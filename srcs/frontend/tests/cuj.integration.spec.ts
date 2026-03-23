@@ -8,11 +8,25 @@ async function saveShot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: `${screenshotDir}/${name}.png`, fullPage: true });
 }
 
-test.beforeEach(async ({ request }) => {
-  const response = await request.post("http://127.0.0.1:8080/api/dev/seed", {
-    data: { scenario: "launch-readiness" },
+test.beforeEach(async ({ page, request }) => {
+  const loginResp = await request.post("http://127.0.0.1:8080/api/auth/login", {
+    data: { username: "admin", password: "adminpass123" }
   });
+  const data = await loginResp.json();
+  const token = data.token;
+
+  const response = await request.post("http://127.0.0.1:8080/api/dev/seed", {
+    headers: { Authorization: "Bearer " + token },
+    data: { scenario: "launch-readiness" }
+  });
+  console.log(await response.text());
   expect(response.ok()).toBeTruthy();
+
+  // Set localStorage token in browser context so UI bypassing login
+  await page.goto("/");
+  await page.evaluate((t) => {
+    localStorage.setItem("ohc_token", t);
+  }, token);
 });
 
 test("CUJ 1: frontend dashboard loads seeded organization command center", async ({ page }) => {
@@ -38,7 +52,13 @@ test("CUJ 2: sending message updates UI and backend transcript", async ({ page, 
 
   await expect(page.getByText(message)).toBeVisible();
 
-  const meetingsResponse = await request.get("http://127.0.0.1:8080/api/meetings");
+  // Re-login to get token for request verification
+  const loginResp = await request.post("http://127.0.0.1:8080/api/auth/login", {
+    data: { username: "admin", password: "adminpass123" }
+  });
+  const { token } = await loginResp.json();
+
+  const meetingsResponse = await request.get("http://127.0.0.1:8080/api/meetings", { headers: { Authorization: "Bearer " + token } });
   expect(meetingsResponse.ok()).toBeTruthy();
   const meetings = (await meetingsResponse.json()) as Array<{ id: string; transcript?: Array<{ content: string }> }>;
   const hasMessage = meetings.some((meeting) =>
@@ -125,8 +145,13 @@ test("CUJ 6: agent chat – sent message appears in backend meeting transcript",
   // Verify the textarea clears (message was submitted).
   await expect(page.getByPlaceholder(`Send a message to ${name}…`)).toHaveValue("");
 
+  const loginResp = await request.post("http://127.0.0.1:8080/api/auth/login", {
+    data: { username: "admin", password: "adminpass123" }
+  });
+  const { token } = await loginResp.json();
+
   // Verify the backend meeting transcript contains the message.
-  const meetingsResponse = await request.get("http://127.0.0.1:8080/api/meetings");
+  const meetingsResponse = await request.get("http://127.0.0.1:8080/api/meetings", { headers: { Authorization: "Bearer " + token } });
   expect(meetingsResponse.ok()).toBeTruthy();
   const meetings = (await meetingsResponse.json()) as Array<{
     id: string;
@@ -141,12 +166,15 @@ test("CUJ 6: agent chat – sent message appears in backend meeting transcript",
 });
 
 test("CUJ 7: agent chat via Chatwoot integration – verify send and messages endpoints", async ({ request }) => {
-  // This test verifies the Chatwoot-backed chat API endpoints work end-to-end.
-  // No direct DB seeding – all data is provided via API interaction.
+  const loginResp = await request.post("http://127.0.0.1:8080/api/auth/login", {
+    data: { username: "admin", password: "adminpass123" }
+  });
+  const { token } = await loginResp.json();
 
   // Send a chat message through the integration chat endpoint.
   const chatContent = `Chatwoot E2E test ${Date.now()}`;
   const sendResponse = await request.post("http://127.0.0.1:8080/api/integrations/chat/send", {
+    headers: { Authorization: "Bearer " + token },
     data: {
       integrationId: "slack",
       channel: "#general",
@@ -161,7 +189,7 @@ test("CUJ 7: agent chat via Chatwoot integration – verify send and messages en
 
   // Retrieve the message via the messages list endpoint.
   const messagesResponse = await request.get(
-    "http://127.0.0.1:8080/api/integrations/chat/messages?integrationId=slack"
+    "http://127.0.0.1:8080/api/integrations/chat/messages?integrationId=slack", { headers: { Authorization: "Bearer " + token } }
   );
   expect(messagesResponse.ok()).toBeTruthy();
   const messages = (await messagesResponse.json()) as Array<{ content: string }>;
