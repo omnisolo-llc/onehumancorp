@@ -52,7 +52,7 @@
   - banner [ref=e83]:
     - heading "One Human Corp Dashboard" [level=1] [ref=e85]
     - generic [ref=e86]:
-      - generic [ref=e87]: Updated 08:04 AM
+      - generic [ref=e87]: Updated 06:39 PM
       - button "Refresh" [ref=e88] [cursor=pointer]
   - main [ref=e89]:
     - generic [ref=e90]:
@@ -101,44 +101,47 @@
                   - generic [ref=e139]: pm-1
                   - generic [ref=e140]: →
                   - generic [ref=e141]: swe-1
-                  - generic [ref=e142]: task
-                  - generic [ref=e143]: 07:58 AM
-                - paragraph [ref=e145]: Ship the reliability checklist before launch.
-              - listitem [ref=e146]:
-                - generic [ref=e147]:
-                  - generic [ref=e148]: swe-1
-                  - generic [ref=e149]: →
-                  - generic [ref=e150]: pm-1
-                  - generic [ref=e151]: status
-                  - generic [ref=e152]: 08:00 AM
-                - paragraph [ref=e154]: Checklist is 90% complete. Waiting on design assets for the final error states.
-              - listitem [ref=e155]:
-                - generic [ref=e156]:
-                  - generic [ref=e157]: ux-1
-                  - generic [ref=e158]: →
-                  - generic [ref=e159]: pm-1
-                  - generic [ref=e160]: status
-                  - generic [ref=e161]: 08:02 AM
-                - paragraph [ref=e163]: Design QA pass completed with no blockers. Assets pushed to main.
-              - listitem [ref=e164]:
-                - generic [ref=e165]:
-                  - generic [ref=e166]: pm-1
-                  - generic [ref=e167]: →
-                  - generic [ref=e168]: CEO
-                  - generic [ref=e169]: ApprovalNeeded
-                  - generic [ref=e170]: 08:03 AM
-                - generic [ref=e171]:
-                  - generic [ref=e172]:
-                    - img [ref=e173]
-                    - generic [ref=e175]:
-                      - heading "CEO Approval Required" [level=4] [ref=e176]
-                      - paragraph [ref=e177]: All pre-launch checks passed. Requesting final CEO approval to deploy to production.
-                  - generic [ref=e178]:
-                    - button "Approve" [ref=e179] [cursor=pointer]
-                    - button "Reject" [ref=e180] [cursor=pointer]
-          - generic [ref=e181]:
-            - generic [ref=e182]:
-              - textbox "Inject direction or approve actions as CEO..." [ref=e183]: Playwright seeded message 1774253076317
-              - button "Send" [ref=e184] [cursor=pointer]
-            - alert [ref=e185]: The sending agent is no longer active. Please check the Agent Network to hire or assign a valid agent.
+                  - generic [ref=e142]: Delegated to swe-1
+                  - generic [ref=e143]: task
+                  - generic [ref=e144]: 06:33 PM
+                - paragraph [ref=e146]: Ship the reliability checklist before launch.
+              - listitem [ref=e147]:
+                - generic [ref=e148]:
+                  - generic [ref=e149]: swe-1
+                  - generic [ref=e150]: →
+                  - generic [ref=e151]: pm-1
+                  - generic [ref=e152]: status
+                  - generic [ref=e153]: 06:35 PM
+                - paragraph [ref=e155]: Checklist is 90% complete. Waiting on design assets for the final error states.
+              - listitem [ref=e156]:
+                - generic [ref=e157]:
+                  - generic [ref=e158]: ux-1
+                  - generic [ref=e159]: →
+                  - generic [ref=e160]: pm-1
+                  - generic [ref=e161]: status
+                  - generic [ref=e162]: 06:37 PM
+                - paragraph [ref=e164]: Design QA pass completed with no blockers. Assets pushed to main.
+              - listitem [ref=e165]:
+                - generic [ref=e166]:
+                  - generic [ref=e167]: pm-1
+                  - generic [ref=e168]: →
+                  - generic [ref=e169]: CEO
+                  - generic [ref=e170]: ApprovalNeeded
+                  - generic [ref=e171]: 06:38 PM
+                - generic [ref=e172]:
+                  - generic [ref=e173]:
+                    - img [ref=e174]
+                    - generic [ref=e176]:
+                      - heading "CEO Approval Required" [level=4] [ref=e177]
+                      - paragraph [ref=e178]: All pre-launch checks passed. Requesting final CEO approval to deploy to production.
+                  - generic [ref=e180]:
+                    - generic [ref=e182]:
+                      - generic: Slide to Approve
+                      - img [ref=e184]
+                    - button "Reject" [ref=e187] [cursor=pointer]
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - textbox "Inject direction or approve actions as CEO..." [ref=e190]: Playwright seeded message 1774377591496
+              - button "Send" [ref=e191] [cursor=pointer]
+            - alert [ref=e192]: "Agent Missing: The sender has been terminated or reassigned. Please hire a replacement in the Agent Network."
 ```
