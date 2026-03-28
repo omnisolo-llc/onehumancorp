@@ -40,6 +40,21 @@ func (s *Server) handleMCPRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Persist to SIP DB Mesh
+	if s.hub.SIPDB() != nil {
+		plugin := orchestration.CapabilityPlugin{
+			PluginID:    req.Tool.ID,
+			Name:        req.Tool.Name,
+			Version:     "1.0.0", // Hardcoded for now if not provided
+			ManifestURL: "internal",
+			Status:      "available",
+		}
+		if err := s.hub.SIPDB().RegisterCapabilityPlugin(r.Context(), plugin); err != nil {
+			http.Error(w, "failed to register capability plugin in mesh: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
