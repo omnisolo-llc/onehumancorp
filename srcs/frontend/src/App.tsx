@@ -611,7 +611,7 @@ export function App() {
       setForm((f) => ({ ...f, content: "" }));
     } catch (e) {
       let errMsg = e instanceof Error ? e.message : "Failed to send message";
-      if (errMsg.toLowerCase().includes("conflict") || errMsg.includes("State Changed")) {
+      if (errMsg.toLowerCase().includes("conflict") || errMsg.includes("State Changed") || errMsg.includes("already been approved or rejected")) {
         errMsg = "Action Required: The organizational state has shifted. Please review the updated meeting transcript before providing direction.";
       } else if (errMsg.includes("sender agent is not registered")) {
         errMsg = "Workforce Alert: The issuing agent has been decommissioned. Please re-assign this workflow to an active resource.";
@@ -1613,7 +1613,12 @@ export function App() {
                                             setResolvedApprovals(prev => ({ ...prev, [msg.id]: "approved" }));
                                             setNotice("Approval successfully recorded.");
                                           }).catch((e: unknown) => {
-                                            setError(e instanceof Error ? e.message : "Failed to record approval");
+                                            const errMsg = e instanceof Error ? e.message : "Failed to record approval";
+                                            if (errMsg.toLowerCase().includes("conflict") || errMsg.includes("State Changed") || errMsg.includes("already been approved")) {
+                                              setError("Action Required: The organizational state has shifted. Please review the updated meeting transcript before providing direction.");
+                                            } else {
+                                              setError(errMsg);
+                                            }
                                           }).finally(() => {
                                             setApprovalLoading(prev => ({ ...prev, [msg.id]: false }));
                                           });
@@ -1634,7 +1639,12 @@ export function App() {
                                             setResolvedApprovals(prev => ({ ...prev, [msg.id]: "rejected" }));
                                             setNotice("Rejection successfully recorded.");
                                           }).catch((e: unknown) => {
-                                            setError(e instanceof Error ? e.message : "Failed to record rejection");
+                                            const errMsg = e instanceof Error ? e.message : "Failed to record rejection";
+                                            if (errMsg.toLowerCase().includes("conflict") || errMsg.includes("State Changed") || errMsg.includes("already been approved")) {
+                                              setError("Action Required: The organizational state has shifted. Please review the updated meeting transcript before providing direction.");
+                                            } else {
+                                              setError(errMsg);
+                                            }
                                           }).finally(() => {
                                             setApprovalLoading(prev => ({ ...prev, [msg.id]: false }));
                                           });
