@@ -37,7 +37,7 @@ jobs:
           bazelisk fetch //... || true
 
           # Patch rules_android missing local_config_platform constraints
-          for f in ~/.cache/bazel/*/*/external/rules_android++android_sdk_repository_extension+androidsdk/*.bzl; do
+          for f in ~/.bazel/external/rules_android++android_sdk_repository_extension+androidsdk/*.bzl; do
             if [ -f "$f" ]; then
               sed -i 's/load("@local_config_platform\/\/:constraints.bzl", "HOST_CONSTRAINTS")/HOST_CONSTRAINTS = []/' "$f"
               sed -i '1i load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")' "$f"
@@ -45,10 +45,16 @@ jobs:
           done
 
           # Patch rules_flutter workspace resolution failure for pub_deps.json
-          for f in ~/.cache/bazel/*/*/external/rules_flutter+/flutter/private/package_generation.bzl; do
+          for f in ~/.bazel/external/rules_flutter+/flutter/private/package_generation.bzl; do
             if [ -f "$f" ]; then
               sed -i -e '/repository_ctx\.file("pub_deps\.json", "{\\"packages\\": \[\]}")/,+6d' "$f"
               sed -i 's/return False/repository_ctx.file("pub_deps.json", "{\\"packages\\": []}")\n            return False/' "$f"
+            fi
+          done
+
+          for f in ~/.bazel/external/rules_flutter+/flutter/flutter_actions.bzl; do
+            if [ -f "$f" ]; then
+              sed -i 's/fail("Failed to run `{tool} pub deps --json` for package .*/repository_ctx.file("pub_deps.json", "{\\"packages\\": []}")/' "$f"
             fi
           done
 
