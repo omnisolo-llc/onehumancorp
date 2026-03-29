@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNER_EOF' > .github/workflows/ci.yml
 name: CI
 
 on:
@@ -83,3 +85,4 @@ jobs:
               --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY \
               --jobs=200
           fi
+INNER_EOF
