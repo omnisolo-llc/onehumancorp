@@ -93,6 +93,8 @@ def _ensure_pub_deps(repository_ctx, package_name, package_dir):
         ) or (
             # Catch-all for SDK version-solving failures (e.g. _macros not in SDK).
             "version solving failed" in lower_stderr
+        ) or (
+            "but found no workspace root" in lower_stderr
         ):
             repository_ctx.report_progress(
                 "Skipping pub deps generation for {} due to unsupported dependency source; falling back to pubspec.yaml".format(package_name),
@@ -115,6 +117,9 @@ def _ensure_pub_deps(repository_ctx, package_name, package_dir):
             json_start = idx
             break
     if json_start == -1:
+        if "but found no workspace root" in deps_result.stderr.lower():
+            repository_ctx.report_progress("Skipping pub deps generation for {} due to workspace resolution failure".format(package_name))
+            return False
         fail("`{tool} pub deps --json` for package '{pkg}' did not produce JSON output.\nstdout: {stdout}\nstderr: {stderr}".format(
             tool = tool,
             pkg = package_name,

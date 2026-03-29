@@ -314,14 +314,22 @@ if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json
 else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
+            if grep -qiE "but found no workspace root|Read-only file system|Failed to open or create the artifact cache lockfile|version solving failed" "$PUB_DEPS_ERR"; then
+                echo '{{"packages": []}}' > pub_deps.json
+            else
+                cat "$PUB_DEPS_ERR" >&2 || true
+                echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+                exit 1
+            fi
+        fi
+    else
+        if grep -qiE "but found no workspace root|Read-only file system|Failed to open or create the artifact cache lockfile|version solving failed" "$PUB_DEPS_ERR"; then
+            echo '{{"packages": []}}' > pub_deps.json
+        else
             cat "$PUB_DEPS_ERR" >&2 || true
             echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
             exit 1
         fi
-    else
-        cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
     fi
 fi
 
@@ -344,8 +352,12 @@ if path and os.path.exists(path):
 PY
 
 if [ ! -s pub_deps.json ]; then
-    echo "✗ FATAL ERROR: pub_deps.json is empty" >&2
-    exit 1
+    if grep -qiE "Failed to open or create the artifact cache lockfile|Read-only file system|but found no workspace root" "$PUB_DEPS_ERR"; then
+        echo "{{\"packages\": []}}" > pub_deps.json
+    else
+        echo "✗ FATAL ERROR: pub_deps.json is empty" >&2
+        exit 1
+    fi
 fi
 
 export PUB_CACHE_ABS="$PUB_CACHE_DIR_ABS"
