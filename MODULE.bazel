@@ -46,7 +46,7 @@ use_repo(
     "pub_crypto",
     "pub_cupertino_icons",
     "pub_fake_async",
-    "pub_ffi",
+
     "pub_file",
     "pub_fixnum",
     "pub_flutter_lints",
