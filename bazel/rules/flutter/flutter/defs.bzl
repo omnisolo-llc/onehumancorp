@@ -748,14 +748,14 @@ done
 
     test_runner_content = """#!/bin/bash
 set -euo pipefail
-set -o pipefail
-
 copy_tree() {{
     local src="$1"
     local dest="$2"
+    # Ensure src has a trailing slash for rsync or use /. for cp to copy contents
     if command -v rsync >/dev/null 2>&1; then
         rsync -aL "$src/" "$dest/"
     else
+        # Using /. ensures hidden files are copied in most shells
         cp -RL "$src/." "$dest/"
     fi
 }}
@@ -789,7 +789,19 @@ resolve_path() {{
 }}
 
 RUNFILES_ROOT="${{RUNFILES_DIR:-$PWD}}"
-WORKSPACE_ROOT="$RUNFILES_ROOT/${{TEST_WORKSPACE:-__main__}}"
+case "${{TEST_WORKSPACE:-__main__}}" in
+  __main__)
+    if [ -d "$RUNFILES_ROOT/_main" ]; then
+        WORKSPACE_ROOT="$RUNFILES_ROOT/_main"
+    else
+        WORKSPACE_ROOT="$RUNFILES_ROOT/__main__"
+    fi
+    ;;
+  *)
+    WORKSPACE_ROOT="$RUNFILES_ROOT/${{TEST_WORKSPACE}}"
+    ;;
+esac
+
 if [ ! -d "$WORKSPACE_ROOT" ]; then
     if [ -d "$RUNFILES_ROOT/__main__" ]; then
         WORKSPACE_ROOT="$RUNFILES_ROOT/__main__"
@@ -798,12 +810,64 @@ if [ ! -d "$WORKSPACE_ROOT" ]; then
     fi
 fi
 
-WORKSPACE_SRC="{workspace_short}"
-PUB_CACHE_SRC="{pub_cache_short}"
-PUB_DEPS_SRC="{pub_deps_short}"
-DART_TOOL_SRC="{dart_tool_short}"
-FLUTTER_BIN_REL="{flutter_bin}"
+WORKSPACE_ABS="$(resolve_path "{workspace_short}" "{workspace_path}")"
+PUB_CACHE_ABS="$(resolve_path "{pub_cache_short}" "{pub_cache_path}")"
+PUB_DEPS_ABS="$(resolve_path "{pub_deps_short}" "{pub_deps_path}")"
+DART_TOOL_ABS="$(resolve_path "{dart_tool_short}" "{dart_tool_path}")"
 
+if [[ -z "${{TEST_TMPDIR:-}}" ]]; then
+    echo "✗ TEST_TMPDIR is not set"
+    exit 1
+fi
+
+RUNTIME_WORKSPACE="${{TEST_TMPDIR}}/flutter_workspace"
+RUNTIME_PUB_CACHE="${{TEST_TMPDIR}}/pub_cache"
+LOG_ROOT="${{TEST_UNDECLARED_OUTPUTS_DIR:-${{TEST_TMPDIR}}/test_outputs}}"
+TEST_LOG="$LOG_ROOT/flutter_test.log"
+
+mkdir -p "$LOG_ROOT"
+: > "$TEST_LOG"
+
+# Create a writable RUNTIME_WORKSPACE via deep copying instead of symlinks.
+rm -rf "$RUNTIME_WORKSPACE"
+mkdir -p "$RUNTIME_WORKSPACE"
+copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
+
+# If we are in a workspace, we must cd into the package directory
+PACKAGE_DIR="{package_dir}"
+
+# Ensure pubspec.yaml and pubspec.lock are present in the runtime root.
+# Flutter REQUIRES a pubspec.yaml in the project root to run tests.
+if [ ! -f "$RUNTIME_WORKSPACE/pubspec.yaml" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.yaml" ]; then
+    cp "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.yaml" "$RUNTIME_WORKSPACE/pubspec.yaml"
+    chmod u+w "$RUNTIME_WORKSPACE/pubspec.yaml" 2>/dev/null || true
+fi
+if [ ! -f "$RUNTIME_WORKSPACE/pubspec.lock" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.lock" ]; then
+    cp "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.lock" "$RUNTIME_WORKSPACE/pubspec.lock"
+    chmod u+w "$RUNTIME_WORKSPACE/pubspec.lock" 2>/dev/null || true
+fi
+
+# Create RUNTIME_PUB_CACHE via deep copying instead of symlinks.
+mkdir -p "$RUNTIME_PUB_CACHE"
+if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ]; then
+    copy_tree "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
+fi
+
+if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
+    mkdir -p "$RUNTIME_WORKSPACE/.dart_tool"
+    copy_tree "$DART_TOOL_ABS" "$RUNTIME_WORKSPACE/.dart_tool"
+    # Ensure package_config.json is writable and readable
+    if [ -f "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" ]; then
+        chmod u+rw "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" 2>/dev/null || true
+    fi
+fi
+
+if [ -n "$PUB_DEPS_ABS" ] && [ -f "$PUB_DEPS_ABS" ]; then
+    cp "$PUB_DEPS_ABS" "$RUNTIME_WORKSPACE/pub_deps.json"
+    chmod u+w "$RUNTIME_WORKSPACE/pub_deps.json" 2>/dev/null || true
+fi
+
+FLUTTER_BIN_REL="{flutter_bin}"
 FLUTTER_BIN_ABS="$RUNFILES_ROOT/$FLUTTER_BIN_REL"
 if [ ! -f "$FLUTTER_BIN_ABS" ]; then
     SEARCH_ROOT="$RUNFILES_ROOT"
@@ -827,51 +891,6 @@ fi
 if [ ! -f "$FLUTTER_BIN_ABS" ]; then
     echo "✗ Flutter binary not found: $FLUTTER_BIN_REL" >&2
     exit 1
-fi
-
-WORKSPACE_ABS="$(resolve_path "$WORKSPACE_SRC" "{workspace_path}")"
-if [ -z "$WORKSPACE_ABS" ]; then
-    echo "✗ Unable to locate prepared Flutter workspace: $WORKSPACE_SRC" >&2
-    exit 1
-fi
-
-PUB_CACHE_ABS="$(resolve_path "$PUB_CACHE_SRC" "{pub_cache_path}")"
-PUB_DEPS_ABS="$(resolve_path "$PUB_DEPS_SRC" "{pub_deps_path}")"
-DART_TOOL_ABS="$(resolve_path "$DART_TOOL_SRC" "{dart_tool_path}")"
-
-if [[ -z "${{TEST_TMPDIR:-}}" ]]; then
-    echo "✗ TEST_TMPDIR is not set"
-    exit 1
-fi
-
-RUNTIME_WORKSPACE="${{TEST_TMPDIR}}/flutter_workspace"
-RUNTIME_PUB_CACHE="${{TEST_TMPDIR}}/pub_cache"
-LOG_ROOT="${{TEST_UNDECLARED_OUTPUTS_DIR:-${{TEST_TMPDIR}}/test_outputs}}"
-TEST_LOG="$LOG_ROOT/flutter_test.log"
-
-mkdir -p "$LOG_ROOT"
-: > "$TEST_LOG"
-
-rm -rf "$RUNTIME_WORKSPACE"
-mkdir -p "$RUNTIME_WORKSPACE"
-copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
-chmod -R u+w "$RUNTIME_WORKSPACE" 2>/dev/null || true
-
-mkdir -p "$RUNTIME_PUB_CACHE"
-if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ] && [ -n "$(ls -A "$PUB_CACHE_ABS" 2>/dev/null)" ]; then
-    copy_tree "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
-fi
-chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-
-if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
-    mkdir -p "$RUNTIME_WORKSPACE/.dart_tool"
-    copy_tree "$DART_TOOL_ABS" "$RUNTIME_WORKSPACE/.dart_tool"
-    chmod -R u+w "$RUNTIME_WORKSPACE/.dart_tool" 2>/dev/null || true
-fi
-
-if [ -n "$PUB_DEPS_ABS" ] && [ -f "$PUB_DEPS_ABS" ]; then
-    cp "$PUB_DEPS_ABS" "$RUNTIME_WORKSPACE/pub_deps.json"
-    chmod u+w "$RUNTIME_WORKSPACE/pub_deps.json" 2>/dev/null || true
 fi
 
 FLUTTER_BIN_DIR="$(dirname "$FLUTTER_BIN_ABS")"
@@ -967,30 +986,59 @@ export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
 export PATH="$FLUTTER_BIN_DIR:$PATH"
 
-# Regenerate package_config.json with correct paths to RUNTIME_PUB_CACHE
-# This ensures package imports resolve correctly in the test environment
-echo "Regenerating package_config.json for test runtime..."
+# Adjust package_config.json paths for test runtime
+# The build-time package_config.json already exists in .dart_tool/
+# We just need to ensure the paths match the RUNTIME_PUB_CACHE.
+echo "Adjusting package_config.json for test runtime..." | tee -a "$TEST_LOG"
 pushd "$RUNTIME_WORKSPACE" >/dev/null
 
 # If we are in a workspace, we must cd into the package directory
 PACKAGE_DIR="{package_dir}"
+
+# Ensure pubspec.yaml and pubspec.lock are present in the runtime root.
+# Flutter REQUIRES a pubspec.yaml in the project root to run tests.
+if [ ! -f "pubspec.yaml" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$PACKAGE_DIR/pubspec.yaml" ]; then
+    echo "Mirroring $PACKAGE_DIR/pubspec.yaml to root..." | tee -a "$TEST_LOG"
+    cp "$PACKAGE_DIR/pubspec.yaml" "pubspec.yaml"
+    chmod u+w "pubspec.yaml" 2>/dev/null || true
+fi
+if [ ! -f "pubspec.lock" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$PACKAGE_DIR/pubspec.lock" ]; then
+    cp "$PACKAGE_DIR/pubspec.lock" "pubspec.lock"
+    chmod u+w "pubspec.lock" 2>/dev/null || true
+fi
+
+PUSHED_PKG=0
 if [ -n "$PACKAGE_DIR" ]; then
-    pushd "$PACKAGE_DIR" >/dev/null
-    echo "Entered package directory: $(pwd)"
+    if pushd "$PACKAGE_DIR" >/dev/null 2>&1; then
+        PUSHED_PKG=1
+        echo "Entered package directory: $(pwd)" | tee -a "$TEST_LOG"
+    else
+        echo "⚠ Warning: Could not enter $PACKAGE_DIR" | tee -a "$TEST_LOG"
+    fi
 fi
 
-PUB_GET_OUT="$LOG_ROOT/flutter_pub_get.log"
-if "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_OUT" 2>&1; then
-    echo "✓ Package config regenerated successfully (offline)" | tee -a "$TEST_LOG"
+if [ -f .dart_tool/package_config.json ]; then
+    # The build action already generates a correct package_config.json
+    # relative to the workspace root. Since we've symlinked everything
+    # in the same relative structure, it should just work!
+    # No need to run 'pub get --offline' again.
+    echo "✓ Using existing package_config.json" | tee -a "$TEST_LOG"
 else
-    echo "✗ flutter pub get --offline failed in test runtime" | tee -a "$TEST_LOG"
-    cat "$PUB_GET_OUT" | tee -a "$TEST_LOG"
-    if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
-    popd >/dev/null
-    exit 1
+    # Fallback only if missing (should not happen with our rules)
+    echo "⚠ package_config.json missing, running offline pub get..." | tee -a "$TEST_LOG"
+    PUB_GET_OUT="$LOG_ROOT/flutter_pub_get.log"
+    if "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_OUT" 2>&1; then
+        echo "✓ Package config regenerated successfully (offline)" | tee -a "$TEST_LOG"
+    else
+        echo "✗ flutter pub get --offline failed" | tee -a "$TEST_LOG"
+        cat "$PUB_GET_OUT" | tee -a "$TEST_LOG"
+        if [ "$PUSHED_PKG" -eq 1 ]; then popd >/dev/null; fi
+        popd >/dev/null
+        exit 1
+    fi
 fi
 
-if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
+if [ "$PUSHED_PKG" -eq 1 ]; then popd >/dev/null; fi
 popd >/dev/null
 
 CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test")
@@ -1006,8 +1054,15 @@ done
 unset IFS
 
 pushd "$RUNTIME_WORKSPACE" >/dev/null
+echo "Execution root: $(pwd)" | tee -a "$TEST_LOG"
+ls -F | tee -a "$TEST_LOG"
+
+PUSHED_PKG_EXEC=0
 if [ -n "$PACKAGE_DIR" ]; then
-    pushd "$PACKAGE_DIR" >/dev/null
+    if pushd "$PACKAGE_DIR" >/dev/null 2>&1; then
+        PUSHED_PKG_EXEC=1
+        echo "Executing tests in: $(pwd)" | tee -a "$TEST_LOG"
+    fi
 fi
 
 set +e
@@ -1015,7 +1070,7 @@ set +e
 RESULT=${{PIPESTATUS[0]}}
 set -e
 
-if [ -n "$PACKAGE_DIR" ]; then
+if [ "$PUSHED_PKG_EXEC" -eq 1 ]; then
     popd >/dev/null
 fi
 popd >/dev/null
@@ -1429,9 +1484,21 @@ Note: Enhanced placeholder demonstrating Dart library analysis
     if pub_deps:
         output_files.extend([pub_deps, pub_get_output, pub_cache_dir, dart_tool_dir])
 
+    # Return both providers for maximum compatibility
     return [
         DefaultInfo(files = depset(output_files)),
         library_info,
+        FlutterLibraryInfo(
+            workspace = _prepared_workspace if pubspec_file else None,
+            pub_get_log = pub_get_output,
+            pub_cache = pub_cache_dir,
+            pub_deps = pub_deps,
+            dart_tool = dart_tool_dir,
+            pubspec = pubspec_file,
+            dart_sources = depset(direct = [f for f in direct_srcs if f.extension == "dart"]),
+            other_sources = depset(direct = [f for f in direct_srcs if f.extension != "dart"]),
+            transitive_pub_caches = library_info.transitive_pub_caches,
+        ),
     ]
 
 def _dart_library_update_impl(ctx):

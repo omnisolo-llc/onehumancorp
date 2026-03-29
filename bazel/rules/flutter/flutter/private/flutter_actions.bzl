@@ -86,7 +86,16 @@ while IFS='|' read -r RELATIVE_PATH SOURCE_PATH; do
     fi
     DEST_PATH="$WORKSPACE_DIR/$RELATIVE_PATH"
     mkdir -p "$(dirname "$DEST_PATH")"
-    cp -RL "$SOURCE_PATH" "$DEST_PATH"
+    
+    # Use dereferencing copy (cp -L) to ensure the workspace seeds are real files.
+    # This prevents 'dangling symlink' errors when we later use 'cp -as' on
+    # these workspace directories in subsequent actions.
+    if [ -d "$SOURCE_PATH" ]; then
+        mkdir -p "$DEST_PATH"
+        cp -RL "$SOURCE_PATH/." "$DEST_PATH/"
+    else
+        cp -L "$SOURCE_PATH" "$DEST_PATH"
+    fi
 done < "$MANIFEST_FILE"
 """,
         is_executable = True,
@@ -193,7 +202,9 @@ WORKSPACE_DIR_ABS="${{WORKSPACE_DIR_ABS:+$WORKSPACE_DIR_ABS/}}${{PACKAGE_DIR:+$P
 PUB_CACHE_DIR_ABS="$ORIGINAL_PWD/$PUB_CACHE_DIR"
 DART_TOOL_DIR_ABS="$ORIGINAL_PWD/$DART_TOOL_DIR"
 
-# Copy staged workspace into prepared output directory
+# Link staged workspace into prepared output directory.
+# We use rsync -aL to ensure all symlinks are dereferenced and the workspace is hermetic.
+# This is necessary to avoid 'dangling symlink' errors in Bazel's output tree validation.
 rm -rf "$WORKSPACE_DIR_ABS"
 mkdir -p "$WORKSPACE_DIR_ABS"
 if command -v rsync >/dev/null 2>&1; then
@@ -201,7 +212,14 @@ if command -v rsync >/dev/null 2>&1; then
 else
     cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
 fi
-chmod -R u+rwX "$WORKSPACE_DIR_ABS"
+
+# Ensure pubspec files are writable for modification.
+for _f in "$WORKSPACE_DIR_ABS/pubspec.yaml" "$WORKSPACE_DIR_ABS/pubspec.lock"; do
+    if [ -f "$_f" ]; then
+        chmod u+rw "$_f" 2>/dev/null || true
+    fi
+done
+chmod u+rwX "$WORKSPACE_DIR_ABS" 2>/dev/null || true
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
@@ -219,9 +237,10 @@ if [ ${{#DEP_CACHES[@]}} -gt 0 ]; then
         if [[ "$DEP_CACHE" != /* ]]; then
             DEP_CACHE="$ORIGINAL_PWD/$DEP_CACHE"
         fi
-        if [ -d "$DEP_CACHE" ] && [ -n "$(ls -A "$DEP_CACHE" 2>/dev/null)" ]; then
+        if [ -d "$DEP_CACHE" ]; then
+            # Use deep copy (rsync -aL) to ensure all dependencies are self-contained.
             if command -v rsync >/dev/null 2>&1; then
-                rsync -a "$DEP_CACHE/" "$PUB_CACHE_DIR_ABS/"
+                rsync -aL "$DEP_CACHE/" "$PUB_CACHE_DIR_ABS/"
             else
                 cp -RL "$DEP_CACHE/." "$PUB_CACHE_DIR_ABS/"
             fi
@@ -230,10 +249,8 @@ if [ ${{#DEP_CACHES[@]}} -gt 0 ]; then
 else
     echo "No dependency caches supplied"
 fi
-# Bazel marks output directories read-only (0555) after actions complete.
-# Dependency caches are Bazel outputs, so rsync -a copies those read-only
-# permissions into our new pub_cache.  Make everything writable so subsequent
-# mkdir/copy operations (e.g. the IS_PUB_PACKAGE block below) can succeed.
+
+# Ensure the cache is writable for subsequent modifications.
 chmod -R u+w "$PUB_CACHE_DIR_ABS" 2>/dev/null || true
 echo ""
 
