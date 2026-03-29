@@ -24,7 +24,6 @@ _DEF_VISIBILITY = '    visibility = ["//visibility:public"],'
 def _ensure_pub_deps(repository_ctx, package_name, package_dir):
     repository_ctx.file("pub_deps.json", "{\"packages\": []}")
     return False
-
 def _find_pub_command(repository_ctx):
     """Locate a flutter or dart executable and return the pub command prefix."""
 
