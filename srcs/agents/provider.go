@@ -346,7 +346,7 @@ func (p *OpenClawProvider) Description() string {
 // Produces no errors.
 // Has no side effects.
 func (p *OpenClawProvider) SupportedRoles() []string {
-	return []string{"GROWTH_AGENT", "CONTENT_STRATEGIST", "MARKETING_MANAGER", "PRODUCT_MANAGER"}
+	return []string{"GROWTH_AGENT", "CONTENT_STRATEGIST", "MARKETING_MANAGER", "PRODUCT_MANAGER", "SOFTWARE_ENGINEER", "QA_TESTER", "DESIGNER", "SECURITY_ENGINEER", "ENGINEERING_DIRECTOR"}
 }
 
 // Authenticate functionality.
