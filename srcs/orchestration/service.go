@@ -258,7 +258,9 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
 		go func(t Message, r string) {
-			_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
+			if dbErr := h.sipDB.DelegateMission(context.Background(), t.ID, r, t); dbErr != nil {
+				telemetry.RecordAgentApiCall(context.Background(), t.FromAgent, r, "delegate_mission_error")
+			}
 		}(task, toAgent.Role)
 	}
 	return err

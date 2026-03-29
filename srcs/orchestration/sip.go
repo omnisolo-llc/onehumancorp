@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"strings"
+
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -53,10 +55,14 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
+	if !strings.Contains(dbPath, "?") {
+		dbPath += "?_journal_mode=WAL&_busy_timeout=15000&_txlock=immediate"
+	}
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -153,7 +159,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING' LIMIT 100", role)
 		if err != nil {
 			return err
 		}
