@@ -80,6 +80,26 @@ def _ensure_pub_deps(repository_ctx, package_name, package_dir):
         # fails with a path resolution error. Allow falling back to pubspec parsing
         # so repository generation can continue.
         lower_stderr = stderr.lower()
+        if "workspace" in lower_stderr or "resolution `workspace`" in lower_stderr:
+            repository_ctx.report_progress(
+                "Skipping pub deps generation for {} due to workspace resolution error; falling back to pubspec.yaml".format(package_name),
+            )
+            return False
+        if "workspace" in lower_stderr or "resolution `workspace`" in lower_stderr:
+            repository_ctx.report_progress(
+                "Skipping pub deps generation for {} due to workspace resolution error; falling back to pubspec.yaml".format(package_name),
+            )
+            return False
+        if "workspace" in lower_stderr or "resolution `workspace`" in lower_stderr:
+            repository_ctx.report_progress(
+                "Skipping pub deps generation for {} due to workspace resolution error; falling back to pubspec.yaml".format(package_name),
+            )
+            return False
+        if "workspace" in lower_stderr:
+            repository_ctx.report_progress(
+                "Skipping pub deps generation for {} due to workspace resolution error; falling back to pubspec.yaml".format(package_name),
+            )
+            return False
         if (
             "path" in lower_stderr and (
                 "could not find package" in lower_stderr or

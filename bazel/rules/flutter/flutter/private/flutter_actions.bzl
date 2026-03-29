@@ -202,6 +202,7 @@ else
     cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
 fi
 chmod -R u+rwX "$WORKSPACE_DIR_ABS"
+find "$WORKSPACE_DIR_ABS" -type f -name pubspec.yaml -exec sed -i 's/resolution: *workspace//g' {{}} + || true
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
@@ -455,6 +456,7 @@ echo "=== Dependency preparation complete ==="
         command = script_content + """
 
 cd "$ORIGINAL_PWD"
+find "$WORKSPACE_DIR_ABS" -name pubspec.yaml -exec sed -i 's/resolution: *workspace//g' {{}} + || true
 
 mkdir -p "$(dirname "{pub_get_output}")"
 mkdir -p "$(dirname "{pub_deps}")"
