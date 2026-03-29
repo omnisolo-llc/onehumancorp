@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -1171,5 +1172,53 @@ func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 	st, ok := status.FromError(err)
 	if !ok || st.Code() != codes.PermissionDenied {
 		t.Fatalf("Expected PermissionDenied, got: %v", err)
+	}
+}
+
+func TestSPIFFEAuthInterceptor_UnknownPayload(t *testing.T) {
+	interceptor := SPIFFEAuthInterceptor()
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+	p := &peer.Peer{
+		AuthInfo: credentials.TLSInfo{
+			State: tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{
+					{
+						URIs: []*url.URL{
+							{
+								Scheme: "spiffe",
+								Host:   "ohc.os",
+								Path:   "/agent/agent-1",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx = peer.NewContext(ctx, p)
+
+	unknownReq := &struct{ Dummy string }{Dummy: "value"}
+
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "success", nil
+	}
+
+	_, err := interceptor(ctx, unknownReq, nil, handler)
+
+	if err == nil {
+		t.Fatalf("expected error for unknown payload, got nil")
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected status error, got %v", err)
+	}
+
+	if st.Code() != codes.PermissionDenied {
+		t.Errorf("expected PermissionDenied, got %v", st.Code())
+	}
+	if !strings.Contains(st.Message(), "unsupported payload type") {
+		t.Errorf("expected unsupported payload type message, got: %v", st.Message())
 	}
 }
