@@ -196,24 +196,29 @@ def _flutter_library_impl(ctx):
     dart_files = [f for f in source_files if f.extension == "dart"]
     other_files = [f for f in source_files if f.extension != "dart"]
 
-    working_dir, _ = create_flutter_working_dir(
-        ctx,
-        pubspec_file,
-        dart_files,
-        other_files,
-        list(ctx.files.data),
-        workspace_pubspec = ctx.file.workspace_pubspec,
-    )
-
     # Collect pub_cache directories from all transitive dependencies
     transitive_pub_caches = []
+    transitive_dart_files = []
+    transitive_other_files = []
     for dep in ctx.attr.deps:
         if FlutterLibraryInfo in dep:
             # Collect transitive pub_caches depset from flutter_library deps
             transitive_pub_caches.append(dep[FlutterLibraryInfo].transitive_pub_caches)
+            transitive_dart_files.extend(dep[FlutterLibraryInfo].dart_sources.to_list())
+            transitive_other_files.extend(dep[FlutterLibraryInfo].other_sources.to_list())
         elif DartLibraryInfo in dep:
             # Collect transitive pub_caches depset from dart_library deps
             transitive_pub_caches.append(dep[DartLibraryInfo].transitive_pub_caches)
+            transitive_dart_files.extend(dep[DartLibraryInfo].srcs.to_list())
+
+    working_dir, _ = create_flutter_working_dir(
+        ctx,
+        pubspec_file,
+        dart_files + transitive_dart_files,
+        other_files + transitive_other_files,
+        list(ctx.files.data),
+        workspace_pubspec = ctx.file.workspace_pubspec,
+    )
 
     prepared_workspace, pub_get_output, pub_cache_dir, pub_deps, dart_tool_dir = flutter_pub_get_action(
         ctx,
