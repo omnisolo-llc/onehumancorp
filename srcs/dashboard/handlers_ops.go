@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/orchestration"
@@ -377,6 +378,14 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+var sseBufferPool = sync.Pool{
+	New: func() interface{} {
+		// pre-allocate a slice with enough capacity for standard SSE events
+		buf := make([]byte, 0, 512)
+		return &buf
+	},
+}
+
 // handleScaleStream streams real-time scaling trace events to the dashboard.
 // Accepts parameters: s *Server (No Constraints).
 // Returns nothing.
@@ -400,8 +409,19 @@ func (s *Server) handleScaleStream(w http.ResponseWriter, r *http.Request) {
 
 	for _, event := range events {
 		s.hub.LogEvent(map[string]interface{}{"type": "ScalingEventStream", "data": event})
-		data := []byte("data: " + event + "\n\n")
-		w.Write(data)
+
+		// Optimization: Use sync.Pool to avoid high-frequency allocations during SSE streams
+		bufPtr := sseBufferPool.Get().(*[]byte)
+		buf := (*bufPtr)[:0] // reset length
+		buf = append(buf, "data: "...)
+		buf = append(buf, event...)
+		buf = append(buf, "\n\n"...)
+
+		w.Write(buf)
+
+		*bufPtr = buf // update original pointer's slice header (length/capacity)
+		sseBufferPool.Put(bufPtr)
+
 		if err := rc.Flush(); err != nil {
 			break
 		}
