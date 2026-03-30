@@ -1,0 +1,5 @@
+status: "healthy"
+heartbeat: 20260330094518
+metrics:
+  missions_executed: 0
+  missions_pending: 0
