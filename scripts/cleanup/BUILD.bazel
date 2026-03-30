@@ -1,0 +1,8 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "prune_test",
+    srcs = ["prune_test.sh"],
+    data = ["prune.sh"],
+    size = "small",
+)
