@@ -65,15 +65,9 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 		t.Fatalf("failed to insert: %v", err)
 	}
 
-	missions, err := db.GetPendingMissions(ctx, "ROLE")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if len(missions) != 1 {
-		t.Fatalf("expected 1 mission, got %d", len(missions))
-	}
-	if missions[0].Content != "invalid_json" || missions[0].ID != "m2" || missions[0].Type != EventTask {
-		t.Fatalf("fallback msg parsing failed: %+v", missions[0])
+	_, err = db.GetPendingMissions(ctx, "ROLE")
+	if err == nil || err.Error() != "invalid JSON payload in agent_missions" {
+		t.Fatalf("expected error invalid JSON payload in agent_missions, got %v", err)
 	}
 }
 

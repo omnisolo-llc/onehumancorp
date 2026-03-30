@@ -98,17 +98,9 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
 
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
-	if err != nil {
-		t.Fatalf("Expected fallback to message string on JSON unmarshal error, got error: %v", err)
-	}
-
-	if len(missions) != 1 {
-		t.Fatalf("Expected 1 mission, got %d", len(missions))
-	}
-
-	if missions[0].Content != "invalid-json" {
-		t.Fatalf("Expected content 'invalid-json', got %s", missions[0].Content)
+	_, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	if err == nil || err.Error() != "invalid JSON payload in agent_missions" {
+		t.Fatalf("Expected 'invalid JSON payload in agent_missions', got error: %v", err)
 	}
 }
 
@@ -143,17 +135,9 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 	}
 
 	// Ensure we handle invalid JSON in GetPendingMissions without blowing up completely
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	if len(missions) != 1 {
-		t.Fatalf("Expected 1 mission, got %d", len(missions))
-	}
-
-	if missions[0].Content != "invalid-json" {
-		t.Fatalf("Expected content to be 'invalid-json' fallback, got: %s", missions[0].Content)
+	_, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	if err == nil || err.Error() != "invalid JSON payload in agent_missions" {
+		t.Fatalf("Expected 'invalid JSON payload in agent_missions', got error: %v", err)
 	}
 }
 

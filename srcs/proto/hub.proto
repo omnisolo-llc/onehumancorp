@@ -59,6 +59,14 @@ message DelegateTaskRequest {
   Message task = 3;
 }
 
+message MultiAgentHandoff {
+  string session_id = 1;
+  string current_agent_id = 2;
+  string target_agent_id = 3;
+  Message context_snapshot = 4;
+  string reason = 5;
+}
+
 message DelegateTaskResponse {
   bool success = 1;
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -53,10 +54,19 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// ⚡ BOLT: Apply high-concurrency PRAGMAs required for modernc.org/sqlite DSN format
+	connStr := dbPath
+	if !strings.Contains(connStr, "?") {
+		connStr += "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
+	}
+
+	db, err := sql.Open("sqlite", connStr)
 	if err != nil {
 		return nil, err
 	}
+
+	// Required to mitigate SQLite "database is locked" errors under high concurrency
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -167,8 +177,8 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 
 			var msg Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				// fallback: raw string is considered invalid JSON payload
+				return errors.New("invalid JSON payload in agent_missions")
 			} else {
 				if msg.ID == "" {
 					msg.ID = id

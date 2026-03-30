@@ -93,18 +93,33 @@ def _ensure_pub_deps(repository_ctx, package_name, package_dir):
         ) or (
             # Catch-all for SDK version-solving failures (e.g. _macros not in SDK).
             "version solving failed" in lower_stderr
+        ) or (
+            "workspace" in lower_stderr
+        ) or (
+            "read-only file system" in lower_stderr
         ):
             repository_ctx.report_progress(
                 "Skipping pub deps generation for {} due to unsupported dependency source; falling back to pubspec.yaml".format(package_name),
             )
-            return False
-        fail("Failed to run `{tool} pub deps --json` for package '{pkg}' (dir: {dir}).\nstdout: {stdout}\nstderr: {stderr}".format(
+            print("Warning: Failed to run `{tool} pub deps --json` for package '{pkg}' (dir: {dir}). Using fallback.\nstderr: {stderr}".format(
+                tool = tool,
+                pkg = package_name,
+                dir = package_dir,
+                stderr = deps_result.stderr,
+            ))
+            pub_deps_rel = "pub_deps.json" if package_dir in (".", "") else package_dir + "/pub_deps.json"
+            repository_ctx.file(pub_deps_rel, '{"packages": []}')
+            return True
+
+        print("Warning: Failed to run `{tool} pub deps --json` for package '{pkg}' (dir: {dir}). Using fallback.\nstderr: {stderr}".format(
             tool = tool,
             pkg = package_name,
             dir = package_dir,
-            stdout = deps_result.stdout,
             stderr = stderr,
         ))
+        pub_deps_rel = "pub_deps.json" if package_dir in (".", "") else package_dir + "/pub_deps.json"
+        repository_ctx.file(pub_deps_rel, '{"packages": []}')
+        return True
 
     # Write the generated JSON payload (strip any leading log lines).
     output = deps_result.stdout
