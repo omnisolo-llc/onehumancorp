@@ -18,92 +18,75 @@ filegroup(
     visibility = ["//srcs/app:__pkg__"],
 )
 
+# All service sources in ONE library → single pub-prepare action instead of
+# one per service file.  This eliminates the 5-step dependency chain.
 flutter_library(
-    name = "settings_service",
-    srcs = ["settings_service.dart"],
+    name = "services_lib",
+    srcs = glob(
+        ["*.dart"],
+        exclude = ["*_test.dart"],
+    ),
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         "//srcs/app/lib/models:models_lib",
-        "@flutter_sdk//flutter/packages/flutter",
-        "@pub_flutter_riverpod//:flutter_riverpod",
-        "@pub_shared_preferences//:shared_preferences",
-    ],
-)
-
-flutter_library(
-    name = "auth_service",
-    srcs = ["auth_service.dart"],
-    pubspec = "//srcs/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        ":settings_service",
-        "@flutter_sdk//flutter/packages/flutter",
-        "@pub_flutter_riverpod//:flutter_riverpod",
-        "@pub_http//:http",
-        "@pub_shared_preferences//:shared_preferences",
-    ],
-)
-
-flutter_library(
-    name = "local_manager_service",
-    srcs = ["local_manager_service.dart"],
-    pubspec = "//srcs/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        ":settings_service",
-        "@flutter_sdk//flutter/packages/flutter",
-        "@pub_flutter_riverpod//:flutter_riverpod",
-    ],
-)
-
-flutter_library(
-    name = "centrifuge_service",
-    srcs = ["centrifuge_service.dart"],
-    pubspec = "//srcs/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        ":auth_service",
         "@flutter_sdk//flutter/packages/flutter",
         "@pub_flutter_riverpod//:flutter_riverpod",
         "@pub_centrifuge//:centrifuge",
-    ],
-)
-
-flutter_library(
-    name = "api_service",
-    srcs = ["api_service.dart"],
-    pubspec = "//srcs/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        ":auth_service",
-        "//srcs/app/lib/models:models_lib",
-        "@flutter_sdk//flutter/packages/flutter",
-        "@pub_flutter_riverpod//:flutter_riverpod",
         "@pub_http//:http",
+        "@pub_shared_preferences//:shared_preferences",
     ],
 )
 
+# Keep individual service libraries as aliases for backward compatibility
+# (they're needed in tests that want minimal embeds, but since services are
+# small, keeping them pointing to services_lib is fine).
+alias(
+    name = "api_service",
+    actual = ":services_lib",
+)
+
+alias(
+    name = "auth_service",
+    actual = ":services_lib",
+)
+
+alias(
+    name = "centrifuge_service",
+    actual = ":services_lib",
+)
+
+alias(
+    name = "local_manager_service",
+    actual = ":services_lib",
+)
+
+alias(
+    name = "settings_service",
+    actual = ":services_lib",
+)
+
+# ── Test-only aggregate library ───────────────────────────────────────────────
+# services_lib + mocktail for tests that need mock support.
+
 flutter_library(
-    name = "services_lib",
+    name = "services_for_tests",
     srcs = [],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
-        ":api_service",
-        ":auth_service",
-        ":centrifuge_service",
-        ":local_manager_service",
-        ":settings_service",
+        ":services_lib",
+        "@pub_mocktail//:mocktail",
     ],
 )
 
 SERVICE_TESTS = glob(["*_test.dart"])
+
 [
     flutter_test(
         name = file.replace(".dart", ""),
         srcs = [file],
-        embed = ["//srcs/app:app_lib"],
+        embed = [":services_for_tests"],
         test_files = [file],
         workspace_pubspec = "//:pubspec.yaml",
     )
