@@ -1,0 +1,6 @@
+agent_id: pm-1
+status: healthy
+last_heartbeat: $(date)
+metrics:
+  cpu: "10m"
+  memory: "32Mi"
