@@ -713,6 +713,13 @@ func (h *Hub) FireAgent(id string) {
 	delete(h.inbox, id)
 }
 
+var notifyChannelsPool = sync.Pool{
+	New: func() interface{} {
+		s := make([]chan struct{}, 0, 16)
+		return &s
+	},
+}
+
 // Publish validates and routes a message to a direct recipient, a meeting room, or both.
 //
 //   - message: Message; The event payload containing routing headers and content.
@@ -736,6 +743,9 @@ func (h *Hub) Publish(message Message) error {
 	h.mu.RUnlock()
 
 	h.mu.Lock()
+	notifyChannelsPtr := notifyChannelsPool.Get().(*[]chan struct{})
+	notifyChannels := (*notifyChannelsPtr)[:0]
+
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
@@ -746,10 +756,7 @@ func (h *Hub) Publish(message Message) error {
 
 		subs := h.subs[message.ToAgent]
 		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
-			}
+			notifyChannels = append(notifyChannels, subs[i])
 		}
 	}
 
@@ -758,6 +765,10 @@ func (h *Hub) Publish(message Message) error {
 		meeting, ok := h.meetings[message.MeetingID]
 		if !ok {
 			h.mu.Unlock()
+
+			// cleanup
+			*notifyChannelsPtr = notifyChannels
+			notifyChannelsPool.Put(notifyChannelsPtr)
 			return errors.New("meeting room is not registered")
 		}
 
@@ -816,10 +827,7 @@ func (h *Hub) Publish(message Message) error {
 		for _, participant := range meeting.Participants {
 			subs := h.subs[participant]
 			for i := 0; i < len(subs); i++ {
-				select {
-				case subs[i] <- struct{}{}:
-				default:
-				}
+				notifyChannels = append(notifyChannels, subs[i])
 			}
 		}
 	} else {
@@ -827,6 +835,21 @@ func (h *Hub) Publish(message Message) error {
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
+
+	// Perform non-blocking channel sends outside of the critical path lock
+	for _, ch := range notifyChannels {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
+
+	// clear and put back into pool
+	for i := range notifyChannels {
+		notifyChannels[i] = nil
+	}
+	*notifyChannelsPtr = notifyChannels[:0]
+	notifyChannelsPool.Put(notifyChannelsPtr)
 
 	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
@@ -1189,6 +1212,11 @@ var bufferPool = sync.Pool{
 
 var sharedHTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
+		IdleConnTimeout:     90 * time.Second,
+	},
 }
 
 // Reason functionality.
