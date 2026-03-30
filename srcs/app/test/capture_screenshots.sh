@@ -108,10 +108,11 @@ if [[ -n "${runfiles_root}" ]]; then
 fi
 
 if [[ -z "${web_artifacts}" ]]; then
-  run_bazel build //srcs/app:app_web
+  run_bazel build //srcs/app:app
   web_artifacts="$(find_first_dir \
-    "${workspace_root}/bazel-bin/srcs/app/app_web.web_build_artifacts" \
-    "${workspace_root}/bazel-bin/srcs/app/app_web_build_artifacts")"
+    "${workspace_root}/bazel-bin/srcs/app/app.web_build_artifacts" \
+    "${workspace_root}/bazel-bin/srcs/app/app_web_build_artifacts" \
+    "${workspace_root}/bazel-bin/srcs/app/app")"
 fi
 
 if [[ -z "${playwright_package_dir}" ]]; then
