@@ -31,6 +31,13 @@ jobs:
           disk-cache: ${{ runner.os }}-bazel-disk-${{ hashFiles('**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'WORKSPACE', 'MODULE.bazel', '.bazelrc') }}
           repository-cache: true
 
+      - name: Workaround rules_android platform error
+        run: |
+          bazelisk query 'deps(//...)' > /dev/null 2>&1 || true
+          find ~/.cache/bazel -type f -name "helper.bzl" -path "*/external/rules_android++android_sdk_repository_extension+androidsdk/*" -exec sed -i 's/local_config_platform/platforms/' {} + || true
+          # We also want to manually perform the patch logic that we couldn't properly apply in MODULE.bazel.
+          bazelisk query 'deps(//...)' > /dev/null 2>&1 || true
+
       - name: Test
         env:
           BAZEL_DISK_CACHE: ${{ env.BAZEL_DISK_CACHE }}
@@ -47,7 +54,8 @@ jobs:
               --remote_upload_local_results=false \
               --build_event_json_file="" \
               --bes_results_url="" \
-              --bes_backend=""
+              --bes_backend="" \
+              --jobs=200
           else
             bazelisk test //... \
               --test_output=errors \
@@ -58,5 +66,6 @@ jobs:
               --bes_results_url="" \
               --bes_backend="" \
               --remote_upload_local_results=false \
-              --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY
+              --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY \
+              --jobs=200
           fi
