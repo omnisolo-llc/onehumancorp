@@ -28,6 +28,8 @@ spec:
           image: {{ .Values.chatwoot.image }}
           command: ["bundle", "exec", "rails", "db:chatwoot_prepare"]
           securityContext:
+            seccompProfile:
+              type: RuntimeDefault
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
@@ -93,6 +95,8 @@ spec:
           image: {{ .Values.chatwoot.image }}
           command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
           securityContext:
+            seccompProfile:
+              type: RuntimeDefault
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
@@ -176,6 +180,8 @@ spec:
           image: {{ .Values.chatwoot.image }}
           command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
           securityContext:
+            seccompProfile:
+              type: RuntimeDefault
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
