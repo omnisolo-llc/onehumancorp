@@ -1,0 +1,18 @@
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+pkg_tar(
+    name = "security_policies",
+    srcs = [
+        "agent_crd.yaml",
+        "authz_policy.yaml",
+        "policy.yaml",
+    ],
+    extension = "tar.gz",
+    mode = "0644",
+)
+
+sh_test(
+    name = "k8s_security_test",
+    srcs = ["test_k8s_security.sh"],
+)

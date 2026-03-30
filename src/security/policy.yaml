@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Policy
+metadata:
+  name: agent-identity
+spec:
+  rules:
+  - resource: agents
+    verbs: ["get", "list", "watch"]
