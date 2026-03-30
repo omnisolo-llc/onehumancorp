@@ -198,18 +198,21 @@ def _flutter_library_impl(ctx):
 
     # Collect pub_cache directories from all transitive dependencies
     transitive_pub_caches = []
-    transitive_dart_files = []
-    transitive_other_files = []
+    transitive_dart_source_sets = []
+    transitive_other_source_sets = []
     for dep in ctx.attr.deps:
         if FlutterLibraryInfo in dep:
             # Collect transitive pub_caches depset from flutter_library deps
             transitive_pub_caches.append(dep[FlutterLibraryInfo].transitive_pub_caches)
-            transitive_dart_files.extend(dep[FlutterLibraryInfo].dart_sources.to_list())
-            transitive_other_files.extend(dep[FlutterLibraryInfo].other_sources.to_list())
+            transitive_dart_source_sets.append(dep[FlutterLibraryInfo].dart_sources)
+            transitive_other_source_sets.append(dep[FlutterLibraryInfo].other_sources)
         elif DartLibraryInfo in dep:
             # Collect transitive pub_caches depset from dart_library deps
             transitive_pub_caches.append(dep[DartLibraryInfo].transitive_pub_caches)
-            transitive_dart_files.extend(dep[DartLibraryInfo].srcs.to_list())
+            transitive_dart_source_sets.append(dep[DartLibraryInfo].srcs)
+
+    transitive_dart_files = depset(transitive = transitive_dart_source_sets).to_list()
+    transitive_other_files = depset(transitive = transitive_other_source_sets).to_list()
 
     working_dir, _ = create_flutter_working_dir(
         ctx,
@@ -250,8 +253,14 @@ def _flutter_library_impl(ctx):
             pub_deps = pub_deps,
             dart_tool = dart_tool_dir,
             pubspec = pubspec_file,
-            dart_sources = depset(dart_files),
-            other_sources = depset(other_files),
+            dart_sources = depset(
+                direct = dart_files,
+                transitive = transitive_dart_source_sets,
+            ),
+            other_sources = depset(
+                direct = other_files,
+                transitive = transitive_other_source_sets,
+            ),
             transitive_pub_caches = depset(
                 direct = [pub_cache_dir],
                 transitive = transitive_pub_caches,
