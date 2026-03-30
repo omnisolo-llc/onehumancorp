@@ -40,16 +40,18 @@ func TestDelegateSubTask_Success(t *testing.T) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
+	// Look for the newly spawned sub-agent directly by prefix to avoid
+	// non-deterministic map iteration order.
 	var subAgentID string
 	for id := range hub.agents {
 		if strings.HasPrefix(id, "sub-agent-SWE-") {
 			subAgentID = id
-            break
+			break
 		}
 	}
 
 	if subAgentID == "" {
-		t.Fatalf("sub-agent not found")
+		t.Fatalf("no sub-agent with prefix 'sub-agent-SWE-' found; agents: %v", hub.agents)
 	}
 
 	msgs := hub.inbox[subAgentID]
@@ -165,11 +167,18 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
+	// Look for the newly spawned sub-agent directly by prefix to avoid
+	// non-deterministic map iteration order.
 	var subAgentID string
 	for id := range hub.agents {
-		if id != "SYSTEM" {
+		if strings.HasPrefix(id, "sub-agent-QA-") {
 			subAgentID = id
+			break
 		}
+	}
+
+	if subAgentID == "" {
+		t.Fatalf("no sub-agent with prefix 'sub-agent-QA-' found; agents: %v", hub.agents)
 	}
 
 	agent, exists := hub.agents[subAgentID]
