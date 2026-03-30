@@ -1,0 +1,18 @@
+title: "OHC-SIP Evolution: MCP-Driven Multi-Agent Workspace Isolation"
+description: >
+  Based on market analysis of OpenClaw, Claude Code, and OpenCode, the OHC Swarm lacks
+  a unified "Workspace Isolation" and "Contextual Grounding" feature for sub-agents.
+
+  Market Delta:
+  - Claude Code uses `CLAUDE.md` and MCP for deep context.
+  - OpenCode uses `AGENTS.md` and project-level grounding.
+  - OpenClaw uses per-agent/workspace sessions with multi-channel gateways.
+
+  OHC Unfair Advantage:
+  Combine OHC's existing K8s/Bazel multi-tenancy with a new "Workspace Isolation Protocol"
+  that uses MCP (Model Context Protocol) to dynamically mount `AGENTS.md` and role-specific
+  memory per sub-agent. This ensures a Lead Agent can spawn parallel sub-agents (like Claude Code)
+  where each sub-agent operates in a strictly isolated context (like OpenClaw workspaces),
+  driven by the shared OHC-SIP database.
+
+action: validate_with_product_architecture

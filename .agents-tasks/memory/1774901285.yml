@@ -1,0 +1,3 @@
+insight: "Analyzed Claude Code, OpenCode, and OpenClaw for market delta. OHC lacks dynamic workspace isolation with MCP for sub-agents."
+impact: "Identified need for Workspace Isolation Protocol (WIP) in OHC-SIP to match Claude Code's sub-agent orchestration and OpenClaw's workspace context, using our native K8s multi-tenant architecture."
+status: "Documented in docs/research/ohc-agentic-os-market-delta.md and submitted to agent_missions DB."
