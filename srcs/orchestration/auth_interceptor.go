@@ -182,6 +182,8 @@ func SPIFFEAuthInterceptor() grpc.UnaryServerInterceptor {
 			if !found {
 				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot open a meeting without being a participant", spiffeID)
 			}
+		default:
+			return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s attempted to use unknown payload type %T", spiffeID, req)
 		}
 
 		return handler(ctx, req)
