@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"github.com/onehumancorp/mono/srcs/minimax"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
@@ -21,9 +22,9 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.APIURL
+	minimax.APIURL = ts.URL
+	defer func() { minimax.APIURL = originalURL }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
@@ -128,10 +129,10 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
-	client := NewMinimaxClient("test")
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
-	defer func() { minimaxAPIURL = originalURL }()
+	client := minimax.NewClient("test")
+	originalURL := minimax.APIURL
+	minimax.APIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
+	defer func() { minimax.APIURL = originalURL }()
 
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
@@ -224,9 +225,9 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.APIURL
+	minimax.APIURL = ts.URL
+	defer func() { minimax.APIURL = originalURL }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")

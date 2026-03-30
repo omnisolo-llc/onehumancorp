@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"github.com/onehumancorp/mono/srcs/minimax"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
@@ -122,11 +123,11 @@ func BenchmarkReason(b *testing.B) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.APIURL
+	minimax.APIURL = ts.URL
+	defer func() { minimax.APIURL = originalURL }()
 
-	client := NewMinimaxClient("test-key")
+	client := minimax.NewClient("test-key")
 	ctx := context.Background()
 
 	b.ResetTimer()

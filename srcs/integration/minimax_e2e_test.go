@@ -16,6 +16,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"github.com/onehumancorp/mono/srcs/minimax"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/orchestration"
@@ -82,7 +83,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	}
 
 	// SWE uses Minimax to reason about the task and produce an implementation plan.
-	client := orchestration.NewMinimaxClient(key)
+	client := minimax.NewClient(key)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -136,6 +137,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // After the three-turn exchange the test asserts that the meeting transcript
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
+	minimax.DefaultBreaker.Reset()
 	key := minimaxAPIKey()
 	if key == "" {
 		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax meeting-room E2E test")
@@ -169,7 +171,7 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		[]string{"pm-meet", "swe-meet", "qa-meet"},
 	)
 
-	client := orchestration.NewMinimaxClient(key)
+	client := minimax.NewClient(key)
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
@@ -291,7 +293,7 @@ func TestMinimaxClientInitializedWithEnvKey(t *testing.T) {
 		t.Fatal("expected MINIMAX_API_KEY to be set by t.Setenv")
 	}
 
-	client := orchestration.NewMinimaxClient(key)
+	client := minimax.NewClient(key)
 	if client == nil {
 		t.Fatal("NewMinimaxClient returned nil")
 	}
