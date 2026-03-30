@@ -683,6 +683,27 @@ def _flutter_test_impl(ctx):
         (_compute_relative_to_package(ctx, f), f)
         for f in ctx.files.srcs
     ]
+    if library_info.pubspec:
+        test_file_mappings.append(("pubspec.yaml", library_info.pubspec))
+    
+    # Try to find a lockfile in the library's files if it exists
+    pubspec_lock = None
+    for f in library_target[DefaultInfo].files.to_list():
+        if f.basename == "pubspec.lock":
+            pubspec_lock = f
+            break
+    if pubspec_lock:
+        test_file_mappings.append(("pubspec.lock", pubspec_lock))
+
+    # Try to find a lockfile for the workspace root if specified
+    root_pubspec_lock = None
+    if ctx.file.workspace_pubspec:
+        # We look for a pubspec.lock in the same directory as workspace_pubspec
+        # Since Bazel might not have it as a direct input, we check the library's files
+        for f in library_target[DefaultInfo].files.to_list():
+            if f.basename == "pubspec.lock" and f.dirname == ctx.file.workspace_pubspec.dirname:
+                root_pubspec_lock = f
+                break
 
     prepared_workspace = ctx.actions.declare_directory(ctx.label.name + "_test_workspace")
 
@@ -727,8 +748,14 @@ done
 """
     copy_script = copy_script_template
 
+    extra_inputs = []
+    if library_info.pubspec:
+        extra_inputs.append(library_info.pubspec)
+    if pubspec_lock:
+        extra_inputs.append(pubspec_lock)
+
     ctx.actions.run_shell(
-        inputs = [library_info.workspace] + ctx.files.srcs,
+        inputs = [library_info.workspace] + ctx.files.srcs + extra_inputs,
         outputs = [prepared_workspace],
         arguments = [
             prepared_workspace.path,
@@ -810,10 +837,21 @@ if [ ! -d "$WORKSPACE_ROOT" ]; then
     fi
 fi
 
+set +e
 WORKSPACE_ABS="$(resolve_path "{workspace_short}" "{workspace_path}")"
 PUB_CACHE_ABS="$(resolve_path "{pub_cache_short}" "{pub_cache_path}")"
 PUB_DEPS_ABS="$(resolve_path "{pub_deps_short}" "{pub_deps_path}")"
 DART_TOOL_ABS="$(resolve_path "{dart_tool_short}" "{dart_tool_path}")"
+PUBSPEC_ABS="$(resolve_path "{pubspec_short}" "{pubspec_path}")"
+LOCKFILE_ABS="$(resolve_path "{lockfile_short}" "{lockfile_path}")"
+ROOT_PUBSPEC_ABS="$(resolve_path "{root_pubspec_short}" "{root_pubspec_path}")"
+ROOT_LOCKFILE_ABS="$(resolve_path "{root_lockfile_short}" "{root_lockfile_path}")"
+set -e
+
+if [ -z "$WORKSPACE_ABS" ]; then
+    echo "✗ Failed to resolve workspace source: {workspace_short}" >&2
+    exit 1
+fi
 
 if [[ -z "${{TEST_TMPDIR:-}}" ]]; then
     echo "✗ TEST_TMPDIR is not set"
@@ -831,26 +869,49 @@ mkdir -p "$LOG_ROOT"
 # Create a writable RUNTIME_WORKSPACE via deep copying instead of symlinks.
 rm -rf "$RUNTIME_WORKSPACE"
 mkdir -p "$RUNTIME_WORKSPACE"
-copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
 
 # If we are in a workspace, we must cd into the package directory
 PACKAGE_DIR="{package_dir}"
 
-# Ensure pubspec.yaml and pubspec.lock are present in the runtime root.
-# Flutter REQUIRES a pubspec.yaml in the project root to run tests.
-if [ ! -f "$RUNTIME_WORKSPACE/pubspec.yaml" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.yaml" ]; then
-    cp "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.yaml" "$RUNTIME_WORKSPACE/pubspec.yaml"
-    chmod u+w "$RUNTIME_WORKSPACE/pubspec.yaml" 2>/dev/null || true
-fi
-if [ ! -f "$RUNTIME_WORKSPACE/pubspec.lock" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.lock" ]; then
-    cp "$RUNTIME_WORKSPACE/$PACKAGE_DIR/pubspec.lock" "$RUNTIME_WORKSPACE/pubspec.lock"
-    chmod u+w "$RUNTIME_WORKSPACE/pubspec.lock" 2>/dev/null || true
+if [ -n "$PACKAGE_DIR" ]; then
+    # In workspace mode, the root pubspec goes to the top,
+    # and the package sources go to its relative subdirectory.
+    mkdir -p "$RUNTIME_WORKSPACE/$PACKAGE_DIR"
+    copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE/$PACKAGE_DIR"
+    
+    if [ -n "$ROOT_PUBSPEC_ABS" ] && [ -f "$ROOT_PUBSPEC_ABS" ]; then
+        cp "$ROOT_PUBSPEC_ABS" "$RUNTIME_WORKSPACE/pubspec.yaml"
+        chmod u+rw "$RUNTIME_WORKSPACE/pubspec.yaml" 2>/dev/null || true
+        if [ -n "$ROOT_LOCKFILE_ABS" ] && [ -f "$ROOT_LOCKFILE_ABS" ]; then
+            cp "$ROOT_LOCKFILE_ABS" "$RUNTIME_WORKSPACE/pubspec.lock"
+            chmod u+rw "$RUNTIME_WORKSPACE/pubspec.lock" 2>/dev/null || true
+        fi
+        echo "✓ Mirrored root workspace pubspec to $RUNTIME_WORKSPACE" | tee -a "$TEST_LOG"
+    fi
+else
+    # Standard single-package mode
+    copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
 fi
 
-# Create RUNTIME_PUB_CACHE via deep copying instead of symlinks.
-mkdir -p "$RUNTIME_PUB_CACHE"
-if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ]; then
-    copy_tree "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
+# Ensure pubspec.yaml and pubspec.lock are present in the runtime root (of the package)
+# Flutter REQUIRES a pubspec.yaml in the project root to run tests.
+# If in workspace mode, this is RUNTIME_WORKSPACE/PACKAGE_DIR/pubspec.yaml
+PKG_ROOT="$RUNTIME_WORKSPACE"
+if [ -n "$PACKAGE_DIR" ]; then
+    PKG_ROOT="$RUNTIME_WORKSPACE/$PACKAGE_DIR"
+fi
+
+if [ ! -f "$PKG_ROOT/pubspec.yaml" ]; then
+    if [ -n "$PUBSPEC_ABS" ] && [ -f "$PUBSPEC_ABS" ]; then
+        cp "$PUBSPEC_ABS" "$PKG_ROOT/pubspec.yaml"
+    fi
+    chmod u+w "$PKG_ROOT/pubspec.yaml" 2>/dev/null || true
+fi
+if [ ! -f "$PKG_ROOT/pubspec.lock" ]; then
+    if [ -n "$LOCKFILE_ABS" ] && [ -f "$LOCKFILE_ABS" ]; then
+        cp "$LOCKFILE_ABS" "$PKG_ROOT/pubspec.lock"
+    fi
+    chmod u+w "$PKG_ROOT/pubspec.lock" 2>/dev/null || true
 fi
 
 if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
@@ -986,60 +1047,16 @@ export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
 export PATH="$FLUTTER_BIN_DIR:$PATH"
 
-# Adjust package_config.json paths for test runtime
-# The build-time package_config.json already exists in .dart_tool/
-# We just need to ensure the paths match the RUNTIME_PUB_CACHE.
-echo "Adjusting package_config.json for test runtime..." | tee -a "$TEST_LOG"
-pushd "$RUNTIME_WORKSPACE" >/dev/null
-
-# If we are in a workspace, we must cd into the package directory
-PACKAGE_DIR="{package_dir}"
-
-# Ensure pubspec.yaml and pubspec.lock are present in the runtime root.
-# Flutter REQUIRES a pubspec.yaml in the project root to run tests.
-if [ ! -f "pubspec.yaml" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$PACKAGE_DIR/pubspec.yaml" ]; then
-    echo "Mirroring $PACKAGE_DIR/pubspec.yaml to root..." | tee -a "$TEST_LOG"
-    cp "$PACKAGE_DIR/pubspec.yaml" "pubspec.yaml"
-    chmod u+w "pubspec.yaml" 2>/dev/null || true
-fi
-if [ ! -f "pubspec.lock" ] && [ -n "$PACKAGE_DIR" ] && [ -f "$PACKAGE_DIR/pubspec.lock" ]; then
-    cp "$PACKAGE_DIR/pubspec.lock" "pubspec.lock"
-    chmod u+w "pubspec.lock" 2>/dev/null || true
+# Create RUNTIME_PUB_CACHE via deep copying instead of symlinks.
+mkdir -p "$RUNTIME_PUB_CACHE"
+if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ]; then
+    copy_tree "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
 fi
 
-PUSHED_PKG=0
-if [ -n "$PACKAGE_DIR" ]; then
-    if pushd "$PACKAGE_DIR" >/dev/null 2>&1; then
-        PUSHED_PKG=1
-        echo "Entered package directory: $(pwd)" | tee -a "$TEST_LOG"
-    else
-        echo "⚠ Warning: Could not enter $PACKAGE_DIR" | tee -a "$TEST_LOG"
-    fi
+if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
+    mkdir -p "$PKG_ROOT/.dart_tool"
+    copy_tree "$DART_TOOL_ABS" "$PKG_ROOT/.dart_tool"
 fi
-
-if [ -f .dart_tool/package_config.json ]; then
-    # The build action already generates a correct package_config.json
-    # relative to the workspace root. Since we've symlinked everything
-    # in the same relative structure, it should just work!
-    # No need to run 'pub get --offline' again.
-    echo "✓ Using existing package_config.json" | tee -a "$TEST_LOG"
-else
-    # Fallback only if missing (should not happen with our rules)
-    echo "⚠ package_config.json missing, running offline pub get..." | tee -a "$TEST_LOG"
-    PUB_GET_OUT="$LOG_ROOT/flutter_pub_get.log"
-    if "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_OUT" 2>&1; then
-        echo "✓ Package config regenerated successfully (offline)" | tee -a "$TEST_LOG"
-    else
-        echo "✗ flutter pub get --offline failed" | tee -a "$TEST_LOG"
-        cat "$PUB_GET_OUT" | tee -a "$TEST_LOG"
-        if [ "$PUSHED_PKG" -eq 1 ]; then popd >/dev/null; fi
-        popd >/dev/null
-        exit 1
-    fi
-fi
-
-if [ "$PUSHED_PKG" -eq 1 ]; then popd >/dev/null; fi
-popd >/dev/null
 
 CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test")
 if [ "{coverage_flag}" = "true" ]; then
@@ -1116,6 +1133,14 @@ exit "$RESULT"
         pub_cache_path = library_info.pub_cache.path,
         pub_deps_path = library_info.pub_deps.path,
         dart_tool_path = library_info.dart_tool.path,
+        pubspec_short = library_info.pubspec.short_path if library_info.pubspec else "",
+        pubspec_path = library_info.pubspec.path if library_info.pubspec else "",
+        lockfile_short = pubspec_lock.short_path if pubspec_lock else "",
+        lockfile_path = pubspec_lock.path if pubspec_lock else "",
+        root_pubspec_short = ctx.file.workspace_pubspec.short_path if ctx.file.workspace_pubspec else "",
+        root_pubspec_path = ctx.file.workspace_pubspec.path if ctx.file.workspace_pubspec else "",
+        root_lockfile_short = root_pubspec_lock.short_path if root_pubspec_lock else "",
+        root_lockfile_path = root_pubspec_lock.path if root_pubspec_lock else "",
         flutter_bin = flutter_bin,
         test_patterns = test_patterns_literal,
         coverage_flag = "true" if ctx.attr.coverage else "false",
@@ -1140,7 +1165,8 @@ exit "$RESULT"
                     library_info.pub_cache,
                     library_info.pub_deps,
                     library_info.dart_tool,
-                ],
+                ] + ([ctx.file.workspace_pubspec] if ctx.file.workspace_pubspec else []) +
+                ([root_pubspec_lock] if root_pubspec_lock else []),
             ),
         ),
     ]
