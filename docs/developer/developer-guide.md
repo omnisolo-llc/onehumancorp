@@ -20,7 +20,7 @@ Create a `.env` file in the root directory (see [Environment Variables](#environ
 ```bash
 docker compose -f deploy/docker-compose.yml up --build
 ```
-Navigate to `http://localhost:8081` to view the dashboard.
+Navigate to `127.0.0.1:8081` to view the dashboard.
 
 | Tool | Minimum Version | Install |
 |------|----------------|---------|
@@ -181,22 +181,22 @@ docker compose -f deploy/docker-compose.yml up --build
 Services:
 | Service | Port | URL |
 |---------|------|-----|
-| Backend | 8080 | http://localhost:8080 |
-| Frontend | 8081 | http://localhost:8081 |
+| Backend | 8080 | 127.0.0.1:8080 |
+| Frontend | 8081 | 127.0.0.1:8081 |
 | Redis | 6379 | redis://localhost:6379 |
 | PostgreSQL | 5432 | postgres://localhost:5432/ohc |
 
 ### 2 — Seed demo data
 
 ```bash
-curl -s -X POST http://localhost:8080/api/dev/seed \
+curl -s -X POST 127.0.0.1:8080/api/dev/seed \
   -H 'Content-Type: application/json' \
   -d '{"scenario":"launch-readiness"}' | jq .
 ```
 
 ### 3 — Open the dashboard
 
-Navigate to [http://localhost:8081](http://localhost:8081).
+Navigate to `127.0.0.1:8081`.
 
 ### 4 — Stop
 
@@ -229,7 +229,7 @@ docker compose -f deploy/docker-compose.yml down -v
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `FRONTEND_ADDR` | `:8081` | HTTP listen address |
-| `BACKEND_URL` | `http://localhost:8080` | Upstream backend for `/api/*` proxy |
+| `BACKEND_URL` | `127.0.0.1:8080` | Upstream backend for `/api/*` proxy |
 | `FRONTEND_STATIC_DIR` | `./dist` | Path to built React static files |
 
 ---

@@ -9,7 +9,7 @@ One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It 
 - For local development: Docker and Docker Compose installed.
 
 ## Setup
-1. **Login**: Navigate to your platform URL (e.g., `http://localhost:8081`).
+1. **Login**: Navigate to your platform URL (e.g., `127.0.0.1:8081`).
 2. **Initial Configuration**: Follow the on-screen prompts to set your Organisation Name and Domain.
 3. **Seed Data (Optional)**: If you are in a development environment, you can seed demo data by clicking "Seed Demo" in the settings menu.
 
@@ -23,7 +23,7 @@ One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It 
 
 ## Accessing the Platform
 
-Open your browser and navigate to the platform URL provided by your administrator (default: **http://localhost:8081** for local installations).
+Open your browser and navigate to the platform URL provided by your administrator (default: **127.0.0.1:8081** for local installations).
 
 ---
 
