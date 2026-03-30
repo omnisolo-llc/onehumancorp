@@ -40,7 +40,7 @@ func Middleware(store *Store) func(http.Handler) http.Handler {
 
 			claims, err := store.ValidateToken(token)
 			if err != nil {
-				jsonError(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
+				jsonError(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
 
@@ -127,7 +127,6 @@ func OrganizationIDFromContext(ctx context.Context) string {
 	}
 	return ""
 }
-
 
 // ClaimsContextKeyForTest provides domain-specific context and typed constraints for ClaimsContextKeyForTest operations across the application.
 // Accepts no parameters.

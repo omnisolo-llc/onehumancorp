@@ -249,6 +249,7 @@ func (r *TenantRegistry) HandleOrgList(w http.ResponseWriter, req *http.Request)
 //	registry := handler.(*dashboard.TenantRegistry)
 //	registry.ProvisionOrg("org-1", "Acme Corp", "acme.com")
 //	http.ListenAndServe(":8080", handler)
+//
 // Accepts parameters: authStore *auth.Store, factory TenantFactory (No Constraints).
 // Returns http.Handler.
 // Produces no errors.

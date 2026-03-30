@@ -121,7 +121,6 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 	}
 }
 
-
 func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
@@ -140,9 +139,9 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 
 	invokeTool := func(toolID string) *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  toolID,
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"toolId": toolID,
+			"action": "test_action",
+			"params": json.RawMessage(`{"integrationId": "123"}`),
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -158,7 +157,6 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 		}
 	})
 }
-
 
 func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
@@ -262,7 +260,7 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 
 	app.mu.Lock()
 	app.rateLimitStates[rateLimitKey] = &RateLimitState{
-		Failures:    3, // Set to max threshold
+		Failures:    3,                              // Set to max threshold
 		LastFailure: time.Now().Add(-1 * time.Hour), // Ready for next try, backoff bypassed
 		Backoff:     10 * time.Second,
 	}
@@ -292,10 +290,10 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 	tracker := billing.NewTracker(prices)
 
 	app := &Server{
-		org:             org,
-		hub:             hub,
-		tracker:         tracker,
-		integReg:        integrations.NewRegistry(),
+		org:      org,
+		hub:      hub,
+		tracker:  tracker,
+		integReg: integrations.NewRegistry(),
 		// Explicitly set to nil to test nil map initialization coverage
 		rateLimitStates: nil,
 		dynamicMCPTools: []MCPTool{},

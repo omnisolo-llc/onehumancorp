@@ -1,11 +1,11 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"bytes"
 )
 
 func TestHandleLogin_IssueTokenError(t *testing.T) {

@@ -154,7 +154,6 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 	}
 }
 
-
 func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 	// Test the fallback to first registered tenant for unauthenticated requests
 	reg := newTestRegistry()
