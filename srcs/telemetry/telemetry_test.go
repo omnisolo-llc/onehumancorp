@@ -326,6 +326,10 @@ func TestLogAgentExecution(t *testing.T) {
 	slog.SetDefault(slog.New(handler))
 	defer slog.SetDefault(originalLogger)
 
+	originalVerbosity := Verbosity
+	Verbosity = 2
+	defer func() { Verbosity = originalVerbosity }()
+
 	ctx := context.Background()
 	LogAgentExecution(ctx, "agent-1", "role-1", "api-1", "event-1", "content-1")
 
@@ -338,6 +342,14 @@ func TestLogAgentExecution(t *testing.T) {
 	}
 	if !bytes.Contains(buf.Bytes(), []byte("role=role-1")) {
 		t.Errorf("Expected output to contain 'role=role-1', got %q", output)
+	}
+
+	// Test verbosity < 2
+	buf.Reset()
+	Verbosity = 1
+	LogAgentExecution(ctx, "agent-1", "role-1", "api-1", "event-1", "content-1")
+	if buf.Len() != 0 {
+		t.Errorf("Expected no output when verbosity is < 2, got %q", buf.String())
 	}
 }
 
