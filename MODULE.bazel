@@ -139,6 +139,10 @@ use_repo(platforms_host, "host_platform")
 
 bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 
+# Force rules_android to 0.7.1 (fixes @local_config_platform → @platforms//host migration
+# for Bazel 9 compatibility; 0.6.4 was pulled in transitively via protobuf→rules_kotlin)
+bazel_dep(name = "rules_android", version = "0.7.1")
+
 buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 buildbuddy.gcc_toolchain()
 use_repo(buildbuddy, "buildbuddy_toolchain")

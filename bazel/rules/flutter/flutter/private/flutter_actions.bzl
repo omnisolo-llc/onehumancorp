@@ -309,15 +309,46 @@ cd "$WORKSPACE_DIR_ABS"
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
 PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
+_PUB_DEPS_SUCCESS=0
 if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
-    :
+    _PUB_DEPS_SUCCESS=1
 else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
-        if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
-            cat "$PUB_DEPS_ERR" >&2 || true
-            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
+        if "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
+            _PUB_DEPS_SUCCESS=1
         fi
+    fi
+fi
+if [ "$_PUB_DEPS_SUCCESS" = "0" ]; then
+    # Check for recoverable errors: workspace resolution, missing path deps, SDK version mismatch.
+    # In these cases fall back to scanning the assembled pub cache so compilation can proceed.
+    _RECOVERABLE=0
+    if [ -f "$PUB_DEPS_ERR" ] && grep -qiE "resolution.*workspace|workspace root|path.*doesn.t exist|could not find package|version solving failed|sdk.*doesn.t match|dart sdk version" "$PUB_DEPS_ERR"; then
+        _RECOVERABLE=1
+    fi
+    if [ "$_RECOVERABLE" = "1" ]; then
+        echo "⚠ pub deps --json failed with recoverable error; generating pub_deps.json from pub cache" >&2
+        cat "$PUB_DEPS_ERR" >&2 || true
+        export FALLBACK_PACKAGE_NAME="$PACKAGE_NAME"
+        export FALLBACK_PUB_CACHE="$PUB_CACHE_DIR_ABS"
+        "$PYTHON_BIN" <<'FALLBACK_PY'
+import os, json
+pkg_name = os.environ.get("FALLBACK_PACKAGE_NAME", "unknown")
+cache_root = os.environ.get("FALLBACK_PUB_CACHE", "")
+packages = [{{"name": pkg_name, "source": "root", "version": "0.0.0", "kind": "root"}}]
+if cache_root:
+    hosted_dir = os.path.join(cache_root, "hosted", "pub.dev")
+    if os.path.isdir(hosted_dir):
+        for pkg_ver in sorted(os.listdir(hosted_dir)):
+            if "-" in pkg_ver:
+                idx = pkg_ver.rfind("-")
+                name = pkg_ver[:idx]
+                version = pkg_ver[idx + 1:]
+                packages.append({{"name": name, "source": "hosted", "version": version, "kind": "transitive"}})
+with open("pub_deps.json", "w") as f:
+    json.dump({{"packages": packages}}, f, indent=2)
+print("Generated fallback pub_deps.json with", len(packages), "packages")
+FALLBACK_PY
     else
         cat "$PUB_DEPS_ERR" >&2 || true
         echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
