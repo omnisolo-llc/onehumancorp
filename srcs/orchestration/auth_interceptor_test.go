@@ -1173,3 +1173,30 @@ func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 		t.Fatalf("Expected PermissionDenied, got: %v", err)
 	}
 }
+
+func TestSPIFFEAuthInterceptor_UnknownPayload_Rejects(t *testing.T) {
+	interceptor := SPIFFEAuthInterceptor()
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
+
+	// Create a mock struct that is not in the type switch
+	type unknownReq struct {
+		Data string
+	}
+	req := &unknownReq{Data: "exploit"}
+
+	_, err := interceptor(ctx, req, nil, func(ctx context.Context, req interface{}) (interface{}, error) {
+		return nil, nil
+	})
+
+	if err == nil {
+		t.Fatalf("Expected permission denied error for unknown payload type, but request was allowed")
+	}
+
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.PermissionDenied {
+		t.Fatalf("Expected PermissionDenied, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "unsupported request type in SPIFFE authorization interceptor") {
+		t.Fatalf("Expected specific error message, got: %v", err)
+	}
+}
