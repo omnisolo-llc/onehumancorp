@@ -69,7 +69,7 @@ void main() {
     testWidgets('renders email/password fields and sign-in button',
         (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.byType(TextFormField), findsWidgets);
       expect(find.text('Sign In'), findsOneWidget);
@@ -78,7 +78,7 @@ void main() {
     testWidgets('shows validation error when form submitted empty',
         (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
@@ -127,7 +127,7 @@ void main() {
           apiServiceProvider.overrideWithValue(null),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       // With null API, the FutureProvider returns {} immediately (no loading).
       expect(find.byType(Scaffold), findsOneWidget);
     });
@@ -181,7 +181,7 @@ void main() {
         const AgentsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -241,7 +241,7 @@ void main() {
         const MeetingsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -278,7 +278,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
   });
@@ -291,7 +291,7 @@ void main() {
         const ChannelsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -333,7 +333,7 @@ void main() {
         const AiConfigScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -374,7 +374,7 @@ void main() {
         const SkillsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -415,7 +415,7 @@ void main() {
         const LogsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -447,7 +447,7 @@ void main() {
         const SecurityScreen(),
         overrides: [apiServiceProvider.overrideWithValue(null)],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 

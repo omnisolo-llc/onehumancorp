@@ -168,7 +168,7 @@ void main() {
     testWidgets('shows password validation error when only password is empty',
         (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'test@example.com');
@@ -181,7 +181,7 @@ void main() {
     testWidgets('shows email validation error for invalid email',
         (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'notanemail');
@@ -480,7 +480,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -501,7 +501,7 @@ void main() {
               )),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
   });
