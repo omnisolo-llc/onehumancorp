@@ -67,4 +67,13 @@ srcs/frontend/coverage/
 .vscode/
 *.tgz
 *.tar.gz
-Chart.lock
+Chart.lock.bazelrc.local
+patch_*.py
+build.log
+docs/app/
+patch_*
+*.log
+docs/app/
+test.log
+build.log
+docs/app/*

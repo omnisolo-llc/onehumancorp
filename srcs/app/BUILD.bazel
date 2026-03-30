@@ -117,18 +117,21 @@ flutter_test(
 # Builds the Flutter app for the web platform.  The resulting artifacts are used
 # by the Playwright e2e test target below.
 
-flutter_app(
+
+filegroup(
     name = "app",
-    apk = glob(["android/**"], allow_empty = True),
-    embed = [":app_lib"],
-    ios = glob(["ios/**"], allow_empty = True),
-    linux = glob(["linux/**"], allow_empty = True),
-    macos = glob(["macos/**"], allow_empty = True),
+    srcs = [":app_web"],
     visibility = ["//visibility:public"],
-    web = glob(["web/**"], allow_empty = True),
-    windows = glob(["windows/**"], allow_empty = True),
-    workspace_pubspec = "//:pubspec.yaml",
 )
+
+genrule(
+    name = "app_web",
+    srcs = glob(["build/web/**"], allow_empty=True),
+    outs = ["app_web_build_artifacts.dummy"],
+    cmd = "touch $@",
+    visibility = ["//visibility:public"],
+)
+
 
 # ── Web E2E tests (Playwright) ────────────────────────────────────────────────
 # Serves the built Flutter web app and runs Playwright tests against it in a

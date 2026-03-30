@@ -10,7 +10,7 @@ build --disk_cache=~/.cache/bazel-disk-cache
 # For tests under --config=remote we override this to download all outputs,
 # because many test wrappers execute local helper binaries/scripts generated
 # during the build phase.
-build:remote --remote_download_all
+build:remote --remote_download_toplevel
 
 # Show test output only on failure
 test --test_output=errors

@@ -63,14 +63,40 @@ const profiles = [
   },
 ];
 
+const routes = [
+  { name: "dashboard", path: "/dashboard" },
+  { name: "agents", path: "/agents" },
+  { name: "meetings", path: "/meetings" },
+  { name: "chat", path: "/chat" },
+  { name: "handoffs", path: "/handoffs" },
+  { name: "cost", path: "/cost" },
+  { name: "scaling", path: "/scaling" },
+  { name: "pipelines", path: "/pipelines" },
+  { name: "integrations", path: "/integrations" },
+  { name: "users", path: "/users" },
+  { name: "channels", path: "/channels" },
+  { name: "ai-config", path: "/ai-config" },
+  { name: "skills", path: "/skills" },
+  { name: "security", path: "/security" },
+  { name: "logs", path: "/logs" },
+  { name: "settings", path: "/settings" },
+  { name: "service", path: "/service" },
+  { name: "wizard", path: "/wizard" },
+  { name: "agent-hire", path: "/agents/hire" }
+];
+
 const browser = await chromium.launch({ headless: true });
 
 try {
   for (const profile of profiles) {
     const context = await browser.newContext(profile.context);
     const page = await context.newPage();
+    const targetDir = path.join(outputRoot, profile.name);
+    await mkdir(targetDir, { recursive: true });
 
-    await page.goto(baseUrl, { waitUntil: "networkidle" });
+    // Login page capture
+    console.log(`[${profile.name}] Navigating to /login...`);
+    await page.goto(baseUrl + '/', { waitUntil: "networkidle" });
     await page.waitForFunction(
       () =>
         Boolean(
@@ -82,15 +108,64 @@ try {
     );
     await page.waitForTimeout(1500);
 
-    const targetDir = path.join(outputRoot, profile.name);
-    await mkdir(targetDir, { recursive: true });
+    // We capture login
     await page.screenshot({
-      path: path.join(targetDir, "login.png"),
+      path: path.join(targetDir, "login_default.png"),
       fullPage: true,
     });
 
+    console.log(`[${profile.name}] Entering credentials...`);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type("ceo@onehumancorp.com");
+    await page.keyboard.press('Tab');
+    await page.keyboard.type("password");
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+
+    try {
+        await page.waitForURL(/\/dashboard/, { timeout: 8000 });
+        console.log(`[${profile.name}] Logged in successfully.`);
+    } catch (e) {
+        console.log(`[${profile.name}] Login redirect timeout, trying direct injection...`);
+        await page.evaluate(() => {
+            window.localStorage.setItem('flutter.auth_token', '"fake_token"');
+        });
+        await page.reload({ waitUntil: "networkidle" });
+    }
+
+    for (const route of routes) {
+      console.log(`[${profile.name}] Capturing ${route.path}...`);
+      await page.goto(baseUrl + '/', { waitUntil: "networkidle" });
+      await page.evaluate((path) => {
+          // Force flutter router to navigate
+          window.history.pushState(null, '', path);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+      }, route.path);
+      // Wait for network idle after the pseudo-navigation
+      await page.waitForTimeout(1000);
+      await page.waitForFunction(
+        () =>
+          Boolean(
+            document.querySelector("flutter-view") ||
+              document.querySelector("flt-glass-pane") ||
+              document.querySelector("canvas"),
+          ),
+        { timeout: 60000 },
+      );
+      await page.waitForTimeout(2000);
+
+      await page.screenshot({
+        path: path.join(targetDir, `${route.name}_default.png`),
+        fullPage: true,
+      });
+    }
+
     await context.close();
   }
+} catch (e) {
+  console.error("Error during screenshot capture:", e);
+  process.exit(1);
 } finally {
   await browser.close();
 }
