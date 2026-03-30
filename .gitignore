@@ -67,4 +67,4 @@ srcs/frontend/coverage/
 .vscode/
 *.tgz
 *.tar.gz
-Chart.lock
+Chart.lock.agents-tasks/
