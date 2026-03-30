@@ -1,0 +1,1 @@
+performance_critical_state: "Baseline latency for Publish_Concurrent reduced from 24245 ns/op to 9358 ns/op using sync.RWMutex lock optimization."

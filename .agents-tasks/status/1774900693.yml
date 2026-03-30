@@ -1,0 +1,5 @@
+id: performance_agent_1
+status: ACTIVE
+metrics:
+  latencies: "9358 ns/op"
+  build_times: "1s"

@@ -736,6 +736,8 @@ func (h *Hub) Publish(message Message) error {
 	h.mu.RUnlock()
 
 	h.mu.Lock()
+	var localSubs []chan struct{}
+
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
@@ -744,13 +746,7 @@ func (h *Hub) Publish(message Message) error {
 
 		h.inbox[message.ToAgent] = append(inbox, message)
 
-		subs := h.subs[message.ToAgent]
-		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
-			}
-		}
+		localSubs = append(localSubs, h.subs[message.ToAgent]...)
 	}
 
 	sender := h.agents[message.FromAgent]
@@ -814,19 +810,20 @@ func (h *Hub) Publish(message Message) error {
 		sender.Status = StatusInMeeting
 
 		for _, participant := range meeting.Participants {
-			subs := h.subs[participant]
-			for i := 0; i < len(subs); i++ {
-				select {
-				case subs[i] <- struct{}{}:
-				default:
-				}
-			}
+			localSubs = append(localSubs, h.subs[participant]...)
 		}
 	} else {
 		sender.Status = StatusActive
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
+
+	for i := 0; i < len(localSubs); i++ {
+		select {
+		case localSubs[i] <- struct{}{}:
+		default:
+		}
+	}
 
 	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
