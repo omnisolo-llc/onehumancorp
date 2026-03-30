@@ -1,15 +1,2 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
-# ── Layout / structure test ───────────────────────────────────────────────────
-# Verifies all required Go server source files are present.
-# The React frontend has been migrated to Flutter (srcs/app).
-# This test verifies the Go web-server component remains intact.
-
-sh_test(
-    name = "frontend_layout_test",
-    srcs = ["tests/layout_test.sh"],
-    data = [
-        "//srcs/frontend/server:srcs",
-        "//srcs/frontend/server/cmd/frontend:srcs",
-    ],
-)

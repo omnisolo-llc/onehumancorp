@@ -1,9 +1,10 @@
 package dashboard
 
 import (
+	"context"
+	"errors"
 	"time"
 
-	"errors"
 	"github.com/onehumancorp/mono/srcs/billing"
 	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/orchestration"
@@ -30,6 +31,16 @@ func seededScenario(name string, now time.Time) (domain.Organization, *orchestra
 func seededLaunchReadiness(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
 	org := domain.NewSoftwareCompany("demo", "Demo Software Company", "Human CEO", now.UTC())
 	hub := orchestration.NewHub()
+
+	if hub.SIPDB() != nil {
+		_ = hub.SIPDB().RegisterCapabilityPlugin(context.Background(), orchestration.CapabilityPlugin{
+			PluginID:    "plugin_marketing",
+			Name:        "Marketing Automation",
+			Version:     "1.0.0",
+			ManifestURL: "http://example.com/marketing.yaml",
+			Status:      "ACTIVE",
+		})
+	}
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "ux-1", Name: "Design Lead", Role: "DESIGNER", OrganizationID: org.ID})
