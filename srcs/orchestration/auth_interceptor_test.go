@@ -1031,7 +1031,6 @@ func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Valid(t *testing.T) {
 	}
 }
 
-
 func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
 	interceptor := SPIFFEStreamInterceptor()
 
@@ -1171,5 +1170,93 @@ func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 	st, ok := status.FromError(err)
 	if !ok || st.Code() != codes.PermissionDenied {
 		t.Fatalf("Expected PermissionDenied, got: %v", err)
+	}
+}
+
+func TestUnaryAuthInterceptor_ReasonRequest(t *testing.T) {
+	interceptor := SPIFFEAuthInterceptor()
+	ctx := mockSPIFFEContext("spiffe://ohc.os/agent/agent-123")
+
+	info := &grpc.UnaryServerInfo{
+		FullMethod: "/agent.v1.AgentService/Reason",
+	}
+
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "success", nil
+	}
+
+	tests := []struct {
+		name    string
+		req     interface{}
+		wantErr codes.Code
+	}{
+		{
+			name: "success",
+			req: pb.ReasonRequest_builder{
+				FromAgentId: proto.String("agent-123"),
+			}.Build(),
+			wantErr: codes.OK,
+		},
+		{
+			name: "mismatched agent id",
+			req: pb.ReasonRequest_builder{
+				FromAgentId: proto.String("agent-456"),
+			}.Build(),
+			wantErr: codes.PermissionDenied,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := interceptor(ctx, tt.req, info, handler)
+			if status.Code(err) != tt.wantErr {
+				t.Fatalf("expected error code %v, got %v", tt.wantErr, status.Code(err))
+			}
+		})
+	}
+}
+
+func TestUnaryAuthInterceptor_OpenMeetingRequest(t *testing.T) {
+	interceptor := SPIFFEAuthInterceptor()
+	ctx := mockSPIFFEContext("spiffe://ohc.os/agent/agent-123")
+
+	info := &grpc.UnaryServerInfo{
+		FullMethod: "/hub.v1.HubService/OpenMeeting",
+	}
+
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "success", nil
+	}
+
+	tests := []struct {
+		name    string
+		req     interface{}
+		wantErr codes.Code
+	}{
+		{
+			name: "success",
+			req: pb.OpenMeetingRequest_builder{
+				MeetingId:    proto.String("meeting-1"),
+				Participants: []string{"agent-123", "agent-456"},
+			}.Build(),
+			wantErr: codes.OK,
+		},
+		{
+			name: "missing participant",
+			req: pb.OpenMeetingRequest_builder{
+				MeetingId:    proto.String("meeting-1"),
+				Participants: []string{"agent-456", "agent-789"},
+			}.Build(),
+			wantErr: codes.PermissionDenied,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := interceptor(ctx, tt.req, info, handler)
+			if status.Code(err) != tt.wantErr {
+				t.Fatalf("expected error code %v, got %v", tt.wantErr, status.Code(err))
+			}
+		})
 	}
 }
