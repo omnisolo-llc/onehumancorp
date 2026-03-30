@@ -1,0 +1,2 @@
+type: task
+description: "Fix test failures: rules_flutter workspace resolution issue"
