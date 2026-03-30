@@ -1,5 +1,8 @@
 # Test Plan: Cross-Org Collaboration (B2B Agent Exchange)
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -52,3 +55,6 @@ A high-level summary of the testing strategy for the Cross-Org Collaboration fea
 - **Network Partitions**: Tests simulate random network drops between Hub A and Hub B during an active negotiation to ensure the Redis-backed retry logic correctly queues messages without dropping them.
 - **Trust Domain Revocation**: If Hub B's trust domain is suddenly marked untrusted, the tests verify that Hub A immediately severs the connection and fails closed, preventing any further B2B API access or data leakage.
 - **Context Payload Size Mismatch**: Tests verify that if Hub A sends a message exceeding Hub B's LLM context limit, the protocol falls back to chunking or summarization rather than crashing the receiving agent.
+
+
+</div>

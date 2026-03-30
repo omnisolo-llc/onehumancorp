@@ -1,5 +1,8 @@
 # CUJ: Human-in-the-Loop Handoff UI
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** CEO / Manager
 **Context:** An autonomous agent has encountered a high-risk operation or an ambiguous state requiring human intervention before proceeding.
 **Success Metrics:** Secure handoff presentation, verifiable state ground truth, and quick resumption of tasks post-approval.
@@ -29,3 +32,6 @@ When an AI agent reaches a decision gate it is unauthorized to cross (e.g., spen
 
 ## 5. Security & Privacy
 - **Approval Gating**: Relies on SPIFFE-gated confidence approvals to prevent unauthorized users from clearing handoffs.
+
+
+</div>

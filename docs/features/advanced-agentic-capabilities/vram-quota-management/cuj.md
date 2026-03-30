@@ -1,5 +1,8 @@
 # CUJ: VRAM Quota Management
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** DevOps / SRE Agent
 **Context:** The organization's multi-agent workflows are scaling, risking out-of-memory errors on GPU nodes or runaway billing costs.
 **Success Metrics:** Strict enforcement of GPU memory budgets without crashing active critical workflows.
@@ -28,3 +31,6 @@ Enforce strict department-level GPU memory budgets to prevent runaway compute co
 
 ## 5. Security & Privacy
 - **Resource Isolation**: Prevent noisy-neighbor issues by enforcing hard limits via K8s resource quotas and limits.
+
+
+</div>

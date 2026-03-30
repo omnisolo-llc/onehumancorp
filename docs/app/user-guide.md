@@ -1,5 +1,8 @@
 # User Guide: OHC Flutter App
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Overview
 
 This guide covers the Bazel-native Flutter app workflow in `srcs/app`.
@@ -50,3 +53,6 @@ Generated images are written to:
 ### Linux
 
 ![OHC Flutter app with Linux profile](./linux/login.png)
+
+
+</div>

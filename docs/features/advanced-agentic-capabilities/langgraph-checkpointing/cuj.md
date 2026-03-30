@@ -1,5 +1,8 @@
 # CUJ: LangGraph Checkpointing
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** SWE Agent
 **Context:** An agent is executing a multi-step, long-running workflow that spans across multiple sessions or requires pausing.
 **Success Metrics:** Robust cross-session context persistence without token window bloat.
@@ -29,3 +32,6 @@ Implement robust cross-session context persistence using LangGraph Checkpointer 
 ## 5. Security & Privacy
 - **Data at Rest**: Checkpoint data in PostgreSQL must be encrypted at rest.
 - **Isolation**: Tenant-specific isolation of checkpointer tables.
+
+
+</div>

@@ -1,5 +1,8 @@
 # Design Document: Spatial Object Recognition
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Executive Summary
 **Objective:** Enable agents to execute precise viewport interactions by translating visual intent into exact X,Y coordinates using multimodal LLMs.
 **Scope:** Integrate spatial grounding capabilities into the Multimodal Router and build an MCP tool for executing Playwright actions via coordinates.
@@ -26,3 +29,6 @@
 ## 5. Implementation Details
 - Ensure the Playwright MCP tool translates coordinates correctly regardless of viewport scaling or DPI settings.
 - Maintain Zero-Lock stack compatibility.
+
+
+</div>

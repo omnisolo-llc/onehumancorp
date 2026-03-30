@@ -1,5 +1,8 @@
 # Test Plan: Tool Execution Rate Limiting
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Testing Strategy
 Validate the end-to-end functionality, security boundaries, and performance constraints of the Tool Execution Rate Limiting feature using hermetic, table-driven tests. Ensure we use the Database Seeder pattern to establish deterministic starting states.
 
@@ -23,3 +26,6 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST strictly exceed 95% for the corresponding Go packages.
 - Tests will utilize lightweight dependency injection for fatal exit paths (`os.Exit`).
+
+
+</div>

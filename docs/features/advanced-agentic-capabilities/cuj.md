@@ -1,5 +1,8 @@
 # CUJ: Advanced Agentic Capabilities
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** TPM Agent | **Context:** Initiating a massive, multi-phase software project requiring cyclic workflows, dynamic tool discovery, and deep historical context.
 **Success Metrics:** Sub-50ms routing goals, Zero "Amnesia" errors, Successful dynamic tool binding, and verifiable UI components.
 
@@ -41,3 +44,6 @@ The CEO kicks off a complex initiative. Manager agents autonomously spawn specia
 ## 5. Security & Privacy
 - All dynamic tool discovery is authenticated and authorized via SPIFFE/SPIRE.
 - Data privacy is maintained during semantic distillation; sensitive information is not exposed to external vector databases.
+
+
+</div>

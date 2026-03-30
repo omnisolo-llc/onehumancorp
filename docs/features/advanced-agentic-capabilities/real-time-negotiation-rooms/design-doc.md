@@ -1,5 +1,8 @@
 # Design Document: Real Time Negotiation Rooms
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Executive Summary
 **Objective:** Architect and implement Real Time Negotiation Rooms to empower autonomous agents and human operators.
 **Scope:** Integration within the core Orchestration Hub and the MCP Gateway, adhering to the Zero-Lock paradigm.
@@ -27,3 +30,6 @@ message RealTimeNegotiationRoomsEvent {
 - Maintain minimal memory overhead by avoiding O(N) string manipulations in hot paths.
 - All K8s pods associated with this feature will enforce least privilege (e.g., `runAsNonRoot: true`, `readOnlyRootFilesystem: true`).
 - Implement bounded memory growth by explicitly deleting map entries upon successful execution.
+
+
+</div>

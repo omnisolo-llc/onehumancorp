@@ -1,5 +1,8 @@
 # CUJ: Billing and Cost Management Journey
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -25,3 +28,5 @@ The CEO reviews the daily token burn rate, identifies inefficient agents, and ma
 - **Streaming Tokens**: Calculating cost on streaming LLM responses requires chunk counting. Disconnects mid-stream will log the exact chunk count received before the failure.
 - **Threshold Stampedes**: Multiple agents hitting the budget limit simultaneously triggers a concurrent lock on the "suspend" action to ensure exactly-once suspension.
 - **Off-Platform Spending**: External tool API costs (e.g., AWS usage) are currently decoupled from the LLM token billing engine.
+
+</div>

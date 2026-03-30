@@ -1,5 +1,8 @@
 # CUJ: B2B SPIFFE Federation for AI Collaboration
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** Cross-Organizational Agents
 **Context:** Inter-agent collaboration is heavily restricted to single-organization silos.
 **Success Metrics:** Cross-Org Collaboration utilizing federated SPIFFE/SPIRE Trust Agreements established successfully.
@@ -22,3 +25,6 @@ The system establishes Cross-Org Collaboration (B2B Agent Exchange) utilizing fe
 
 ## 4. Security & Privacy
 - **Federated Authentication Failures**: If the partner's SPIRE server is unreachable, the system fails closed and prevents any further B2B API access.
+
+
+</div>

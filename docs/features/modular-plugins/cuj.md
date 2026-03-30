@@ -1,5 +1,8 @@
 # Core User Journey: Modular Plugin System
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Actor
 Human CEO
 
@@ -13,3 +16,6 @@ The CEO wants to dynamically extend the capabilities of their virtual workforce 
 4. **Validation**: The platform autonomously validates the schema (Zero-Lock Stack) to ensure it meets security and compatibility requirements.
 5. **Dynamic Binding**: The backend dynamically registers the new capabilities with the MCP Gateway. The `capability_plugins` database table is updated with the active plugin state.
 6. **Execution**: The CEO immediately sees new role options or tool integrations available in the "Hire" menu or when assigning tasks, seamlessly expanding the agentic workforce's abilities.
+
+
+</div>

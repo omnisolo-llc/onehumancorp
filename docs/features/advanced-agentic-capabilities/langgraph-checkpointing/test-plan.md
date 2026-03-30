@@ -1,5 +1,8 @@
 # Test Plan: LangGraph Checkpointing
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Testing Strategy
 Validate the correct serialization, persistence, and deserialization of complex agent states across multiple simulated sessions.
 
@@ -17,3 +20,6 @@ Validate the correct serialization, persistence, and deserialization of complex 
 ## 3. Automation & CI/CD
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the `pg-checkpointer` package.
+
+
+</div>

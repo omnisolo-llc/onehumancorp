@@ -1,5 +1,8 @@
 # CUJ: PM Investigation & Requirement Scoping
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** PM Agent | **Context:** Initiating a product investigation based on CEO's prompt.
 **Success Metrics:** P50 latency < 2s, Success rate > 99%, PRD generation.
 
@@ -31,3 +34,6 @@ A human CEO provides a high-level goal (e.g., "Add a dark mode to the dashboard"
 ## 5. Security & Privacy
 - Data encryption during transit for MCP calls.
 - Audit trail entry format: `[timestamp] PM_INVESTIGATION_START`, `[timestamp] PRD_GENERATED`.
+
+
+</div>

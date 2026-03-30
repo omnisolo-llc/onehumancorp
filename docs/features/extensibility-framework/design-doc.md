@@ -1,5 +1,8 @@
 # Design Doc: Extensible Skill Import Framework
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** Principal TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-20
@@ -49,3 +52,5 @@ The CEO Dashboard is updated with a real-time scaling panel. As demand fluctuate
 ## 5. Security & Isolation
 - **Role Scoping:** Dynamically generated agents are strictly isolated to the MCP tools explicitly granted in their blueprint.
 - **SPIFFE Validation:** Identity issuance remains tightly coupled to the generated CRDs, ensuring zero-trust enforcement for all inter-agent and agent-to-tool communication.
+
+</div>

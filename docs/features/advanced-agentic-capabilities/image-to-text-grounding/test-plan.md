@@ -1,5 +1,8 @@
 # Test Plan: Image-to-Text Grounding
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Testing Strategy
 Validate the correct routing of image payloads, accurate text grounding, and proper error handling for oversized or malformed images.
 
@@ -17,3 +20,6 @@ Validate the correct routing of image payloads, accurate text grounding, and pro
 ## 3. Automation & CI/CD
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the Multimodal Router.
+
+
+</div>

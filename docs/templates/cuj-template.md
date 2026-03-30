@@ -1,5 +1,8 @@
 # CUJ: [Journey Name]
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** [User Role] | **Context:** [Starting state]
 **Success Metrics:** [P50 latency, Success rate, specific artifact generation]
 
@@ -28,3 +31,6 @@ A narrative description of what a successful journey looks like from the user's 
 ## 5. Security & Privacy
 - Data encryption during transit.
 - Audit trail entry format for this specific journey.
+
+
+</div>

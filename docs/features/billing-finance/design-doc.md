@@ -1,5 +1,8 @@
 # Design Doc: Billing & Finance Engine
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -24,3 +27,5 @@ The Billing & Finance Engine provides real-time visibility into the financial co
 - **Self-Hosted Models**: If a user runs a local model (e.g., Ollama) or sets pricing to 0, the system must handle division-by-zero errors in the ROI/efficiency calculations.
 - **Stale Catalog Cache**: If a provider drops their prices, the billing engine relies on a Redis-cached catalog. Un-expired caches may briefly over-report cost.
 - **Token Count Divergence**: Token estimation may slightly diverge from actual provider billing; the engine uses a daily reconciliation job against the provider's billing API (where supported) to correct the variance.
+
+</div>

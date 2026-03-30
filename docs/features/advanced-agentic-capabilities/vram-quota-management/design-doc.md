@@ -1,5 +1,8 @@
 # Design Document: VRAM Quota Management
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Executive Summary
 **Objective:** Ensure predictable billing, prevent GPU OOM errors, and enable multi-tenant fairness through strict VRAM quota enforcement.
 **Scope:** Enhance the Kubernetes Operator to inject custom `nvidia.com/gpu` resource requests and limits based on the organization's pricing tier.
@@ -25,3 +28,6 @@ resources:
 ## 5. Implementation Details
 - Integrate closely with Kubernetes `ResourceQuotas` and `LimitRanges` for native enforcement.
 - Maintain Zero-Lock stack compatibility.
+
+
+</div>

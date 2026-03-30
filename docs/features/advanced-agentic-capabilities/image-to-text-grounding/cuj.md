@@ -1,5 +1,8 @@
 # CUJ: Image-to-Text Grounding
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** QA / Design Agent
 **Context:** An agent requires visual context (e.g., a screenshot or diagram) to correctly infer state or design intent without relying on complex, brittle DOM parsing.
 **Success Metrics:** Accurate grounding of visual elements into text context, enabling precise agent reasoning.
@@ -28,3 +31,6 @@ Integrate multimodal capabilities allowing agents to natively parse and reason o
 
 ## 5. Security & Privacy
 - **PII Scrubbing**: Ensure screenshots of UI do not contain sensitive PII before sending to external multimodal LLM endpoints.
+
+
+</div>

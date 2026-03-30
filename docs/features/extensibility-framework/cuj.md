@@ -1,5 +1,8 @@
 # CUJ: Extensible Skill Import Framework
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** Human CEO | **Context:** Evolving "One Human Corp" from a Software Company into a Digital Marketing Agency by importing a custom Skill Blueprint.
 **Success Metrics:** Sub-minute ingestion of the YAML blueprint, automated generation of an org chart, successful tool binding, and dynamic scaling of the new department.
 
@@ -41,3 +44,5 @@ The CEO wants to expand their business into Digital Marketing. Instead of waitin
 ## 5. Security & Privacy
 - **Injection Prevention**: All string fields in the blueprint are strictly sanitized to prevent prompt injection or malicious code execution within agent contexts.
 - **SPIFFE Validation**: The newly generated agents are strictly scoped to the tools defined in their blueprint, enforced by SPIFFE SVIDs, preventing lateral movement or unauthorized API access.
+
+</div>

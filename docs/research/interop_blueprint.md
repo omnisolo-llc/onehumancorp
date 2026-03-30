@@ -1,5 +1,8 @@
 # Interop Blueprint: Agentic OS Universal Standard
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Overview
 This document outlines the state of AI agent framework interoperability within the OHC "Agentic OS" control plane. Our goal is to serve as the "Universal Bus" for swarms of autonomous agents running on Kubernetes, leveraging standard protocols like MCP (Model Context Protocol), LangGraph for state management, and SPIFFE/SPIRE for zero-trust identity propagation.
 
@@ -33,3 +36,6 @@ This document outlines the state of AI agent framework interoperability within t
 
 ## Future Work
 - Optimize K8s operator for large-scale swarm scheduling.
+
+
+</div>

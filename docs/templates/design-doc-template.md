@@ -1,5 +1,8 @@
 # Design Doc: [Feature Name]
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** [Your Name]
 **Status:** [Draft / In Review / Approved]
 **Last Updated:** [Date]
@@ -55,3 +58,6 @@ A technical summary of the problem space, the proposed solution, and the overall
 ## 6. Implementation Plan
 - Step-by-step rollout (Phases).
 - Migration strategy for existing data.
+
+
+</div>

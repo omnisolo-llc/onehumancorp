@@ -1,5 +1,8 @@
 # Design Doc: Cross-Org Collaboration (B2B Agent Exchange)
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** Antigravity
 **Status:** Roadmap / Proposed
 **Last Updated:** 2026-03-17
@@ -68,3 +71,6 @@ type TrustAgreement struct {
 - **Network Partitions:** Fallback to cached state and retry logic for tool calls.
 - **Database Unavailability:** Circuit breakers open, gracefully degrade to read-only mode if possible.
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
+
+
+</div>

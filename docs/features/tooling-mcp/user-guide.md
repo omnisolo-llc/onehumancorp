@@ -1,5 +1,8 @@
 # User Guide: MCP Tool Integrations
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Introduction
 MCP (Model Context Protocol) is how your agents "interact with the world". It connects them to tools like GitHub, Slack, and your internal databases.
 
@@ -31,3 +34,6 @@ You can build your own MCP server in any language. Just provide a manifest file 
 - **Malicious URLs/SSRF**: The Gateway explicitly blocks connections to loopback (`127.0.0.1`, `::1`), private (`10.0.0.0/8`, `192.168.0.0/16`), and link-local (`169.254.x.x`) IPs to prevent Server-Side Request Forgery and TOCTOU vulnerabilities.
 - **Rate Limits**: If an external API (like GitHub) rate-limits the tool, the MCP Gateway interprets the 429 response and issues a backoff command to the calling agent to prevent thrashing.
 - **Schema Drift**: If an external tool changes its payload schema, the MCP proxy's strict type-checking will reject invalid LLM-generated JSON, failing closed to prevent corrupt data entry.
+
+
+</div>

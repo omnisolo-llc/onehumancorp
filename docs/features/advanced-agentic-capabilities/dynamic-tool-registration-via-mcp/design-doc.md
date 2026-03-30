@@ -1,5 +1,8 @@
 # Design Document: Dynamic Tool Registration via MCP
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Executive Summary
 **Objective:** Enable the Orchestration Hub to dynamically map OpenAPI schemas into agent tool definitions at runtime, preventing the need for hardcoded schemas and tightly coupled agent-tool implementations.
 **Scope:** Implement the `MCPRegistryService` and integrate the `Switchboard` routing layer with the Model Context Protocol.
@@ -32,3 +35,6 @@ type MCPSchema struct {
 - **Schema Validation:** Ensure `json.NewDecoder` combined with `dec.DisallowUnknownFields()` is used to strictly validate tool payloads to prevent schema drift or injection attacks.
 - **Zero-Lock Paradigm:** The `MCPRegistryService` must support any standard OpenAPI v3 specification to ensure zero vendor lock-in and allow importing custom tools easily.
 - **Performance:** Caching of OpenAPI schemas in the `MCPRegistryService` must be implemented to ensure sub-50ms latency routing for tool discovery requests.
+
+
+</div>

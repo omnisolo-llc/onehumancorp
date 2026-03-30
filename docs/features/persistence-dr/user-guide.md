@@ -1,5 +1,8 @@
 # User Guide: Persistence & Snapshots
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Introduction
 The Snapshot Fabric allows you to "Undo" complex organizational changes or recover from a disaster with a single click.
 
@@ -31,3 +34,6 @@ If something goes wrong, navigate to the Snapshots log and click "Restore". Your
 - **In-Flight Tool Operations**: If an agent is executing a long-running external API call (e.g., provisioning AWS infrastructure) during a snapshot restore, the external state might become orphaned from the restored internal state.
 - **Corrupted Snapshots**: Checksums are validated before restoration. If a CSI snapshot is corrupted, the system fails closed and aborts the restore to prevent partial org states.
 - **Storage Limits**: Automated snapshot pruning deletes older snapshots when cluster storage limits are reached, prioritizing explicitly labeled "keep" snapshots.
+
+
+</div>

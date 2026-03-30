@@ -1,5 +1,8 @@
 # Customer User Journey: Dynamic Scaling UI ("Hire/Fire")
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Overview
 This document outlines the user journey for the Dynamic Scaling UI ("Hire/Fire"), a real-time React component in the CEO Dashboard that allows adjusting replica counts for newly generated roles.
 
@@ -16,3 +19,6 @@ This document outlines the user journey for the Dynamic Scaling UI ("Hire/Fire")
 - The Support Department now has 5 active agents.
 - The bottleneck is resolved as new agents begin processing tickets.
 - The CEO Dashboard accurately reflects the updated headcount and operational metrics.
+
+
+</div>

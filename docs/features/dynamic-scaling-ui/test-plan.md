@@ -1,5 +1,8 @@
 # Test Plan: Dynamic Scaling UI ("Hire/Fire")
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Objective
 To verify the functionality, reliability, and usability of the Dynamic Scaling UI component within the CEO Dashboard. This ensures the human operator can efficiently manage and scale agent roles dynamically.
 
@@ -41,3 +44,6 @@ This test plan covers the real-time React component responsible for replica coun
 - **Pre-condition:** Dashboard is open; a scaling action has been initiated.
 - **Action:** Backend emits an SSE event `{"event": "AgentHired", "status": "Ready"}`.
 - **Expected Result:** The UI updates its real-time trace log and progress bar without requiring a manual page refresh.
+
+
+</div>

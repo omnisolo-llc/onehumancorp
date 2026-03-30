@@ -1,5 +1,8 @@
 # Supported Standards Update: Zero-Trust SPIFFE Validations
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Overview
 This document outlines recent capabilities developed to enhance AI agent framework interoperability within the OHC "Agentic OS" control plane, particularly focusing on zero-trust identity propagation and strict security standards.
 
@@ -16,3 +19,5 @@ This document outlines recent capabilities developed to enhance AI agent framewo
 
 ## Execution Requirements
 - Any newly implemented adapter must integrate SPIFFE ID validations explicitly upon initializations and correctly proxy the identity via the UniversalAdapter interface.
+
+</div>

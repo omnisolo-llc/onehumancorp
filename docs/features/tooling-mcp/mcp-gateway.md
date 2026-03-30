@@ -1,5 +1,8 @@
 # Design Doc: External Tool Aggregation (MCP Gateway)
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** Antigravity
 **Status:** In Review
 **Last Updated:** 2026-03-17
@@ -74,3 +77,6 @@ Current frameworks tightly couple agents to hardcoded tool schemas. OHC utilizes
 - **Dynamic Registration**: Tools are discovered and registered via the SPIFFE-gated MCP Gateway.
 - **Runtime Binding**: Agents can query the registry and dynamically bind to necessary tools based on task requirements, minimizing error loops caused by missing hardcoded configurations.
 - **Seamless Integrations**: Supports a wide array of tools via standardized Model Context Protocols.
+
+
+</div>

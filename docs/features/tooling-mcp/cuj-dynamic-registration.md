@@ -1,5 +1,8 @@
 # CUJ: Dynamic Tool Registration via MCP
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** External Agent / Developer | **Context:** Registering a new tool without a restart.
 **Success Metrics:** Successfully registering an un-configured tool and having agents find it dynamically via the `/api/mcp/tools` endpoint.
 
@@ -29,3 +32,6 @@ A developer or an automated pipeline registers a new external tool on the One Hu
 
 ## 5. Security & Privacy
 - The system employs `interop.ValidateSPIFFEID` which checks that `SPIFFE ID` formats and trust domains align strictly with allowed definitions.
+
+
+</div>

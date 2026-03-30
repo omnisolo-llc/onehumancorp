@@ -1,5 +1,8 @@
 # 2024-05-18 - Cross-Cluster Handoff UI: Aesthetic & Technical Blueprint
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Executive Summary & Aesthetic Spec
 
 **Mission:** Elevate the Multi-Agent Swarm orchestration to an intuitive, cinematic experience. Cross-Cluster Handoff UI must feel instantaneous, fluid, and premium. When an agent hands off a task to another cluster, the transition should be visually continuous—a seamless bridging of neural execution.
@@ -54,3 +57,6 @@ sequenceDiagram
 - **K8s Operator:** Must support dynamic resource requests across distinct namespaces or federated clusters for target pods.
 - **SSE Stream:** The Gateway (`/api/v1/handoff/stream`) will aggregate and push the handoff events.
 - **Next.js Rendering:** The visual graph must use a lightweight SVG/Canvas overlay to render the "Neon Arteries" (the connecting curves) between agent DOM nodes, utilizing React Server Components where feasible to minimize client payload.
+
+
+</div>

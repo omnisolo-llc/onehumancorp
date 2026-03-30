@@ -1,5 +1,8 @@
 # CUJ: Dynamic Tool Registration via MCP
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** Autonomous AI Agent
 **Context:** Current frameworks tightly couple agents to hardcoded tool schemas.
 **Success Metrics:** Secure, dynamic tool synthesis and binding across federated clusters.
@@ -23,3 +26,6 @@ When an AI agent is instantiated or encounters a novel task, it queries the unif
 
 ## 4. Security & Privacy
 - **Zero-Trust Binding**: Tools are strictly gated by SPIFFE SVIDs and RBAC policies, ensuring an agent cannot access tools outside its assigned domain.
+
+
+</div>

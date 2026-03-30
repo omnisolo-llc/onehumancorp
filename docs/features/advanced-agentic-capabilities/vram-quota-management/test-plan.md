@@ -1,5 +1,8 @@
 # Test Plan: VRAM Quota Management
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Testing Strategy
 Validate that hard resource limits are enforced, queuing logic works under pressure, and preemption of lower priority agents functions correctly.
 
@@ -17,3 +20,6 @@ Validate that hard resource limits are enforced, queuing logic works under press
 ## 3. Automation & CI/CD
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the `QuotaManager`.
+
+
+</div>

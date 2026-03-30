@@ -1,5 +1,8 @@
 # User Guide: Implementation Pipelines
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Introduction
 Automated Implementation Pipelines turn agent-written code into a functioning product without manual effort from you.
 
@@ -30,3 +33,6 @@ To push to production, you must manually approve the task in the "Mission Contro
 - **Bazel Sandboxing Issues**: If a test requires network access (e.g., DNS resolution for `dl.google.com`), strict Bazel sandboxing may cause timeouts. The pipeline automatically falls back to standard `go test` for diagnostic runs, alerting the DevOps agent.
 - **EROFS Errors**: Read-only test sandboxes may block `npm install`. The pipeline handles this by setting a custom writable cache directory (`npm_config_cache`) to prevent build failures.
 - **Staging Exhaustion**: If too many preview URLs are spun up, the Kubernetes node pool might exhaust available memory limits. The DevOps agent automatically reaps preview namespaces inactive for more than 4 hours.
+
+
+</div>

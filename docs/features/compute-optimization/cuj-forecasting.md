@@ -1,5 +1,8 @@
 # CUJ: Token Burn-Rate Forecasting
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** CEO / Finance Manager
 **Context:** Managing costs and enterprise adoption across the AI workforce.
 **Success Metrics:** Burn rate predicted accurately, quotas enforced successfully.
@@ -27,3 +30,6 @@ The CEO views the Token Burn-Rate Forecasting panel on the dashboard. They can o
 
 ## 5. Security & Privacy
 - **Access Control**: Only the CEO or specific finance roles can modify quota assignments.
+
+
+</div>

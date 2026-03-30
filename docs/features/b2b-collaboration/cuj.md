@@ -1,5 +1,8 @@
 # CUJ: B2B Collaboration Journey
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -25,3 +28,5 @@ The CEO establishes a B2B agreement with another One Human Corp instance, enabli
 - **Concurrent Approvals**: If both CEOs attempt to approve differing contract versions concurrently, the backend enforces a transactional lock; the second manager receives a "State Changed" conflict error.
 - **Federated Authentication Failures**: If the partner's SPIRE server is unreachable, the system fails closed and prevents any further B2B API access.
 - **Unauthorized Data Sharing**: The B2B Room strictly filters the context payload to prevent agents from inadvertently sharing internal intellectual property.
+
+</div>

@@ -1,5 +1,8 @@
 # Design Doc: Hierarchical Task Delegation (Delegate SubTask)
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-27
@@ -27,3 +30,5 @@ Hierarchical Task Delegation allows agents to provision temporary, specialized s
 ## 4. Edge Cases
 - **Missing Arguments**: If the `task_id` or `target_role` are empty strings, an `InvalidArgument` error is immediately returned.
 - **VRAM Quota Exceeded**: If total agents are >= 10, the system proactively blocks the sub-agent's creation and returns an error without publishing any tasks.
+
+</div>

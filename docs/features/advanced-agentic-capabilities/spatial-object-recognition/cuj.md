@@ -1,5 +1,8 @@
 # CUJ: Spatial Object Recognition
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** QA Agent
 **Context:** An automated testing agent needs to click a specific UI element (e.g., a checkout button) that lacks semantic HTML tags or stable CSS selectors.
 **Success Metrics:** Precise identification of bounding box coordinates for target visual elements.
@@ -28,3 +31,6 @@ Enhance multimodal agents with the ability to identify and interact with specifi
 
 ## 5. Security & Privacy
 - **Sandboxed Browsers**: Playwright instances executing clicks must be heavily sandboxed with no access to local network resources (SSRF prevention).
+
+
+</div>

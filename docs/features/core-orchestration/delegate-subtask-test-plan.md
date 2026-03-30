@@ -1,5 +1,8 @@
 # Test Plan: Hierarchical Task Delegation (Delegate SubTask)
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-27
@@ -28,3 +31,5 @@ A high-level summary of the testing strategy for the Hierarchical Task Delegatio
 
 ## 6. Environment & Prerequisites
 - Standard unit testing environment via `bazelisk test //srcs/orchestration/...`.
+
+</div>

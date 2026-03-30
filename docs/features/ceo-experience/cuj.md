@@ -1,5 +1,8 @@
 # CUJ: CEO Experience
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -33,3 +36,5 @@ A high-level view of how the human CEO manages the AI workforce from the "Missio
 ## 6. Security & Privacy
 - RBAC ensures that only the CEO or explicit Directors can approve high-risk operations via the dashboard.
 - The CEO dashboard leverages short-lived session tokens mapped to OIDC claims.
+
+</div>

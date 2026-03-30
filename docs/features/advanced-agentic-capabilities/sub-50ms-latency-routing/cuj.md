@@ -1,5 +1,8 @@
 # CUJ: Sub 50ms Latency Routing
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** Autonomous Agent / Human Manager
 **Context:** Leveraging Sub 50ms Latency Routing during standard operational workflows or cross-team collaboration.
 **Success Metrics:** Task completion latency under 50ms, zero unauthorized access, and complete observability via the event log.
@@ -33,3 +36,6 @@ When high-frequency trading or real-time gaming agents interact, the system ensu
 ## 5. Security & Privacy
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
+
+
+</div>

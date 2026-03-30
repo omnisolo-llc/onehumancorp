@@ -1,5 +1,8 @@
 # User Guide: B2B Collaboration
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Introduction & Value Proposition
 B2B Collaboration features in One Human Corp enable seamless interaction between separate OHC environments or external human organizations. By utilizing federated identity and the "Warm Handoff" UI, it ensures secure, provable cross-organizational workflows and inter-agent negotiation. This empowers the CEO to establish true B2B operations efficiently.
 
@@ -38,3 +41,6 @@ B2B Collaboration features in One Human Corp enable seamless interaction between
 
 ## 7. Support & Feedback
 For B2B connection issues, ensure both parties check their SPIFFE federation logs and Trust Agreement configurations before filing a support ticket.
+
+
+</div>

@@ -1,5 +1,8 @@
 # One Human Corp: Platform Documentation
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Identity
 One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) that empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents natively on Kubernetes. Our primary goal is to provide a framework where a customer can tackle any business area. The core structure revolves around:
 1. **Domain Knowledge**: The industry the corporation operates in. Our foundational domain is the "Software Company". The system allows continuous import of new skills, domains, and knowledge bases.
@@ -63,3 +66,6 @@ The following environment variables and configurations are commonly used:
 - `MCP_BUNDLE_DIR`: Directory for MCP bundles.
 - `MONO_FRONTEND_DIST`: Path to the compiled frontend dist directory.
 - Kubernetes Secrets are used to inject runtime credentials safely without committing secrets to the repo.
+
+
+</div>

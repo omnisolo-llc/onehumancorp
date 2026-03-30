@@ -1,5 +1,8 @@
 # CUJ: Integrations Registry SSRF Prevention
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** AI Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -56,3 +59,6 @@ This Customer User Journey (CUJ) describes the interactions and expected outcome
 - **DNS Rebinding Attacks:** The system should resolve the IP address and perform validation *before* establishing the connection to mitigate time-of-check to time-of-use (TOCTOU) race conditions.
 - **IPv6 and Alternate Representations:** The system correctly handles IPv6 loopback (`::1`) and non-standard IP representations (e.g., octal or hex formats, if applicable) by relying on standard Go `net` package parsing.
 - **Missing Protocol/Host:** The system rejects URLs missing a scheme or host entirely.
+
+
+</div>

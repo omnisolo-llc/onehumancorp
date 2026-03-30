@@ -1,5 +1,8 @@
 # Test Plan: Hierarchical Task Delegation
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Testing Strategy
 Validate the end-to-end functionality of dynamic sub-agent spawning, ensuring correct pod provisioning, context isolation, and successful result aggregation without breaking token quotas.
 
@@ -24,3 +27,6 @@ Validate the end-to-end functionality of dynamic sub-agent spawning, ensuring co
 - All unit and integration tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for `srcs/orchestration/delegation.go` and the associated `ohc-operator` reconciliation loops.
 - Avoid using arbitrary `time.Sleep()` for asynchronous checks; strictly use deterministic polling loops.
+
+
+</div>

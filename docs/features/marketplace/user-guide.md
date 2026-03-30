@@ -1,5 +1,8 @@
 # User Guide: Marketplace
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Introduction & Value Proposition
 The One Human Corp Marketplace is an ecosystem where the CEO can discover, acquire, and deploy specialized AI agents, organizational templates, and unique tool integrations. This directly empowers businesses to rapidly scale their operations by simply importing proven, ready-made domain knowledge and skill blueprints.
 
@@ -40,3 +43,6 @@ The One Human Corp Marketplace is an ecosystem where the CEO can discover, acqui
 
 ## 7. Support & Feedback
 If you encounter an issue with a specific marketplace item, contact the creator directly or report it via the OHC Marketplace support channel.
+
+
+</div>

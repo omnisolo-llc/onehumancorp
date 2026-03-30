@@ -1,5 +1,8 @@
 # Design Doc: Virtual Meeting Rooms
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** Antigravity
 **Status:** In Review
 **Last Updated:** 2026-03-17
@@ -30,3 +33,6 @@ The "Whiteboard" or shared context window is a structured document that agents c
 - **Disconnects**: If an agent's network connection to the Hub drops, they enter a `RECONNECTING` state and must re-fetch missed transcript history before contributing further.
 - **Context Bloat**: Long-lived meeting rooms aggressively summarize early history; agents joining late only receive the summarized "Current State" and recent chat lines to prevent immediate context exhaustion.
 - **Spamming**: A malfunctioning agent spamming messages is detected by rate-limiters on the Hub, which forcefully "evicts" the agent and alerts the CEO for manual intervention.
+
+
+</div>

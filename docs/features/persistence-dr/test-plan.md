@@ -1,5 +1,8 @@
 # Test Plan: Persistence & Disaster Recovery
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -52,3 +55,6 @@ A high-level summary of the testing strategy for the Persistence & Disaster Reco
 - **In-Flight Tool Operations**: E2E tests trigger a snapshot restore while a mock agent is waiting for an external API call. The test ensures that the external state is gracefully orphaned and the agent restarts safely from the checkpointed state.
 - **Corrupted Snapshots**: A test intentionally modifies a byte in the CSI snapshot file to verify the Hub calculates checksums before restoration. If corrupted, the system fails closed and aborts the restore to prevent partial org states.
 - **Storage Limit Pruning**: Tests simulate a full storage quota to verify that automated snapshot pruning correctly deletes older snapshots, prioritizing those without a labeled "keep" tag.
+
+
+</div>

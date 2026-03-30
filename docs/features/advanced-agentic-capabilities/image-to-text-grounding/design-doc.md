@@ -1,5 +1,8 @@
 # Design Document: Image-to-Text Grounding
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Executive Summary
 **Objective:** Enable seamless multimodal inference by securely passing image payloads to capable LLMs and structuring the output for agent reasoning.
 **Scope:** Update the Orchestration Hub's LLM routing layer to handle multipart and base64 encoded image requests.
@@ -27,3 +30,6 @@ type MultimodalPayload struct {
 - Implement asynchronous handling for multimodal calls as they may incur higher latency.
 - Ensure base64 strings are efficiently handled in memory to prevent OOM errors.
 - Maintain Zero-Lock stack compatibility.
+
+
+</div>

@@ -1,5 +1,8 @@
 # User Guide: Core Orchestration Engine
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Introduction & Value Proposition
 The Core Orchestration Engine is the "brain" of One Human Corp. It transforms high-level CEO mandates into actionable, multi-agent workflows. By automating task delegation, context propagation, and meeting management, it allows a single human to operate with the capacity of a 50-person department.
 
@@ -58,3 +61,6 @@ For technical issues, please file a ticket via the "OHC Support" portal or conta
 - **Cyclic Dependencies**: If a PM mistakenly assigns two tasks that depend on each other, the Orchestration Engine's DAG evaluator detects the cycle and raises a `DependencyCycleError` for human review.
 - **Node Failures**: If an underlying K8s node dies, the agent pod restarts on a new node and recovers its exact position in the workflow by rehydrating state from the Postgres append-only log.
 - **Unreachable LLM Provider**: If the external AI API (e.g., OpenAI/Gemini) is down, the engine pauses active workflows and places them in a `ProviderRetry` queue rather than silently dropping tasks.
+
+
+</div>

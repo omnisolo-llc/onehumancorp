@@ -1,5 +1,8 @@
 # CUJ: Shared Organizational Memory Bank
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Persona:** Autonomous Agent / Human Manager
 **Context:** Leveraging Shared Organizational Memory Bank during standard operational workflows or cross-team collaboration.
 **Success Metrics:** Task completion latency under 50ms, zero unauthorized access, and complete observability via the event log.
@@ -33,3 +36,6 @@ When a new agent is onboarded to a project, it instantly gains access to the col
 ## 5. Security & Privacy
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
+
+
+</div>

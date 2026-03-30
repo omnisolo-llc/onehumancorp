@@ -1,5 +1,8 @@
 # Design Doc: Human-in-the-Loop (HITL) Handoff UI
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-20
@@ -24,3 +27,6 @@ The Human-in-the-Loop (HITL) Handoff UI provides a seamless "Warm Handoff" mecha
 - **Handoff Timeouts**: If a human does not respond within a configurable threshold, the agent enters a backoff state or escalates to a higher-level human manager.
 - **State Strikethroughs**: If an agent's state becomes invalid while waiting for a handoff (e.g., underlying infrastructure changes), the handoff request is marked stale and the agent must re-evaluate.
 - **Cross-Cluster Handoffs**: Support routing handoff requests between federated clusters securely using B2B trust agreements.
+
+
+</div>

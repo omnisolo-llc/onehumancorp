@@ -1,5 +1,8 @@
 # Design Doc: Dynamic Tool Registration via MCP
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** In Review
 **Last Updated:** $(date +"%Y-%m-%d")
@@ -34,3 +37,6 @@ Before any tool is accepted into the `dynamicMCPTools` slice, the `spiffeId` mus
 ## 4. Alternatives Considered
 - **File-based Configuration Watcher**: Monitoring `MCP_BUNDLE_DIR` for YAML changes. Rejected because it requires shared filesystem access across K8s pods, which breaks the API-first loosely-coupled design.
 - **Database Persistence**: Storing tools in a PostgreSQL registry. Rejected for this phase to reduce initial complexity, though this will likely be needed for multi-cluster federation later.
+
+
+</div>

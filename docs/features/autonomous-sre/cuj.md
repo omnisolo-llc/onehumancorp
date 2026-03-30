@@ -1,5 +1,8 @@
 # CUJ: Autonomous SRE Journey
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -25,3 +28,5 @@ The CEO and Operations team utilize the Autonomous SRE system to identify, track
 - **Missing Telemetry Data**: If log streams fail, the SRE engine degrades gracefully and notifies the human operator of the missing signal.
 - **Concurrent Fixes**: Multiple SRE agents diagnosing the same system independently trigger a Conflict Resolution Meeting Room.
 - **Runaway Healing**: If the auto-remediation loop triggers more than three times for the same issue in a short window, the system halts the loop and escalates immediately.
+
+</div>

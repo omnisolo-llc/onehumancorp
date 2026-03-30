@@ -1,5 +1,8 @@
 # Design Hook: Dynamic Tool Discovery via MCP & SPIFFE
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Executive Summary
 Agents in existing AI frameworks (like AutoGen and CrewAI) are tightly coupled to a static list of tools injected at initialization. When a novel problem arises that requires a new tool, the agent fails out, creating a high-friction loop.
 
@@ -32,3 +35,6 @@ We introduce a `DynamicToolDiscovery` node directly into our standard LangGraph 
 - Implement the `Semantic Tool Search & Routing` endpoint within the Switchboard.
 - Test the LangGraph recovery node using a simulated "Agent finds a bug in AWS, needs CloudWatch tool" scenario.
 - Finalize the integration between SPIRE and the MCP Gateway for short-lived tool certificates.
+
+
+</div>

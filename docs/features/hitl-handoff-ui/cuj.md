@@ -1,5 +1,8 @@
 # CUJ: Human-in-the-Loop (HITL) Handoff UI
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-20
@@ -29,3 +32,6 @@ When an AI agent reaches an ambiguous decision point or requires a high-risk act
 - **Simultaneous Approvals**: If two managers attempt to approve the same handoff concurrently, the database enforces a lock, rejecting the second attempt with a conflict error.
 - **Handoff Timeout**: If a handoff is not actioned within a specific period (e.g., 2 hours), the UI flags it as "Expired" and the agent falls back to a safe default action or escalates.
 - **Context Size Limit**: If the agent's LangGraph state is excessively large, it is summarized before being sent to the UI to maintain performance and prevent browser memory issues.
+
+
+</div>

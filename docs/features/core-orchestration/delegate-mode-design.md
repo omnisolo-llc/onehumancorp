@@ -1,5 +1,8 @@
 # Design Doc: Agent Delegate Mode
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-20
@@ -20,3 +23,5 @@ Agent Delegate Mode allows an AI agent to act as a routing proxy. It inspects an
 
 ## 4. Edge Cases
 - **Agent Not Found**: If either the source or destination agent is not registered, the delegation will fail with an error.
+
+</div>

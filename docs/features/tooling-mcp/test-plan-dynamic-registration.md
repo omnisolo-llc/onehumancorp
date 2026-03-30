@@ -1,5 +1,8 @@
 # Test Plan: Dynamic Tool Registration via MCP
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** In Review
 **Last Updated:** $(date +"%Y-%m-%d")
@@ -34,3 +37,6 @@ A high-level summary of the testing strategy for the Dynamic Tool Registration v
 ## 6. Implementation Details
 - **Execution**: Run via `bazelisk test //...` under the Bazel sandbox.
 - **Validation**: Strict enforcement of >95% test coverage.
+
+
+</div>

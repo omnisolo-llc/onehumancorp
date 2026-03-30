@@ -1,5 +1,8 @@
 # User Guide: Autonomous SRE
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Introduction & Value Proposition
 Autonomous SRE features allow One Human Corp to maintain the operational health of its AI workforce and underlying infrastructure automatically. This significantly reduces the CEO's burden by mitigating system failures, auto-scaling resources, and auto-repairing K8s deployments without human intervention. The expected ROI is near-zero downtime for critical workstreams and optimized compute usage.
 
@@ -37,3 +40,6 @@ Autonomous SRE features allow One Human Corp to maintain the operational health 
 
 ## 7. Support & Feedback
 For issues with the SRE Engine, file a report with the cluster state and telemetry logs from the time of the incident.
+
+
+</div>

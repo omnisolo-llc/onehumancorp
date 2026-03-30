@@ -1,4 +1,7 @@
 # Design Doc: Dynamic Scaling (Hire/Fire) UI
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
 Date: 2024-05-18
 
 ## 1. Core User Journey (CUJ)
@@ -42,3 +45,6 @@ sequenceDiagram
     Gateway API-->>Dashboard UI: SSE stream: { "event": "AgentHired", "status": "Ready" }
     Dashboard UI-->>CEO: Real-time UI Update (Progress Bar Complete)
 ```
+
+
+</div>

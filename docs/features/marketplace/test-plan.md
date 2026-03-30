@@ -1,5 +1,8 @@
 # Test Plan: "One Human Corp" Marketplace
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -42,3 +45,5 @@ A high-level summary of the testing strategy for the "One Human Corp" Marketplac
 - **Architecture**: Tested via Go table-driven unit tests, Mock HTTP clients for the Marketplace backend, and Playwright scripts for the UI validation.
 - **Execution**: Run via `bazelisk test //...` under the Bazel sandbox. Real internet access is not required; the test suite mocks all Marketplace API responses.
 - **Validation**: >95% test coverage is strictly enforced on the Marketplace importer module.
+
+</div>

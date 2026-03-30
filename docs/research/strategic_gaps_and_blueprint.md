@@ -1,5 +1,8 @@
 # OHC AI Agent Platform Strategy & Blueprint
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## Top 5 Urgent Ecosystem Gaps
 Based on cross-framework ingestion (OpenClaw, CrewAI, AutoGen, Claude Code), we have identified five immediate capability gaps:
 
@@ -33,3 +36,6 @@ Based on cross-framework ingestion (OpenClaw, CrewAI, AutoGen, Claude Code), we 
     }
     ```
 *   **Retrieval Optimization:** During the pre-flight node of the LangGraph cycle, a semantic search resolves only the top `k` relevant memory interactions, appending them as optimized System Prompt contexts.
+
+
+</div>

@@ -1,5 +1,8 @@
 # Design Doc: Autonomous SRE
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
@@ -25,3 +28,5 @@ The Autonomous SRE feature enables the platform to monitor, identify, and resolv
 - **Metric Spikes**: False positives in CPU spikes may trigger a cascade of alerts. The SRE engine uses an intelligent smoothing algorithm before initiating self-healing protocols.
 - **Cascading Failures**: When the database fails, the SRE engine must not spam the human operator. It suppresses downstream alerts and correlates the root cause.
 - **Privilege Escalation Limits**: If the SRE agent requests destructive access (e.g., terminating pods), the system uses Confidence Gating to halt the action and request a human manager's approval.
+
+</div>

@@ -1,5 +1,8 @@
 # CUJ: Hierarchical Task Delegation (Delegate SubTask)
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-27
@@ -26,3 +29,6 @@ An agent receives a complex task and decides to provision a temporary, specializ
 ## 5. UI/UX Details
 - The UI can display a "Spawning Specialized [Role] Agent" indicator in the transcript, reflecting dynamic team assembly.
 - Quota errors should be surfaced as a "VRAM Quota Reached: Cannot spawn additional agents" notification to the human CEO.
+
+
+</div>

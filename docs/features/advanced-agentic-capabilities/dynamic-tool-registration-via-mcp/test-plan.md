@@ -1,5 +1,8 @@
 # Test Plan: Dynamic Tool Registration via MCP
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 8px; color: white;">
+
+
 ## 1. Testing Strategy
 Validate the dynamic synthesis and injection of tool schemas, verify secure routing via the MCP Switchboard, and ensure strict parameter validation.
 
@@ -29,3 +32,6 @@ Validate the dynamic synthesis and injection of tool schemas, verify secure rout
 - All unit and integration tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for `srcs/orchestration/mcp_gateway.go`.
 - Avoid arbitrary `time.Sleep()` for async tool executions; strictly use deterministic polling loops.
+
+
+</div>
