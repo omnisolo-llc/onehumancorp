@@ -196,24 +196,37 @@ def _flutter_library_impl(ctx):
     dart_files = [f for f in source_files if f.extension == "dart"]
     other_files = [f for f in source_files if f.extension != "dart"]
 
-    working_dir, _ = create_flutter_working_dir(
-        ctx,
-        pubspec_file,
-        dart_files,
-        other_files,
-        list(ctx.files.data),
-        workspace_pubspec = ctx.file.workspace_pubspec,
-    )
-
     # Collect pub_cache directories from all transitive dependencies
     transitive_pub_caches = []
+    dep_dart_sources = []
     for dep in ctx.attr.deps:
         if FlutterLibraryInfo in dep:
             # Collect transitive pub_caches depset from flutter_library deps
             transitive_pub_caches.append(dep[FlutterLibraryInfo].transitive_pub_caches)
+            # Collect transitive dart sources so workspace seeds include all
+            # project source files needed to compile transitive imports.
+            dep_dart_sources.append(dep[FlutterLibraryInfo].dart_sources)
         elif DartLibraryInfo in dep:
             # Collect transitive pub_caches depset from dart_library deps
             transitive_pub_caches.append(dep[DartLibraryInfo].transitive_pub_caches)
+
+    # Build a transitive depset of all dart source files (own + from deps).
+    # This depset is used both to expose dart_sources to dependents and to
+    # populate the workspace seed with all project files needed for compilation.
+    transitive_dart_sources = depset(
+        direct = dart_files,
+        transitive = dep_dart_sources,
+    )
+    all_dart_files = transitive_dart_sources.to_list()
+
+    working_dir, _ = create_flutter_working_dir(
+        ctx,
+        pubspec_file,
+        all_dart_files,
+        other_files,
+        list(ctx.files.data),
+        workspace_pubspec = ctx.file.workspace_pubspec,
+    )
 
     prepared_workspace, pub_get_output, pub_cache_dir, pub_deps, dart_tool_dir = flutter_pub_get_action(
         ctx,
@@ -245,7 +258,7 @@ def _flutter_library_impl(ctx):
             pub_deps = pub_deps,
             dart_tool = dart_tool_dir,
             pubspec = pubspec_file,
-            dart_sources = depset(dart_files),
+            dart_sources = transitive_dart_sources,
             other_sources = depset(other_files),
             transitive_pub_caches = depset(
                 direct = [pub_cache_dir],
@@ -678,13 +691,67 @@ def _flutter_test_impl(ctx):
 
     flutter_bin = flutter_toolchain.flutterinfo.tool_files[0].path
 
-    # Build a mapping of relative paths to actual file objects
-    test_file_mappings = [
-        (_compute_relative_to_package(ctx, f), f)
-        for f in ctx.files.srcs
-    ]
-    if library_info.pubspec:
-        test_file_mappings.append(("pubspec.yaml", library_info.pubspec))
+    # Determine if the embedded library uses Dart workspace mode by checking
+    # whether its pubspec lives in a subdirectory of the workspace root.
+    # e.g. "srcs/app/pubspec.yaml" → lib_package_dir = "srcs/app" (workspace mode)
+    #      "pubspec.yaml"          → lib_package_dir = ""           (standalone mode)
+    library_pubspec_short = library_info.pubspec.short_path if library_info.pubspec else ""
+    if "/" in library_pubspec_short:
+        lib_package_dir = library_pubspec_short.rsplit("/", 1)[0]
+    else:
+        lib_package_dir = ""
+
+    # Build a mapping of (destination-relative-path, file-object) for the test workspace.
+    if lib_package_dir:
+        # Workspace mode: place test files at their full workspace-relative paths so
+        # that flutter can find them when running from the library's package directory.
+        test_file_mappings = [
+            (f.short_path, f)
+            for f in ctx.files.srcs
+        ]
+        # In workspace mode the workspace seed already has the correct pubspec layout
+        # (root workspace pubspec + package pubspec at lib_package_dir/pubspec.yaml).
+        # Adding ("pubspec.yaml", lib_pubspec) would overwrite the workspace root
+        # pubspec with the package pubspec, breaking `flutter pub get --offline`.
+        # Instead, refresh the package pubspec at its proper location.
+        if library_info.pubspec:
+            test_file_mappings.append((library_pubspec_short, library_info.pubspec))
+    else:
+        # Standalone mode: place test files relative to the test's Bazel package.
+        test_file_mappings = [
+            (_compute_relative_to_package(ctx, f), f)
+            for f in ctx.files.srcs
+        ]
+        if library_info.pubspec:
+            test_file_mappings.append(("pubspec.yaml", library_info.pubspec))
+
+    # Compute the test patterns that will be passed to `flutter test`.
+    # In workspace mode flutter runs from lib_package_dir, so patterns must be
+    # relative to that directory (e.g. "lib/models/agent_model_test.dart").
+    if lib_package_dir:
+        prefix = lib_package_dir + "/"
+        computed_test_patterns = []
+        for f in ctx.files.srcs:
+            p = f.short_path
+            if p.startswith(prefix):
+                computed_test_patterns.append(p[len(prefix):])
+            else:
+                computed_test_patterns.append(f.basename)
+        # Fall back to declared test_files only when no srcs were provided.
+        if not computed_test_patterns:
+            computed_test_patterns = list(ctx.attr.test_files)
+    else:
+        computed_test_patterns = list(ctx.attr.test_files)
+
+    # Effective package dir for the flutter test execution (where `flutter test` runs).
+    # In workspace mode use the library's package path; otherwise honour the
+    # explicit workspace_pubspec override (legacy behaviour).
+    if lib_package_dir:
+        effective_package_dir = lib_package_dir
+    elif ctx.file.workspace_pubspec:
+        effective_package_dir = ctx.label.package
+    else:
+        effective_package_dir = ""
     
     # Try to find a lockfile in the library's files if it exists
     pubspec_lock = None
@@ -769,7 +836,7 @@ done
     def _escape_pattern(pattern):
         return pattern.replace("\\", "\\\\").replace("'", "\\'")
 
-    test_patterns_literal = "\n".join([_escape_pattern(pattern) for pattern in ctx.attr.test_files])
+    test_patterns_literal = "\n".join([_escape_pattern(pattern) for pattern in computed_test_patterns])
 
     test_runner = ctx.actions.declare_file(ctx.label.name + "_test_runner.sh")
 
@@ -875,6 +942,10 @@ mkdir -p "$RUNTIME_WORKSPACE"
 # If not, it contains the package sources at the root.
 copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
 
+# Bazel artifact directories are read-only; ensure the runtime workspace is
+# fully writable so that Flutter can create .dart_tool and other runtime files.
+chmod -R u+rwX "$RUNTIME_WORKSPACE"
+
 # Root workspace files are already inside the prepared workspace if in workspace mode,
 # but we ensure they are writable for the test runner.
 PACKAGE_DIR="{package_dir}"
@@ -911,10 +982,9 @@ fi
 if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
     mkdir -p "$RUNTIME_WORKSPACE/.dart_tool"
     copy_tree "$DART_TOOL_ABS" "$RUNTIME_WORKSPACE/.dart_tool"
-    # Ensure package_config.json is writable and readable
-    if [ -f "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" ]; then
-        chmod u+rw "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" 2>/dev/null || true
-    fi
+    # rsync -a preserves source permissions (often read-only Bazel artifacts);
+    # make the whole .dart_tool tree writable so Flutter can update it.
+    chmod -R u+rwX "$RUNTIME_WORKSPACE/.dart_tool" 2>/dev/null || true
 fi
 
 if [ -n "$PUB_DEPS_ABS" ] && [ -f "$PUB_DEPS_ABS" ]; then
@@ -1046,11 +1116,29 @@ mkdir -p "$RUNTIME_PUB_CACHE"
 if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ]; then
     copy_tree "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
 fi
+# Bazel artifact directories are read-only; ensure pub_cache is writable.
+chmod -R u+rw "$RUNTIME_PUB_CACHE" 2>/dev/null || true
 
 if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
     mkdir -p "$PKG_ROOT/.dart_tool"
     copy_tree "$DART_TOOL_ABS" "$PKG_ROOT/.dart_tool"
 fi
+# Ensure .dart_tool is writable so flutter can regenerate package_config.json.
+chmod -R u+rw "$PKG_ROOT/.dart_tool" 2>/dev/null || true
+
+# Regenerate package_config.json with paths correct for this test sandbox.
+# The pre-built package_config.json has paths relative to the build sandbox
+# which differ from the test sandbox layout. Running pub get --offline
+# regenerates the config using $RUNTIME_PUB_CACHE as the pub cache.
+PUB_GET_LOG="$LOG_ROOT/flutter_pub_get.log"
+(
+    cd "$PKG_ROOT"
+    if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_LOG" 2>&1; then
+        echo "✗ flutter pub get --offline failed; see $PUB_GET_LOG for details" >&2
+        cat "$PUB_GET_LOG" >&2 || true
+        exit 1
+    fi
+)
 
 CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test")
 if [ "{coverage_flag}" = "true" ]; then
@@ -1139,7 +1227,7 @@ exit "$RESULT"
         test_patterns = test_patterns_literal,
         coverage_flag = "true" if ctx.attr.coverage else "false",
         coverage_min = ctx.attr.coverage_min,
-        package_dir = ctx.label.package if ctx.file.workspace_pubspec else "",
+        package_dir = effective_package_dir,
     )
 
     ctx.actions.write(
