@@ -172,7 +172,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('One Human Corp'), findsOneWidget);
       expect(find.text('Dashboard'), findsWidgets);
@@ -208,7 +208,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump(); // Trigger initState
+      await tester.pumpAndSettle(); // Trigger initState
       await tester.pump(const Duration(milliseconds: 100));
 
       verify(() => mockClient.connect()).called(1);
@@ -226,7 +226,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('No messages yet. Say hello!'), findsOneWidget);
@@ -243,7 +243,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
       // Simulate receiving a message
@@ -274,7 +274,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
       // Type and send a message
@@ -296,7 +296,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.byIcon(Icons.meeting_room));
@@ -316,7 +316,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.byIcon(Icons.meeting_room));
@@ -339,7 +339,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.byIcon(Icons.meeting_room));
@@ -386,7 +386,7 @@ void main() {
           backendUrlProvider.overrideWith((ref) => 'http://localhost'),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
@@ -412,7 +412,7 @@ void main() {
           backendUrlProvider.overrideWith((ref) => 'http://localhost'),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'a@b.com');

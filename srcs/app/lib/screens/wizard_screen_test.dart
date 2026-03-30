@@ -13,7 +13,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // The step indicator should show labels for all three steps.
       expect(find.text('Server'), findsOneWidget);
@@ -29,7 +29,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Server Settings'), findsOneWidget);
       expect(find.text('Next'), findsOneWidget);
@@ -43,7 +43,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
@@ -60,7 +60,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Step 1 → Step 2
       await tester.tap(find.text('Next'));
@@ -82,7 +82,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
@@ -101,7 +101,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.widgetWithText(TextField, '0.0.0.0:18789'), findsOneWidget);
     });

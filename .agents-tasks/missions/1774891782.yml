@@ -1,0 +1,3 @@
+type: task
+description: "SemVer calculation and Release Notes generation"
+status: PENDING

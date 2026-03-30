@@ -135,7 +135,7 @@ void main() {
   group('LoginScreen – button clicks', () {
     testWidgets('Sign In button is present and tappable', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final signInBtn = find.text('Sign In');
       expect(signInBtn, findsOneWidget);
@@ -154,7 +154,7 @@ void main() {
         ],
         child: const MaterialApp(home: LoginScreen()),
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'user@example.com');
@@ -168,7 +168,7 @@ void main() {
 
     testWidgets('email field validates correct email format', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Enter invalid email
       await tester.enterText(
@@ -180,7 +180,7 @@ void main() {
 
     testWidgets('password field validates non-empty', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'user@example.com');
@@ -196,7 +196,7 @@ void main() {
         ],
         child: const MaterialApp(home: LoginScreen()),
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'bad@example.com');
@@ -220,7 +220,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Sign Out'), findsOneWidget);
 
@@ -237,7 +237,7 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
         ],
       ));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Dev User'), findsOneWidget);
       expect(find.text('dev@example.com'), findsOneWidget);
@@ -309,7 +309,7 @@ void main() {
         const DashboardScreen(),
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
-      await tester.pump(); // first frame – may show loading
+      await tester.pumpAndSettle(); // first frame – may show loading
       await tester.pumpAndSettle(); // complete futures
       expect(find.byType(Scaffold), findsOneWidget);
     });
@@ -700,7 +700,7 @@ void main() {
   group('SetupWizardScreen – button clicks', () {
     testWidgets('Next button advances wizard steps', (tester) async {
       await tester.pumpWidget(_wrap(const SetupWizardScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // First step should be visible
       expect(find.byType(Scaffold), findsOneWidget);
@@ -716,7 +716,7 @@ void main() {
 
     testWidgets('Back button is disabled on first step', (tester) async {
       await tester.pumpWidget(_wrap(const SetupWizardScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final backBtn = find.text('Back');
       if (backBtn.evaluate().isNotEmpty) {
@@ -729,7 +729,7 @@ void main() {
 
     testWidgets('final step Finish button is tappable', (tester) async {
       await tester.pumpWidget(_wrap(const SetupWizardScreen()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Click through all steps via Next buttons
       for (int i = 0; i < 10; i++) {
