@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glassmorphism_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ohc_app/models/agent.dart';
@@ -90,7 +91,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassmorphismCard(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -166,7 +167,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassmorphismCard(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -227,7 +228,7 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
+    return GlassmorphismCard(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

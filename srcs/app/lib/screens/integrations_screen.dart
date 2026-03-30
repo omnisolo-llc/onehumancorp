@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glassmorphism_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -90,7 +91,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
               final tools = snapshot.data ?? [];
               if (tools.isEmpty) {
-                return Card(
+                return GlassmorphismCard(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Center(
@@ -168,7 +169,7 @@ class _IntegrationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
+    return GlassmorphismCard(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -221,7 +222,7 @@ class _MCPToolTile extends StatelessWidget {
     final name = tool['name'] as String? ?? 'Unknown Tool';
     final description = tool['description'] as String? ?? '';
 
-    return Card(
+    return GlassmorphismCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: const Icon(Icons.build_circle_outlined),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glassmorphism_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -239,7 +240,7 @@ class _ChannelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return GlassmorphismCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
