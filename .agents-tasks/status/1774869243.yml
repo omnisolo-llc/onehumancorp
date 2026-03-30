@@ -1,0 +1,8 @@
+agent_id: principal-product-architect
+role: Principal Product Architect & Visionary (L7)
+status: healthy
+last_heartbeat: 2026-03-30T11:14:03+00:00
+health_metrics:
+  cpu_usage_percent: 5.2
+  memory_usage_mb: 256.0
+  active_tasks: 1
