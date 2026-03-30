@@ -18,11 +18,32 @@ Hierarchical Task Delegation allows agents to provision temporary, specialized s
 - Persistence of dynamic `sub-agent` state across complete system restarts (they are temporary).
 
 ## 3. Implementation Details
+
+```mermaid
+sequenceDiagram
+    participant Originator
+    participant Hub (VRAM Check)
+    participant SubAgent
+
+    Originator->>Hub (VRAM Check): DelegateSubTask(target_role)
+    alt VRAM Quota Exceeded (>=10)
+        Hub (VRAM Check)-->>Originator: ResourceExhausted Error
+    else Quota Available (<10)
+        Hub (VRAM Check)->>Hub (VRAM Check): Provision sub-agent (Write Lock)
+        Hub (VRAM Check)->>SubAgent: RegisterAgent(StatusIdle)
+        Hub (VRAM Check)->>SubAgent: Publish TaskDelegation Message
+        Hub (VRAM Check)-->>Originator: DelegateTaskResponse(Success)
+    end
+```
+
+> **Developer Insight:**
+> *When dynamically spawning agents, hold the `Write Lock` during quota enforcement and registry updates to prevent Time-of-Check to Time-of-Use (TOCTOU) concurrency bugs.*
+
 - **Architecture**: A new RPC method `DelegateSubTask(ctx context.Context, req *pb.SubTask)` is implemented in the `HubServiceServer`.
-- **Quota Enforcement**: A read lock checks the current number of registered agents. If the count exceeds or is equal to 10, a `ResourceExhausted` gRPC status is returned.
-- **Provisioning**: The system dynamically creates an `Agent` struct using the `target_role`. It is assigned to the `dynamic-delegation` organization and registered via `RegisterAgent`.
-- **SYSTEM Fallback**: To ensure proper publishing and prevent "sender agent is not registered" errors during message passing, the `SYSTEM` agent is dynamically registered if it does not already exist.
-- **Routing**: An initial task message containing the instruction and parent thread ID is published from `SYSTEM` directly to the `sub-agent`.
+- **Quota Enforcement**: A write lock checks the current number of registered agents to prevent TOCTOU bypasses. If the count exceeds or is equal to 10, a `ResourceExhausted` gRPC status is returned.
+- **Provisioning**: The system dynamically creates an `Agent` struct using the `target_role`. It is assigned to the `dynamic-delegation` organization and registered directly into the `Hub`'s internal map, avoiding race conditions.
+- **Sender Validation**: To ensure proper publishing and prevent "sender agent is not registered" errors during message passing, the `FromAgentId` is verified to exist in the `Hub`'s registry prior to publishing.
+- **Routing**: An initial task message containing the instruction and parent thread ID is published from the originating agent directly to the `sub-agent`.
 
 ## 4. Edge Cases
 - **Missing Arguments**: If the `task_id` or `target_role` are empty strings, an `InvalidArgument` error is immediately returned.
