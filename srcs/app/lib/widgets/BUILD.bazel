@@ -47,5 +47,16 @@ flutter_library(
     deps = [
         ":org_tree_widget",
         ":slide_to_approve",
+        ":glass_container",
+    ],
+)
+
+flutter_library(
+    name = "glass_container",
+    srcs = ["glass_container.dart"],
+    pubspec = "//srcs/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = [
+        "@flutter_sdk//flutter/packages/flutter",
     ],
 )
