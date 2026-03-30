@@ -250,18 +250,6 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 	})
 }
 
-// PruneStaleMemory removes obsolete blueprints from the swarm_memory table.
-// Accepts parameters: ctx context.Context.
-// Returns error.
-// Produces errors: Explicit error handling.
-// Has side effects: Deletes records from the swarm_memory table.
-func (s *SIPDB) PruneStaleMemory(ctx context.Context) error {
-	return withRetry(ctx, func() error {
-		_, err := s.db.ExecContext(ctx, "DELETE FROM swarm_memory WHERE key LIKE 'architectural_blueprint_v%' AND key != 'architectural_blueprint_v3'")
-		return err
-	})
-}
-
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
 	PluginID    string    `json:"plugin_id"`

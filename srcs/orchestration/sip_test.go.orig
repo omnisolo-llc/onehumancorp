@@ -361,4 +361,3 @@ func TestSIPDB_PruneStaleMemory(t *testing.T) {
 	if count != 2 {
 		t.Fatalf("Expected 2 remaining memory items, got %d", count)
 	}
-}

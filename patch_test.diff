@@ -1,0 +1,38 @@
+--- srcs/orchestration/sip_test.go
++++ srcs/orchestration/sip_test.go
+@@ -235,4 +235,34 @@
+	if err == nil {
+		t.Fatal("Expected error when pruning on closed DB")
+	}
+ }
++
++func TestSIPDB_PruneStaleMemory(t *testing.T) {
++	dbPath := filepath.Join(t.TempDir(), "test.db")
++	db, err := NewSIPDB(dbPath)
++	if err != nil {
++		t.Fatalf("Failed to create test DB: %v", err)
++	}
++	defer db.Close()
++
++	ctx := context.Background()
++
++	// Insert some memory items
++	_ = db.UpdateMemory(ctx, "architectural_blueprint_v1", "v1")
++	_ = db.UpdateMemory(ctx, "architectural_blueprint_v2", "v2")
++	_ = db.UpdateMemory(ctx, "architectural_blueprint_v3", "v3")
++	_ = db.UpdateMemory(ctx, "other_memory", "other")
++
++	err = db.PruneStaleMemory(ctx)
++	if err != nil {
++		t.Fatalf("Failed to prune stale memory: %v", err)
++	}
++
++	var count int
++	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM swarm_memory").Scan(&count)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if count != 2 {
++		t.Fatalf("Expected 2 remaining memory items, got %d", count)
++	}
++}

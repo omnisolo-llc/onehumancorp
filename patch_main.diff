@@ -1,0 +1,14 @@
+--- srcs/cmd/ohc/main.go
++++ srcs/cmd/ohc/main.go
+@@ -148,6 +148,11 @@
+					} else {
+						slog.Info("successfully pruned stale agent missions")
+					}
++					if err := sipdb.PruneStaleMemory(ctx); err != nil {
++						slog.Error("failed to prune stale memory", "error", err)
++					} else {
++						slog.Info("successfully pruned stale memory")
++					}
+				}
+			}
+		}()

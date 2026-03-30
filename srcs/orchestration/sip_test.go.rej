@@ -1,0 +1,7 @@
+--- srcs/orchestration/sip_test.go
++++ srcs/orchestration/sip_test.go
+@@ -362,3 +362,4 @@
+		t.Fatalf("Expected 2 remaining memory items, got %d", count)
+	}
+ }
++

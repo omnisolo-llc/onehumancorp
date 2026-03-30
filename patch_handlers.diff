@@ -1,0 +1,10 @@
+--- srcs/dashboard/handlers_ops.go
++++ srcs/dashboard/handlers_ops.go
+@@ -165,6 +165,7 @@
+	// Execute pruning task
+	if s.hub.SIPDB() != nil {
+		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
++		_ = s.hub.SIPDB().PruneStaleMemory(r.Context())
+	}
+	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+ }
