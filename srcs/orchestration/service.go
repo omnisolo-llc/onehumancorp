@@ -744,13 +744,17 @@ func (h *Hub) Publish(message Message) error {
 
 		h.inbox[message.ToAgent] = append(inbox, message)
 
-		subs := h.subs[message.ToAgent]
-		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
+		subs := make([]chan struct{}, len(h.subs[message.ToAgent]))
+		copy(subs, h.subs[message.ToAgent])
+
+		go func() {
+			for i := 0; i < len(subs); i++ {
+				select {
+				case subs[i] <- struct{}{}:
+				default:
+				}
 			}
-		}
+		}()
 	}
 
 	sender := h.agents[message.FromAgent]
@@ -813,15 +817,19 @@ func (h *Hub) Publish(message Message) error {
 		h.meetings[message.MeetingID] = meeting
 		sender.Status = StatusInMeeting
 
+		var allSubs []chan struct{}
 		for _, participant := range meeting.Participants {
-			subs := h.subs[participant]
-			for i := 0; i < len(subs); i++ {
+			allSubs = append(allSubs, h.subs[participant]...)
+		}
+
+		go func() {
+			for i := 0; i < len(allSubs); i++ {
 				select {
-				case subs[i] <- struct{}{}:
+				case allSubs[i] <- struct{}{}:
 				default:
 				}
 			}
-		}
+		}()
 	} else {
 		sender.Status = StatusActive
 	}
@@ -833,7 +841,7 @@ func (h *Hub) Publish(message Message) error {
 
 	// Structured logging for agent execution traces
 	// Filter out high-frequency "status" events to reduce signal noise.
-	if message.Type != EventStatus {
+	if message.Type != EventStatus && telemetry.Verbosity >= 2 {
 		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
 	}
 

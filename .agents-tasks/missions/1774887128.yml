@@ -1,0 +1,13 @@
+mission_id: "m-1774887128"
+role: "Software Engineer (L6)"
+task: |
+  Based on the telemetry review, the 'Hub.Publish' synchronous channel blocking under high concurrency (seen in high throughput event broadcasting to thousands of Centrifuge subscribers) is the primary bottleneck.
+
+  The agent role assigned to network broadcasting is overwhelmed.
+
+  Proposal: Split the current monolithic 'orchestrator' role into two distinct roles:
+  1. 'Orchestrator-Ingest': Responsible solely for ingesting and validating incoming gRPC/REST messages into the Hub inbox.
+  2. 'Orchestrator-Distributor': Dedicated to fanning out messages from the Hub to registered subscribers, centrifuge nodes, and meeting rooms asynchronously.
+
+status: "PENDING"
+created_at: 1774887128
