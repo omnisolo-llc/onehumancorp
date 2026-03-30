@@ -497,6 +497,7 @@ func TestNewMinimaxClient(t *testing.T) {
 }
 
 func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
+	ResetMinimaxCircuitBreaker()
 	// Save the original URL to restore it later
 	originalURL := minimaxAPIURL
 	defer func() { minimaxAPIURL = originalURL }()
@@ -1052,6 +1053,7 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
+	ResetMinimaxCircuitBreaker()
 	// 1. Setup Mock Server for Minimax
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

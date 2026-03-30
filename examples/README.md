@@ -1,3 +1,7 @@
+<div style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.08); padding: 20px; border-radius: 12px; font-family: 'Outfit', 'Inter', sans-serif; text-align: center;">
+  <strong>Agentic OS Identity: Aesthetic Excellence. Zero Friction. Maximum Autonomy.</strong>
+</div>
+
 <div align="center">
   <h1>One Human Corp Examples</h1>
   <p><strong>Pre-configured, high-quality agent examples for the One Human Corp platform.</strong></p>
@@ -15,7 +19,7 @@ These examples are designed to practically demonstrate the platform's **Zero-Loc
 Experience the platform in seconds with the "Hello World" agent. It leverages the `builtin` model for immediate feedback with **zero configuration** and **no external API keys**.
 Run the compiled Go agent directly using our intuitive Bazel aliases:
 ```bash
-bazelisk run //:hello-world
+./setup.sh hello-world
 ```
 *Expected Output: A successful boot log and a friendly "Hello World" message.*
 

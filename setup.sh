@@ -7,6 +7,7 @@ function print_usage {
     echo "  test          Run all standard tests via Bazel."
     echo "  e2e           Run end-to-end integration tests."
     echo "  start-local   Start the local development environment."
+    echo "  hello-world   Run the Hello World agent."
     echo "  build         Build all targets."
     return 1
 }
@@ -19,6 +20,10 @@ COMMAND=$1
 shift
 
 case "$COMMAND" in
+    hello-world)
+        echo "Running Hello World agent..."
+        bazelisk run //:hello-world "$@"
+        ;;
     test)
         echo "Running Bazel tests..."
         bazelisk test //... "$@"
@@ -29,7 +34,7 @@ case "$COMMAND" in
         ;;
     start-local)
         echo "Starting local environment..."
-        bazelisk run //:deploy_dev "$@"
+        bazelisk run //deploy:deploy_dev "$@"
         ;;
     build)
         echo "Building all modules..."

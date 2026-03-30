@@ -1189,6 +1189,89 @@ var bufferPool = sync.Pool{
 
 var sharedHTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
+	},
+}
+
+type CircuitBreakerState int
+
+const (
+	StateClosed CircuitBreakerState = iota
+	StateOpen
+	StateHalfOpen
+)
+
+type CircuitBreaker struct {
+	mu           sync.Mutex
+	state        CircuitBreakerState
+	failureCount int
+	maxFailures  int
+	lastFailure  time.Time
+	resetTimeout time.Duration
+}
+
+func NewCircuitBreaker(maxFailures int, resetTimeout time.Duration) *CircuitBreaker {
+	return &CircuitBreaker{
+		state:        StateClosed,
+		maxFailures:  maxFailures,
+		resetTimeout: resetTimeout,
+	}
+}
+
+func (cb *CircuitBreaker) Allow() error {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+
+	switch cb.state {
+	case StateClosed:
+		return nil
+	case StateOpen:
+		if time.Since(cb.lastFailure) > cb.resetTimeout {
+			cb.state = StateHalfOpen
+			return nil
+		}
+		return errors.New("circuit breaker is open")
+	case StateHalfOpen:
+		return nil
+	default:
+		return errors.New("invalid circuit breaker state")
+	}
+}
+
+func (cb *CircuitBreaker) RecordResult(err error) {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+
+	if err == nil {
+		if cb.state == StateHalfOpen {
+			cb.state = StateClosed
+			cb.failureCount = 0
+		}
+		return
+	}
+
+	cb.failureCount++
+	cb.lastFailure = time.Now()
+	if cb.state == StateHalfOpen || cb.failureCount >= cb.maxFailures {
+		cb.state = StateOpen
+	}
+}
+
+func (cb *CircuitBreaker) Reset() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.state = StateClosed
+	cb.failureCount = 0
+	cb.lastFailure = time.Time{}
+}
+
+var globalCB = NewCircuitBreaker(5, 10*time.Second)
+
+// ResetMinimaxCircuitBreaker is provided to ensure hermetic testing.
+func ResetMinimaxCircuitBreaker() {
+	globalCB.Reset()
 }
 
 // Reason functionality.
@@ -1196,10 +1279,17 @@ var sharedHTTPClient = &http.Client{
 // Returns (string, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (res string, err error) {
 	if c.APIKey == "" {
 		return "", errors.New("minimax API key is not configured")
 	}
+
+	if err = globalCB.Allow(); err != nil {
+		return "", err
+	}
+	defer func() {
+		globalCB.RecordResult(err)
+	}()
 
 	url := minimaxAPIURL
 	// Optimization: construct the JSON payload manually to avoid
@@ -1216,7 +1306,8 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	buf.Truncate(buf.Len() - 1)
 	buf.WriteString(`}]}`)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, buf)
+	var req *http.Request
+	req, err = http.NewRequestWithContext(ctx, "POST", url, buf)
 	if err != nil {
 		return "", err
 	}
@@ -1226,7 +1317,8 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 	// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
 	// Prevents severe connection and resource leaks by reusing connection pools on every request.
-	resp, err := sharedHTTPClient.Do(req)
+	var resp *http.Response
+	resp, err = sharedHTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -1234,7 +1326,8 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
+		err = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
+		return "", err
 	}
 
 	var result struct {
@@ -1245,13 +1338,15 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		} `json:"choices"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}
 
 	if len(result.Choices) == 0 {
-		return "", errors.New("empty response from minimax")
+		err = errors.New("empty response from minimax")
+		return "", err
 	}
 
-	return result.Choices[0].Message.Content, nil
+	res = result.Choices[0].Message.Content
+	return res, nil
 }

@@ -1,3 +1,22 @@
+## 🚀 Quick Start (Zero Friction Onboarding)
+
+Experience One Human Corp's premium developer experience via our unified setup CLI:
+
+```bash
+# Start the local development environment
+./setup.sh start-local
+
+# Run the Hello World agent
+./setup.sh hello-world
+
+# Run all automated tests
+./setup.sh test
+```
+
+<div style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.08); padding: 20px; border-radius: 12px; font-family: 'Outfit', 'Inter', sans-serif; text-align: center;">
+  <strong>Agentic OS Identity: Aesthetic Excellence. Zero Friction. Maximum Autonomy.</strong>
+</div>
+
 # One Human Corp
 
 ## Identity
