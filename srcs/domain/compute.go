@@ -84,12 +84,20 @@ func (ae *AffinityEngine) CalculateScore(profile ComputeProfile, isVIP bool, loc
 // Has no side effects.
 type QuotaManager struct{}
 
-// CheckQuota validates if the requested VRAM fits within the available quota limit. This implements UT-02 from the test plan.
-// Accepts parameters: qm *QuotaManager (No Constraints).
+// CheckQuota validates if the requested VRAM fits within the available quota limit and enforces SPIFFE identity checks and stricter quotas.
+// Accepts parameters: qm *QuotaManager (No Constraints), spiffeID string (No Constraints).
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (qm *QuotaManager) CheckQuota(profile ComputeProfile, availableVRAM int) error {
+func (qm *QuotaManager) CheckQuota(spiffeID string, profile ComputeProfile, availableVRAM int) error {
+	if spiffeID == "" || !strings.HasPrefix(spiffeID, "spiffe://") {
+		return errors.New("identity check failed: valid SPIFFE ID required")
+	}
+
+	if profile.Priority > 100 && availableVRAM < 80 {
+		return errors.New("strict quota enforced: high priority tasks require dedicated high-VRAM nodes")
+	}
+
 	if profile.MinVRAM > availableVRAM {
 		return errors.New("quota exceeded: min_vram_gb exceeds available VRAM")
 	}

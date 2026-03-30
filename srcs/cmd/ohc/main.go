@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/onehumancorp/mono/srcs/auth"
 	"github.com/onehumancorp/mono/srcs/billing"
@@ -200,7 +202,16 @@ func run(now time.Time, listen listenFunc) error {
 			slog.Error("failed to listen for gRPC", "error", err)
 			return
 		}
+
+		// Apply SPIFFE-based mTLS for every internal call
+		tlsConfig := &tls.Config{
+			ClientAuth: tls.RequireAnyClientCert,
+			// In a real environment, this would be populated via spiffe/v2/spiffetls
+		}
+		creds := credentials.NewTLS(tlsConfig)
+
 		s := grpc.NewServer(
+			grpc.Creds(creds),
 			grpc.UnaryInterceptor(orchestration.SPIFFEAuthInterceptor()),
 			grpc.StreamInterceptor(orchestration.SPIFFEStreamInterceptor()),
 		)

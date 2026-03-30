@@ -108,14 +108,30 @@ func TestQuotaManager_CheckQuota(t *testing.T) {
 			availableVRAM: 80,
 			wantErr:       true,
 		},
+		{
+			name: "High priority task rejected on low VRAM node",
+			profile: ComputeProfile{
+				Priority: 200,
+				MinVRAM: 40,
+			},
+			availableVRAM: 40,
+			wantErr:       true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := qm.CheckQuota(tt.profile, tt.availableVRAM)
+			err := qm.CheckQuota("spiffe://onehumancorp.io/org-1/a1", tt.profile, tt.availableVRAM)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckQuota() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
+
+	t.Run("Missing SPIFFE ID rejected", func(t *testing.T) {
+		err := qm.CheckQuota("", ComputeProfile{MinVRAM: 40}, 80)
+		if err == nil || !strings.Contains(err.Error(), "identity check failed") {
+			t.Errorf("Expected identity check error, got %v", err)
+		}
+	})
 }
