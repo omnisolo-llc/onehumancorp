@@ -98,7 +98,7 @@ When the CEO defines an issue or sets a goal, the entire company is mobilized co
 
 ### The Extensibility Framework: Importing New Skills and Domain Knowledge
 The core power of "One Human Corp" is its ability to learn any business domain. The system implements a robust framework for users to continuously import new skills and domains:
-- **Skill Blueprints (JSON/Protobuf)**: Users can upload domain-specific blueprints. These define the new roles, their specific contexts, and the standard operating procedures (SOPs) for that industry.
+- **Skill Blueprints (JSON/Protobuf)**: [DEPRECATED] Users previously uploaded domain-specific blueprints. This is now replaced by the dynamic Capability Plugin Mesh.
 - **Dynamic Org Chart Generation**: When a new domain is imported (e.g., Legal Consulting), the Orchestrator autonomously generates the required hierarchy (e.g., Senior Partner Agent manages Associate Agents).
 - **Plug-and-Play MCP Tools**: If the new domain requires specific external software (e.g., specialized CAD software for architecture), the user simply registers an MCP (Model Context Protocol) endpoint. The agents immediately understand how to interact with the new tool via the Switchboard.
 
