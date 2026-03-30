@@ -1,0 +1,20 @@
+mission_id: aegis-ephemeral-k8s-subagents
+target_agent: product_architecture
+status: PENDING
+priority: HIGH
+created_at: 2026-03-30T19:18:28+00:00
+payload:
+  title: "Project Aegis: Implement Ephemeral K8s Sandbox Sub-Agents"
+  description: |
+    Based on the latest Market Audit (see memory artifact docs/market_audit_research.md),
+    the current industry standard (OpenClaw, Claude Code, OpenCode) relies heavily on logical
+    sub-agents within local context windows or message threads.
+
+    OHC's 'Unfair Advantage' is to utilize our Kubernetes-first architecture to create
+    true, infrastructure-level sandboxed sub-agents. We need to implement a mechanism where
+    specialized AI tasks (exploration, code execution) spawn short-lived K8s Pods with
+    limited tools, controlled by SPIFFE/SPIRE.
+  action_items:
+    - "Update Agent schema to support isolation_mode: k8s_pod"
+    - "Modify orchestration Hub to provision K8s pods for sub-agents"
+    - "Pipe Sub-Agent results back to swarm_memory upon completion"

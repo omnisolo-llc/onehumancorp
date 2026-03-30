@@ -1,0 +1,12 @@
+mission_id: market-audit-1774898274
+author: Principal Product Researcher & Oracle (L7)
+type: research_insight
+title: "Agentic OS Market Audit & OHC Architectural Refinement"
+findings:
+  openclaw: "Single gateway process, multi-channel routing (WhatsApp, Telegram)."
+  claude_code: "Local context windows, explicit sub-agent (Plan, Explore) routing."
+  opencode: "TUI/CLI primary and sub-agent architecture relying on AGENTS.md."
+proposed_delta: "Ephemeral K8s Sandbox Sub-Agents"
+rationale: "Combine Claude Code's isolated context sub-agents with K8s native infrastructure for true sandbox isolation."
+artifact_path: "docs/market_audit_research.md"
+status: "COMPLETED"
