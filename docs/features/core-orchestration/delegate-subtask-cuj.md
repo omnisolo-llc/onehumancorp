@@ -13,9 +13,25 @@ An agent receives a complex task and decides to provision a temporary, specializ
 |------|-----------------------------|----------------|-----------------|--------------|
 | 1 | Agent identifies a sub-task requiring specialized skills | Agent calls `DelegateSubTask` with `task_id` and `target_role` | System checks VRAM quota (max 10 active agents) | Quota is evaluated |
 | 2 | System validates quota and creates sub-agent | System provisions a new `Agent` with `dynamic-delegation` organization | Sub-agent is registered in the Hub | Sub-agent ID is generated |
-| 3 | System assigns instructions | System publishes a `TaskDelegation` message to the sub-agent from `SYSTEM` | Sub-agent receives instructions and isolated thread context | Original caller receives success response |
+| 3 | System assigns instructions | System publishes a `TaskDelegation` message to the sub-agent from the originating agent | Sub-agent receives instructions and isolated thread context | Original caller receives success response |
 
 ## 3. Implementation Details
+
+```mermaid
+graph TD;
+    Agent[Agent Caller] -->|DelegateSubTask| Hub;
+    Hub -->|Quota Check < 10| Provision[Spawn Sub-Agent];
+    Hub -.->|Quota Check >= 10| Reject[ResourceExhausted Error];
+    Provision --> Thread[Isolate Thread Context];
+    Thread --> Execute[Publish Instruction];
+    Execute --> Success[Caller Receives Success];
+
+    %% Premium OHC Glassmorphism Tokens
+    style Agent fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
+    style Hub fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
+    style Reject fill:rgba(255, 0, 0, 0.1),stroke:rgba(255, 0, 0, 0.3)
+```
+
 - **Architecture**: The `DelegateSubTask` RPC method handles quota checking, dynamic agent provisioning, and message publication on the `Hub`.
 - **State Management**: The sub-agent is registered dynamically with `StatusIdle` and a generated ID containing its role and a timestamp.
 
