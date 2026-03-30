@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/minimax"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"google.golang.org/grpc"
@@ -21,9 +22,9 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
@@ -128,10 +129,10 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
-	client := NewMinimaxClient("test")
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
-	defer func() { minimaxAPIURL = originalURL }()
+	client := minimax.NewMinimaxClient("test")
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(string([]byte{0x7f})) // Control character to fail http.NewRequestWithContext
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
@@ -224,9 +225,9 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
@@ -337,7 +338,7 @@ func TestEventLogWorker_Errors(t *testing.T) {
 
 	hub2 := NewHub()
 	// Marshal failure branch (func cannot be marshaled in JSON)
-	hub2.LogEvent(func(){})
+	hub2.LogEvent(func() {})
 
 	time.Sleep(50 * time.Millisecond)
 }

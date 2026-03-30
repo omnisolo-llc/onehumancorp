@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/minimax"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -122,11 +123,11 @@ func BenchmarkReason(b *testing.B) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
-	client := NewMinimaxClient("test-key")
+	client := minimax.NewMinimaxClient("test-key")
 	ctx := context.Background()
 
 	b.ResetTimer()

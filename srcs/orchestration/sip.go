@@ -53,16 +53,37 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
+	// Add PRAGMAs for high-concurrency connections to mitigate 'database is locked' errors
+	if dbPath != ":memory:" && dbPath != "" {
+		if !contains(dbPath, "?") {
+			dbPath += "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+		} else {
+			dbPath += "&_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+		}
+	}
+
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
+
+	// For WAL mode and to mitigate locking issues further
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
 	}
 
 	return &SIPDB{db: db}, nil
+}
+
+func contains(s, substr string) bool {
+	for i := 0; i < len(s)-len(substr)+1; i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func initializeTables(db *sql.DB) error {
@@ -252,11 +273,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 
