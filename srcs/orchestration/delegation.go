@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration/core"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,8 +18,8 @@ import (
 // specialized sub-agents. It enforces VRAM quota limits before creating the agent,
 // and isolates the sub-agent with its own thread ID and instructions.
 //
-//   ctx context.Context
-//   req *pb.SubTask
+//	ctx context.Context
+//	req *pb.SubTask
 //
 // Accepts parameters: s *HubServiceServer (No Constraints).
 // Returns DelegateSubTask(ctx context.Context, req *pb.SubTask) (*pb.DelegateTaskResponse, error).
@@ -46,12 +48,12 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 	}
 
 	subAgentID := fmt.Sprintf("sub-agent-%s-%d", req.GetTargetRole(), time.Now().UnixNano())
-	subAgent := Agent{
+	subAgent := core.Agent{
 		ID:             subAgentID,
-		Name:           fmt.Sprintf("Specialized %s Agent", req.GetTargetRole()),
+		Name:           fmt.Sprintf("Specialized %s core.Agent", req.GetTargetRole()),
 		Role:           req.GetTargetRole(),
 		OrganizationID: "dynamic-delegation",
-		Status:         StatusIdle,
+		Status:    core.StatusIdle,
 		ProviderType:   "builtin",
 	}
 
@@ -83,7 +85,7 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		return nil, status.Errorf(codes.InvalidArgument, "parent_thread_id contains forbidden prompt injection sequences")
 	}
 
-	msg := Message{
+	msg := core.Message{
 		ID:         fmt.Sprintf("msg-%s-%d", req.GetTaskId(), time.Now().UnixNano()),
 		FromAgent:  req.GetFromAgentId(),
 		ToAgent:    subAgentID,

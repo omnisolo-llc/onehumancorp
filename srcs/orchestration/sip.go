@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration/core"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -53,16 +55,41 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
+	// Add required PRAGMAs for high-concurrency access in modernc.org/sqlite.
+	if dbPath != ":memory:" {
+		// Only append if it doesn't already have query parameters, or correctly append
+		if !contains(dbPath, "?") {
+			dbPath += "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
+		} else {
+			dbPath += "&_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
+		}
+	} else {
+		// For in-memory, we can also apply busy_timeout
+		dbPath += "?_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
+	}
+
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
+
+	// effectively mitigate 'database is locked (SQLITE_BUSY)' errors
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
 	}
 
 	return &SIPDB{db: db}, nil
+}
+
+func contains(s, substr string) bool {
+	for i := 0; i < len(s)-len(substr)+1; i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func initializeTables(db *sql.DB) error {
@@ -146,11 +173,11 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 
 // GetPendingMissions proactively seeks tasks assigned to the role.
 // Accepts parameters: s *SIPDB (No Constraints).
-// Returns GetPendingMissions(ctx context.Context, role string) ([]Message, error).
+// Returns GetPendingMissions(ctx context.Context, role string) ([]core.Message, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message, error) {
-	var missions []Message
+func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]core.Message, error) {
+	var missions []core.Message
 	err := withRetry(ctx, func() error {
 		missions = nil
 		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
@@ -159,23 +186,46 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 		}
 		defer rows.Close()
 
+		type fixTask struct {
+			id  string
+			msg core.Message
+		}
+		var toFix []fixTask
+
 		for rows.Next() {
 			var id, taskStr string
 			if err := rows.Scan(&id, &taskStr); err != nil {
 				return err
 			}
 
-			var msg Message
+			var msg core.Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				// fallback: Automatically fix divergences in inter-agent messages.
+				msg = core.Message{ID: id, Content: taskStr, Type: core.EventTask}
+				toFix = append(toFix, fixTask{id: id, msg: msg})
 			} else {
 				if msg.ID == "" {
 					msg.ID = id
+					toFix = append(toFix, fixTask{id: id, msg: msg})
 				}
 			}
 			missions = append(missions, msg)
 		}
+
+		// Update invalid JSON formats synchronously inside the transaction scope/connection
+		if len(toFix) > 0 {
+			go func(fixes []fixTask) {
+				// Best effort divergence fixes
+				for _, fix := range fixes {
+					b, _ := json.Marshal(fix.msg)
+					_ = withRetry(context.Background(), func() error {
+						_, err := s.db.Exec("UPDATE agent_missions SET task = ? WHERE id = ?", string(b), fix.id)
+						return err
+					})
+				}
+			}(toFix)
+		}
+
 		return nil
 	})
 	return missions, err
@@ -220,10 +270,10 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 
 // DelegateMission delegates specialized tasks via the agent_missions table.
 // Accepts parameters: s *SIPDB (No Constraints).
-// Returns DelegateMission(ctx context.Context, missionID, role string, task Message) error.
+// Returns DelegateMission(ctx context.Context, missionID, role string, task core.Message) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task core.Message) error {
 	taskBytes, err := json.Marshal(task)
 	if err != nil {
 		return err
@@ -252,11 +302,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 

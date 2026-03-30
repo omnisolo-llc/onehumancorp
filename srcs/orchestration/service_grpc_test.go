@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration/core"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -21,10 +23,10 @@ func TestRegisterAgentViaGRPC(t *testing.T) {
 	req := pb.RegisterAgentRequest_builder{
 		Agent: pb.Agent_builder{
 			Id:             proto.String("test-agent"),
-			Name:           proto.String("Test Agent"),
+			Name:           proto.String("Test core.Agent"),
 			Role:           proto.String("QA_ENGINEER"),
 			OrganizationId: proto.String("org-1"),
-			Status:         proto.String("ACTIVE"),
+			Status:    proto.String("ACTIVE"),
 		}.Build(),
 	}.Build()
 
@@ -40,15 +42,15 @@ func TestRegisterAgentViaGRPC(t *testing.T) {
 	if !ok {
 		t.Fatalf("agent not registered in hub")
 	}
-	if agent.Name != "Test Agent" || agent.Role != "QA_ENGINEER" || agent.Status != "ACTIVE" {
+	if agent.Name != "Test core.Agent" || agent.Role != "QA_ENGINEER" || agent.Status != "ACTIVE" {
 		t.Errorf("agent fields mismatch: %+v", agent)
 	}
 }
 
 func TestOpenMeetingViaGRPC(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
 
 	req := pb.OpenMeetingRequest_builder{
@@ -76,8 +78,8 @@ func TestOpenMeetingViaGRPC(t *testing.T) {
 
 func TestPublishViaGRPC(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
 
 	req := pb.PublishMessageRequest_builder{
@@ -124,12 +126,12 @@ func (m *MockStreamServer) RecvMsg(m_ interface{}) error { return nil }
 
 func TestStreamMessagesViaGRPC(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
 
 	// Publish an initial message
-	hub.Publish(Message{
+	hub.Publish(core.Message{
 		ID:         "msg-1",
 		FromAgent:  "a1",
 		ToAgent:    "a2",
@@ -146,7 +148,7 @@ func TestStreamMessagesViaGRPC(t *testing.T) {
 	go func() {
 		// Publish a message while streaming
 		time.Sleep(100 * time.Millisecond)
-		hub.Publish(Message{
+		hub.Publish(core.Message{
 			ID:         "msg-2",
 			FromAgent:  "a1",
 			ToAgent:    "a2",

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/centrifugal/centrifuge"
+	"github.com/onehumancorp/mono/srcs/orchestration/core"
 )
 
 // TestNewCentrifugeNode_CreationError tests the error path of centrifuge.New via our hook.
@@ -62,7 +63,6 @@ func TestCentrifugeNodeHandler(t *testing.T) {
 func TestHubCentrifugeIntegration(t *testing.T) {
 	hub := NewHub()
 
-
 	cn, err := NewCentrifugeNode()
 	if err != nil {
 		t.Fatalf("NewCentrifugeNode() error = %v", err)
@@ -76,13 +76,13 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 	}
 
 	// Register agents and open a meeting so Publish succeeds.
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(core.Agent{
 		ID:             "cn-pm",
 		Name:           "PM",
 		Role:           "PRODUCT_MANAGER",
 		OrganizationID: "org-cn",
 	})
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(core.Agent{
 		ID:             "cn-swe",
 		Name:           "SWE",
 		Role:           "SOFTWARE_ENGINEER",
@@ -91,10 +91,10 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 	hub.OpenMeetingWithAgenda("cn-meeting", "Integration test", []string{"cn-pm", "cn-swe"})
 
 	// Publish should succeed and silently forward to Centrifuge in the background.
-	if err := hub.Publish(Message{
+	if err := hub.Publish(core.Message{
 		ID:        "cn-msg-1",
 		FromAgent: "cn-pm",
-		Type:      EventTask,
+		Type:      core.EventTask,
 		Content:   "Hello from centrifuge test",
 		MeetingID: "cn-meeting",
 	}); err != nil {
@@ -107,13 +107,13 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 func TestHubCentrifugeNilSafe(t *testing.T) {
 	hub := NewHub()
 
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(core.Agent{
 		ID:             "nil-pm",
 		Name:           "PM",
 		Role:           "PRODUCT_MANAGER",
 		OrganizationID: "org-nil",
 	})
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(core.Agent{
 		ID:             "nil-swe",
 		Name:           "SWE",
 		Role:           "SOFTWARE_ENGINEER",
@@ -121,10 +121,10 @@ func TestHubCentrifugeNilSafe(t *testing.T) {
 	})
 	hub.OpenMeeting("nil-meeting", []string{"nil-pm", "nil-swe"})
 
-	if err := hub.Publish(Message{
+	if err := hub.Publish(core.Message{
 		ID:        "nil-msg-1",
 		FromAgent: "nil-pm",
-		Type:      EventTask,
+		Type:      core.EventTask,
 		Content:   "No centrifuge attached",
 		MeetingID: "nil-meeting",
 	}); err != nil {
@@ -140,10 +140,10 @@ func TestCentrifugeNode_Publishers(t *testing.T) {
 	}
 	defer cn.Close()
 
-	msg := Message{
+	msg := core.Message{
 		ID:        "msg-1",
 		FromAgent: "agent-1",
-		Type:      EventTask,
+		Type:      core.EventTask,
 		Content:   "Test content",
 	}
 
@@ -231,10 +231,10 @@ func TestCentrifugeNodePublishErrorPaths(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	msg := Message{
+	msg := core.Message{
 		ID:        "msg-1",
 		FromAgent: "agent-1",
-		Type:      EventTask,
+		Type:      core.EventTask,
 		Content:   "Test content",
 	}
 
@@ -246,7 +246,7 @@ func TestCentrifugeNodePublishErrorPaths(t *testing.T) {
 
 func TestCentrifugeNode_MarshalError(t *testing.T) {
 	// Actually we cannot easily mock json.Marshal.
-	// We can pass a Message with something unmarshalable if there is a field that allows it.
+	// We can pass a core.Message with something unmarshalable if there is a field that allows it.
 	// Oh well, 95% is our goal.
 }
 
@@ -330,8 +330,8 @@ func TestCentrifugeNode_HandlerCheckOrigin(t *testing.T) {
 }
 
 // Add coverage to json.Marshal error by temporarily replacing the json.Marshal function.
-// Actually json.Marshal is not a variable. But wait, what if I pass a channel or function in Message to force Marshal error?
-// Oh, Message is a struct. Does it contain an `interface{}` field?
+// Actually json.Marshal is not a variable. But wait, what if I pass a channel or function in core.Message to force Marshal error?
+// Oh, core.Message is a struct. Does it contain an `interface{}` field?
 // No, it has ID, FromAgent, ToAgent, Type, Content, MeetingID, OccurredAt
 // But we can't change it to interface{} because that would be a schema change.
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration/core"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"google.golang.org/grpc"
@@ -27,13 +29,13 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	meeting := hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	for i := 0; i < 16; i++ {
-		err := hub.Publish(Message{
+		err := hub.Publish(core.Message{
 			ID:         "msg-" + string(rune(i)),
 			FromAgent:  "pm-1",
 			ToAgent:    "", // Broadcast to meeting
@@ -49,7 +51,7 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 
 	// Wait deterministically for the summarizer goroutine to finish modifying the transcript
 	var finalTranscriptLength int
-	var mtg MeetingRoom
+	var mtg core.MeetingRoom
 	var ok bool
 	for i := 0; i < 50; i++ {
 		mtg, ok = hub.Meeting("kickoff")
@@ -76,8 +78,8 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 
 func TestPublish_ChannelFull(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	hub.mu.Lock()
 	ch := make(chan struct{}, 1)
@@ -86,7 +88,7 @@ func TestPublish_ChannelFull(t *testing.T) {
 
 	ch <- struct{}{}
 
-	err := hub.Publish(Message{
+	err := hub.Publish(core.Message{
 		ID:         "msg-1",
 		FromAgent:  "pm-1",
 		ToAgent:    "swe-1",
@@ -101,8 +103,8 @@ func TestPublish_ChannelFull(t *testing.T) {
 
 func TestPublish_MeetingChannelFull(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	hub.mu.Lock()
 	ch := make(chan struct{}, 1)
@@ -113,7 +115,7 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
-	err := hub.Publish(Message{
+	err := hub.Publish(core.Message{
 		ID:         "msg-1",
 		FromAgent:  "pm-1",
 		ToAgent:    "swe-1",
@@ -154,15 +156,15 @@ func (m *mockStreamMessagesServerError) Send(msg *pb.Message) error {
 
 func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
-	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
+	hub.RegisterAgent(core.Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
+	hub.RegisterAgent(core.Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
 
-	_ = hub.Publish(Message{
+	_ = hub.Publish(core.Message{
 		ID:         "msg-1",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       core.EventTask,
 		Content:    "Hello Streaming",
 		OccurredAt: time.Now(),
 	})
@@ -183,8 +185,8 @@ func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 
 func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
-	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
+	hub.RegisterAgent(core.Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
+	hub.RegisterAgent(core.Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -201,11 +203,11 @@ func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 	}()
 
 	time.Sleep(10 * time.Millisecond) // Let stream setup
-	_ = hub.Publish(Message{
+	_ = hub.Publish(core.Message{
 		ID:         "msg-2",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       core.EventTask,
 		Content:    "Hello Streaming",
 		OccurredAt: time.Now(),
 	})
@@ -230,13 +232,13 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(core.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	meeting := hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	for i := 0; i < 16; i++ {
-		err := hub.Publish(Message{
+		err := hub.Publish(core.Message{
 			ID:         "msg-" + string(rune(i)),
 			FromAgent:  "pm-1",
 			ToAgent:    "", // Broadcast to meeting
@@ -283,12 +285,12 @@ func TestService_CoverageExt(t *testing.T) {
 	}
 	hub.SetSIPDB(db)
 
-	hub.RegisterAgent(Agent{ID: "del-sender", Role: "ROUTER"})
-	hub.RegisterAgent(Agent{ID: "del-receiver", Role: "WORKER"})
+	hub.RegisterAgent(core.Agent{ID: "del-sender", Role: "ROUTER"})
+	hub.RegisterAgent(core.Agent{ID: "del-receiver", Role: "WORKER"})
 
 	time.Sleep(10 * time.Millisecond)
 
-	err = hub.DelegateTask("del-sender", "del-receiver", Message{ID: "msg-del"})
+	err = hub.DelegateTask("del-sender", "del-receiver", core.Message{ID: "msg-del"})
 	if err != nil {
 		t.Errorf("DelegateTask failed: %v", err)
 	}
@@ -307,7 +309,7 @@ func TestService_CoverageExt(t *testing.T) {
 	}
 
 	// 5. putMessageSlice with cap > 1024
-	largeSlice := make([]Message, 0, 2048)
+	largeSlice := make([]core.Message, 0, 2048)
 	putMessageSlice(largeSlice) // should just return, no assertion needed
 
 	// 6. ToAgent in CentrifugeNode
@@ -316,7 +318,7 @@ func TestService_CoverageExt(t *testing.T) {
 		t.Fatalf("Failed to create centrifuge node: %v", err)
 	}
 	hub.SetCentrifugeNode(cn)
-	err = hub.Publish(Message{FromAgent: "del-sender", ToAgent: "del-receiver"})
+	err = hub.Publish(core.Message{FromAgent: "del-sender", ToAgent: "del-receiver"})
 	if err != nil {
 		t.Errorf("Publish failed: %v", err)
 	}
@@ -337,7 +339,7 @@ func TestEventLogWorker_Errors(t *testing.T) {
 
 	hub2 := NewHub()
 	// Marshal failure branch (func cannot be marshaled in JSON)
-	hub2.LogEvent(func(){})
+	hub2.LogEvent(func() {})
 
 	time.Sleep(50 * time.Millisecond)
 }
