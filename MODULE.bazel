@@ -17,6 +17,19 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 
+bazel_dep(name = "rules_android", version = "0.6.0")
+bazel_dep(name = "rules_cc", version = "0.1.1")
+
+single_version_override(
+    module_name = "rules_android",
+    patch_cmds = [
+        "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl",
+        "find rules -type f -name '*.bzl' -exec sed -i '/CcInfo/d' {} \\;",
+        "find toolchains -type f -name '*.bzl' -exec sed -i '/CcInfo/d' {} \\;",
+    ],
+    version = "0.6.0",
+)
+
 # ── Flutter rules (vendored fork) ─────────────────────────────────────────────
 bazel_dep(name = "rules_flutter", version = "0.0.0")
 local_path_override(
