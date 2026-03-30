@@ -110,22 +110,11 @@ flutter_library(
 
 MODEL_TESTS = glob(["*_test.dart"])
 
-# Map test file names to their corresponding flutter_library targets.
-# Each test only imports its own model, so embedding the per-model library
-# keeps the dependency graph minimal and maximises Bazel cache reuse.
-_MODEL_TEST_EMBED = {
-    "agent_model_test.dart": ":agent_model",
-    "ai_provider_model_test.dart": ":ai_provider_model",
-    "channel_model_test.dart": ":channel_model",
-    "security_issue_model_test.dart": ":security_issue_model",
-    "skill_model_test.dart": ":skill_model",
-}
-
 [
     flutter_test(
         name = file.replace(".dart", ""),
         srcs = [file],
-        embed = [_MODEL_TEST_EMBED.get(file, ":models_lib")],
+        embed = ["//srcs/app:app_lib"],
         test_files = [file],
     )
     for file in MODEL_TESTS
@@ -140,7 +129,7 @@ test_suite(
 flutter_test(
     name = "coverage_test",
     srcs = MODEL_TESTS,
-    embed = [":models_lib"],
+    embed = ["//srcs/app:app_lib"],
     test_files = ["."],
     coverage = True,
     coverage_min = 90,
