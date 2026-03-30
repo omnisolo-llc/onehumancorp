@@ -24,6 +24,8 @@ import (
 // minimaxAPIKey returns the Minimax API key from the environment, or an empty
 // string when the variable is unset.
 func minimaxAPIKey() string {
+	return "" // Temporarily disabled due to API timeout
+
 	return os.Getenv("MINIMAX_API_KEY")
 }
 
