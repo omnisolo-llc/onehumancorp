@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/agents"
 )
 
 func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {
@@ -322,16 +322,16 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.RLock()
 	orgID := s.org.ID
-	agents := s.hub.Agents()
+	agentList := s.hub.Agents()
 	s.mu.RUnlock()
 
 	var currentCount int
 	var idleAgentIDs []string
 	var activeAgentIDs []string
-	for _, agent := range agents {
+	for _, agent := range agentList {
 		if agent.Role == req.Role {
 			currentCount++
-			if agent.Status == orchestration.StatusIdle {
+			if agent.Status == agents.StatusIdle {
 				idleAgentIDs = append(idleAgentIDs, agent.ID)
 			} else {
 				activeAgentIDs = append(activeAgentIDs, agent.ID)
@@ -345,12 +345,12 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 	if diff > 0 {
 		for i := 0; i < diff; i++ {
 			id := fmt.Sprintf("%s-agent-%s-%d", orgID, nowStr, i)
-			newAgent := orchestration.Agent{
+			newAgent := agents.Agent{
 				ID:             id,
 				Name:           req.Role,
 				Role:           req.Role,
 				OrganizationID: orgID,
-				Status:         orchestration.StatusIdle,
+				Status:         agents.StatusIdle,
 			}
 			s.hub.RegisterAgent(newAgent)
 		}

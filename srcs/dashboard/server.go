@@ -25,8 +25,8 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
-	mu                    sync.RWMutex
-	org                   domain.Organization
+	mu  sync.RWMutex
+	org domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub
@@ -63,15 +63,15 @@ type RateLimitState struct {
 // Initial settings logic is now handled by the settings package.
 
 type statusCount struct {
-	Status orchestration.Status `json:"status"`
-	Count  int                  `json:"count"`
+	Status agents.Status `json:"status"`
+	Count  int           `json:"count"`
 }
 
 type dashboardSnapshot struct {
 	Organization domain.Organization         `json:"organization"`
 	Meetings     []orchestration.MeetingRoom `json:"meetings"`
 	Costs        billing.Summary             `json:"costs"`
-	Agents       []orchestration.Agent       `json:"agents"`
+	Agents       []agents.Agent              `json:"agents"`
 	Statuses     []statusCount               `json:"statuses"`
 	UpdatedAt    time.Time                   `json:"updatedAt"`
 }
@@ -360,11 +360,11 @@ var defaultMcpTools = []MCPTool{
 	{ID: "spire-mcp", Name: "SPIFFE/SPIRE", Description: "Identity management: issue and rotate SVID certificates for agent workloads.", Category: "identity", Status: "available"},
 }
 
-var statusOrder = []orchestration.Status{
-	orchestration.StatusActive,
-	orchestration.StatusBlocked,
-	orchestration.StatusIdle,
-	orchestration.StatusInMeeting,
+var statusOrder = []agents.Status{
+	agents.StatusActive,
+	agents.StatusBlocked,
+	agents.StatusIdle,
+	agents.StatusInMeeting,
 }
 
 // NewServer initializes a new Dashboard HTTP handler that routes all API and frontend requests.
@@ -669,13 +669,13 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.hub.Agents()
+	agentList := s.hub.Agents()
 	return dashboardSnapshot{
 		Organization: s.org,
 		Meetings:     s.hub.Meetings(),
 		Costs:        s.tracker.Summary(s.org.ID),
-		Agents:       agents,
-		Statuses:     summarizeStatuses(agents),
+		Agents:       agentList,
+		Statuses:     summarizeStatuses(agentList),
 		UpdatedAt:    time.Now().UTC(),
 	}
 }
@@ -732,14 +732,14 @@ type issueToolParams struct {
 	Priority      string `json:"priority"`
 }
 
-func summarizeStatuses(agents []orchestration.Agent) []statusCount {
-	counts := map[orchestration.Status]int{
-		orchestration.StatusIdle:      0,
-		orchestration.StatusActive:    0,
-		orchestration.StatusInMeeting: 0,
-		orchestration.StatusBlocked:   0,
+func summarizeStatuses(agentList []agents.Agent) []statusCount {
+	counts := map[agents.Status]int{
+		agents.StatusIdle:      0,
+		agents.StatusActive:    0,
+		agents.StatusInMeeting: 0,
+		agents.StatusBlocked:   0,
 	}
-	for _, agent := range agents {
+	for _, agent := range agentList {
 		counts[agent.Status]++
 	}
 

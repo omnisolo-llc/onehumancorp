@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/agents"
 )
 
 func TestEventLogWorker_CoverageGaps(t *testing.T) {
@@ -38,7 +40,7 @@ func TestEventLogWorker_CoverageGaps(t *testing.T) {
 
 	// Create a new fresh hub where we can control the startup or just re-run the worker
 	hub2 := &Hub{
-		agents:        make(map[string]Agent),
+		agents:        make(map[string]agents.Agent),
 		inbox:         make(map[string][]Message),
 		meetings:      make(map[string]MeetingRoom),
 		subs:          make(map[string][]chan struct{}),

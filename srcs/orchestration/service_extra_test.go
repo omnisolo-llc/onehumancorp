@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"google.golang.org/grpc"
@@ -21,14 +22,14 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := GetMinimaxAPIURL()
+	SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	meeting := hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
@@ -76,8 +77,8 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 
 func TestPublish_ChannelFull(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	hub.mu.Lock()
 	ch := make(chan struct{}, 1)
@@ -101,8 +102,8 @@ func TestPublish_ChannelFull(t *testing.T) {
 
 func TestPublish_MeetingChannelFull(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	hub.mu.Lock()
 	ch := make(chan struct{}, 1)
@@ -129,9 +130,9 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 
 func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
 	client := NewMinimaxClient("test")
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := GetMinimaxAPIURL()
+	SetMinimaxAPIURL(string([]byte{0x7f})) // Control character to fail http.NewRequestWithContext
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
@@ -154,8 +155,8 @@ func (m *mockStreamMessagesServerError) Send(msg *pb.Message) error {
 
 func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
-	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
+	hub.RegisterAgent(agents.Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
+	hub.RegisterAgent(agents.Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
 
 	_ = hub.Publish(Message{
@@ -183,8 +184,8 @@ func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 
 func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
-	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
+	hub.RegisterAgent(agents.Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
+	hub.RegisterAgent(agents.Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -224,14 +225,14 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := GetMinimaxAPIURL()
+	SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
-	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
 	meeting := hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
@@ -283,8 +284,8 @@ func TestService_CoverageExt(t *testing.T) {
 	}
 	hub.SetSIPDB(db)
 
-	hub.RegisterAgent(Agent{ID: "del-sender", Role: "ROUTER"})
-	hub.RegisterAgent(Agent{ID: "del-receiver", Role: "WORKER"})
+	hub.RegisterAgent(agents.Agent{ID: "del-sender", Role: "ROUTER"})
+	hub.RegisterAgent(agents.Agent{ID: "del-receiver", Role: "WORKER"})
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -337,7 +338,7 @@ func TestEventLogWorker_Errors(t *testing.T) {
 
 	hub2 := NewHub()
 	// Marshal failure branch (func cannot be marshaled in JSON)
-	hub2.LogEvent(func(){})
+	hub2.LogEvent(func() {})
 
 	time.Sleep(50 * time.Millisecond)
 }

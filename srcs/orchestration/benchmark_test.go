@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -35,8 +36,8 @@ func BenchmarkStreamLatency(b *testing.B) {
 	hub := NewHub()
 	srv := NewHubServiceServer(hub)
 
-	hub.RegisterAgent(Agent{ID: "agent1", Status: StatusIdle})
-	hub.RegisterAgent(Agent{ID: "agent2", Status: StatusIdle})
+	hub.RegisterAgent(agents.Agent{ID: "agent1", Status: agents.StatusIdle})
+	hub.RegisterAgent(agents.Agent{ID: "agent2", Status: agents.StatusIdle})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -73,7 +74,7 @@ func BenchmarkPublish_Concurrent(b *testing.B) {
 	hub := NewHub()
 	numAgents := 100
 	for i := 0; i < numAgents; i++ {
-		hub.RegisterAgent(Agent{ID: fmt.Sprintf("agent%d", i), Status: StatusIdle})
+		hub.RegisterAgent(agents.Agent{ID: fmt.Sprintf("agent%d", i), Status: agents.StatusIdle})
 	}
 
 	b.ResetTimer()
@@ -94,7 +95,7 @@ func BenchmarkPublish_Concurrent(b *testing.B) {
 
 func BenchmarkInbox(b *testing.B) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "agent1", Status: StatusIdle})
+	hub.RegisterAgent(agents.Agent{ID: "agent1", Status: agents.StatusIdle})
 
 	msg := Message{
 		ID:         "msg1",
@@ -122,9 +123,9 @@ func BenchmarkReason(b *testing.B) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := GetMinimaxAPIURL()
+	SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("test-key")
 	ctx := context.Background()

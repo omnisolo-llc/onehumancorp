@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -21,7 +22,7 @@ func TestRegisterAgentViaGRPC(t *testing.T) {
 	req := pb.RegisterAgentRequest_builder{
 		Agent: pb.Agent_builder{
 			Id:             proto.String("test-agent"),
-			Name:           proto.String("Test Agent"),
+			Name:           proto.String("Test agents.Agent"),
 			Role:           proto.String("QA_ENGINEER"),
 			OrganizationId: proto.String("org-1"),
 			Status:         proto.String("ACTIVE"),
@@ -40,15 +41,15 @@ func TestRegisterAgentViaGRPC(t *testing.T) {
 	if !ok {
 		t.Fatalf("agent not registered in hub")
 	}
-	if agent.Name != "Test Agent" || agent.Role != "QA_ENGINEER" || agent.Status != "ACTIVE" {
+	if agent.Name != "Test agents.Agent" || agent.Role != "QA_ENGINEER" || agent.Status != "ACTIVE" {
 		t.Errorf("agent fields mismatch: %+v", agent)
 	}
 }
 
 func TestOpenMeetingViaGRPC(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
 
 	req := pb.OpenMeetingRequest_builder{
@@ -76,8 +77,8 @@ func TestOpenMeetingViaGRPC(t *testing.T) {
 
 func TestPublishViaGRPC(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
 
 	req := pb.PublishMessageRequest_builder{
@@ -124,8 +125,8 @@ func (m *MockStreamServer) RecvMsg(m_ interface{}) error { return nil }
 
 func TestStreamMessagesViaGRPC(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
-	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
+	hub.RegisterAgent(agents.Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
 
 	// Publish an initial message
@@ -266,9 +267,9 @@ func TestMinimaxClientReasonDecodeError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := GetMinimaxAPIURL()
+	SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")

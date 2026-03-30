@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	"github.com/onehumancorp/mono/srcs/billing"
 	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/integrations"
@@ -61,8 +62,8 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 
 	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(agents.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(agents.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	tracker := billing.NewTracker(billing.DefaultCatalog)
@@ -283,7 +284,7 @@ func TestHandleDevSeedResetsServerState(t *testing.T) {
 	var payload struct {
 		Organization domain.Organization         `json:"organization"`
 		Meetings     []orchestration.MeetingRoom `json:"meetings"`
-		Agents       []orchestration.Agent       `json:"agents"`
+		Agents       []agents.Agent              `json:"agents"`
 	}
 	if err := json.NewDecoder(dashboardResp.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode dashboard payload: %v", err)
@@ -429,25 +430,25 @@ func TestWriteJSONSetsContentTypeAndBody(t *testing.T) {
 }
 
 func TestSummarizeStatusesReturnsOrderedCounts(t *testing.T) {
-	statuses := summarizeStatuses([]orchestration.Agent{
-		{ID: "a", Status: orchestration.StatusInMeeting},
-		{ID: "b", Status: orchestration.StatusActive},
-		{ID: "c", Status: orchestration.StatusInMeeting},
+	statuses := summarizeStatuses([]agents.Agent{
+		{ID: "a", Status: agents.StatusInMeeting},
+		{ID: "b", Status: agents.StatusActive},
+		{ID: "c", Status: agents.StatusInMeeting},
 	})
 
 	if len(statuses) != 4 {
 		t.Fatalf("expected 4 status buckets, got %d", len(statuses))
 	}
-	if statuses[0].Status != orchestration.StatusActive || statuses[0].Count != 1 {
+	if statuses[0].Status != agents.StatusActive || statuses[0].Count != 1 {
 		t.Fatalf("unexpected active bucket: %+v", statuses[0])
 	}
-	if statuses[1].Status != orchestration.StatusBlocked || statuses[1].Count != 0 {
+	if statuses[1].Status != agents.StatusBlocked || statuses[1].Count != 0 {
 		t.Fatalf("unexpected blocked bucket: %+v", statuses[1])
 	}
-	if statuses[2].Status != orchestration.StatusIdle || statuses[2].Count != 0 {
+	if statuses[2].Status != agents.StatusIdle || statuses[2].Count != 0 {
 		t.Fatalf("unexpected idle bucket: %+v", statuses[2])
 	}
-	if statuses[3].Status != orchestration.StatusInMeeting || statuses[3].Count != 2 {
+	if statuses[3].Status != agents.StatusInMeeting || statuses[3].Count != 2 {
 		t.Fatalf("unexpected in-meeting bucket: %+v", statuses[3])
 	}
 }
@@ -474,7 +475,7 @@ func TestHandleHireAgentAddsToHub(t *testing.T) {
 	}
 
 	var snapshot struct {
-		Agents []orchestration.Agent `json:"agents"`
+		Agents []agents.Agent `json:"agents"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&snapshot); err != nil {
 		t.Fatalf("decode hire response: %v", err)
@@ -3871,7 +3872,7 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 	t.Run("Missing Tool ID and Name", func(t *testing.T) {
 		payload := map[string]interface{}{
 			"spiffeId": "spiffe://onehumancorp.io/agent/test",
-			"tool": map[string]interface{}{},
+			"tool":     map[string]interface{}{},
 		}
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/mcp/tools/register", bytes.NewReader(body))

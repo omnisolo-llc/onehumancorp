@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/cmd/ohc",
     visibility = ["//visibility:private"],
     deps = [
+        "//srcs/agents",
         "//srcs/auth",
         "//srcs/billing",
         "//srcs/dashboard",

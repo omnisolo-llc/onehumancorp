@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,7 +16,7 @@ import (
 
 func TestDelegateSubTask_Success(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
+	hub.RegisterAgent(agents.Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: agents.StatusIdle})
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
 
@@ -70,12 +71,12 @@ func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
 
 	// Fill the hub to reach the quota limit (10)
 	for i := 0; i < 10; i++ {
-		hub.RegisterAgent(Agent{
+		hub.RegisterAgent(agents.Agent{
 			ID:             fmt.Sprintf("filler-%d", i),
-			Name:           "Filler Agent",
+			Name:           "Filler agents.Agent",
 			Role:           "FILLER",
 			OrganizationID: "org-1",
-			Status:         StatusIdle,
+			Status:         agents.StatusIdle,
 		})
 	}
 
@@ -139,7 +140,7 @@ func TestDelegateSubTask_MissingFields(t *testing.T) {
 // TestDelegateSubTask_Integration checks the real data law by seeing if the message gets processed properly
 func TestDelegateSubTask_Integration(t *testing.T) {
 	hub := NewHub()
-	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
+	hub.RegisterAgent(agents.Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: agents.StatusIdle})
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
 
@@ -178,7 +179,7 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 	if agent.ProviderType != "builtin" {
 		t.Fatalf("expected ProviderType builtin, got %s", agent.ProviderType)
 	}
-	if agent.Status != StatusIdle {
-		t.Fatalf("expected StatusIdle, got %s", agent.Status)
+	if agent.Status != agents.StatusIdle {
+		t.Fatalf("expected agents.StatusIdle, got %s", agent.Status)
 	}
 }

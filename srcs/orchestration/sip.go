@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -53,10 +54,16 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
+	if !strings.Contains(dbPath, "?") {
+		dbPath += "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	} else {
+		dbPath += "&_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	}
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -153,22 +160,31 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
+
+		type update struct {
+			id string
+			task string
+		}
+		var updates []update
+
 		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
 
 		for rows.Next() {
 			var id, taskStr string
 			if err := rows.Scan(&id, &taskStr); err != nil {
+			    rows.Close()
 				return err
 			}
 
 			var msg Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
+				// Actively rewrite invalid string payload to valid JSON in database
 				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				fixedBytes, _ := json.Marshal(msg)
+				updates = append(updates, update{id: id, task: string(fixedBytes)})
 			} else {
 				if msg.ID == "" {
 					msg.ID = id
@@ -176,6 +192,12 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 			}
 			missions = append(missions, msg)
 		}
+		rows.Close()
+
+		for _, u := range updates {
+			s.db.ExecContext(ctx, "UPDATE agent_missions SET task = ? WHERE id = ?", u.task, u.id)
+		}
+
 		return nil
 	})
 	return missions, err
@@ -252,11 +274,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 

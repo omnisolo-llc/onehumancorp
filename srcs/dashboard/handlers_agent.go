@@ -56,12 +56,12 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	id := s.org.ID + "-agent-" + time.Now().UTC().Format("20060102150405000")
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:             id,
 		Name:           req.Name,
 		Role:           req.Role,
 		OrganizationID: s.org.ID,
-		Status:         orchestration.StatusIdle,
+		Status:         agents.StatusIdle,
 		ProviderType:   providerType,
 		Region:         req.Region,
 	}
@@ -203,13 +203,13 @@ func (s *Server) handleAgentProviderAuth(w http.ResponseWriter, r *http.Request)
 // Has no side effects.
 func (s *Server) handleIdentities(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
-	agents := s.hub.Agents()
+	agentList := s.hub.Agents()
 	org := s.org
 	s.mu.RUnlock()
 
 	now := time.Now().UTC()
-	identities := make([]AgentIdentity, 0, len(agents))
-	for _, agent := range agents {
+	identities := make([]AgentIdentity, 0, len(agentList))
+	for _, agent := range agentList {
 		identities = append(identities, AgentIdentity{
 			AgentID:     agent.ID,
 			SVID:        "spiffe://onehumancorp.io/" + org.ID + "/" + agent.ID,
@@ -315,7 +315,7 @@ func (s *Server) handleSnapshotCreate(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	meetings := s.hub.Meetings()
-	agents := s.hub.Agents()
+	agentList := s.hub.Agents()
 	msgCount := 0
 	for _, m := range meetings {
 		msgCount += len(m.Transcript)
@@ -331,7 +331,7 @@ func (s *Server) handleSnapshotCreate(w http.ResponseWriter, r *http.Request) {
 		OrgID:        s.org.ID,
 		OrgName:      s.org.Name,
 		Domain:       s.org.Domain,
-		AgentCount:   len(agents),
+		AgentCount:   len(agentList),
 		MeetingCount: len(meetings),
 		MessageCount: msgCount,
 		CreatedAt:    now,

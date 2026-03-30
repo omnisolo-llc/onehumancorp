@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/scheduler"
 	"github.com/onehumancorp/mono/srcs/settings"
@@ -71,46 +72,6 @@ func redactInterfacePII(val interface{}) interface{} {
 		return val
 	}
 }
-
-// Status indicates the current operational phase of an AI agent within the workforce.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Status string
-
-const (
-	// StatusIdle represents the IDLE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusIdle Status = "IDLE"
-	// StatusActive represents the ACTIVE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusActive Status = "ACTIVE"
-	// StatusInMeeting represents the INMEETING lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusInMeeting Status = "IN_MEETING"
-	// StatusBlocked represents the BLOCKED lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusBlocked Status = "BLOCKED"
-	// StatusWaitingForTools represents the WAITINGFORTOOLS lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusWaitingForTools Status = "WAITING_FOR_TOOLS"
-)
 
 // Event type constants for the asynchronous pub/sub agent interaction protocol.
 const (
@@ -194,24 +155,6 @@ const (
 	EventApprovalNeeded = "ApprovalNeeded"
 )
 
-// Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Agent struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Role           string `json:"role"`
-	OrganizationID string `json:"organizationId"`
-	Status         Status `json:"status"`
-	// ProviderType identifies the external agent implementation backing this worker
-	// (e.g. "claude", "gemini", "opencode").  An empty string or "builtin" means
-	// the platform's own lightweight agent is used.
-	ProviderType string `json:"providerType,omitempty"`
-	Region       string `json:"region,omitempty"`
-}
-
 // Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.
 // Accepts no parameters.
 // Returns nothing.
@@ -283,7 +226,7 @@ type MeetingRoom struct {
 // Has no side effects.
 type Hub struct {
 	mu             sync.RWMutex
-	agents         map[string]Agent
+	agents         map[string]agents.Agent
 	inbox          map[string][]Message
 	meetings       map[string]MeetingRoom
 	minimaxAPIKey  string
@@ -305,7 +248,7 @@ type Hub struct {
 // Has no side effects.
 func NewHub() *Hub {
 	h := &Hub{
-		agents:        map[string]Agent{},
+		agents:        map[string]agents.Agent{},
 		inbox:         map[string][]Message{},
 		meetings:      map[string]MeetingRoom{},
 		subs:          map[string][]chan struct{}{},
@@ -558,23 +501,23 @@ func (h *Hub) GetSIPDB() *SIPDB {
 	return h.sipDB
 }
 
-// RegisterAgent enrolls an agent into the Hub, allocating an inbox and initialising its Status.  Parameters:   - agent: Agent; The worker object containing ID, Name, Role, and Organization context.
+// RegisterAgent enrolls an agent into the Hub, allocating an inbox and initialising its agents.Status.  Parameters:   - agent: agents.Agent; The worker object containing ID, Name, Role, and Organization context.
 // Accepts parameters: h *Hub (No Constraints).
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
-func (h *Hub) RegisterAgent(agent Agent) {
+func (h *Hub) RegisterAgent(agent agents.Agent) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	if agent.Status == "" {
-		agent.Status = StatusIdle
+		agent.Status = agents.StatusIdle
 	}
 
 	h.agents[agent.ID] = agent
 
 	if h.sipDB != nil {
-		go func(a Agent) {
+		go func(a agents.Agent) {
 			_ = h.sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
 		}(agent)
 	}
@@ -638,10 +581,10 @@ func (h *Hub) CentrifugeNode() *CentrifugeNode {
 //   - id: string; The unique identifier of the agent.
 //
 // Accepts parameters: h *Hub (No Constraints).
-// Returns Agent(id string) (Agent, bool).
+// Returns Agent(id string) (agents.Agent, bool).
 // Produces no errors.
 // Has no side effects.
-func (h *Hub) Agent(id string) (Agent, bool) {
+func (h *Hub) Agent(id string) (agents.Agent, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -666,7 +609,7 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 	h.meetings[id] = meeting
 	for _, participant := range participants {
 		agent := h.agents[participant]
-		agent.Status = StatusInMeeting
+		agent.Status = agents.StatusInMeeting
 		h.agents[participant] = agent
 	}
 
@@ -692,7 +635,7 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 	h.meetings[id] = meeting
 	for _, participant := range participants {
 		agent := h.agents[participant]
-		agent.Status = StatusInMeeting
+		agent.Status = agents.StatusInMeeting
 		h.agents[participant] = agent
 	}
 
@@ -735,6 +678,7 @@ func (h *Hub) Publish(message Message) error {
 	}
 	h.mu.RUnlock()
 
+	var channelsToNotify []chan struct{}
 	h.mu.Lock()
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
@@ -745,11 +689,8 @@ func (h *Hub) Publish(message Message) error {
 		h.inbox[message.ToAgent] = append(inbox, message)
 
 		subs := h.subs[message.ToAgent]
-		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
-			}
+		if len(subs) > 0 {
+			channelsToNotify = append(channelsToNotify, subs...)
 		}
 	}
 
@@ -811,22 +752,26 @@ func (h *Hub) Publish(message Message) error {
 		}
 
 		h.meetings[message.MeetingID] = meeting
-		sender.Status = StatusInMeeting
+		sender.Status = agents.StatusInMeeting
 
 		for _, participant := range meeting.Participants {
 			subs := h.subs[participant]
-			for i := 0; i < len(subs); i++ {
-				select {
-				case subs[i] <- struct{}{}:
-				default:
-				}
+			if len(subs) > 0 {
+				channelsToNotify = append(channelsToNotify, subs...)
 			}
 		}
 	} else {
-		sender.Status = StatusActive
+		sender.Status = agents.StatusActive
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
+
+	for i := 0; i < len(channelsToNotify); i++ {
+		select {
+		case channelsToNotify[i] <- struct{}{}:
+		default:
+		}
+	}
 
 	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
@@ -966,12 +911,12 @@ func (h *Hub) Meetings() []MeetingRoom {
 // Agents retrieves a point-in-time snapshot of the entire registered workforce, ordered by ID.
 //
 // Accepts parameters: h *Hub (No Constraints).
-// Returns Agents() []Agent.
+// Returns Agents() []agents.Agent.
 // Produces no errors.
 // Has no side effects.
-func (h *Hub) Agents() []Agent {
+func (h *Hub) Agents() []agents.Agent {
 	h.mu.RLock()
-	agents := make([]Agent, 0, len(h.agents))
+	agents := make([]agents.Agent, 0, len(h.agents))
 	for _, agent := range h.agents {
 		agents = append(agents, agent)
 	}
@@ -1020,12 +965,12 @@ func NewHubServiceServer(hub *Hub) *HubServiceServer {
 // Has no side effects.
 func (s *HubServiceServer) RegisterAgent(ctx context.Context, req *pb.RegisterAgentRequest) (*pb.RegisterAgentResponse, error) {
 	agentReq := req.GetAgent()
-	agent := Agent{
+	agent := agents.Agent{
 		ID:             agentReq.GetId(),
 		Name:           agentReq.GetName(),
 		Role:           agentReq.GetRole(),
 		OrganizationID: agentReq.GetOrganizationId(),
-		Status:         Status(agentReq.GetStatus()),
+		Status:         agents.Status(agentReq.GetStatus()),
 		ProviderType:   agentReq.GetProviderType(),
 	}
 	s.hub.RegisterAgent(agent)
@@ -1161,7 +1106,35 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 
 // minimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
-var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
+var (
+	minimaxAPIURL   = "https://api.minimax.io/v1/chat/completions"
+	minimaxAPIURLMu sync.RWMutex
+)
+
+func GetMinimaxAPIURL() string {
+	minimaxAPIURLMu.RLock()
+	defer minimaxAPIURLMu.RUnlock()
+	return minimaxAPIURL
+}
+
+func SetMinimaxAPIURL(url string) {
+	minimaxAPIURLMu.Lock()
+	defer minimaxAPIURLMu.Unlock()
+	minimaxAPIURL = url
+}
+
+// MinimaxClient handles interaction with the Minimax Model 2.7.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type CircuitState int
+
+const (
+	StateClosed CircuitState = iota
+	StateOpen
+	StateHalfOpen
+)
 
 // MinimaxClient handles interaction with the Minimax Model 2.7.
 // Accepts no parameters.
@@ -1169,7 +1142,11 @@ var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Produces no errors.
 // Has no side effects.
 type MinimaxClient struct {
-	APIKey string
+	APIKey   string
+	cbMu     sync.RWMutex
+	state    CircuitState
+	failures int
+	timeout  time.Time
 }
 
 // NewMinimaxClient functionality.
@@ -1197,11 +1174,28 @@ var sharedHTTPClient = &http.Client{
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	c.cbMu.RLock()
+	if c.state == StateOpen {
+		if time.Now().After(c.timeout) {
+			c.cbMu.RUnlock()
+			c.cbMu.Lock()
+			if c.state == StateOpen {
+				c.state = StateHalfOpen
+			}
+			c.cbMu.Unlock()
+		} else {
+			c.cbMu.RUnlock()
+			return "", errors.New("circuit breaker open")
+		}
+	} else {
+		c.cbMu.RUnlock()
+	}
+
 	if c.APIKey == "" {
 		return "", errors.New("minimax API key is not configured")
 	}
 
-	url := minimaxAPIURL
+	url := GetMinimaxAPIURL()
 	// Optimization: construct the JSON payload manually to avoid
 	// maps and slices allocations.
 	buf := bufferPool.Get().(*bytes.Buffer)
@@ -1228,11 +1222,25 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	// Prevents severe connection and resource leaks by reusing connection pools on every request.
 	resp, err := sharedHTTPClient.Do(req)
 	if err != nil {
+		c.cbMu.Lock()
+		c.failures++
+		if c.failures >= 3 {
+			c.state = StateOpen
+			c.timeout = time.Now().Add(10 * time.Second)
+		}
+		c.cbMu.Unlock()
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		c.cbMu.Lock()
+		c.failures++
+		if c.failures >= 3 {
+			c.state = StateOpen
+			c.timeout = time.Now().Add(10 * time.Second)
+		}
+		c.cbMu.Unlock()
 		respBody, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
 	}
@@ -1252,6 +1260,11 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	if len(result.Choices) == 0 {
 		return "", errors.New("empty response from minimax")
 	}
+
+	c.cbMu.Lock()
+	c.state = StateClosed
+	c.failures = 0
+	c.cbMu.Unlock()
 
 	return result.Choices[0].Message.Content, nil
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	"github.com/onehumancorp/mono/srcs/integrations"
 	"github.com/onehumancorp/mono/srcs/interop"
 	"github.com/onehumancorp/mono/srcs/orchestration"
@@ -170,7 +171,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 		} else if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "unknown tool") || strings.Contains(err.Error(), "invalid JSON-RPC") {
 			if req.AgentID != "" {
 				if agent, ok := s.hub.Agent(req.AgentID); ok {
-					agent.Status = orchestration.StatusWaitingForTools
+					agent.Status = agents.StatusWaitingForTools
 					s.hub.RegisterAgent(agent)
 				}
 			}

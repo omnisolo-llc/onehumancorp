@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	"github.com/onehumancorp/mono/srcs/billing"
 	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/integrations"
@@ -32,9 +33,9 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:     "agent-1",
-		Status: orchestration.StatusActive,
+		Status: agents.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -59,8 +60,8 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 		}
 
 		a, exists := hub.Agent("agent-1")
-		if !exists || a.Status != orchestration.StatusWaitingForTools {
-			t.Errorf("expected agent status %s, got %s", orchestration.StatusWaitingForTools, a.Status)
+		if !exists || a.Status != agents.StatusWaitingForTools {
+			t.Errorf("expected agent status %s, got %s", agents.StatusWaitingForTools, a.Status)
 		}
 	})
 }
@@ -81,9 +82,9 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:     "agent-2",
-		Status: orchestration.StatusActive,
+		Status: agents.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -121,7 +122,6 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 	}
 }
 
-
 func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
@@ -140,9 +140,9 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 
 	invokeTool := func(toolID string) *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  toolID,
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"toolId": toolID,
+			"action": "test_action",
+			"params": json.RawMessage(`{"integrationId": "123"}`),
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -158,7 +158,6 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 		}
 	})
 }
-
 
 func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
@@ -176,9 +175,9 @@ func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:     "agent-3",
-		Status: orchestration.StatusActive,
+		Status: agents.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -238,9 +237,9 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:     "agent-max",
-		Status: orchestration.StatusActive,
+		Status: agents.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -262,7 +261,7 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 
 	app.mu.Lock()
 	app.rateLimitStates[rateLimitKey] = &RateLimitState{
-		Failures:    3, // Set to max threshold
+		Failures:    3,                              // Set to max threshold
 		LastFailure: time.Now().Add(-1 * time.Hour), // Ready for next try, backoff bypassed
 		Backoff:     10 * time.Second,
 	}
@@ -292,18 +291,18 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 	tracker := billing.NewTracker(prices)
 
 	app := &Server{
-		org:             org,
-		hub:             hub,
-		tracker:         tracker,
-		integReg:        integrations.NewRegistry(),
+		org:      org,
+		hub:      hub,
+		tracker:  tracker,
+		integReg: integrations.NewRegistry(),
 		// Explicitly set to nil to test nil map initialization coverage
 		rateLimitStates: nil,
 		dynamicMCPTools: []MCPTool{},
 	}
 
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:     "agent-limited",
-		Status: orchestration.StatusActive,
+		Status: agents.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -399,9 +398,9 @@ func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 		},
 	}
 
-	agent := orchestration.Agent{
+	agent := agents.Agent{
 		ID:     "agent-success",
-		Status: orchestration.StatusActive,
+		Status: agents.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 

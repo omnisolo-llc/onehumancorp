@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,8 +18,8 @@ import (
 // specialized sub-agents. It enforces VRAM quota limits before creating the agent,
 // and isolates the sub-agent with its own thread ID and instructions.
 //
-//   ctx context.Context
-//   req *pb.SubTask
+//	ctx context.Context
+//	req *pb.SubTask
 //
 // Accepts parameters: s *HubServiceServer (No Constraints).
 // Returns DelegateSubTask(ctx context.Context, req *pb.SubTask) (*pb.DelegateTaskResponse, error).
@@ -46,12 +48,12 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 	}
 
 	subAgentID := fmt.Sprintf("sub-agent-%s-%d", req.GetTargetRole(), time.Now().UnixNano())
-	subAgent := Agent{
+	subAgent := agents.Agent{
 		ID:             subAgentID,
-		Name:           fmt.Sprintf("Specialized %s Agent", req.GetTargetRole()),
+		Name:           fmt.Sprintf("Specialized %s agents.Agent", req.GetTargetRole()),
 		Role:           req.GetTargetRole(),
 		OrganizationID: "dynamic-delegation",
-		Status:         StatusIdle,
+		Status:         agents.StatusIdle,
 		ProviderType:   "builtin",
 	}
 

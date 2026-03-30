@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/centrifugal/centrifuge"
+	"github.com/onehumancorp/mono/srcs/agents"
 )
 
 // TestNewCentrifugeNode_CreationError tests the error path of centrifuge.New via our hook.
@@ -62,7 +63,6 @@ func TestCentrifugeNodeHandler(t *testing.T) {
 func TestHubCentrifugeIntegration(t *testing.T) {
 	hub := NewHub()
 
-
 	cn, err := NewCentrifugeNode()
 	if err != nil {
 		t.Fatalf("NewCentrifugeNode() error = %v", err)
@@ -76,13 +76,13 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 	}
 
 	// Register agents and open a meeting so Publish succeeds.
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(agents.Agent{
 		ID:             "cn-pm",
 		Name:           "PM",
 		Role:           "PRODUCT_MANAGER",
 		OrganizationID: "org-cn",
 	})
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(agents.Agent{
 		ID:             "cn-swe",
 		Name:           "SWE",
 		Role:           "SOFTWARE_ENGINEER",
@@ -107,13 +107,13 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 func TestHubCentrifugeNilSafe(t *testing.T) {
 	hub := NewHub()
 
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(agents.Agent{
 		ID:             "nil-pm",
 		Name:           "PM",
 		Role:           "PRODUCT_MANAGER",
 		OrganizationID: "org-nil",
 	})
-	hub.RegisterAgent(Agent{
+	hub.RegisterAgent(agents.Agent{
 		ID:             "nil-swe",
 		Name:           "SWE",
 		Role:           "SOFTWARE_ENGINEER",

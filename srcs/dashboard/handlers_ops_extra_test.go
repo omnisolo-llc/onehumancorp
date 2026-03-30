@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/agents"
 	"github.com/onehumancorp/mono/srcs/billing"
 	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/orchestration"
@@ -70,9 +71,9 @@ func TestHandleScaleOpsExtra(t *testing.T) {
 			// Local hub specifically for this test case
 			localHub := orchestration.NewHub()
 			if tt.name == "Scale Down" {
-				localHub.RegisterAgent(orchestration.Agent{ID: "worker-active", Role: "worker", Status: orchestration.StatusActive})
-				localHub.RegisterAgent(orchestration.Agent{ID: "worker-idle-1", Role: "worker", Status: orchestration.StatusIdle})
-				localHub.RegisterAgent(orchestration.Agent{ID: "worker-idle-2", Role: "worker", Status: orchestration.StatusIdle})
+				localHub.RegisterAgent(agents.Agent{ID: "worker-active", Role: "worker", Status: agents.StatusActive})
+				localHub.RegisterAgent(agents.Agent{ID: "worker-idle-1", Role: "worker", Status: agents.StatusIdle})
+				localHub.RegisterAgent(agents.Agent{ID: "worker-idle-2", Role: "worker", Status: agents.StatusIdle})
 			}
 			localServer := &Server{
 				org:     org,
