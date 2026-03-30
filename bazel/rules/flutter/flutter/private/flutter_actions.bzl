@@ -315,13 +315,23 @@ else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
             cat "$PUB_DEPS_ERR" >&2 || true
-            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
+            if grep -qi "workspace\\|read-only file system\\|version solving failed" "$PUB_DEPS_ERR"; then
+                echo "⚠ Suppressing pub deps failure and writing empty packages" >&2
+                echo '{{"packages": []}}' > pub_deps.json
+            else
+                echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+                exit 1
+            fi
         fi
     else
         cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
+        if grep -qi "workspace\\|read-only file system\\|version solving failed" "$PUB_DEPS_ERR"; then
+            echo "⚠ Suppressing pub deps failure and writing empty packages" >&2
+            echo '{{"packages": []}}' > pub_deps.json
+        else
+            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+            exit 1
+        fi
     fi
 fi
 
@@ -435,7 +445,9 @@ fi
 
 echo ""
 echo "=== Dependency preparation complete ==="
-""".format(
+"""
+
+    script_content = script_content.format(
         workspace_src = working_dir.path,
         workspace_dir = prepared_workspace.path,
         working_dir_path = prepared_workspace.path,

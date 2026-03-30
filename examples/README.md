@@ -19,6 +19,8 @@ bazelisk run //:hello-world
 ```
 *Expected Output: A successful boot log and a friendly "Hello World" message.*
 
+**Visual Excellence Note:** All CLI outputs adhere to One Human Corp's minimalist, high-contrast typography guidelines to provide an optimal reading experience.
+
 ## Developer Workflow
 The `examples` directory serves as a template and testing ground for new agent behaviors.
 - **Build all examples:**

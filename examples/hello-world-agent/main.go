@@ -22,5 +22,6 @@ func main() {
 	fmt.Printf("Is Authenticated: %t\n", provider.IsAuthenticated())
 
 	// Create an agent or do something with the built in provider
-	fmt.Println("Hello World! The agent provider is ready to use with zero configuration.")
+	fmt.Println("\n✨ \033[1;32mHello World!\033[0m The agent provider is ready to use with zero configuration.")
+	fmt.Println("   \033[3mOne Human Corp - Orchestrating Swarms with Zero Friction\033[0m\n")
 }
