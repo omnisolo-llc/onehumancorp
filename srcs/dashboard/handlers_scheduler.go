@@ -8,10 +8,10 @@ import (
 )
 
 type schedulerCreateRequest struct {
-	AgentID  string             `json:"agentId"`
-	Name     string             `json:"name"`
-	Schedule scheduler.Schedule `json:"schedule"`
-	Payload  json.RawMessage    `json:"payload"`
+	AgentID   string               `json:"agentId"`
+	Name      string               `json:"name"`
+	Schedule  scheduler.Schedule  `json:"schedule"`
+	Payload   json.RawMessage      `json:"payload"`
 }
 
 // handleSchedulerTasks handles listing and creating scheduled tasks.
@@ -64,7 +64,7 @@ func (s *Server) handleSchedulerCancel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.hub.Scheduler().Cancel(req.ID); err != nil {
-		http.Error(w, "failed to cancel task", http.StatusNotFound)
+			http.Error(w, "failed to cancel task", http.StatusNotFound)
 		return
 	}
 

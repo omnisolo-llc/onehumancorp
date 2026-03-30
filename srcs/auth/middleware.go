@@ -128,6 +128,7 @@ func OrganizationIDFromContext(ctx context.Context) string {
 	return ""
 }
 
+
 // ClaimsContextKeyForTest provides domain-specific context and typed constraints for ClaimsContextKeyForTest operations across the application.
 // Accepts no parameters.
 // Returns nothing.

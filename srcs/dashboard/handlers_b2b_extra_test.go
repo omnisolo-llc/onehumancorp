@@ -46,7 +46,7 @@ func TestHandleHandoffResolveExtraCoverage(t *testing.T) {
 			} else {
 				req = httptest.NewRequest(method, path, nil)
 			}
-			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("Authorization", "Bearer " + token)
 			w := httptest.NewRecorder()
 			handler := auth.Middleware(authStore)(http.HandlerFunc(srv.handleHandoffResolve))
 			handler.ServeHTTP(w, req)

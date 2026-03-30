@@ -25,8 +25,8 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
-	mu  sync.RWMutex
-	org domain.Organization
+	mu                    sync.RWMutex
+	org                   domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub

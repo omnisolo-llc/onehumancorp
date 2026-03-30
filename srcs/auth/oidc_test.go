@@ -634,6 +634,7 @@ func TestOIDC_FetchJWKS_ClientError(t *testing.T) {
 	}
 }
 
+
 func TestFetchJWKS_NewRequestError(t *testing.T) {
 	jwksCache.Lock()
 	jwksCache.byIssuer = make(map[string]cachedJWKS)

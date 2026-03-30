@@ -83,7 +83,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	t.Run("large payload", func(t *testing.T) {
 		// generate > 1MB string
 		largeStr := strings.Repeat("a", 2<<20)
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "params": {"a": "`+largeStr+`"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "params": {"a": "` + largeStr + `"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
