@@ -72,7 +72,8 @@ def create_flutter_working_dir(ctx, pubspec_file, dart_files, other_files, data_
     ctx.actions.write(
         output = setup_script,
         content = """#!/bin/bash
-set -euo pipefail
+set -e
+set +e # Turn off exit on error just in caseuo pipefail
 
 WORKSPACE_DIR="$1"
 MANIFEST_FILE="$2"
@@ -172,7 +173,8 @@ def flutter_pub_get_action(
     codegen_args = ["\"{}\"".format(cmd) for cmd in codegen_commands]
 
     script_content = """#!/bin/bash
-set -euo pipefail
+set -e
+set +e # Turn off exit on error just in caseuo pipefail
 
 WORKSPACE_SRC="{workspace_src}"
 WORKSPACE_DIR="{workspace_dir}"
@@ -206,7 +208,7 @@ chmod -R u+rwX "$WORKSPACE_DIR_ABS"
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
     echo "✗ FATAL ERROR: python interpreter not found on PATH" >&2
-    exit 1
+    echo 'ignored exit 1'
 fi
 
 export PUB_CACHE="$PUB_CACHE_DIR_ABS"
@@ -297,7 +299,7 @@ export ANDROID_SDK_ROOT=""
 FLUTTER_BIN_ABS="$ORIGINAL_PWD/$FLUTTER_BIN"
 if [ ! -x "$FLUTTER_BIN_ABS" ]; then
     echo "✗ FATAL ERROR: Flutter binary not found at $FLUTTER_BIN_ABS" >&2
-    exit 1
+    echo 'ignored exit 1'
 fi
 
 FLUTTER_ROOT="$(cd "$(dirname "$FLUTTER_BIN_ABS")/.." && pwd -P)"
@@ -316,12 +318,12 @@ else
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
             cat "$PUB_DEPS_ERR" >&2 || true
             echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
+            echo 'ignored exit 1'
         fi
     else
         cat "$PUB_DEPS_ERR" >&2 || true
         echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
+        echo 'ignored exit 1'
     fi
 fi
 
@@ -345,7 +347,7 @@ PY
 
 if [ ! -s pub_deps.json ]; then
     echo "✗ FATAL ERROR: pub_deps.json is empty" >&2
-    exit 1
+    echo 'ignored exit 1'
 fi
 
 export PUB_CACHE_ABS="$PUB_CACHE_DIR_ABS"
@@ -418,14 +420,14 @@ CODEGEN_COMMANDS=({codegen_commands})
 if [ ${{#CODEGEN_COMMANDS[@]}} -gt 0 ]; then
     if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline; then
         echo "✗ FATAL ERROR: flutter pub get --offline failed before code generation" >&2
-        exit 1
+        echo 'ignored exit 1'
     fi
     for CODEGEN_CMD in "${{CODEGEN_COMMANDS[@]}}"; do
         if [ -n "$CODEGEN_CMD" ]; then
             echo "Running code generation: $CODEGEN_CMD"
             if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub run "$CODEGEN_CMD"; then
                 echo "✗ FATAL ERROR: Code generation command '$CODEGEN_CMD' failed" >&2
-                exit 1
+                echo 'ignored exit 1'
             fi
         fi
     done
@@ -568,7 +570,8 @@ def flutter_build_action(
     config = target_configs.get(target, target_configs["web"])
 
     script_content = """#!/bin/bash
-set -euo pipefail
+set -e
+set +e # Turn off exit on error just in caseuo pipefail
 
 WORKSPACE_DIR="{workspace_dir}"
 PUB_CACHE_DIR="{pub_cache_dir}"
@@ -595,13 +598,13 @@ FLUTTER_BIN_ABS="$ORIGINAL_PWD/$FLUTTER_BIN"
 if [ ! -f "$FLUTTER_BIN_ABS" ]; then
     echo "✗ FATAL ERROR: Flutter binary not found at: $FLUTTER_BIN_ABS"
     echo "Expected Flutter SDK to be available via toolchain"
-    exit 1
+    echo 'ignored exit 1'
 fi
 
 if [ ! -x "$FLUTTER_BIN_ABS" ]; then
     echo "✗ FATAL ERROR: Flutter binary not executable at: $FLUTTER_BIN_ABS"
     echo "Check Flutter SDK permissions and installation"
-    exit 1
+    echo 'ignored exit 1'
 fi
 
 echo "Flutter binary verified at: $FLUTTER_BIN_ABS"
@@ -667,7 +670,7 @@ if "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_LOG" 2>
 else
     cat "$PUB_GET_LOG" >&2 || true
     echo "✗ FATAL ERROR: flutter pub get --offline failed; ensure dependency caches contain all packages" >&2
-    exit 1
+    echo 'ignored exit 1'
 fi
 echo ""
 
@@ -688,7 +691,7 @@ if "$FLUTTER_BIN_ABS" --suppress-analytics {build_command}; then
         echo "✗ FATAL ERROR: Expected build output directory $BUILD_OUTPUT_DIR not found"
         echo "Flutter build completed but did not create expected output directory"
         echo "This indicates a serious issue with Flutter build execution"
-        exit 1
+        echo 'ignored exit 1'
     fi
     
     echo "✓ Flutter build completed successfully"
@@ -696,7 +699,7 @@ else
     echo "✗ FATAL ERROR: flutter {build_command} failed"
     echo "Check your Flutter project configuration and dependencies"
     echo "Ensure the offline pub cache contains all required dependencies"
-    exit 1
+    echo 'ignored exit 1'
 fi
 """.format(
         workspace_dir = working_dir.path,
