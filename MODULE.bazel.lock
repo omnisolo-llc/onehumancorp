@@ -157,6 +157,7 @@
     "https://bcr.bazel.build/modules/re2/2024-07-02.bcr.1/source.json": "2ff292be6ef3340325ce8a045ecc326e92cbfab47c7cbab4bd85d28971b97ac4",
     "https://bcr.bazel.build/modules/re2/2024-07-02/MODULE.bazel": "0eadc4395959969297cbcf31a249ff457f2f1d456228c67719480205aa306daa",
     "https://bcr.bazel.build/modules/rules_android/0.1.1/MODULE.bazel": "48809ab0091b07ad0182defb787c4c5328bd3a278938415c00a7b69b50c4d3a8",
+    "https://bcr.bazel.build/modules/rules_android/0.6.0/MODULE.bazel": "30e60cc87068ffbb3e8d0c704b9de3795a9cdeead315d916e258ed9c90236505",
     "https://bcr.bazel.build/modules/rules_android/0.6.4/MODULE.bazel": "b4cde12d506dd65d82b2be39761f49f5797303343a3d5b4ee191c0cdf9ef387c",
     "https://bcr.bazel.build/modules/rules_android/0.6.4/source.json": "95d3c233c81005ad95eadc9382fde7dc6bd2c61752361e463264ee8349c071fb",
     "https://bcr.bazel.build/modules/rules_apple/3.16.0/MODULE.bazel": "0d1caf0b8375942ce98ea944be754a18874041e4e0459401d925577624d3a54a",
@@ -386,9 +387,21 @@
     },
     "@@rules_android+//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
       "general": {
-        "bzlTransitiveDigest": "NAy+0M15JNVEBb8Tny6t7j3lKqTnsAMjoBB6LJ+C370=",
+        "bzlTransitiveDigest": "fjbt6lcQ4ZtHZBJl1vxvs+w754HcyPRIdCM8enO4RFg=",
         "usagesDigest": "r1sq1tQKuNeVtcI2nW5rwlvQdzsYNG964QnEMLNIDvs=",
-        "recordedInputs": [],
+        "recordedInputs": [
+          "REPO_MAPPING:bazel_features+,bazel_features_globals bazel_features++version_extension+bazel_features_globals",
+          "REPO_MAPPING:bazel_features+,bazel_features_version bazel_features++version_extension+bazel_features_version",
+          "REPO_MAPPING:protobuf+,proto_bazel_features bazel_features+",
+          "REPO_MAPPING:rules_android+,rules_cc rules_cc+",
+          "REPO_MAPPING:rules_cc+,bazel_skylib bazel_skylib+",
+          "REPO_MAPPING:rules_cc+,bazel_tools bazel_tools",
+          "REPO_MAPPING:rules_cc+,cc_compatibility_proxy rules_cc++compatibility_proxy+cc_compatibility_proxy",
+          "REPO_MAPPING:rules_cc+,com_google_protobuf protobuf+",
+          "REPO_MAPPING:rules_cc+,platforms platforms",
+          "REPO_MAPPING:rules_cc+,rules_cc rules_cc+",
+          "REPO_MAPPING:rules_cc++compatibility_proxy+cc_compatibility_proxy,rules_cc rules_cc+"
+        ],
         "generatedRepoSpecs": {
           "androidsdk": {
             "repoRuleId": "@@rules_android+//rules/android_sdk_repository:rule.bzl%_android_sdk_repository",
@@ -399,7 +412,7 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
-        "bzlTransitiveDigest": "tw9KgiUKhnrNhHh48uHFDLX1rKojzhKx7/d1aspFjw8=",
+        "bzlTransitiveDigest": "RDC+M1JkVGHoOvSgQj983x9UtlXC3Wmc4wG7XMe5rFA=",
         "usagesDigest": "A9JWWjL9TOzdpcun1xILpii1AvtISB9kidb7O6tpgyY=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
@@ -441,7 +454,7 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
-        "bzlTransitiveDigest": "tw9KgiUKhnrNhHh48uHFDLX1rKojzhKx7/d1aspFjw8=",
+        "bzlTransitiveDigest": "RDC+M1JkVGHoOvSgQj983x9UtlXC3Wmc4wG7XMe5rFA=",
         "usagesDigest": "/h5b1cyp9ubbCBGrqeV6gtns/kxql/4waj+VZTG2nbw=",
         "recordedInputs": [
           "FILE:@@//srcs/app/pub_deps.json 2ea5badd8014b86ec7ae933c89a96798ed491afa66a4ca8bed2b19b229463865"

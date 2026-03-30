@@ -151,3 +151,22 @@ oci.pull(
     tag = "latest",
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
+single_version_override(
+    module_name = "aspect_bazel_lib",
+    patch_cmds = [
+        "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' lib/private/utils.bzl",
+        "find . -type f -name '*.bzl' -exec sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' {} \\;",
+        "find . -type f -name '*.bzl' -exec sed -i '/incompatible_use_toolchain_transition = /d' {} \\;"
+    ],
+)
+
+bazel_dep(name = "rules_android", version = "0.6.0")
+single_version_override(
+    module_name = "rules_android",
+    patch_cmds = [
+        "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl",
+        "find . -type f -name '*.bzl' -exec sed -i 's/load(\\\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\\\", \\\"CcInfo\\\")//g' {} \\;",
+        "find . -type f -name '*.bzl' -exec sed -i 's/fail(\\\"The CcInfo symbol has been removed.*/pass/g' {} \\;",
+        "find . -type f -name '*.bzl' -exec sed -i '1i load(\\\"@rules_cc\\/\\/cc:defs.bzl\\\", \\\"CcInfo\\\")' {} \\;"
+    ],
+)
