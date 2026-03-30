@@ -34,9 +34,7 @@ jobs:
       - name: Workaround rules_android platform error
         run: |
           bazelisk query 'deps(//...)' > /dev/null 2>&1 || true
-          find ~/.cache/bazel -type f -name "helper.bzl" -path "*/external/rules_android++android_sdk_repository_extension+androidsdk/*" -exec sed -i 's/local_config_platform/platforms/' {} + || true
-          # We also want to manually perform the patch logic that we couldn't properly apply in MODULE.bazel.
-          bazelisk query 'deps(//...)' > /dev/null 2>&1 || true
+          find ~/.bazel ~/.cache/bazel -type f -name "helper.bzl" -path "*/external/rules_android++android_sdk_repository_extension+androidsdk/*" -exec sed -i 's/local_config_platform/platforms/' {} + || true
 
       - name: Test
         env:
