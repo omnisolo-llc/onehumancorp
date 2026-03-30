@@ -398,10 +398,20 @@ func (s *Server) handleScaleStream(w http.ResponseWriter, r *http.Request) {
 		`{"event":"AgentHired","status":"Ready"}`,
 	}
 
+	bp := s.sseBufferPool.Get().(*[]byte)
+	buf := (*bp)[:0]
+	defer func() {
+		s.sseBufferPool.Put(bp)
+	}()
+
 	for _, event := range events {
 		s.hub.LogEvent(map[string]interface{}{"type": "ScalingEventStream", "data": event})
-		data := []byte("data: " + event + "\n\n")
-		w.Write(data)
+		buf = buf[:0]
+		buf = append(buf, "data: "...)
+		buf = append(buf, event...)
+		buf = append(buf, "\n\n"...)
+
+		w.Write(buf)
 		if err := rc.Flush(); err != nil {
 			break
 		}

@@ -47,6 +47,7 @@ type Server struct {
 	agentProviderRegistry *agents.Registry
 	dynamicMCPTools       []MCPTool
 	rateLimitStates       map[string]*RateLimitState
+	sseBufferPool         sync.Pool
 }
 
 // RateLimitState functionality.
@@ -410,6 +411,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		agentProviderRegistry: agents.DefaultRegistry(),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
 		rateLimitStates:       make(map[string]*RateLimitState),
+		sseBufferPool: sync.Pool{
+			New: func() interface{} {
+				b := make([]byte, 0, 1024)
+				return &b
+			},
+		},
 	}
 	// Load initial settings.
 	initialSettings := hub.SettingsStore().Get()

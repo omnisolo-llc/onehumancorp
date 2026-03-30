@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -101,6 +102,12 @@ func TestHandleScaleStreamOpsExtra(t *testing.T) {
 		org:     org,
 		hub:     hub,
 		tracker: tracker,
+		sseBufferPool: sync.Pool{
+			New: func() interface{} {
+				b := make([]byte, 0, 1024)
+				return &b
+			},
+		},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)

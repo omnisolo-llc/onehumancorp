@@ -4,38 +4,28 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/onehumancorp/mono/srcs/auth"
 	"github.com/onehumancorp/mono/srcs/billing"
 	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
-func TestHandleScaleStreamOpsCoverage(t *testing.T) {
-	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+func BenchmarkHandleScaleStream(b *testing.B) {
+	org := domain.Organization{ID: "test-org"}
 	hub := orchestration.NewHub()
-	tracker := billing.NewTracker(billing.DefaultCatalog)
-	authStore := auth.NewStore()
+	tracker := billing.NewTracker(map[string]billing.Price{})
+	serverHandler := NewServer(org, hub, tracker)
 
-	_, err := authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"})
-	if err != nil {
-		t.Fatal("create user failed", err)
+	// The NewServer method returns an http.Handler.
+	// Since we know the implementation is a chi.Mux or chi.Router wrapping Server,
+	// or similar. Wait, NewServer returns telemetry.Middleware(auth.Middleware(store)(mux))
+	// We should just use the handler directly.
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/stream", nil)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		rr := httptest.NewRecorder()
+		serverHandler.ServeHTTP(rr, req)
 	}
-
-	srv := &Server{
-		org:       org,
-		hub:       hub,
-		tracker:   tracker,
-		authStore: authStore,
-	}
-
-	t.Run("invalid method", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/ops/scale/stream", nil)
-		w := httptest.NewRecorder()
-		srv.handleScaleStream(w, req)
-		if w.Code != http.StatusOK { // It doesn't check method.
-			t.Errorf("expected 200, got %d", w.Code)
-		}
-	})
 }

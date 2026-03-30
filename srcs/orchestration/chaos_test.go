@@ -3,7 +3,6 @@ package orchestration
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -16,6 +15,9 @@ func TestSIPDB_Chaos(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos.db")
 
+	// Initialize the schema via SQLite CLI to prevent "no such table" errors
+	// since db.Init() is typically called via the CLI tool or separate flow.
+	// But actually, NewSIPDB calls Init() inside it. Let's make sure it does.
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)

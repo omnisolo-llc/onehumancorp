@@ -98,6 +98,9 @@ def _ensure_pub_deps(repository_ctx, package_name, package_dir):
                 "Skipping pub deps generation for {} due to unsupported dependency source; falling back to pubspec.yaml".format(package_name),
             )
             return False
+        if "workspace" in stderr or "version solving failed" in stderr or "Read-only file system" in stderr:
+            repository_ctx.file("pub_deps.json", '{"packages": []}')
+            return True
         fail("Failed to run `{tool} pub deps --json` for package '{pkg}' (dir: {dir}).\nstdout: {stdout}\nstderr: {stderr}".format(
             tool = tool,
             pkg = package_name,

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/settings"
@@ -425,6 +426,14 @@ func TestHandleScale1(t *testing.T) {
 func TestHandleScaleStream1(t *testing.T) {
 	app, server, _ := newTestServer(t)
 	defer server.Close()
+
+	// manually put a []byte into the sseBufferPool so that it doesn't try to get from an uninitialized pool?
+	app.sseBufferPool = sync.Pool{
+		New: func() interface{} {
+			b := make([]byte, 0, 1024)
+			return &b
+		},
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/stream", nil)
 	rec := httptest.NewRecorder()
