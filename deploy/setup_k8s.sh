@@ -30,7 +30,7 @@ else
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             # Assuming macos with arm or amd64
             ARCH=$(uname -m)
-            if [ "$ARCH" = "arm64" ]; then
+            if [ "$ARCH" == "arm64" ]; then
                 curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.22.0/kind-darwin-arm64"
             else
                 curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.22.0/kind-darwin-amd64"
@@ -49,6 +49,8 @@ else
 fi
 
 echo "--- Local K8s Context Configured ---"
-echo "You are now using context: $(kubectl config current-context)"
+if command -v kubectl >/dev/null 2>&1; then
+    echo "You are now using context: $(kubectl config current-context)"
+fi
 echo ""
 echo "Run the application easily using: bazelisk run //:up"
