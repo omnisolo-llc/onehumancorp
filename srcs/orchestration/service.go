@@ -735,6 +735,8 @@ func (h *Hub) Publish(message Message) error {
 	}
 	h.mu.RUnlock()
 
+	var notifyChannels []chan struct{}
+
 	h.mu.Lock()
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
@@ -744,12 +746,8 @@ func (h *Hub) Publish(message Message) error {
 
 		h.inbox[message.ToAgent] = append(inbox, message)
 
-		subs := h.subs[message.ToAgent]
-		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
-			}
+		if subs := h.subs[message.ToAgent]; len(subs) > 0 {
+			notifyChannels = append(notifyChannels, subs...)
 		}
 	}
 
@@ -814,12 +812,8 @@ func (h *Hub) Publish(message Message) error {
 		sender.Status = StatusInMeeting
 
 		for _, participant := range meeting.Participants {
-			subs := h.subs[participant]
-			for i := 0; i < len(subs); i++ {
-				select {
-				case subs[i] <- struct{}{}:
-				default:
-				}
+			if subs := h.subs[participant]; len(subs) > 0 {
+				notifyChannels = append(notifyChannels, subs...)
 			}
 		}
 	} else {
@@ -827,6 +821,13 @@ func (h *Hub) Publish(message Message) error {
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
+
+	for _, ch := range notifyChannels {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
 
 	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
