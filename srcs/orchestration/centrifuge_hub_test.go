@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/domain"
 	"context"
 	"errors"
 	"net/http"
@@ -94,7 +95,7 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 	if err := hub.Publish(Message{
 		ID:        "cn-msg-1",
 		FromAgent: "cn-pm",
-		Type:      EventTask,
+		Type:      domain.EventTask,
 		Content:   "Hello from centrifuge test",
 		MeetingID: "cn-meeting",
 	}); err != nil {
@@ -124,7 +125,7 @@ func TestHubCentrifugeNilSafe(t *testing.T) {
 	if err := hub.Publish(Message{
 		ID:        "nil-msg-1",
 		FromAgent: "nil-pm",
-		Type:      EventTask,
+		Type:      domain.EventTask,
 		Content:   "No centrifuge attached",
 		MeetingID: "nil-meeting",
 	}); err != nil {
@@ -143,7 +144,7 @@ func TestCentrifugeNode_Publishers(t *testing.T) {
 	msg := Message{
 		ID:        "msg-1",
 		FromAgent: "agent-1",
-		Type:      EventTask,
+		Type:      domain.EventTask,
 		Content:   "Test content",
 	}
 
@@ -234,7 +235,7 @@ func TestCentrifugeNodePublishErrorPaths(t *testing.T) {
 	msg := Message{
 		ID:        "msg-1",
 		FromAgent: "agent-1",
-		Type:      EventTask,
+		Type:      domain.EventTask,
 		Content:   "Test content",
 	}
 

@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/domain"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -167,8 +168,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 
 			var msg Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				// Automatically fix divergence: convert the plain string task into a valid JSON Message representation
+				msg = Message{ID: id, Content: taskStr, Type: domain.EventTask}
+				fixedTaskBytes, marshalErr := json.Marshal(msg)
+				if marshalErr == nil {
+					// Update the DB with the valid JSON
+					_, _ = s.db.ExecContext(ctx, "UPDATE agent_missions SET task = ? WHERE id = ?", string(fixedTaskBytes), id)
+				}
 			} else {
 				if msg.ID == "" {
 					msg.ID = id

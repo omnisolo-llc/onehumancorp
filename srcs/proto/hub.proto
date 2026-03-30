@@ -22,6 +22,7 @@ message Message {
   string content = 5;
   string meeting_id = 6;
   int64 occurred_at_unix = 7;
+  string parent_thread_id = 8;
 }
 
 message MeetingRoom {

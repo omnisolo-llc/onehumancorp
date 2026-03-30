@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/domain"
 	"context"
 	"fmt"
 	"strings"
@@ -51,7 +52,7 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		Name:           fmt.Sprintf("Specialized %s Agent", req.GetTargetRole()),
 		Role:           req.GetTargetRole(),
 		OrganizationID: "dynamic-delegation",
-		Status:         StatusIdle,
+		Status:         domain.StatusIdle,
 		ProviderType:   "builtin",
 	}
 

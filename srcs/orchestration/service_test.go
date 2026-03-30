@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/domain"
 	"context"
 	"encoding/json"
 	"errors"
@@ -51,7 +52,7 @@ func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
 	}
 
 	agent, ok := hub.Agent("pm-1")
-	if !ok || agent.Status != StatusInMeeting {
+	if !ok || agent.Status != domain.StatusInMeeting {
 		t.Fatalf("expected sender to be in meeting, got %+v", agent)
 	}
 }
@@ -75,7 +76,7 @@ func TestRegisterAgentDefaultsStatusAndLookupMiss(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected registered agent lookup to succeed")
 	}
-	if agent.Status != StatusIdle {
+	if agent.Status != domain.StatusIdle {
 		t.Fatalf("expected default idle status, got %s", agent.Status)
 	}
 	if _, ok := hub.Agent("missing"); ok {
@@ -94,7 +95,7 @@ func TestOpenMeetingMarksParticipantsInMeeting(t *testing.T) {
 	}
 
 	agent, _ := hub.Agent("a")
-	if agent.Status != StatusInMeeting {
+	if agent.Status != domain.StatusInMeeting {
 		t.Fatalf("expected participant to be in meeting, got %s", agent.Status)
 	}
 }
@@ -106,7 +107,7 @@ func TestDelegateTask(t *testing.T) {
 
 	task := Message{
 		ID:         "msg-1",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "Implement feature",
 		OccurredAt: time.Now().UTC(),
 	}
@@ -139,7 +140,7 @@ func TestDelegateTask_AgentNotFound(t *testing.T) {
 
 	task := Message{
 		ID:         "msg-1",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "Implement feature",
 		OccurredAt: time.Now().UTC(),
 	}
@@ -191,7 +192,7 @@ func TestPublishWithoutMeetingMarksSenderActive(t *testing.T) {
 	}
 
 	agent, _ := hub.Agent("a")
-	if agent.Status != StatusActive {
+	if agent.Status != domain.StatusActive {
 		t.Fatalf("expected sender to become active, got %s", agent.Status)
 	}
 }
@@ -247,7 +248,7 @@ func TestFireAgentRemovesFromHubAndInbox(t *testing.T) {
 		ID:        "msg-1",
 		FromAgent: "a",
 		ToAgent:   "b",
-		Type:      EventTask,
+		Type:      domain.EventTask,
 		Content:   "do work",
 		MeetingID: "m1",
 	})
@@ -293,10 +294,10 @@ func TestOpenMeetingWithAgendaPreservesAgendaField(t *testing.T) {
 
 func TestEventTypeConstantsAreDefined(t *testing.T) {
 	types := []string{
-		EventTask, EventStatus, EventHandoff,
-		EventCodeReviewed, EventTestsFailed, EventTestsPassed,
-		EventSpecApproved, EventBlockerRaised, EventBlockerCleared,
-		EventPRCreated, EventPRMerged, EventDesignReviewed, EventApprovalNeeded,
+		domain.EventTask, domain.EventStatus, domain.EventHandoff,
+		domain.EventCodeReviewed, domain.EventTestsFailed, domain.EventTestsPassed,
+		domain.EventSpecApproved, domain.EventBlockerRaised, domain.EventBlockerCleared,
+		domain.EventPRCreated, domain.EventPRMerged, domain.EventDesignReviewed, domain.EventApprovalNeeded,
 	}
 	for _, ev := range types {
 		if ev == "" {
@@ -364,7 +365,7 @@ func TestHubServiceServer_StreamMessages(t *testing.T) {
 		ID:         "msg-1",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "Hello Streaming",
 		OccurredAt: time.Now(),
 	})
@@ -411,7 +412,7 @@ func TestHubServiceServer_StreamMessages_SendError(t *testing.T) {
 		ID:         "msg-err",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "trigger_send_error",
 		OccurredAt: time.Now(),
 	})
@@ -475,7 +476,7 @@ func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 		ID:         "msg-err",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "trigger_send_error",
 		OccurredAt: time.Now(),
 	})
@@ -616,7 +617,7 @@ func TestHubServiceServer_RegisterAgent(t *testing.T) {
 			Name:           proto.String("GRPC Agent"),
 			Role:           proto.String("TEST_ROLE"),
 			OrganizationId: proto.String("org-grpc"),
-			Status:         proto.String(string(StatusIdle)),
+			Status:         proto.String(string(domain.StatusIdle)),
 		}.Build(),
 	}.Build()
 
@@ -690,7 +691,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 				ToAgentId:   proto.String("specialist"),
 				Task: pb.Message_builder{
 					Id:             proto.String("m1"),
-					Type:           proto.String(EventTask),
+					Type:           proto.String(domain.EventTask),
 					Content:        proto.String("Do work"),
 					OccurredAtUnix: proto.Int64(time.Now().Unix()),
 				}.Build(),
@@ -705,7 +706,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 				ToAgentId:   proto.String("specialist"),
 				Task: pb.Message_builder{
 					Id:             proto.String("m2"),
-					Type:           proto.String(EventTask),
+					Type:           proto.String(domain.EventTask),
 					Content:        proto.String("Do work"),
 					OccurredAtUnix: proto.Int64(time.Now().Unix()),
 				}.Build(),
@@ -720,7 +721,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 				ToAgentId:   proto.String("unknown-specialist"),
 				Task: pb.Message_builder{
 					Id:             proto.String("m3"),
-					Type:           proto.String(EventTask),
+					Type:           proto.String(domain.EventTask),
 					Content:        proto.String("Do work"),
 					OccurredAtUnix: proto.Int64(time.Now().Unix()),
 				}.Build(),
@@ -779,7 +780,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 
 	// Pre-fill both channels
 	_ = hub.Publish(Message{
-		ID: "m2-1", FromAgent: "sender", ToAgent: "receiver2", Type: EventTask, Content: "fill", OccurredAt: time.Now(),
+		ID: "m2-1", FromAgent: "sender", ToAgent: "receiver2", Type: domain.EventTask, Content: "fill", OccurredAt: time.Now(),
 	})
 
 	// Fill the channel or just let Publish run twice without draining it
@@ -787,7 +788,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 		ID:         "msg-1",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "fill channel",
 		OccurredAt: time.Now(),
 	})
@@ -806,7 +807,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 		ID:         "msg-m3-fill",
 		FromAgent:  "sender",
 		ToAgent:    "receiver3",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		MeetingID:  "m3",
 		Content:    "fill meeting channel",
 		OccurredAt: time.Now(),
@@ -824,7 +825,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 		ID:         "msg-m3-fill-2",
 		FromAgent:  "sender",
 		ToAgent:    "", // broadcast to meeting
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		MeetingID:  "m3",
 		Content:    "hit meeting channel default",
 		OccurredAt: time.Now(),
@@ -835,7 +836,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 		ID:         "msg-2",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "hit default case",
 		OccurredAt: time.Now(),
 	})
@@ -850,7 +851,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 		ID:         "msg-3",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		MeetingID:  "m1",
 		Content:    "hit meeting default case",
 		OccurredAt: time.Now(),
@@ -863,7 +864,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 		ID:         "msg-4",
 		FromAgent:  "sender",
 		ToAgent:    "receiver2",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		MeetingID:  "m2",
 		Content:    "hit meeting default case 2",
 		OccurredAt: time.Now(),
@@ -921,7 +922,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 					Id:             proto.String("m1"),
 					FromAgent:      proto.String("sender"),
 					ToAgent:        proto.String("receiver"),
-					Type:           proto.String(EventTask),
+					Type:           proto.String(domain.EventTask),
 					Content:        proto.String("Hello"),
 					OccurredAtUnix: proto.Int64(time.Now().Unix()),
 				}.Build(),
@@ -936,7 +937,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 					Id:             proto.String("m2"),
 					FromAgent:      proto.String("unknown"),
 					ToAgent:        proto.String("receiver"),
-					Type:           proto.String(EventTask),
+					Type:           proto.String(domain.EventTask),
 					Content:        proto.String("Hello"),
 					OccurredAtUnix: proto.Int64(time.Now().Unix()),
 				}.Build(),

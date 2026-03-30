@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/domain"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -162,7 +163,7 @@ func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 		ID:         "msg-1",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "Hello Streaming",
 		OccurredAt: time.Now(),
 	})
@@ -205,7 +206,7 @@ func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 		ID:         "msg-2",
 		FromAgent:  "sender",
 		ToAgent:    "receiver",
-		Type:       EventTask,
+		Type:       domain.EventTask,
 		Content:    "Hello Streaming",
 		OccurredAt: time.Now(),
 	})

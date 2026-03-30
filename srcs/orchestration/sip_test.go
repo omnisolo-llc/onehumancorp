@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/domain"
 	"context"
 	"testing"
 	"path/filepath"
@@ -37,7 +38,7 @@ func TestSIPDB_Init(t *testing.T) {
 	}
 
 	// Test Delegation & Mission
-	msg := Message{ID: "m1", Content: "Build a feature", Type: EventTask}
+	msg := Message{ID: "m1", Content: "Build a feature", Type: domain.EventTask}
 	err = db.DelegateMission(ctx, "m1", "SOFTWARE_ENGINEER", msg)
 	if err != nil {
 		t.Fatalf("DelegateMission failed: %v", err)

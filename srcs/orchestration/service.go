@@ -18,6 +18,7 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/scheduler"
+	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"github.com/onehumancorp/mono/srcs/telemetry"
 	"google.golang.org/grpc"
@@ -72,139 +73,17 @@ func redactInterfacePII(val interface{}) interface{} {
 	}
 }
 
-// Status indicates the current operational phase of an AI agent within the workforce.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Status string
-
-const (
-	// StatusIdle represents the IDLE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusIdle Status = "IDLE"
-	// StatusActive represents the ACTIVE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusActive Status = "ACTIVE"
-	// StatusInMeeting represents the INMEETING lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusInMeeting Status = "IN_MEETING"
-	// StatusBlocked represents the BLOCKED lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusBlocked Status = "BLOCKED"
-	// StatusWaitingForTools represents the WAITINGFORTOOLS lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusWaitingForTools Status = "WAITING_FOR_TOOLS"
-)
-
-// Event type constants for the asynchronous pub/sub agent interaction protocol.
-const (
-	// EventTask provides domain-specific context and typed constraints for EventTask operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventTask = "task"
-	// EventStatus provides domain-specific context and typed constraints for EventStatus operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventStatus = "status"
-	// EventHandoff provides domain-specific context and typed constraints for EventHandoff operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventHandoff = "handoff"
-	// EventCodeReviewed provides domain-specific context and typed constraints for EventCodeReviewed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventCodeReviewed = "CodeReviewed"
-	// EventTestsFailed provides domain-specific context and typed constraints for EventTestsFailed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventTestsFailed = "TestsFailed"
-	// EventTestsPassed provides domain-specific context and typed constraints for EventTestsPassed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventTestsPassed = "TestsPassed"
-	// EventSpecApproved provides domain-specific context and typed constraints for EventSpecApproved operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventSpecApproved = "SpecApproved"
-	// EventBlockerRaised provides domain-specific context and typed constraints for EventBlockerRaised operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventBlockerRaised = "BlockerRaised"
-	// EventBlockerCleared provides domain-specific context and typed constraints for EventBlockerCleared operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventBlockerCleared = "BlockerCleared"
-	// EventPRCreated provides domain-specific context and typed constraints for EventPRCreated operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventPRCreated = "PRCreated"
-	// EventPRMerged provides domain-specific context and typed constraints for EventPRMerged operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventPRMerged = "PRMerged"
-	// EventDesignReviewed provides domain-specific context and typed constraints for EventDesignReviewed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventDesignReviewed = "DesignReviewed"
-	// EventApprovalNeeded provides domain-specific context and typed constraints for EventApprovalNeeded operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventApprovalNeeded = "ApprovalNeeded"
-)
-
 // Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
 // Accepts no parameters.
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
 type Agent struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Role           string `json:"role"`
-	OrganizationID string `json:"organizationId"`
-	Status         Status `json:"status"`
+	ID             string        `json:"id"`
+	Name           string        `json:"name"`
+	Role           string        `json:"role"`
+	OrganizationID string        `json:"organizationId"`
+	Status         domain.Status `json:"status"`
 	// ProviderType identifies the external agent implementation backing this worker
 	// (e.g. "claude", "gemini", "opencode").  An empty string or "builtin" means
 	// the platform's own lightweight agent is used.
@@ -218,13 +97,14 @@ type Agent struct {
 // Produces no errors.
 // Has no side effects.
 type Message struct {
-	ID         string    `json:"id"`
-	FromAgent  string    `json:"fromAgent"`
-	ToAgent    string    `json:"toAgent"`
-	Type       string    `json:"type"`
-	Content    string    `json:"content"`
-	MeetingID  string    `json:"meetingId,omitempty"`
-	OccurredAt time.Time `json:"occurredAt"`
+	ID             string    `json:"id"`
+	FromAgent      string    `json:"fromAgent"`
+	ToAgent        string    `json:"toAgent"`
+	Type           string    `json:"type"`
+	Content        string    `json:"content"`
+	MeetingID      string    `json:"meetingId,omitempty"`
+	ParentThreadID string    `json:"parentThreadId,omitempty"`
+	OccurredAt     time.Time `json:"occurredAt"`
 }
 
 // DelegateTask allows an agent in Delegate Mode to act as a routing proxy.
@@ -558,7 +438,7 @@ func (h *Hub) GetSIPDB() *SIPDB {
 	return h.sipDB
 }
 
-// RegisterAgent enrolls an agent into the Hub, allocating an inbox and initialising its Status.  Parameters:   - agent: Agent; The worker object containing ID, Name, Role, and Organization context.
+// RegisterAgent enrolls an agent into the Hub, allocating an inbox and initialising its domain.Status.  Parameters:   - agent: Agent; The worker object containing ID, Name, Role, and Organization context.
 // Accepts parameters: h *Hub (No Constraints).
 // Returns nothing.
 // Produces no errors.
@@ -568,7 +448,7 @@ func (h *Hub) RegisterAgent(agent Agent) {
 	defer h.mu.Unlock()
 
 	if agent.Status == "" {
-		agent.Status = StatusIdle
+		agent.Status = domain.StatusIdle
 	}
 
 	h.agents[agent.ID] = agent
@@ -666,7 +546,7 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 	h.meetings[id] = meeting
 	for _, participant := range participants {
 		agent := h.agents[participant]
-		agent.Status = StatusInMeeting
+		agent.Status = domain.StatusInMeeting
 		h.agents[participant] = agent
 	}
 
@@ -692,7 +572,7 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 	h.meetings[id] = meeting
 	for _, participant := range participants {
 		agent := h.agents[participant]
-		agent.Status = StatusInMeeting
+		agent.Status = domain.StatusInMeeting
 		h.agents[participant] = agent
 	}
 
@@ -788,7 +668,7 @@ func (h *Hub) Publish(message Message) error {
 								ID:         "summary-" + time.Now().UTC().Format("20060102150405"),
 								FromAgent:  "SYSTEM_SUMMARIZER",
 								ToAgent:    "all",
-								Type:       EventStatus,
+								Type:       domain.EventStatus,
 								Content:    "[CONTEXT SUMMARIZED]: " + summary,
 								MeetingID:  mID,
 								OccurredAt: time.Now().UTC(),
@@ -811,7 +691,7 @@ func (h *Hub) Publish(message Message) error {
 		}
 
 		h.meetings[message.MeetingID] = meeting
-		sender.Status = StatusInMeeting
+		sender.Status = domain.StatusInMeeting
 
 		for _, participant := range meeting.Participants {
 			subs := h.subs[participant]
@@ -823,7 +703,7 @@ func (h *Hub) Publish(message Message) error {
 			}
 		}
 	} else {
-		sender.Status = StatusActive
+		sender.Status = domain.StatusActive
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
@@ -833,7 +713,7 @@ func (h *Hub) Publish(message Message) error {
 
 	// Structured logging for agent execution traces
 	// Filter out high-frequency "status" events to reduce signal noise.
-	if message.Type != EventStatus {
+	if message.Type != domain.EventStatus {
 		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
 	}
 
@@ -1025,7 +905,7 @@ func (s *HubServiceServer) RegisterAgent(ctx context.Context, req *pb.RegisterAg
 		Name:           agentReq.GetName(),
 		Role:           agentReq.GetRole(),
 		OrganizationID: agentReq.GetOrganizationId(),
-		Status:         Status(agentReq.GetStatus()),
+		Status:         domain.Status(agentReq.GetStatus()),
 		ProviderType:   agentReq.GetProviderType(),
 	}
 	s.hub.RegisterAgent(agent)
@@ -1054,13 +934,14 @@ func (s *HubServiceServer) OpenMeeting(ctx context.Context, req *pb.OpenMeetingR
 func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRequest) (*pb.PublishMessageResponse, error) {
 	msgReq := req.GetMessage()
 	msg := Message{
-		ID:         msgReq.GetId(),
-		FromAgent:  msgReq.GetFromAgent(),
-		ToAgent:    msgReq.GetToAgent(),
-		Type:       msgReq.GetType(),
-		Content:    msgReq.GetContent(),
-		MeetingID:  msgReq.GetMeetingId(),
-		OccurredAt: time.Unix(msgReq.GetOccurredAtUnix(), 0),
+		ID:             msgReq.GetId(),
+		FromAgent:      msgReq.GetFromAgent(),
+		ToAgent:        msgReq.GetToAgent(),
+		Type:           msgReq.GetType(),
+		Content:        msgReq.GetContent(),
+		MeetingID:      msgReq.GetMeetingId(),
+		ParentThreadID: msgReq.GetParentThreadId(),
+		OccurredAt:     time.Unix(msgReq.GetOccurredAtUnix(), 0),
 	}
 	if err := s.hub.Publish(msg); err != nil {
 		return nil, status.Errorf(codes.Internal, "publish failed: %v", err)
@@ -1076,13 +957,14 @@ func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRe
 func (s *HubServiceServer) DelegateTask(ctx context.Context, req *pb.DelegateTaskRequest) (*pb.DelegateTaskResponse, error) {
 	msgReq := req.GetTask()
 	msg := Message{
-		ID:         msgReq.GetId(),
-		FromAgent:  msgReq.GetFromAgent(),
-		ToAgent:    msgReq.GetToAgent(),
-		Type:       msgReq.GetType(),
-		Content:    msgReq.GetContent(),
-		MeetingID:  msgReq.GetMeetingId(),
-		OccurredAt: time.Unix(msgReq.GetOccurredAtUnix(), 0),
+		ID:             msgReq.GetId(),
+		FromAgent:      msgReq.GetFromAgent(),
+		ToAgent:        msgReq.GetToAgent(),
+		Type:           msgReq.GetType(),
+		Content:        msgReq.GetContent(),
+		MeetingID:      msgReq.GetMeetingId(),
+		ParentThreadID: msgReq.GetParentThreadId(),
+		OccurredAt:     time.Unix(msgReq.GetOccurredAtUnix(), 0),
 	}
 
 	err := s.hub.DelegateTask(req.GetFromAgentId(), req.GetToAgentId(), msg)
@@ -1120,6 +1002,7 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 				Type:           proto.String(m.Type),
 				Content:        proto.String(m.Content),
 				MeetingId:      proto.String(m.MeetingID),
+				ParentThreadId: proto.String(m.ParentThreadID),
 				OccurredAtUnix: proto.Int64(m.OccurredAt.Unix()),
 			}.Build()); err != nil {
 				return err
