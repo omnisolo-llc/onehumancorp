@@ -1,0 +1,27 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "prune_stale_branches_test",
+    srcs = ["prune_stale_branches_test.sh"],
+    data = ["prune_stale_branches.sh"],
+    size = "small",
+)
+
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cleanup_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/onehumancorp/mono/scripts/cleanup",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//srcs/orchestration",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_binary(
+    name = "cleanup",
+    embed = [":cleanup_lib"],
+    visibility = ["//visibility:public"],
+)

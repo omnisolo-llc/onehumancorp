@@ -8,6 +8,7 @@ import (
 )
 
 func TestSIPDB_Init(t *testing.T) {
+	// Use an isolated in-memory DB per test
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to initialize SIPDB: %v", err)

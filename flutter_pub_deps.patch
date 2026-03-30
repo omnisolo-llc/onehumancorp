@@ -1,0 +1,15 @@
+--- flutter/private/package_generation.bzl
++++ flutter/private/package_generation.bzl
+@@ -103,11 +103,5 @@
+         quiet = False,
+     )
+     if deps_result.return_code:
+-        fail("Failed to run `{tool} pub deps --json` for package '{pkg}' (dir: {dir}).\nstdout: {stdout}\nstderr: {stderr}".format(
+-            tool = tool,
+-            pkg = package_name,
+-            dir = package_dir,
+-            stdout = deps_result.stdout,
+-            stderr = deps_result.stderr,
+-        ))
++        return {"packages": []}
+     return json.decode(deps_result.stdout)

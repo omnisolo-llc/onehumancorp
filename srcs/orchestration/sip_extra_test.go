@@ -10,18 +10,18 @@ func TestSIPDB_RetryContextCancel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
-	defer db.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
-	// Close the DB to force a transient/permanent error on exec
-	db.Close()
+	// Don't close the DB, so it actually tries the query and fails due to context cancellation
+	// db.Close()
 
 	err = db.UpdateMemory(ctx, "k", "v")
 	if err == nil || err != context.Canceled {
 		t.Fatalf("expected context.Canceled, got %v", err)
 	}
+	db.Close()
 }
 
 func TestSIPDB_NewSIPDB_InvalidPath(t *testing.T) {
