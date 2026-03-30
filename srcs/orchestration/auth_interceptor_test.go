@@ -638,6 +638,29 @@ func TestSPIFFEAuthInterceptor_UnsupportedTrustDomain(t *testing.T) {
 	}
 }
 
+func TestSPIFFEAuthInterceptor_UnknownRequestType(t *testing.T) {
+	interceptor := SPIFFEAuthInterceptor()
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/a1")
+
+	// Pass an unknown request type
+	req := "I am a string, not a proto message"
+
+	_, err := interceptor(ctx, req, nil, func(ctx context.Context, req interface{}) (interface{}, error) {
+		return nil, nil
+	})
+
+	if err == nil {
+		t.Fatal("expected error due to unknown request type")
+	}
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.PermissionDenied {
+		t.Errorf("expected PermissionDenied, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "unknown request type for SPIFFE ID") {
+		t.Errorf("expected unknown request type error message, got %v", err)
+	}
+}
+
 func TestSPIFFEStreamInterceptor(t *testing.T) {
 	interceptor := SPIFFEStreamInterceptor()
 
