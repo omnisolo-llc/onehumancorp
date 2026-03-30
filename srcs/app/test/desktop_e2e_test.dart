@@ -15,6 +15,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ohc_app/services/settings_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
@@ -66,6 +68,15 @@ Widget _wrap(
 }
 
 /// A [AuthNotifier] stub that resolves to [user] (or null).
+
+
+class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
+  _FakeClientSettingsNotifier(Ref ref) : super(ref) {
+    state = const AsyncData(ClientSettings(backendUrl: 'http://localhost:18789', standaloneMode: false));
+  }
+}
+
+
 class _FakeAuthNotifier extends AuthNotifier {
   final AuthUser? _user;
   _FakeAuthNotifier(this._user);
@@ -218,6 +229,7 @@ void main() {
         const SettingsScreen(),
         overrides: [
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+          clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
         ],
       ));
       await tester.pump();
@@ -235,6 +247,7 @@ void main() {
         const SettingsScreen(),
         overrides: [
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+          clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
         ],
       ));
       await tester.pump();

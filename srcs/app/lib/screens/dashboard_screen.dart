@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 final _dashboardProvider = FutureProvider<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -74,6 +75,10 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 48),
+        _SectionTitle('Active Virtual Meetings'),
+        const SizedBox(height: 16),
+        _ActiveMeetingsFeed(meetings: data.meetings),
       ],
     );
   }
@@ -107,33 +112,86 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return GlassContainer(
       width: 180,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ActiveMeetingsFeed extends StatelessWidget {
+  final List<dynamic> meetings;
+
+  const _ActiveMeetingsFeed({required this.meetings});
+
+  @override
+  Widget build(BuildContext context) {
+    if (meetings.isEmpty) {
+      return const Text('No active meetings at the moment.');
+    }
+
+    return Column(
+      children: meetings.map((meeting) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: GlassContainer(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.group_work, color: Colors.indigo, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        meeting['id'] ?? meeting.id,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Status: ${meeting['agenda'] ?? meeting.status}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Logic to join the meeting as a human observer/director
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo.withOpacity(0.2),
+                    foregroundColor: Colors.indigo,
+                    elevation: 0,
+                  ),
+                  child: const Text('Join Room'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
