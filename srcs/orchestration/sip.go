@@ -53,10 +53,24 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// Use modernc.org/sqlite PRAGMAs to configure high-concurrency WAL mode safely.
+	// We append pragmas conditionally depending on if dbPath is memory or file.
+	var connStr string
+	if dbPath == ":memory:" || dbPath == "" {
+		// Cannot use WAL mode with true purely in-memory databases easily.
+		connStr = "file::memory:"
+	} else {
+		connStr = dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
+	}
+
+	db, err := sql.Open("sqlite", connStr)
 	if err != nil {
 		return nil, err
 	}
+
+	// Important: To fully avoid SQLITE_BUSY, limit to 1 open connection to strictly sequence writes,
+	// while the background retries and WAL handle concurrent throughput elegantly.
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err

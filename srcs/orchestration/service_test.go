@@ -1384,7 +1384,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub := NewHub()
 
-	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")
+	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to create sip db: %v", err)
 	}

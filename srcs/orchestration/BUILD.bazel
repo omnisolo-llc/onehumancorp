@@ -1,4 +1,5 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 # gazelle:resolve go github.com/onehumancorp/mono/srcs/proto //srcs/proto:hub_go_proto
 
@@ -44,6 +45,7 @@ go_test(
         "sip_extra_test.go",
         "sip_test.go",
         "sip_mesh_test.go",
+        "chaos_test.go",
     ],
     embed = [":orchestration"],
     deps = [
@@ -55,5 +57,20 @@ go_test(
         "@org_golang_google_grpc//peer",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
+    ],
+)
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+
+js_test(
+    name = "chaos_test",
+    entry_point = "chaos_test.js",
+    data = [
+        ":orchestration_test",
+        "//:node_modules/@playwright/test",
+    ],
+    tags = [
+        "local",
+        "requires-network",
     ],
 )

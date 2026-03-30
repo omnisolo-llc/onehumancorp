@@ -10,6 +10,7 @@ exports_files([
     "go.mod",
     "go.sum",
     "pubspec.yaml",
+    "package.json",
 ])
 
 # gazelle:exclude srcs/proto
