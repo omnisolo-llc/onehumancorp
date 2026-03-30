@@ -18,6 +18,20 @@ fi
 COMMAND=$1
 shift
 
+# Patch rules_android cache before running bazel
+bazelisk fetch @rules_android//... >/dev/null 2>&1 || true
+OUTPUT_BASE=$(bazelisk info output_base)
+find "$OUTPUT_BASE/external" -type d -name "*android*" | while read -r cache_dir; do
+  find "$cache_dir" -name "*.bzl" -type f -exec grep -l "The CcInfo symbol has been removed" {} \; | while read -r bzl_file; do
+    sed -i '1i load("@rules_cc\/\/cc\/common:cc_info.bzl", "CcInfo")' "$bzl_file"
+  done
+  find "$cache_dir" -name "helper.bzl" -type f | while read -r helper_file; do
+    sed -i 's/load("@local_config_platform\/\/:constraints.bzl", "HOST_CONSTRAINTS")/# load("@local_config_platform\/\/:constraints.bzl", "HOST_CONSTRAINTS")/g' "$helper_file"
+    sed -i 's/HOST_CONSTRAINTS/\[\]/g' "$helper_file"
+  done
+done
+
+
 case "$COMMAND" in
     test)
         echo "Running Bazel tests..."

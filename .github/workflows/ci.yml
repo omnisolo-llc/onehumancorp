@@ -37,8 +37,9 @@ jobs:
           BAZEL_REPOSITORY_CACHE: ${{ env.BAZEL_REPOSITORY_CACHE }}
           BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
+          chmod +x setup.sh
           if [ -z "$BUILDBUDDY_API_KEY" ]; then
-            bazelisk test //... \
+            ./setup.sh test \
               --test_output=errors \
               --test_summary=terse \
               --test_timeout=300,600,900,1800 \
@@ -49,7 +50,7 @@ jobs:
               --bes_results_url="" \
               --bes_backend=""
           else
-            bazelisk test //... \
+            ./setup.sh test \
               --test_output=errors \
               --test_summary=terse \
               --test_timeout=300,600,900,1800 \

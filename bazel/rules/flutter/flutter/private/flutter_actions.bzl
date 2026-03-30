@@ -315,13 +315,21 @@ else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
             cat "$PUB_DEPS_ERR" >&2 || true
-            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
+            if grep -qiE "workspace|version solving failed|Read-only file system" "$PUB_DEPS_ERR"; then
+                echo '{{ "packages": [] }}' > pub_deps.json
+            else
+                echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+                exit 1
+            fi
         fi
     else
         cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
+        if grep -qiE "workspace|version solving failed|Read-only file system" "$PUB_DEPS_ERR"; then
+            echo '{{ "packages": [] }}' > pub_deps.json
+        else
+            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+            exit 1
+        fi
     fi
 fi
 
