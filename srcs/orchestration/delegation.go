@@ -55,9 +55,7 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		ProviderType:   "builtin",
 	}
 
-	if _, exists := s.hub.agents[subAgent.ID]; !exists {
-		s.hub.agents[subAgent.ID] = subAgent
-	}
+	s.hub.agents[subAgent.ID] = subAgent
 	s.hub.mu.Unlock()
 
 	if s.hub.sipDB != nil {

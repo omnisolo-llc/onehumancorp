@@ -1,4 +1,5 @@
 load("@rules_go//go:def.bzl", "go_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 go_test(
     name = "frontend_backend_test",
@@ -12,6 +13,18 @@ go_test(
         "//srcs/integrations",
         "//srcs/orchestration",
     ],
+)
+
+sh_test(
+    name = "chaos_test",
+    srcs = ["chaos_test.sh"],
+    data = [
+        "//:node_modules",
+        "//srcs/cmd/ohc",
+    ],
+    env = {
+        "PLAYWRIGHT_BROWSERS_PATH": "1",
+    },
 )
 
 go_test(
