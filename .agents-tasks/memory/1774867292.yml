@@ -1,0 +1,15 @@
+timestamp: 1774867292
+event: "Token Analysis"
+details: |
+  Analyzed cloud infra (K8s) provisioning in deploy/helm/ohc/values.yaml.
+  Current allocations exhibit significant over-provisioning at limits level.
+  Backend limits: cpu 500m, memory 512Mi.
+  Frontend limits: cpu 250m, memory 256Mi.
+  Chatwoot limits: cpu 1000m, memory 1Gi.
+  ohcCore limits: cpu 500m, memory 256Mi.
+  Proposed reductions (>15% saving) without functional quality drop:
+  Backend: cpu 300m, memory 256Mi.
+  Frontend: cpu 150m, memory 128Mi.
+  Chatwoot: cpu 500m, memory 512Mi.
+  ohcCore: cpu 250m, memory 128Mi.
+  These adjustments will effectively lower the compute ceiling without violating baseline requests.
