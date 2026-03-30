@@ -870,27 +870,21 @@ mkdir -p "$LOG_ROOT"
 rm -rf "$RUNTIME_WORKSPACE"
 mkdir -p "$RUNTIME_WORKSPACE"
 
-# If we are in a workspace, we must cd into the package directory
-PACKAGE_DIR="{package_dir}"
+# If we are in a workspace, the prepared workspace already contains the full
+# relative path structure (root pubspec + package subdirectory).
+# If not, it contains the package sources at the root.
+copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
 
+# Root workspace files are already inside the prepared workspace if in workspace mode,
+# but we ensure they are writable for the test runner.
+PACKAGE_DIR="{package_dir}"
 if [ -n "$PACKAGE_DIR" ]; then
-    # In workspace mode, the root pubspec goes to the top,
-    # and the package sources go to its relative subdirectory.
-    mkdir -p "$RUNTIME_WORKSPACE/$PACKAGE_DIR"
-    copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE/$PACKAGE_DIR"
-    
-    if [ -n "$ROOT_PUBSPEC_ABS" ] && [ -f "$ROOT_PUBSPEC_ABS" ]; then
-        cp "$ROOT_PUBSPEC_ABS" "$RUNTIME_WORKSPACE/pubspec.yaml"
+    if [ -f "$RUNTIME_WORKSPACE/pubspec.yaml" ]; then
         chmod u+rw "$RUNTIME_WORKSPACE/pubspec.yaml" 2>/dev/null || true
-        if [ -n "$ROOT_LOCKFILE_ABS" ] && [ -f "$ROOT_LOCKFILE_ABS" ]; then
-            cp "$ROOT_LOCKFILE_ABS" "$RUNTIME_WORKSPACE/pubspec.lock"
-            chmod u+rw "$RUNTIME_WORKSPACE/pubspec.lock" 2>/dev/null || true
-        fi
-        echo "✓ Mirrored root workspace pubspec to $RUNTIME_WORKSPACE" | tee -a "$TEST_LOG"
     fi
-else
-    # Standard single-package mode
-    copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
+    if [ -f "$RUNTIME_WORKSPACE/pubspec.lock" ]; then
+        chmod u+rw "$RUNTIME_WORKSPACE/pubspec.lock" 2>/dev/null || true
+    fi
 fi
 
 # Ensure pubspec.yaml and pubspec.lock are present in the runtime root (of the package)
