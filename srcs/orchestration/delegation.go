@@ -100,3 +100,13 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 	// Return success acknowledging that the sub-agent is spawned and task assigned.
 	return pb.DelegateTaskResponse_builder{Success: proto.Bool(true)}.Build(), nil
 }
+
+func (s *HubServiceServer) InitiateHandoff(ctx context.Context, req *pb.HandoffRequest) (*pb.HandoffResponse, error) {
+	// Add mock functionality to handle the added schema.
+	return pb.HandoffResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+func (s *HubServiceServer) ResolveHandoff(ctx context.Context, req *pb.HandoffResolveRequest) (*pb.HandoffResolveResponse, error) {
+	// Add mock functionality to handle the added schema.
+	return pb.HandoffResolveResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}

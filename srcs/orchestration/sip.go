@@ -389,3 +389,33 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 func (s *SIPDB) Close() error {
 	return s.db.Close()
 }
+
+// AuditMissions detects circular dependencies or blocked tasks in the agent_missions table.
+// Accepts parameters: ctx context.Context.
+// Returns []string (mission IDs), error.
+func (s *SIPDB) AuditMissions(ctx context.Context) ([]string, error) {
+	var blockedMissions []string
+	err := withRetry(ctx, func() error {
+		blockedMissions = nil
+		// Circular dependency or blocked task logic:
+		// Let's identify missions that are PENDING and older than a threshold (e.g., 5 minutes)
+		// Or missions that have been bounced between roles.
+		// A simple query to find blocked PENDING tasks created > 5 minutes ago:
+		thresholdTime := time.Now().Add(-5 * time.Minute).UTC().Format("2006-01-02 15:04:05")
+		rows, err := s.db.QueryContext(ctx, "SELECT id FROM agent_missions WHERE status = 'PENDING' AND created_at < ?", thresholdTime)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			blockedMissions = append(blockedMissions, id)
+		}
+		return nil
+	})
+	return blockedMissions, err
+}

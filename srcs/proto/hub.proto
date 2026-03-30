@@ -103,5 +103,36 @@ service HubService {
   rpc DelegateTask(DelegateTaskRequest) returns (DelegateTaskResponse);
   rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
   rpc Reason(ReasonRequest) returns (ReasonResponse);
+  rpc InitiateHandoff(HandoffRequest) returns (HandoffResponse);
+  rpc ResolveHandoff(HandoffResolveRequest) returns (HandoffResolveResponse);
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
+}
+
+message HandoffPackage {
+  string id = 1;
+  string intent = 2;
+  string from_agent_id = 3;
+  string to_human_role = 4;
+  string current_state = 5;
+  int32 failed_attempts = 6;
+  string status = 7;
+  string created_at = 8;
+  bytes visual_ground_truth = 9;
+}
+
+message HandoffRequest {
+  HandoffPackage handoff = 1;
+}
+
+message HandoffResponse {
+  bool success = 1;
+}
+
+message HandoffResolveRequest {
+  string handoff_id = 1;
+  string status = 2;
+}
+
+message HandoffResolveResponse {
+  bool success = 1;
 }

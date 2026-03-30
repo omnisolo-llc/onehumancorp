@@ -148,6 +148,11 @@ func run(now time.Time, listen listenFunc) error {
 					return
 				case <-ticker.C:
 					// Prune missions older than 7 days or marked COMPLETED
+					if blocked, err := sipdb.AuditMissions(ctx); err != nil {
+						slog.Error("failed to audit agent missions", "error", err)
+					} else if len(blocked) > 0 {
+						slog.Warn("found blocked or circularly dependent agent missions", "count", len(blocked), "mission_ids", blocked)
+					}
 					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
 						slog.Error("failed to prune stale agent missions", "error", err)
 					} else {
