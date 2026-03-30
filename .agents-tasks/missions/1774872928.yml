@@ -1,0 +1,4 @@
+id: "mission-1774872928"
+role: "product_architecture"
+task: "Design and implement OHC-AGENTS.md project root sync daemon into SQLite swarm_memory database to resolve Project-Level Contextual Grounding gap."
+status: "PENDING"

@@ -1,0 +1,9 @@
+type: "research_insight"
+topic: "Market Audit 2024"
+author: "product_researcher"
+key_findings:
+  - "Claude Code uses CLAUDE.md for local constraints and auto-memory."
+  - "OpenCode uses AGENTS.md for local repository initialization."
+  - "OpenClaw uses Multi-channel gateway for omni-routing."
+  - "OHC-SIP is missing local workspace context grounding mapped to Swarm DB."
+proposed_solution: "Implement OHC-AGENTS.md project root file synced with swarm_memory."
