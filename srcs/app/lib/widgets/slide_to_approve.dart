@@ -130,28 +130,39 @@ class _SlideToApproveState extends State<SlideToApprove> {
                 left: _position + 4,
                 top: 4,
                 bottom: 4,
-                child: GestureDetector(
-                  onHorizontalDragUpdate: _handleDragUpdate,
-                  onHorizontalDragEnd: _handleDragEnd,
-                  child: Container(
-                    width: _thumbWidth,
-                    decoration: BoxDecoration(
-                      color: widget.disabled && _position == _maxDrag
-                          ? Colors.green.withOpacity(0.2)
-                          : colors.primary,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.shadow.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: widget.disabled && _position == _maxDrag
-                          ? const Icon(Icons.check, color: Colors.green, size: 24)
-                          : const Icon(Icons.chevron_right, color: Colors.white, size: 24),
+                child: Semantics(
+                  button: true,
+                  enabled: !widget.disabled,
+                  label: 'Slide to Approve',
+                  hint: 'Double tap to approve',
+                  onTap: () {
+                    if (!widget.disabled) {
+                       widget.onApprove();
+                    }
+                  },
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: _handleDragUpdate,
+                    onHorizontalDragEnd: _handleDragEnd,
+                    child: Container(
+                      width: _thumbWidth,
+                      decoration: BoxDecoration(
+                        color: widget.disabled && _position == _maxDrag
+                            ? Colors.green.withOpacity(0.2)
+                            : colors.primary,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors.shadow.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: widget.disabled && _position == _maxDrag
+                            ? const Icon(Icons.check, color: Colors.green, size: 24)
+                            : const Icon(Icons.chevron_right, color: Colors.white, size: 24),
+                      ),
                     ),
                   ),
                 ),

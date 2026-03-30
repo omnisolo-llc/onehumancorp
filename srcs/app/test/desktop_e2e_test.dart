@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 // Desktop end-to-end tests for the OHC Flutter app.
 //
 // These tests use flutter_test's testWidgets with tester.tap() to simulate
@@ -127,6 +128,7 @@ class _FakeLocalManagerService extends LocalManagerService {
 
 void main() {
   setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
     registerFallbackValue(FakeUri());
   });
 

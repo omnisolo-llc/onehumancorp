@@ -58,7 +58,7 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
       appBar: AppBar(
         title: const Text('SDLC Pipelines'),
         actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh pipelines'),
         ],
       ),
       body: FutureBuilder<List<Pipeline>>(
