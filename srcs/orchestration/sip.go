@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"errors"
 	"log/slog"
 	"time"
@@ -53,10 +54,19 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	dsn := dbPath
+	if !strings.Contains(dsn, "?") {
+		dsn += "?"
+	} else if !strings.HasSuffix(dsn, "?") && !strings.HasSuffix(dsn, "&") {
+		dsn += "&"
+	}
+	dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -167,8 +177,10 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 
 			var msg Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
+				// fallback: convert invalid string to valid JSON Message struct
 				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				validBytes, _ := json.Marshal(msg)
+				s.db.ExecContext(ctx, "UPDATE agent_missions SET task = ? WHERE id = ?", string(validBytes), id)
 			} else {
 				if msg.ID == "" {
 					msg.ID = id
