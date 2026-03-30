@@ -1173,3 +1173,26 @@ func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 		t.Fatalf("Expected PermissionDenied, got: %v", err)
 	}
 }
+
+func TestSPIFFEAuthInterceptor_UnknownPayloadType(t *testing.T) {
+	interceptor := SPIFFEAuthInterceptor()
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
+
+	// Provide an unsupported request type, e.g. a string
+	req := "unsupported request type"
+
+	_, err := interceptor(ctx, req, nil, func(ctx context.Context, req interface{}) (interface{}, error) {
+		return nil, nil
+	})
+
+	if err == nil {
+		t.Fatal("expected PermissionDenied error for unknown payload type")
+	}
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.PermissionDenied {
+		t.Errorf("expected PermissionDenied, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "unsupported request type") {
+		t.Errorf("expected unsupported request type error message, got %v", err)
+	}
+}
