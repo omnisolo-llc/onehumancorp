@@ -86,16 +86,7 @@ while IFS='|' read -r RELATIVE_PATH SOURCE_PATH; do
     fi
     DEST_PATH="$WORKSPACE_DIR/$RELATIVE_PATH"
     mkdir -p "$(dirname "$DEST_PATH")"
-    
-    # Use dereferencing copy (cp -L) to ensure the workspace seeds are real files.
-    # This prevents 'dangling symlink' errors when we later use 'cp -as' on
-    # these workspace directories in subsequent actions.
-    if [ -d "$SOURCE_PATH" ]; then
-        mkdir -p "$DEST_PATH"
-        cp -RL "$SOURCE_PATH/." "$DEST_PATH/"
-    else
-        cp -L "$SOURCE_PATH" "$DEST_PATH"
-    fi
+    cp -RL "$SOURCE_PATH" "$DEST_PATH"
 done < "$MANIFEST_FILE"
 """,
         is_executable = True,
@@ -153,16 +144,8 @@ def flutter_pub_get_action(
     # If workspace_pubspec is present, the package is at its real relative path.
     # Otherwise, it's at the root.
     package_dir = ""
-    # The package directory is where the pubspec.yaml lives.
-    # In Workspace Mode, this is derived from the pubspec file's dirname.
-    # In Standalone Mode, the seed is created with the pubspec at the root.
     if workspace_pubspec:
-        # Use the directory containing the pubspec.yaml as the package root.
-        # This is more robust than ctx.label.package when targets inherit pubspecs.
-        # dirname is available in recent Bazel, otherwise we falls back to string manipulation.
-        package_dir = pubspec_file.dirname
-    else:
-        package_dir = ""
+        package_dir = ctx.label.package
 
     if not flutter_toolchain.flutterinfo.tool_files:
         fail("No tool files found in Flutter toolchain")
@@ -201,46 +184,24 @@ IS_PUB_PACKAGE="{is_pub_package}"
 ORIGINAL_PWD="$PWD"
 
 WORKSPACE_SRC_ABS="$ORIGINAL_PWD/$WORKSPACE_SRC"
-# Step 1: Initialize and populate prepared workspace
-# The sandbox layout depends on whether we are in Workspace Mode.
-# We use rsync -aL to ensure all symlinks are dereferenced and the workspace is hermetic.
-# This is necessary to avoid 'dangling symlink' errors in Bazel's output tree validation.
-PREPARED_ROOT_ABS="$ORIGINAL_PWD/{working_dir_path}"
+# The sandbox layout depends on whether we are in Workspace Mode
+WORKSPACE_DIR_ABS="$ORIGINAL_PWD/{working_dir_path}"
 PACKAGE_DIR="{package_dir}"
+WORKSPACE_DIR_ABS="${{WORKSPACE_DIR_ABS:+$WORKSPACE_DIR_ABS/}}${{PACKAGE_DIR:+$PACKAGE_DIR}}"
 
-rm -rf "$PREPARED_ROOT_ABS"
-mkdir -p "$PREPARED_ROOT_ABS"
-
-if [ -d "$WORKSPACE_SRC_ABS" ]; then
-    # Use cp -RL to ensure all symlinks are dereferenced and the workspace is hermetic.
-    # This is necessary to avoid 'dangling symlink' errors in Bazel's output tree validation.
-    cp -RL "$WORKSPACE_SRC_ABS/." "$PREPARED_ROOT_ABS/"
-fi
-
-# Step 2: Navigate to the package directory within the prepared workspace
-# We must ensure we are in the directory containing the pubspec.yaml.
-# In a monorepo, some targets might borrow a pubspec from a parent directory.
-# This must happen AFTER the workspace is populated.
-PACKAGE_DIR_ABS="${{PREPARED_ROOT_ABS}}${{PACKAGE_DIR:+/${{PACKAGE_DIR}}}}"
-
-# Use the calculated paths for everything else
+# Use the calculated WORKSPACE_DIR_ABS for everything else
 PUB_CACHE_DIR_ABS="$ORIGINAL_PWD/$PUB_CACHE_DIR"
 DART_TOOL_DIR_ABS="$ORIGINAL_PWD/$DART_TOOL_DIR"
 
-mkdir -p "${{PACKAGE_DIR_ABS}}"
-cd "${{PACKAGE_DIR_ABS}}"
-
-    echo "Debug: Prepared Workspace Layout ($HOSTNAME)"
-    find . -maxdepth 10 -not -path '*/.*'
-echo "========================================"
-
-# Ensure pubspec files are writable for modification.
-for _f in "$PACKAGE_DIR_ABS/pubspec.yaml" "$PACKAGE_DIR_ABS/pubspec.lock"; do
-    if [ -f "$_f" ]; then
-        chmod u+rw "$_f" 2>/dev/null || true
-    fi
-done
-chmod u+rwX "$PACKAGE_DIR_ABS" 2>/dev/null || true
+# Copy staged workspace into prepared output directory
+rm -rf "$WORKSPACE_DIR_ABS"
+mkdir -p "$WORKSPACE_DIR_ABS"
+if command -v rsync >/dev/null 2>&1; then
+    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_DIR_ABS/"
+else
+    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
+fi
+chmod -R u+rwX "$WORKSPACE_DIR_ABS"
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
@@ -258,10 +219,9 @@ if [ ${{#DEP_CACHES[@]}} -gt 0 ]; then
         if [[ "$DEP_CACHE" != /* ]]; then
             DEP_CACHE="$ORIGINAL_PWD/$DEP_CACHE"
         fi
-        if [ -d "$DEP_CACHE" ]; then
-            # Use deep copy (rsync -aL) to ensure all dependencies are self-contained.
+        if [ -d "$DEP_CACHE" ] && [ -n "$(ls -A "$DEP_CACHE" 2>/dev/null)" ]; then
             if command -v rsync >/dev/null 2>&1; then
-                rsync -aL "$DEP_CACHE/" "$PUB_CACHE_DIR_ABS/"
+                rsync -a "$DEP_CACHE/" "$PUB_CACHE_DIR_ABS/"
             else
                 cp -RL "$DEP_CACHE/." "$PUB_CACHE_DIR_ABS/"
             fi
@@ -270,12 +230,14 @@ if [ ${{#DEP_CACHES[@]}} -gt 0 ]; then
 else
     echo "No dependency caches supplied"
 fi
-
-# Ensure the cache is writable for subsequent modifications.
+# Bazel marks output directories read-only (0555) after actions complete.
+# Dependency caches are Bazel outputs, so rsync -a copies those read-only
+# permissions into our new pub_cache.  Make everything writable so subsequent
+# mkdir/copy operations (e.g. the IS_PUB_PACKAGE block below) can succeed.
 chmod -R u+w "$PUB_CACHE_DIR_ABS" 2>/dev/null || true
 echo ""
 
-export PUBSPEC_PATH="${{PACKAGE_DIR_ABS}}/pubspec.yaml"
+export PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
 PACKAGE_INFO="$("$PYTHON_BIN" <<'PY'
 import os
 path = os.environ.get("PUBSPEC_PATH")
@@ -317,10 +279,14 @@ if [ -z "$LANGUAGE_SPEC" ]; then
 fi
 
 if [ "$IS_PUB_PACKAGE" = "1" ] && [ -n "$PACKAGE_NAME" ] && [ -n "$PACKAGE_VERSION" ]; then
-    DEST="${{PUB_CACHE_DIR_ABS}}/hosted/pub.dev/${{PACKAGE_NAME}}-${{PACKAGE_VERSION}}"
+    DEST="$PUB_CACHE_DIR_ABS/hosted/pub.dev/${{PACKAGE_NAME}}-${{PACKAGE_VERSION}}"
     rm -rf "$DEST"
     mkdir -p "$DEST"
-    cp -RL "${{PACKAGE_DIR_ABS}}/." "$DEST/"
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -aL "$WORKSPACE_DIR_ABS/" "$DEST/"
+    else
+        cp -RL "$WORKSPACE_DIR_ABS/." "$DEST/"
+    fi
 fi
 
 export FLUTTER_SUPPRESS_ANALYTICS=true
@@ -338,50 +304,11 @@ FLUTTER_ROOT="$(cd "$(dirname "$FLUTTER_BIN_ABS")/.." && pwd -P)"
 export FLUTTER_ROOT
 export PATH="$FLUTTER_ROOT/bin:$PATH"
 
-cd "${{PACKAGE_DIR_ABS}}"
-
-# Strip 'resolution: workspace' from pubspec.yaml.  Packages published to
-# pub.dev may include this field (introduced in Dart 3.6 pub workspaces) to
-# indicate they belong to a monorepo workspace.  When Bazel prepares an
-# isolated working directory for a single package the parent workspace root
-# is absent, causing `flutter/dart pub deps` to fail with:
-#   "Found a pubspec.yaml ... But it has resolution `workspace`.
-#    But found no workspace root including it in parent directories."
-# We remove the field so that pub treats the package as a standalone package.
-if [ -f pubspec.yaml ]; then
-    sed -i '/^[[:space:]]*resolution:[[:space:]]*workspace[[:space:]]*$/d' pubspec.yaml
-fi
-
-# Strip dev_dependencies from pub package pubspecs when IS_PUB_PACKAGE=1.
-# When Bazel fetches a pub package (e.g. ffi@2.2.0) its dev_dependencies may
-# require a newer Dart/Flutter SDK version than we are using.  Bazel builds
-# only need runtime dependencies, not dev ones, so we can safely drop them
-# from the pubspec before running `flutter/dart pub deps --json`.
-if [ "$IS_PUB_PACKAGE" = "1" ] && [ -f pubspec.yaml ]; then
-    "$PYTHON_BIN" - <<'PYEOF'
-import re, sys
-
-with open("pubspec.yaml", "r", encoding="utf-8") as fh:
-    content = fh.read()
-
-# Remove the dev_dependencies section.  It starts at "^dev_dependencies:"
-# and continues until the next top-level key (a line that starts with a
-# non-whitespace character and contains a colon) or end-of-file.
-cleaned = re.sub(
-    r"^dev_dependencies:.*?(?=^\\S|\\Z)",
-    "",
-    content,
-    flags=re.MULTILINE | re.DOTALL,
-)
-
-with open("pubspec.yaml", "w", encoding="utf-8") as fh:
-    fh.write(cleaned)
-PYEOF
-fi
+cd "$WORKSPACE_DIR_ABS"
 
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
-PUB_DEPS_ERR="${{PACKAGE_DIR_ABS}}/pub_deps.stderr.log"
+PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
 if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
     :
 else
@@ -398,7 +325,7 @@ else
     fi
 fi
 
-export PUB_DEPS_PATH="${{PACKAGE_DIR_ABS}}/pub_deps.json"
+export PUB_DEPS_PATH="$WORKSPACE_DIR_ABS/pub_deps.json"
 "$PYTHON_BIN" <<'PY'
 import os
 
@@ -421,11 +348,11 @@ if [ ! -s pub_deps.json ]; then
     exit 1
 fi
 
-export PUB_CACHE_ABS="${{PUB_CACHE_DIR_ABS}}"
-export WORKSPACE_ABS="${{PACKAGE_DIR_ABS}}"
-export PACKAGE_CONFIG_PATH="${{PACKAGE_DIR_ABS}}/.dart_tool/package_config.json"
-export ROOT_PACKAGE_NAME="${{PACKAGE_NAME}}"
-export ROOT_LANGUAGE_SPEC="${{LANGUAGE_SPEC}}"
+export PUB_CACHE_ABS="$PUB_CACHE_DIR_ABS"
+export WORKSPACE_ABS="$WORKSPACE_DIR_ABS"
+export PACKAGE_CONFIG_PATH="$WORKSPACE_DIR_ABS/.dart_tool/package_config.json"
+export ROOT_PACKAGE_NAME="$PACKAGE_NAME"
+export ROOT_LANGUAGE_SPEC="$LANGUAGE_SPEC"
 mkdir -p "$(dirname "$PACKAGE_CONFIG_PATH")"
 "$PYTHON_BIN" <<'PY'
 import json
@@ -541,8 +468,8 @@ echo "Workspace output: {workspace_dir}" >> "$LOG_FILE"
 echo "Prepared at: $(date)" >> "$LOG_FILE"
 echo "" >> "$LOG_FILE"
 
-if [ -f "$PACKAGE_DIR_ABS/pub_deps.json" ]; then
-    cp "$PACKAGE_DIR_ABS/pub_deps.json" "{pub_deps}"
+if [ -f "$WORKSPACE_DIR_ABS/pub_deps.json" ]; then
+    cp "$WORKSPACE_DIR_ABS/pub_deps.json" "{pub_deps}"
     echo "✓ Generated pub_deps.json" >> "$LOG_FILE"
 else
     echo "{{}}" > "{pub_deps}"
@@ -551,8 +478,12 @@ fi
 
 rm -rf "{dart_tool_dir}"
 mkdir -p "{dart_tool_dir}"
-if [ -d "$PACKAGE_DIR_ABS/.dart_tool" ]; then
-    cp -RL "$PACKAGE_DIR_ABS/.dart_tool/." "{dart_tool_dir}/"
+if [ -d "$WORKSPACE_DIR_ABS/.dart_tool" ]; then
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a "$WORKSPACE_DIR_ABS/.dart_tool/" "{dart_tool_dir}/"
+    else
+        cp -RL "$WORKSPACE_DIR_ABS/.dart_tool/." "{dart_tool_dir}/"
+    fi
     echo "✓ Created .dart_tool/package_config.json" >> "$LOG_FILE"
 else
     echo "{{}}" > "{dart_tool_dir}/package_config.json"
