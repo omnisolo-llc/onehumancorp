@@ -1,5 +1,10 @@
 # One Human Corp: Platform Documentation
 
+<div style="backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); padding: 10px;">
+![Dashboard](screenshots/dashboard_empty.png)
+</div>
+
+
 ## Identity
 One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) that empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents natively on Kubernetes. Our primary goal is to provide a framework where a customer can tackle any business area. The core structure revolves around:
 1. **Domain Knowledge**: The industry the corporation operates in. Our foundational domain is the "Software Company". The system allows continuous import of new skills, domains, and knowledge bases.

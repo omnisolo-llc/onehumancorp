@@ -1,5 +1,10 @@
 # Design Doc: One Human Corp (OHC) Platform
 
+<div style="backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); padding: 10px;">
+![Agents List](screenshots/agents_list.png)
+</div>
+
+
 **Author(s):** Antigravity, Principal Product Architect & Visionary (L7)
 **Status:** Approved
 **Last Updated:** 2026-03-28
