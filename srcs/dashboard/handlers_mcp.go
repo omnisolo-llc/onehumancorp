@@ -72,7 +72,27 @@ func (s *Server) handleMCPRegister(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{"status": "registered", "tool": req.Tool})
 }
 
-func (s *Server) handleMCPTools(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleMCPTools(w http.ResponseWriter, r *http.Request) {
+	if s.hub.SIPDB() != nil {
+		plugins, err := s.hub.SIPDB().GetCapabilityPlugins(r.Context(), "")
+		if err == nil {
+			for _, p := range plugins {
+				found := false
+				for _, t := range s.dynamicMCPTools {
+					if t.ID == p.PluginID {
+						found = true
+						break
+					}
+				}
+				if !found {
+					s.dynamicMCPTools = append(s.dynamicMCPTools, orchestration.MCPTool{
+						ID:   p.PluginID,
+						Name: p.Name,
+					})
+				}
+			}
+		}
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	writeJSON(w, s.dynamicMCPTools)

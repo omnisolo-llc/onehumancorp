@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 final _providersProvider = FutureProvider<List<AiProvider>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -103,8 +104,8 @@ class _ProviderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    return GlassContainer(
+
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/slide_to_approve.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 /// Screen for managing agent-to-human escalation handoffs.
 class HandoffsScreen extends ConsumerStatefulWidget {
@@ -128,8 +129,8 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               final handoff = handoffs[index];
               final isProcessing = _processingIds.contains(handoff.id);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
+              return GlassContainer(
+
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(

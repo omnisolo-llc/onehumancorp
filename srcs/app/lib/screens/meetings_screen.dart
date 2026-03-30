@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 final _meetingsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -174,8 +175,8 @@ class _RoomCardState extends State<_RoomCard> {
   Widget build(BuildContext context) {
     final room = widget.room;
     final participantCount = room['participant_count'] as int? ?? 0;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    return GlassContainer(
+
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -197,7 +198,7 @@ class _RoomCardState extends State<_RoomCard> {
                       Container(
                         width: 8,
                         height: 8,
-                        margin: const EdgeInsets.only(right: 4),
+
                         decoration: BoxDecoration(
                           color: _statusColor(),
                           shape: BoxShape.circle,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/security_issue.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 final _securityProvider = FutureProvider<List<SecurityIssue>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -161,8 +162,8 @@ class _IssueCardState extends State<_IssueCard> {
   @override
   Widget build(BuildContext context) {
     final issue = widget.issue;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return GlassContainer(
+
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

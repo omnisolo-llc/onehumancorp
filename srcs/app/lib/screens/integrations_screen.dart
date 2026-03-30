@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 /// Screen for managing external integrations and MCP tools.
 class IntegrationsScreen extends ConsumerStatefulWidget {
@@ -90,7 +91,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
               final tools = snapshot.data ?? [];
               if (tools.isEmpty) {
-                return Card(
+                return GlassContainer(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Center(
@@ -168,7 +169,7 @@ class _IntegrationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
+    return GlassContainer(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -221,8 +222,8 @@ class _MCPToolTile extends StatelessWidget {
     final name = tool['name'] as String? ?? 'Unknown Tool';
     final description = tool['description'] as String? ?? '';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    return GlassContainer(
+
       child: ListTile(
         leading: const Icon(Icons.build_circle_outlined),
         title: Text(name),

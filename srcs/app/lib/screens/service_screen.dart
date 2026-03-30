@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 class ServiceScreen extends ConsumerStatefulWidget {
   const ServiceScreen({super.key});
@@ -75,7 +76,7 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
   }
 
   Widget _buildStatusCard() {
-    return Card(
+    return GlassContainer(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

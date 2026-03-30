@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 /// Screen for scaling the agent workforce dynamically.
 class ScalingScreen extends ConsumerStatefulWidget {
@@ -110,7 +111,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   // Step 2: Capacity
                   _SectionHeader(number: 2, title: 'Define Target Capacity'),
                   const SizedBox(height: 16),
-                  Card(
+                  GlassContainer(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Column(

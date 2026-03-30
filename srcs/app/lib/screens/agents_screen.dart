@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 final _agentsProvider = FutureProvider<List<Agent>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -89,8 +90,8 @@ class _AgentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    return GlassContainer(
+
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: agent.isRunning ? Colors.green : Colors.grey.shade300,

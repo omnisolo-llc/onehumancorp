@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -135,7 +136,7 @@ class _LocalBackendStatusCard extends ConsumerWidget {
       future: manager.isServiceRunning(),
       builder: (context, snapshot) {
         final running = snapshot.data ?? false;
-        return Card(
+        return GlassContainer(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(

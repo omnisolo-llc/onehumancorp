@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/pipeline.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/slide_to_approve.dart';
+import 'package:ohc_app/widgets/glass_container.dart';
 
 /// Screen for monitoring SDLC pipelines and promoting releases.
 class PipelinesScreen extends ConsumerStatefulWidget {
@@ -84,8 +85,8 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
               final pipeline = pipelines[index];
               final isProcessing = _processingIds.contains(pipeline.id);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 24),
+              return GlassContainer(
+
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
