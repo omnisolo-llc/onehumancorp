@@ -40,7 +40,7 @@ func Middleware(store *Store) func(http.Handler) http.Handler {
 
 			claims, err := store.ValidateToken(token)
 			if err != nil {
-				jsonError(w, "invalid token", http.StatusUnauthorized)
+				jsonError(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
 				return
 			}
 

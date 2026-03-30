@@ -38,128 +38,80 @@ pub = use_extension("@rules_flutter//flutter:extensions.bzl", "pub")
 use_repo(
     pub,
     "pub_async",
-    "pub_boolean_selector",
-    "pub_centrifuge",
-    "pub_characters",
-    "pub_clock",
     "pub_collection",
-    "pub_crypto",
-    "pub_cupertino_icons",
+    "pub_cross_file",
     "pub_fake_async",
-    "pub_ffi",
     "pub_file",
-    "pub_fixnum",
-    "pub_flutter_lints",
-    "pub_flutter_riverpod",
-    "pub_go_router",
-    "pub_http",
-    "pub_http_parser",
-    "pub_intl",
-    "pub_leak_tracker",
-    "pub_leak_tracker_flutter_testing",
-    "pub_leak_tracker_testing",
+    "pub_http_multi_server",
     "pub_lints",
-    "pub_logging",
-    "pub_matcher",
-    "pub_material_color_utilities",
-    "pub_meta",
-    "pub_mocktail",
+    "pub_mock",
     "pub_path",
-    "pub_path_provider_linux",
-    "pub_path_provider_platform_interface",
-    "pub_path_provider_windows",
-    "pub_platform",
     "pub_plugin_platform_interface",
-    "pub_protobuf",
-    "pub_riverpod",
+    "pub_pool",
     "pub_shared_preferences",
     "pub_shared_preferences_android",
     "pub_shared_preferences_foundation",
+    "pub_shared_preferences_ios",
     "pub_shared_preferences_linux",
+    "pub_shared_preferences_macos",
     "pub_shared_preferences_platform_interface",
     "pub_shared_preferences_web",
     "pub_shared_preferences_windows",
+    "pub_shelf",
     "pub_source_span",
-    "pub_stack_trace",
-    "pub_state_notifier",
     "pub_stream_channel",
-    "pub_string_scanner",
-    "pub_term_glyph",
+    "pub_test",
     "pub_test_api",
-    "pub_typed_data",
-    "pub_uuid",
+    "pub_test_core",
     "pub_vector_math",
-    "pub_vm_service",
-    "pub_web",
     "pub_web_socket_channel",
-    "pub_xdg_directories",
 )
-# ─────────────────────────────────────────────────────────────────────────────
 
-node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
-node.toolchain(node_version = "23.6.0")
-use_repo(node, "nodejs")
-
+# ── Go dependencies ───────────────────────────────────────────────────────────
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.26.1")
+go_sdk.download(version = "1.24.0")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
-
-# Fix for centrifuge's vtprotobuf-generated files: disable proto-library generation
-# so that control.pb.go and control_vtproto.pb.go are included together in the
-# same go_library target instead of separate proto_library / go_proto_library rules.
-go_deps.gazelle_override(
-    directives = [
-        "gazelle:proto disable",
-    ],
-    path = "github.com/centrifugal/centrifuge",
+use_repo(
+    go_deps,
+    "com_github_centrifugal_centrifuge",
+    "com_github_google_uuid",
+    "com_github_prometheus_client_golang",
+    "in_gopkg_yaml_v3",
+    "io_opentelemetry_go_otel",
+    "io_opentelemetry_go_otel_exporters_prometheus",
+    "io_opentelemetry_go_otel_metric",
+    "io_opentelemetry_go_otel_sdk_metric",
+    "org_golang_google_grpc",
+    "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
+    "org_golang_google_protobuf",
+    "org_golang_x_crypto",
+    "org_modernc_sqlite",
 )
 
-# Fix for centrifugal/protocol: disable proto-library generation so that
-# client.pb.go, client.pb_easyjson.go, and client_vtproto.pb.go are all
-# compiled together in one go_library target.
-go_deps.gazelle_override(
-    directives = [
-        "gazelle:proto disable",
-    ],
-    path = "github.com/centrifugal/protocol",
-)
-use_repo(go_deps, "com_github_centrifugal_centrifuge", "com_github_google_uuid", "com_github_prometheus_client_golang", "in_gopkg_yaml_v3", "io_opentelemetry_go_otel", "io_opentelemetry_go_otel_exporters_prometheus", "io_opentelemetry_go_otel_metric", "io_opentelemetry_go_otel_sdk_metric", "org_golang_google_grpc", "org_golang_google_grpc_cmd_protoc_gen_go_grpc", "org_golang_google_protobuf", "org_golang_x_crypto", "org_modernc_sqlite")
-
+# ── Frontend (Next.js) ────────────────────────────────────────────────────────
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
     pnpm_lock = "//:pnpm-lock.yaml",
+    verify_node_modules_ignored = "//:.eslintignore",
 )
 use_repo(npm, "npm")
 
-platforms_host = use_extension("@platforms//host:extension.bzl", "host_platform")
-use_repo(platforms_host, "host_platform")
-
-bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
-
-buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
-buildbuddy.gcc_toolchain()
-use_repo(buildbuddy, "buildbuddy_toolchain")
-
+# ── Docker OCI Rules ──────────────────────────────────────────────────────────
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
-    name = "distroless_static",
-    image = "gcr.io/distroless/static",
-    platforms = ["linux/amd64"],
-    tag = "latest",
+    name = "distroless_base",
+    digest = "sha256:d8bd6c4f697cc649df16a7e080eb5c3de5765d7554d3102434559b3f3b9095df",
+    image = "gcr.io/distroless/base",
 )
-use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
+use_repo(oci, "distroless_base")
 
 single_version_override(
     module_name = "rules_android",
     patch_cmds = [
         "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl",
-        "sed -i 's/CcInfo/CcInfo/g' rules/android_local_test/attrs.bzl",
-        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_local_test/attrs.bzl",
-        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_library/attrs.bzl",
-        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_binary/attrs.bzl",
-        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_binary/impl.bzl",
-    ]
+        "find rules -name \"*.bzl\" -exec sed -i -e '/CcInfo/!b' -e '/@rules_cc\\/\\/cc\\/common:cc_info.bzl/!s/CcInfo/CcInfo/g' -e '1i\\load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' {} \\;",
+    ],
 )

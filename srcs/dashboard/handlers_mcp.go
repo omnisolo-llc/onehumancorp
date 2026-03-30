@@ -37,7 +37,7 @@ func (s *Server) handleMCPRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := interop.ValidateSPIFFEID(req.SPIFFEID); err != nil {
-		http.Error(w, "invalid SPIFFE ID", http.StatusForbidden)
+		http.Error(w, "invalid SPIFFE ID: "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (s *Server) handleMCPRegister(w http.ResponseWriter, r *http.Request) {
 			Status:      "available",
 		}
 		if err := s.hub.SIPDB().RegisterCapabilityPlugin(r.Context(), plugin); err != nil {
-			http.Error(w, "failed to register capability plugin in mesh", http.StatusInternalServerError)
+			http.Error(w, "failed to register capability plugin in mesh: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -104,7 +104,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 
 	if req.SPIFFEID != "" {
 		if err := interop.ValidateSPIFFEID(req.SPIFFEID); err != nil {
-			http.Error(w, "invalid SPIFFE ID", http.StatusForbidden)
+			http.Error(w, "invalid SPIFFE ID: "+err.Error(), http.StatusForbidden)
 			return
 		}
 	}

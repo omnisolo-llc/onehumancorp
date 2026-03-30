@@ -67,7 +67,7 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		http.Error(w, "invalid JSON payload: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
