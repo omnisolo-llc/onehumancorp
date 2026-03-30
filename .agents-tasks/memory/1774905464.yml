@@ -1,0 +1,1 @@
+critical_insight: "The Bazel 'rules_flutter' vendored fork dependency resolution strategy is brittle. Masking 'flutter pub deps' JSON failures bypasses true dependency tracking, leading to latent crashes. Instead of suppressing via patched bzl rules, the workspace must be correctly resolved. Do not arbitrarily suppress Bazel build rules to pass tests."

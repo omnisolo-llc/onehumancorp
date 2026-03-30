@@ -1,0 +1,4 @@
+mission: "Implement OHC-SIP v2 schema per docs/architecture.md"
+target: "backend_dev"
+status: "PENDING"
+details: "Focus on sub-agent isolation and hierarchical memory via SQLite. Architecture blueprint has been established."

@@ -2,9 +2,9 @@
 
 <style>
   .glass-container {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(15px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 24px;

@@ -171,11 +171,11 @@ To reflect the fluidity of the new Agentic OS, the OHC frontend adopts the Next-
 
 ### 12.1 Design System Tokens
 *   **Backdrop & Depth**: Glassmorphism is the core structural element.
-    *   `backdrop-filter: blur(15px) saturate(180%)`
+    *   `backdrop-filter: blur(20px) saturate(200%)`
 *   **Surfaces**: Ghostly, semi-transparent layers to indicate dynamic, ephemeral agent capabilities.
-    *   `background: rgba(255, 255, 255, 0.05)`
+    *   `background: rgba(255, 255, 255, 0.03)`
 *   **Borders**: Subtle definition.
-    *   `border: 1px solid rgba(255, 255, 255, 0.1)`
+    *   `border: 1px solid rgba(255, 255, 255, 0.08)`
 *   **Typography**: Clean, geometric sans-serif for clarity at a glance.
     *   `font-family: 'Outfit', 'Inter', sans-serif`
 *   **Transitions**: Smooth data transitions for all asynchronous operations (e.g., capability binding).
