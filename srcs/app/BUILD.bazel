@@ -169,3 +169,15 @@ sh_binary(
     ],
     visibility = ["//visibility:public"],
 )
+
+sh_test(
+    name = "playwright_verifier_test",
+    srcs = ["test/flutter_web_e2e_test.sh"],
+    data = [
+        ":app",
+        "e2e/playwright.config.ts",
+        "e2e/verifier.spec.ts",
+        "//:node_modules/@playwright/test",
+    ],
+    tags = ["requires-network"],
+)

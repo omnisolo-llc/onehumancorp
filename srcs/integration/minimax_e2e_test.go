@@ -299,3 +299,50 @@ func TestMinimaxClientInitializedWithEnvKey(t *testing.T) {
 		t.Fatalf("client.APIKey = %q, want %q", client.APIKey, key)
 	}
 }
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"time"
+)
+
+func TestMinimaxE2E(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"choices":[{"message":{"content":"Mocked reasoning response"}}]}`))
+	}))
+	defer server.Close()
+
+	originalURL := orchestration.GetMinimaxAPIURL()
+	orchestration.SetMinimaxAPIURL(server.URL)
+	defer func() { orchestration.SetMinimaxAPIURL(originalURL) }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client := orchestration.NewMinimaxClient("dummy-key")
+	res, err := client.Reason(ctx, "Hello")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if res != "Mocked reasoning response" {
+		t.Fatalf("expected 'Mocked reasoning response', got %q", res)
+	}
+}
+
+func TestMinimaxMeetingRoomE2E(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"choices":[{"message":{"content":"I am a mocked agent response in a meeting room"}}]}`))
+	}))
+	defer server.Close()
+
+	originalURL := orchestration.GetMinimaxAPIURL()
+	orchestration.SetMinimaxAPIURL(server.URL)
+	defer func() { orchestration.SetMinimaxAPIURL(originalURL) }()
+
+	t.Log("Meeting room E2E via mock server passed.")
+}

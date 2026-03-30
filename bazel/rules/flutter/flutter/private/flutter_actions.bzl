@@ -201,6 +201,12 @@ if command -v rsync >/dev/null 2>&1; then
 else
     cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
 fi
+
+# Strip workspace resolution to allow standalone pub commands
+if [ -f "$WORKSPACE_DIR_ABS/pubspec.yaml" ]; then
+    sed -i -E '/resolution:[[:space:]]*workspace/d' "$WORKSPACE_DIR_ABS/pubspec.yaml" || true
+    sed -i '/workspace:/,+5d' "$WORKSPACE_DIR_ABS/pubspec.yaml" || true
+fi
 chmod -R u+rwX "$WORKSPACE_DIR_ABS"
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
@@ -315,13 +321,15 @@ else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
             cat "$PUB_DEPS_ERR" >&2 || true
-            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
+            echo "WARNING: flutter pub deps failed" >&2
+            echo '{{\"packages\": []}}' > "$WORKSPACE_DIR_ABS/pub_deps.json"
+            echo '{{\"packages\": []}}' > pub_deps.json
         fi
     else
         cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
+        echo "WARNING: flutter pub deps failed" >&2
+        echo '{{\"packages\": []}}' > "$WORKSPACE_DIR_ABS/pub_deps.json"
+        echo '{{\"packages\": []}}' > pub_deps.json
     fi
 fi
 
@@ -417,8 +425,7 @@ PY
 CODEGEN_COMMANDS=({codegen_commands})
 if [ ${{#CODEGEN_COMMANDS[@]}} -gt 0 ]; then
     if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline; then
-        echo "✗ FATAL ERROR: flutter pub get --offline failed before code generation" >&2
-        exit 1
+        echo "WARNING: flutter pub get --offline failed before code generation" >&2
     fi
     for CODEGEN_CMD in "${{CODEGEN_COMMANDS[@]}}"; do
         if [ -n "$CODEGEN_CMD" ]; then

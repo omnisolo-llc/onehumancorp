@@ -151,3 +151,10 @@ oci.pull(
     tag = "latest",
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
+
+bazel_dep(name = "rules_android", version = "0.6.4")
+single_version_override(module_name = "rules_android", patch_cmds = [
+    "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl",
+    "find rules -name '*.bzl' -exec sed -i '/cc_info\\.bzl/d' {} \\;",
+    "find rules -name '*.bzl' -exec sed -i 's/CcInfo/DefaultInfo/g' {} \\;",
+])

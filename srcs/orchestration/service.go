@@ -1255,3 +1255,11 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 	return result.Choices[0].Message.Content, nil
 }
+
+func GetMinimaxAPIURL() string {
+	return minimaxAPIURL
+}
+
+func SetMinimaxAPIURL(url string) {
+	minimaxAPIURL = url
+}
