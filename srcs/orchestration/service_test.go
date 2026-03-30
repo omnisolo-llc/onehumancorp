@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/minimax"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -486,21 +487,7 @@ func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 	}
 }
 
-func TestNewMinimaxClient(t *testing.T) {
-	client := NewMinimaxClient("test-key")
-	if client == nil {
-		t.Fatalf("expected non-nil MinimaxClient")
-	}
-	if client.APIKey != "test-key" {
-		t.Fatalf("expected APIKey 'test-key', got %q", client.APIKey)
-	}
-}
-
 func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
-	// Save the original URL to restore it later
-	originalURL := minimaxAPIURL
-	defer func() { minimaxAPIURL = originalURL }()
-
 	tests := []struct {
 		name          string
 		apiKey        string
@@ -561,7 +548,9 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 			defer ts.Close()
 
 			// Override the package-level URL
-			minimaxAPIURL = ts.URL
+			originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 			hub := NewHub()
 			hub.SetMinimaxAPIKey(tt.apiKey)
@@ -874,28 +863,30 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
-	client := NewMinimaxClient("valid-key")
+	client := minimax.NewClient("valid-key")
+	cb := minimax.NewCircuitBreaker(client, 3, 30*time.Second)
 
-	originalURL := minimaxAPIURL
+	originalURL := minimax.GetMinimaxAPIURL()
 	// Use an invalid control character in the URL to make http.NewRequestWithContext fail
-	minimaxAPIURL = "http://\x00invalid-url"
-	defer func() { minimaxAPIURL = originalURL }()
+	minimax.SetMinimaxAPIURL("http://\x00invalid-url")
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
-	_, err := client.Reason(context.Background(), "some prompt")
+	_, err := cb.Reason(context.Background(), "some prompt")
 	if err == nil {
 		t.Fatalf("expected error from http.NewRequestWithContext with invalid URL")
 	}
 }
 
 func TestMinimaxClient_Reason_ClientDo_Error(t *testing.T) {
-	client := NewMinimaxClient("valid-key")
+	client := minimax.NewClient("valid-key")
+	cb := minimax.NewCircuitBreaker(client, 3, 30*time.Second)
 
-	originalURL := minimaxAPIURL
+	originalURL := minimax.GetMinimaxAPIURL()
 	// Use a validly parseable URL that fails at the network level
-	minimaxAPIURL = "http://127.0.0.1:0"
-	defer func() { minimaxAPIURL = originalURL }()
+	minimax.SetMinimaxAPIURL("http://127.0.0.1:0")
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
-	_, err := client.Reason(context.Background(), "test prompt")
+	_, err := cb.Reason(context.Background(), "test prompt")
 	if err == nil {
 		t.Fatalf("expected error from http.Client.Do with network-level failure")
 	}
@@ -969,7 +960,28 @@ func TestHubServiceServer_Publish(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization(t *testing.T) {
+	// Mock the Minimax API to avoid real network calls
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{
+			"choices": [
+				{
+					"message": {
+						"content": "summarized data"
+					}
+				}
+			]
+		}`
+		w.Write([]byte(response))
+	}))
+	defer ts.Close()
+
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
+
 	hub := NewHub()
+	// Deliberately DO NOT set minimax API key globally
 	agentID := "test-agent"
 	validPayload := []byte(`{"context": "some data to summarize"}`)
 	invalidPayload := []byte(`{"context": "some data", "unknown_field": "bad data"}`)
@@ -992,7 +1004,7 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 			payload:     validPayload,
 			setup:       func() {},
 			expectError: true,
-			expectedErr: "summarization failed: minimax API key is not configured",
+			expectedErr: "minimax API key is not configured",
 		},
 		{
 			name:        "Edge Case: Strict Schema and Payload Validation",
@@ -1069,15 +1081,13 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	defer ts.Close()
 
 	// Override the Minimax API URL to point to our test server
-	originalAPIURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalAPIURL }()
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 	// 2. Initialize Hub and set a fake API key
 	hub := NewHub()
-	hub.mu.Lock()
-	hub.minimaxAPIKey = "fake-key"
-	hub.mu.Unlock()
+	hub.SetMinimaxAPIKey("fake-key")
 
 	agentID := "test-agent-2"
 	eventID := "event-123"

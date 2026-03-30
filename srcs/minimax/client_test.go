@@ -1,4 +1,4 @@
-package orchestration
+package minimax
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestMinimaxClientReasonSuccess(t *testing.T) {
+func TestClientReasonSuccess(t *testing.T) {
 	// Start a local HTTP server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer valid-key" {
@@ -33,7 +33,7 @@ func TestMinimaxClientReasonSuccess(t *testing.T) {
 	minimaxAPIURL = ts.URL
 	defer func() { minimaxAPIURL = originalURL }()
 
-	client := NewMinimaxClient("valid-key")
+	client := NewClient("valid-key")
 	res, err := client.Reason(context.Background(), "What is 6x7?")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -43,7 +43,7 @@ func TestMinimaxClientReasonSuccess(t *testing.T) {
 	}
 }
 
-func TestMinimaxClientReasonFailure(t *testing.T) {
+func TestClientReasonFailure(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("internal error"))
@@ -54,14 +54,14 @@ func TestMinimaxClientReasonFailure(t *testing.T) {
 	minimaxAPIURL = ts.URL
 	defer func() { minimaxAPIURL = originalURL }()
 
-	client := NewMinimaxClient("valid-key")
+	client := NewClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
 		t.Fatalf("expected error on 500 response")
 	}
 }
 
-func TestMinimaxClientReasonEmptyResponse(t *testing.T) {
+func TestClientReasonEmptyResponse(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]interface{}{
 			"choices": []map[string]interface{}{},
@@ -74,7 +74,7 @@ func TestMinimaxClientReasonEmptyResponse(t *testing.T) {
 	minimaxAPIURL = ts.URL
 	defer func() { minimaxAPIURL = originalURL }()
 
-	client := NewMinimaxClient("valid-key")
+	client := NewClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
 		t.Fatalf("expected error on empty choices")

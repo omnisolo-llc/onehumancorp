@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "minimax",
+    srcs = [
+        "circuitbreaker.go",
+        "client.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/minimax",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "minimax_test",
+    srcs = [
+        "circuitbreaker_test.go",
+        "client_test.go",
+    ],
+    embed = [":minimax"],
+)

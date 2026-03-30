@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/minimax"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"google.golang.org/grpc"
@@ -21,9 +22,9 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
@@ -127,18 +128,6 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 	}
 }
 
-func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
-	client := NewMinimaxClient("test")
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
-	defer func() { minimaxAPIURL = originalURL }()
-
-	_, err := client.Reason(context.Background(), "test")
-	if err == nil {
-		t.Fatalf("expected error from http.NewRequestWithContext")
-	}
-}
-
 type mockStreamMessagesServerError struct {
 	grpc.ServerStream
 	ctx context.Context
@@ -224,9 +213,9 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := minimax.GetMinimaxAPIURL()
+	minimax.SetMinimaxAPIURL(ts.URL)
+	defer func() { minimax.SetMinimaxAPIURL(originalURL) }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
