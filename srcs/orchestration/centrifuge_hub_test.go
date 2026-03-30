@@ -5,7 +5,11 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
+
+	"golang.org/x/net/websocket"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -257,3 +261,83 @@ func TestCentrifugeNode_HandlerCheckOrigin(t *testing.T) {
 	h.ServeHTTP(w, req)
 }
 
+func TestCentrifugeNodeHandlersCoverageIntegration(t *testing.T) {
+	origCreateNode := createNode
+	defer func() { createNode = origCreateNode }()
+
+	createNode = func(cfg centrifuge.Config) (Node, error) {
+		return centrifuge.New(cfg)
+	}
+
+	cn, err := NewCentrifugeNode()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	defer cn.Close()
+
+	wsHandler := cn.Handler()
+	server := httptest.NewServer(wsHandler)
+	defer server.Close()
+
+	url := "ws" + strings.TrimPrefix(server.URL, "http")
+
+	ws, err := websocket.Dial(url, "", "http://localhost/")
+	if err != nil {
+		t.Fatalf("Dial err: %v", err)
+	}
+
+	connectCmd := `{"id": 1, "connect": {}}`
+	if err := websocket.Message.Send(ws, connectCmd); err != nil {
+		t.Fatalf("Send connect err: %v", err)
+	}
+
+	var reply string
+	if err := websocket.Message.Receive(ws, &reply); err != nil {
+		t.Fatalf("Receive connect err: %v", err)
+	}
+
+	subCmd := `{"id": 2, "subscribe": {"channel": "test"}}`
+	if err := websocket.Message.Send(ws, subCmd); err != nil {
+		t.Fatalf("Send subscribe err: %v", err)
+	}
+	if err := websocket.Message.Receive(ws, &reply); err != nil {
+		t.Fatalf("Receive sub err: %v", err)
+	}
+
+	pubCmd := `{"id": 3, "publish": {"channel": "test", "data": {}}}`
+	if err := websocket.Message.Send(ws, pubCmd); err != nil {
+		t.Fatalf("Send publish err: %v", err)
+	}
+	if err := websocket.Message.Receive(ws, &reply); err != nil {
+		t.Fatalf("Receive pub err: %v", err)
+	}
+
+	ws.Close()
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestCentrifugeNodeMarshalErrors(t *testing.T) {
+	origCreateNode := createNode
+	defer func() { createNode = origCreateNode }()
+
+	createNode = func(c centrifuge.Config) (Node, error) {
+		return &mockNode{}, nil
+	}
+
+	cn, err := NewCentrifugeNode()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	badMsg := Message{
+		ID:         "msg-bad",
+		FromAgent:  "agent-1",
+		Type:       EventTask,
+		Content:    "Bad content",
+		OccurredAt: time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	cn.PublishMeetingMessage("meeting-bad", badMsg)
+	cn.PublishChatMessage("room-bad", badMsg)
+	cn.PublishAgentNotification("agent-bad", badMsg)
+}

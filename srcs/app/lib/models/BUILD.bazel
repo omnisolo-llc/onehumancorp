@@ -4,7 +4,10 @@ package(default_visibility = ["//srcs/app:__subpackages__"])
 
 filegroup(
     name = "srcs",
-    srcs = glob(["*.dart"], allow_empty = True) + ["BUILD.bazel"],
+    srcs = glob(
+        ["*.dart"],
+        allow_empty = True,
+    ) + ["BUILD.bazel"],
     visibility = ["//srcs/app:__pkg__"],
 )
 
@@ -12,8 +15,8 @@ filegroup(
     name = "dart_srcs",
     srcs = glob(
         ["*.dart"],
-        exclude = ["*_test.dart"],
         allow_empty = True,
+        exclude = ["*_test.dart"],
     ),
     visibility = ["//srcs/app:__pkg__"],
 )
@@ -30,16 +33,55 @@ flutter_library(
 )
 
 # Keep individual model names as aliases for any existing embed references.
-alias(name = "agent_model", actual = ":models_lib")
-alias(name = "ai_provider_model", actual = ":models_lib")
-alias(name = "channel_model", actual = ":models_lib")
-alias(name = "dashboard_model", actual = ":models_lib")
-alias(name = "handoff_model", actual = ":models_lib")
-alias(name = "pipeline_model", actual = ":models_lib")
-alias(name = "security_issue_model", actual = ":models_lib")
-alias(name = "settings_model", actual = ":models_lib")
-alias(name = "skill_model", actual = ":models_lib")
-alias(name = "user_model", actual = ":models_lib")
+alias(
+    name = "agent_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "ai_provider_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "channel_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "dashboard_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "handoff_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "pipeline_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "security_issue_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "settings_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "skill_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "user_model",
+    actual = ":models_lib",
+)
 
 MODEL_TESTS = glob(["*_test.dart"])
 
@@ -55,16 +97,16 @@ MODEL_TESTS = glob(["*_test.dart"])
 
 test_suite(
     name = "all_tests",
-    tests = [":" + file.replace(".dart", "") for file in MODEL_TESTS],
     tags = ["manual"],
+    tests = [":" + file.replace(".dart", "") for file in MODEL_TESTS],
 )
 
 flutter_test(
     name = "coverage_test",
     srcs = MODEL_TESTS,
-    embed = [":models_lib"],
-    test_files = ["."],
     coverage = True,
     coverage_min = 90,
+    embed = [":models_lib"],
     tags = ["manual"],
+    test_files = ["."],
 )

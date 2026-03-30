@@ -13,6 +13,8 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -37,10 +39,18 @@ func minimaxAPIKey() string {
 //     the round-trip from task dispatch → Minimax reasoning → acknowledgment
 //     works end-to-end.
 func TestMinimaxAgentTaskE2E(t *testing.T) {
-	key := minimaxAPIKey()
-	if key == "" {
-		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax E2E test")
-	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"choices": [{"message": {"content": "Mocked LLM Response"}}]}`))
+	}))
+	defer ts.Close()
+
+	origURL := orchestration.MinimaxAPIURL
+	defer func() { orchestration.MinimaxAPIURL = origURL }()
+	orchestration.MinimaxAPIURL = ts.URL
+
+	key := "mock-key"
 
 	hub := orchestration.NewHub()
 	hub.SetMinimaxAPIKey(key)
@@ -136,10 +146,18 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // After the three-turn exchange the test asserts that the meeting transcript
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
-	key := minimaxAPIKey()
-	if key == "" {
-		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax meeting-room E2E test")
-	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"choices": [{"message": {"content": "Mocked LLM Response"}}]}`))
+	}))
+	defer ts.Close()
+
+	origURL := orchestration.MinimaxAPIURL
+	defer func() { orchestration.MinimaxAPIURL = origURL }()
+	orchestration.MinimaxAPIURL = ts.URL
+
+	key := "mock-key"
 
 	hub := orchestration.NewHub()
 	hub.SetMinimaxAPIKey(key)

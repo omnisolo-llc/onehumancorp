@@ -498,8 +498,8 @@ func TestNewMinimaxClient(t *testing.T) {
 
 func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 	// Save the original URL to restore it later
-	originalURL := minimaxAPIURL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := MinimaxAPIURL
+	defer func() { MinimaxAPIURL = originalURL }()
 
 	tests := []struct {
 		name          string
@@ -561,7 +561,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 			defer ts.Close()
 
 			// Override the package-level URL
-			minimaxAPIURL = ts.URL
+			MinimaxAPIURL = ts.URL
 
 			hub := NewHub()
 			hub.SetMinimaxAPIKey(tt.apiKey)
@@ -876,10 +876,10 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
 	client := NewMinimaxClient("valid-key")
 
-	originalURL := minimaxAPIURL
+	originalURL := MinimaxAPIURL
 	// Use an invalid control character in the URL to make http.NewRequestWithContext fail
-	minimaxAPIURL = "http://\x00invalid-url"
-	defer func() { minimaxAPIURL = originalURL }()
+	MinimaxAPIURL = "http://\x00invalid-url"
+	defer func() { MinimaxAPIURL = originalURL }()
 
 	_, err := client.Reason(context.Background(), "some prompt")
 	if err == nil {
@@ -890,10 +890,10 @@ func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
 func TestMinimaxClient_Reason_ClientDo_Error(t *testing.T) {
 	client := NewMinimaxClient("valid-key")
 
-	originalURL := minimaxAPIURL
+	originalURL := MinimaxAPIURL
 	// Use a validly parseable URL that fails at the network level
-	minimaxAPIURL = "http://127.0.0.1:0"
-	defer func() { minimaxAPIURL = originalURL }()
+	MinimaxAPIURL = "http://127.0.0.1:0"
+	defer func() { MinimaxAPIURL = originalURL }()
 
 	_, err := client.Reason(context.Background(), "test prompt")
 	if err == nil {
@@ -1069,9 +1069,9 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	defer ts.Close()
 
 	// Override the Minimax API URL to point to our test server
-	originalAPIURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalAPIURL }()
+	originalAPIURL := MinimaxAPIURL
+	MinimaxAPIURL = ts.URL
+	defer func() { MinimaxAPIURL = originalAPIURL }()
 
 	// 2. Initialize Hub and set a fake API key
 	hub := NewHub()
@@ -1384,7 +1384,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub := NewHub()
 
-	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")
+	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to create sip db: %v", err)
 	}

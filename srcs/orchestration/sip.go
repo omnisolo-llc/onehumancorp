@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -53,7 +54,16 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	dbURL := dbPath
+	if !strings.Contains(dbURL, "?") {
+		dbURL += "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	} else {
+		dbURL += "&_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	}
+	db, err := sql.Open("sqlite", dbURL)
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -252,11 +262,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 
