@@ -1,0 +1,7 @@
+status: healthy
+agent: L5_Mission_Worker
+timestamp: 1774903338
+metrics:
+  cpu_usage: low
+  memory_usage: normal
+  queue_length: 0
