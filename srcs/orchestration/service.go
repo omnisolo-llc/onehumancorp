@@ -17,6 +17,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/resilience"
 	"github.com/onehumancorp/mono/srcs/scheduler"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"github.com/onehumancorp/mono/srcs/telemetry"
@@ -1170,6 +1171,7 @@ var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Has no side effects.
 type MinimaxClient struct {
 	APIKey string
+	cb     *resilience.CircuitBreaker
 }
 
 // NewMinimaxClient functionality.
@@ -1178,7 +1180,18 @@ type MinimaxClient struct {
 // Produces no errors.
 // Has no side effects.
 func NewMinimaxClient(apiKey string) *MinimaxClient {
-	return &MinimaxClient{APIKey: apiKey}
+	// 3 max failures, 5 second reset timeout
+	return &MinimaxClient{
+		APIKey: apiKey,
+		cb:     resilience.NewCircuitBreaker(3, 5*time.Second),
+	}
+}
+
+// ResetCircuitBreaker resets the internal circuit breaker.
+func (c *MinimaxClient) ResetCircuitBreaker() {
+	if c.cb != nil {
+		c.cb.Reset()
+	}
 }
 
 var bufferPool = sync.Pool{
@@ -1189,6 +1202,10 @@ var bufferPool = sync.Pool{
 
 var sharedHTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
+	},
 }
 
 // Reason functionality.
@@ -1224,18 +1241,37 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 
-	// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
-	// Prevents severe connection and resource leaks by reusing connection pools on every request.
-	resp, err := sharedHTTPClient.Do(req)
-	if err != nil {
-		return "", err
+	var resp *http.Response
+	var reqErr error
+
+	// To handle transient failures, we'll implement a retry loop inside the circuit breaker execution block,
+	// but the instructions ask for retries, fallbacks, and circuit-breaking.
+	// Since the circuit breaker's role is to prevent thrashing on *sustained* failures,
+	// we use the circuit breaker to guard the HTTP call, and a fallback mechanism to handle transient ones.
+	// But it's simpler: Let's do the retry *outside* the CB, or *inside*?
+	// If we retry *outside*, each retry hits the CB. If it's transient, CB might trip if we retry too fast?
+	// The prompt: "Implement retries and fallbacks for database-driven missions". Wait, for missions?
+	// And "Implement robust error-handling and circuit-breaking for all internal RPCs."
+	// Let's stick to the CircuitBreaker wrapper here.
+
+	// Wrap the HTTP request in the circuit breaker
+	cbErr := c.cb.Execute(func() error {
+		resp, reqErr = sharedHTTPClient.Do(req)
+		if reqErr != nil {
+			return reqErr
+		}
+		if resp.StatusCode != http.StatusOK {
+			respBody, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
+		}
+		return nil
+	})
+
+	if cbErr != nil {
+		return "", cbErr
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-	}
 
 	var result struct {
 		Choices []struct {

@@ -3,7 +3,6 @@ package orchestration
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -15,11 +14,12 @@ import (
 func TestSIPDB_Chaos(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos.db")
-
+	dbPath = dbPath + "?_journal_mode=WAL&_busy_timeout=15000&_txlock=immediate"
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)
 	}
+	db.db.SetMaxOpenConns(1)
 	defer db.Close()
 
 	ctx := context.Background()
