@@ -18,7 +18,15 @@ filegroup(
     visibility = ["//srcs/app:__pkg__"],
 )
 
-# Base dependencies for most screens
+# All screen sources in ONE library → single pub-prepare action instead of
+# one per screen file.  This is the main speed-up: ~15 separate pub-prepare
+# actions (each 60-70 s) become 1.
+SCREEN_SRCS = glob(
+    ["*.dart"],
+    exclude = ["*_test.dart"],
+)
+
+# Base dependencies shared by all screens
 SCREEN_DEPS = [
     "//srcs/app/lib/models:models_lib",
     "//srcs/app/lib/services:services_lib",
@@ -29,30 +37,36 @@ SCREEN_DEPS = [
     "@pub_intl//:intl",
 ]
 
-[
-    flutter_library(
-        name = file.replace(".dart", ""),
-        srcs = [file],
-        pubspec = "//srcs/app:pubspec.yaml",
-        workspace_pubspec = "//:pubspec.yaml",
-        deps = SCREEN_DEPS,
-    )
-    for file in glob(
-        ["*.dart"],
-        exclude = ["*_test.dart"],
-    )
-]
-
 flutter_library(
     name = "screens_lib",
+    srcs = SCREEN_SRCS,
+    pubspec = "//srcs/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = SCREEN_DEPS,
+)
+
+# ── Test-only aggregate library ───────────────────────────────────────────────
+# screens_lib + mocktail for tests that need mock support but not the full router.
+
+flutter_library(
+    name = "screens_for_tests",
     srcs = [],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
-    deps = [":" + file.replace(".dart", "") for file in glob(
-        ["*.dart"],
-        exclude = ["*_test.dart"],
-    )],
+    deps = [
+        ":screens_lib",
+        "@pub_mocktail//:mocktail",
+    ],
 )
+
+# Per-test embed configuration: each test uses the smallest sufficient library.
+#   advanced_widget_test  — needs router.dart (AppShell) → use app_for_tests
+#   all others            — need screens + mocktail → use screens_for_tests
+_SCREEN_TEST_EMBEDS = {
+    "advanced_widget_test.dart": ["//srcs/app:app_for_tests"],
+}
+
+_DEFAULT_SCREEN_TEST_EMBED = [":screens_for_tests"]
 
 SCREEN_TESTS = glob(["**/*_test.dart"])
 
@@ -60,7 +74,7 @@ SCREEN_TESTS = glob(["**/*_test.dart"])
     flutter_test(
         name = file.replace(".dart", "").replace("/", "_"),
         srcs = [file],
-        embed = ["//srcs/app:app_lib"],
+        embed = _SCREEN_TEST_EMBEDS.get(file, _DEFAULT_SCREEN_TEST_EMBED),
         test_files = [file],
         workspace_pubspec = "//:pubspec.yaml",
     )

@@ -18,34 +18,20 @@ filegroup(
     visibility = ["//srcs/app:__pkg__"],
 )
 
-flutter_library(
-    name = "org_tree_widget",
-    srcs = ["org_tree_widget.dart"],
-    pubspec = "//srcs/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        "//srcs/app/lib/models:dashboard_model",
-        "@flutter_sdk//flutter/packages/flutter",
-    ],
-)
-
-flutter_library(
-    name = "slide_to_approve",
-    srcs = ["slide_to_approve.dart"],
-    pubspec = "//srcs/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        "@flutter_sdk//flutter/packages/flutter",
-    ],
-)
-
+# All widget sources in ONE library → single pub-prepare action.
 flutter_library(
     name = "widgets_lib",
-    srcs = [],
+    srcs = glob(
+        ["*.dart"],
+        exclude = ["*_test.dart"],
+    ),
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
-        ":org_tree_widget",
-        ":slide_to_approve",
+        "//srcs/app/lib/models:models_lib",
+        "@flutter_sdk//flutter/packages/flutter",
     ],
 )
+
+alias(name = "org_tree_widget", actual = ":widgets_lib")
+alias(name = "slide_to_approve", actual = ":widgets_lib")
