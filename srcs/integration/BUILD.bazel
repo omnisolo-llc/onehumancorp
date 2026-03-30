@@ -1,3 +1,5 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
 load("@rules_go//go:def.bzl", "go_test")
 
 go_test(
@@ -32,4 +34,16 @@ go_test(
         "//srcs/integrations/chatwoot",
         "//srcs/orchestration",
     ],
+)
+
+sh_test(
+    name = "chaos_test",
+    srcs = ["chaos_test.sh"],
+    data = [
+
+        "//srcs/frontend/server/cmd/frontend:frontend",
+        "//srcs/cmd/ohc:ohc",
+        "chaos_verifier.spec.ts",
+    ],
+    tags = ["requires-network"],
 )

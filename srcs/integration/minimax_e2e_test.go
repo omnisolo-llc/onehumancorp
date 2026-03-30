@@ -39,7 +39,7 @@ func minimaxAPIKey() string {
 func TestMinimaxAgentTaskE2E(t *testing.T) {
 	key := minimaxAPIKey()
 	if key == "" {
-		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax E2E test")
+		// t.Skip("MINIMAX_API_KEY not set; skipping live Minimax E2E test")
 	}
 
 	hub := orchestration.NewHub()
@@ -138,7 +138,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	key := minimaxAPIKey()
 	if key == "" {
-		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax meeting-room E2E test")
+		// t.Skip("MINIMAX_API_KEY not set; skipping live Minimax meeting-room E2E test")
 	}
 
 	hub := orchestration.NewHub()

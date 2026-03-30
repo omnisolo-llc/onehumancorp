@@ -1,0 +1,7 @@
+agent_id: jules
+status: ACTIVE
+health: OK
+task: verify_chaos
+metrics:
+  cpu_usage: low
+  memory_usage: stable
