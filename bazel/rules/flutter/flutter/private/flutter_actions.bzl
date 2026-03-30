@@ -145,7 +145,8 @@ def flutter_pub_get_action(
     # Otherwise, it's at the root.
     package_dir = ""
     if workspace_pubspec:
-        package_dir = ctx.label.package
+        pubspec_segments = pubspec_file.short_path.split("/")
+        package_dir = "/".join(pubspec_segments[:-1])
 
     if not flutter_toolchain.flutterinfo.tool_files:
         fail("No tool files found in Flutter toolchain")
@@ -211,6 +212,45 @@ fi
 
 export PUB_CACHE="$PUB_CACHE_DIR_ABS"
 mkdir -p "$PUB_CACHE_DIR_ABS"
+
+if [ "$IS_PUB_PACKAGE" = "1" ] && [ -f "$WORKSPACE_DIR_ABS/pubspec.yaml" ]; then
+    export WORKSPACE_PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
+    "$PYTHON_BIN" <<'PY'
+import os
+
+path = os.environ["WORKSPACE_PUBSPEC_PATH"]
+with open(path, "r", encoding="utf-8") as fh:
+    lines = fh.readlines()
+
+rewritten = []
+skip_block = None
+
+for line in lines:
+    stripped = line.lstrip()
+    indent = len(line) - len(stripped)
+
+    if skip_block:
+        if stripped and indent == 0:
+            skip_block = None
+        else:
+            continue
+
+    if indent == 0 and stripped.startswith("resolution:"):
+        continue
+
+    if indent == 0 and (
+        stripped.startswith("workspace:") or
+        stripped.startswith("dev_dependencies:")
+    ):
+        skip_block = stripped.split(":", 1)[0]
+        continue
+
+    rewritten.append(line)
+
+with open(path, "w", encoding="utf-8") as fh:
+    fh.writelines(rewritten)
+PY
+fi
 
 echo "=== Preparing pub cache from dependencies ==="
 DEP_CACHES=({dep_caches})

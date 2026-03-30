@@ -114,7 +114,7 @@ MODEL_TESTS = glob(["*_test.dart"])
     flutter_test(
         name = file.replace(".dart", ""),
         srcs = [file],
-        embed = ["//srcs/app:app_lib"],
+        embed = [":" + file.replace("_test.dart", "")],
         test_files = [file],
     )
     for file in MODEL_TESTS
@@ -129,7 +129,7 @@ test_suite(
 flutter_test(
     name = "coverage_test",
     srcs = MODEL_TESTS,
-    embed = ["//srcs/app:app_lib"],
+    embed = [":models_lib"],
     test_files = ["."],
     coverage = True,
     coverage_min = 90,

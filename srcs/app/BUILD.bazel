@@ -110,6 +110,7 @@ flutter_test(
     srcs = ["test/desktop_e2e_test.dart"],
     embed = [":app_lib"],
     test_files = ["test/desktop_e2e_test.dart"],
+    tags = ["manual"],
     workspace_pubspec = "//:pubspec.yaml",
 )
 
@@ -143,7 +144,10 @@ sh_test(
         "e2e/web.spec.ts",
         "//:node_modules/@playwright/test",
     ],
-    tags = ["requires-network"],  # browser download may need network on first run
+    tags = [
+        "manual",
+        "requires-network",
+    ],  # browser download may need network on first run
 )
 
 # ── Local Development targets ─────────────────────────────────────────────────

@@ -99,7 +99,6 @@ flutter_library(
 )
 
 SERVICE_TESTS = glob(["*_test.dart"])
-
 [
     flutter_test(
         name = file.replace(".dart", ""),
@@ -120,7 +119,7 @@ test_suite(
 flutter_test(
     name = "coverage_test",
     srcs = SERVICE_TESTS,
-    embed = ["//srcs/app:app_lib"],
+    embed = [":services_lib"],
     test_files = ["."],
     coverage = True,
     coverage_min = 90,
