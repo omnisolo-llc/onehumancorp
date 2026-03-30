@@ -83,7 +83,7 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.hub.Publish(message); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (s *Server) handleChatTest(w http.ResponseWriter, r *http.Request) {
 		APIToken:   req.APIToken,
 	}
 	if err := s.integReg.TestConnection(req.IntegrationID, creds); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	writeJSON(w, map[string]bool{"success": true})
@@ -167,7 +167,7 @@ func (s *Server) handleChatSend(w http.ResponseWriter, r *http.Request) {
 	}
 	msg, err := s.integReg.SendChatMessage(req.IntegrationID, req.Channel, req.FromAgent, req.Content, req.ThreadID, time.Now().UTC())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	writeJSON(w, msg)

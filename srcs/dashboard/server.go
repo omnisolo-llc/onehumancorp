@@ -598,7 +598,7 @@ func (s *Server) handleDevSeed(w http.ResponseWriter, r *http.Request) {
 
 	org, hub, tracker, err := seededScenario(payload.Scenario, time.Now().UTC())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
