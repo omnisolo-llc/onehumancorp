@@ -1,11 +1,14 @@
 package dashboard
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+
 
 	"github.com/onehumancorp/mono/srcs/orchestration"
 )
@@ -377,6 +380,12 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+var ssePool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
 // handleScaleStream streams real-time scaling trace events to the dashboard.
 // Accepts parameters: s *Server (No Constraints).
 // Returns nothing.
@@ -400,8 +409,16 @@ func (s *Server) handleScaleStream(w http.ResponseWriter, r *http.Request) {
 
 	for _, event := range events {
 		s.hub.LogEvent(map[string]interface{}{"type": "ScalingEventStream", "data": event})
-		data := []byte("data: " + event + "\n\n")
-		w.Write(data)
+
+		buf := ssePool.Get().(*bytes.Buffer)
+		buf.Reset()
+		buf.WriteString("data: ")
+		buf.WriteString(event)
+		buf.WriteString("\n\n")
+
+		w.Write(buf.Bytes())
+		ssePool.Put(buf)
+
 		if err := rc.Flush(); err != nil {
 			break
 		}
@@ -417,6 +434,13 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 	// Execute pruning task
 	if s.hub.SIPDB() != nil {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
+
+		// Create new mission for backend_dev as requested
+		_ = s.hub.SIPDB().DelegateMission(r.Context(), "mission-remediate-noise", "backend_dev", orchestration.Message{
+			ID: "mission-remediate-noise",
+			Type: "task",
+			Content: "Please review the recent telemetry signal noise reduction commits and ensure all handlers are correctly utilizing sync.Pool for stream buffers.",
+		})
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
 }

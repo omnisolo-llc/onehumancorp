@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -53,10 +54,21 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// Append PRAGMAs for high-concurrency WAL mode to avoid database locking issues
+	dsn := dbPath
+	if !strings.Contains(dsn, "?") {
+		dsn += "?_journal_mode=WAL&_busy_timeout=15000&_txlock=immediate"
+	} else {
+		dsn += "&_journal_mode=WAL&_busy_timeout=15000&_txlock=immediate"
+	}
+
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	// Limit connection pool to mitigate concurrency lockups with SQLite
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -245,7 +257,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
 	return withRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
-		_, err := s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR created_at < ?", thresholdTime)
+			_, err := s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR status = 'stale' OR status = 'STALE' OR created_at < ?", thresholdTime)
 		return err
 	})
 }

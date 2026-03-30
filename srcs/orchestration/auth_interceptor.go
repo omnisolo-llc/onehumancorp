@@ -306,5 +306,6 @@ func (w *recvWrapper) RecvMsg(m interface{}) error {
 			return status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot stream messages for agent %s", w.spiffeID, reqAgentID)
 		}
 	}
+
 	return nil
 }
