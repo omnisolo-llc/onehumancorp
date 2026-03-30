@@ -1,0 +1,14 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "chaos_test",
+    srcs = ["chaos_test.sh"],
+    data = [
+        "chaos.spec.ts",
+        "playwright.config.ts",
+        "//:node_modules",
+        "//srcs/cmd/ohc:ohc",
+        "//srcs/app:app",
+    ],
+    tags = ["requires-network"],
+)
