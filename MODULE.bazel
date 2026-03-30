@@ -151,3 +151,19 @@ oci.pull(
     tag = "latest",
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
+single_version_override(
+    module_name = "rules_android",
+    patch_cmds = [
+        "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl",
+        "find rules -name '*.bzl' -exec sed -i -e '/CcInfo/!b' -e '/@rules_cc/b' -e 's/CcInfo/CcInfo_REMOVED/g' {} \\;",
+        "find rules -name '*.bzl' -exec sh -c 'grep -q \"load.*rules_cc.*CcInfo\" \"$1\" || sed -i \"1s/^/load(\\\"@rules_cc\\\\/\\\\/cc\\\\/common:cc_info.bzl\\\", \\\"CcInfo\\\")\\\\n/\" \"$1\"' _ {} \\;",
+        "find rules -name '*.bzl' -exec sed -i 's/CcInfo_REMOVED/CcInfo/g' {} \\;",
+        "find rules -name '*.bzl' -exec sh -c 'awk \"BEGIN {seen=0} /^load.*CcInfo/ {if(seen) next; seen=1} {print}\" \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"' _ {} \\;",
+    ],
+)
+go_deps.module(
+    path = "github.com/playwright-community/playwright-go",
+    sum = "h1:L0sS8gUjXm0995U2z0Q7qD/S/z8Yv1bBq743o4LpT/o=",
+    version = "v0.4902.0",
+)
+use_repo(go_deps, "com_github_playwright_community_playwright_go")

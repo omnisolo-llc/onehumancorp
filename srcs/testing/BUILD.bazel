@@ -1,0 +1,10 @@
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "chaos_test",
+    srcs = ["chaos_test.go"],
+    deps = [
+        "@org_modernc_sqlite//:sqlite",
+        "@com_github_playwright_community_playwright_go//:playwright-go",
+    ],
+)
