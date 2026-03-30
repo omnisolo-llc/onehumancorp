@@ -1,0 +1,56 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>OHC Swarm Verification</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
+        body {
+          font-family: 'Outfit', sans-serif;
+          background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+          color: white;
+          margin: 0;
+          padding: 40px;
+          min-height: 100vh;
+        }
+        .container {
+          max-width: 800px;
+          margin: 0 auto;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(20px) saturate(200%);
+          -webkit-backdrop-filter: blur(20px) saturate(200%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 24px;
+          padding: 32px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+          font-weight: 600;
+          margin-top: 0;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+          padding-bottom: 16px;
+        }
+        .summary {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 30px;
+          font-size: 1.2em;
+        }
+        .status-passed { color: #4ade80; }
+        .status-failed { color: #f87171; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>🛡️ OHC Swarm E2E Verification</h1>
+        <div class="summary">
+          <span>Status: <strong class="status-failed">FAILED</strong></span>
+          <span>Total Tests: 0</span>
+        </div>
+        <div class="grid">
+
+        </div>
+      </div>
+    </body>
+    </html>

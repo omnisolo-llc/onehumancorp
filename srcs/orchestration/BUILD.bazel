@@ -30,6 +30,12 @@ go_library(
 )
 
 go_test(
+    name = "chaos_test",
+    srcs = ["chaos_test.go"],
+    embed = [":orchestration"],
+)
+
+go_test(
     name = "orchestration_test",
     srcs = [
         "auth_interceptor_test.go",

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -21,8 +22,8 @@ type SIPDB struct {
 }
 
 const (
-	maxRetries    = 3
-	retryInterval = 100 * time.Millisecond
+	maxRetries    = 10
+	retryInterval = 50 * time.Millisecond
 )
 
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
@@ -41,6 +42,12 @@ func withRetry(ctx context.Context, op func() error) error {
 		default:
 		}
 
+		// Only retry on busy or locked errors, otherwise break early
+		errStr := err.Error()
+		if !(strings.Contains(errStr, "database is locked") || strings.Contains(errStr, "SQLITE_BUSY")) {
+			return err
+		}
+
 		slog.Warn("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
 		time.Sleep(retryInterval * time.Duration(1<<i))
 	}
@@ -53,7 +60,12 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// Ensure busy_timeout is set so SQLite natively retries locks instead of immediately failing
+	dbURL := dbPath
+	if dbPath != ":memory:" {
+		dbURL = dbPath + "?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
+	}
+	db, err := sql.Open("sqlite", dbURL)
 	if err != nil {
 		return nil, err
 	}
