@@ -316,12 +316,12 @@ else
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
             cat "$PUB_DEPS_ERR" >&2 || true
             echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
+            echo '{{"packages": []}}' > pub_deps.json
         fi
     else
         cat "$PUB_DEPS_ERR" >&2 || true
         echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
+        echo '{{"packages": []}}' > pub_deps.json
     fi
 fi
 

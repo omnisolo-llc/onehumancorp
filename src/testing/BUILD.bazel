@@ -1,0 +1,13 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "chaos_ui_verifier_test",
+    srcs = ["chaos_ui_verifier_test.sh"],
+    data = [
+        "//srcs/cmd/ohc:ohc",
+        "//srcs/frontend/server/cmd/frontend:frontend",
+        "//srcs/app:app",
+        "//:node_modules/@playwright/test",
+    ],
+    tags = ["requires-network"],
+)
