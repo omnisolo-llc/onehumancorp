@@ -736,6 +736,8 @@ func (h *Hub) Publish(message Message) error {
 	h.mu.RUnlock()
 
 	h.mu.Lock()
+	var channelsToNotify []chan struct{}
+
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
@@ -746,10 +748,7 @@ func (h *Hub) Publish(message Message) error {
 
 		subs := h.subs[message.ToAgent]
 		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
-			}
+			channelsToNotify = append(channelsToNotify, subs[i])
 		}
 	}
 
@@ -816,10 +815,7 @@ func (h *Hub) Publish(message Message) error {
 		for _, participant := range meeting.Participants {
 			subs := h.subs[participant]
 			for i := 0; i < len(subs); i++ {
-				select {
-				case subs[i] <- struct{}{}:
-				default:
-				}
+				channelsToNotify = append(channelsToNotify, subs[i])
 			}
 		}
 	} else {
@@ -827,6 +823,13 @@ func (h *Hub) Publish(message Message) error {
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
+
+	for _, ch := range channelsToNotify {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
 
 	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
@@ -1169,7 +1172,12 @@ var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Produces no errors.
 // Has no side effects.
 type MinimaxClient struct {
-	APIKey string
+	APIKey      string
+	circuitLock sync.Mutex
+	failures    int
+	state       string
+	lastFailure time.Time
+	timeout     time.Duration
 }
 
 // NewMinimaxClient functionality.
@@ -1178,7 +1186,11 @@ type MinimaxClient struct {
 // Produces no errors.
 // Has no side effects.
 func NewMinimaxClient(apiKey string) *MinimaxClient {
-	return &MinimaxClient{APIKey: apiKey}
+	return &MinimaxClient{
+		APIKey:  apiKey,
+		state:   "CLOSED",
+		timeout: 10 * time.Second,
+	}
 }
 
 var bufferPool = sync.Pool{
@@ -1224,18 +1236,42 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 
+	c.circuitLock.Lock()
+	if c.state == "OPEN" {
+		if time.Since(c.lastFailure) > c.timeout {
+			c.state = "HALF_OPEN"
+		} else {
+			c.circuitLock.Unlock()
+			return "", errors.New("circuit breaker is OPEN")
+		}
+	}
+	c.circuitLock.Unlock()
+
 	// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
 	// Prevents severe connection and resource leaks by reusing connection pools on every request.
 	resp, err := sharedHTTPClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	c.circuitLock.Lock()
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.failures++
+		c.lastFailure = time.Now()
+		if c.failures >= 3 || c.state == "HALF_OPEN" {
+			c.state = "OPEN"
+		}
+		c.circuitLock.Unlock()
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
 		respBody, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
 	}
+
+	c.failures = 0
+	c.state = "CLOSED"
+	c.circuitLock.Unlock()
+
+	defer resp.Body.Close()
 
 	var result struct {
 		Choices []struct {
