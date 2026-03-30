@@ -98,12 +98,38 @@ flutter_library(
     ],
 )
 
+# ── Test-only aggregate library ───────────────────────────────────────────────
+# services_lib + mocktail for tests that need mock support.
+
+flutter_library(
+    name = "services_for_tests",
+    srcs = [],
+    pubspec = "//srcs/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = [
+        ":services_lib",
+        "@pub_mocktail//:mocktail",
+    ],
+)
+
+# Per-test embed configuration: each test uses the smallest sufficient library.
+#   centrifuge_service_test  — no mocktail needed → use centrifuge_service directly
+#   local_manager_service_test — no mocktail needed → use local_manager_service directly
+#   all others               — need services + mocktail → use services_for_tests
+_SERVICE_TEST_EMBEDS = {
+    "centrifuge_service_test.dart": [":centrifuge_service"],
+    "local_manager_service_test.dart": [":local_manager_service"],
+}
+
+_DEFAULT_SERVICE_TEST_EMBED = [":services_for_tests"]
+
 SERVICE_TESTS = glob(["*_test.dart"])
+
 [
     flutter_test(
         name = file.replace(".dart", ""),
         srcs = [file],
-        embed = ["//srcs/app:app_lib"],
+        embed = _SERVICE_TEST_EMBEDS.get(file, _DEFAULT_SERVICE_TEST_EMBED),
         test_files = [file],
         workspace_pubspec = "//:pubspec.yaml",
     )

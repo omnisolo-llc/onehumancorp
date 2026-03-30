@@ -54,13 +54,38 @@ flutter_library(
     )],
 )
 
+# ── Test-only aggregate library ───────────────────────────────────────────────
+# screens_lib + mocktail for tests that need mock support but not the full router.
+
+flutter_library(
+    name = "screens_for_tests",
+    srcs = [],
+    pubspec = "//srcs/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = [
+        ":screens_lib",
+        "@pub_mocktail//:mocktail",
+    ],
+)
+
+# Per-test embed configuration: each test uses the smallest sufficient library.
+#   advanced_widget_test  — needs router.dart (AppShell) → use app_for_tests
+#   wizard_screen_test    — only needs one screen, no mocktail → use wizard_screen
+#   all others            — need screens + mocktail → use screens_for_tests
+_SCREEN_TEST_EMBEDS = {
+    "advanced_widget_test.dart": ["//srcs/app:app_for_tests"],
+    "wizard_screen_test.dart": [":wizard_screen"],
+}
+
+_DEFAULT_SCREEN_TEST_EMBED = [":screens_for_tests"]
+
 SCREEN_TESTS = glob(["**/*_test.dart"])
 
 [
     flutter_test(
         name = file.replace(".dart", "").replace("/", "_"),
         srcs = [file],
-        embed = ["//srcs/app:app_lib"],
+        embed = _SCREEN_TEST_EMBEDS.get(file, _DEFAULT_SCREEN_TEST_EMBED),
         test_files = [file],
         workspace_pubspec = "//:pubspec.yaml",
     )
