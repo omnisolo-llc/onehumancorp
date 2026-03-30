@@ -29,7 +29,9 @@ Generated images are written to:
 
 ### Web
 
-![OHC Flutter app on web](./web/login.png)
+<img src="../screenshots/web/login.png" alt="OHC Login State" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(15px) saturate(180%);" />
+<br/>
+<img src="../screenshots/web/dashboard.png" alt="OHC Dashboard State" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(15px) saturate(180%);" />
 
 ### macOS
 

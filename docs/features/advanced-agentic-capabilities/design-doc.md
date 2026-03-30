@@ -61,6 +61,11 @@ Traditional static prompting chains fail at handling cyclic workflows (looping, 
 - **In-Memory Context Arrays**: Relying entirely on the LLM's growing context window. Rejected due to unacceptable token burn rates, latency spikes, and eventual context collapse.
 - **Hardcoded Tool Chains**: Defining specific tools per agent role in static configuration. Rejected as it severely limits flexibility and extensibility when importing new Skill Blueprints.
 
+### Autonomy Threshold Settings
+Administrators configure agentic autonomy boundaries within the global configuration settings view.
+
+<img src="../../screenshots/web/settings.png" alt="Autonomy Threshold Settings" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(15px) saturate(180%);" />
+
 ### 3.6 Human-in-the-Loop (HITL) Handoff UI
 Orchestrators struggle to seamlessly hand off critical tasks to human operators without losing context. OHC implements a native K8s-backed "Warm Handoff" UI, directly integrating visual ground truth (screenshots) and SPIFFE-gated confidence approvals.
 - **Handoff Generation**: When an agent encounters an ambiguous state, a predefined high-risk operation, or a cyclic hallucination, it pauses its execution graph.

@@ -66,7 +66,7 @@ common:buildbuddy_remote-common --genrule_strategy=remote
 common:buildbuddy_remote-common --remote_local_fallback
 common:buildbuddy_remote-common --remote_upload_local_results
 common:buildbuddy_remote-common --remote_cache_compression
-common:buildbuddy_remote-common --jobs=200
+common:buildbuddy_remote-common --jobs=10
 build:buildbuddy_remote-common --remote_timeout=10m
 build:buildbuddy_remote-common --verbose_failures
 build:buildbuddy_remote-common --platforms=@toolchains_buildbuddy//platforms:linux_arm64
@@ -97,7 +97,7 @@ common:buildbuddy-official --remote_upload_local_results
 common:buildbuddy-official --remote_timeout=10m
 common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy-official --remote_cache_compression
-common:buildbuddy-official --jobs=200
+common:buildbuddy-official --jobs=10
 common:buildbuddy-official --remote_local_fallback
 # Default read-only key
 common:buildbuddy-official --remote_header=x-buildbuddy-api-key=vGFjlQg7X49NwoQHAfRW
@@ -109,7 +109,7 @@ build:remote --config=buildbuddy-official
 test:remote --local_test_jobs=8
 
 # Optimize testing globally by automatically discovering max parallelism
-test --jobs=200
+test --jobs=10
 
 # Local config to disable remote execution
 build:local --remote_cache=

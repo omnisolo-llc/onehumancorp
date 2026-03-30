@@ -23,6 +23,11 @@ With a single slider interaction, the CEO scales the "Sales Representative" role
 - **Panel Elevation**: On hover, elevate panel with a subtle glow: `box-shadow: var(--glow-hire); transition: box-shadow 0.3s ease;`
 - **Skeleton Loading**: For real-time trace events, use a sweeping linear gradient `background: linear-gradient(90deg, #1A1A1A 25%, #2A2A2A 50%, #1A1A1A 75%); animation: shimmer 1.5s infinite;`
 
+## Visual Reality (Dashboard Implementation)
+Below is the visual implementation of the dynamic scaling agents view, which provides direct feedback on the agent mesh via the sidebar navigation pattern.
+
+<img src="../../screenshots/web/agents.png" alt="Dynamic Scaling UI State" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(15px) saturate(180%);" />
+
 ## 3. Data Flow Architecture (Mermaid)
 
 ```mermaid
