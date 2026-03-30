@@ -17,6 +17,24 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 
+bazel_dep(name = "rules_android", version = "0.5.1")
+single_version_override(
+    module_name = "rules_android",
+    patch_cmds = [
+        "sed -i 's/\"CcInfo\"/CcInfo/g' rules/android_local_test/attrs.bzl || true",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_local_test/attrs.bzl || true",
+        "sed -i 's/\"CcInfo\"/CcInfo/g' rules/android_library/impl.bzl || true",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_library/impl.bzl || true",
+        "sed -i 's/\"CcInfo\"/CcInfo/g' rules/android_library/attrs.bzl || true",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_library/attrs.bzl || true",
+        "sed -i 's/\"CcInfo\"/CcInfo/g' rules/native_deps.bzl || true",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/native_deps.bzl || true",
+        "sed -i 's/\"CcInfo\"/CcInfo/g' rules/android_binary/attrs.bzl || true",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_binary/attrs.bzl || true",
+        "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl || true",
+    ],
+)
+
 # ── Flutter rules (vendored fork) ─────────────────────────────────────────────
 bazel_dep(name = "rules_flutter", version = "0.0.0")
 local_path_override(
