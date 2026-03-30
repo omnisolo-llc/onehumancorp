@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -53,10 +54,25 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// Add PRAGMAs to mitigate SQLITE_BUSY
+	dsn := dbPath
+	if dsn == ":memory:" {
+		dsn = dsn + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	} else {
+		// handle existing query string
+		if len(dsn) > 0 {
+			if strings.Contains(dsn, "?") {
+				dsn = dsn + "&_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+			} else {
+				dsn = dsn + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+			}
+		}
+	}
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -74,12 +90,9 @@ func initializeTables(db *sql.DB) error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
-			role TEXT NOT NULL,
-			task TEXT NOT NULL,
 			status TEXT NOT NULL,
-			assigned_to TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			payload TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,
@@ -153,28 +166,36 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		// Since role is removed from the schema, we must parse the payload to filter by role if needed,
+		// or fetch all pending missions and filter in memory.
+		// A JSON payload could be queried, but standard SQLite json1 extension might not be guaranteed.
+		// For now we will fetch all pending and unmarshal to check role if we need to filter by role,
+		// though the requirement says do not attempt to query or insert into legacy columns like role or task.
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING'")
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, taskStr string
-			if err := rows.Scan(&id, &taskStr); err != nil {
+			var id, payloadStr string
+			if err := rows.Scan(&id, &payloadStr); err != nil {
 				return err
 			}
 
 			var msg Message
-			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
+			if err := json.Unmarshal([]byte(payloadStr), &msg); err != nil {
 				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				msg = Message{ID: id, Content: payloadStr, Type: EventTask}
 			} else {
 				if msg.ID == "" {
 					msg.ID = id
 				}
 			}
-			missions = append(missions, msg)
+			// Filtering by role in memory if a specific role is requested, otherwise return all
+			if role == "" || msg.ToAgent == role || msg.FromAgent == role {
+				missions = append(missions, msg)
+			}
 		}
 		return nil
 	})
@@ -188,7 +209,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", missionID)
+		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
 		if err != nil {
 			return err
 		}
@@ -224,14 +245,16 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	// embed the role in the task if needed, but role parameter may be kept for function signature compatibility
+	task.ToAgent = role
 	taskBytes, err := json.Marshal(task)
 	if err != nil {
 		return err
 	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-			missionID, role, string(taskBytes),
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			missionID, string(taskBytes),
 		)
 		return err
 	})
@@ -252,11 +275,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 

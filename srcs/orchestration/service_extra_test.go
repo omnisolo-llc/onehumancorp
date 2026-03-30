@@ -337,7 +337,7 @@ func TestEventLogWorker_Errors(t *testing.T) {
 
 	hub2 := NewHub()
 	// Marshal failure branch (func cannot be marshaled in JSON)
-	hub2.LogEvent(func(){})
+	hub2.LogEvent(func() {})
 
 	time.Sleep(50 * time.Millisecond)
 }
