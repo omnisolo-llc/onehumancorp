@@ -42,7 +42,7 @@ class LocalManagerService {
   Future<bool> isServiceRunning() async {
     try {
       // Check if something is listening on the default port
-      final socket = await Socket.connect('localhost', 18789, timeout: const Duration(milliseconds: 500));
+      final socket = await Socket.connect(InternetAddress.loopbackIPv4, 18789, timeout: const Duration(milliseconds: 500));
       socket.destroy();
       return true;
     } catch (_) {
