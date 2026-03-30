@@ -51,7 +51,7 @@ To reflect the fluidity of the new Agentic OS, the OHC frontend must adopt the N
 The UI must hide infrastructure complexity (K8s, MCP) behind consumer-grade "Apple-level aesthetics".
 
 *   **Backdrop & Depth**: Glassmorphism is the core structural element.
-    *   `backdrop-filter: blur(15px) saturate(180%)`
+    *   `backdrop-filter: blur(20px) saturate(200%)`
 *   **Surfaces**: Ghostly, semi-transparent layers to indicate dynamic, ephemeral agent capabilities.
     *   `background: rgba(255, 255, 255, 0.05)`
 *   **Borders**: Subtle definition.
