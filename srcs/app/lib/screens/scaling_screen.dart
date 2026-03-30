@@ -33,14 +33,17 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     try {
       await ref.read(apiServiceProvider)!.scaleAgents(_selectedRole, _targetCount.toInt());
       
-      // Simulate real-time logs (since we don't have a real stream yet)
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) setState(() => _logs.add('Allocating compute resources...'));
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _logs.add('Initializing runtime environments...'));
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) setState(() => _logs.add('Injecting context and skills...'));
-      await Future.delayed(const Duration(milliseconds: 400));
+      await for (final log in ref.read(apiServiceProvider)!.streamScaleEvents()) {
+        if (mounted) setState(() => _logs.add(log));
+      }
+
+
+
+
+
+
+
+
       
       if (mounted) {
         setState(() {
