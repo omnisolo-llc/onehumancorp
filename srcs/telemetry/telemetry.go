@@ -278,6 +278,9 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 // Produces no errors.
 // Has no side effects.
 func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, content string) {
+	if Verbosity < 2 {
+		return
+	}
 	slog.InfoContext(ctx, "agent execution trace",
 		"component", "telemetry",
 		"agent_id", agentID,

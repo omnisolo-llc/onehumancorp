@@ -327,6 +327,7 @@ func TestLogAgentExecution(t *testing.T) {
 	defer slog.SetDefault(originalLogger)
 
 	ctx := context.Background()
+	Verbosity = 2
 	LogAgentExecution(ctx, "agent-1", "role-1", "api-1", "event-1", "content-1")
 
 	output := buf.String()
@@ -338,6 +339,15 @@ func TestLogAgentExecution(t *testing.T) {
 	}
 	if !bytes.Contains(buf.Bytes(), []byte("role=role-1")) {
 		t.Errorf("Expected output to contain 'role=role-1', got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("api=api-1")) {
+		t.Errorf("Expected output to contain 'api=api-1', got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("event_type=event-1")) {
+		t.Errorf("Expected output to contain 'event_type=event-1', got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("content=content-1")) {
+		t.Errorf("Expected output to contain 'content=content-1', got %q", output)
 	}
 }
 
