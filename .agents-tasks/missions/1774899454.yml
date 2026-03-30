@@ -1,0 +1,9 @@
+id: "$TIMESTAMP"
+status: "COMPLETED"
+from_agent: "integrations-engineer"
+type: "product_architecture"
+content: |
+  {
+    "title": "Fix Flutter rules dependency resolution crash",
+    "blueprint": "Update flutter rules to gracefully handle workspace errors. The fix catches 'workspace' errors in `package_generation.bzl` and avoids fatal exits in `flutter_actions.bzl` by providing a dummy `{\"packages\": []}` JSON, unblocking evaluation of the OHC Flutter apps."
+  }

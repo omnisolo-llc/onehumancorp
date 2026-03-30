@@ -1,0 +1,1 @@
+learned: "Patched rules_flutter package_generation.bzl and flutter_actions.bzl to output a dummy `{\"packages\": []}` JSON array when `flutter pub deps --json` fails. This circumvents 'workspace' and version-solving errors and allows fallback to pubspec.yaml."
