@@ -2,16 +2,17 @@ package dashboard
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/onehumancorp/mono/srcs/scheduler"
 )
 
 type schedulerCreateRequest struct {
-	AgentID   string               `json:"agentId"`
-	Name      string               `json:"name"`
-	Schedule  scheduler.Schedule  `json:"schedule"`
-	Payload   json.RawMessage      `json:"payload"`
+	AgentID  string             `json:"agentId"`
+	Name     string             `json:"name"`
+	Schedule scheduler.Schedule `json:"schedule"`
+	Payload  json.RawMessage    `json:"payload"`
 }
 
 // handleSchedulerTasks handles listing and creating scheduled tasks.
@@ -33,7 +34,8 @@ func (s *Server) handleSchedulerTasks(w http.ResponseWriter, r *http.Request) {
 
 		task := scheduler.NewTask(s.org.ID, req.AgentID, req.Name, req.Schedule, req.Payload)
 		if err := s.hub.Scheduler().Create(task); err != nil {
-			http.Error(w, "failed to create task: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("error: %v", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 
@@ -64,7 +66,8 @@ func (s *Server) handleSchedulerCancel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.hub.Scheduler().Cancel(req.ID); err != nil {
-		http.Error(w, "failed to cancel task: "+err.Error(), http.StatusNotFound)
+		log.Printf("error: %v", err)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 

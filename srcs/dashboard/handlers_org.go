@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/onehumancorp/mono/srcs/settings"
@@ -47,7 +48,8 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.hub.SettingsStore().Update(req); err != nil {
-			http.Error(w, "failed to save settings: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("error: %v", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 		s.mu.Lock()

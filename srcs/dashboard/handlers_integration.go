@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -53,7 +54,8 @@ func (s *Server) handleIntegrationConnect(w http.ResponseWriter, r *http.Request
 	}
 	updated, err := s.integReg.Connect(req.IntegrationID, req.BaseURL, creds)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		log.Printf("error: %v", err)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	writeJSON(w, updated)
@@ -80,7 +82,8 @@ func (s *Server) handleIntegrationDisconnect(w http.ResponseWriter, r *http.Requ
 	}
 	updated, err := s.integReg.Disconnect(req.IntegrationID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		log.Printf("error: %v", err)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	writeJSON(w, updated)
@@ -121,7 +124,8 @@ func (s *Server) handlePRCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	pr, err := s.integReg.CreatePullRequest(req.IntegrationID, req.Repository, req.Title, req.Body, req.SourceBranch, req.TargetBranch, req.CreatedBy, time.Now().UTC())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("error: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	writeJSON(w, pr)
@@ -148,7 +152,8 @@ func (s *Server) handlePRMerge(w http.ResponseWriter, r *http.Request) {
 	}
 	pr, err := s.integReg.MergePullRequest(req.PRID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("error: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	writeJSON(w, pr)
@@ -175,7 +180,8 @@ func (s *Server) handlePRClose(w http.ResponseWriter, r *http.Request) {
 	}
 	pr, err := s.integReg.ClosePullRequest(req.PRID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("error: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	writeJSON(w, pr)
@@ -216,7 +222,8 @@ func (s *Server) handleIssueCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	issue, err := s.integReg.CreateIssue(req.IntegrationID, req.Project, req.Title, req.Description, req.CreatedBy, integrations.IssuePriority(req.Priority), req.Labels, time.Now().UTC())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("error: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 	writeJSON(w, issue)
@@ -243,7 +250,8 @@ func (s *Server) handleIssueUpdateStatus(w http.ResponseWriter, r *http.Request)
 	}
 	issue, err := s.integReg.UpdateIssueStatus(req.IssueID, integrations.IssueStatus(req.Status))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		log.Printf("error: %v", err)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	writeJSON(w, issue)
@@ -270,7 +278,8 @@ func (s *Server) handleIssueAssign(w http.ResponseWriter, r *http.Request) {
 	}
 	issue, err := s.integReg.AssignIssue(req.IssueID, req.Assignee)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		log.Printf("error: %v", err)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	writeJSON(w, issue)

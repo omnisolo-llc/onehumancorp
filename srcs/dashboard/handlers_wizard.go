@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/onehumancorp/mono/srcs/settings"
@@ -67,7 +68,8 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		http.Error(w, "invalid JSON payload: "+err.Error(), http.StatusBadRequest)
+		log.Printf("error: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 

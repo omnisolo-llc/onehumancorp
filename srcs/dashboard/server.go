@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -25,8 +26,8 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
-	mu                    sync.RWMutex
-	org                   domain.Organization
+	mu  sync.RWMutex
+	org domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub
@@ -598,7 +599,8 @@ func (s *Server) handleDevSeed(w http.ResponseWriter, r *http.Request) {
 
 	org, hub, tracker, err := seededScenario(payload.Scenario, time.Now().UTC())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("error: %v", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
