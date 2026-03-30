@@ -982,10 +982,9 @@ fi
 if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
     mkdir -p "$RUNTIME_WORKSPACE/.dart_tool"
     copy_tree "$DART_TOOL_ABS" "$RUNTIME_WORKSPACE/.dart_tool"
-    # Ensure package_config.json is writable and readable
-    if [ -f "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" ]; then
-        chmod u+rw "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" 2>/dev/null || true
-    fi
+    # rsync -a preserves source permissions (often read-only Bazel artifacts);
+    # make the whole .dart_tool tree writable so Flutter can update it.
+    chmod -R u+rwX "$RUNTIME_WORKSPACE/.dart_tool" 2>/dev/null || true
 fi
 
 if [ -n "$PUB_DEPS_ABS" ] && [ -f "$PUB_DEPS_ABS" ]; then
