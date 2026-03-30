@@ -41,8 +41,9 @@ func TestDelegateSubTask_Success(t *testing.T) {
 
 	var subAgentID string
 	for id := range hub.agents {
-		if id != "SYSTEM" {
+		if id != "SYSTEM" && id != "sender-1" {
 			subAgentID = id
+			break
 		}
 	}
 
@@ -165,8 +166,9 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 
 	var subAgentID string
 	for id := range hub.agents {
-		if id != "SYSTEM" {
+		if id != "SYSTEM" && id != "sender-1" {
 			subAgentID = id
+			break
 		}
 	}
 
