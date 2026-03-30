@@ -2,8 +2,8 @@ package orchestration
 
 import (
 	"context"
-	"testing"
 	"path/filepath"
+	"testing"
 	"time"
 )
 
@@ -190,15 +190,21 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	// Insert missions:
 	// 1. Pending and new (should not be deleted)
 	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('1', 'ROLE', 'task', 'PENDING', datetime('now'))")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// 2. Completed (should be deleted regardless of age)
 	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('2', 'ROLE', 'task', 'COMPLETED', datetime('now'))")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// 3. Pending but old (should be deleted)
 	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('3', 'ROLE', 'task', 'PENDING', datetime('now', '-2 days'))")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Prune missions older than 24 hours
 	err = db.PruneStaleMissions(ctx, 24*time.Hour)
@@ -208,7 +214,9 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 
 	var count int
 	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM agent_missions").Scan(&count)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if count != 1 {
 		t.Fatalf("Expected 1 mission remaining, got %d", count)
@@ -217,7 +225,9 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	// Verify the remaining mission is the correct one
 	var id string
 	err = db.db.QueryRowContext(ctx, "SELECT id FROM agent_missions").Scan(&id)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if id != "1" {
 		t.Fatalf("Expected remaining mission to be '1', got '%s'", id)
@@ -323,11 +333,205 @@ func TestSIPDB_DelegateMission_DBError(t *testing.T) {
 	}
 }
 
-
 func TestSIPDB_InitTables_InvalidDBDir(t *testing.T) {
 	dbPath := t.TempDir()
 	_, err := NewSIPDB(dbPath)
 	if err == nil {
 		t.Fatal("Expected error initializing tables when path is a directory")
+	}
+}
+
+func TestSIPDB_RegisterCapabilityPlugin(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	plugin := CapabilityPlugin{
+		PluginID:    "plugin-1",
+		Name:        "Test Plugin",
+		Version:     "1.0.0",
+		ManifestURL: "http://example.com/manifest.json",
+		Status:      "ACTIVE",
+	}
+
+	err = db.RegisterCapabilityPlugin(ctx, plugin)
+	if err != nil {
+		t.Fatalf("RegisterCapabilityPlugin failed: %v", err)
+	}
+
+	// Update the plugin
+	plugin.Status = "INACTIVE"
+	err = db.RegisterCapabilityPlugin(ctx, plugin)
+	if err != nil {
+		t.Fatalf("RegisterCapabilityPlugin update failed: %v", err)
+	}
+
+	plugins, err := db.GetCapabilityPlugins(ctx, "")
+	if err != nil {
+		t.Fatalf("GetCapabilityPlugins failed: %v", err)
+	}
+	if len(plugins) != 1 {
+		t.Fatalf("expected 1 plugin, got %d", len(plugins))
+	}
+	if plugins[0].Status != "INACTIVE" {
+		t.Fatalf("expected status INACTIVE, got %s", plugins[0].Status)
+	}
+
+	activePlugins, err := db.GetCapabilityPlugins(ctx, "ACTIVE")
+	if err != nil {
+		t.Fatalf("GetCapabilityPlugins with status failed: %v", err)
+	}
+	if len(activePlugins) != 0 {
+		t.Fatalf("expected 0 active plugins, got %d", len(activePlugins))
+	}
+}
+
+func TestSIPDB_StoreAndGetEpisodicMemories(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	memory := EpisodicMemory{
+		MemoryID:        "mem-1",
+		Context:         "User likes dark mode",
+		VectorEmbedding: []byte{1, 2, 3},
+		SourcePlugin:    "plugin-1",
+	}
+
+	err = db.StoreEpisodicMemory(ctx, memory)
+	if err != nil {
+		t.Fatalf("StoreEpisodicMemory failed: %v", err)
+	}
+
+	// Update memory
+	memory.Context = "User likes light mode"
+	err = db.StoreEpisodicMemory(ctx, memory)
+	if err != nil {
+		t.Fatalf("StoreEpisodicMemory update failed: %v", err)
+	}
+
+	memories, err := db.GetEpisodicMemoriesByPlugin(ctx, "")
+	if err != nil {
+		t.Fatalf("GetEpisodicMemoriesByPlugin failed: %v", err)
+	}
+	if len(memories) != 1 {
+		t.Fatalf("expected 1 memory, got %d", len(memories))
+	}
+	if memories[0].Context != "User likes light mode" {
+		t.Fatalf("expected updated context, got %s", memories[0].Context)
+	}
+
+	plugin1Memories, err := db.GetEpisodicMemoriesByPlugin(ctx, "plugin-1")
+	if err != nil {
+		t.Fatalf("GetEpisodicMemoriesByPlugin with plugin failed: %v", err)
+	}
+	if len(plugin1Memories) != 1 {
+		t.Fatalf("expected 1 memory for plugin-1, got %d", len(plugin1Memories))
+	}
+
+	plugin2Memories, err := db.GetEpisodicMemoriesByPlugin(ctx, "plugin-2")
+	if err != nil {
+		t.Fatalf("GetEpisodicMemoriesByPlugin with plugin failed: %v", err)
+	}
+	if len(plugin2Memories) != 0 {
+		t.Fatalf("expected 0 memories for plugin-2, got %d", len(plugin2Memories))
+	}
+}
+
+func TestSIPDB_GetCapabilityPlugins_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	_, err = db.GetCapabilityPlugins(context.Background(), "")
+	if err == nil {
+		t.Fatal("Expected error querying closed DB")
+	}
+
+	_, err = db.GetCapabilityPlugins(context.Background(), "ACTIVE")
+	if err == nil {
+		t.Fatal("Expected error querying closed DB with status")
+	}
+}
+
+func TestSIPDB_GetEpisodicMemoriesByPlugin_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	_, err = db.GetEpisodicMemoriesByPlugin(context.Background(), "")
+	if err == nil {
+		t.Fatal("Expected error querying closed DB")
+	}
+
+	_, err = db.GetEpisodicMemoriesByPlugin(context.Background(), "plugin-1")
+	if err == nil {
+		t.Fatal("Expected error querying closed DB with plugin")
+	}
+}
+
+func TestSIPDB_RegisterCapabilityPlugin_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	err = db.RegisterCapabilityPlugin(context.Background(), CapabilityPlugin{})
+	if err == nil {
+		t.Fatal("Expected error querying closed DB")
+	}
+}
+
+func TestSIPDB_StoreEpisodicMemory_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	err = db.StoreEpisodicMemory(context.Background(), EpisodicMemory{})
+	if err == nil {
+		t.Fatal("Expected error querying closed DB")
+	}
+}
+
+func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'invalid-json', 'PENDING')")
+	// Now we will break the table to cause Scan to fail. Scan fails if the number of columns returned doesn't match the pointers, or type conversion fails.
+	// But type conversion to string rarely fails in sqlite. We can close the rows early maybe?
+	// The easiest way is to mock rows or just change schema, but we can't alter table.
+	// We can drop table and recreate it with only one column!
+	_, err = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
+	_, err = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY, role TEXT, status TEXT)")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'PENDING')")
+
+	_, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	if err == nil {
+		t.Fatal("Expected error from scan due to missing column")
 	}
 }
