@@ -433,6 +433,13 @@ def _flutter_app_impl(ctx):
 
     library_target = ctx.attr.embed[0]
     library_info = library_target[FlutterLibraryInfo]
+    package_root = paths.dirname(library_info.pubspec.short_path)
+    if package_root == ".":
+        package_root = ""
+
+    test_package_subdir = ""
+    if package_root and ctx.label.package.startswith(package_root + "/"):
+        test_package_subdir = ctx.label.package[len(package_root) + 1:]
 
     flutter_toolchain = ctx.toolchains["//flutter:toolchain_type"]
 
@@ -671,6 +678,13 @@ def _flutter_test_impl(ctx):
 
     library_target = ctx.attr.embed[0]
     library_info = library_target[FlutterLibraryInfo]
+    package_root = paths.dirname(library_info.pubspec.short_path)
+    if package_root == ".":
+        package_root = ""
+
+    test_package_subdir = ""
+    if package_root and ctx.label.package.startswith(package_root + "/"):
+        test_package_subdir = ctx.label.package[len(package_root) + 1:]
 
     flutter_toolchain = ctx.toolchains["//flutter:toolchain_type"]
     if not flutter_toolchain.flutterinfo.tool_files:
@@ -680,7 +694,10 @@ def _flutter_test_impl(ctx):
 
     # Build a mapping of relative paths to actual file objects
     test_file_mappings = [
-        (_compute_relative_to_package(ctx, f), f)
+        (
+            f.short_path if package_root and f.short_path.startswith(package_root + "/") else _compute_relative_to_package(ctx, f),
+            f,
+        )
         for f in ctx.files.srcs
     ]
 
@@ -742,7 +759,14 @@ done
     def _escape_pattern(pattern):
         return pattern.replace("\\", "\\\\").replace("'", "\\'")
 
-    test_patterns_literal = "\n".join([_escape_pattern(pattern) for pattern in ctx.attr.test_files])
+    normalized_test_patterns = []
+    for pattern in ctx.attr.test_files:
+        if pattern == "." or pattern.startswith("/") or not test_package_subdir:
+            normalized_test_patterns.append(pattern)
+        else:
+            normalized_test_patterns.append(test_package_subdir + "/" + pattern)
+
+    test_patterns_literal = "\n".join([_escape_pattern(pattern) for pattern in normalized_test_patterns])
 
     test_runner = ctx.actions.declare_file(ctx.label.name + "_test_runner.sh")
 
@@ -966,9 +990,15 @@ export PUB_CACHE="$RUNTIME_PUB_CACHE"
 export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
 export PATH="$FLUTTER_BIN_DIR:$PATH"
+PYTHON_BIN="$(command -v python3 || command -v python || true)"
+if [ -z "$PYTHON_BIN" ]; then
+    echo "✗ python interpreter not found on PATH" | tee -a "$TEST_LOG"
+    exit 1
+fi
 
 # Regenerate package_config.json with correct paths to RUNTIME_PUB_CACHE
-# This ensures package imports resolve correctly in the test environment
+# directly from Bazel-generated pub_deps.json so tests stay hermetic and do not
+# require a runtime `flutter pub get`.
 echo "Regenerating package_config.json for test runtime..."
 pushd "$RUNTIME_WORKSPACE" >/dev/null
 
@@ -979,12 +1009,97 @@ if [ -n "$PACKAGE_DIR" ]; then
     echo "Entered package directory: $(pwd)"
 fi
 
-PUB_GET_OUT="$LOG_ROOT/flutter_pub_get.log"
-if "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_OUT" 2>&1; then
-    echo "✓ Package config regenerated successfully (offline)" | tee -a "$TEST_LOG"
+export PUBSPEC_PATH="$(pwd)/pubspec.yaml"
+export PUB_DEPS_PATH="$(pwd)/pub_deps.json"
+export PACKAGE_CONFIG_PATH="$(pwd)/.dart_tool/package_config.json"
+PACKAGE_CONFIG_OUT="$LOG_ROOT/package_config_regen.log"
+if "$PYTHON_BIN" > "$PACKAGE_CONFIG_OUT" 2>&1 <<'PY'
+import json
+import os
+
+pubspec_path = os.environ["PUBSPEC_PATH"]
+deps_path = os.environ["PUB_DEPS_PATH"]
+config_path = os.environ["PACKAGE_CONFIG_PATH"]
+cache_root = os.environ["PUB_CACHE"]
+workspace_root = os.getcwd()
+
+name = ""
+language_spec = ""
+
+with open(pubspec_path, "r", encoding="utf-8") as fh:
+    lines = fh.readlines()
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("name:") and not name:
+        name = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+
+for i, line in enumerate(lines):
+    if line.strip().startswith("environment:"):
+        for j in range(i + 1, len(lines)):
+            subline = lines[j].strip()
+            if subline.startswith("sdk:"):
+                language_spec = subline.split(":", 1)[1].strip().strip('"').strip("'")
+                break
+            if subline and not subline.startswith("#") and ":" in subline and not subline.startswith(("flutter:", "flutter_test:", "dart:")):
+                break
+        break
+
+def _parse_language(spec):
+    if not spec:
+        return "3.0"
+    spec = spec.replace(">=", "").replace("<", "").split()
+    if spec:
+        return spec[0].split("+")[0]
+    return "3.0"
+
+language_version = _parse_language(language_spec)
+
+with open(deps_path, "r", encoding="utf-8") as fh:
+    data = json.load(fh)
+
+packages = []
+for entry in data.get("packages", []):
+    pkg_name = entry.get("name")
+    source = entry.get("source")
+    version = entry.get("version")
+    if not pkg_name:
+        continue
+    if source == "hosted" and version:
+        root_path = os.path.join(cache_root, "hosted", "pub.dev", pkg_name + "-" + version)
+        if not os.path.isdir(root_path):
+            continue
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
+        packages.append(dict(
+            name = pkg_name,
+            rootUri = rel,
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
+    elif source == "root":
+        packages.append(dict(
+            name = pkg_name,
+            rootUri = ".",
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
+
+os.makedirs(os.path.dirname(config_path), exist_ok=True)
+config = dict(
+    configVersion = 2,
+    generated = True,
+    generator = "rules_flutter",
+    packages = packages,
+)
+with open(config_path, "w", encoding="utf-8") as fh:
+    json.dump(config, fh, indent=2)
+    fh.write("\\n")
+PY
+then
+    echo "✓ Package config regenerated successfully" | tee -a "$TEST_LOG"
 else
-    echo "✗ flutter pub get --offline failed in test runtime" | tee -a "$TEST_LOG"
-    cat "$PUB_GET_OUT" | tee -a "$TEST_LOG"
+    echo "✗ package_config.json regeneration failed" | tee -a "$TEST_LOG"
+    cat "$PACKAGE_CONFIG_OUT" | tee -a "$TEST_LOG"
     if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
     popd >/dev/null
     exit 1
@@ -1065,7 +1180,7 @@ exit "$RESULT"
         test_patterns = test_patterns_literal,
         coverage_flag = "true" if ctx.attr.coverage else "false",
         coverage_min = ctx.attr.coverage_min,
-        package_dir = ctx.label.package if ctx.file.workspace_pubspec else "",
+        package_dir = package_root,
     )
 
     ctx.actions.write(
