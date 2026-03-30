@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -61,8 +62,8 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 
 	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	tracker := billing.NewTracker(billing.DefaultCatalog)
@@ -160,7 +161,7 @@ func TestHandleMeetingsReturnsJSONPayload(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var meetings []orchestration.MeetingRoom
+	var meetings []handoff.MeetingRoom
 	if err := json.NewDecoder(resp.Body).Decode(&meetings); err != nil {
 		t.Fatalf("decode meetings response: %v", err)
 	}
@@ -282,8 +283,8 @@ func TestHandleDevSeedResetsServerState(t *testing.T) {
 
 	var payload struct {
 		Organization domain.Organization         `json:"organization"`
-		Meetings     []orchestration.MeetingRoom `json:"meetings"`
-		Agents       []orchestration.Agent       `json:"agents"`
+		Meetings     []handoff.MeetingRoom `json:"meetings"`
+		Agents       []handoff.Agent       `json:"agents"`
 	}
 	if err := json.NewDecoder(dashboardResp.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode dashboard payload: %v", err)
@@ -364,7 +365,7 @@ func TestHandleSendMessageRejectsConcurrentApprovals(t *testing.T) {
 
 	app.mu.Lock()
 	app.hub.OpenMeetingWithAgenda("test-meeting", "Test", []string{"pm-1", "CEO"})
-	_ = app.hub.Publish(orchestration.Message{
+	_ = app.hub.Publish(handoff.Message{
 		ID:        "msg-1",
 		FromAgent: "pm-1",
 		ToAgent:   "CEO",
@@ -372,7 +373,7 @@ func TestHandleSendMessageRejectsConcurrentApprovals(t *testing.T) {
 		Content:   "Please approve.",
 		MeetingID: "test-meeting",
 	})
-	_ = app.hub.Publish(orchestration.Message{
+	_ = app.hub.Publish(handoff.Message{
 		ID:        "msg-2",
 		FromAgent: "CEO",
 		ToAgent:   "pm-1",
@@ -429,25 +430,25 @@ func TestWriteJSONSetsContentTypeAndBody(t *testing.T) {
 }
 
 func TestSummarizeStatusesReturnsOrderedCounts(t *testing.T) {
-	statuses := summarizeStatuses([]orchestration.Agent{
-		{ID: "a", Status: orchestration.StatusInMeeting},
-		{ID: "b", Status: orchestration.StatusActive},
-		{ID: "c", Status: orchestration.StatusInMeeting},
+	statuses := summarizeStatuses([]handoff.Agent{
+		{ID: "a", Status: handoff.StatusInMeeting},
+		{ID: "b", Status: handoff.StatusActive},
+		{ID: "c", Status: handoff.StatusInMeeting},
 	})
 
 	if len(statuses) != 4 {
 		t.Fatalf("expected 4 status buckets, got %d", len(statuses))
 	}
-	if statuses[0].Status != orchestration.StatusActive || statuses[0].Count != 1 {
+	if statuses[0].Status != handoff.StatusActive || statuses[0].Count != 1 {
 		t.Fatalf("unexpected active bucket: %+v", statuses[0])
 	}
-	if statuses[1].Status != orchestration.StatusBlocked || statuses[1].Count != 0 {
+	if statuses[1].Status != handoff.StatusBlocked || statuses[1].Count != 0 {
 		t.Fatalf("unexpected blocked bucket: %+v", statuses[1])
 	}
-	if statuses[2].Status != orchestration.StatusIdle || statuses[2].Count != 0 {
+	if statuses[2].Status != handoff.StatusIdle || statuses[2].Count != 0 {
 		t.Fatalf("unexpected idle bucket: %+v", statuses[2])
 	}
-	if statuses[3].Status != orchestration.StatusInMeeting || statuses[3].Count != 2 {
+	if statuses[3].Status != handoff.StatusInMeeting || statuses[3].Count != 2 {
 		t.Fatalf("unexpected in-meeting bucket: %+v", statuses[3])
 	}
 }
@@ -474,7 +475,7 @@ func TestHandleHireAgentAddsToHub(t *testing.T) {
 	}
 
 	var snapshot struct {
-		Agents []orchestration.Agent `json:"agents"`
+		Agents []handoff.Agent `json:"agents"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&snapshot); err != nil {
 		t.Fatalf("decode hire response: %v", err)

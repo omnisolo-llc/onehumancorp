@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"errors"
 	"fmt"
 	"strings"
@@ -63,7 +64,7 @@ type Pipeline struct {
 	CreatedAt time.Time
 }
 
-// SpecApprovedEvent models the parsed content of an EventSpecApproved message.  Constraints: The Branch field must not be empty.
+// SpecApprovedEvent models the parsed content of an handoff.EventSpecApproved message.  Constraints: The Branch field must not be empty.
 // Accepts no parameters.
 // Returns nothing.
 // Produces no errors.
@@ -164,14 +165,14 @@ func ParseSpecApproved(content string) (SpecApprovedEvent, error) {
 // HandleSpecApproved processes a specification approval, creates a tracking pipeline, and dispatches an implementation task.
 //
 // Accepts parameters:
-//   - msg: orchestration.Message; The EventSpecApproved message containing branch and detail data.
+//   - msg: handoff.Message; The handoff.EventSpecApproved message containing branch and detail data.
 //
 // Returns An error if parsing fails or if the resulting task message cannot be published.
 //
 // Produces errors: Fails if the message content format is invalid.
 //
 // Has side effects: Modifies the orchestrator's internal pipeline map and publishes a task to the Hub.
-func (o *Orchestrator) HandleSpecApproved(msg orchestration.Message) error {
+func (o *Orchestrator) HandleSpecApproved(msg handoff.Message) error {
 	event, err := ParseSpecApproved(msg.Content)
 	if err != nil {
 		return err
@@ -191,11 +192,11 @@ func (o *Orchestrator) HandleSpecApproved(msg orchestration.Message) error {
 	o.mu.Unlock()
 
 	// Assign task to SWE
-	taskMsg := orchestration.Message{
+	taskMsg := handoff.Message{
 		ID:         fmt.Sprintf("msg-%d", time.Now().UnixNano()),
 		FromAgent:  "system-hub", // Represents the orchestrator
 		ToAgent:    sweAgentID,
-		Type:       orchestration.EventTask,
+		Type:       handoff.EventTask,
 		Content:    fmt.Sprintf("Implement %s on branch %s", event.Details, event.Branch),
 		OccurredAt: time.Now().UTC(),
 	}
@@ -206,14 +207,14 @@ func (o *Orchestrator) HandleSpecApproved(msg orchestration.Message) error {
 // HandlePRCreated advances the pipeline state to testing and triggers a mock CI job.
 //
 // Accepts parameters:
-//   - msg: orchestration.Message; The PR creation message where the content is the branch name.
+//   - msg: handoff.Message; The PR creation message where the content is the branch name.
 //
 // Returns An error if the pipeline for the associated branch does not exist.
 //
 // Produces errors: Fails if the pipeline is untracked.
 //
 // Has side effects: Updates the pipeline state to StateTesting and appends a new job to the internal ciJobs slice.
-func (o *Orchestrator) HandlePRCreated(msg orchestration.Message) error {
+func (o *Orchestrator) HandlePRCreated(msg handoff.Message) error {
 	branch := msg.Content // Assuming content contains just the branch name for simplicity
 
 	o.mu.Lock()
@@ -239,14 +240,14 @@ func (o *Orchestrator) HandlePRCreated(msg orchestration.Message) error {
 // HandleTestResults processes the outcome of a CI run and determines the next pipeline state.
 //
 // Accepts parameters:
-//   - msg: orchestration.Message; The CI result message indicating pass or fail, including branch and logs.
+//   - msg: handoff.Message; The CI result message indicating pass or fail, including branch and logs.
 //
 // Returns An error if the pipeline is missing or if the test result type is unknown.
 //
-// Produces errors: Fails if the pipeline cannot be found or if the message type is not EventTestsPassed or EventTestsFailed.
+// Produces errors: Fails if the pipeline cannot be found or if the message type is not handoff.EventTestsPassed or handoff.EventTestsFailed.
 //
 // Has side effects: Mutates pipeline state, publishes an ApprovalNeeded event on success, or a TestsFailed event on failure.
-func (o *Orchestrator) HandleTestResults(msg orchestration.Message) error {
+func (o *Orchestrator) HandleTestResults(msg handoff.Message) error {
 	// ⚡ BOLT: [context window parsing/summarization overhead] - Randomized Selection from Top 5
 	// Extracted zero-allocation string manipulations to parse test result payloads strictly without triggering O(N) memory allocations via strings.Split
 
@@ -288,17 +289,17 @@ func (o *Orchestrator) HandleTestResults(msg orchestration.Message) error {
 		return errors.New("pipeline not found for branch")
 	}
 
-	if msg.Type == orchestration.EventTestsPassed {
+	if msg.Type == handoff.EventTestsPassed {
 		o.mu.Lock()
 		pipeline.State = StateStagingReady
 		o.mu.Unlock()
 
-		// Emitting EventApprovalNeeded to CEO via Hub
-		approvalMsg := orchestration.Message{
+		// Emitting handoff.EventApprovalNeeded to CEO via Hub
+		approvalMsg := handoff.Message{
 			ID:         fmt.Sprintf("msg-%d", time.Now().UnixNano()),
 			FromAgent:  "system-hub",
 			ToAgent:    "ceo-1",
-			Type:       orchestration.EventApprovalNeeded,
+			Type:       handoff.EventApprovalNeeded,
 			Content:    fmt.Sprintf("branch=%s,url=https://staging.onehumancorp.com/%s", branch, branch),
 			OccurredAt: time.Now().UTC(),
 		}
@@ -306,18 +307,18 @@ func (o *Orchestrator) HandleTestResults(msg orchestration.Message) error {
 		// but typically system-hub would be registered elsewhere. We will rely on the Hub publish
 		// which requires FromAgent to be registered.
 		return o.hub.Publish(approvalMsg)
-	} else if msg.Type == orchestration.EventTestsFailed {
+	} else if msg.Type == handoff.EventTestsFailed {
 		// Notify SWE to auto-fix
 		o.mu.Lock()
 		pipeline.State = StateImplementing // Revert back to implementing for fixes
 		sweID := pipeline.AgentID
 		o.mu.Unlock()
 
-		failMsg := orchestration.Message{
+		failMsg := handoff.Message{
 			ID:         fmt.Sprintf("msg-%d", time.Now().UnixNano()),
 			FromAgent:  "system-hub",
 			ToAgent:    sweID,
-			Type:       orchestration.EventTestsFailed,
+			Type:       handoff.EventTestsFailed,
 			Content:    fmt.Sprintf("branch=%s,logs=%s", branch, logs),
 			OccurredAt: time.Now().UTC(),
 		}
@@ -349,11 +350,11 @@ func (o *Orchestrator) RejectStaging(branch string, reason string) error {
 	sweID := pipeline.AgentID
 	o.mu.Unlock()
 
-	rejectMsg := orchestration.Message{
+	rejectMsg := handoff.Message{
 		ID:         fmt.Sprintf("msg-%d", time.Now().UnixNano()),
 		FromAgent:  "ceo-1",
 		ToAgent:    sweID,
-		Type:       orchestration.EventTask, // Send as a new task to fix the rejection
+		Type:       handoff.EventTask, // Send as a new task to fix the rejection
 		Content:    fmt.Sprintf("Rejection on branch %s: %s", branch, reason),
 		OccurredAt: time.Now().UTC(),
 	}
@@ -369,7 +370,7 @@ func (o *Orchestrator) RejectStaging(branch string, reason string) error {
 //
 // Produces errors: Fails if the pipeline does not exist or if it has not yet passed testing and staging.
 //
-// Has side effects: Sets the pipeline state to StateDeployed and publishes an EventPRMerged message to the Hub.
+// Has side effects: Sets the pipeline state to StateDeployed and publishes an handoff.EventPRMerged message to the Hub.
 func (o *Orchestrator) ApproveForProduction(branch string) error {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -387,12 +388,12 @@ func (o *Orchestrator) ApproveForProduction(branch string) error {
 
 	// Conceptually apply to prod namespace here
 
-	// Simulate EventPRMerged (though maybe Github handles this, we do it here for completeness)
-	mergeMsg := orchestration.Message{
+	// Simulate handoff.EventPRMerged (though maybe Github handles this, we do it here for completeness)
+	mergeMsg := handoff.Message{
 		ID:         fmt.Sprintf("msg-%d", time.Now().UnixNano()),
 		FromAgent:  "system-hub",
 		ToAgent:    "system-hub", // Broadcast or store internally
-		Type:       orchestration.EventPRMerged,
+		Type:       handoff.EventPRMerged,
 		Content:    fmt.Sprintf("branch=%s", branch),
 		OccurredAt: time.Now().UTC(),
 	}

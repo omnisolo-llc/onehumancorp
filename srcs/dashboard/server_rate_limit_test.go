@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -32,9 +33,9 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:     "agent-1",
-		Status: orchestration.StatusActive,
+		Status: handoff.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -59,8 +60,8 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 		}
 
 		a, exists := hub.Agent("agent-1")
-		if !exists || a.Status != orchestration.StatusWaitingForTools {
-			t.Errorf("expected agent status %s, got %s", orchestration.StatusWaitingForTools, a.Status)
+		if !exists || a.Status != handoff.StatusWaitingForTools {
+			t.Errorf("expected agent status %s, got %s", handoff.StatusWaitingForTools, a.Status)
 		}
 	})
 }
@@ -81,9 +82,9 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:     "agent-2",
-		Status: orchestration.StatusActive,
+		Status: handoff.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -176,9 +177,9 @@ func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:     "agent-3",
-		Status: orchestration.StatusActive,
+		Status: handoff.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -238,9 +239,9 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 		rateLimitStates: make(map[string]*RateLimitState),
 	}
 
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:     "agent-max",
-		Status: orchestration.StatusActive,
+		Status: handoff.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -301,9 +302,9 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 		dynamicMCPTools: []MCPTool{},
 	}
 
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:     "agent-limited",
-		Status: orchestration.StatusActive,
+		Status: handoff.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 
@@ -399,9 +400,9 @@ func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 		},
 	}
 
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:     "agent-success",
-		Status: orchestration.StatusActive,
+		Status: handoff.StatusActive,
 	}
 	hub.RegisterAgent(agent)
 

@@ -20,3 +20,21 @@ proto_ts_library(
     protos = ":hub_proto",
     visibility = ["//visibility:public"],
 )
+
+
+load("@rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "handoff_proto",
+    srcs = ["handoff.proto"],
+    visibility = ["//visibility:public"],
+    deps = [":hub_proto"],
+)
+
+go_proto_library(
+    name = "handoff_go_proto",
+    protos = [":handoff_proto"],
+    importpath = "github.com/onehumancorp/mono/srcs/proto/handoff",
+    visibility = ["//visibility:public"],
+    deps = [":hub_go_proto"],
+)

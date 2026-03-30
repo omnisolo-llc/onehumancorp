@@ -10,6 +10,7 @@ go_library(
         "//srcs/billing",
         "//srcs/dashboard",
         "//srcs/domain",
+        "//srcs/handoff",
         "//srcs/integrations/chatwoot",
         "//srcs/orchestration",
         "//srcs/scheduler",

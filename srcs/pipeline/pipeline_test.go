@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"testing"
 	"time"
 
@@ -62,26 +63,26 @@ func setupHubAndOrchestrator(t *testing.T) (*orchestration.Hub, *Orchestrator) {
 	t.Helper()
 	hub := orchestration.NewHub()
 
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "system-hub",
 		Name:           "System Hub",
 		Role:           "System",
 		OrganizationID: "org-1",
-		Status:         orchestration.StatusActive,
+		Status:         handoff.StatusActive,
 	})
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "swe-1",
 		Name:           "SWE Agent",
 		Role:           "Software Engineer",
 		OrganizationID: "org-1",
-		Status:         orchestration.StatusIdle,
+		Status:         handoff.StatusIdle,
 	})
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "ceo-1",
 		Name:           "CEO Agent",
 		Role:           "CEO",
 		OrganizationID: "org-1",
-		Status:         orchestration.StatusActive,
+		Status:         handoff.StatusActive,
 	})
 
 	orc := NewOrchestrator(hub)
@@ -91,10 +92,10 @@ func setupHubAndOrchestrator(t *testing.T) (*orchestration.Hub, *Orchestrator) {
 func TestHandleSpecApproved(t *testing.T) {
 	hub, orc := setupHubAndOrchestrator(t)
 
-	msg := orchestration.Message{
+	msg := handoff.Message{
 		ID:         "msg-1",
 		FromAgent:  "ceo-1",
-		Type:       orchestration.EventSpecApproved,
+		Type:       handoff.EventSpecApproved,
 		Content:    "branch=feat-123,details=Implement something",
 		OccurredAt: time.Now(),
 	}
@@ -116,14 +117,14 @@ func TestHandleSpecApproved(t *testing.T) {
 	if len(inbox) != 1 {
 		t.Fatalf("expected 1 task in swe-1 inbox, got %d", len(inbox))
 	}
-	if inbox[0].Type != orchestration.EventTask {
-		t.Errorf("expected message type %s, got %s", orchestration.EventTask, inbox[0].Type)
+	if inbox[0].Type != handoff.EventTask {
+		t.Errorf("expected message type %s, got %s", handoff.EventTask, inbox[0].Type)
 	}
 }
 
 func TestHandleSpecApproved_Error(t *testing.T) {
 	_, orc := setupHubAndOrchestrator(t)
-	err := orc.HandleSpecApproved(orchestration.Message{Content: "invalid"})
+	err := orc.HandleSpecApproved(handoff.Message{Content: "invalid"})
 	if err == nil {
 		t.Fatal("expected error for invalid content")
 	}
@@ -142,10 +143,10 @@ func TestHandlePRCreated(t *testing.T) {
 		CreatedAt: time.Now(),
 	}
 
-	msg := orchestration.Message{
+	msg := handoff.Message{
 		ID:         "msg-2",
 		FromAgent:  "swe-1",
-		Type:       orchestration.EventPRCreated,
+		Type:       handoff.EventPRCreated,
 		Content:    "feat-123",
 		OccurredAt: time.Now(),
 	}
@@ -171,7 +172,7 @@ func TestHandlePRCreated(t *testing.T) {
 
 func TestHandlePRCreated_PipelineNotFound(t *testing.T) {
 	_, orc := setupHubAndOrchestrator(t)
-	err := orc.HandlePRCreated(orchestration.Message{Content: "nonexistent"})
+	err := orc.HandlePRCreated(handoff.Message{Content: "nonexistent"})
 	if err == nil {
 		t.Fatal("expected error for nonexistent pipeline")
 	}
@@ -188,10 +189,10 @@ func TestHandleTestResults_Passed(t *testing.T) {
 		AgentID: "swe-1",
 	}
 
-	msg := orchestration.Message{
+	msg := handoff.Message{
 		ID:         "msg-3",
 		FromAgent:  "system-hub",
-		Type:       orchestration.EventTestsPassed,
+		Type:       handoff.EventTestsPassed,
 		Content:    "branch=feat-123",
 		OccurredAt: time.Now(),
 	}
@@ -210,8 +211,8 @@ func TestHandleTestResults_Passed(t *testing.T) {
 	if len(ceoInbox) != 1 {
 		t.Fatalf("expected 1 approval request in ceo-1 inbox, got %d", len(ceoInbox))
 	}
-	if ceoInbox[0].Type != orchestration.EventApprovalNeeded {
-		t.Errorf("expected %s, got %s", orchestration.EventApprovalNeeded, ceoInbox[0].Type)
+	if ceoInbox[0].Type != handoff.EventApprovalNeeded {
+		t.Errorf("expected %s, got %s", handoff.EventApprovalNeeded, ceoInbox[0].Type)
 	}
 }
 
@@ -224,10 +225,10 @@ func TestHandleTestResults_Failed(t *testing.T) {
 		AgentID: "swe-1",
 	}
 
-	msg := orchestration.Message{
+	msg := handoff.Message{
 		ID:         "msg-4",
 		FromAgent:  "system-hub",
-		Type:       orchestration.EventTestsFailed,
+		Type:       handoff.EventTestsFailed,
 		Content:    "branch=feat-123,logs=compile error",
 		OccurredAt: time.Now(),
 	}
@@ -246,14 +247,14 @@ func TestHandleTestResults_Failed(t *testing.T) {
 	if len(sweInbox) != 1 {
 		t.Fatalf("expected 1 task in swe-1 inbox, got %d", len(sweInbox))
 	}
-	if sweInbox[0].Type != orchestration.EventTestsFailed {
-		t.Errorf("expected %s, got %s", orchestration.EventTestsFailed, sweInbox[0].Type)
+	if sweInbox[0].Type != handoff.EventTestsFailed {
+		t.Errorf("expected %s, got %s", handoff.EventTestsFailed, sweInbox[0].Type)
 	}
 }
 
 func TestHandleTestResults_UnknownPipeline(t *testing.T) {
 	_, orc := setupHubAndOrchestrator(t)
-	err := orc.HandleTestResults(orchestration.Message{Content: "nonexistent", Type: orchestration.EventTestsPassed})
+	err := orc.HandleTestResults(handoff.Message{Content: "nonexistent", Type: handoff.EventTestsPassed})
 	if err == nil {
 		t.Fatal("expected error for nonexistent pipeline")
 	}
@@ -262,7 +263,7 @@ func TestHandleTestResults_UnknownPipeline(t *testing.T) {
 func TestHandleTestResults_UnknownType(t *testing.T) {
 	_, orc := setupHubAndOrchestrator(t)
 	orc.pipelines["feat-123"] = &Pipeline{Branch: "feat-123"}
-	err := orc.HandleTestResults(orchestration.Message{Content: "feat-123", Type: "UnknownType"})
+	err := orc.HandleTestResults(handoff.Message{Content: "feat-123", Type: "UnknownType"})
 	if err == nil {
 		t.Fatal("expected error for unknown test result type")
 	}
@@ -352,9 +353,9 @@ func TestE2EPipeline(t *testing.T) {
 	hub, orc := setupHubAndOrchestrator(t)
 
 	// 1. PM approves spec
-	specMsg := orchestration.Message{
+	specMsg := handoff.Message{
 		FromAgent: "ceo-1",
-		Type:      orchestration.EventSpecApproved,
+		Type:      handoff.EventSpecApproved,
 		Content:   "branch=feat-e2e,details=Analytics",
 	}
 	if err := orc.HandleSpecApproved(specMsg); err != nil {
@@ -367,9 +368,9 @@ func TestE2EPipeline(t *testing.T) {
 	}
 
 	// 2. SWE creates PR (code ready)
-	prMsg := orchestration.Message{
+	prMsg := handoff.Message{
 		FromAgent: "swe-1",
-		Type:      orchestration.EventPRCreated,
+		Type:      handoff.EventPRCreated,
 		Content:   "feat-e2e",
 	}
 	if err := orc.HandlePRCreated(prMsg); err != nil {
@@ -382,9 +383,9 @@ func TestE2EPipeline(t *testing.T) {
 	}
 
 	// 3. Tests Pass
-	testMsg := orchestration.Message{
+	testMsg := handoff.Message{
 		FromAgent: "system-hub",
-		Type:      orchestration.EventTestsPassed,
+		Type:      handoff.EventTestsPassed,
 		Content:   "branch=feat-e2e",
 	}
 	if err := orc.HandleTestResults(testMsg); err != nil {

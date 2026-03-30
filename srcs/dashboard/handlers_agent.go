@@ -1,13 +1,13 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/agents"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 // Handles hiring a new agent.
@@ -56,15 +56,14 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	id := s.org.ID + "-agent-" + time.Now().UTC().Format("20060102150405000")
-	agent := orchestration.Agent{
+	agent := handoff.Agent{
 		ID:             id,
 		Name:           req.Name,
 		Role:           req.Role,
 		OrganizationID: s.org.ID,
-		Status:         orchestration.StatusIdle,
+		Status:         handoff.StatusIdle,
 		ProviderType:   providerType,
-		Region:         req.Region,
-	}
+			}
 	s.hub.RegisterAgent(agent)
 	snapshot := s.snapshotLocked()
 	s.mu.Unlock()
@@ -126,9 +125,9 @@ func (s *Server) handleDelegateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message := orchestration.Message{
+	message := handoff.Message{
 		ID:         "web-" + time.Now().UTC().Format("20060102150405.000000000"),
-		Type:       orchestration.EventTask,
+		Type:       handoff.EventTask,
 		Content:    req.Content,
 		MeetingID:  req.MeetingID,
 		OccurredAt: time.Now().UTC(),

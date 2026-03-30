@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,9 +19,9 @@ import (
 func TestMultiAgentMeetingInteraction(t *testing.T) {
 	hub := orchestration.NewHub()
 
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Alice", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Bob", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
-	hub.RegisterAgent(orchestration.Agent{ID: "qa-1", Name: "Carol", Role: "QA_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(handoff.Agent{ID: "pm-1", Name: "Alice", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
+	hub.RegisterAgent(handoff.Agent{ID: "swe-1", Name: "Bob", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
+	hub.RegisterAgent(handoff.Agent{ID: "qa-1", Name: "Carol", Role: "QA_ENGINEER", OrganizationID: "org-1"})
 
 	hub.OpenMeetingWithAgenda("sprint-1", "Plan Q3 sprint", []string{"pm-1", "swe-1", "qa-1"})
 
@@ -35,10 +36,10 @@ func TestMultiAgentMeetingInteraction(t *testing.T) {
 	}
 
 	for _, m := range messages {
-		if err := hub.Publish(orchestration.Message{
+		if err := hub.Publish(handoff.Message{
 			ID:        fmt.Sprintf("msg-%s-%d", m.from, time.Now().UnixNano()),
 			FromAgent: m.from,
-			Type:      orchestration.EventTask,
+			Type:      handoff.EventTask,
 			Content:   m.content,
 			MeetingID: "sprint-1",
 		}); err != nil {
@@ -73,7 +74,7 @@ func TestMultiAgentMeetingInteraction(t *testing.T) {
 		if !ok {
 			t.Fatalf("agent %s not found", id)
 		}
-		if agent.Status != orchestration.StatusInMeeting {
+		if agent.Status != handoff.StatusInMeeting {
 			t.Errorf("agent %s status = %q, want IN_MEETING", id, agent.Status)
 		}
 	}
@@ -168,13 +169,13 @@ func TestHumanChatWithAgent(t *testing.T) {
 	// Set up the orchestration hub with a router and a support agent.
 	hub := orchestration.NewHub()
 	// The "router" is the system that dispatches inbound human messages to agents.
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "router",
 		Name:           "Router",
 		Role:           "ROUTER",
 		OrganizationID: "org-1",
 	})
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "support-1",
 		Name:           "Support Agent",
 		Role:           "CUSTOMER_SUPPORT",
@@ -223,11 +224,11 @@ func TestHumanChatWithAgent(t *testing.T) {
 	}
 
 	// The router dispatches the human message to the support agent's inbox.
-	if err := hub.Publish(orchestration.Message{
+	if err := hub.Publish(handoff.Message{
 		ID:        "human-chat-1",
 		FromAgent: "router",
 		ToAgent:   "support-1",
-		Type:      orchestration.EventTask,
+		Type:      handoff.EventTask,
 		Content:   fmt.Sprintf("Inbound customer query: %s", incomingMsgs[0].Content),
 	}); err != nil {
 		t.Fatalf("hub dispatch to support agent: %v", err)

@@ -1,13 +1,13 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {
@@ -331,7 +331,7 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 	for _, agent := range agents {
 		if agent.Role == req.Role {
 			currentCount++
-			if agent.Status == orchestration.StatusIdle {
+			if agent.Status == handoff.StatusIdle {
 				idleAgentIDs = append(idleAgentIDs, agent.ID)
 			} else {
 				activeAgentIDs = append(activeAgentIDs, agent.ID)
@@ -345,12 +345,12 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 	if diff > 0 {
 		for i := 0; i < diff; i++ {
 			id := fmt.Sprintf("%s-agent-%s-%d", orgID, nowStr, i)
-			newAgent := orchestration.Agent{
+			newAgent := handoff.Agent{
 				ID:             id,
 				Name:           req.Role,
 				Role:           req.Role,
 				OrganizationID: orgID,
-				Status:         orchestration.StatusIdle,
+				Status:         handoff.StatusIdle,
 			}
 			s.hub.RegisterAgent(newAgent)
 		}

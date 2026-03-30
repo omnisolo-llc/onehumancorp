@@ -11,6 +11,7 @@ package integration
 //     a Minimax reasoning call so the conversation is fully autonomous.
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"context"
 	"fmt"
 	"os"
@@ -45,13 +46,13 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	hub := orchestration.NewHub()
 	hub.SetMinimaxAPIKey(key)
 
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "pm-e2e",
 		Name:           "Product Manager",
 		Role:           "PRODUCT_MANAGER",
 		OrganizationID: "org-e2e",
 	})
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "swe-e2e",
 		Name:           "Software Engineer",
 		Role:           "SOFTWARE_ENGINEER",
@@ -60,11 +61,11 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 
 	// PM assigns a concrete task to the SWE.
 	taskContent := "Implement a simple HTTP health-check endpoint that returns 200 OK."
-	if err := hub.Publish(orchestration.Message{
+	if err := hub.Publish(handoff.Message{
 		ID:         "task-e2e-1",
 		FromAgent:  "pm-e2e",
 		ToAgent:    "swe-e2e",
-		Type:       orchestration.EventTask,
+		Type:       handoff.EventTask,
 		Content:    taskContent,
 		OccurredAt: time.Now().UTC(),
 	}); err != nil {
@@ -100,11 +101,11 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	}
 
 	// SWE publishes the implementation plan back to the PM.
-	if err := hub.Publish(orchestration.Message{
+	if err := hub.Publish(handoff.Message{
 		ID:         "reply-e2e-1",
 		FromAgent:  "swe-e2e",
 		ToAgent:    "pm-e2e",
-		Type:       orchestration.EventHandoff,
+		Type:       handoff.EventHandoff,
 		Content:    reasoningResult,
 		OccurredAt: time.Now().UTC(),
 	}); err != nil {
@@ -144,19 +145,19 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	hub := orchestration.NewHub()
 	hub.SetMinimaxAPIKey(key)
 
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "pm-meet",
 		Name:           "Alice (PM)",
 		Role:           "PRODUCT_MANAGER",
 		OrganizationID: "org-meet",
 	})
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "swe-meet",
 		Name:           "Bob (SWE)",
 		Role:           "SOFTWARE_ENGINEER",
 		OrganizationID: "org-meet",
 	})
-	hub.RegisterAgent(orchestration.Agent{
+	hub.RegisterAgent(handoff.Agent{
 		ID:             "qa-meet",
 		Name:           "Carol (QA)",
 		Role:           "QA_TESTER",
@@ -209,10 +210,10 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 			t.Fatalf("turn %d (%s) returned empty Minimax response", i+1, turn.role)
 		}
 
-		if err := hub.Publish(orchestration.Message{
+		if err := hub.Publish(handoff.Message{
 			ID:         fmt.Sprintf("meet-msg-%d", i+1),
 			FromAgent:  turn.fromAgent,
-			Type:       orchestration.EventTask,
+			Type:       handoff.EventTask,
 			Content:    content,
 			MeetingID:  "sprint-e2e",
 			OccurredAt: time.Now().UTC(),
@@ -254,7 +255,7 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		if !ok {
 			t.Fatalf("agent %s not found after meeting", id)
 		}
-		if agent.Status != orchestration.StatusInMeeting {
+		if agent.Status != handoff.StatusInMeeting {
 			t.Errorf("agent %s status = %q, want IN_MEETING", id, agent.Status)
 		}
 	}

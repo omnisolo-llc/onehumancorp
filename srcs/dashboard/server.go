@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -63,15 +64,15 @@ type RateLimitState struct {
 // Initial settings logic is now handled by the settings package.
 
 type statusCount struct {
-	Status orchestration.Status `json:"status"`
+	Status handoff.Status `json:"status"`
 	Count  int                  `json:"count"`
 }
 
 type dashboardSnapshot struct {
 	Organization domain.Organization         `json:"organization"`
-	Meetings     []orchestration.MeetingRoom `json:"meetings"`
+	Meetings     []handoff.MeetingRoom `json:"meetings"`
 	Costs        billing.Summary             `json:"costs"`
-	Agents       []orchestration.Agent       `json:"agents"`
+	Agents       []handoff.Agent       `json:"agents"`
 	Statuses     []statusCount               `json:"statuses"`
 	UpdatedAt    time.Time                   `json:"updatedAt"`
 }
@@ -360,11 +361,11 @@ var defaultMcpTools = []MCPTool{
 	{ID: "spire-mcp", Name: "SPIFFE/SPIRE", Description: "Identity management: issue and rotate SVID certificates for agent workloads.", Category: "identity", Status: "available"},
 }
 
-var statusOrder = []orchestration.Status{
-	orchestration.StatusActive,
-	orchestration.StatusBlocked,
-	orchestration.StatusIdle,
-	orchestration.StatusInMeeting,
+var statusOrder = []handoff.Status{
+	handoff.StatusActive,
+	handoff.StatusBlocked,
+	handoff.StatusIdle,
+	handoff.StatusInMeeting,
 }
 
 // NewServer initializes a new Dashboard HTTP handler that routes all API and frontend requests.
@@ -732,12 +733,12 @@ type issueToolParams struct {
 	Priority      string `json:"priority"`
 }
 
-func summarizeStatuses(agents []orchestration.Agent) []statusCount {
-	counts := map[orchestration.Status]int{
-		orchestration.StatusIdle:      0,
-		orchestration.StatusActive:    0,
-		orchestration.StatusInMeeting: 0,
-		orchestration.StatusBlocked:   0,
+func summarizeStatuses(agents []handoff.Agent) []statusCount {
+	counts := map[handoff.Status]int{
+		handoff.StatusIdle:      0,
+		handoff.StatusActive:    0,
+		handoff.StatusInMeeting: 0,
+		handoff.StatusBlocked:   0,
 	}
 	for _, agent := range agents {
 		counts[agent.Status]++

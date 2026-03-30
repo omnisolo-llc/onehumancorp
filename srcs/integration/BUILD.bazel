@@ -4,6 +4,7 @@ go_test(
     name = "frontend_backend_test",
     srcs = ["frontend_backend_test.go"],
     deps = [
+        "//srcs/handoff",
         "//srcs/auth",
         "//srcs/billing",
         "//srcs/dashboard",
@@ -28,6 +29,7 @@ go_test(
         "//srcs/dashboard",
         "//srcs/domain",
         "//srcs/frontend/server:server_lib",
+        "//srcs/handoff",
         "//srcs/integrations",
         "//srcs/integrations/chatwoot",
         "//srcs/orchestration",

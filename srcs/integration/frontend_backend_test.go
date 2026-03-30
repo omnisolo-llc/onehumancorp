@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -28,8 +29,8 @@ func newTestBackend(t *testing.T) (*httptest.Server, *auth.Store) {
 	t.Helper()
 	org := domain.NewSoftwareCompany("org-1", "Acme", "CEO", time.Now().UTC())
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
@@ -95,8 +96,8 @@ func authedPost(t *testing.T, url, token string, body any) *http.Response {
 func TestFrontendCanReachBackendAPI(t *testing.T) {
 	org := domain.NewSoftwareCompany("org-1", "Acme", "CEO", time.Now().UTC())
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 

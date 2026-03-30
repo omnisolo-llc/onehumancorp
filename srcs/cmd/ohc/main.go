@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"context"
 	"fmt"
 	"log/slog"
@@ -73,8 +74,8 @@ func init() {
 func newDemoSystem(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker) {
 	org := domain.NewSoftwareCompany("demo", "Demo Software Company", "Human CEO", now.UTC())
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	tracker := billing.NewTracker(billing.DefaultCatalog)
@@ -170,11 +171,11 @@ func run(now time.Time, listen listenFunc) error {
 		}
 
 		// Simulate task execution by publishing a message
-		msg := orchestration.Message{
+		msg := handoff.Message{
 			ID:         task.ID + "-" + fmt.Sprintf("%d", time.Now().Unix()),
 			FromAgent:  "system-scheduler",
 			ToAgent:    task.AgentID,
-			Type:       orchestration.EventTask,
+			Type:       handoff.EventTask,
 			Content:    fmt.Sprintf("Scheduled Task triggered: %s. Payload: %s", task.Name, string(task.Payload)),
 			OccurredAt: time.Now().UTC(),
 		}

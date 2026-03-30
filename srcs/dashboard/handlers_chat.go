@@ -1,13 +1,13 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/integrations"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/telemetry"
 )
 
@@ -38,7 +38,7 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message := orchestration.Message{
+	message := handoff.Message{
 		ID:         "web-" + time.Now().UTC().Format("20060102150405.000000000"),
 		FromAgent:  r.FormValue("fromAgent"),
 		ToAgent:    r.FormValue("toAgent"),

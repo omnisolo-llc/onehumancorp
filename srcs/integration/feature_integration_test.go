@@ -12,6 +12,7 @@ package integration
 //   - Dashboard: snapshot contains real org, agent, meeting, and cost data.
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -38,7 +39,7 @@ func newFullBackend(t *testing.T) (*httptest.Server, string) {
 	org := domain.NewSoftwareCompany("org-feature", "Acme Software", "Alice CEO", now)
 
 	hub := orchestration.NewHub()
-	for _, a := range []orchestration.Agent{
+	for _, a := range []handoff.Agent{
 		{ID: "CEO", Name: "Alice CEO", Role: "CEO", OrganizationID: org.ID},
 		{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID},
 		{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID},

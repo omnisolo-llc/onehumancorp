@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"time"
 
 	"errors"
@@ -30,48 +31,48 @@ func seededScenario(name string, now time.Time) (domain.Organization, *orchestra
 func seededLaunchReadiness(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
 	org := domain.NewSoftwareCompany("demo", "Demo Software Company", "Human CEO", now.UTC())
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "ux-1", Name: "Design Lead", Role: "DESIGNER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "qa-1", Name: "QA Lead", Role: "QA_TESTER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "sec-1", Name: "Security Auditor", Role: "SECURITY_ENGINEER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "CEO", Name: "Human CEO", Role: "CEO", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "ux-1", Name: "Design Lead", Role: "DESIGNER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "qa-1", Name: "QA Lead", Role: "QA_TESTER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "sec-1", Name: "Security Auditor", Role: "SECURITY_ENGINEER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "CEO", Name: "Human CEO", Role: "CEO", OrganizationID: org.ID})
 	hub.OpenMeetingWithAgenda("launch-readiness", "Review launch blockers, sign-off on reliability checklist, assign post-launch owners.", []string{"pm-1", "swe-1", "ux-1", "qa-1", "sec-1", "CEO"})
 
-	_ = hub.Publish(orchestration.Message{
+	_ = hub.Publish(handoff.Message{
 		ID:         "seed-1",
 		FromAgent:  "pm-1",
 		ToAgent:    "swe-1",
-		Type:       orchestration.EventTask,
+		Type:       handoff.EventTask,
 		Content:    "Ship the reliability checklist before launch.",
 		MeetingID:  "launch-readiness",
 		OccurredAt: now.Add(-6 * time.Minute),
 	})
-	_ = hub.Publish(orchestration.Message{
+	_ = hub.Publish(handoff.Message{
 		ID:         "seed-2",
 		FromAgent:  "swe-1",
 		ToAgent:    "pm-1",
-		Type:       orchestration.EventStatus,
+		Type:       handoff.EventStatus,
 		Content:    "Checklist is 90% complete. Waiting on design assets for the final error states.",
 		MeetingID:  "launch-readiness",
 		OccurredAt: now.Add(-4 * time.Minute),
 	})
-	_ = hub.Publish(orchestration.Message{
+	_ = hub.Publish(handoff.Message{
 		ID:         "seed-3",
 		FromAgent:  "ux-1",
 		ToAgent:    "pm-1",
-		Type:       orchestration.EventStatus,
+		Type:       handoff.EventStatus,
 		Content:    "Design QA pass completed with no blockers. Assets pushed to main.",
 		MeetingID:  "launch-readiness",
 		OccurredAt: now.Add(-2 * time.Minute),
 	})
 
 	msgID := "seed-4"
-	_ = hub.Publish(orchestration.Message{
+	_ = hub.Publish(handoff.Message{
 		ID:         msgID,
 		FromAgent:  "pm-1",
 		ToAgent:    "CEO",
-		Type:       orchestration.EventApprovalNeeded,
+		Type:       handoff.EventApprovalNeeded,
 		Content:    "All pre-launch checks passed. Requesting final CEO approval to deploy to production.",
 		MeetingID:  "launch-readiness",
 		OccurredAt: now.Add(-1 * time.Minute),
@@ -112,16 +113,16 @@ func seededLaunchReadiness(now time.Time) (domain.Organization, *orchestration.H
 func seededDigitalMarketing(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
 	org := domain.NewDigitalMarketingAgency("dma-demo", "Demo Digital Agency", "Human CEO", now.UTC())
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "growth-1", Name: "Growth Agent", Role: "GROWTH_AGENT", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "content-1", Name: "Content Strategist", Role: "CONTENT_STRATEGIST", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "seo-1", Name: "SEO Specialist", Role: "SEO_SPECIALIST", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "growth-1", Name: "Growth Agent", Role: "GROWTH_AGENT", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "content-1", Name: "Content Strategist", Role: "CONTENT_STRATEGIST", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "seo-1", Name: "SEO Specialist", Role: "SEO_SPECIALIST", OrganizationID: org.ID})
 	hub.OpenMeetingWithAgenda("campaign-kickoff", "Plan Q2 acquisition campaigns and assign channel ownership.", []string{"growth-1", "content-1", "seo-1"})
 
-	_ = hub.Publish(orchestration.Message{
+	_ = hub.Publish(handoff.Message{
 		ID:         "seed-dma-1",
 		FromAgent:  "growth-1",
 		ToAgent:    "content-1",
-		Type:       orchestration.EventTask,
+		Type:       handoff.EventTask,
 		Content:    "Draft top-of-funnel blog series targeting enterprise SaaS buyers.",
 		MeetingID:  "campaign-kickoff",
 		OccurredAt: now.Add(-5 * time.Minute),
@@ -144,16 +145,16 @@ func seededDigitalMarketing(now time.Time) (domain.Organization, *orchestration.
 func seededAccounting(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
 	org := domain.NewAccountingFirm("acc-demo", "Demo Accounting Firm", "Human CEO", now.UTC())
 	hub := orchestration.NewHub()
-	hub.RegisterAgent(orchestration.Agent{ID: "bookkeeper-1", Name: "Bookkeeper", Role: "BOOKKEEPER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "tax-1", Name: "Tax Specialist", Role: "TAX_SPECIALIST", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "cfo-1", Name: "CFO", Role: "CFO", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "bookkeeper-1", Name: "Bookkeeper", Role: "BOOKKEEPER", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "tax-1", Name: "Tax Specialist", Role: "TAX_SPECIALIST", OrganizationID: org.ID})
+	hub.RegisterAgent(handoff.Agent{ID: "cfo-1", Name: "CFO", Role: "CFO", OrganizationID: org.ID})
 	hub.OpenMeetingWithAgenda("month-close", "Reconcile April ledger, prepare estimated tax liability, and review payroll entries.", []string{"bookkeeper-1", "tax-1", "cfo-1"})
 
-	_ = hub.Publish(orchestration.Message{
+	_ = hub.Publish(handoff.Message{
 		ID:         "seed-acc-1",
 		FromAgent:  "cfo-1",
 		ToAgent:    "bookkeeper-1",
-		Type:       orchestration.EventTask,
+		Type:       handoff.EventTask,
 		Content:    "Reconcile bank feeds and categorize uncategorized transactions before EOD.",
 		MeetingID:  "month-close",
 		OccurredAt: now.Add(-3 * time.Minute),

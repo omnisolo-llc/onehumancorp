@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/handoff"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -70,9 +71,9 @@ func TestHandleScaleOpsExtra(t *testing.T) {
 			// Local hub specifically for this test case
 			localHub := orchestration.NewHub()
 			if tt.name == "Scale Down" {
-				localHub.RegisterAgent(orchestration.Agent{ID: "worker-active", Role: "worker", Status: orchestration.StatusActive})
-				localHub.RegisterAgent(orchestration.Agent{ID: "worker-idle-1", Role: "worker", Status: orchestration.StatusIdle})
-				localHub.RegisterAgent(orchestration.Agent{ID: "worker-idle-2", Role: "worker", Status: orchestration.StatusIdle})
+				localHub.RegisterAgent(handoff.Agent{ID: "worker-active", Role: "worker", Status: handoff.StatusActive})
+				localHub.RegisterAgent(handoff.Agent{ID: "worker-idle-1", Role: "worker", Status: handoff.StatusIdle})
+				localHub.RegisterAgent(handoff.Agent{ID: "worker-idle-2", Role: "worker", Status: handoff.StatusIdle})
 			}
 			localServer := &Server{
 				org:     org,

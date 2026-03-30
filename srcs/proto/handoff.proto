@@ -1,0 +1,21 @@
+edition = "2024";
+
+package ohc.orchestration;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto;orchestrationpb";
+
+import "srcs/proto/hub.proto";
+
+message HandoffContext {
+  string mission_id = 1;
+  string source_agent = 2;
+  string target_agent = 3;
+  Message task = 4;
+  repeated string routing_chain = 5;
+}
+
+message HandoffResponse {
+  bool success = 1;
+  string target_agent_accepted = 2;
+  string error_message = 3;
+}

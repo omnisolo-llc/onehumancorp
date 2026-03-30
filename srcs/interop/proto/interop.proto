@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ohc.interop;
+
+option go_package = "github.com/onehumancorp/mono/srcs/interop/proto;interoppb";
+
+message SharedState {
+    string session_id = 1;
+    string owner = 2;
+    map<string, string> data = 3;
+    repeated string checkpoints = 4;
+}
+
+message ExecutionResult {
+    bool success = 1;
+    string output = 2;
+    string error_message = 3;
+}
