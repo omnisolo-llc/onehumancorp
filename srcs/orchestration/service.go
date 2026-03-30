@@ -736,6 +736,8 @@ func (h *Hub) Publish(message Message) error {
 	h.mu.RUnlock()
 
 	h.mu.Lock()
+	var subsToNotify []chan struct{}
+
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
@@ -745,11 +747,8 @@ func (h *Hub) Publish(message Message) error {
 		h.inbox[message.ToAgent] = append(inbox, message)
 
 		subs := h.subs[message.ToAgent]
-		for i := 0; i < len(subs); i++ {
-			select {
-			case subs[i] <- struct{}{}:
-			default:
-			}
+		if len(subs) > 0 {
+			subsToNotify = append(subsToNotify, subs...)
 		}
 	}
 
@@ -815,11 +814,8 @@ func (h *Hub) Publish(message Message) error {
 
 		for _, participant := range meeting.Participants {
 			subs := h.subs[participant]
-			for i := 0; i < len(subs); i++ {
-				select {
-				case subs[i] <- struct{}{}:
-				default:
-				}
+			if len(subs) > 0 {
+				subsToNotify = append(subsToNotify, subs...)
 			}
 		}
 	} else {
@@ -827,6 +823,14 @@ func (h *Hub) Publish(message Message) error {
 	}
 	h.agents[message.FromAgent] = sender
 	h.mu.Unlock()
+
+	// Notify all collected subscribers outside the critical section
+	for i := 0; i < len(subsToNotify); i++ {
+		select {
+		case subsToNotify[i] <- struct{}{}:
+		default:
+		}
+	}
 
 	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
@@ -1163,6 +1167,15 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
 var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 
+// CircuitBreakerState represents the state of the circuit breaker.
+type CircuitBreakerState string
+
+const (
+	StateClosed   CircuitBreakerState = "CLOSED"
+	StateOpen     CircuitBreakerState = "OPEN"
+	StateHalfOpen CircuitBreakerState = "HALF_OPEN"
+)
+
 // MinimaxClient handles interaction with the Minimax Model 2.7.
 // Accepts no parameters.
 // Returns nothing.
@@ -1170,6 +1183,14 @@ var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Has no side effects.
 type MinimaxClient struct {
 	APIKey string
+
+	// Circuit Breaker state variables
+	cbMutex           sync.Mutex
+	cbState           CircuitBreakerState
+	cbFailures        int
+	cbMaxFailures     int
+	cbTimeout         time.Duration
+	cbLastFailureTime time.Time
 }
 
 // NewMinimaxClient functionality.
@@ -1178,7 +1199,12 @@ type MinimaxClient struct {
 // Produces no errors.
 // Has no side effects.
 func NewMinimaxClient(apiKey string) *MinimaxClient {
-	return &MinimaxClient{APIKey: apiKey}
+	return &MinimaxClient{
+		APIKey:        apiKey,
+		cbState:       StateClosed,
+		cbMaxFailures: 3,
+		cbTimeout:     10 * time.Second,
+	}
 }
 
 var bufferPool = sync.Pool{
@@ -1187,8 +1213,73 @@ var bufferPool = sync.Pool{
 	},
 }
 
-var sharedHTTPClient = &http.Client{
-	Timeout: 30 * time.Second,
+var (
+	sharedHTTPClient = &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        1000,
+			MaxIdleConnsPerHost: 1000,
+		},
+	}
+)
+
+// Reset resets the circuit breaker to the CLOSED state.
+// Primarily for hermetic testing.
+func (c *MinimaxClient) Reset() {
+	c.cbMutex.Lock()
+	defer c.cbMutex.Unlock()
+	c.cbState = StateClosed
+	c.cbFailures = 0
+	c.cbLastFailureTime = time.Time{}
+}
+
+// recordFailure increments the failure count and opens the circuit if threshold is reached.
+func (c *MinimaxClient) recordFailure() {
+	c.cbMutex.Lock()
+	defer c.cbMutex.Unlock()
+
+	c.cbFailures++
+	c.cbLastFailureTime = time.Now()
+	if c.cbFailures >= c.cbMaxFailures {
+		c.cbState = StateOpen
+		slog.Warn("Circuit Breaker transitioned to OPEN state")
+	}
+}
+
+// recordSuccess resets the failure count and closes the circuit.
+func (c *MinimaxClient) recordSuccess() {
+	c.cbMutex.Lock()
+	defer c.cbMutex.Unlock()
+
+	if c.cbState != StateClosed {
+		slog.Info("Circuit Breaker transitioned to CLOSED state")
+	}
+	c.cbState = StateClosed
+	c.cbFailures = 0
+}
+
+// allowRequest checks if a request is allowed to proceed.
+func (c *MinimaxClient) allowRequest() bool {
+	c.cbMutex.Lock()
+	defer c.cbMutex.Unlock()
+
+	switch c.cbState {
+	case StateClosed:
+		return true
+	case StateOpen:
+		if time.Since(c.cbLastFailureTime) > c.cbTimeout {
+			c.cbState = StateHalfOpen
+			slog.Info("Circuit Breaker transitioned to HALF_OPEN state")
+			return true
+		}
+		return false
+	case StateHalfOpen:
+		// In HALF_OPEN, we only allow one request to pass through to test the circuit.
+		// For a simple implementation, we can just reject other requests until success/failure is recorded.
+		// However, returning true here will allow multiple requests in the HALF_OPEN state to potentially fail and transition back to OPEN.
+		return true
+	}
+	return true
 }
 
 // Reason functionality.
@@ -1199,6 +1290,10 @@ var sharedHTTPClient = &http.Client{
 func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
 	if c.APIKey == "" {
 		return "", errors.New("minimax API key is not configured")
+	}
+
+	if !c.allowRequest() {
+		return "", errors.New("circuit breaker is OPEN")
 	}
 
 	url := minimaxAPIURL
@@ -1218,6 +1313,7 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, buf)
 	if err != nil {
+		c.recordFailure()
 		return "", err
 	}
 
@@ -1228,11 +1324,13 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	// Prevents severe connection and resource leaks by reusing connection pools on every request.
 	resp, err := sharedHTTPClient.Do(req)
 	if err != nil {
+		c.recordFailure()
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		c.recordFailure()
 		respBody, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
 	}
@@ -1246,12 +1344,15 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		c.recordFailure()
 		return "", err
 	}
 
 	if len(result.Choices) == 0 {
+		c.recordFailure()
 		return "", errors.New("empty response from minimax")
 	}
 
+	c.recordSuccess()
 	return result.Choices[0].Message.Content, nil
 }

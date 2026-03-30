@@ -562,6 +562,8 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 
 			// Override the package-level URL
 			minimaxAPIURL = ts.URL
+			client := NewMinimaxClient(tt.apiKey)
+			client.Reset()
 
 			hub := NewHub()
 			hub.SetMinimaxAPIKey(tt.apiKey)
@@ -1071,6 +1073,8 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	// Override the Minimax API URL to point to our test server
 	originalAPIURL := minimaxAPIURL
 	minimaxAPIURL = ts.URL
+	client := NewMinimaxClient("fake-key")
+	client.Reset()
 	defer func() { minimaxAPIURL = originalAPIURL }()
 
 	// 2. Initialize Hub and set a fake API key

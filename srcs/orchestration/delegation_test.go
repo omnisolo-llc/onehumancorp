@@ -41,8 +41,9 @@ func TestDelegateSubTask_Success(t *testing.T) {
 
 	var subAgentID string
 	for id := range hub.agents {
-		if id != "SYSTEM" {
+		if strings.HasPrefix(id, "sub-agent-SWE-") {
 			subAgentID = id
+			break
 		}
 	}
 
