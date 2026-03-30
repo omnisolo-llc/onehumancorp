@@ -9,7 +9,8 @@ class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
 
   @override
-  ConsumerState<UserManagementScreen> createState() => _UserManagementScreenState();
+  ConsumerState<UserManagementScreen> createState() =>
+      _UserManagementScreenState();
 }
 
 class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
@@ -30,18 +31,22 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Future<void> _handleDeleteUser(String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete User?'),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete User?'),
+            content: const Text('This action cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -66,7 +71,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       appBar: AppBar(
         title: const Text('User Management'),
         actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -95,21 +104,31 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               final user = users[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: user.isAdmin ? colors.primary : colors.secondaryContainer,
+                  backgroundColor:
+                      user.isAdmin ? colors.primary : colors.secondaryContainer,
                   child: Text(
                     user.username[0].toUpperCase(),
                     style: TextStyle(
-                      color: user.isAdmin ? Colors.white : colors.onSecondaryContainer,
+                      color:
+                          user.isAdmin
+                              ? Colors.white
+                              : colors.onSecondaryContainer,
                     ),
                   ),
                 ),
                 title: Row(
                   children: [
-                    Text(user.username, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      user.username,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(width: 8),
                     if (user.isAdmin)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: colors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
@@ -138,6 +157,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () => _handleDeleteUser(user.id),
+                  tooltip: 'Delete User',
                 ),
                 isThreeLine: true,
               );
@@ -151,31 +171,38 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   void _showAddUserDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Invite New User'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Username',
-                border: OutlineInputBorder(),
-              ),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Invite New User'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Email Address',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Email Address',
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Send Invitation')),
-        ],
-      ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Send Invitation'),
+              ),
+            ],
+          ),
     );
   }
 }

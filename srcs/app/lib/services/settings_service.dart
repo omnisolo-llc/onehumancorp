@@ -20,9 +20,9 @@ class ClientSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'backendUrl': backendUrl,
-        'standaloneMode': standaloneMode,
-      };
+    'backendUrl': backendUrl,
+    'standaloneMode': standaloneMode,
+  };
 
   factory ClientSettings.fromJson(Map<String, dynamic> json) {
     return ClientSettings(
@@ -36,9 +36,12 @@ final _prefsProvider = FutureProvider<SharedPreferences>(
   (_) => SharedPreferences.getInstance(),
 );
 
-final clientSettingsProvider = StateNotifierProvider<ClientSettingsNotifier, AsyncValue<ClientSettings>>((ref) {
-  return ClientSettingsNotifier(ref);
-});
+final clientSettingsProvider =
+    StateNotifierProvider<ClientSettingsNotifier, AsyncValue<ClientSettings>>((
+      ref,
+    ) {
+      return ClientSettingsNotifier(ref);
+    });
 
 class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
   final Ref _ref;
@@ -55,7 +58,10 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
       final json = prefs.getString(_key);
       if (json == null) {
         // Check environment variable if web/desktop supports it via string.fromEnvironment
-        const envUrl = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:18789');
+        const envUrl = String.fromEnvironment(
+          'BACKEND_URL',
+          defaultValue: 'http://localhost:18789',
+        );
         return ClientSettings(backendUrl: envUrl, standaloneMode: false);
       }
       return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);

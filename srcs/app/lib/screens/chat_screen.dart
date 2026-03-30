@@ -10,8 +10,9 @@ import 'package:uuid/uuid.dart';
 const _kDefaultRoom = 'general';
 
 /// Real-time messages accumulated from the Centrifuge subscription.
-final _messagesProvider =
-    StateProvider<List<CentrifugeMessage>>((ref) => const []);
+final _messagesProvider = StateProvider<List<CentrifugeMessage>>(
+  (ref) => const [],
+);
 
 /// Active room ID.
 final _roomProvider = StateProvider<String>((ref) => _kDefaultRoom);
@@ -46,9 +47,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _sub = svc.subscribe(room).listen(_onMessage);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chat connection failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Chat connection failed: $e')));
       }
     }
   }
@@ -87,8 +88,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _ctrl.clear();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Send failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Send failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -124,26 +126,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: messages.isEmpty
-                ? const Center(
-                    child: Text('No messages yet. Say hello!'),
-                  )
-                : ListView.builder(
-                    controller: _scrollCtrl,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: messages.length,
-                    itemBuilder: (_, i) {
-                      final m = messages[i];
-                      final isMe = m.authorId == user?.id;
-                      return _MessageBubble(message: m, isMe: isMe);
-                    },
-                  ),
+            child:
+                messages.isEmpty
+                    ? const Center(child: Text('No messages yet. Say hello!'))
+                    : ListView.builder(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: messages.length,
+                      itemBuilder: (_, i) {
+                        final m = messages[i];
+                        final isMe = m.authorId == user?.id;
+                        return _MessageBubble(message: m, isMe: isMe);
+                      },
+                    ),
           ),
-          _InputBar(
-            controller: _ctrl,
-            sending: _sending,
-            onSend: _send,
-          ),
+          _InputBar(controller: _ctrl, sending: _sending, onSend: _send),
         ],
       ),
     );
@@ -182,8 +179,9 @@ class _MessageBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
         decoration: BoxDecoration(
           color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
           borderRadius: BorderRadius.only(
@@ -200,10 +198,9 @@ class _MessageBubble extends StatelessWidget {
             if (!isMe)
               Text(
                 message.authorName,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             Text(message.body),
           ],
@@ -243,13 +240,14 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           IconButton.filled(
-            icon: sending
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send),
+            icon:
+                sending
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Icon(Icons.send),
             onPressed: sending ? null : onSend,
           ),
         ],

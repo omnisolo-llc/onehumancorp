@@ -19,85 +19,107 @@ class SettingsScreen extends ConsumerWidget {
       body: clientSettingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error: $err')),
-        data: (settings) => ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            if (user != null) ...[
-              ListTile(
-                leading: CircleAvatar(child: Text(user.name.substring(0, 1).toUpperCase())),
-                title: Text(user.name),
-                subtitle: Text(user.email),
-              ),
-              const Divider(),
-            ],
-            
-            _SectionHeader(title: 'Communication'),
-            ListTile(
-              leading: const Icon(Icons.link),
-              title: const Text('Backend URL'),
-              subtitle: Text(settings.backendUrl),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => _editBackendUrl(context, ref, settings.backendUrl),
-              ),
-            ),
-            
-            SwitchListTile(
-              secondary: const Icon(Icons.computer),
-              title: const Text('Standalone Mode'),
-              subtitle: const Text('App manages local backend lifecycle'),
-              value: settings.standaloneMode,
-              onChanged: (value) => ref.read(clientSettingsProvider.notifier).updateStandaloneMode(value),
-            ),
+        data:
+            (settings) => ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                if (user != null) ...[
+                  ListTile(
+                    leading: CircleAvatar(
+                      child: Text(user.name.substring(0, 1).toUpperCase()),
+                    ),
+                    title: Text(user.name),
+                    subtitle: Text(user.email),
+                  ),
+                  const Divider(),
+                ],
 
-            if (settings.standaloneMode) ...[
-              const Divider(),
-              _SectionHeader(title: 'Local Backend'),
-              _LocalBackendStatusCard(),
-            ],
+                _SectionHeader(title: 'Communication'),
+                ListTile(
+                  leading: const Icon(Icons.link),
+                  title: const Text('Backend URL'),
+                  subtitle: Text(settings.backendUrl),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed:
+                        () =>
+                            _editBackendUrl(context, ref, settings.backendUrl),
+                    tooltip: 'Edit Backend URL',
+                  ),
+                ),
 
-            const Divider(),
-            _SectionHeader(title: 'Account'),
-            ListTile(
-              leading: const Icon(Icons.business),
-              title: const Text('Organization'),
-              subtitle: Text(user?.organizationId ?? '—'),
+                SwitchListTile(
+                  secondary: const Icon(Icons.computer),
+                  title: const Text('Standalone Mode'),
+                  subtitle: const Text('App manages local backend lifecycle'),
+                  value: settings.standaloneMode,
+                  onChanged:
+                      (value) => ref
+                          .read(clientSettingsProvider.notifier)
+                          .updateStandaloneMode(value),
+                ),
+
+                if (settings.standaloneMode) ...[
+                  const Divider(),
+                  _SectionHeader(title: 'Local Backend'),
+                  _LocalBackendStatusCard(),
+                ],
+
+                const Divider(),
+                _SectionHeader(title: 'Account'),
+                ListTile(
+                  leading: const Icon(Icons.business),
+                  title: const Text('Organization'),
+                  subtitle: Text(user?.organizationId ?? '—'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.verified_user),
+                  title: const Text('Role'),
+                  subtitle: Text(user?.role ?? '—'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    'Sign Out',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () => ref.read(authStateProvider.notifier).logout(),
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.verified_user),
-              title: const Text('Role'),
-              subtitle: Text(user?.role ?? '—'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-              onTap: () => ref.read(authStateProvider.notifier).logout(),
-            ),
-          ],
-        ),
       ),
     );
   }
 
-  Future<void> _editBackendUrl(BuildContext context, WidgetRef ref, String current) async {
+  Future<void> _editBackendUrl(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
     final controller = TextEditingController(text: current);
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Backend URL'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'URL (e.g. http://localhost:8080)'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Backend URL'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'URL (e.g. http://localhost:8080)',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, controller.text),
+                child: const Text('Save'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (result != null && result.isNotEmpty) {
       ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
@@ -116,9 +138,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -130,7 +152,7 @@ class _LocalBackendStatusCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final manager = ref.watch(localManagerServiceProvider);
-    
+
     return FutureBuilder<bool>(
       future: manager.isServiceRunning(),
       builder: (context, snapshot) {
@@ -170,11 +192,19 @@ class _LocalBackendStatusCard extends ConsumerWidget {
                     if (context.mounted) {
                       showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('System Doctor'),
-                          content: SingleChildScrollView(child: Text(report)),
-                          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-                        ),
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text('System Doctor'),
+                              content: SingleChildScrollView(
+                                child: Text(report),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            ),
                       );
                     }
                   },

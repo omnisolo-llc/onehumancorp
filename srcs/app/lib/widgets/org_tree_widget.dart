@@ -25,19 +25,20 @@ class OrgTreeWidget extends StatelessWidget {
       padding: EdgeInsets.only(left: depth == 0 ? 0 : 20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: children.map((member) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _OrgMemberRow(member: member),
-              OrgTreeWidget(
-                members: members,
-                parentId: member.id,
-                depth: depth + 1,
-              ),
-            ],
-          );
-        }).toList(),
+        children:
+            children.map((member) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _OrgMemberRow(member: member),
+                  OrgTreeWidget(
+                    members: members,
+                    parentId: member.id,
+                    depth: depth + 1,
+                  ),
+                ],
+              );
+            }).toList(),
       ),
     );
   }
@@ -61,20 +62,24 @@ class _OrgMemberRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: member.isHuman
-                  ? colors.primaryContainer
-                  : colors.secondaryContainer,
+              color:
+                  member.isHuman
+                      ? colors.primaryContainer
+                      : colors.secondaryContainer,
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
-                _getInitials(member.role.isNotEmpty ? member.role : member.name),
+                _getInitials(
+                  member.role.isNotEmpty ? member.role : member.name,
+                ),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: member.isHuman
-                      ? colors.onPrimaryContainer
-                      : colors.onSecondaryContainer,
+                  color:
+                      member.isHuman
+                          ? colors.onPrimaryContainer
+                          : colors.onSecondaryContainer,
                 ),
               ),
             ),

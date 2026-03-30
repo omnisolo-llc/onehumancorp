@@ -40,7 +40,7 @@ class AuthService {
   final http.Client _client;
 
   AuthService({required this.baseUrl, http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   Future<AuthUser> login(String email, String password) async {
     final response = await _client.post(
@@ -70,7 +70,6 @@ class AuthService {
 
 // ── Providers ──────────────────────────────────────────────────────────────
 
-
 final _prefsProvider = FutureProvider<SharedPreferences>(
   (_) => SharedPreferences.getInstance(),
 );
@@ -78,9 +77,12 @@ final _prefsProvider = FutureProvider<SharedPreferences>(
 final backendUrlProvider = Provider<String>((ref) {
   final settings = ref.watch(clientSettingsProvider).valueOrNull;
   if (settings != null) return settings.backendUrl;
-  
+
   // Fallback to environment variable if provided at compile time (Web/Desktop)
-  const envUrl = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:18789');
+  const envUrl = String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'http://localhost:18789',
+  );
   return envUrl;
 });
 

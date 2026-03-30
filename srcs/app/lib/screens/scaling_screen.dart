@@ -31,25 +31,30 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     });
 
     try {
-      await ref.read(apiServiceProvider)!.scaleAgents(_selectedRole, _targetCount.toInt());
-      
+      await ref
+          .read(apiServiceProvider)!
+          .scaleAgents(_selectedRole, _targetCount.toInt());
+
       // Simulate real-time logs (since we don't have a real stream yet)
       await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) setState(() => _logs.add('Allocating compute resources...'));
       await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _logs.add('Initializing runtime environments...'));
+      if (mounted)
+        setState(() => _logs.add('Initializing runtime environments...'));
       await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) setState(() => _logs.add('Injecting context and skills...'));
       await Future.delayed(const Duration(milliseconds: 400));
-      
+
       if (mounted) {
         setState(() {
-          _logs.add('SUCCESS: $_selectedRole scaled to $_targetCount instances.');
+          _logs.add(
+            'SUCCESS: $_selectedRole scaled to $_targetCount instances.',
+          );
           _isProvisioning = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Scaling successful')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Scaling successful')));
       }
     } catch (e) {
       if (mounted) {
@@ -66,9 +71,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dynamic Scaling'),
-      ),
+      appBar: AppBar(title: const Text('Dynamic Scaling')),
       body: Row(
         children: [
           // Scaling Controls
@@ -81,7 +84,9 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                 children: [
                   Text(
                     'Agent Workforce Scaling',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -96,14 +101,19 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _roles.map((role) {
-                      final isSelected = _selectedRole == role;
-                      return ChoiceChip(
-                        label: Text(role.replaceAll('_', ' ')),
-                        selected: isSelected,
-                        onSelected: _isProvisioning ? null : (val) => setState(() => _selectedRole = role),
-                      );
-                    }).toList(),
+                    children:
+                        _roles.map((role) {
+                          final isSelected = _selectedRole == role;
+                          return ChoiceChip(
+                            label: Text(role.replaceAll('_', ' ')),
+                            selected: isSelected,
+                            onSelected:
+                                _isProvisioning
+                                    ? null
+                                    : (val) =>
+                                        setState(() => _selectedRole = role),
+                          );
+                        }).toList(),
                   ),
                   const SizedBox(height: 48),
 
@@ -118,7 +128,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Target Count', style: TextStyle(fontWeight: FontWeight.bold)),
+                              const Text(
+                                'Target Count',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               Text(
                                 '${_targetCount.toInt()}',
                                 style: TextStyle(
@@ -134,18 +147,32 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                             min: 1,
                             max: 10,
                             divisions: 9,
-                            onChanged: _isProvisioning ? null : (val) => setState(() => _targetCount = val),
+                            onChanged:
+                                _isProvisioning
+                                    ? null
+                                    : (val) =>
+                                        setState(() => _targetCount = val),
                           ),
                           const Divider(height: 32),
                           Row(
                             children: [
-                              const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                              const Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: Colors.blue,
+                              ),
                               const SizedBox(width: 8),
-                              const Text('Estimated Cost Impact:', style: TextStyle(fontSize: 12)),
+                              const Text(
+                                'Estimated Cost Impact:',
+                                style: TextStyle(fontSize: 12),
+                              ),
                               const Spacer(),
                               Text(
                                 '\$${(_targetCount * 0.45).toStringAsFixed(2)} / hr',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -161,14 +188,22 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                     height: 56,
                     child: FilledButton.icon(
                       onPressed: _isProvisioning ? null : _handleScale,
-                      icon: _isProvisioning
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.rocket_launch),
-                      label: Text(_isProvisioning ? 'Provisioning...' : 'Initiate Scaling'),
+                      icon:
+                          _isProvisioning
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : const Icon(Icons.rocket_launch),
+                      label: Text(
+                        _isProvisioning
+                            ? 'Provisioning...'
+                            : 'Initiate Scaling',
+                      ),
                     ),
                   ),
                 ],
@@ -191,7 +226,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                       children: [
                         const Icon(Icons.terminal, size: 18),
                         const SizedBox(width: 8),
-                        const Text('Provisioning Logs', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Provisioning Logs',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const Spacer(),
                         if (_isProvisioning)
                           const SizedBox(
@@ -219,9 +257,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                             style: TextStyle(
                               fontFamily: 'monospace',
                               fontSize: 12,
-                              color: isError
-                                  ? Colors.red
-                                  : isSuccess
+                              color:
+                                  isError
+                                      ? Colors.red
+                                      : isSuccess
                                       ? Colors.green
                                       : colors.onSurfaceVariant,
                             ),
@@ -261,7 +300,11 @@ class _SectionHeader extends StatelessWidget {
           child: Center(
             child: Text(
               '$number',
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
