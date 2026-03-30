@@ -47,7 +47,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.hub.SettingsStore().Update(req); err != nil {
-			http.Error(w, "failed to save settings: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 		s.mu.Lock()

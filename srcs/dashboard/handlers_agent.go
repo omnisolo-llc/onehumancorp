@@ -135,7 +135,7 @@ func (s *Server) handleDelegateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.hub.DelegateTask(req.FromAgentID, req.ToAgentID, message); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
@@ -188,7 +188,7 @@ func (s *Server) handleAgentProviderAuth(w http.ResponseWriter, r *http.Request)
 		Extra:      req.Extra,
 	}
 	if err := s.agentProviderRegistry.Authenticate(agents.ProviderType(req.ProviderType), creds); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
@@ -399,7 +399,7 @@ func (s *Server) handleSnapshotRestore(w http.ResponseWriter, r *http.Request) {
 
 	org, hub, tracker, err := seededScenarioByDomain(target.Domain, time.Now().UTC())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
