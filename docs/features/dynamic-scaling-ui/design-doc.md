@@ -2,6 +2,8 @@
 Date: 2024-05-18
 
 ## 1. Core User Journey (CUJ)
+
+![Dynamic Scaling UI](../../screenshots/dynamic_scaling_ui.png){: style="backdrop-filter: blur(15px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.08);"}
 The CEO realizes that a surge in inbound marketing leads has bottlenecked the Sales Representatives. To capitalize on the traffic, the CEO navigates to the "Dynamic Scaling" tab in the Dashboard. The UI displays the current organizational compute allocation.
 With a single slider interaction, the CEO scales the "Sales Representative" role from 2 to 5 concurrent agents. The Dashboard instantly issues a JSON scaling intent to the backend API, triggering the K8s Operator to reconcile the `TeamMember` resource count. Real-time trace logs confirm that new agents are "Hired" and spinning up.
 

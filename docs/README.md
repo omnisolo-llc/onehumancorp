@@ -17,6 +17,8 @@ One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) th
 4. **Collaboration (Virtual Meeting Rooms)**: When the CEO defines a goal, multiple agents (e.g., PM, SWE, and Director) convene in Virtual Meeting Rooms to define scopes, debate technical constraints, and finalize designs before execution.
 
 ## Architecture
+
+![Dashboard Overview](screenshots/dashboard_overview.png){: style="backdrop-filter: blur(15px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.08);"}
 Built on a modular, open-source stack (Model Context Protocol, SPIFFE/SPIRE, LangGraph), the system leverages Kubernetes Custom Resource Definitions (CRDs) to manage the organisational structure as Infrastructure as Code. The backend is written in Go (Bazel-based monorepo), and it integrates with a React Next.js-style frontend to allow the human CEO to direct virtual meeting rooms, handle high-risk approvals, and monitor token usage and billing.
 
 ```mermaid

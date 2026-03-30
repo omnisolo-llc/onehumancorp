@@ -27,6 +27,8 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 
 ## 3. Detailed Architecture
 
+![API Raw Dashboard](screenshots/api_dashboard_raw.png){: style="backdrop-filter: blur(15px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.08);"}
+
 ```mermaid
 graph TD
     Client[Client Browser / React SPA] -->|HTTP/JSON| FE[Frontend Server :8081]
