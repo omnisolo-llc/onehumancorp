@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -53,10 +54,14 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "?") {
+		dbPath += "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	}
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -87,6 +92,7 @@ func initializeTables(db *sql.DB) error {
 			status TEXT NOT NULL,
 			last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE INDEX IF NOT EXISTS idx_agent_missions_role_status ON agent_missions(role, status);`,
 		`CREATE TABLE IF NOT EXISTS capability_plugins (
 			plugin_id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
@@ -218,6 +224,67 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 	})
 }
 
+// AuditMissions scans the agent_missions table for circular dependencies or blocked tasks.
+// If a circular dependency (e.g. A->B and B->A) is detected among PENDING tasks, the involved missions are marked as BLOCKED.
+// Accepts parameters: ctx context.Context.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Updates records in the agent_missions table to 'BLOCKED'.
+func (s *SIPDB) AuditMissions(ctx context.Context) error {
+	return withRetry(ctx, func() error {
+		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE status = 'PENDING'")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		type missionData struct {
+			ID        string
+			FromAgent string
+			ToAgent   string
+		}
+		var pending []missionData
+
+		for rows.Next() {
+			var id, taskStr string
+			if err := rows.Scan(&id, &taskStr); err != nil {
+				return err
+			}
+
+			var msg Message
+			if err := json.Unmarshal([]byte(taskStr), &msg); err == nil {
+				pending = append(pending, missionData{
+					ID:        id,
+					FromAgent: msg.FromAgent,
+					ToAgent:   msg.ToAgent,
+				})
+			}
+		}
+
+		// Detect circular dependencies: FromAgent -> ToAgent -> FromAgent
+		blockedIDs := make(map[string]bool)
+		for i, m1 := range pending {
+			for j, m2 := range pending {
+				if i != j && m1.FromAgent != "" && m1.ToAgent != "" {
+					if m1.FromAgent == m2.ToAgent && m1.ToAgent == m2.FromAgent {
+						blockedIDs[m1.ID] = true
+						blockedIDs[m2.ID] = true
+					}
+				}
+			}
+		}
+
+		for id := range blockedIDs {
+			_, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'BLOCKED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", id)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 // DelegateMission delegates specialized tasks via the agent_missions table.
 // Accepts parameters: s *SIPDB (No Constraints).
 // Returns DelegateMission(ctx context.Context, missionID, role string, task Message) error.
@@ -252,11 +319,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 

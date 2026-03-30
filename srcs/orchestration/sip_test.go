@@ -7,6 +7,48 @@ import (
 	"time"
 )
 
+func TestSIPDB_AuditMissions(t *testing.T) {
+	db, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert test data with circular dependency
+	task1 := `{"id":"m1","fromAgent":"A","toAgent":"B","type":"task","content":"ping"}`
+	task2 := `{"id":"m2","fromAgent":"B","toAgent":"A","type":"task","content":"pong"}`
+
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES ('m1', 'ROLE', ?, 'PENDING', datetime('now'), datetime('now'))", task1)
+	if err != nil {
+		t.Fatalf("Failed to insert m1: %v", err)
+	}
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES ('m2', 'ROLE', ?, 'PENDING', datetime('now'), datetime('now'))", task2)
+	if err != nil {
+		t.Fatalf("Failed to insert m2: %v", err)
+	}
+
+	err = db.AuditMissions(ctx)
+	if err != nil {
+		t.Fatalf("AuditMissions failed: %v", err)
+	}
+
+	var status1, status2 string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm1'").Scan(&status1)
+	if err != nil {
+		t.Fatalf("Failed to query status for m1: %v", err)
+	}
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm2'").Scan(&status2)
+	if err != nil {
+		t.Fatalf("Failed to query status for m2: %v", err)
+	}
+
+	if status1 != "BLOCKED" || status2 != "BLOCKED" {
+		t.Fatalf("Expected both missions to be BLOCKED, got %s, %s", status1, status2)
+	}
+}
+
 func TestSIPDB_Init(t *testing.T) {
 	db, err := NewSIPDB(":memory:")
 	if err != nil {

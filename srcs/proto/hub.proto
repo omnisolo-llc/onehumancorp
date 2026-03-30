@@ -77,6 +77,18 @@ message TokenEfficientContextSummarizationEvent {
   bytes payload = 3;
 }
 
+message MultiAgentHandoff {
+  string id = 1;
+  string from_agent_id = 2;
+  string to_human_role = 3;
+  string intent = 4;
+  int32 failed_attempts = 5;
+  string current_state = 6;
+  string visual_ground_truth = 7;
+  string status = 8;
+  int64 created_at_unix = 9;
+}
+
 message ToolParameterAutoCorrectionEvent {
   string event_id = 1;
   string agent_id = 2;
