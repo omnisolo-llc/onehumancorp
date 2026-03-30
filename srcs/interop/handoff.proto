@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package interop;
+
+option go_package = "github.com/onehumancorp/mono/srcs/interop";
+
+message HandoffContext {
+  string source_agent = 1;
+  string target_agent = 2;
+  string priority = 3;
+  map<string, string> metadata = 4;
+}
+
+message MultiAgentHandoff {
+  string mission_id = 1;
+  string role = 2;
+  string task_payload = 3;
+  HandoffContext context = 4;
+}

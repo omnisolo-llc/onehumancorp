@@ -1,4 +1,20 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "interop_proto",
+    srcs = ["handoff.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "interop_go_proto",
+    compilers = ["@rules_go//proto:go_grpc"],
+    importpath = "github.com/onehumancorp/mono/srcs/interop",
+    proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
 
 go_library(
     name = "interop",
@@ -9,7 +25,9 @@ go_library(
         "openclaw_adapter.go",
         "semantickernel_adapter.go",
         "types.go",
+        "handoff.go",
     ],
+    embed = [":interop_go_proto"],
     importpath = "github.com/onehumancorp/mono/srcs/interop",
     visibility = ["//visibility:public"],
 )
@@ -20,6 +38,7 @@ go_test(
         "ironclaw_adapter_test.go",
         "swarm_test.go",
         "types_test.go",
+        "handoff_test.go",
     ],
     embed = [":interop"],
 )

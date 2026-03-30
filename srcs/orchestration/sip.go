@@ -53,10 +53,24 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	dsn := dbPath
+	if dbPath != ":memory:" {
+		// Use & to append parameters if there's already a query string
+		sep := "?"
+		for i := 0; i < len(dbPath); i++ {
+			if dbPath[i] == '?' {
+				sep = "&"
+				break
+			}
+		}
+		dsn += sep + "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	}
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetMaxOpenConns(1)
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
@@ -159,6 +173,12 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 		}
 		defer rows.Close()
 
+		type fix struct {
+			id   string
+			task string
+		}
+		var fixes []fix
+
 		for rows.Next() {
 			var id, taskStr string
 			if err := rows.Scan(&id, &taskStr); err != nil {
@@ -167,8 +187,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 
 			var msg Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
+				// fallback: actively rewrite raw string into valid JSON Message
 				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+
+				fixedBytes, marshalErr := json.Marshal(msg)
+				if marshalErr == nil {
+					fixes = append(fixes, fix{id: id, task: string(fixedBytes)})
+				}
 			} else {
 				if msg.ID == "" {
 					msg.ID = id
@@ -176,6 +201,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 			}
 			missions = append(missions, msg)
 		}
+		rows.Close()
+
+		for _, f := range fixes {
+			// Best-effort update, ignore errors
+			_, _ = s.db.ExecContext(ctx, "UPDATE agent_missions SET task = ? WHERE id = ?", f.task, f.id)
+		}
+
 		return nil
 	})
 	return missions, err
