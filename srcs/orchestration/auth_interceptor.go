@@ -182,6 +182,8 @@ func SPIFFEAuthInterceptor() grpc.UnaryServerInterceptor {
 			if !found {
 				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot open a meeting without being a participant", spiffeID)
 			}
+		default:
+			return nil, status.Errorf(codes.PermissionDenied, "unknown request payload type")
 		}
 
 		return handler(ctx, req)
@@ -300,11 +302,14 @@ func (w *recvWrapper) RecvMsg(m interface{}) error {
 		return err
 	}
 
-	if req, ok := m.(*pb.StreamMessagesRequest); ok {
+	switch req := m.(type) {
+	case *pb.StreamMessagesRequest:
 		reqAgentID := req.GetAgentId()
 		if w.agentID != reqAgentID {
 			return status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot stream messages for agent %s", w.spiffeID, reqAgentID)
 		}
+	default:
+		return status.Errorf(codes.PermissionDenied, "unknown request payload type in stream")
 	}
 	return nil
 }
