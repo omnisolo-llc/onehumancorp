@@ -1,5 +1,6 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 
 npm_link_all_packages(name = "node_modules")
@@ -75,4 +76,18 @@ alias(
 alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
+)
+sh_test(
+    name = "chaos_test",
+    srcs = ["//srcs/app:test/flutter_web_chaos_test.sh"],
+    data = [
+        "//srcs/app:app",
+        "//srcs/app:e2e/playwright.config.ts",
+        "//srcs/app:e2e/chaos.spec.ts",
+        "//:node_modules/@playwright/test",
+    ],
+    tags = [
+        "manual",
+        "requires-network",
+    ],
 )

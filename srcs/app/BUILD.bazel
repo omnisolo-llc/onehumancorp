@@ -173,3 +173,25 @@ sh_binary(
     ],
     visibility = ["//visibility:public"],
 )
+
+sh_test(
+    name = "app_web_chaos_test",
+    srcs = ["test/flutter_web_chaos_test.sh"],
+    data = [
+        ":app",
+        "e2e/playwright.config.ts",
+        "e2e/chaos.spec.ts",
+        "//:node_modules/@playwright/test",
+    ],
+    tags = [
+        "manual",
+        "requires-network",
+    ],  # browser download may need network on first run
+)
+exports_files([
+    "e2e/chaos.spec.ts",
+    "test/flutter_web_chaos_test.sh",
+])
+exports_files([
+    "e2e/playwright.config.ts",
+])
