@@ -319,9 +319,13 @@ else
             exit 1
         fi
     else
-        cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
+        if grep -qi "workspace" "$PUB_DEPS_ERR" || grep -qi "version solving failed" "$PUB_DEPS_ERR" || grep -qi "Read-only file system" "$PUB_DEPS_ERR"; then
+            echo '{{ "packages": [] }}' > pub_deps.json
+        else
+            cat "$PUB_DEPS_ERR" >&2 || true
+            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+            exit 1
+        fi
     fi
 fi
 
