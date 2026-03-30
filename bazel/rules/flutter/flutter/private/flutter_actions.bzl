@@ -512,7 +512,7 @@ if [ -f "$WORKSPACE_DIR_ABS/pub_deps.json" ]; then
     cp "$WORKSPACE_DIR_ABS/pub_deps.json" "{pub_deps}"
     echo "✓ Generated pub_deps.json" >> "$LOG_FILE"
 else
-    echo "{{}}" > "{pub_deps}"
+    echo '{{"packages": []}}' > "{pub_deps}"
     echo "⚠ pub_deps.json missing, wrote empty placeholder" >> "$LOG_FILE"
 fi
 
