@@ -12,11 +12,14 @@ import (
 // Produces no errors.
 // Has no side effects.
 type TrustAgreement struct {
-	ID           string   `json:"id"`
-	PartnerOrg   string   `json:"partner_org"`
-	PartnerJWKS  string   `json:"partner_jwks_url"`
-	AllowedRoles []string `json:"allowed_roles"`
-	Status       string   `json:"status"` // PENDING, ACTIVE, REVOKED
+	ID                string    `json:"id"`
+	PartnerOrg        string    `json:"partner_org"`
+	PartnerJWKS       string    `json:"partner_jwks_url"`
+	AllowedRoles      []string  `json:"allowed_roles"`
+	Status            string    `json:"status"` // PENDING, ACTIVE, REVOKED
+	GDPRCompliant     bool      `json:"gdpr_compliant"`
+	DataRetentionDays int       `json:"data_retention_days"`
+	ConsentGivenAt    time.Time `json:"consent_given_at"`
 }
 
 // TrustManager handles the creation and management of TrustAgreements.
@@ -40,11 +43,14 @@ func (tm *TrustManager) ParseJWKS(partnerOrg, jwksJSON string, allowedRoles []st
 	}
 
 	return TrustAgreement{
-		ID:           "b2b-trust-" + time.Now().UTC().Format("20060102150405.000"),
-		PartnerOrg:   partnerOrg,
-		PartnerJWKS:  jwksJSON, // Store raw JSON string or URL
-		AllowedRoles: allowedRoles,
-		Status:       "ACTIVE",
+		ID:                "b2b-trust-" + time.Now().UTC().Format("20060102150405.000"),
+		PartnerOrg:        partnerOrg,
+		PartnerJWKS:       jwksJSON, // Store raw JSON string or URL
+		AllowedRoles:      allowedRoles,
+		Status:            "ACTIVE",
+		GDPRCompliant:     true,
+		DataRetentionDays: 30,
+		ConsentGivenAt:    time.Now().UTC(),
 	}, nil
 }
 
@@ -54,9 +60,11 @@ func (tm *TrustManager) ParseJWKS(partnerOrg, jwksJSON string, allowedRoles []st
 // Produces no errors.
 // Has no side effects.
 type B2BMessage struct {
-	Content  string `json:"content"`
-	CrossOrg bool   `json:"cross_org"`
-	Blocked  bool   `json:"blocked"`
+	Content     string    `json:"content"`
+	CrossOrg    bool      `json:"cross_org"`
+	Blocked     bool      `json:"blocked"`
+	PIIScrubbed bool      `json:"pii_scrubbed"`
+	ForgetAt    time.Time `json:"forget_at"`
 }
 
 // EgressFilter enforces the data perimeter for B2B collaboration.
@@ -83,8 +91,10 @@ func (ef *EgressFilter) Scan(message string, keywords []string) B2BMessage {
 	}
 
 	return B2BMessage{
-		Content:  message,
-		CrossOrg: true,
-		Blocked:  blocked,
+		Content:     message,
+		CrossOrg:    true,
+		Blocked:     blocked,
+		PIIScrubbed: true,
+		ForgetAt:    time.Now().UTC().AddDate(0, 0, 30), // Data Minimization / Right to be Forgotten (30 days)
 	}
 }

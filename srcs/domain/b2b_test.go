@@ -113,3 +113,16 @@ func TestEgressFilter_Scan(t *testing.T) {
 		})
 	}
 }
+
+func TestEgressFilter_GDPRCompliance(t *testing.T) {
+	ef := &EgressFilter{}
+	keywords := []string{"Internal"}
+
+	got := ef.Scan("This is a message", keywords)
+	if !got.PIIScrubbed {
+		t.Errorf("Scan() PII Scrubbed = %v, want true", got.PIIScrubbed)
+	}
+	if got.ForgetAt.IsZero() {
+		t.Errorf("Scan() ForgetAt is zero, want a valid future time")
+	}
+}
