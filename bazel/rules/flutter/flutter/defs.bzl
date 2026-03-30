@@ -875,6 +875,10 @@ mkdir -p "$RUNTIME_WORKSPACE"
 # If not, it contains the package sources at the root.
 copy_tree "$WORKSPACE_ABS" "$RUNTIME_WORKSPACE"
 
+# Bazel artifact directories are read-only; ensure the runtime workspace is
+# fully writable so that Flutter can create .dart_tool and other runtime files.
+chmod -R u+rwX "$RUNTIME_WORKSPACE"
+
 # Root workspace files are already inside the prepared workspace if in workspace mode,
 # but we ensure they are writable for the test runner.
 PACKAGE_DIR="{package_dir}"
