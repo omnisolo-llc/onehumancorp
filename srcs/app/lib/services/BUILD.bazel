@@ -100,13 +100,23 @@ flutter_library(
 
 SERVICE_TESTS = glob(["*_test.dart"])
 
+# Map test file names to their corresponding flutter_library targets.
+# Each test only imports one service (plus its transitive model deps which are
+# pulled in automatically through the transitive dart_sources mechanism).
+_SERVICE_TEST_EMBED = {
+    "api_service_test.dart": ":api_service",
+    "auth_service_test.dart": ":auth_service",
+    "centrifuge_service_full_test.dart": ":centrifuge_service",
+    "centrifuge_service_test.dart": ":centrifuge_service",
+    "local_manager_service_test.dart": ":local_manager_service",
+}
+
 [
     flutter_test(
         name = file.replace(".dart", ""),
         srcs = [file],
-        embed = ["//srcs/app:app_lib"],
+        embed = [_SERVICE_TEST_EMBED.get(file, ":services_lib")],
         test_files = [file],
-        workspace_pubspec = "//:pubspec.yaml",
     )
     for file in SERVICE_TESTS
 ]
@@ -120,10 +130,9 @@ test_suite(
 flutter_test(
     name = "coverage_test",
     srcs = SERVICE_TESTS,
-    embed = ["//srcs/app:app_lib"],
+    embed = [":services_lib"],
     test_files = ["."],
     coverage = True,
     coverage_min = 90,
     tags = ["manual"],
-    workspace_pubspec = "//:pubspec.yaml",
 )
