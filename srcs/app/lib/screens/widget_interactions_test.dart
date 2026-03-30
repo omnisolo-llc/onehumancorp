@@ -234,7 +234,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No active meeting rooms.'), findsOneWidget);
-      await tester.tap(find.text('New Room'));
+      await tester.tap(find.text('Create Room'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsOneWidget);
@@ -252,7 +252,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('New Room'));
+      await tester.tap(find.text('Create Room'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Cancel'));
@@ -277,7 +277,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('New Room'));
+      await tester.tap(find.text('Create Room'));
       await tester.pumpAndSettle();
 
       await tester.enterText(

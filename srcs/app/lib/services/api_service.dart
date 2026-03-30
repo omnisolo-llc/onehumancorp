@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/models/agent.dart';
@@ -371,7 +372,30 @@ class ApiService {
     return list.cast<String>();
   }
 
+
+  Stream<String> streamScaleEvents() async* {
+    final req = http.Request('GET', Uri.parse('$baseUrl/api/v1/scale/stream'));
+    req.headers.addAll(_headers);
+    final res = await _client.send(req);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('API error ${res.statusCode}');
+    }
+
+    await for (final chunk in res.stream.transform(utf8.decoder)) {
+      final lines = chunk.split('\n');
+      for (final line in lines) {
+        if (line.startsWith('data: ')) {
+          final data = line.substring(6).trim();
+          if (data.isNotEmpty) {
+            yield data;
+          }
+        }
+      }
+    }
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
+
 
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {

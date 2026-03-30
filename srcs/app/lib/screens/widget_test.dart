@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/ai_config_screen.dart';
 import 'package:ohc_app/screens/channels_screen.dart';
@@ -59,6 +60,7 @@ const _fakeUser = AuthUser(
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeUri());
+    SharedPreferences.setMockInitialValues({});
   });
 
   // ── LoginScreen ──────────────────────────────────────────────────────────

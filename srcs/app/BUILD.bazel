@@ -91,6 +91,23 @@ flutter_library(
     ],
 )
 
+# ── Test-only aggregate library ───────────────────────────────────────────────
+# Provides router.dart (AppShell) + test-only deps (mocktail) for screen tests
+# that need router-level access.  Intentionally excludes main_lib to keep the
+# build graph smaller and maximise cache hit rate for those tests.
+
+flutter_library(
+    name = "app_for_tests",
+    srcs = [],
+    pubspec = "pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    visibility = ["//srcs/app:__subpackages__"],
+    deps = [
+        ":router_lib",
+        "@pub_mocktail//:mocktail",
+    ],
+)
+
 # ── Flutter Tests ─────────────────────────────────────────────────────────────
 
 # (Individual tests are now in lib/*/BUILD.bazel)
