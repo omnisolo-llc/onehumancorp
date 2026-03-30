@@ -151,3 +151,22 @@ oci.pull(
     tag = "latest",
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
+
+single_version_override(
+    module_name = "rules_android",
+    patch_cmds = [
+        "sed -i 's/@local_config_platform\\/\\/:constraints.bzl/@platforms\\/\\/host:constraints.bzl/g' rules/android_sdk_repository/helper.bzl",
+        "sed -i '/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")/d' rules/android_local_test/attrs.bzl || true",
+        "sed -i '1s/^/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")\\n/' rules/android_local_test/attrs.bzl || true",
+        "sed -i '/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")/d' rules/android_library/impl.bzl || true",
+        "sed -i '1s/^/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")\\n/' rules/android_library/impl.bzl || true",
+        "sed -i '/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")/d' rules/android_library/attrs.bzl || true",
+        "sed -i '1s/^/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")\\n/' rules/android_library/attrs.bzl || true",
+        "sed -i '/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")/d' rules/attrs.bzl || true",
+        "sed -i '1s/^/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")\\n/' rules/attrs.bzl || true",
+        "sed -i '/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")/d' rules/native_deps.bzl || true",
+        "sed -i '1s/^/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")\\n/' rules/native_deps.bzl || true",
+        "sed -i '/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")/d' rules/android_binary/attrs.bzl || true",
+        "sed -i '1s/^/load(\"@rules_cc\\/\\/cc\\/common:cc_info.bzl\", \"CcInfo\")\\n/' rules/android_binary/attrs.bzl || true",
+    ],
+)

@@ -1,0 +1,1 @@
+sed -i 's/fail("Failed to run `{tool} pub deps --json` for package '\''{pkg}'\''/repository_ctx.file(pub_deps_rel, "{\"packages\": []}")\n            return False\n        fail("Failed to run `{tool} pub deps --json` for package '\''{pkg}'\''/' bazel/rules/flutter/flutter/private/package_generation.bzl
