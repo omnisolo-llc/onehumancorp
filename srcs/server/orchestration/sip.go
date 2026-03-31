@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -20,8 +21,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db          *sql.DB
-	ContextRoot string
+	db                 *sql.DB
+	ContextRoot        string
+	cachedGrounding    string
+	groundingOnce      *sync.Once
 }
 
 const (
@@ -77,7 +80,7 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		return nil, err
 	}
 
-	return &SIPDB{db: db}, nil
+	return &SIPDB{db: db, groundingOnce: &sync.Once{}}, nil
 }
 
 func initializeTables(db *sql.DB) error {
@@ -257,12 +260,17 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	}
 
 	if s.ContextRoot != "" {
-		for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
-			path := filepath.Join(s.ContextRoot, filename)
-			if content, err := os.ReadFile(path); err == nil {
-				task.Content += "\n\n[SYSTEM GROUNDING]:\n" + string(content)
-				break
+		s.groundingOnce.Do(func() {
+			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
+				path := filepath.Join(s.ContextRoot, filename)
+				if content, err := os.ReadFile(path); err == nil {
+					s.cachedGrounding = "\n\n[SYSTEM GROUNDING]:\n" + string(content)
+					break
+				}
 			}
+		})
+		if s.cachedGrounding != "" {
+			task.Content += s.cachedGrounding
 		}
 	}
 
@@ -439,4 +447,6 @@ func (s *SIPDB) Close() error {
 // SetContextRoot sets the context root for the SIPDB
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
+	s.cachedGrounding = ""
+	s.groundingOnce = &sync.Once{}
 }
