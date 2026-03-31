@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/sony/gobreaker"
 )
 
 // DefaultBaseURL is the in-cluster URL for the Plane API service.
@@ -35,6 +37,7 @@ type Client struct {
 	Workspace  string
 	Project    string
 	httpClient *http.Client
+	cb         *gobreaker.CircuitBreaker
 }
 
 // NewClientFromEnv creates a Client using environment variables.
@@ -47,12 +50,25 @@ func NewClientFromEnv() *Client {
 	if base == "" {
 		base = DefaultBaseURL
 	}
+
+	cbSettings := gobreaker.Settings{
+		Name:        "PlaneAPI",
+		MaxRequests: 5,
+		Interval:    10 * time.Second,
+		Timeout:     30 * time.Second,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
+			return counts.Requests >= 3 && failureRatio >= 0.5
+		},
+	}
+
 	return &Client{
 		BaseURL:    base,
 		APIKey:     os.Getenv("PLANE_API_KEY"),
 		Workspace:  os.Getenv("PLANE_WORKSPACE"),
 		Project:    os.Getenv("PLANE_PROJECT"),
 		httpClient: &http.Client{Timeout: 15 * time.Second},
+		cb:         gobreaker.NewCircuitBreaker(cbSettings),
 	}
 }
 
@@ -141,21 +157,34 @@ func (c *Client) addHeaders(req *http.Request) {
 }
 
 func (c *Client) do(req *http.Request, dest interface{}) error {
-	resp, err := c.httpClient.Do(req)
+	result, err := c.cb.Execute(func() (interface{}, error) {
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
+
+		if resp.StatusCode >= 400 {
+			b, _ := io.ReadAll(resp.Body)
+			return nil, fmt.Errorf("plane API %s %s returned %d: %s", req.Method, req.URL.Path, resp.StatusCode, string(b))
+		}
+
+		if dest != nil {
+			// Read all data first before decoding so we don't return stream errors late
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal(b, dest); err != nil {
+				return nil, fmt.Errorf("plane decode response: %w", err)
+			}
+		}
+		return nil, nil
+	})
+
 	if err != nil {
 		return err
 	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-
-	if resp.StatusCode >= 400 {
-		b, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("plane API %s %s returned %d: %s", req.Method, req.URL.Path, resp.StatusCode, string(b))
-	}
-
-	if dest != nil {
-		if err := json.NewDecoder(resp.Body).Decode(dest); err != nil {
-			return fmt.Errorf("plane decode response: %w", err)
-		}
-	}
+	_ = result
 	return nil
 }

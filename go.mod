@@ -6,6 +6,7 @@ require (
 	github.com/centrifugal/centrifuge v0.38.0
 	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/sony/gobreaker v1.0.0
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.53.0
 	go.opentelemetry.io/otel/metric v1.42.0

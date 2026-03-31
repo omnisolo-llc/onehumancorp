@@ -16,6 +16,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/agents",
         "//srcs/server/integrations/plane",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
@@ -28,6 +29,7 @@ go_library(
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
         "@org_modernc_sqlite//:sqlite",
+        "@com_github_sony_gobreaker//:gobreaker",
     ],
 )
 

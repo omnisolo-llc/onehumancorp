@@ -13,12 +13,14 @@ import (
 // and randomly assigns an idle agent to them by injecting the task into their context.
 type TaskWorker struct {
 	planeClient *plane.Client
+	hub         *Hub
 }
 
 // NewTaskWorker creates a new TaskWorker.
-func NewTaskWorker(pc *plane.Client) *TaskWorker {
+func NewTaskWorker(pc *plane.Client, hub *Hub) *TaskWorker {
 	return &TaskWorker{
 		planeClient: pc,
+		hub:         hub,
 	}
 }
 
@@ -66,6 +68,36 @@ func (tw *TaskWorker) pollAndAssign() {
 		return
 	}
 
-	// TODO: Inject issue descriptor into an available agent's prompt queue.
-	slog.Info("agent task worker: issue marked in_progress, delegating to agent")
+	if tw.hub == nil {
+		return
+	}
+
+	agents := tw.hub.Agents()
+	var availableAgents []Agent
+	for _, a := range agents {
+		if a.Status == StatusIdle {
+			availableAgents = append(availableAgents, a)
+		}
+	}
+
+	if len(availableAgents) == 0 {
+		slog.Warn("no available idle agents to take task")
+		return
+	}
+
+	selectedAgent := availableAgents[rand.Intn(len(availableAgents))]
+	msg := Message{
+		ID:         "plane-issue-" + issue.ID,
+		FromAgent:  "system",
+		ToAgent:    selectedAgent.ID,
+		Type:       EventTask,
+		Content:    "Issue: " + issue.Name + "\n" + issue.Description,
+		OccurredAt: time.Now().UTC(),
+	}
+
+	if err := tw.hub.Publish(msg); err != nil {
+		slog.Error("failed to inject issue to agent", "agent_id", selectedAgent.ID, "err", err)
+	}
+
+	slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", selectedAgent.ID)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
+	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -192,6 +193,13 @@ func run(now time.Time, listen listenFunc) error {
 
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
+
+	// 4. Start TaskWorker
+	if plane.IsEnabled() {
+		tw := orchestration.NewTaskWorker(plane.NewClientFromEnv(), hub)
+		tw.Start(ctx)
+		slog.Info("started agent task worker for plane issues")
+	}
 
 	// Start gRPC server
 	go func() {
