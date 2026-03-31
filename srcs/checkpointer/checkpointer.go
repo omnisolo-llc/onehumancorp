@@ -81,12 +81,14 @@ func (p *PGCheckpointer) SaveCheckpoint(ctx context.Context, threadID string, st
 		return fmt.Errorf("failed to marshal state: %w", err)
 	}
 
-	// Use an upsert strategy. The specific syntax here works for both SQLite (for tests) and PostgreSQL
-	// Postgres uses ON CONFLICT. SQLite uses ON CONFLICT (from 3.24.0+).
+	// ⚡ BOLT: [Heavy Postgres locking in LangGraph checkpointers] - Randomized Selection from Top 5
+	// Using a conditional DO UPDATE (WHERE checkpoints.state != excluded.state) eliminates write locks
+	// and WAL bloat for no-op state updates. The specific syntax here works for both SQLite (for tests) and PostgreSQL.
 	query := `
 	INSERT INTO checkpoints (thread_id, state)
 	VALUES ($1, $2)
-	ON CONFLICT (thread_id) DO UPDATE SET state = excluded.state;
+	ON CONFLICT (thread_id) DO UPDATE SET state = excluded.state
+	WHERE checkpoints.state != excluded.state;
 	`
 	return p.withRetry(func() error {
 		_, err := p.db.ExecContext(ctx, query, threadID, stateBytes)
