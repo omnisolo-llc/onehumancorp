@@ -25,12 +25,13 @@ mkdir -p "${HOME}" "${XDG_CONFIG_HOME}" "${XDG_CACHE_HOME}"
 
 # ── Locate web build artifacts ─────────────────────────────────────────────
 # Depending on rule naming, Bazel may emit either:
-#   srcs/app/app_web.web_build_artifacts/
+#   srcs/app/app.web_build_artifacts/
 #   srcs/app/app_web_build_artifacts/
 WEB_ARTIFACTS=""
 WEB_ARTIFACTS_RELS=(
-  "srcs/app/app_web.web_build_artifacts"
+  "srcs/app/app.web_build_artifacts"
   "srcs/app/app_web_build_artifacts"
+  "srcs/app/app_web.web_build_artifacts"
 )
 
 for rel in "${WEB_ARTIFACTS_RELS[@]}"; do
@@ -65,10 +66,43 @@ print(port)
 export PLAYWRIGHT_BASE_URL="http://localhost:${PORT}"
 echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
-# ── Start Python HTTP server ───────────────────────────────────────────────
-python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
-SERVER_PID=$!
-trap 'kill ${SERVER_PID} 2>/dev/null; rm -rf "${TMPDIR}/pw_results" 2>/dev/null' EXIT
+# ── Start the Go backend serving the Flutter app ───────────────────────────
+# We run the real backend API so the Flutter app can communicate with it
+# and we use an ephemeral SQLite DB to ensure deterministic seeded state.
+
+BACKEND_BIN=""
+for candidate in \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/server_/server" \
+    "${RUNFILES}/_main/srcs/server/server_/server" \
+    "${RUNFILES}/__main__/srcs/server/server_/server" \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/server" \
+    "${RUNFILES}/_main/srcs/server/server" \
+    "${RUNFILES}/__main__/srcs/server/server"; do
+  if [ -x "$candidate" ]; then
+    BACKEND_BIN="$candidate"
+    break
+  fi
+done
+
+if [ -z "$BACKEND_BIN" ]; then
+  echo "ERROR: Go backend binary not found. Ensure //srcs/server:server is included in data." >&2
+  # Fallback to Python server if we can't find the backend binary (e.g. during local dev)
+  python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
+  SERVER_PID=$!
+else
+  export FRONTEND_STATIC_DIR="${WEB_ARTIFACTS}"
+  export PORT="${PORT}"
+  export GRPC_PORT="0"
+  export OHC_DB_PATH="${TMPDIR}/ohc_e2e.db"
+  export ADMIN_USERNAME="admin"
+  export ADMIN_PASSWORD="adminpass123"
+
+  # Seed the backend
+  "${BACKEND_BIN}" &
+  SERVER_PID=$!
+fi
+
+trap 'kill ${SERVER_PID} 2>/dev/null || true; rm -rf "${TMPDIR}/pw_results" 2>/dev/null || true' EXIT
 
 # Wait for server to be ready
 READY=0
