@@ -69,7 +69,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 	if _, err := tracker.Track(billing.Usage{
 		AgentID:          "swe-1",
 		OrganizationID:   org.ID,
-		Model:            "gpt-4o",
+		Model:            "gpt-4o-mini",
 		PromptTokens:     1000,
 		CompletionTokens: 500,
 		OccurredAt:       time.Date(2026, 3, 10, 1, 0, 0, 0, time.UTC),

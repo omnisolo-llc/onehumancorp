@@ -217,7 +217,7 @@ Enables "Architecture as Code" to be snapshotted and recovered.
 #### Module 5: Cost Estimation & Billing Engine
 Provides real-time visibility into the financial cost of running the AI workforce.
 - **Token Tracking by Role**: The Gateway intercepts every LLM call, logging the `prompt_tokens` and `completion_tokens` against the specific agent role (e.g., `SWE Agent 1`) and the overarching project.
-- **Model-Aware Pricing**: Calculates cost dynamically based on the underlying model (e.g., GPT-4o vs. Claude 3.5 Sonnet).
+- **Model-Aware Pricing**: Calculates cost dynamically based on the underlying model (e.g., GPT-4o-mini vs. Claude 3.5 Sonnet).
 - **Burn Rate Forecasting**: Predicts end-of-month cloud and API costs based on current task volume, allowing the CEO to throttle non-critical agents if budgets are tight.
 
 #### Module 6: Agent Interaction Protocol

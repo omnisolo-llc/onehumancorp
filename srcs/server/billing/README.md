@@ -22,7 +22,7 @@ func main() {
 	_, _ = tracker.Track(billing.Usage{
 		AgentID:          "agent-swe-1",
 		OrganizationID:   "org-demo-1",
-		Model:            "gpt-4o",
+		Model:            "gpt-4o-mini",
 		PromptTokens:     1000,
 		CompletionTokens: 500,
 		OccurredAt:       time.Now().UTC(),

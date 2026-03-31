@@ -82,7 +82,7 @@ func newDemoSystem(now time.Time) (domain.Organization, *orchestration.Hub, *bil
 		AgentID:          "swe-1",
 		AgentRole:        "SOFTWARE_ENGINEER",
 		OrganizationID:   org.ID,
-		Model:            "gpt-4o",
+		Model:            "gpt-4o-mini",
 		PromptTokens:     1500,
 		CompletionTokens: 700,
 		OccurredAt:       now.UTC(),

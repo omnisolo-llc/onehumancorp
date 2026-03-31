@@ -190,7 +190,7 @@ class _ProviderCard extends StatelessWidget {
 // ── Add provider dialog ────────────────────────────────────────────────────
 
 const _presetProviders = [
-  {'name': 'OpenAI', 'base_url': 'https://api.openai.com/v1', 'models': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo']},
+  {'name': 'OpenAI', 'base_url': 'https://api.openai.com/v1', 'models': ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo']},
   {'name': 'Anthropic', 'base_url': 'https://api.anthropic.com/v1', 'models': ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']},
   {'name': 'Ollama (local)', 'base_url': 'http://localhost:11434/v1', 'models': ['llama3', 'mistral', 'phi3']},
   {'name': 'Custom', 'base_url': '', 'models': []},
@@ -317,7 +317,7 @@ class _ProviderDialogState extends State<_ProviderDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Models (comma-separated)',
                   border: OutlineInputBorder(),
-                  hintText: 'gpt-4o, gpt-4o-mini',
+                  hintText: 'gpt-4o-mini, gpt-4o',
                 ),
               ),
             ],
