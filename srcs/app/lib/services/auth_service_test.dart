@@ -35,19 +35,13 @@ void main() {
     });
 
     test('fromJson uses email as name when name is missing', () {
-      final json = {
-        'id': 'user-2',
-        'email': 'bob@example.com',
-      };
+      final json = {'id': 'user-2', 'email': 'bob@example.com'};
       final user = AuthUser.fromJson(json, 'tok-xyz');
       expect(user.name, 'bob@example.com');
     });
 
     test('fromJson uses defaults for missing optional fields', () {
-      final json = {
-        'id': 'user-3',
-        'email': 'carol@example.com',
-      };
+      final json = {'id': 'user-3', 'email': 'carol@example.com'};
       final user = AuthUser.fromJson(json, 'tok-def');
       expect(user.role, 'viewer');
       expect(user.organizationId, '');
@@ -80,12 +74,13 @@ void main() {
         },
       });
 
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async =>
-          http.Response(responseBody, 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response(responseBody, 200));
 
       final user = await service.login('alice@example.com', 'password');
       expect(user.id, 'u1');
@@ -95,11 +90,13 @@ void main() {
     });
 
     test('login throws on non-200 response', () async {
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response('Unauthorized', 401));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('Unauthorized', 401));
 
       expect(
         () => service.login('bad@example.com', 'wrong'),
@@ -108,17 +105,15 @@ void main() {
     });
 
     test('logout calls the logout endpoint', () async {
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await service.logout('some-token');
 
-      verify(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-          )).called(1);
+      verify(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).called(1);
     });
   });
 }

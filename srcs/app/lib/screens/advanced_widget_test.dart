@@ -39,10 +39,7 @@ class FakeClientConfig extends Fake implements centrifuge.ClientConfig {}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
-  return ProviderScope(
-    overrides: overrides,
-    child: MaterialApp(home: child),
-  );
+  return ProviderScope(overrides: overrides, child: MaterialApp(home: child));
 }
 
 ApiService _mockApi(MockHttpClient client) =>
@@ -60,8 +57,9 @@ CentrifugeService _mockCentrifugeService(
   when(() => mockSub.subscribe()).thenAnswer((_) async {});
   when(() => mockSub.unsubscribe()).thenAnswer((_) async {});
   when(() => mockClient.disconnect()).thenAnswer((_) async {});
-  when(() => mockClient.publish(any(), any()))
-      .thenAnswer((_) async => centrifuge.PublishResult());
+  when(
+    () => mockClient.publish(any(), any()),
+  ).thenAnswer((_) async => centrifuge.PublishResult());
 
   return CentrifugeService(
     serverUrl: 'ws://localhost:8000/connection/websocket',
@@ -135,10 +133,12 @@ void main() {
 
   group('routerProvider', () {
     test('creates a GoRouter with routes', () {
-      final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
-        backendUrlProvider.overrideWith((ref) => 'http://localhost'),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
+          backendUrlProvider.overrideWith((ref) => 'http://localhost'),
+        ],
+      );
       addTearDown(container.dispose);
 
       final router = container.read(routerProvider);
@@ -189,8 +189,7 @@ void main() {
     setUp(() {
       mockClient = MockCentrifugeClient();
       mockSub = MockSubscription();
-      pubController =
-          StreamController<centrifuge.PublicationEvent>.broadcast();
+      pubController = StreamController<centrifuge.PublicationEvent>.broadcast();
     });
 
     tearDown(() {
@@ -198,16 +197,19 @@ void main() {
     });
 
     testWidgets('connects to service on init', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle(); // Trigger initState
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -216,16 +218,19 @@ void main() {
     });
 
     testWidgets('shows "No messages yet" when no messages', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -233,16 +238,19 @@ void main() {
     });
 
     testWidgets('displays messages when received', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -255,8 +263,14 @@ void main() {
         'body': 'Hello from Bob!',
         'sent_at': '2025-01-01T10:00:00.000Z',
       });
-      pubController.add(centrifuge.PublicationEvent(
-          utf8.encode(msgJson), fixnum.Int64.ZERO, null, {}));
+      pubController.add(
+        centrifuge.PublicationEvent(
+          utf8.encode(msgJson),
+          fixnum.Int64.ZERO,
+          null,
+          {},
+        ),
+      );
 
       await tester.pump(const Duration(milliseconds: 50));
 
@@ -264,16 +278,19 @@ void main() {
     });
 
     testWidgets('can send a message', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -286,16 +303,19 @@ void main() {
     });
 
     testWidgets('opens room picker dialog', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -306,16 +326,19 @@ void main() {
     });
 
     testWidgets('can cancel room picker dialog', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -329,16 +352,19 @@ void main() {
     });
 
     testWidgets('can switch to a different room', (tester) async {
-      final svc =
-          _mockCentrifugeService(mockClient, mockSub, pubController);
+      final svc = _mockCentrifugeService(mockClient, mockSub, pubController);
 
-      await tester.pumpWidget(_wrap(
-        const ChatScreen(),
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(svc),
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChatScreen(),
+          overrides: [
+            centrifugeServiceProvider.overrideWithValue(svc),
+            authStateProvider.overrideWith(
+              () => _FakeAuthNotifier(_loggedInUser),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -346,7 +372,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-          find.widgetWithText(TextField, 'Room ID'), 'support');
+        find.widgetWithText(TextField, 'Room ID'),
+        'support',
+      );
       await tester.tap(find.text('Switch'));
       await tester.pumpAndSettle();
 
@@ -360,64 +388,84 @@ void main() {
   group('LoginScreen login flow', () {
     testWidgets('submits login with valid credentials', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response(
-            jsonEncode({
-              'token': 'new-tok',
-              'user': {
-                'id': 'u1',
-                'email': 'a@b.com',
-                'name': 'Alice',
-                'role': 'admin',
-                'organization_id': 'org-1',
-              },
-            }),
-            200,
-          ));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'token': 'new-tok',
+            'user': {
+              'id': 'u1',
+              'email': 'a@b.com',
+              'name': 'Alice',
+              'role': 'admin',
+              'organization_id': 'org-1',
+            },
+          }),
+          200,
+        ),
+      );
 
-      await tester.pumpWidget(_wrap(
-        const LoginScreen(),
-        overrides: [
-          authServiceProvider.overrideWithValue(
-              AuthService(baseUrl: 'http://localhost', client: mockClient)),
-          backendUrlProvider.overrideWith((ref) => 'http://localhost'),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const LoginScreen(),
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              AuthService(baseUrl: 'http://localhost', client: mockClient),
+            ),
+            backendUrlProvider.overrideWith((ref) => 'http://localhost'),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
+        find.widgetWithText(TextFormField, 'Email'),
+        'a@b.com',
+      );
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Password'), 'password');
+        find.widgetWithText(TextFormField, 'Password'),
+        'password',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pump(const Duration(milliseconds: 100));
     });
 
     testWidgets('shows error when login fails', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenThrow(Exception('Network error'));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenThrow(Exception('Network error'));
 
-      await tester.pumpWidget(_wrap(
-        const LoginScreen(),
-        overrides: [
-          authServiceProvider.overrideWithValue(
-              AuthService(baseUrl: 'http://localhost', client: mockClient)),
-          backendUrlProvider.overrideWith((ref) => 'http://localhost'),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const LoginScreen(),
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              AuthService(baseUrl: 'http://localhost', client: mockClient),
+            ),
+            backendUrlProvider.overrideWith((ref) => 'http://localhost'),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
+        find.widgetWithText(TextFormField, 'Email'),
+        'a@b.com',
+      );
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Password'), 'pw');
+        find.widgetWithText(TextFormField, 'Password'),
+        'pw',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
@@ -430,24 +478,36 @@ void main() {
     testWidgets('shows join info dialog when joining', (tester) async {
       final mockClient = MockHttpClient();
       // First call: list meetings
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {'id': 'm1', 'name': 'Standup', 'participants': []}
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {'id': 'm1', 'name': 'Standup', 'participants': []},
+          ]),
+          200,
+        ),
+      );
       // Second call: join meeting
-      when(() => mockClient.post(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode({'join_url': 'https://meet.example.com/xyz',
-                'token': 'lk-token-abc'}),
-              200));
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'join_url': 'https://meet.example.com/xyz',
+            'token': 'lk-token-abc',
+          }),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const MeetingsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const MeetingsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Join'));
@@ -460,21 +520,32 @@ void main() {
 
     testWidgets('can dismiss join info dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {'id': 'm1', 'name': 'Standup', 'participants': []}
-              ]),
-              200));
-      when(() => mockClient.post(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode({'join_url': 'https://meet.example.com/xyz'}), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {'id': 'm1', 'name': 'Standup', 'participants': []},
+          ]),
+          200,
+        ),
+      );
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({'join_url': 'https://meet.example.com/xyz'}),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const MeetingsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const MeetingsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Join'));
@@ -489,15 +560,17 @@ void main() {
 
     testWidgets('shows empty meeting rooms message', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer(
-              (_) async => http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const MeetingsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const MeetingsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Empty state has create button
@@ -513,28 +586,35 @@ void main() {
   group('SecurityScreen fix action', () {
     testWidgets('can fix a security issue', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'i1',
-                  'title': 'Weak password',
-                  'description': 'Use a stronger password',
-                  'severity': 'high',
-                  'fixable': true,
-                  'fixed': false,
-                  'category': 'auth',
-                }
-              ]),
-              200));
-      when(() => mockClient.post(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'i1',
+              'title': 'Weak password',
+              'description': 'Use a stronger password',
+              'severity': 'high',
+              'fixable': true,
+              'fixed': false,
+              'category': 'auth',
+            },
+          ]),
+          200,
+        ),
+      );
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const SecurityScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SecurityScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Weak password'), findsOneWidget);
@@ -543,32 +623,39 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpAndSettle();
 
-      verify(() => mockClient.post(any(),
-          headers: any(named: 'headers'))).called(1);
+      verify(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).called(1);
     });
 
     testWidgets('shows fixed issues section', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'i1',
-                  'title': 'Old Issue',
-                  'description': 'This was fixed',
-                  'severity': 'medium',
-                  'fixable': true,
-                  'fixed': true,
-                  'category': 'auth',
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'i1',
+              'title': 'Old Issue',
+              'description': 'This was fixed',
+              'severity': 'medium',
+              'fixable': true,
+              'fixed': true,
+              'category': 'auth',
+            },
+          ]),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const SecurityScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SecurityScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Old Issue'), findsOneWidget);
@@ -581,27 +668,34 @@ void main() {
   group('SkillsScreen toggle install/enable', () {
     testWidgets('can install a skill', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'name': 'code_runner',
-                  'version': '1.0.0',
-                  'description': 'Run code',
-                  'category': 'official',
-                  'installed': false,
-                  'enabled': false,
-                }
-              ]),
-              200));
-      when(() => mockClient.post(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'name': 'code_runner',
+              'version': '1.0.0',
+              'description': 'Run code',
+              'category': 'official',
+              'installed': false,
+              'enabled': false,
+            },
+          ]),
+          200,
+        ),
+      );
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const SkillsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SkillsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('code_runner'), findsOneWidget);
@@ -612,27 +706,34 @@ void main() {
 
     testWidgets('can uninstall a skill', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'name': 'code_runner',
-                  'version': '1.0.0',
-                  'description': 'Run code',
-                  'category': 'official',
-                  'installed': true,
-                  'enabled': false,
-                }
-              ]),
-              200));
-      when(() => mockClient.post(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'name': 'code_runner',
+              'version': '1.0.0',
+              'description': 'Run code',
+              'category': 'official',
+              'installed': true,
+              'enabled': false,
+            },
+          ]),
+          200,
+        ),
+      );
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const SkillsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SkillsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Remove'));
@@ -642,28 +743,38 @@ void main() {
 
     testWidgets('can toggle skill enabled', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'name': 'code_runner',
-                  'version': '1.0.0',
-                  'description': 'Run code',
-                  'category': 'official',
-                  'installed': true,
-                  'enabled': true,
-                }
-              ]),
-              200));
-      when(() => mockClient.patch(any(),
-              headers: any(named: 'headers'), body: any(named: 'body')))
-          .thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'name': 'code_runner',
+              'version': '1.0.0',
+              'description': 'Run code',
+              'category': 'official',
+              'installed': true,
+              'enabled': true,
+            },
+          ]),
+          200,
+        ),
+      );
+      when(
+        () => mockClient.patch(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const SkillsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SkillsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Find and toggle the Switch widget
@@ -677,33 +788,39 @@ void main() {
 
     testWidgets('can filter skills by category', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'name': 'web_search',
-                  'version': '1.0.0',
-                  'description': 'Search the web',
-                  'category': 'official',
-                  'installed': true,
-                  'enabled': true,
-                },
-                {
-                  'name': 'custom_tool',
-                  'version': '0.1.0',
-                  'description': 'Community tool',
-                  'category': 'community',
-                  'installed': false,
-                  'enabled': false,
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'name': 'web_search',
+              'version': '1.0.0',
+              'description': 'Search the web',
+              'category': 'official',
+              'installed': true,
+              'enabled': true,
+            },
+            {
+              'name': 'custom_tool',
+              'version': '0.1.0',
+              'description': 'Community tool',
+              'category': 'community',
+              'installed': false,
+              'enabled': false,
+            },
+          ]),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const SkillsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SkillsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('web_search'), findsOneWidget);
@@ -723,25 +840,31 @@ void main() {
   group('AiConfigScreen edit key dialog', () {
     testWidgets('opens edit API key dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'p1',
-                  'name': 'OpenAI',
-                  'base_url': 'https://api.openai.com/v1',
-                  'api_key': 'sk-...',
-                  'models': ['gpt-4'],
-                  'is_official': true,
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'p1',
+              'name': 'OpenAI',
+              'base_url': 'https://api.openai.com/v1',
+              'api_key': 'sk-...',
+              'models': ['gpt-4'],
+              'is_official': true,
+            },
+          ]),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Find edit key button (icon button)
@@ -754,25 +877,31 @@ void main() {
 
     testWidgets('can cancel edit key dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'p1',
-                  'name': 'OpenAI',
-                  'base_url': 'https://api.openai.com/v1',
-                  'api_key': 'sk-...',
-                  'models': ['gpt-4'],
-                  'is_official': false,
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'p1',
+              'name': 'OpenAI',
+              'base_url': 'https://api.openai.com/v1',
+              'api_key': 'sk-...',
+              'models': ['gpt-4'],
+              'is_official': false,
+            },
+          ]),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.edit_outlined));
@@ -786,28 +915,38 @@ void main() {
 
     testWidgets('can save API key', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'p1',
-                  'name': 'OpenAI',
-                  'base_url': 'https://api.openai.com/v1',
-                  'api_key': 'sk-old',
-                  'models': ['gpt-4'],
-                  'is_official': false,
-                }
-              ]),
-              200));
-      when(() => mockClient.patch(any(),
-              headers: any(named: 'headers'), body: any(named: 'body')))
-          .thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'p1',
+              'name': 'OpenAI',
+              'base_url': 'https://api.openai.com/v1',
+              'api_key': 'sk-old',
+              'models': ['gpt-4'],
+              'is_official': false,
+            },
+          ]),
+          200,
+        ),
+      );
+      when(
+        () => mockClient.patch(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.edit_outlined));
@@ -818,34 +957,47 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpAndSettle();
 
-      verify(() => mockClient.patch(any(),
+      verify(
+        () => mockClient.patch(
+          any(),
           headers: any(named: 'headers'),
-          body: any(named: 'body'))).called(1);
+          body: any(named: 'body'),
+        ),
+      ).called(1);
     });
 
     testWidgets('can add a new AI provider via dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer(
-              (_) async => http.Response(jsonEncode(<dynamic>[]), 200));
-      when(() => mockClient.post(any(),
-              headers: any(named: 'headers'), body: any(named: 'body')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode({
-                'id': 'p-new',
-                'name': 'Anthropic',
-                'base_url': 'https://api.anthropic.com',
-                'api_key': 'sk-ant',
-                'models': ['claude-3'],
-                'is_official': false,
-              }),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'id': 'p-new',
+            'name': 'Anthropic',
+            'base_url': 'https://api.anthropic.com',
+            'api_key': 'sk-ant',
+            'models': ['claude-3'],
+            'is_official': false,
+          }),
+          200,
+        ),
+      );
 
       final api = _mockApi(mockClient);
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Add Provider').first);
