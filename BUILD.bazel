@@ -62,7 +62,7 @@ alias(
 # Alias to start the backend (Go)
 alias(
     name = "start-backend",
-    actual = "//srcs/server:ohc",
+    actual = "//srcs/server:server",
     visibility = ["//visibility:public"],
 )
 

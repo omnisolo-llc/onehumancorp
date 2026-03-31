@@ -1289,15 +1289,6 @@ func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 	}
 }
 
-func TestSetSIPDB(t *testing.T) {
-	hub := NewHub()
-	db, _ := NewSIPDB("file:dummy_1.db?mode=memory&cache=shared")
-	hub.SetSIPDB(db)
-	if hub.GetSIPDB() != db {
-		t.Fatal("SetSIPDB/GetSIPDB failed")
-	}
-}
-
 func TestDelegateTask_AgentNotRegistered(t *testing.T) {
 	hub := NewHub()
 	err := hub.DelegateTask("task-1", "ROLE", Message{Content: "instruction"})
@@ -1389,12 +1380,6 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub := NewHub()
 
-	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")
-	if err != nil {
-		t.Fatalf("failed to create sip db: %v", err)
-	}
-	hub.SetSIPDB(db)
-
 	hub.RegisterAgent(Agent{
 		ID:             "swe-1",
 		Name:           "SWE",
@@ -1410,16 +1395,8 @@ func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub.OpenMeeting("m-1", []string{"swe-1", "pm-1"})
 
 	msg := Message{ID: "msg-1", Content: "do work", MeetingID: "m-1"}
-	err = hub.DelegateTask("pm-1", "swe-1", msg)
+	err := hub.DelegateTask("pm-1", "swe-1", msg)
 	if err != nil {
 		t.Fatalf("expected nil err, got %v", err)
-	}
-
-	// Let the goroutine run
-	time.Sleep(150 * time.Millisecond) // enough time for sipdb
-
-	missions, _ := db.GetPendingMissions(context.Background(), "SOFTWARE_ENGINEER")
-	if len(missions) != 1 {
-		t.Fatalf("expected 1 mission, got %d", len(missions))
 	}
 }

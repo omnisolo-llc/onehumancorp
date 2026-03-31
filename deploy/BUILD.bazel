@@ -13,14 +13,14 @@ exports_files([
 # Package backend binary
 pkg_tar(
     name = "backend_pkg",
-    srcs = ["//srcs/server/ohc"],
+    srcs = ["//srcs/server"],
     package_dir = "/usr/local/bin",
 )
 
 oci_image(
     name = "backend_image",
     base = "@distroless_static",
-    entrypoint = ["/usr/local/bin/ohc"],
+    entrypoint = ["/usr/local/bin/server"],
     tars = [":backend_pkg"],
 )
 
@@ -35,7 +35,7 @@ oci_load(
 oci_image(
     name = "server_image",
     base = "@distroless_static",
-    entrypoint = ["/usr/local/bin/ohc"],
+    entrypoint = ["/usr/local/bin/server"],
     tars = [":backend_pkg"],
 )
 
@@ -61,14 +61,14 @@ oci_push(
 )
 
 # ── agent image (onehumancorp/agent) ──────────────────────────────────────────
-# The agent image bundles the ironclaw CLI alongside the ohc server binary so
+# The agent image bundles the ironclaw CLI alongside the server binary so
 # that any specialised AI agent container can be started from this base.
 
 pkg_tar(
     name = "agent_pkg",
     srcs = [
         "//srcs/server/ironclaw",
-        "//srcs/server/ohc",
+        "//srcs/server",
     ],
     package_dir = "/usr/local/bin",
 )
@@ -76,9 +76,9 @@ pkg_tar(
 oci_image(
     name = "agent_image",
     base = "@distroless_static",
-    # The agent container runs the ohc server; the ironclaw binary is available
+    # The agent container runs the server; the ironclaw binary is available
     # as a sidecar tool inside the container.
-    entrypoint = ["/usr/local/bin/ohc"],
+    entrypoint = ["/usr/local/bin/server"],
     tars = [":agent_pkg"],
 )
 

@@ -19,9 +19,6 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/scheduler"
-	"github.com/onehumancorp/mono/srcs/settings"
-	"github.com/onehumancorp/mono/srcs/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -125,8 +122,7 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 		h.mu.RUnlock()
 		return errors.New("sender agent is not registered")
 	}
-	toAgent, ok := h.agents[toAgentID]
-	if !ok {
+	if _, ok := h.agents[toAgentID]; !ok {
 		h.mu.RUnlock()
 		return errors.New("recipient agent is not registered")
 	}
@@ -136,11 +132,6 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 	task.ToAgent = toAgentID
 
 	err := h.Publish(task)
-	if err == nil && h.sipDB != nil {
-		go func(t Message, r string) {
-			_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
-		}(task, toAgent.Role)
-	}
 	return err
 }
 
@@ -166,15 +157,11 @@ type Hub struct {
 	agents         map[string]Agent
 	inbox          map[string][]Message
 	meetings       map[string]MeetingRoom
-	minimaxAPIKey  string
-	subs           map[string][]chan struct{}
-	sipDB          *SIPDB
-	tokenTrackers  map[string]struct{}
-	autoCorTrack   map[string]struct{}
-	eventLogChan   chan interface{}
-	scheduler      *scheduler.Scheduler
-	settingsStore  *settings.Store
-	centrifugeNode *CentrifugeNode
+	minimaxAPIKey string
+	subs          map[string][]chan struct{}
+	tokenTrackers map[string]struct{}
+	autoCorTrack  map[string]struct{}
+	eventLogChan  chan interface{}
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -192,8 +179,6 @@ func NewHub() *Hub {
 		tokenTrackers: map[string]struct{}{},
 		autoCorTrack:  map[string]struct{}{},
 		eventLogChan:  make(chan interface{}, 100),
-		scheduler:     scheduler.NewScheduler(),
-		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
@@ -409,35 +394,6 @@ func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byt
 	return nil
 }
 
-// SetSIPDB injects a database-driven Swarm Intelligence Protocol interface.
-// Accepts parameters: h *Hub (No Constraints).
-// Returns SetSIPDB(sipDB *SIPDB).
-// Produces no errors.
-// Has no side effects.
-func (h *Hub) SetSIPDB(sipDB *SIPDB) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.sipDB = sipDB
-}
-
-// SIPDB returns the configured database-driven Swarm Intelligence Protocol interface.
-func (h *Hub) SIPDB() *SIPDB {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.sipDB
-}
-
-// GetSIPDB retrieves the current SIP database interface.
-// Accepts parameters: h *Hub (No Constraints).
-// Returns GetSIPDB() *SIPDB.
-// Produces no errors.
-// Has no side effects.
-func (h *Hub) GetSIPDB() *SIPDB {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.sipDB
-}
-
 // RegisterAgent enrolls an agent into the Hub, allocating an inbox and initialising its Status.  Parameters:   - agent: Agent; The worker object containing ID, Name, Role, and Organization context.
 // Accepts parameters: h *Hub (No Constraints).
 // Returns nothing.
@@ -452,12 +408,6 @@ func (h *Hub) RegisterAgent(agent Agent) {
 	}
 
 	h.agents[agent.ID] = agent
-
-	if h.sipDB != nil {
-		go func(a Agent) {
-			_ = h.sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
-		}(agent)
-	}
 }
 
 // SetMinimaxAPIKey functionality.
@@ -480,39 +430,6 @@ func (h *Hub) MinimaxAPIKey() string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.minimaxAPIKey
-}
-
-// Scheduler returns the Hub's task scheduler.
-func (h *Hub) Scheduler() *scheduler.Scheduler {
-	return h.scheduler
-}
-
-// SettingsStore returns the Hub's settings store.
-func (h *Hub) SettingsStore() *settings.Store {
-	return h.settingsStore
-}
-
-// SetSettingsStore injects a custom settings store.
-func (h *Hub) SetSettingsStore(s *settings.Store) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.settingsStore = s
-}
-
-// SetCentrifugeNode attaches a CentrifugeNode to the Hub so that every
-// published message is also fanned out to the corresponding Centrifuge
-// channel for real-time client delivery.
-func (h *Hub) SetCentrifugeNode(cn *CentrifugeNode) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.centrifugeNode = cn
-}
-
-// CentrifugeNode returns the currently attached CentrifugeNode (may be nil).
-func (h *Hub) CentrifugeNode() *CentrifugeNode {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.centrifugeNode
 }
 
 //   - id: string; The unique identifier of the agent.
@@ -550,7 +467,6 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 		h.agents[participant] = agent
 	}
 
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meeting
 }
 
@@ -576,7 +492,6 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 		h.agents[participant] = agent
 	}
 
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meeting
 }
 
@@ -710,27 +625,6 @@ func (h *Hub) Publish(message Message) error {
 		}
 	}
 
-	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
-	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
-
-	// Structured logging for agent execution traces
-	// Filter out high-frequency "status" events to reduce signal noise.
-	if message.Type != EventStatus {
-		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
-	}
-
-	// Forward to Centrifuge for real-time client delivery (non-blocking).
-	if cn := h.centrifugeNode; cn != nil {
-		go func() {
-			if message.MeetingID != "" {
-				cn.PublishMeetingMessage(message.MeetingID, message)
-			}
-			if message.ToAgent != "" {
-				cn.PublishAgentNotification(message.ToAgent, message)
-			}
-		}()
-	}
-
 	return nil
 }
 
@@ -822,7 +716,6 @@ func (h *Hub) Meeting(id string) (MeetingRoom, bool) {
 	defer h.mu.RUnlock()
 
 	meeting, ok := h.meetings[id]
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meeting, ok
 }
 
@@ -841,7 +734,6 @@ func (h *Hub) Meetings() []MeetingRoom {
 		meetings = append(meetings, meeting)
 	}
 
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meetings
 }
 
