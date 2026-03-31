@@ -21,6 +21,11 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
+import (
+	"net/http"
+	"net/http/httptest"
+)
+
 // minimaxAPIKey returns the Minimax API key from the environment, or an empty
 // string when the variable is unset.
 func minimaxAPIKey() string {
@@ -138,7 +143,16 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	key := minimaxAPIKey()
 	if key == "" {
-		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax meeting-room E2E test")
+		// Mock the API for CI testing
+		key = "mock-key"
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
+		}))
+		defer ts.Close()
+		originalURL := orchestration.MinimaxAPIURL
+		orchestration.MinimaxAPIURL = ts.URL
+		defer func() { orchestration.MinimaxAPIURL = originalURL }()
 	}
 
 	hub := orchestration.NewHub()

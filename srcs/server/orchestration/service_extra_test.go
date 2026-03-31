@@ -21,9 +21,9 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := MinimaxAPIURL
+	MinimaxAPIURL = ts.URL
+	defer func() { MinimaxAPIURL = originalURL }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
@@ -129,9 +129,9 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 
 func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
 	client := NewMinimaxClient("test")
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := MinimaxAPIURL
+	MinimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
+	defer func() { MinimaxAPIURL = originalURL }()
 
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
@@ -224,9 +224,9 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := MinimaxAPIURL
+	MinimaxAPIURL = ts.URL
+	defer func() { MinimaxAPIURL = originalURL }()
 
 	hub := NewHub()
 	hub.SetMinimaxAPIKey("test-key")
