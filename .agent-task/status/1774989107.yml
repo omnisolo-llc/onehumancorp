@@ -1,0 +1,5 @@
+type: status
+id: GeneralMissionWorker
+status: HEALTHY
+memory_type: observability
+timestamp: 1774989107
