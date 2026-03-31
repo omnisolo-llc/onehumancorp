@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"sync"
@@ -27,9 +28,10 @@ import (
 )
 
 var (
-	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
-	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
-	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
+	emailRegex   = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
+	phoneRegex   = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
+	ssnRegex     = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
+	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
 
 func redactPII(input string) string {
@@ -240,6 +242,10 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
+	if err := CheckDocumentationGate(task.Content); err != nil {
+		return err
+	}
+
 	h.mu.RLock()
 	if _, ok := h.agents[fromAgentID]; !ok {
 		h.mu.RUnlock()
@@ -1256,4 +1262,22 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	}
 
 	return result.Choices[0].Message.Content, nil
+}
+
+// CheckDocumentationGate verifies that the necessary documentation exists for a feature.
+func CheckDocumentationGate(content string) error {
+	matches := featureRegex.FindStringSubmatch(content)
+	if len(matches) > 1 {
+		featureName := matches[1]
+		baseDir := filepath.Join("docs", "features", featureName)
+
+		requiredFiles := []string{"design-doc.md", "cuj.md", "test-plan.md"}
+		for _, file := range requiredFiles {
+			path := filepath.Join(baseDir, file)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				return fmt.Errorf("missing required documentation: %s", path)
+			}
+		}
+	}
+	return nil
 }
