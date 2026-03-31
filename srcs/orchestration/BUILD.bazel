@@ -1,10 +1,65 @@
-alias(
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+# gazelle:resolve go github.com/onehumancorp/mono/srcs/proto //srcs/proto:hub_go_proto
+
+go_library(
     name = "orchestration",
-    actual = "//srcs/server/orchestration:orchestration",
+    srcs = [
+        "agent_task_worker.go",
+        "auth_interceptor.go",
+        "centrifuge_hub.go",
+        "delegation.go",
+        "service.go",
+        "sip.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/orchestration",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto:hub_go_proto",
+        "//srcs/server/integrations/plane",
+        "//srcs/server/scheduler",
+        "//srcs/server/settings",
+        "//srcs/server/telemetry",
+        "@com_github_centrifugal_centrifuge//:centrifuge",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//proto",
+        "@org_modernc_sqlite//:sqlite",
+    ],
 )
 
-test_suite(
+go_test(
     name = "orchestration_test",
-    tests = ["//srcs/server/orchestration:orchestration_test"],
+    srcs = [
+        "auth_interceptor_test.go",
+        "benchmark_test.go",
+        "centrifuge_hub_test.go",
+        "chaos_test.go",
+        "agent_task_worker_test.go",
+        "delegation_test.go",
+        "eventlog_test.go",
+        "minimax_client_test.go",
+        "service_extra_test.go",
+        "service_grpc_test.go",
+        "service_test.go",
+        "sip_extra_test.go",
+        "sip_mesh_test.go",
+        "sip_test.go",
+    ],
+    embed = [":orchestration"],
+    deps = [
+        "//srcs/proto:hub_go_proto",
+        "//srcs/server/settings",
+        "@com_github_centrifugal_centrifuge//:centrifuge",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//metadata",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
