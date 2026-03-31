@@ -88,12 +88,15 @@ void main() {
     expect(await service.getEnvValue('BASE_URL'), 'http://localhost:18789');
   });
 
-  test('getEnvValue returns null when env file missing or key absent', () async {
-    expect(await service.getEnvValue('MISSING_KEY'), isNull);
+  test(
+    'getEnvValue returns null when env file missing or key absent',
+    () async {
+      expect(await service.getEnvValue('MISSING_KEY'), isNull);
 
-    await service.saveEnvValue('ONLY_KEY', 'value');
-    expect(await service.getEnvValue('ANOTHER_KEY'), isNull);
-  });
+      await service.saveEnvValue('ONLY_KEY', 'value');
+      expect(await service.getEnvValue('ANOTHER_KEY'), isNull);
+    },
+  );
 
   test('getSystemInfo returns expected fields', () async {
     final info = await service.getSystemInfo();
