@@ -62,7 +62,7 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		} else {
 			dsn += "&"
 		}
-		dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+		dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
 	}
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
