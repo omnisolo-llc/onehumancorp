@@ -80,9 +80,9 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
         title: const Text('Handoffs & Escalations'),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
           ),
         ],
       ),

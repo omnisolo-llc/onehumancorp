@@ -243,6 +243,7 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           IconButton.filled(
+            tooltip: 'Send message',
             icon: sending
                 ? const SizedBox(
                     width: 20,
@@ -250,7 +251,6 @@ class _InputBar extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.send),
-            tooltip: 'Send message',
             onPressed: sending ? null : onSend,
           ),
         ],
