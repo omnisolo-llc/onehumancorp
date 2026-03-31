@@ -164,6 +164,7 @@ class _IssueCardState extends State<_IssueCard> {
     final issue = widget.issue;
     return Semantics(
       label: 'Security issue: ${issue.title}, Severity: ${issue.severity}',
+      excludeSemantics: true,
       child: Card(
         margin: const EdgeInsets.only(bottom: 10),
         child: Padding(

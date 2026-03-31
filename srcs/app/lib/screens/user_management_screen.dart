@@ -158,10 +158,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     ),
                   ],
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'Delete user',
-                  onPressed: () => _handleDeleteUser(user.id),
+                trailing: Semantics(
+                  button: true,
+                  label: 'Delete user',
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    tooltip: 'Delete user',
+                    onPressed: () => _handleDeleteUser(user.id),
+                  ),
                 ),
                 isThreeLine: true,
               );
