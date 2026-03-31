@@ -1,2 +1,0 @@
-type: global_intelligence
-context: Pruned obsolete resources. Installed automated cleanup script at scripts/cleanup/janitor.sh.
