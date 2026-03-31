@@ -1,0 +1,29 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "frontend_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/frontend/server/cmd/frontend",
+    visibility = ["//visibility:private"],
+    deps = ["//srcs/server/frontend/server"],
+)
+
+go_binary(
+    name = "frontend",
+    embed = [":frontend_lib"],
+    pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "frontend_test",
+    srcs = ["main_test.go"],
+    embed = [":frontend_lib"],
+    deps = ["//srcs/server/frontend/server"],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = ["main.go"],
+    visibility = ["//srcs/server/frontend:__pkg__"],
+)
