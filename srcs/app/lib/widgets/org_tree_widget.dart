@@ -52,9 +52,11 @@ class _OrgMemberRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
+    return Semantics(
+      label: 'Organization member: ${member.name}, Role: ${member.role.replaceAll('_', ' ')}${member.isHuman ? ', YOU' : ''}',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
         children: [
           // Avatar
           Container(
@@ -128,6 +130,7 @@ class _OrgMemberRow extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
