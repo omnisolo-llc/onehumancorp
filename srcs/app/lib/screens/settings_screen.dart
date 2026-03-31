@@ -38,6 +38,7 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: Text(settings.backendUrl),
               trailing: IconButton(
                 icon: const Icon(Icons.edit),
+                tooltip: 'Edit Backend URL',
                 onPressed: () => _editBackendUrl(context, ref, settings.backendUrl),
               ),
             ),
