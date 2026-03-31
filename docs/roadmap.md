@@ -260,7 +260,7 @@ Defines how autonomous agents communicate, collaborate, and resolve conflicts.
   * **Status:** Ready
 * **Task 3.2: Apply Design Tokens (Frontend)**
   * **Owner:** UI Developer Agent
-  * **Description:** Update the OHC Next.js dashboard with Glassmorphism tokens (`blur(15px)`, `rgba` backgrounds, smooth data transitions).
+  * **Description:** Update the OHC Next.js dashboard with Glassmorphism tokens (`blur(20px)`, `rgba` backgrounds, smooth data transitions).
   * **Dependencies:** Task 3.1
   * **Status:** Ready
 * **Task 3.3: Visual Prototyping (Design)**
