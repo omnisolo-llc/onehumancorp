@@ -628,7 +628,7 @@ func (r *Registry) Connect(id, baseURL string, creds ...IntegrationCredentials) 
 		if !found {
 			return nil, errors.New("integration provider not found in catalog")
 		}
-		
+
 		inst = &IntegrationInstance{
 			InstanceID:    id,
 			IntegrationID: meta.GetId(),
@@ -1171,4 +1171,3 @@ func sendDiscordWebhook(ctx context.Context, webhookURL, username, content strin
 	}
 	return nil
 }
-

@@ -270,6 +270,7 @@ func TestMinimaxClientReasonDecodeError(t *testing.T) {
 	MinimaxAPIURL = ts.URL
 	defer func() { MinimaxAPIURL = originalURL }()
 
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
@@ -278,6 +279,7 @@ func TestMinimaxClientReasonDecodeError(t *testing.T) {
 }
 
 func TestMinimaxClientReasonInvalidRequest(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 	// Using a cancelled context to trigger a request creation or execution error
 	ctx, cancel := context.WithCancel(context.Background())

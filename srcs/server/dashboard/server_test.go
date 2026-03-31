@@ -3871,7 +3871,7 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 	t.Run("Missing Tool ID and Name", func(t *testing.T) {
 		payload := map[string]interface{}{
 			"spiffeId": "spiffe://onehumancorp.io/agent/test",
-			"tool": map[string]interface{}{},
+			"tool":     map[string]interface{}{},
 		}
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/mcp/tools/register", bytes.NewReader(body))

@@ -126,6 +126,7 @@ func BenchmarkReason(b *testing.B) {
 	MinimaxAPIURL = ts.URL
 	defer func() { MinimaxAPIURL = originalURL }()
 
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("test-key")
 	ctx := context.Background()
 

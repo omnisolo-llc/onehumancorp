@@ -2,8 +2,8 @@ package orchestration
 
 import (
 	"context"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -566,7 +566,6 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	_ = db.CompleteMission(ctx, "nonexistent")
 	_ = db.PruneStaleMissions(ctx, 0)
 }
-
 
 func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission.db")

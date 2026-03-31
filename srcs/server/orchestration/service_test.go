@@ -325,6 +325,7 @@ func TestMinimaxAPIKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ResetGlobalCircuitBreakerForTest()
 			hub := NewHub()
 			hub.SetMinimaxAPIKey(tt.apiKey)
 			if got := hub.MinimaxAPIKey(); got != tt.expected {
@@ -487,6 +488,7 @@ func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 }
 
 func TestNewMinimaxClient(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("test-key")
 	if client == nil {
 		t.Fatalf("expected non-nil MinimaxClient")
@@ -553,6 +555,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ResetGlobalCircuitBreakerForTest()
 			// Mock the server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.httpStatus)
@@ -732,6 +735,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ResetGlobalCircuitBreakerForTest()
 			resp, err := server.DelegateTask(ctx, tt.req)
 			if err != nil {
 				if tt.expectSuccess {
@@ -874,6 +878,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 
 	originalURL := MinimaxAPIURL
@@ -888,6 +893,7 @@ func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_ClientDo_Error(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 
 	originalURL := MinimaxAPIURL
@@ -948,6 +954,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ResetGlobalCircuitBreakerForTest()
 			resp, err := server.Publish(ctx, tt.req)
 			if err != nil {
 				if tt.expectSuccess {
@@ -1018,8 +1025,10 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ResetGlobalCircuitBreakerForTest()
 			tt.setup()
 
+			ResetGlobalCircuitBreakerForTest()
 			err := hub.TokenEfficientContextSummarization(tt.eventID, agentID, tt.payload)
 
 			if tt.expectError {
@@ -1086,6 +1095,7 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	defer os.Remove("events.jsonl")
 
 	// 3. Execute the function
+	ResetGlobalCircuitBreakerForTest()
 	err := hub.TokenEfficientContextSummarization(eventID, agentID, payload)
 	if err != nil {
 		t.Fatalf("expected success, got error: %v", err)
@@ -1182,6 +1192,7 @@ func TestHub_ToolParameterAutoCorrection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ResetGlobalCircuitBreakerForTest()
 			tt.setup()
 
 			err := hub.ToolParameterAutoCorrection(tt.eventID, agentID, tt.payload)

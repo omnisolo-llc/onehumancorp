@@ -178,7 +178,7 @@ func run(now time.Time, listen listenFunc) error {
 			Content:    fmt.Sprintf("Scheduled Task triggered: %s. Payload: %s", task.Name, string(task.Payload)),
 			OccurredAt: time.Now().UTC(),
 		}
-		
+
 		// In a real scenario, we'd need to register 'system-scheduler' or similar.
 		// For this migration, we'll just log and mark done for now.
 		err := hub.Publish(msg)

@@ -128,6 +128,7 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("test")
 	originalURL := MinimaxAPIURL
 	MinimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
@@ -337,7 +338,7 @@ func TestEventLogWorker_Errors(t *testing.T) {
 
 	hub2 := NewHub()
 	// Marshal failure branch (func cannot be marshaled in JSON)
-	hub2.LogEvent(func(){})
+	hub2.LogEvent(func() {})
 
 	time.Sleep(50 * time.Millisecond)
 }

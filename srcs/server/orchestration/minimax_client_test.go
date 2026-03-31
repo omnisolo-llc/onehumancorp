@@ -33,6 +33,7 @@ func TestMinimaxClientReasonSuccess(t *testing.T) {
 	MinimaxAPIURL = ts.URL
 	defer func() { MinimaxAPIURL = originalURL }()
 
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 	res, err := client.Reason(context.Background(), "What is 6x7?")
 	if err != nil {
@@ -54,6 +55,7 @@ func TestMinimaxClientReasonFailure(t *testing.T) {
 	MinimaxAPIURL = ts.URL
 	defer func() { MinimaxAPIURL = originalURL }()
 
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {
@@ -74,6 +76,7 @@ func TestMinimaxClientReasonEmptyResponse(t *testing.T) {
 	MinimaxAPIURL = ts.URL
 	defer func() { MinimaxAPIURL = originalURL }()
 
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")
 	if err == nil {

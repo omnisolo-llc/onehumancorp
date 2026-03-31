@@ -12,12 +12,12 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Incident struct {
-	ID           string    `json:"id"`
-	Severity     string    `json:"severity"` // P0, P1, P2
-	Summary      string    `json:"summary"`
-	RCA          string    `json:"root_cause_analysis"`
-	ResolutionID string    `json:"resolution_plan_id"`
-	Status       string    `json:"status"` // INVESTIGATING, PROPOSED, RESOLVED
+	ID           string `json:"id"`
+	Severity     string `json:"severity"` // P0, P1, P2
+	Summary      string `json:"summary"`
+	RCA          string `json:"root_cause_analysis"`
+	ResolutionID string `json:"resolution_plan_id"`
+	Status       string `json:"status"` // INVESTIGATING, PROPOSED, RESOLVED
 }
 
 // AlertParser handles incoming alerts from Observability tools.

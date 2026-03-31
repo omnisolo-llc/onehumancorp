@@ -3,11 +3,11 @@ package telemetry
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -65,8 +65,8 @@ func (m *mockRegisterer) Unregister(prometheus.Collector) bool {
 }
 
 // mockMeter implements metric.Meter
-type mockMeter struct{
-	failCounters bool
+type mockMeter struct {
+	failCounters   bool
 	failHistograms bool
 }
 
