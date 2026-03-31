@@ -25,6 +25,25 @@ message AgentMessage {
 }
 
 service AgentOrchestration {
+  rpc DelegateHandoff(HandoffRequest) returns (HandoffResponse);
   rpc RegisterAgent(Agent) returns (Agent);
   rpc PublishMessage(AgentMessage) returns (AgentMessage);
+}
+
+message HandoffContext {
+  string thread_id = 1;
+  string payload = 2;
+  int32 priority = 3;
+}
+
+message HandoffRequest {
+  string from_agent_id = 1;
+  string target_role = 2;
+  string instruction = 3;
+  HandoffContext context = 4;
+}
+
+message HandoffResponse {
+  bool success = 1;
+  string target_agent_id = 2;
 }

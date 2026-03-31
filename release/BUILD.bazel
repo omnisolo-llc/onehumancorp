@@ -123,8 +123,8 @@ filegroup(
 
 pkg_files(
     name = "ohc_linux_amd64_files",
-    srcs = ["//srcs/server/ohc"],
-    renames = {"//srcs/server:ohc": "ohc"},
+    srcs = ["//srcs/server:server"],
+    renames = {"//srcs/server:server": "ohc"},
     strip_prefix = strip_prefix.from_pkg(),
 )
 
