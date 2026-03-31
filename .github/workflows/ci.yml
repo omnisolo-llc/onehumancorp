@@ -39,7 +39,6 @@ jobs:
         run: |
           if [ -z "$BUILDBUDDY_API_KEY" ]; then
             bazelisk test //... \
-              --jobs=200 \
               --test_output=errors \
               --test_summary=terse \
               --test_timeout=300,600,900,1800 \
@@ -51,7 +50,6 @@ jobs:
               --bes_backend=""
           else
             bazelisk test //... \
-              --jobs=200 \
               --test_output=errors \
               --test_summary=terse \
               --test_timeout=300,600,900,1800 \
