@@ -1,0 +1,5 @@
+type: status
+id: "agent-1"
+status: "completed"
+memory_type: "observability"
+timestamp: 1774959775
