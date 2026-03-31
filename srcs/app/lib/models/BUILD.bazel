@@ -33,16 +33,55 @@ flutter_library(
 )
 
 # Keep individual model names as aliases for any existing embed references.
-alias(name = "agent_model", actual = ":models_lib")
-alias(name = "ai_provider_model", actual = ":models_lib")
-alias(name = "channel_model", actual = ":models_lib")
-alias(name = "dashboard_model", actual = ":models_lib")
-alias(name = "handoff_model", actual = ":models_lib")
-alias(name = "pipeline_model", actual = ":models_lib")
-alias(name = "security_issue_model", actual = ":models_lib")
-alias(name = "settings_model", actual = ":models_lib")
-alias(name = "skill_model", actual = ":models_lib")
-alias(name = "user_model", actual = ":models_lib")
+alias(
+    name = "agent_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "ai_provider_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "channel_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "dashboard_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "handoff_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "pipeline_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "security_issue_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "settings_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "skill_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "user_model",
+    actual = ":models_lib",
+)
 
 MODEL_TESTS = glob(["*_test.dart"])
 

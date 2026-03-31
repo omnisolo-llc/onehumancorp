@@ -3,10 +3,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "agents",
     srcs = [
+        "agent.go",
         "provider.go",
         "registry.go",
-            "agent.go",
-],
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/agents",
     visibility = ["//visibility:public"],
 )
