@@ -60,6 +60,9 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+
+	// ProviderTypeGitHubMCP targets the GitHub MCP server provider. Best suited for software-engineering roles.
+	ProviderTypeGitHubMCP ProviderType = "github-mcp"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
@@ -497,3 +500,59 @@ func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
 // Produces no errors.
 // Has no side effects.
 func (p *BuiltinProvider) IsAuthenticated() bool { return true }
+
+// GitHubProvider implements Provider for the GitHub MCP agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type GitHubProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubProvider) Type() ProviderType { return "github-mcp" }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubProvider) Description() string {
+	return "GitHub MCP Server for autonomous repository management"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubProvider) SupportedRoles() []string {
+	return []string{
+		"SOFTWARE_ENGINEER",
+		"SECURITY_ENGINEER",
+		"QA_TESTER",
+		"DEVOPS",
+	}
+}
+
+// Authenticate functionality enforcing Zero Secrets.
+func (p *GitHubProvider) Authenticate(creds Credentials) error {
+	if !creds.IsEmpty() {
+		return errors.New("zero secrets violation: GitHub MCP provider strictly relies on SPIFFE/SPIRE identity and rejects explicit API keys")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials returns the stored credentials.
+func (p *GitHubProvider) GetCredentials() Credentials {
+	return p.load()
+}
+
+// IsAuthenticated reports whether the provider is authenticated.
+func (p *GitHubProvider) IsAuthenticated() bool {
+	return true
+}

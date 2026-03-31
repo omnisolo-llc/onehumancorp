@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/agents"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -3916,4 +3917,46 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 			t.Errorf("expected status 'updated', got %v", result["status"])
 		}
 	})
+}
+
+
+func TestHandleAgentProviders_GitHubMCP(t *testing.T) {
+	org := domain.Organization{ID: "org-1"}
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(nil)
+
+	app := &Server{
+		org:                   org,
+		hub:                   hub,
+		tracker:               tracker,
+		agentProviderRegistry: agents.DefaultRegistry(),
+	}
+
+	req := httptest.NewRequest("GET", "/api/agent/providers", nil)
+	rec := httptest.NewRecorder()
+	app.handleAgentProviders(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected OK, got %d", rec.Code)
+	}
+
+	var infos []agents.ProviderInfo
+	if err := json.Unmarshal(rec.Body.Bytes(), &infos); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+
+	found := false
+	for _, info := range infos {
+		if info.Type == agents.ProviderTypeGitHubMCP {
+			found = true
+			if !info.IsAuthenticated {
+				t.Errorf("expected GitHub MCP to BE authenticated by default")
+			}
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("GitHub MCP provider not found in registry output")
+	}
 }

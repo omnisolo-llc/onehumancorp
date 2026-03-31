@@ -1,0 +1,20 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+js_binary(
+    name = "github",
+    entry_point = "index.js",
+    data = [
+        "//:node_modules/@modelcontextprotocol/server-github",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "e2e_test",
+    srcs = ["e2e_test.sh"],
+    data = [":github"],
+    env = {
+        "MCP_BUNDLE_DIR": "$$(TEST_TMPDIR)/mcp_bundles",
+    },
+)
