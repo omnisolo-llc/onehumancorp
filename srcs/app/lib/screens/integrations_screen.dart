@@ -30,15 +30,15 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Integrations & Tools'),
-      ),
+      appBar: AppBar(title: const Text('Integrations & Tools')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           Text(
             'External Channels',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Row(
@@ -68,7 +68,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
           Text(
             'MCP Tool Gateway',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -76,12 +78,17 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             style: TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 16),
-          
+
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _mcpToolsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Semantics(
+                    label: 'Loading',
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
               }
 
               if (snapshot.hasError) {
@@ -96,10 +103,17 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.construction, size: 48, color: colors.onSurfaceVariant.withOpacity(0.3)),
+                          Icon(
+                            Icons.construction,
+                            size: 48,
+                            color: colors.onSurfaceVariant.withOpacity(0.3),
+                          ),
                           const SizedBox(height: 16),
                           const Text('No MCP tools active'),
-                          TextButton(onPressed: _refresh, child: const Text('Refresh')),
+                          TextButton(
+                            onPressed: _refresh,
+                            child: const Text('Refresh'),
+                          ),
                         ],
                       ),
                     ),
@@ -108,7 +122,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               }
 
               return Column(
-                children: tools.map((tool) => _MCPToolTile(tool: tool)).toList(),
+                children: tools
+                    .map((tool) => _MCPToolTile(tool: tool))
+                    .toList(),
               );
             },
           ),
@@ -141,8 +157,14 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Save Integration')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Save Integration'),
+          ),
         ],
       ),
     );
@@ -185,11 +207,17 @@ class _IntegrationCard extends StatelessWidget {
                   child: Icon(icon, color: color, size: 24),
                 ),
                 const Spacer(),
-                const Text('Inactive', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                const Text(
+                  'Inactive',
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
             ),
             const SizedBox(height: 16),
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text(
               subtitle,
@@ -226,7 +254,11 @@ class _MCPToolTile extends StatelessWidget {
       child: ListTile(
         leading: const Icon(Icons.build_circle_outlined),
         title: Text(name),
-        subtitle: Text(description, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          description,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         trailing: OutlinedButton(
           onPressed: () {}, // Invoke dialog
           child: const Text('Invoke'),

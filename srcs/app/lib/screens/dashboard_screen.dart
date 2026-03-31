@@ -26,7 +26,12 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       body: snapshot.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+          child: Semantics(
+            label: 'Loading',
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (data) => _DashboardContent(data: data),
       ),
@@ -88,7 +93,9 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(
+        context,
+      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 }
@@ -136,10 +143,7 @@ class _StatCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  Text(label, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ),

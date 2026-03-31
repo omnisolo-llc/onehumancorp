@@ -17,20 +17,27 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: clientSettingsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+          child: Semantics(
+            label: 'Loading',
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
         error: (err, _) => Center(child: Text('Error: $err')),
         data: (settings) => ListView(
           padding: const EdgeInsets.all(24),
           children: [
             if (user != null) ...[
               ListTile(
-                leading: CircleAvatar(child: Text(user.name.substring(0, 1).toUpperCase())),
+                leading: CircleAvatar(
+                  child: Text(user.name.substring(0, 1).toUpperCase()),
+                ),
                 title: Text(user.name),
                 subtitle: Text(user.email),
               ),
               const Divider(),
             ],
-            
+
             _SectionHeader(title: 'Communication'),
             ListTile(
               leading: const Icon(Icons.link),
@@ -39,16 +46,19 @@ class SettingsScreen extends ConsumerWidget {
               trailing: IconButton(
                 icon: const Icon(Icons.edit),
                 tooltip: 'Edit Backend URL',
-                onPressed: () => _editBackendUrl(context, ref, settings.backendUrl),
+                onPressed: () =>
+                    _editBackendUrl(context, ref, settings.backendUrl),
               ),
             ),
-            
+
             SwitchListTile(
               secondary: const Icon(Icons.computer),
               title: const Text('Standalone Mode'),
               subtitle: const Text('App manages local backend lifecycle'),
               value: settings.standaloneMode,
-              onChanged: (value) => ref.read(clientSettingsProvider.notifier).updateStandaloneMode(value),
+              onChanged: (value) => ref
+                  .read(clientSettingsProvider.notifier)
+                  .updateStandaloneMode(value),
             ),
 
             if (settings.standaloneMode) ...[
@@ -72,7 +82,10 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Sign Out',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () => ref.read(authStateProvider.notifier).logout(),
             ),
           ],
@@ -81,7 +94,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editBackendUrl(BuildContext context, WidgetRef ref, String current) async {
+  Future<void> _editBackendUrl(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
     final controller = TextEditingController(text: current);
     final result = await showDialog<String>(
       context: context,
@@ -89,10 +106,15 @@ class SettingsScreen extends ConsumerWidget {
         title: const Text('Edit Backend URL'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'URL (e.g. http://localhost:8080)'),
+          decoration: const InputDecoration(
+            labelText: 'URL (e.g. http://localhost:8080)',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text),
             child: const Text('Save'),
@@ -117,9 +139,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -131,7 +153,7 @@ class _LocalBackendStatusCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final manager = ref.watch(localManagerServiceProvider);
-    
+
     return FutureBuilder<bool>(
       future: manager.isServiceRunning(),
       builder: (context, snapshot) {
@@ -174,7 +196,12 @@ class _LocalBackendStatusCard extends ConsumerWidget {
                         builder: (context) => AlertDialog(
                           title: const Text('System Doctor'),
                           content: SingleChildScrollView(child: Text(report)),
-                          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Close'),
+                            ),
+                          ],
                         ),
                       );
                     }

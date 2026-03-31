@@ -8,7 +8,8 @@ class AgentHireWizardScreen extends ConsumerStatefulWidget {
   const AgentHireWizardScreen({super.key});
 
   @override
-  ConsumerState<AgentHireWizardScreen> createState() => _AgentHireWizardScreenState();
+  ConsumerState<AgentHireWizardScreen> createState() =>
+      _AgentHireWizardScreenState();
 }
 
 class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
@@ -31,13 +32,13 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api == null) return;
-      
+
       final providers = await api.listAgentProviders();
       final rolesSet = <String>{};
       for (final p in providers) {
         rolesSet.addAll(p.supportedRoles);
       }
-      
+
       if (mounted) {
         setState(() {
           _providers = providers;
@@ -52,7 +53,10 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load providers: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Failed to load providers: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -65,7 +69,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   }
 
   String _formatRole(String role) {
-    return role.replaceAll('_', ' ').toLowerCase().split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ');
+    return role
+        .replaceAll('_', ' ')
+        .toLowerCase()
+        .split(' ')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 
   Future<void> _handleDeploy() async {
@@ -73,18 +82,29 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
-        await api.hireAgent(_nameController.text.trim(), _selectedRole, providerType: _selectedProvider);
+        await api.hireAgent(
+          _nameController.text.trim(),
+          _selectedRole,
+          providerType: _selectedProvider,
+        );
         if (mounted) {
           context.go('/agents');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Agent ${_nameController.text} hired successfully!')),
+            SnackBar(
+              content: Text(
+                'Agent ${_nameController.text} hired successfully!',
+              ),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to hire agent: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Failed to hire agent: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -125,14 +145,25 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               children: [
                 if (_step < 3)
                   ElevatedButton(
-                    onPressed: (_step == 0 && _selectedRole.isEmpty) ? null : details.onStepContinue,
+                    onPressed: (_step == 0 && _selectedRole.isEmpty)
+                        ? null
+                        : details.onStepContinue,
                     child: const Text('Next'),
                   )
                 else
                   ElevatedButton(
                     onPressed: _isDeploying ? null : _handleDeploy,
                     child: _isDeploying
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Semantics(
+                              label: 'Loading',
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          )
                         : const Text('Deploy Agent'),
                   ),
                 const SizedBox(width: 12),
@@ -152,9 +183,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Step 1 — Select Agent Role', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Step 1 — Select Agent Role',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
-                const Text('Choose the primary capability profile for this new agent.'),
+                const Text(
+                  'Choose the primary capability profile for this new agent.',
+                ),
                 const SizedBox(height: 24),
                 Wrap(
                   spacing: 12,
@@ -182,25 +218,40 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Step 2 — Choose AI Provider', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Step 2 — Choose AI Provider',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 const Text('Select the AI backend that will power this agent.'),
                 const SizedBox(height: 16),
                 if (_isLoading)
-                  const Center(child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(),
-                  ))
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Semantics(
+                        label: 'Loading',
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
                 else if (_providers.isEmpty)
-                  const Center(child: Text('No AI providers available. Please configure one in Integrations.'))
+                  const Center(
+                    child: Text(
+                      'No AI providers available. Please configure one in Integrations.',
+                    ),
+                  )
                 else
-                  ..._providers.map((p) => RadioListTile<String>(
-                        title: Text(p.label),
-                        subtitle: Text(p.description),
-                        value: p.type,
-                        groupValue: _selectedProvider,
-                        onChanged: (val) => setState(() => _selectedProvider = val!),
-                      )),
+                  ..._providers.map(
+                    (p) => RadioListTile<String>(
+                      title: Text(p.label),
+                      subtitle: Text(p.description),
+                      value: p.type,
+                      groupValue: _selectedProvider,
+                      onChanged: (val) =>
+                          setState(() => _selectedProvider = val!),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -210,7 +261,10 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Step 3 — Agent Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Step 3 — Agent Details',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _nameController,
@@ -223,7 +277,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('This name will appear in transcripts and the org chart.'),
+                  title: const Text(
+                    'This name will appear in transcripts and the org chart.',
+                  ),
                 ),
               ],
             ),
@@ -234,11 +290,18 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Step 4 — Confirm Deployment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Step 4 — Confirm Deployment',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 Card(
                   child: ListTile(
-                    leading: CircleAvatar(child: Text(_selectedRole.isNotEmpty ? _selectedRole[0] : '?')),
+                    leading: CircleAvatar(
+                      child: Text(
+                        _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
+                      ),
+                    ),
                     title: Text(_nameController.text),
                     subtitle: Text(_formatRole(_selectedRole)),
                     trailing: Text(_selectedProvider.toUpperCase()),

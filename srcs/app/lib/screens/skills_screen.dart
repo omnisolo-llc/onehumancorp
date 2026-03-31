@@ -24,7 +24,12 @@ class SkillsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Skills & Plugins')),
       body: snapshot.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+          child: Semantics(
+            label: 'Loading',
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (skills) {
           final filtered = category == 'all'
@@ -149,8 +154,9 @@ class _SkillCardState extends State<_SkillCard> {
       widget.ref.invalidate(_skillsProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -166,8 +172,9 @@ class _SkillCardState extends State<_SkillCard> {
       widget.ref.invalidate(_skillsProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -193,12 +200,18 @@ class _SkillCardState extends State<_SkillCard> {
                   visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(width: 8),
-                Text(s.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(
+                  s.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(width: 4),
-                Text('v${s.version}',
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'v${s.version}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const Spacer(),
                 if (_installed)
                   Switch(
@@ -207,10 +220,15 @@ class _SkillCardState extends State<_SkillCard> {
                   ),
                 const SizedBox(width: 8),
                 _busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: Semantics(
+                          label: 'Loading',
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        ),
                       )
                     : OutlinedButton(
                         onPressed: _toggleInstall,
@@ -220,8 +238,7 @@ class _SkillCardState extends State<_SkillCard> {
             ),
             if (s.description.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(s.description,
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(s.description, style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
         ),

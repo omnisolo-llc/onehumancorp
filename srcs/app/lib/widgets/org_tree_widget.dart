@@ -68,7 +68,9 @@ class _OrgMemberRow extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                _getInitials(member.role.isNotEmpty ? member.role : member.name),
+                _getInitials(
+                  member.role.isNotEmpty ? member.role : member.name,
+                ),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

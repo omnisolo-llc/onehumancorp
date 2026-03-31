@@ -30,13 +30,13 @@ class Agent {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'role': role,
-        'status': status,
-        'organization_id': organizationId,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'role': role,
+    'status': status,
+    'organization_id': organizationId,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   bool get isRunning => status == 'running';
   bool get isPending => status == 'pending';

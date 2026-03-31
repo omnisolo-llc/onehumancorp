@@ -20,14 +20,22 @@ class DashboardSnapshot {
 
   factory DashboardSnapshot.fromJson(Map<String, dynamic> json) {
     return DashboardSnapshot(
-      organization: Organization.fromJson(json['organization'] as Map<String, dynamic>? ?? {}),
+      organization: Organization.fromJson(
+        json['organization'] as Map<String, dynamic>? ?? {},
+      ),
       meetings: json['meetings'] as List<dynamic>? ?? [],
-      costs: CostSummary.fromJson(json['costs'] as Map<String, dynamic>? ?? json['costSummary'] as Map<String, dynamic>? ?? {}),
-      agents: (json['agents'] as List<dynamic>?)
+      costs: CostSummary.fromJson(
+        json['costs'] as Map<String, dynamic>? ??
+            json['costSummary'] as Map<String, dynamic>? ??
+            {},
+      ),
+      agents:
+          (json['agents'] as List<dynamic>?)
               ?.map((e) => Agent.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      statuses: (json['statuses'] as List<dynamic>?)
+      statuses:
+          (json['statuses'] as List<dynamic>?)
               ?.map((e) => StatusBucket.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -56,8 +64,11 @@ class Organization {
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       domain: json['domain'] as String? ?? '',
-      members: (json['members'] as List<dynamic>?)
-              ?.map((e) => OrganizationMember.fromJson(e as Map<String, dynamic>))
+      members:
+          (json['members'] as List<dynamic>?)
+              ?.map(
+                (e) => OrganizationMember.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );
@@ -103,9 +114,11 @@ class CostSummary {
 
   factory CostSummary.fromJson(Map<String, dynamic> json) {
     return CostSummary(
-      totalCostUSD: (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0).toDouble(),
+      totalCostUSD: (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0)
+          .toDouble(),
       totalTokens: json['totalTokens'] ?? json['total_tokens'] ?? 0,
-      agents: (json['agents'] as List<dynamic>?)
+      agents:
+          (json['agents'] as List<dynamic>?)
               ?.map((e) => AgentCost.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -137,10 +150,7 @@ class StatusBucket {
   final String status;
   final int count;
 
-  const StatusBucket({
-    required this.status,
-    required this.count,
-  });
+  const StatusBucket({required this.status, required this.count});
 
   factory StatusBucket.fromJson(Map<String, dynamic> json) {
     return StatusBucket(

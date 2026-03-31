@@ -10,7 +10,8 @@ class CostDashboardScreen extends ConsumerStatefulWidget {
   const CostDashboardScreen({super.key});
 
   @override
-  ConsumerState<CostDashboardScreen> createState() => _CostDashboardScreenState();
+  ConsumerState<CostDashboardScreen> createState() =>
+      _CostDashboardScreenState();
 }
 
 class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
@@ -48,7 +49,12 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
         future: _dashboardFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Semantics(
+                label: 'Loading',
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -88,7 +94,9 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
               // Usage per Agent Chart
               Text(
                 'Usage per Agent',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Card(
@@ -120,7 +128,12 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(agent.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                Text(
+                                  agent.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                                 Text(currencyFormat.format(agentCost.costUSD)),
                               ],
                             ),
@@ -150,7 +163,10 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                             const SizedBox(height: 4),
                             Text(
                               '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
-                              style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colors.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -164,7 +180,9 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
               // Organization Hierarchy Preview
               Text(
                 'Organization View',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Card(
@@ -186,12 +204,19 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                         ],
                       ),
                       const Divider(height: 32),
-                      ...data.organization.members.take(3).map((m) => ListTile(
-                            leading: Icon(m.isHuman ? Icons.person : Icons.smart_toy, size: 20),
-                            title: Text(m.name),
-                            subtitle: Text(m.role),
-                            dense: true,
-                          )),
+                      ...data.organization.members
+                          .take(3)
+                          .map(
+                            (m) => ListTile(
+                              leading: Icon(
+                                m.isHuman ? Icons.person : Icons.smart_toy,
+                                size: 20,
+                              ),
+                              title: Text(m.name),
+                              subtitle: Text(m.role),
+                              dense: true,
+                            ),
+                          ),
                       if (data.organization.members.length > 3)
                         Center(
                           child: TextButton(
@@ -247,10 +272,7 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),

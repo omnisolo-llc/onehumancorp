@@ -39,11 +39,11 @@ class AiProvider {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'base_url': baseUrl,
-        'api_key': apiKey,
-        'models': models,
-        'is_official': isOfficial,
-      };
+    'id': id,
+    'name': name,
+    'base_url': baseUrl,
+    'api_key': apiKey,
+    'models': models,
+    'is_official': isOfficial,
+  };
 }

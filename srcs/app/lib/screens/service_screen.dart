@@ -121,7 +121,8 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
           label: const Text('Run Health Check'),
         ),
         OutlinedButton.icon(
-          onPressed: () => ref.read(localManagerServiceProvider).restartService(),
+          onPressed: () =>
+              ref.read(localManagerServiceProvider).restartService(),
           icon: const Icon(Icons.refresh),
           label: const Text('Force Restart'),
         ),

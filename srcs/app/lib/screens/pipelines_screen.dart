@@ -42,7 +42,10 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Promotion failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Promotion failed: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -58,14 +61,23 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
       appBar: AppBar(
         title: const Text('SDLC Pipelines'),
         actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh pipelines'),
+          IconButton(
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh pipelines',
+          ),
         ],
       ),
       body: FutureBuilder<List<Pipeline>>(
         future: _pipelinesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Semantics(
+                label: 'Loading',
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -99,16 +111,25 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                             children: [
                               Text(
                                 pipeline.name,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.account_tree_outlined, size: 14),
+                                  const Icon(
+                                    Icons.account_tree_outlined,
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     pipeline.branch,
-                                    style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+                                    style: TextStyle(
+                                      color: colors.onSurfaceVariant,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -122,11 +143,17 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                         children: [
                           const Icon(Icons.person_outline, size: 16),
                           const SizedBox(width: 8),
-                          Text('Initiated by: ${pipeline.initiatedBy ?? "System"}', style: const TextStyle(fontSize: 12)),
+                          Text(
+                            'Initiated by: ${pipeline.initiatedBy ?? "System"}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           const Spacer(),
                           Text(
                             'Updated: ${DateFormat.MMMd().add_jm().format(pipeline.updatedAt)}',
-                            style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -145,7 +172,10 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                               Expanded(
                                 child: Text(
                                   pipeline.stagingUrl!,
-                                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: 'monospace',
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -162,7 +192,10 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                       if (pipeline.status == 'staging') ...[
                         const Text(
                           'Promote to Production',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         SlideToApprove(
