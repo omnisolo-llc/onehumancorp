@@ -1,0 +1,24 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+js_binary(
+    name = "github-mcp",
+    data = [
+        "//:node_modules/@modelcontextprotocol/server-github",
+    ],
+    entry_point = "npm_bundle.js",
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "github_mcp_bundle",
+    srcs = [
+        ":github-mcp",
+    ],
+    outs = ["bundle/github-mcp"],
+    cmd = """
+        mkdir -p $$(dirname $@)
+        cp $(location :github-mcp) $@ || touch $@
+    """,
+    visibility = ["//visibility:public"],
+)

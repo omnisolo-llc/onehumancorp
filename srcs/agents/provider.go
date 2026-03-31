@@ -60,6 +60,7 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+	ProviderTypeGitHubMCP ProviderType = "github-mcp"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
