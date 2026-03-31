@@ -108,7 +108,7 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
       children: [
         ElevatedButton.icon(
           onPressed: _isLoading ? null : _toggleService,
-          icon: Icon(_isRunning ? Icons.stop : Icons.play_arrow),
+          icon: _isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Icon(_isRunning ? Icons.stop : Icons.play_arrow),
           label: Text(_isRunning ? 'Stop Service' : 'Start Service'),
           style: ElevatedButton.styleFrom(
             backgroundColor: _isRunning ? Colors.red.shade50 : null,
