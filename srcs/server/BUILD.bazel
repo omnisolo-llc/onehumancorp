@@ -11,7 +11,7 @@ go_library(
         "//srcs/server/dashboard",
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
-        "//srcs/server/orchestration",
+        "//srcs/orchestration",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",

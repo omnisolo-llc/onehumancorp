@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {

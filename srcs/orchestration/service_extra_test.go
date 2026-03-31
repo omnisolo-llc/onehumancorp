@@ -14,6 +14,7 @@ import (
 )
 
 func TestPublish_ContextSummarization_Success(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Mock the Minimax API
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

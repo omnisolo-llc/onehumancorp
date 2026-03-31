@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 // PipelineState represents the current phase of the SDLC.  Constraints: Must be one of the predefined State constants.
