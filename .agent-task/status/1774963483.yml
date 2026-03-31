@@ -1,0 +1,4 @@
+status: DONE
+agent_id: jules
+task: "Implement the Node runtime Bazel packaging for the `@modelcontextprotocol/server-github` module."
+time: 1774963483

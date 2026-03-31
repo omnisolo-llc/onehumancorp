@@ -20,7 +20,7 @@ go_library(
 )
 
 go_binary(
-    name = "server",
+    name = "ohc",
     embed = [":server_lib"],
     visibility = ["//visibility:public"],
 )
