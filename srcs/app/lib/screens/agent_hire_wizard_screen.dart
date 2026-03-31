@@ -116,7 +116,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hire New Agent'),
+        title: const Text('Hire New Agent', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.close),
           tooltip: 'Close wizard',
@@ -144,30 +144,48 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             child: Row(
               children: [
                 if (_step < 3)
-                  ElevatedButton(
-                    onPressed:
-                        (_step == 0 && _selectedRole.isEmpty)
-                            ? null
-                            : details.onStepContinue,
-                    child: const Text('Next'),
+                  Semantics(
+                    label: 'Proceed to next step',
+                    child: Tooltip(
+                      message: 'Next step',
+                      child: ElevatedButton(
+                        onPressed:
+                            (_step == 0 && _selectedRole.isEmpty)
+                                ? null
+                                : details.onStepContinue,
+                        child: const Text('Next'),
+                      ),
+                    ),
                   )
                 else
-                  ElevatedButton(
-                    onPressed: _isDeploying ? null : _handleDeploy,
-                    child:
-                        _isDeploying
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Text('Deploy Agent'),
+                  Semantics(
+                    label: 'Deploy the configured agent',
+                    child: Tooltip(
+                      message: 'Deploy agent to orchestration hub',
+                      child: ElevatedButton(
+                        onPressed: _isDeploying ? null : _handleDeploy,
+                        child:
+                            _isDeploying
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                                : const Text('Deploy Agent'),
+                      ),
+                    ),
                   ),
                 const SizedBox(width: 12),
                 if (_step > 0)
-                  TextButton(
-                    onPressed: details.onStepCancel,
-                    child: const Text('Back'),
+                  Semantics(
+                    label: 'Go back to previous step',
+                    child: Tooltip(
+                      message: 'Previous step',
+                      child: TextButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('Back'),
+                      ),
+                    ),
                   ),
               ],
             ),
