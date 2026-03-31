@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"strings"
+
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -21,8 +23,8 @@ type SIPDB struct {
 }
 
 const (
-	maxRetries    = 3
-	retryInterval = 100 * time.Millisecond
+	maxRetries    = 15
+	retryInterval = 250 * time.Millisecond
 )
 
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
@@ -53,7 +55,15 @@ func withRetry(ctx context.Context, op func() error) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func NewSIPDB(dbPath string) (*SIPDB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// Add PRAGMAs for high concurrency
+	dsn := dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	if strings.Contains(dbPath, "?") {
+		dsn = dbPath + "&_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+	}
+	db, err := sql.Open("sqlite", dsn)
+	if err == nil {
+		db.SetMaxOpenConns(1)
+	}
 	if err != nil {
 		return nil, err
 	}

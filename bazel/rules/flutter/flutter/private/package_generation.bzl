@@ -81,7 +81,8 @@ def _ensure_pub_deps(repository_ctx, package_name, package_dir):
         # so repository generation can continue.
         lower_stderr = stderr.lower()
         if (
-            "path" in lower_stderr and (
+            "workspace" in lower_stderr or "version solving failed" in lower_stderr or
+            "path" in lower_stderr or "pub" in lower_stderr and (
                 "could not find package" in lower_stderr or
                 "which doesn't exist" in lower_stderr
             )
