@@ -1,0 +1,5 @@
+type: status
+id: $(date +%s)
+status: success
+memory_type: execution
+timestamp: $(date +%s)
