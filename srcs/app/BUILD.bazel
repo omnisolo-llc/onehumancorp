@@ -161,11 +161,34 @@ sh_test(
         "e2e/web.spec.ts",
         "//:node_modules/@playwright/test",
     ],
+    env = {
+        "TEST_SPEC": "web.spec.ts",
+    },
     tags = [
         "manual",
         "requires-network",
+        "local",
     ],  # browser download may need network on first run
 )
+
+sh_test(
+    name = "chaos_test",
+    srcs = ["test/flutter_web_e2e_test.sh"],
+    data = [
+        ":app",
+        "e2e/playwright.config.ts",
+        "e2e/chaos.spec.ts",
+        "//:node_modules/@playwright/test",
+    ],
+    env = {
+        "TEST_SPEC": "chaos.spec.ts",
+    },
+    tags = [
+        "requires-network",
+        "local",
+    ],
+)
+
 
 # ── Local Development targets ─────────────────────────────────────────────────
 

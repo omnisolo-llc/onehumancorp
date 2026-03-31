@@ -135,20 +135,22 @@ if [ -z "$CONFIG" ]; then
   exit 1
 fi
 
-SPEC_REL_FILE="srcs/app/e2e/web.spec.ts"
-SPEC_FILE=""
+# We dynamically accept any spec file based on Bazel TARGET
+# We will just copy the entire e2e dir so all specs are available.
+E2E_DIR_REL="srcs/app/e2e"
+E2E_DIR=""
 for candidate in \
-    "${RUNFILES}/${WORKSPACE}/${SPEC_REL_FILE}" \
-    "${RUNFILES}/_main/${SPEC_REL_FILE}" \
-    "${RUNFILES}/__main__/${SPEC_REL_FILE}"; do
-  if [ -f "$candidate" ]; then
-    SPEC_FILE="$candidate"
+    "${RUNFILES}/${WORKSPACE}/${E2E_DIR_REL}" \
+    "${RUNFILES}/_main/${E2E_DIR_REL}" \
+    "${RUNFILES}/__main__/${E2E_DIR_REL}"; do
+  if [ -d "$candidate" ]; then
+    E2E_DIR="$candidate"
     break
   fi
 done
 
-if [ -z "$SPEC_FILE" ]; then
-  echo "ERROR: web.spec.ts not found" >&2
+if [ -z "$E2E_DIR" ]; then
+  echo "ERROR: e2e directory not found" >&2
   exit 1
 fi
 
@@ -172,8 +174,7 @@ fi
 # in a different @playwright/test instance from the host workspace.
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
-cp "${CONFIG}" "${E2E_TMP_DIR}/playwright.config.ts"
-cp "${SPEC_FILE}" "${E2E_TMP_DIR}/web.spec.ts"
+cp -r "${E2E_DIR}/"* "${E2E_TMP_DIR}/"
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
 export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 
@@ -194,9 +195,16 @@ OUTPUT_DIR="${TMPDIR}/pw_results"
 mkdir -p "${OUTPUT_DIR}"
 
 echo "Running Playwright tests…"
-"${PLAYWRIGHT_CMD[@]}" test \
-  --config="${CONFIG}" \
-  --output="${OUTPUT_DIR}" \
-  2>&1
+if [ -n "${TEST_SPEC:-}" ]; then
+  "${PLAYWRIGHT_CMD[@]}" test "${E2E_TMP_DIR}/${TEST_SPEC}" \
+    --config="${CONFIG}" \
+    --output="${OUTPUT_DIR}" \
+    2>&1
+else
+  "${PLAYWRIGHT_CMD[@]}" test \
+    --config="${CONFIG}" \
+    --output="${OUTPUT_DIR}" \
+    2>&1
+fi
 
 echo "✓ Playwright web e2e tests completed"
