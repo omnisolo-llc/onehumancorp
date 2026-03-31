@@ -1238,42 +1238,61 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	buf.Truncate(buf.Len() - 1)
 	buf.WriteString(`}]}`)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, buf)
-	if err != nil {
-		return "", err
+	// Retry loop to handle transient empty responses from Minimax.
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		// Need a new request for each retry because the body buffer is consumed.
+		// Re-create the request using the same buffer bytes.
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(buf.Bytes()))
+		if err != nil {
+			return "", err
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+		// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
+		// Prevents severe connection and resource leaks by reusing connection pools on every request.
+		resp, err := sharedHTTPClient.Do(req)
+		if err != nil {
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			respBody, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		var result struct {
+			Choices []struct {
+				Message struct {
+					Content string `json:"content"`
+				} `json:"message"`
+			} `json:"choices"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			resp.Body.Close()
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if len(result.Choices) == 0 {
+			resp.Body.Close()
+			lastErr = errors.New("empty response from minimax")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		resp.Body.Close()
+		return result.Choices[0].Message.Content, nil
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.APIKey)
-
-	// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
-	// Prevents severe connection and resource leaks by reusing connection pools on every request.
-	resp, err := sharedHTTPClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-	}
-
-	var result struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-
-	if len(result.Choices) == 0 {
-		return "", errors.New("empty response from minimax")
-	}
-
-	return result.Choices[0].Message.Content, nil
+	return "", lastErr
 }
