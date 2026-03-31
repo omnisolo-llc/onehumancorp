@@ -57,7 +57,7 @@ func newFullBackend(t *testing.T) (*httptest.Server, string) {
 	_, _ = tracker.Track(billing.Usage{
 		OrganizationID:   org.ID,
 		AgentID:          "pm-1",
-		Model:            "gpt-4o",
+		Model:            "gpt-4o-mini",
 		PromptTokens:     500,
 		CompletionTokens: 200,
 	})

@@ -210,7 +210,7 @@ log "  /api/agents ✓"
 # --- hire agent ---
 hire_response="$(curl -sf -X POST "${BACKEND_URL}/api/agents/hire" \
   -H 'Content-Type: application/json' \
-  -d '{"name":"E2E Test Agent","role":"SOFTWARE_ENGINEER","model":"gpt-4o"}')"
+  -d '{"name":"E2E Test Agent","role":"SOFTWARE_ENGINEER","model":"gpt-4o-mini"}')"
 echo "${hire_response}" | grep -q '"id"' || { echo "hire agent failed: ${hire_response}" >&2; exit 1; }
 log "  /api/agents/hire ✓"
 
