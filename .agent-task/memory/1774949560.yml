@@ -1,0 +1,3 @@
+type: memory
+content: "In Flutter, when adding 'Semantics' to widgets within a 'Row' or 'Column' that use 'Expanded', ensure the 'Semantics' widget is placed *inside* the 'Expanded' widget (e.g., `Expanded(child: Semantics(...))`) to avoid layout-breaking runtime exceptions. Furthermore, always make sure to implement premium 'Aesthetic Excellence' Glassmorphism correctly and cleanup the workspace. Specifically, `patch.diff` or temporary files MUST be explicitly deleted before code review to adhere to the Zero Side Effects mandate."
+timestamp: $(date +%s)
