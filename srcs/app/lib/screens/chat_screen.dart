@@ -243,6 +243,7 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           IconButton.filled(
+            tooltip: 'Send message',
             icon: sending
                 ? const SizedBox(
                     width: 20,
