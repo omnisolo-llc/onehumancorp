@@ -1,0 +1,7 @@
+type: memory
+metadata:
+  role: "Principal UX/UI Engineer & Palette (L7)"
+  timestamp: 1774987115
+observations: "Found that Semantics wrappers on custom composite data cards (like StatCard or agent usage summaries) without excludeSemantics: true cause screen readers to incorrectly read the aggregated label and then all the individual child texts redundantly."
+actions_taken: "Added excludeSemantics: true to Semantics widgets wrapping custom cards in DashboardScreen, CostDashboardScreen, and AgentsScreen."
+resolution: "Screen reader accessibility on complex UI cards is now improved significantly by consolidating semantic announcements."

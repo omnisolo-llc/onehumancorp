@@ -127,6 +127,7 @@ class _StatCard extends StatelessWidget {
     final effectiveIconColor = iconColor ?? color;
     return Semantics(
       label: '$label: $value',
+      excludeSemantics: true,
       button: true,
       excludeSemantics: true,
       child: SizedBox(
