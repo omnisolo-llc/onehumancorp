@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/auth_service.dart';
 
@@ -315,9 +316,26 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget buildGlassCard({required Color color, required Widget child}) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.03),
+              border: Border.all(color: color.withOpacity(0.08)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: child,
+          ),
+        ),
+      );
+    }
+
     if (status.configured) {
-      return Card(
-        color: Colors.green.shade50,
+      return buildGlassCard(
+        color: Colors.green,
         child: const ListTile(
           leading: Icon(Icons.check_circle, color: Colors.green),
           title: Text('Platform is fully configured',
@@ -330,8 +348,8 @@ class _StatusBanner extends StatelessWidget {
     if (!status.serverStep) missing.add('Server');
     if (!status.aiProviderStep) missing.add('AI Provider');
     if (!status.centrifugeStep) missing.add('Centrifuge');
-    return Card(
-      color: Colors.orange.shade50,
+    return buildGlassCard(
+      color: Colors.orange,
       child: ListTile(
         leading: const Icon(Icons.warning_amber, color: Colors.orange),
         title: const Text('Configuration incomplete',
@@ -391,10 +409,17 @@ class _ServerStep extends StatelessWidget {
 
 // ── Step 2 – AI Provider ───────────────────────────────────────────────────
 
-class _AiProviderStep extends StatelessWidget {
+class _AiProviderStep extends StatefulWidget {
   final TextEditingController keyCtrl;
   final TextEditingController modelCtrl;
   const _AiProviderStep({required this.keyCtrl, required this.modelCtrl});
+
+  @override
+  State<_AiProviderStep> createState() => _AiProviderStepState();
+}
+
+class _AiProviderStepState extends State<_AiProviderStep> {
+  bool _obscureKey = true;
 
   @override
   Widget build(BuildContext context) {
@@ -410,24 +435,41 @@ class _AiProviderStep extends StatelessWidget {
           'Settings → AI Providers.',
         ),
         const SizedBox(height: 24),
-        TextField(
-          controller: keyCtrl,
-          obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'Minimax API Key',
-            hintText: 'sk-…',
-            helperText: 'Obtain from platform.minimaxi.com',
-            border: OutlineInputBorder(),
+        Semantics(
+          label: 'Minimax API Key Input',
+          child: TextField(
+            controller: widget.keyCtrl,
+            obscureText: _obscureKey,
+            decoration: InputDecoration(
+              labelText: 'Minimax API Key',
+              hintText: 'sk-…',
+              helperText: 'Obtain from platform.minimaxi.com',
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureKey ? Icons.visibility : Icons.visibility_off,
+                ),
+                tooltip: _obscureKey ? 'Show API Key' : 'Hide API Key',
+                onPressed: () {
+                  setState(() {
+                    _obscureKey = !_obscureKey;
+                  });
+                },
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: modelCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Default Model',
-            hintText: 'abab6.5s',
-            helperText: 'The Minimax model to use for agent reasoning',
-            border: OutlineInputBorder(),
+        Semantics(
+          label: 'Default Model Input',
+          child: TextField(
+            controller: widget.modelCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Default Model',
+              hintText: 'abab6.5s',
+              helperText: 'The Minimax model to use for agent reasoning',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
       ],
@@ -467,19 +509,22 @@ class _CentrifugeStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Channel convention',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
-                Text('• meeting:<id>  — live transcript updates'),
-                Text('• chat:<room>   — real-time chat messages'),
-                Text('• agent:<id>    — per-agent inbox notifications'),
-              ],
+        Semantics(
+          label: 'Channel Convention Info Card',
+          child: const Card(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Channel convention',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text('• meeting:<id>  — live transcript updates'),
+                  Text('• chat:<room>   — real-time chat messages'),
+                  Text('• agent:<id>    — per-agent inbox notifications'),
+                ],
+              ),
             ),
           ),
         ),
