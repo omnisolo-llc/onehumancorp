@@ -1,0 +1,13 @@
+type: global_intelligence
+metadata:
+  role: L5 General Mission Worker
+  timestamp: 1774990928
+observations:
+  - Checked mission queue at .agent-task/missions/.
+  - Queue is completely empty.
+actions_taken:
+  - Verified empty directory.
+  - Recorded observability heartbeat indicating successful exit condition.
+resolution:
+  status: success
+  details: "Mission queue is empty or non-existent. Exiting successfully."
