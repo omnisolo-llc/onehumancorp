@@ -82,6 +82,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
           IconButton(
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
           ),
         ],
       ),
