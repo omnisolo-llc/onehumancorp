@@ -464,7 +464,7 @@ mkdir -p "$DEST"
 if command -v rsync >/dev/null 2>&1; then
     rsync -aL "$SRC_WORKSPACE/" "$DEST/"
 else
-    cp -RL "$SRC_WORKSPACE/." "$DEST/"
+    cp -r "$SRC_WORKSPACE/." "$DEST/"
 fi
 chmod -R u+rwX "$DEST"
 
@@ -479,7 +479,7 @@ if [ -s "$MANIFEST" ]; then
         fi
         dest_path="$DEST/$rel"
         mkdir -p "$(dirname "$dest_path")"
-        cp -RL "$src" "$dest_path"
+        cp -r "$src" "$dest_path"
     done < "$MANIFEST"
 fi
 """
@@ -704,7 +704,7 @@ mkdir -p "$DEST"
 if command -v rsync >/dev/null 2>&1; then
     rsync -aL "$SRC_WORKSPACE/" "$DEST/"
 else
-    cp -RL "$SRC_WORKSPACE/." "$DEST/"
+    cp -r "$SRC_WORKSPACE/." "$DEST/"
 fi
 # Bazel marks output directories read-only (0555) after actions complete.
 # rsync -a preserves those permissions, so the destination tree may be
@@ -721,7 +721,7 @@ while [ $# -gt 0 ]; do
     fi
     mkdir -p "$DEST/$(dirname "$rel")"
     if [ -f "$abs" ] || [ -d "$abs" ]; then
-        cp -RL "$abs" "$DEST/$rel"
+        cp -r "$abs" "$DEST/$rel"
     fi
 done
 """
@@ -756,7 +756,7 @@ copy_tree() {{
     if command -v rsync >/dev/null 2>&1; then
         rsync -aL "$src/" "$dest/"
     else
-        cp -RL "$src/." "$dest/"
+        cp -r "$src/." "$dest/"
     fi
 }}
 

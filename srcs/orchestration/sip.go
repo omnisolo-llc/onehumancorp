@@ -167,8 +167,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 
 			var msg Message
 			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
+				// Actively rewrite invalid JSON into a valid Message representation in the database
 				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				validJSON, _ := json.Marshal(msg)
+				_, updateErr := tx.ExecContext(ctx, "UPDATE agent_missions SET task = ? WHERE id = ?", string(validJSON), id)
+				if updateErr != nil {
+					return fmt.Errorf("failed to rewrite invalid task JSON for id %s: %w", id, updateErr)
+				}
 			} else {
 				if msg.ID == "" {
 					msg.ID = id
