@@ -26,3 +26,23 @@ func TestProviderGetCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestGitHubProviderZeroSecrets(t *testing.T) {
+	provider := &GitHubProvider{}
+
+	credsWithKey := Credentials{APIKey: "test-key"}
+	err := provider.Authenticate(credsWithKey)
+	if err == nil {
+		t.Errorf("Expected Authenticate to fail with explicit credentials (Zero Secrets mandate)")
+	}
+
+	credsEmpty := Credentials{}
+	err = provider.Authenticate(credsEmpty)
+	if err != nil {
+		t.Errorf("Expected Authenticate to succeed with empty credentials (relies on SPIFFE/SPIRE), got %v", err)
+	}
+
+	if provider.Type() != ProviderTypeGitHub {
+		t.Errorf("Expected Type to be github, got %v", provider.Type())
+	}
+}

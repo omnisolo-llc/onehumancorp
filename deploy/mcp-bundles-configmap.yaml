@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-bundles
+  namespace: ohc-system
+data:
+  # This configmap would map bundle artifacts from CI into MCP_BUNDLE_DIR mount point.
+  # Here we only document it for local run instructions.

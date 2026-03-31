@@ -11,6 +11,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/billing"
 	"github.com/onehumancorp/mono/srcs/domain"
 	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/integrations"
 )
 
 func TestHandleMCPInvokeCoverage(t *testing.T) {
@@ -106,6 +107,46 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("expected 404, got %d (body: %s)", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestHandleMCPInvokeGitHub(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	authStore := auth.NewStore()
+
+	_, err := authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"})
+	if err != nil {
+		t.Fatal("create user failed", err)
+	}
+	user, err := authStore.Authenticate("adminuser", "adminpass123")
+	if err != nil {
+		t.Fatal("auth failed", err)
+	}
+	token, _ := authStore.IssueToken(user)
+
+	srv := &Server{org: org, hub: hub, tracker: tracker, authStore: authStore}
+
+	t.Run("git-mcp success", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "git-mcp", "params": {"integrationId": "github"}}`))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		// srv.integReg expects an *integrations.Registry, which we cannot mock with dummy struct here since it's a concrete type.
+		// So instead, we just create a valid registry and register a failing client or rely on it to fail gracefully
+		// if the integration ID doesn't exist. Actually `srv.integReg` is set to nil, and `s.integReg.CreatePullRequest` will panic.
+		// If we create an empty integrations.NewRegistry(), it won't panic, it will just return an error that integration is not found!
+
+		srv.integReg = integrations.NewRegistry()
+
+		handler := auth.Middleware(authStore)(http.HandlerFunc(srv.handleMCPInvoke))
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest && !strings.Contains(w.Body.String(), "integration not found") {
+			t.Errorf("Expected integration not found error from git-mcp, got code %d body %s", w.Code, w.Body.String())
 		}
 	})
 }

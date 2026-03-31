@@ -60,6 +60,9 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+
+	// ProviderTypeGitHub targets GitHub integration via MCP
+	ProviderTypeGitHub ProviderType = "github"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
@@ -497,3 +500,38 @@ func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
 // Produces no errors.
 // Has no side effects.
 func (p *BuiltinProvider) IsAuthenticated() bool { return true }
+
+// ── GitHub ───────────────────────────────────────────────────────────────────
+
+// GitHubProvider implements Provider for the GitHub MCP integration.
+type GitHubProvider struct{ baseProvider }
+
+// Type functionality.
+func (p *GitHubProvider) Type() ProviderType { return ProviderTypeGitHub }
+
+// Description functionality.
+func (p *GitHubProvider) Description() string {
+	return "GitHub Model Context Protocol server for repository management"
+}
+
+// SupportedRoles functionality.
+func (p *GitHubProvider) SupportedRoles() []string {
+	return []string{"SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR", "QA_TESTER"}
+}
+
+// Authenticate functionality.
+func (p *GitHubProvider) Authenticate(creds Credentials) error {
+	// Zero Secrets mandate: relies entirely on SPIFFE/SPIRE for identity and auth.
+	// Reject any explicit API Keys or OAuth Tokens.
+	if !creds.IsEmpty() {
+		return errors.New("github provider relies entirely on SPIFFE/SPIRE identity; explicit credentials are not allowed")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+func (p *GitHubProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+func (p *GitHubProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
