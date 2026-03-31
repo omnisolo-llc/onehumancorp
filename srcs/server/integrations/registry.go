@@ -537,9 +537,9 @@ func validateURL(u string) error {
 	return nil
 }
 
-// initSafeHTTPClient returns an http.Client with a custom DialContext that prevents
+// InitSafeHTTPClient returns an http.Client with a custom DialContext that prevents
 // DNS rebinding (TOCTOU) attacks by pinning the connection to the validated IP.
-func initSafeHTTPClient() *http.Client {
+func InitSafeHTTPClient() *http.Client {
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -585,7 +585,7 @@ func initSafeHTTPClient() *http.Client {
 	}
 }
 
-var safeClient = initSafeHTTPClient()
+var safeClient = InitSafeHTTPClient()
 
 // Connect marks an integration as connected and sets its base URL.
 // An optional IntegrationCredentials value stores secrets (e.g. bot tokens)

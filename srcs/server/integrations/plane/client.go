@@ -14,7 +14,8 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/integrations"
 )
 
 // DefaultBaseURL is the in-cluster URL for the Plane API service.
@@ -52,7 +53,7 @@ func NewClientFromEnv() *Client {
 		APIKey:     os.Getenv("PLANE_API_KEY"),
 		Workspace:  os.Getenv("PLANE_WORKSPACE"),
 		Project:    os.Getenv("PLANE_PROJECT"),
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: integrations.InitSafeHTTPClient(),
 	}
 }
 

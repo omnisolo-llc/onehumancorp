@@ -8,9 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
+
+func init() {
+	integrations.AllowLocalIPsForTesting = true
+}
 
 // TestMultiAgentMeetingInteraction verifies that multiple agents can exchange
 // messages within a shared meeting room and that the transcript is correctly

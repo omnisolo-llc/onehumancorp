@@ -8,10 +8,14 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/integrations/chatwoot",
     visibility = ["//visibility:public"],
+    deps = ["//srcs/server/integrations"],
 )
 
 go_test(
     name = "chatwoot_test",
     srcs = ["chatwoot_test.go"],
-    deps = [":chatwoot"],
+    deps = [
+        ":chatwoot",
+        "//srcs/server/integrations",
+    ],
 )

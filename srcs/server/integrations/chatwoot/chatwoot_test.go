@@ -7,8 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 )
+
+func init() {
+	integrations.AllowLocalIPsForTesting = true
+}
 
 // mockChatwootServer returns an httptest.Server that implements the subset of
 // the Chatwoot API used by the client.
