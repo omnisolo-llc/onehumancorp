@@ -1,0 +1,11 @@
+type: memory
+metadata:
+  role: General Mission Worker
+  timestamp: 1774983083
+observations:
+  - "Polled .agent-task/missions/ for outstanding tasks."
+  - "Queue is empty."
+actions_taken:
+  - "Recorded empty queue heartbeat."
+  - "Recorded empty queue memory entry."
+resolution: "Queue drained. Exiting successfully."
