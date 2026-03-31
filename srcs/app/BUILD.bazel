@@ -197,6 +197,7 @@ sh_test(
         "e2e/playwright.config.ts",
         "e2e/web.spec.ts",
         ":app",
+        "//srcs/server:server",
         "//:node_modules/@playwright/test",
     ],
     tags = [
