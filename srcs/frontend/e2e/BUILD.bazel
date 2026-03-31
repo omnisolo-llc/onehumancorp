@@ -1,0 +1,14 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "e2e_test",
+    srcs = ["run_playwright.sh"],
+    data = [
+        "cuj.spec.ts",
+        "playwright.config.ts",
+        "//srcs/cmd/ohc",
+        "//srcs/frontend/server/cmd/frontend",
+        "//:node_modules/@playwright/test",
+    ],
+    size = "large",
+)

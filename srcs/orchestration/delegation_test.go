@@ -40,9 +40,10 @@ func TestDelegateSubTask_Success(t *testing.T) {
 	defer hub.mu.RUnlock()
 
 	var subAgentID string
-	for id := range hub.agents {
-		if id != "SYSTEM" {
+	for id, agent := range hub.agents {
+		if agent.Role == "SWE" && id != "sender-1" && id != "SYSTEM" {
 			subAgentID = id
+			break
 		}
 	}
 
@@ -164,9 +165,10 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 	defer hub.mu.RUnlock()
 
 	var subAgentID string
-	for id := range hub.agents {
-		if id != "SYSTEM" {
+	for id, agent := range hub.agents {
+		if agent.Role == "QA" && id != "sender-1" && id != "SYSTEM" {
 			subAgentID = id
+			break
 		}
 	}
 
