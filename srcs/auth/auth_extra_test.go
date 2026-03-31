@@ -1,11 +1,11 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"bytes"
 )
 
 func TestHandleLogin_IssueTokenError(t *testing.T) {
@@ -187,5 +187,37 @@ func TestStoreGetOrCreateOIDCUser_Fallback(t *testing.T) {
 	u := s.GetOrCreateOIDCUser("sub123", "fallback1@test.com", "fallback1")
 	if u.OIDCSubject != "sub123" {
 		t.Errorf("expected sub123, got %s", u.OIDCSubject)
+	}
+}
+
+func TestGetSetContext(t *testing.T) {
+	ctx := context.Background()
+	claims := &Claims{Subject: "test-user", Roles: []string{"admin"}}
+	ctxWithClaims := context.WithValue(ctx, claimsContextKey, claims)
+
+	retrievedClaims := ClaimsFromContext(ctxWithClaims)
+	if retrievedClaims == nil {
+		t.Fatalf("expected to retrieve claims from context")
+	}
+	if retrievedClaims.Subject != "test-user" {
+		t.Errorf("expected subject 'test-user', got '%s'", retrievedClaims.Subject)
+	}
+
+	nilClaims := ClaimsFromContext(context.Background())
+	if nilClaims != nil {
+		t.Errorf("expected no claims from empty context")
+	}
+}
+
+
+func TestOIDC_ErrorPaths(t *testing.T) {
+	_, err := ValidateOIDCToken("invalid-token", OIDCConfig{Enabled: true})
+	if err == nil {
+		t.Errorf("expected error for invalid token")
+	}
+
+	_, err = ValidateOIDCToken("invalid-token", OIDCConfig{Enabled: false})
+	if err == nil {
+		t.Errorf("expected error for disabled OIDC")
 	}
 }
