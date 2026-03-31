@@ -227,10 +227,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 const Text('Select the AI backend that will power this agent.'),
                 const SizedBox(height: 16),
                 if (_isLoading)
-                  const Center(
+                  Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(),
+                      padding: const EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   )
                 else if (_providers.isEmpty)

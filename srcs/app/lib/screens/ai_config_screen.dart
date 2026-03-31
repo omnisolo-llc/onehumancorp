@@ -30,7 +30,12 @@ class AiConfigScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading:
+            () => Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
         error: (e, _) => Center(child: Text('Error: $e')),
         data:
             (providers) =>
