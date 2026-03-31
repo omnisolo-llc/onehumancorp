@@ -23,8 +23,12 @@ func NewTaskWorker(pc *plane.Client) *TaskWorker {
 }
 
 // Start begins the background polling loop for the task worker.
-func (tw *TaskWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
+// The polling interval is configurable (defaults to 30 seconds).
+func (tw *TaskWorker) Start(ctx context.Context, interval time.Duration) {
+	if interval == 0 {
+		interval = 30 * time.Second
+	}
+	ticker := time.NewTicker(interval)
 	go func() {
 		defer ticker.Stop()
 		for {
