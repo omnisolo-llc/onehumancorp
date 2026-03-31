@@ -125,11 +125,19 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _LocalBackendStatusCard extends ConsumerWidget {
+class _LocalBackendStatusCard extends ConsumerStatefulWidget {
   const _LocalBackendStatusCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LocalBackendStatusCard> createState() => _LocalBackendStatusCardState();
+}
+
+class _LocalBackendStatusCardState extends ConsumerState<_LocalBackendStatusCard> {
+  bool _isToggling = false;
+  bool _isRunningDoctor = false;
+
+  @override
+  Widget build(BuildContext context) {
     final manager = ref.watch(localManagerServiceProvider);
     
     return FutureBuilder<bool>(
@@ -151,35 +159,65 @@ class _LocalBackendStatusCard extends ConsumerWidget {
                     Text(running ? 'Service Running' : 'Service Stopped'),
                     const Spacer(),
                     ElevatedButton(
-                      onPressed: () async {
-                        if (running) {
-                          await manager.stopService();
-                        } else {
-                          await manager.startService();
-                        }
-                        // Simple refresh hack
-                        (context as Element).markNeedsBuild();
-                      },
-                      child: Text(running ? 'Stop' : 'Start'),
+                      onPressed: _isToggling
+                          ? null
+                          : () async {
+                              setState(() => _isToggling = true);
+                              try {
+                                if (running) {
+                                  await manager.stopService();
+                                } else {
+                                  await manager.startService();
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isToggling = false);
+                                }
+                              }
+                            },
+                      child: _isToggling
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(running ? 'Stop' : 'Start'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
-                  onPressed: () async {
-                    final report = await manager.runDoctor();
-                    if (context.mounted) {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('System Doctor'),
-                          content: SingleChildScrollView(child: Text(report)),
-                          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.medical_services),
+                  onPressed: _isRunningDoctor
+                      ? null
+                      : () async {
+                          setState(() => _isRunningDoctor = true);
+                          try {
+                            final report = await manager.runDoctor();
+                            if (context.mounted) {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('System Doctor'),
+                                  content: SingleChildScrollView(child: Text(report)),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Close'))
+                                  ],
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isRunningDoctor = false);
+                          }
+                        },
+                  icon: _isRunningDoctor
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.medical_services),
                   label: const Text('Run Doctor Diagnostics'),
                 ),
               ],
