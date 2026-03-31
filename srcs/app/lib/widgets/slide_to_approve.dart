@@ -130,10 +130,13 @@ class _SlideToApproveState extends State<SlideToApprove> {
                 left: _position + 4,
                 top: 4,
                 bottom: 4,
-                child: GestureDetector(
-                  onHorizontalDragUpdate: _handleDragUpdate,
-                  onHorizontalDragEnd: _handleDragEnd,
-                  child: Container(
+                child: Semantics(
+                  button: true,
+                  label: 'Slide to Approve',
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: _handleDragUpdate,
+                    onHorizontalDragEnd: _handleDragEnd,
+                    child: Container(
                     width: _thumbWidth,
                     decoration: BoxDecoration(
                       color: widget.disabled && _position == _maxDrag
@@ -154,6 +157,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                           : const Icon(Icons.chevron_right, color: Colors.white, size: 24),
                     ),
                   ),
+                ),
                 ),
               ),
             ],

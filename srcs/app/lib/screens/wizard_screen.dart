@@ -437,6 +437,7 @@ class _AiProviderStepState extends State<_AiProviderStep> {
         const SizedBox(height: 24),
         Semantics(
           label: 'Minimax API Key Input',
+          textField: true,
           child: TextField(
             controller: widget.keyCtrl,
             obscureText: _obscureKey,
@@ -462,6 +463,7 @@ class _AiProviderStepState extends State<_AiProviderStep> {
         const SizedBox(height: 16),
         Semantics(
           label: 'Default Model Input',
+          textField: true,
           child: TextField(
             controller: widget.modelCtrl,
             decoration: const InputDecoration(

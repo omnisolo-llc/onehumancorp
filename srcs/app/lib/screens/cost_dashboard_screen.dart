@@ -40,6 +40,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
           IconButton(
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh costs',
           ),
         ],
       ),

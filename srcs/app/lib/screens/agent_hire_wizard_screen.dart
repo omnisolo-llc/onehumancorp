@@ -99,6 +99,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         title: const Text('Hire New Agent'),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: 'Close wizard',
           onPressed: () => context.go('/agents'),
         ),
       ),
