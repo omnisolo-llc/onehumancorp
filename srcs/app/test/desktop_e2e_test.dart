@@ -439,7 +439,7 @@ void main() {
                   'id': 'p1',
                   'name': 'OpenAI',
                   'provider': 'openai',
-                  'models': ['gpt-4o'],
+                  'models': ['gpt-4o-mini'],
                   'organization_id': 'org-1',
                   'is_default': true,
                 }
