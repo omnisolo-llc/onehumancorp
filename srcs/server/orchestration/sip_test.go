@@ -674,4 +674,76 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 	if missions3[0].Content != expectedContent2 {
 		t.Fatalf("expected injected instruction, got %q", missions3[0].Content)
 	}
+
+	// 4. Grounding Priority (Both AGENTS.md and CLAUDE.md exist)
+	tempDir3 := t.TempDir()
+	db.SetContextRoot(tempDir3)
+
+	agentsMdContent4 := "Priority AGENTS."
+	err = os.WriteFile(filepath.Join(tempDir3, "AGENTS.md"), []byte(agentsMdContent4), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write AGENTS.md: %v", err)
+	}
+
+	claudeMdContent4 := "Fallback CLAUDE."
+	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte(claudeMdContent4), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write CLAUDE.md: %v", err)
+	}
+
+	msg4 := Message{
+		ID:         "msg-4",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-5",
+		Type:       EventTask,
+		Content:    "Fourth instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-4", "PRIORITY_TESTER", msg4)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions4, err := db.GetPendingMissions(ctx, "PRIORITY_TESTER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions4) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions4))
+	}
+
+	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]:\n" + agentsMdContent4
+	if missions4[0].Content != expectedContent4 {
+		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
+	}
+
+	// 5. Missing Files (Context Root Configured)
+	tempDir4 := t.TempDir()
+	db.SetContextRoot(tempDir4)
+
+	msg5 := Message{
+		ID:         "msg-5",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-6",
+		Type:       EventTask,
+		Content:    "Fifth instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-5", "MISSING_FILE_TESTER", msg5)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions5, err := db.GetPendingMissions(ctx, "MISSING_FILE_TESTER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions5) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions5))
+	}
+
+	expectedContent5 := "Fifth instruction"
+	if missions5[0].Content != expectedContent5 {
+		t.Fatalf("expected unmodified instruction, got %q", missions5[0].Content)
+	}
 }
