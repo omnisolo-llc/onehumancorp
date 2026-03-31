@@ -1,0 +1,4 @@
+type: memory
+content: |
+  - When packaging external Node.js MCP servers using Bazel's aspect_rules_js, use write_file in BUILD.bazel to dynamically generate the local wrapper script (e.g., index.js with require('...')) instead of checking the wrapper script into the repository. This guarantees hermeticity and prevents module resolution errors within the Bazel sandbox.
+  - Always strictly enforce Workspace Hygiene by removing scratch scripts (.py, .go) after use to prevent polluting the codebase.

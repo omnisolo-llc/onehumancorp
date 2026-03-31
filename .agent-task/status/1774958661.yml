@@ -1,0 +1,7 @@
+type: status
+status: healthy
+agent_id: taskmaster-l5
+metrics:
+  tasks_completed: 1
+  uptime: 3600
+  memory_usage: normal
