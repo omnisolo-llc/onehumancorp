@@ -41,6 +41,7 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 	invokeTool := func(toolID, agentID string) *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  toolID,
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123"}`),
 			"agentId": agentID,
@@ -92,6 +93,7 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "slack-mcp",
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123"}`),
 			"agentId": "agent-2",
@@ -141,6 +143,7 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 	invokeTool := func(toolID string) *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  toolID,
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123"}`),
 		})
@@ -187,6 +190,7 @@ func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "github-mcp",
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123", "repository": "test/test", "title": "t", "body": "b", "sourceBranch": "s", "targetBranch": "t", "createdBy": "a"}`),
 			"agentId": "agent-3",
@@ -249,6 +253,7 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "slack-mcp",
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123"}`),
 			"agentId": "agent-max",
@@ -312,6 +317,7 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 			// By naming the tool "tool-429", the error returned will be "unknown tool: tool-429"
 			// which contains "429", matching the rate limit error check!
 			"toolId":  "tool-429",
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123"}`),
 			"agentId": "agent-limited",
@@ -408,6 +414,7 @@ func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "custom-success-tool",
+			"spiffeId": "spiffe://onehumancorp.io/agent/1",
 			"action":  "test_action",
 			"params":  json.RawMessage(`{"integrationId": "123"}`),
 			"agentId": "agent-success",

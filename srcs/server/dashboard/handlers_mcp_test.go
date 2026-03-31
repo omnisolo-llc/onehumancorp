@@ -61,7 +61,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	})
 
 	t.Run("missing params", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy"}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy"}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -71,7 +71,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	})
 
 	t.Run("success_valid_tool_no_meeting_id", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "params": {"a": "b"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy", "params": {"a": "b"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -83,7 +83,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	t.Run("large payload", func(t *testing.T) {
 		// generate > 1MB string
 		largeStr := strings.Repeat("a", 2<<20)
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "params": {"a": "` + largeStr + `"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy", "params": {"a": "` + largeStr + `"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -97,7 +97,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 		// Register a dummy meeting
 		hub.OpenMeeting("m-1", []string{})
 
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy-tool", "params": {"a": "b"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy-tool", "params": {"a": "b"}}`))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -108,4 +108,40 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 			t.Errorf("expected 404, got %d (body: %s)", w.Code, w.Body.String())
 		}
 	})
+}
+
+func TestHandleMCPInvoke_MissingSPIFFEID(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	authStore := auth.NewStore()
+
+	srv := &Server{org: org, hub: hub, tracker: tracker, authStore: authStore}
+
+	req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy-tool", "params": {"a": "b"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.handleMCPInvoke(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for missing SPIFFE ID, got %d", w.Code)
+	}
+}
+
+func TestHandleMCPInvoke_InvalidSPIFFEID(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	authStore := auth.NewStore()
+
+	srv := &Server{org: org, hub: hub, tracker: tracker, authStore: authStore}
+
+	req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://evil-hacker.com/agent/1", "toolId": "dummy-tool", "params": {"a": "b"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.handleMCPInvoke(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for invalid SPIFFE ID, got %d", w.Code)
+	}
 }
