@@ -1,0 +1,5 @@
+type: memory
+content: |
+  Critical Flutter UX Pattern Constraint:
+  To implement the premium glassmorphism effect correctly without nested BackdropFilter widgets, you must use ImageFilter.compose with inner as ImageFilter.blur(...) and outer as ColorFilter.matrix(...) utilizing a luminance-preserving saturation matrix (e.g. 1.213 instead of 1.787 for saturation). Do not use ImageFilter.matrix as it applies geometric scaling.
+timestamp: $timestamp
