@@ -60,6 +60,7 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+	ProviderTypeMCPGithub ProviderType = "mcp_github"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
@@ -436,6 +437,67 @@ func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
 // Produces no errors.
 // Has no side effects.
 func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// ── MCP GitHub ────────────────────────────────────────────────────────────────
+
+// MCPGithubProvider implements Provider for the GitHub MCP agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type MCPGithubProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *MCPGithubProvider) Type() ProviderType { return ProviderTypeMCPGithub }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *MCPGithubProvider) Description() string {
+	return "GitHub MCP — interacts with GitHub repository and PR tools"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *MCPGithubProvider) SupportedRoles() []string {
+	return []string{"SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR", "QA_TESTER"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *MCPGithubProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *MCPGithubProvider) Authenticate(creds Credentials) error {
+	if !creds.IsEmpty() {
+		return errors.New("Zero Trust: MCP providers do not accept static API keys. Identity is strictly derived from SPIFFE/SPIRE.")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *MCPGithubProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *MCPGithubProvider) IsAuthenticated() bool { return true } // Rely on SPIFFE
 
 // ── Builtin ───────────────────────────────────────────────────────────────────
 

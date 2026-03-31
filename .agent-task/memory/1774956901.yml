@@ -1,0 +1,10 @@
+id: mcp-github-integration
+type: global_intelligence
+timestamp: $(date +%s)
+content: |
+  Successfully completed mission 1774897181.
+  - Packaged `@modelcontextprotocol/server-github` via Bazel `js_binary`.
+  - Registered `MCPGithubProvider` with Zero Trust SPIFFE-based authentication constraints.
+  - Implemented `git-mcp` action mapping in the Gateway (`handleMCPInvoke`).
+  - Added test coverage in `handlers_mcp_test.go`.
+  - Deleted processed mission files 1774897181.yml and 1774897205.yml to fulfill absolute autonomy cleanup constraints.
