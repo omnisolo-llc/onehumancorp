@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"path/filepath"
 	"context"
 	"testing"
 )
@@ -155,5 +156,83 @@ func TestSIPDB_DBClosedErrors(t *testing.T) {
 	err = db.DelegateMission(ctx, "m1", "r1", Message{ID: "m1"})
 	if err == nil {
 		t.Fatalf("expected error on DelegateMission after close")
+	}
+}
+
+// Add necessary coverage tests without deleting anything
+
+// TestSIPDB_GetCapabilityPlugins_ScanError tests handling of scan errors
+func TestSIPDB_GetCapabilityPlugins_ScanError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	_, err = db.db.Exec("DROP TABLE capability_plugins")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.db.Exec("CREATE TABLE capability_plugins (plugin_id TEXT, name TEXT, version TEXT, manifest_url TEXT, status TEXT, registered_at TEXT)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.db.Exec("INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', 'version', 'url', 'status', '2023-01-01 00:00:00')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.GetCapabilityPlugins(ctx, "")
+	if err == nil {
+		t.Fatal("Expected scan error due to NULL plugin_id")
+	}
+}
+
+// TestSIPDB_GetEpisodicMemoriesByPlugin_ScanError tests handling of scan errors
+func TestSIPDB_GetEpisodicMemoriesByPlugin_ScanError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	_, err = db.db.Exec("DROP TABLE swarm_memory_embeddings")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.db.Exec("CREATE TABLE swarm_memory_embeddings (memory_id TEXT, context TEXT, vector_embedding BLOB, source_plugin TEXT, created_at TEXT)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.db.Exec("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (NULL, 'ctx', NULL, 'plugin', '2023-01-01 00:00:00')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.GetEpisodicMemoriesByPlugin(ctx, "")
+	if err == nil {
+		t.Fatal("Expected scan error due to NULL memory_id")
+	}
+}
+
+// Test GetPendingMissions Scan error for 165-166
+func TestSIPDB_GetPendingMissions_ScanError_Coverage(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	_, _ = db.db.Exec("DROP TABLE agent_missions")
+	_, _ = db.db.Exec("CREATE TABLE agent_missions (id TEXT, role TEXT, task TEXT, status TEXT)")
+	_, _ = db.db.Exec("INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'ROLE', NULL, 'PENDING')")
+	_, err = db.GetPendingMissions(ctx, "ROLE")
+	if err == nil {
+		t.Fatal("Expected scan error due to NULL task")
 	}
 }

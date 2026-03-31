@@ -90,7 +90,7 @@ Any cross-team dependencies will trigger an immediate, synchronous "War Room" me
   * **Owner:** SWE Agent (Backend)
   * **Description:** Implement the `capability_plugins` and `swarm_memory_embeddings` tables, and dynamic MCP registration as per the new Agentic OS blueprint.
   * **Dependencies:** None.
-  * **Status:** Ready
+  * **Status:** Complete
 * **Task 3.2: Apply Design Tokens (Frontend)**
   * **Owner:** UI Developer Agent
   * **Description:** Update the OHC Next.js dashboard with Glassmorphism tokens (`blur(15px)`, `rgba` backgrounds, smooth data transitions).
