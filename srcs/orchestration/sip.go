@@ -89,12 +89,10 @@ func initializeTables(db *sql.DB) error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
-			role TEXT NOT NULL,
-			task TEXT NOT NULL,
 			status TEXT NOT NULL,
-			assigned_to TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			payload TEXT NOT NULL,
+			role TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,
@@ -168,26 +166,33 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, taskStr string
-			if err := rows.Scan(&id, &taskStr); err != nil {
+			var id, payloadStr string
+			if err := rows.Scan(&id, &payloadStr); err != nil {
 				return err
 			}
 
+			var wrapper struct {
+				Role string  `json:"role"`
+				Task Message `json:"task"`
+			}
+
 			var msg Message
-			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
+			if err := json.Unmarshal([]byte(payloadStr), &wrapper); err == nil && wrapper.Role != "" {
+				msg = wrapper.Task
+			} else if err := json.Unmarshal([]byte(payloadStr), &msg); err != nil {
 				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
-			} else {
-				if msg.ID == "" {
-					msg.ID = id
-				}
+				msg = Message{ID: id, Content: payloadStr, Type: EventTask}
+			}
+
+			if msg.ID == "" {
+				msg.ID = id
 			}
 			missions = append(missions, msg)
 		}
@@ -203,7 +208,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", missionID)
+		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
 		if err != nil {
 			return err
 		}
@@ -253,14 +258,22 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		}
 	}
 
-	taskBytes, err := json.Marshal(task)
+	wrapper := struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}{
+		Role: role,
+		Task: task,
+	}
+
+	payloadBytes, err := json.Marshal(wrapper)
 	if err != nil {
 		return err
 	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-			missionID, role, string(taskBytes),
+			"INSERT INTO agent_missions (id, role, status, payload, created_at) VALUES (?, ?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			missionID, role, string(payloadBytes),
 		)
 		return err
 	})

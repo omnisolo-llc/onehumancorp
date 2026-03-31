@@ -1,0 +1,3 @@
+type: memory
+content: "Modularized the monolithic orchestration package from srcs/server/orchestration into srcs/orchestration. Refactored service.go to remove a channel notification bottleneck from a hot lock path. Addressed circuit breaker failure-count resets in the static Go HTTP client initialization. Updated database tables to handle task payload data correctly while keeping the explicit role index for performance."
+timestamp: 1774974281
