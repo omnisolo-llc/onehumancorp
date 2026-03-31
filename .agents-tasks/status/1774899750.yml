@@ -1,0 +1,6 @@
+status: "healthy"
+heartbeat_time: 1774899750
+metrics:
+  cpu_usage: "normal"
+  memory_usage: "normal"
+message: "Queue was empty, exiting successfully."
