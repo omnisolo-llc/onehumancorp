@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"sync"
@@ -19,9 +20,9 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/scheduler"
-	"github.com/onehumancorp/mono/srcs/settings"
-	"github.com/onehumancorp/mono/srcs/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/scheduler"
+	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -1061,9 +1062,9 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
 }
 
-// minimaxAPIURL is the endpoint for Minimax reasoning.
+// MinimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
-var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
+var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 
 // MinimaxClient handles interaction with the Minimax Model 2.7.
 // Accepts no parameters.
@@ -1154,7 +1155,7 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		return "", errors.New("minimax API key is not configured")
 	}
 
-	url := minimaxAPIURL
+	url := MinimaxAPIURL
 	// Optimization: construct the JSON payload manually to avoid
 	// maps and slices allocations.
 	buf := bufferPool.Get().(*bytes.Buffer)
@@ -1216,4 +1217,24 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 func ResetGlobalCircuitBreakerForTest() {
 	globalCircuitBreaker.RecordSuccess()
+}
+
+var featureRegex = regexp.MustCompile(`\[Feature\]:?\s*(.*)`)
+
+// CheckDocumentationGate verifies that the necessary documentation exists for a feature.
+func CheckDocumentationGate(content string) error {
+	matches := featureRegex.FindStringSubmatch(content)
+	if len(matches) > 1 {
+		featureName := matches[1]
+		baseDir := filepath.Join("docs", "features", featureName)
+
+		requiredFiles := []string{"design-doc.md", "cuj.md", "test-plan.md"}
+		for _, file := range requiredFiles {
+			path := filepath.Join(baseDir, file)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				return fmt.Errorf("missing required documentation: %s", path)
+			}
+		}
+	}
+	return nil
 }

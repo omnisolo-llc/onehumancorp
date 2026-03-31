@@ -62,13 +62,13 @@ func withRetry(ctx context.Context, op func() error) error {
 func NewSIPDB(dbPath string) (*SIPDB, error) {
 
 	dsn := dbPath
-	if dbPath != ":memory:" {
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
 		if !strings.Contains(dsn, "?") {
 			dsn += "?"
 		} else {
 			dsn += "&"
 		}
-		dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=txlock(immediate)"
+		dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
 	}
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
