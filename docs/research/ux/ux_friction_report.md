@@ -1,22 +1,38 @@
-# OHC UX Friction Report & Remediation
-## Executive Summary
-During the end-to-end customer journey testing, we identified critical UX friction points that fail the Aesthetic Excellence Mandate and slow down discovery.
+# UX Friction Report: AI News Collector Flow
 
-## Friction Points Identified
-1. **API Key Input Field Lack of Visibility Toggle**: The `AgentHireWizardScreen` and `SetupWizardScreen` use obscureText for API keys without a toggle. This creates friction when pasting keys and verifying they are correct.
-2. **Missing Glassmorphism Aesthetics**: Several core setup screens appear visually flat and non-premium.
-3. **Missing Tooltips & Semantics**: Important wizard actions lack accessibility labels and informative tooltips.
+**Date:** 2026-03-31
+**Role:** Principal UX Strategist & Palette (L8)
+**Mission:** "AI News Collector" Setup
 
-## Remediation Applied
-- Added Semantics tags and Tooltips to buttons in SetupWizardScreen and AgentHireWizardScreen.
-- Added a visibility toggle to the `_minimaxKeyCtrl` input field to reduce friction.
-- Elevated the visual hierarchy with glassmorphism `BackdropFilter` utilizing the exact `blur(20px) saturate(200%)` token per design mandates.
+## Discovery & Friction Points
+
+During the genuine manual setup of the "AI News Collector" through the OHC Flutter Web App using Playwright, I identified several major friction points that violated our core values of **Aesthetic Excellence** and **Absolute Autonomy**:
+
+1. **Lack of Premium Glassmorphism**
+   - **Friction:** The Agent Hire Wizard used basic `Card` widgets and hardcoded colors (`Colors.grey`, `Colors.red`) which made the UI feel cheap and violated the mandatory `blur(20px) saturate(200%)` design token.
+   - **Remediation:** Refactored the Wizard to use `ImageFilter.compose` combining a 20px Gaussian blur with a luminance-preserving saturation matrix (`saturate(200%)`). Applied `BackdropFilter` and semantic color schemes instead of hardcoded Material constants.
+
+2. **Missing Accessibility (Semantics) in Wizard Steps**
+   - **Friction:** The stepper and input fields lacked `Semantics` wrappers. Screen readers would read out confusing unlabelled steps or raw input types without context, leading to poor accessibility for visually impaired users.
+   - **Remediation:** Wrapped `TextField`, `IconButton`, and each `Step` content block with explicit `Semantics(label: ...)` to ensure context is correctly read.
+
+3. **Poor Theming & Contrast**
+   - **Friction:** The error snackbars and confirmation cards were not using the `Theme.of(context).colorScheme` context properly, creating visual dissonance across light/dark modes.
+   - **Remediation:** Swapped hardcoded `Colors.red` for `colorScheme.errorContainer` and updated text/icon colors to explicitly map to `onSurfaceVariant`, `primary`, and `secondary` palette tokens.
 
 ## Visual Proof
-![Login Screen](screenshots/2026-03-30/01_login.png)
-![Dashboard](screenshots/2026-03-30/02_dashboard.png)
-![Wizard Step 1](screenshots/2026-03-30/03_wizard_1.png)
-![Wizard Step 2](screenshots/2026-03-30/04_wizard_2.png)
-![Wizard Step 3](screenshots/2026-03-30/05_wizard_3.png)
-![Wizard Done](screenshots/2026-03-30/06_wizard_done.png)
-![Agent Deployed](screenshots/2026-03-30/07_agent_deployed.png)
+
+Screenshots from the journey:
+
+- **Login / Home:**
+  ![Login](screenshots/2026-03-31/01_login.png)
+
+- **Dashboard:**
+  ![Dashboard](screenshots/2026-03-31/02_dashboard.png)
+
+- **Agent Hire Flow:**
+  ![Agent Hire](screenshots/2026-03-31/03_agent_hire.png)
+
+## Resolution Status
+
+All code fixes have been applied directly to `srcs/app/lib/screens/agent_hire_wizard_screen.dart` via autonomous intervention. Unit tests verify the widget structure correctly without regressions.

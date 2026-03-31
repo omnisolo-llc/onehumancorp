@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,7 +56,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load providers: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.errorContainer,
           ),
         );
       }
@@ -94,6 +95,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               content: Text(
                 'Agent ${_nameController.text} hired successfully!',
               ),
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
           );
         }
@@ -103,7 +105,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to hire agent: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.errorContainer,
           ),
         );
       }
@@ -112,15 +114,46 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     }
   }
 
+  Widget _buildGlassCard({required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.compose(
+          inner: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          outer: ColorFilter.matrix([
+            0.2126 + 0.7874 * 2.0, 0.7152 - 0.7152 * 2.0, 0.0722 - 0.0722 * 2.0, 0, 0,
+            0.2126 - 0.2126 * 2.0, 0.7152 + 0.2848 * 2.0, 0.0722 - 0.0722 * 2.0, 0, 0,
+            0.2126 - 0.2126 * 2.0, 0.7152 - 0.7152 * 2.0, 0.0722 + 0.9278 * 2.0, 0, 0,
+            0, 0, 0, 1, 0,
+          ]),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withOpacity(0.05),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hire New Agent'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: 'Close wizard',
-          onPressed: () => context.go('/agents'),
+        leading: Semantics(
+          label: 'Close Agent Hire Wizard',
+          child: IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'Close wizard',
+            onPressed: () => context.go('/agents'),
+          ),
         ),
       ),
       body: Stepper(
@@ -177,140 +210,169 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           Step(
             title: const Text('Role'),
             isActive: _step >= 0,
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Step 1 — Select Agent Role',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Choose the primary capability profile for this new agent.',
-                ),
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children:
-                      _roles.map((role) {
-                        final isSelected = _selectedRole == role;
-                        return ChoiceChip(
-                          label: Text(_formatRole(role)),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(
-                              () => _selectedRole = selected ? role : '',
+            content: Semantics(
+              label: 'Step 1 Select Agent Role. Current role selected: ${_selectedRole.isEmpty ? 'None' : _formatRole(_selectedRole)}',
+              child: _buildGlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Step 1 — Select Agent Role',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Choose the primary capability profile for this new agent.',
+                    ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children:
+                          _roles.map((role) {
+                            final isSelected = _selectedRole == role;
+                            return ChoiceChip(
+                              label: Text(_formatRole(role)),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(
+                                  () => _selectedRole = selected ? role : '',
+                                );
+                                if (selected && _nameController.text.isEmpty) {
+                                  _nameController.text =
+                                      'Senior ${_formatRole(role)}';
+                                }
+                              },
                             );
-                            if (selected && _nameController.text.isEmpty) {
-                              _nameController.text =
-                                  'Senior ${_formatRole(role)}';
-                            }
-                          },
-                        );
-                      }).toList(),
+                          }).toList(),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           Step(
             title: const Text('Provider'),
             isActive: _step >= 1,
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Step 2 — Choose AI Provider',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            content: Semantics(
+               label: 'Step 2 Choose AI Provider. Current provider selected: $_selectedProvider',
+              child: _buildGlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Step 2 — Choose AI Provider',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Select the AI backend that will power this agent.'),
+                    const SizedBox(height: 16),
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (_providers.isEmpty)
+                      const Center(
+                        child: Text(
+                          'No AI providers available. Please configure one in Integrations.',
+                        ),
+                      )
+                    else
+                      ..._providers.map(
+                        (p) => RadioListTile<String>(
+                          title: Text(p.label),
+                          subtitle: Text(p.description),
+                          value: p.type,
+                          groupValue: _selectedProvider,
+                          onChanged:
+                              (val) => setState(() => _selectedProvider = val!),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                const Text('Select the AI backend that will power this agent.'),
-                const SizedBox(height: 16),
-                if (_isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (_providers.isEmpty)
-                  const Center(
-                    child: Text(
-                      'No AI providers available. Please configure one in Integrations.',
-                    ),
-                  )
-                else
-                  ..._providers.map(
-                    (p) => RadioListTile<String>(
-                      title: Text(p.label),
-                      subtitle: Text(p.description),
-                      value: p.type,
-                      groupValue: _selectedProvider,
-                      onChanged:
-                          (val) => setState(() => _selectedProvider = val!),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
           Step(
             title: const Text('Details'),
             isActive: _step >= 2,
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Step 3 — Agent Details',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            content: Semantics(
+              label: 'Step 3 Agent Details',
+              child: _buildGlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Step 3 — Agent Details',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    Semantics(
+                      label: 'Agent Name Input Field',
+                      child: TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Agent Name',
+                          border: const OutlineInputBorder(),
+                          hintText: 'e.g. Senior Software Engineer',
+                          fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                          filled: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+                      title: const Text(
+                        'This name will appear in transcripts and the org chart.',
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Agent Name',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Senior Software Engineer',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text(
-                    'This name will appear in transcripts and the org chart.',
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           Step(
             title: const Text('Confirm'),
             isActive: _step >= 3,
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Step 4 — Confirm Deployment',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(
-                        _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
+            content: Semantics(
+              label: 'Step 4 Confirm Deployment of agent ${_nameController.text}',
+              child: _buildGlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Step 4 — Confirm Deployment',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      elevation: 0,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          child: Text(
+                            _selectedRole.isNotEmpty ? _selectedRole[0].toUpperCase() : '?',
+                          ),
+                        ),
+                        title: Text(_nameController.text, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(_formatRole(_selectedRole)),
+                        trailing: Text(_selectedProvider.toUpperCase(), style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
                       ),
                     ),
-                    title: Text(_nameController.text),
-                    subtitle: Text(_formatRole(_selectedRole)),
-                    trailing: Text(_selectedProvider.toUpperCase()),
-                  ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
+              ),
             ),
           ),
         ],
