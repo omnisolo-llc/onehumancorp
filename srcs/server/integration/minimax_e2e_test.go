@@ -43,9 +43,9 @@ func minimaxAPIKey() string {
 //     works end-to-end.
 func TestMinimaxAgentTaskE2E(t *testing.T) {
 	key := minimaxAPIKey()
-	if key == "" {
+	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
-		key = "mock-key"
+		key = "mock-key-for-testing-purposes"
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
@@ -54,9 +54,6 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
-	}
-	if len(key) < 20 {
-		t.Skip("MINIMAX_API_KEY seems to be a dummy key; skipping live Minimax E2E test")
 	}
 
 	hub := orchestration.NewHub()
@@ -154,9 +151,9 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	key := minimaxAPIKey()
-	if key == "" {
+	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
-		key = "mock-key"
+		key = "mock-key-for-testing-purposes"
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
@@ -165,9 +162,6 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
-	}
-	if len(key) < 20 {
-		t.Skip("MINIMAX_API_KEY seems to be a dummy key; skipping live Minimax meeting-room E2E test")
 	}
 
 	hub := orchestration.NewHub()
