@@ -1,1 +1,0 @@
-require("@modelcontextprotocol/server-github/dist/index.js");
