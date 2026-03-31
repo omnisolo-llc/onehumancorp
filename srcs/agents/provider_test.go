@@ -15,6 +15,7 @@ func TestProviderGetCredentials(t *testing.T) {
 		{"OpenCodeProvider", &OpenCodeProvider{}},
 		{"OpenClawProvider", &OpenClawProvider{}},
 		{"IronClawProvider", &IronClawProvider{}},
+		{"GitHubMCPProvider", &GitHubMCPProvider{}},
 	}
 
 	for _, tt := range tests {

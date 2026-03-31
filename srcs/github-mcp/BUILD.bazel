@@ -1,0 +1,19 @@
+load("@npm//:@modelcontextprotocol/server-github/package_json.bzl", github_mcp_bin = "bin")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+github_mcp_bin.mcp_server_github_binary(
+    name = "github_mcp_bundle",
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "github_mcp_e2e_test",
+    srcs = ["github_mcp_e2e_test.sh"],
+    data = [
+        ":github_mcp_bundle",
+    ],
+    env = {
+        "MCP_BUNDLE_DIR": "$(location :github_mcp_bundle)",
+    },
+)

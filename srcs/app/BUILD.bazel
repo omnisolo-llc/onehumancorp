@@ -100,8 +100,8 @@ flutter_library(
     name = "app_for_tests",
     srcs = [],
     pubspec = "pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
     visibility = ["//srcs/app:__subpackages__"],
+    workspace_pubspec = "//:pubspec.yaml",
     deps = [
         ":router_lib",
         "@pub_mocktail//:mocktail",

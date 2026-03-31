@@ -60,6 +60,13 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+
+	// ProviderTypeGitHubMCP targets the GitHub Model Context Protocol server for full repository management.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeGitHubMCP ProviderType = "github-mcp"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
@@ -497,3 +504,66 @@ func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
 // Produces no errors.
 // Has no side effects.
 func (p *BuiltinProvider) IsAuthenticated() bool { return true }
+
+// ── GitHub MCP ────────────────────────────────────────────────────────────────
+
+// GitHubMCPProvider implements Provider for the GitHub MCP agent capability.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type GitHubMCPProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubMCPProvider) Type() ProviderType { return ProviderTypeGitHubMCP }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubMCPProvider) Description() string {
+	return "GitHub Model Context Protocol server for repository management"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubMCPProvider) SupportedRoles() []string {
+	return []string{
+		"SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR", "QA_TESTER", "SECURITY_ENGINEER",
+	}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *GitHubMCPProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *GitHubMCPProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" && creds.OAuthToken == "" {
+		return errors.New("github-mcp provider requires a GitHub API key (GITHUB_PERSONAL_ACCESS_TOKEN)")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubMCPProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *GitHubMCPProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
