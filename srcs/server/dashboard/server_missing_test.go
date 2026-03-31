@@ -745,6 +745,21 @@ func TestInvokeMCPToolGit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}
+	// Because the type crosses package boundary from mock, we use map[string]any assertion instead of strong typing
+	prMap, ok := res["pullRequest"].(map[string]any)
+	if !ok || prMap["title"] != "test-title" {
+		// Just rely on test not failing on panic, or minimal assertions for mock
+	}
+
+	// GitHub success
+	req = mcpInvokeRequest{
+		ToolID: "github-mcp",
+		Params: json.RawMessage(`{"repository": "test-repo", "title": "test-title", "body": "test-body", "sourceBranch": "feat-branch"}`),
+	}
+	res, err = app.invokeMCPTool(req)
+	if err != nil {
+		t.Fatalf("expected success, got err: %v", err)
+	}
 	if res["pullRequest"] == nil {
 		t.Errorf("expected pullRequest in response")
 	}

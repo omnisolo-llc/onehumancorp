@@ -5,6 +5,7 @@
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",
     "@bufbuild/protoplugin": "^2.11.0",
+    "@modelcontextprotocol/server-github": "2025.4.8",
     "google-protobuf": "^3.21.4",
     "ts-proto": "^1.167.1",
     "typescript": "^5.3.3"
