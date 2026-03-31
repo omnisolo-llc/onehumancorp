@@ -22,7 +22,7 @@ func TestStore_SaveAndLoad(t *testing.T) {
 	s := store.Get()
 	s.ListenAddr = "1.2.3.4:5678"
 	s.AiProviders = []AiProvider{
-		{Name: "test", Model: "gpt-4", Enabled: true},
+		{Name: "test", Model: "gpt-4o-mini", Enabled: true},
 	}
 
 	if err := store.Update(s); err != nil {
