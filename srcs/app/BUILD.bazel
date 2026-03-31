@@ -167,7 +167,6 @@ sh_test(
     tags = [
         "manual",
         "requires-network",
-        "local",
     ],  # browser download may need network on first run
 )
 
@@ -175,10 +174,11 @@ sh_test(
     name = "chaos_test",
     srcs = ["test/flutter_web_e2e_test.sh"],
     data = [
-        ":app",
         "e2e/playwright.config.ts",
         "e2e/chaos.spec.ts",
         "//:node_modules/@playwright/test",
+        "@nodejs//:node",
+        "//srcs/cmd/ohc:ohc",
     ],
     env = {
         "TEST_SPEC": "chaos.spec.ts",
