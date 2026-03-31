@@ -1,0 +1,4 @@
+mission: "Implement Omni-Context Sub-agent Routing"
+role: "product_architecture"
+details: "Modify DelegateMission to inject AGENTS.md or CLAUDE.md from the context root directly into the agent_missions payload under the [SYSTEM GROUNDING] namespace for zero-latency context ingestion."
+timestamp: 1774987488

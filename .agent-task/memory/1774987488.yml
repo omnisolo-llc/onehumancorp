@@ -1,0 +1,13 @@
+type: insight
+metadata:
+  role: "Principal Product Researcher & Oracle (L7)"
+  timestamp: 1774987488
+observations:
+  - "Claude Code uses file-based CLAUDE.md context."
+  - "OpenClaw uses event-driven cross-channel persistence."
+  - "OpenCode uses project-level AGENTS.md grounding."
+actions_taken:
+  - "Verified platform docs via Playwright."
+  - "Defined Omni-Context Sub-agent Routing as the next Unfair Advantage."
+  - "Delegated mission to product_architecture via agent_missions table."
+resolution: "Market Audit complete and next evolution delegated."
