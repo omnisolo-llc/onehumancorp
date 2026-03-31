@@ -41,6 +41,11 @@ const (
 	EventApprovalNeeded = "ApprovalNeeded"
 )
 
+// Capabilities available to agents, dynamically extended via the K8s Kubelet MCP bundles and standard registry.
+var AvailableMCPBundles = []string{
+	"github",
+}
+
 // Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
 // Accepts no parameters.
 // Returns nothing.
