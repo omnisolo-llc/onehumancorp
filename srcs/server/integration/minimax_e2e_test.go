@@ -46,6 +46,9 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	if key == "" {
 		t.Skip("MINIMAX_API_KEY not set; skipping live Minimax E2E test")
 	}
+	if len(key) < 20 {
+		t.Skip("MINIMAX_API_KEY seems to be a dummy key; skipping live Minimax E2E test")
+	}
 
 	hub := orchestration.NewHub()
 	hub.SetMinimaxAPIKey(key)
@@ -153,6 +156,9 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
+	}
+	if len(key) < 20 {
+		t.Skip("MINIMAX_API_KEY seems to be a dummy key; skipping live Minimax meeting-room E2E test")
 	}
 
 	hub := orchestration.NewHub()
