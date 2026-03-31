@@ -1,0 +1,10 @@
+type: global_intelligence
+metadata:
+  role: SemVer Automation Agent
+  timestamp: 1774978616
+observations:
+  - "Parsed latest tag: v0.0.0"
+  - "Evaluated git history for bump type: patch"
+actions_taken:
+  - "Calculated next semantic version: v0.0.1"
+resolution: "SemVer calculation complete."

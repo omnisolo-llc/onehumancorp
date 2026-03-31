@@ -1,6 +1,0 @@
-type: task
-description: "Calculate SemVer bump based on git history and git tag parsing."
-role: "SemVer Automation Agent"
-priority: high
-status: PENDING
-created_at: 1774972912
