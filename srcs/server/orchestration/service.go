@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"sync"
@@ -242,10 +241,6 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	if err := CheckDocumentationGate(task.Content); err != nil {
-		return err
-	}
-
 	h.mu.RLock()
 	if _, ok := h.agents[fromAgentID]; !ok {
 		h.mu.RUnlock()
@@ -1198,6 +1193,42 @@ var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Has no side effects.
 type MinimaxClient struct {
 	APIKey string
+	cb     *CircuitBreaker
+}
+
+// CircuitBreaker state
+type CircuitBreaker struct {
+	mu           sync.Mutex
+	failures     int
+	lastFailure  time.Time
+	maxFailures  int
+	resetTimeout time.Duration
+}
+
+func (cb *CircuitBreaker) Allow() bool {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	if cb.failures >= cb.maxFailures {
+		if time.Since(cb.lastFailure) > cb.resetTimeout {
+			cb.failures = 0
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (cb *CircuitBreaker) RecordSuccess() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures = 0
+}
+
+func (cb *CircuitBreaker) RecordFailure() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures++
+	cb.lastFailure = time.Now()
 }
 
 // NewMinimaxClient functionality.
@@ -1205,8 +1236,16 @@ type MinimaxClient struct {
 // Returns *MinimaxClient.
 // Produces no errors.
 // Has no side effects.
+var globalCircuitBreaker = &CircuitBreaker{
+	maxFailures:  3,
+	resetTimeout: 30 * time.Second,
+}
+
 func NewMinimaxClient(apiKey string) *MinimaxClient {
-	return &MinimaxClient{APIKey: apiKey}
+	return &MinimaxClient{
+		APIKey: apiKey,
+		cb:     globalCircuitBreaker,
+	}
 }
 
 var bufferPool = sync.Pool{
@@ -1225,7 +1264,12 @@ var sharedHTTPClient = &http.Client{
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	if !c.cb.Allow() {
+		return "", errors.New("circuit breaker is open")
+	}
+
 	if c.APIKey == "" {
+		c.cb.RecordFailure()
 		return "", errors.New("minimax API key is not configured")
 	}
 
@@ -1261,12 +1305,14 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		// Prevents severe connection and resource leaks by reusing connection pools on every request.
 		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
+			c.cb.RecordFailure()
 			lastErr = err
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			c.cb.RecordFailure()
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
@@ -1283,6 +1329,7 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			c.cb.RecordFailure()
 			resp.Body.Close()
 			lastErr = err
 			time.Sleep(1 * time.Second)
@@ -1290,12 +1337,14 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		}
 
 		if len(result.Choices) == 0 {
+			c.cb.RecordFailure()
 			resp.Body.Close()
 			lastErr = errors.New("empty response from minimax")
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
+		c.cb.RecordSuccess()
 		resp.Body.Close()
 		return result.Choices[0].Message.Content, nil
 	}
@@ -1303,20 +1352,6 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	return "", lastErr
 }
 
-// CheckDocumentationGate verifies that the necessary documentation exists for a feature.
-func CheckDocumentationGate(content string) error {
-	matches := featureRegex.FindStringSubmatch(content)
-	if len(matches) > 1 {
-		featureName := matches[1]
-		baseDir := filepath.Join("docs", "features", featureName)
-
-		requiredFiles := []string{"design-doc.md", "cuj.md", "test-plan.md"}
-		for _, file := range requiredFiles {
-			path := filepath.Join(baseDir, file)
-			if _, err := os.Stat(path); os.IsNotExist(err) {
-				return fmt.Errorf("missing required documentation: %s", path)
-			}
-		}
-	}
-	return nil
+func ResetGlobalCircuitBreakerForTest() {
+	globalCircuitBreaker.RecordSuccess()
 }

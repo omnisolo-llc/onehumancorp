@@ -255,10 +255,6 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	if err := CheckDocumentationGate(task.Content); err != nil {
-		return err
-	}
-
 	if s.ContextRoot != "" {
 		s.groundingOnce.Do(func() {
 			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {

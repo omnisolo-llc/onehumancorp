@@ -19,6 +19,7 @@ import (
 )
 
 func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -57,6 +58,7 @@ func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
 }
 
 func TestNewHubStartsEmpty(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 
 	if meetings := hub.Meetings(); len(meetings) != 0 {
@@ -68,6 +70,7 @@ func TestNewHubStartsEmpty(t *testing.T) {
 }
 
 func TestRegisterAgentDefaultsStatusAndLookupMiss(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "agent-1", Name: "Agent", Role: "SWE", OrganizationID: "org-1"})
 
@@ -84,6 +87,7 @@ func TestRegisterAgentDefaultsStatusAndLookupMiss(t *testing.T) {
 }
 
 func TestOpenMeetingMarksParticipantsInMeeting(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
@@ -100,6 +104,7 @@ func TestOpenMeetingMarksParticipantsInMeeting(t *testing.T) {
 }
 
 func TestDelegateTask(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "specialist", Name: "Specialist", Role: "SWE", OrganizationID: "org-1"})
@@ -134,6 +139,7 @@ func TestDelegateTask(t *testing.T) {
 }
 
 func TestDelegateTask_AgentNotFound(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "org-1"})
 
@@ -162,6 +168,7 @@ func TestDelegateTask_AgentNotFound(t *testing.T) {
 }
 
 func TestPublishValidationErrors(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 
@@ -177,6 +184,7 @@ func TestPublishValidationErrors(t *testing.T) {
 }
 
 func TestPublishWithoutMeetingMarksSenderActive(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 
@@ -197,6 +205,7 @@ func TestPublishWithoutMeetingMarksSenderActive(t *testing.T) {
 }
 
 func TestMeetingLookupMiss(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	if _, ok := hub.Meeting("missing"); ok {
 		t.Fatalf("expected missing meeting lookup to fail")
@@ -204,6 +213,7 @@ func TestMeetingLookupMiss(t *testing.T) {
 }
 
 func TestMeetingsReturnsSnapshot(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
@@ -219,6 +229,7 @@ func TestMeetingsReturnsSnapshot(t *testing.T) {
 }
 
 func TestAgentsReturnsSortedSnapshot(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
@@ -239,6 +250,7 @@ func TestAgentsReturnsSortedSnapshot(t *testing.T) {
 }
 
 func TestFireAgentRemovesFromHubAndInbox(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
@@ -266,6 +278,7 @@ func TestFireAgentRemovesFromHubAndInbox(t *testing.T) {
 }
 
 func TestOpenMeetingWithAgendaPreservesAgendaField(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "pm", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -292,6 +305,7 @@ func TestOpenMeetingWithAgendaPreservesAgendaField(t *testing.T) {
 }
 
 func TestEventTypeConstantsAreDefined(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	types := []string{
 		EventTask, EventStatus, EventHandoff,
 		EventCodeReviewed, EventTestsFailed, EventTestsPassed,
@@ -306,6 +320,7 @@ func TestEventTypeConstantsAreDefined(t *testing.T) {
 }
 
 func TestMinimaxAPIKey(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	tests := []struct {
 		name     string
 		apiKey   string
@@ -354,6 +369,7 @@ func (m *mockStreamMessagesServer) Send(msg *pb.Message) error {
 }
 
 func TestHubServiceServer_StreamMessages(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -401,6 +417,7 @@ func TestHubServiceServer_StreamMessages(t *testing.T) {
 }
 
 func TestHubServiceServer_StreamMessages_SendError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -431,6 +448,7 @@ func TestHubServiceServer_StreamMessages_SendError(t *testing.T) {
 }
 
 func TestHubServiceServer_StreamMessages_ContextDone(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -452,6 +470,7 @@ func TestHubServiceServer_StreamMessages_ContextDone(t *testing.T) {
 }
 
 func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -487,6 +506,7 @@ func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 }
 
 func TestNewMinimaxClient(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("test-key")
 	if client == nil {
 		t.Fatalf("expected non-nil MinimaxClient")
@@ -497,6 +517,7 @@ func TestNewMinimaxClient(t *testing.T) {
 }
 
 func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Save the original URL to restore it later
 	originalURL := MinimaxAPIURL
 	defer func() { MinimaxAPIURL = originalURL }()
@@ -590,6 +611,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 }
 
 func TestRegisterHubService(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	s := grpc.NewServer()
 	hub := NewHub()
 	RegisterHubService(s, hub)
@@ -606,6 +628,7 @@ func TestRegisterHubService(t *testing.T) {
 }
 
 func TestHubServiceServer_RegisterAgent(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
@@ -638,6 +661,7 @@ func TestHubServiceServer_RegisterAgent(t *testing.T) {
 }
 
 func TestHubServiceServer_OpenMeeting(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "R2", OrganizationID: "O1"})
@@ -671,6 +695,7 @@ func TestHubServiceServer_OpenMeeting(t *testing.T) {
 }
 
 func TestHubServiceServer_DelegateTask(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "specialist", Name: "Specialist", Role: "SWE", OrganizationID: "O1"})
@@ -753,6 +778,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 }
 
 func TestHub_Publish_UnbufferedChannel(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -874,6 +900,7 @@ func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 
 	originalURL := MinimaxAPIURL
@@ -888,6 +915,7 @@ func TestMinimaxClient_Reason_NewRequestWithContext_Error(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_ClientDo_Error(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 
 	originalURL := MinimaxAPIURL
@@ -902,6 +930,7 @@ func TestMinimaxClient_Reason_ClientDo_Error(t *testing.T) {
 }
 
 func TestHubServiceServer_Publish(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -969,6 +998,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	agentID := "test-agent"
 	validPayload := []byte(`{"context": "some data to summarize"}`)
@@ -1052,6 +1082,7 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// 1. Setup Mock Server for Minimax
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -1128,6 +1159,7 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 }
 
 func TestHub_ToolParameterAutoCorrection(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	agentID := "test-agent"
 
@@ -1210,6 +1242,7 @@ func TestHub_ToolParameterAutoCorrection(t *testing.T) {
 }
 
 func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 
 	agentID := "test-agent-2"
@@ -1285,6 +1318,7 @@ func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 }
 
 func TestSetSIPDB(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	db, _ := NewSIPDB("file:dummy_1.db?mode=memory&cache=shared")
 	hub.SetSIPDB(db)
@@ -1294,6 +1328,7 @@ func TestSetSIPDB(t *testing.T) {
 }
 
 func TestDelegateTask_AgentNotRegistered(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	err := hub.DelegateTask("task-1", "ROLE", Message{Content: "instruction"})
 	if err == nil {
@@ -1302,6 +1337,7 @@ func TestDelegateTask_AgentNotRegistered(t *testing.T) {
 }
 
 func TestEventLogWorker_Coverage(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 
 	// Create temp file for events
@@ -1326,6 +1362,7 @@ func TestEventLogWorker_Coverage(t *testing.T) {
 
 // A quick test for the missing []interface{} branch inside service.go redactInterfacePII
 func TestRedactInterfacePII_Slice(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	input := []interface{}{
 		"test@example.com",
 		"hello",
@@ -1347,6 +1384,7 @@ func TestRedactInterfacePII_Slice(t *testing.T) {
 }
 
 func TestHub_LogEvent_FullChan(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub() // eventLogChan is buffered to 1000
 
 	// Fill it up to cause a drop
@@ -1358,6 +1396,7 @@ func TestHub_LogEvent_FullChan(t *testing.T) {
 }
 
 func TestHub_AppendEventWorker_ContextCancel(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -1370,6 +1409,7 @@ func TestHub_AppendEventWorker_ContextCancel(t *testing.T) {
 }
 
 func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	ctx := context.Background()
 
@@ -1382,6 +1422,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 }
 
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 
 	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")

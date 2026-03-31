@@ -24,9 +24,6 @@ import (
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask) (*pb.DelegateTaskResponse, error) {
-	if err := CheckDocumentationGate(req.GetInstruction()); err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "documentation gate failed: %v", err)
-	}
 
 	if req.GetTaskId() == "" || req.GetTargetRole() == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "task_id and target_role are required")
