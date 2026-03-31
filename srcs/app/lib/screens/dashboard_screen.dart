@@ -128,6 +128,7 @@ class _StatCard extends StatelessWidget {
     return Semantics(
       label: '$label: $value',
       button: true,
+      excludeSemantics: true,
       child: SizedBox(
         width: 180,
         child: ClipRRect(

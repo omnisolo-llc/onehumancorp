@@ -47,21 +47,19 @@ class FakeUri extends Fake implements Uri {}
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 /// Build a minimal [ProviderScope] wrapping [child] with optional overrides.
-Widget _wrap(
-  Widget child, {
-  List<Override> overrides = const [],
-}) {
+Widget _wrap(Widget child, {List<Override> overrides = const []}) {
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (context, state) => child),
-      GoRoute(path: '/agents/hire', builder: (context, state) => const Scaffold(body: Text('Hire Agent'))),
+      GoRoute(
+        path: '/agents/hire',
+        builder: (context, state) => const Scaffold(body: Text('Hire Agent')),
+      ),
     ],
   );
   return ProviderScope(
     overrides: overrides,
-    child: MaterialApp.router(
-      routerConfig: router,
-    ),
+    child: MaterialApp.router(routerConfig: router),
   );
 }
 
@@ -109,6 +107,7 @@ class _FakeLocalManagerService extends LocalManagerService {
     _running = false;
     _running = true;
   }
+
   @override
   Future<Map<String, dynamic>> readConfig() async => {};
   @override
@@ -146,25 +145,33 @@ void main() {
       expect(find.text('Enter a valid email'), findsOneWidget);
     });
 
-    testWidgets('filling valid email+password and tapping Sign In calls login',
-        (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          authStateProvider.overrideWith(() => _FailingAuthNotifier()),
-        ],
-        child: const MaterialApp(home: LoginScreen()),
-      ));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'filling valid email+password and tapping Sign In calls login',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(() => _FailingAuthNotifier()),
+            ],
+            child: const MaterialApp(home: LoginScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'), 'user@example.com');
-      await tester.enterText(
-          find.widgetWithText(TextFormField, 'Password'), 'correctpw');
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Email'),
+          'user@example.com',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Password'),
+          'correctpw',
+        );
+        await tester.tap(find.text('Sign In'));
+        await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invalid credentials'), findsOneWidget);
-    });
+        expect(find.textContaining('Invalid credentials'), findsOneWidget);
+      },
+    );
 
     testWidgets('email field validates correct email format', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
@@ -172,7 +179,9 @@ void main() {
 
       // Enter invalid email
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'), 'notvalid');
+        find.widgetWithText(TextFormField, 'Email'),
+        'notvalid',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
       expect(find.text('Enter a valid email'), findsOneWidget);
@@ -183,25 +192,33 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'), 'user@example.com');
+        find.widgetWithText(TextFormField, 'Email'),
+        'user@example.com',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
       expect(find.text('Enter your password'), findsOneWidget);
     });
 
     testWidgets('shows error text when login throws', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          authStateProvider.overrideWith(() => _FailingAuthNotifier()),
-        ],
-        child: const MaterialApp(home: LoginScreen()),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authStateProvider.overrideWith(() => _FailingAuthNotifier()),
+          ],
+          child: const MaterialApp(home: LoginScreen()),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'), 'bad@example.com');
+        find.widgetWithText(TextFormField, 'Email'),
+        'bad@example.com',
+      );
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Password'), 'wrongpw');
+        find.widgetWithText(TextFormField, 'Password'),
+        'wrongpw',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
@@ -214,12 +231,14 @@ void main() {
 
   group('SettingsScreen – button clicks', () {
     testWidgets('Sign Out list tile is rendered and tappable', (tester) async {
-      await tester.pumpWidget(_wrap(
-        const SettingsScreen(),
-        overrides: [
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SettingsScreen(),
+          overrides: [
+            authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Sign Out'), findsOneWidget);
@@ -231,12 +250,14 @@ void main() {
     });
 
     testWidgets('shows user name and email when logged in', (tester) async {
-      await tester.pumpWidget(_wrap(
-        const SettingsScreen(),
-        overrides: [
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-        ],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SettingsScreen(),
+          overrides: [
+            authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Dev User'), findsOneWidget);
@@ -247,42 +268,78 @@ void main() {
   // ── DashboardScreen ───────────────────────────────────────────────────────
 
   group('DashboardScreen – button clicks', () {
-    testWidgets('renders scaffold and stat cards from API data', (tester) async {
+    testWidgets('renders scaffold and stat cards from API data', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode({
-                'organization': {
-                  'id': 'org-1',
-                  'name': 'One Human Corp',
-                  'domain': 'onehumancorp.com',
-                  'members': []
-                },
-                'meetings': [],
-                'costs': {
-                  'total': 1234.56,
-                  'currency': 'USD',
-                  'period': 'monthly',
-                  'breakdown': {}
-                },
-                'agents': [
-                  {'id': 'a1', 'name': 'A1', 'role': 'engineer', 'status': 'running'},
-                  {'id': 'a2', 'name': 'A2', 'role': 'designer', 'status': 'running'},
-                  {'id': 'a3', 'name': 'A3', 'role': 'manager', 'status': 'running'},
-                  {'id': 'a4', 'name': 'A4', 'role': 'manager', 'status': 'running'},
-                  {'id': 'a5', 'name': 'A5', 'role': 'manager', 'status': 'running'},
-                ],
-                'statuses': [],
-                'updatedAt': DateTime.now().toIso8601String(),
-              }),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'organization': {
+              'id': 'org-1',
+              'name': 'One Human Corp',
+              'domain': 'onehumancorp.com',
+              'members': [],
+            },
+            'meetings': [],
+            'costs': {
+              'total': 1234.56,
+              'currency': 'USD',
+              'period': 'monthly',
+              'breakdown': {},
+            },
+            'agents': [
+              {
+                'id': 'a1',
+                'name': 'A1',
+                'role': 'engineer',
+                'status': 'running',
+              },
+              {
+                'id': 'a2',
+                'name': 'A2',
+                'role': 'designer',
+                'status': 'running',
+              },
+              {
+                'id': 'a3',
+                'name': 'A3',
+                'role': 'manager',
+                'status': 'running',
+              },
+              {
+                'id': 'a4',
+                'name': 'A4',
+                'role': 'manager',
+                'status': 'running',
+              },
+              {
+                'id': 'a5',
+                'name': 'A5',
+                'role': 'manager',
+                'status': 'running',
+              },
+            ],
+            'statuses': [],
+            'updatedAt': DateTime.now().toIso8601String(),
+          }),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const DashboardScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const DashboardScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('5'), findsWidgets); // active_agents
@@ -291,24 +348,43 @@ void main() {
 
     testWidgets('shows loading spinner then data', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode({
-                'organization': {'id': 'o', 'name': 'N', 'domain': 'D', 'members': []},
-                'meetings': [],
-                'costs': {'total': 0, 'currency': 'USD', 'period': 'm', 'breakdown': {}},
-                'agents': [],
-                'statuses': [],
-                'updatedAt': DateTime.now().toIso8601String(),
-              }),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'organization': {
+              'id': 'o',
+              'name': 'N',
+              'domain': 'D',
+              'members': [],
+            },
+            'meetings': [],
+            'costs': {
+              'total': 0,
+              'currency': 'USD',
+              'period': 'm',
+              'breakdown': {},
+            },
+            'agents': [],
+            'statuses': [],
+            'updatedAt': DateTime.now().toIso8601String(),
+          }),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const DashboardScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const DashboardScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle(); // first frame – may show loading
       await tester.pumpAndSettle(); // complete futures
       expect(find.byType(Scaffold), findsOneWidget);
@@ -320,16 +396,21 @@ void main() {
   group('AgentsScreen – button clicks', () {
     testWidgets('Hire Agent button opens dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const AgentsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AgentsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Tap the Hire Agent button in the AppBar
@@ -342,26 +423,35 @@ void main() {
 
     testWidgets('shows agents list on data', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'a1',
-                  'name': 'Alice',
-                  'role': 'engineer',
-                  'status': 'running',
-                  'organization_id': 'org-1',
-                  'created_at': '2025-01-01T00:00:00Z',
-                },
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'a1',
+              'name': 'Alice',
+              'role': 'engineer',
+              'status': 'running',
+              'organization_id': 'org-1',
+              'created_at': '2025-01-01T00:00:00Z',
+            },
+          ]),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const AgentsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AgentsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Alice'), findsOneWidget);
@@ -369,16 +459,21 @@ void main() {
 
     testWidgets('empty state shown for empty agents list', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const AgentsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AgentsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('No agents yet'), findsOneWidget);
@@ -390,16 +485,21 @@ void main() {
   group('AiConfigScreen – button clicks', () {
     testWidgets('Add Provider button opens dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Add Provider').first);
@@ -409,18 +509,25 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
     });
 
-    testWidgets('empty state shows Add Provider callout button', (tester) async {
+    testWidgets('empty state shows Add Provider callout button', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // The empty-state "Add Provider" button should also be tappable
@@ -432,26 +539,35 @@ void main() {
 
     testWidgets('shows list when providers returned', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'p1',
-                  'name': 'OpenAI',
-                  'provider': 'openai',
-                  'models': ['gpt-4o-mini'],
-                  'organization_id': 'org-1',
-                  'is_default': true,
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'p1',
+              'name': 'OpenAI',
+              'provider': 'openai',
+              'models': ['gpt-4o-mini'],
+              'organization_id': 'org-1',
+              'is_default': true,
+            },
+          ]),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const AiConfigScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('OpenAI'), findsOneWidget);
     });
@@ -460,29 +576,39 @@ void main() {
   // ── SkillsScreen ──────────────────────────────────────────────────────────
 
   group('SkillsScreen – button clicks', () {
-    testWidgets('category filter buttons change displayed skills',
-        (tester) async {
+    testWidgets('category filter buttons change displayed skills', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 's1',
-                  'name': 'Code Review',
-                  'description': 'Reviews code',
-                  'category': 'builtin',
-                  'enabled': true,
-                  'organization_id': 'org-1',
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 's1',
+              'name': 'Code Review',
+              'description': 'Reviews code',
+              'category': 'builtin',
+              'enabled': true,
+              'organization_id': 'org-1',
+            },
+          ]),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const SkillsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SkillsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Tap category filter
@@ -498,16 +624,21 @@ void main() {
 
     testWidgets('shows empty state when no skills exist', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const SkillsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SkillsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
@@ -518,16 +649,21 @@ void main() {
   group('MeetingsScreen – button clicks', () {
     testWidgets('New Room button opens dialog', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const MeetingsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const MeetingsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('New Room'));
@@ -538,24 +674,33 @@ void main() {
 
     testWidgets('displays rooms returned by API', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode([
-                {
-                  'id': 'r1',
-                  'name': 'Sprint Planning',
-                  'description': 'Weekly planning',
-                  'participants': <dynamic>[],
-                }
-              ]),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'r1',
+              'name': 'Sprint Planning',
+              'description': 'Weekly planning',
+              'participants': <dynamic>[],
+            },
+          ]),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const MeetingsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const MeetingsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Sprint Planning'), findsOneWidget);
@@ -567,16 +712,21 @@ void main() {
   group('ChannelsScreen – button clicks', () {
     testWidgets('Add Channel button is tappable', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const ChannelsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const ChannelsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Find and tap an add/connect button
@@ -594,16 +744,21 @@ void main() {
   group('SecurityScreen – button clicks', () {
     testWidgets('renders scaffold', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(<dynamic>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const SecurityScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const SecurityScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
@@ -614,16 +769,23 @@ void main() {
   group('LogsScreen – button clicks', () {
     testWidgets('renders and shows log lines from API', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(['line 1', 'line 2']), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(jsonEncode(['line 1', 'line 2']), 200),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const LogsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const LogsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.textContaining('line'), findsWidgets);
@@ -631,16 +793,21 @@ void main() {
 
     testWidgets('Clear button clears log view', (tester) async {
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async =>
-              http.Response(jsonEncode(['log entry']), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(['log entry']), 200));
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const LogsScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const LogsScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
 
       final clearBtn = find.textContaining('Clear');
@@ -657,17 +824,20 @@ void main() {
   group('ServiceScreen – button clicks', () {
     testWidgets('Start/Stop toggle button is tappable', (tester) async {
       final fakeService = _FakeLocalManagerService();
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          localManagerServiceProvider.overrideWithValue(fakeService),
-        ],
-        child: const MaterialApp(home: ServiceScreen()),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            localManagerServiceProvider.overrideWithValue(fakeService),
+          ],
+          child: const MaterialApp(home: ServiceScreen()),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Find toggle button (Start Service or Stop Service)
       final toggleBtn = find.byWidgetPredicate(
-          (w) => w is ElevatedButton || w is FilledButton);
+        (w) => w is ElevatedButton || w is FilledButton,
+      );
       if (toggleBtn.evaluate().isNotEmpty) {
         await tester.tap(toggleBtn.first);
         await tester.pump(const Duration(seconds: 3));
@@ -678,12 +848,14 @@ void main() {
 
     testWidgets('Run Doctor button shows output', (tester) async {
       final fakeService = _FakeLocalManagerService();
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          localManagerServiceProvider.overrideWithValue(fakeService),
-        ],
-        child: const MaterialApp(home: ServiceScreen()),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            localManagerServiceProvider.overrideWithValue(fakeService),
+          ],
+          child: const MaterialApp(home: ServiceScreen()),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final doctorBtn = find.textContaining('Doctor');
@@ -722,7 +894,8 @@ void main() {
       if (backBtn.evaluate().isNotEmpty) {
         // Back button should exist but be inactive on step 1
         final widget = tester.widget<TextButton>(
-            find.ancestor(of: backBtn, matching: find.byType(TextButton)));
+          find.ancestor(of: backBtn, matching: find.byType(TextButton)),
+        );
         expect(widget.onPressed, isNull);
       }
     });
@@ -754,17 +927,30 @@ void main() {
     testWidgets('sidebar nav items are tappable', (tester) async {
       // Ensure the sidebar nav items render without error
       final mockClient = MockHttpClient();
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(
-              jsonEncode({'active_agents': 0, 'pending_tasks': 0, 'open_meetings': 0}),
-              200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'active_agents': 0,
+            'pending_tasks': 0,
+            'open_meetings': 0,
+          }),
+          200,
+        ),
+      );
       final api = ApiService(
-          baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
 
-      await tester.pumpWidget(_wrap(
-        const DashboardScreen(),
-        overrides: [apiServiceProvider.overrideWithValue(api)],
-      ));
+      await tester.pumpWidget(
+        _wrap(
+          const DashboardScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });

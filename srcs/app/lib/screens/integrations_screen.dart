@@ -220,12 +220,18 @@ class _IntegrationCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -257,21 +263,25 @@ class _MCPToolTile extends StatelessWidget {
     return Semantics(
       label: 'Invoke MCP Tool: $name. $description',
       button: true,
+      excludeSemantics: true,
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
-        child: ListTile(
-          leading: const Icon(Icons.build_circle_outlined),
-          title: Text(name),
-          subtitle: Text(
-            description,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: OutlinedButton(
-            onPressed: () {}, // Invoke dialog
-            child: const Text('Invoke'),
-          ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
           onTap: () {},
+          child: ListTile(
+            leading: const Icon(Icons.build_circle_outlined),
+            title: Text(name),
+            subtitle: Text(
+              description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: OutlinedButton(
+              onPressed: () {}, // Invoke dialog
+              child: const Text('Invoke'),
+            ),
+          ),
         ),
       ),
     );
