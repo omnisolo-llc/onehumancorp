@@ -151,3 +151,15 @@ oci.pull(
     tag = "latest",
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
+
+single_version_override(
+    module_name = "rules_android",
+    patch_cmds = [
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_local_test/attrs.bzl",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_library/impl.bzl",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_library/attrs.bzl",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/native_deps.bzl",
+        "sed -i '1i load(\"@rules_cc//cc/common:cc_info.bzl\", \"CcInfo\")' rules/android_binary/attrs.bzl",
+        "find . -type f -name '*.bzl' -exec sed -i 's|\"@local_config_platform//:constraints.bzl\"|\"@platforms//host:constraints.bzl\"|g' {} +",
+    ],
+)
