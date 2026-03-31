@@ -1,0 +1,5 @@
+type: status
+id: "agent-jules"
+status: "healthy"
+memory_type: "RAM"
+timestamp: 1774962852
