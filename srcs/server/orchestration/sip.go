@@ -237,6 +237,11 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	// Phase 2: Documentation Gate Mandate
+	if err := CheckDocumentationGate(task.Content); err != nil {
+		return err
+	}
+
 	taskBytes, err := json.Marshal(task)
 	if err != nil {
 		return err

@@ -1077,6 +1077,12 @@ func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRe
 // Has no side effects.
 func (s *HubServiceServer) DelegateTask(ctx context.Context, req *pb.DelegateTaskRequest) (*pb.DelegateTaskResponse, error) {
 	msgReq := req.GetTask()
+
+	// Phase 2: Documentation Gate Mandate
+	if err := CheckDocumentationGate(msgReq.GetContent()); err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
 	msg := Message{
 		ID:         msgReq.GetId(),
 		FromAgent:  msgReq.GetFromAgent(),

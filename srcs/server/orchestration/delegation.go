@@ -78,6 +78,11 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		return nil, status.Errorf(codes.InvalidArgument, "instruction contains forbidden prompt injection sequences")
 	}
 
+	// Phase 2: Documentation Gate Mandate
+	if err := CheckDocumentationGate(instruction); err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
 	parentThreadID := req.GetParentThreadId()
 	if strings.Contains(parentThreadID, "SYSTEM:") || strings.Contains(parentThreadID, "\n\n") {
 		return nil, status.Errorf(codes.InvalidArgument, "parent_thread_id contains forbidden prompt injection sequences")
