@@ -1,0 +1,2 @@
+type: execution_record
+content: Integrated GitHub MCP via Bazel Node.js bundle and added it to Go provider registry respecting zero trust

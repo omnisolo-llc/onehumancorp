@@ -1,0 +1,30 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_binary(
+    name = "github-mcp",
+    srcs = ["bundle.sh"],
+    args = ["$(location :github-mcp-bin)"],
+    data = [":github-mcp-bin"],
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "github_mcp_e2e_test",
+    srcs = ["github_mcp_e2e_test.sh"],
+    args = ["$(location :github-mcp-bin)"],
+    data = [
+        ":github-mcp",
+        ":github-mcp-bin",
+    ],
+)
+
+js_binary(
+    name = "github-mcp-bin",
+    data = [
+        "//:node_modules/@modelcontextprotocol/server-github",
+    ],
+    entry_point = "index.js",
+    visibility = ["//visibility:public"],
+)
