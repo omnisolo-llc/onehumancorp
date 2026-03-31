@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final _logsProvider = FutureProvider.family<List<String>, int>((ref, lines) async {
+final _logsProvider = FutureProvider.family<List<String>, int>((
+  ref,
+  lines,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) return [];
   return api.getLogs(lines: lines);
@@ -106,7 +109,8 @@ class _LogLine extends StatelessWidget {
 
   Color _color() {
     final lower = line.toLowerCase();
-    if (lower.contains('error') || lower.contains('fatal')) return Colors.red.shade300;
+    if (lower.contains('error') || lower.contains('fatal'))
+      return Colors.red.shade300;
     if (lower.contains('warn')) return Colors.orange.shade300;
     if (lower.contains('info')) return Colors.green.shade300;
     if (lower.contains('debug')) return Colors.grey.shade400;
