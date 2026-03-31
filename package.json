@@ -15,6 +15,9 @@
     "@playwright/test": "^1.51.1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": []
+    "onlyBuiltDependencies": [],
+    "overrides": {
+      "@modelcontextprotocol/sdk": ">=1.25.2"
+    }
   }
 }

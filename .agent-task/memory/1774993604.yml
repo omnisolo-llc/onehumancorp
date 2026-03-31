@@ -1,0 +1,12 @@
+type: memory
+metadata:
+  role: ethics_architect
+  timestamp: 1774993757
+observations:
+  - Found high-severity ReDoS and DNS rebinding vulnerabilities in @modelcontextprotocol/sdk used by @modelcontextprotocol/server-github via pnpm audit.
+  - Resolved npm vulnerabilities by overriding @modelcontextprotocol/sdk version to >=1.25.2 in package.json and running pnpm install.
+  - Fixed govulncheck dependency issues in go.mod.
+actions_taken:
+  - Updated Node packages.
+  - Updated Go packages.
+resolution: PENDING

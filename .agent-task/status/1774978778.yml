@@ -1,5 +1,5 @@
 type: status
-id: $(date +%s)
+id: 1774993757
 status: COMPLETED
 memory_type: execution
-timestamp: $(date +%s)
+timestamp: 1774993757

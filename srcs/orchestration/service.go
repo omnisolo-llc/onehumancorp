@@ -19,9 +19,9 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/scheduler"
-	"github.com/onehumancorp/mono/srcs/settings"
-	"github.com/onehumancorp/mono/srcs/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/scheduler"
+	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
