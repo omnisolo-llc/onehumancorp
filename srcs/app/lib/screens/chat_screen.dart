@@ -250,6 +250,7 @@ class _InputBar extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.send),
+            tooltip: 'Send message',
             onPressed: sending ? null : onSend,
           ),
         ],
