@@ -116,10 +116,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: Text('Chat — #$room'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.meeting_room),
-            tooltip: 'Switch room',
-            onPressed: () => _showRoomPicker(context),
+          Semantics(
+            label: 'Switch to a different chat room',
+            child: IconButton(
+              icon: const Icon(Icons.meeting_room),
+              tooltip: 'Switch room',
+              onPressed: () => _showRoomPicker(context),
+            ),
           ),
         ],
       ),
@@ -239,17 +242,20 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          IconButton.filled(
-            tooltip: 'Send message',
-            icon:
-                sending
-                    ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : const Icon(Icons.send),
-            onPressed: sending ? null : onSend,
+          Semantics(
+            label: 'Send chat message',
+            child: IconButton.filled(
+              tooltip: 'Send message',
+              icon:
+                  sending
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.send),
+              onPressed: sending ? null : onSend,
+            ),
           ),
         ],
       ),

@@ -57,17 +57,20 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         title: const Text('Service Logs'),
         actions: [
           // Line count selector
-          DropdownButton<int>(
-            value: _lines,
-            underline: const SizedBox(),
-            items: const [
-              DropdownMenuItem(value: 50, child: Text('50 lines')),
-              DropdownMenuItem(value: 100, child: Text('100 lines')),
-              DropdownMenuItem(value: 500, child: Text('500 lines')),
-            ],
-            onChanged: (v) {
-              if (v != null) setState(() => _lines = v);
-            },
+          Tooltip(
+            message: 'Select number of log lines to show',
+            child: DropdownButton<int>(
+              value: _lines,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 50, child: Text('50 lines')),
+                DropdownMenuItem(value: 100, child: Text('100 lines')),
+                DropdownMenuItem(value: 500, child: Text('500 lines')),
+              ],
+              onChanged: (v) {
+                if (v != null) setState(() => _lines = v);
+              },
+            ),
           ),
           const SizedBox(width: 8),
           IconButton(
