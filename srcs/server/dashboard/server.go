@@ -535,13 +535,17 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Centrifuge real-time WebSocket endpoint for Flutter/web clients.
 	// Mounted at /connection/websocket — the default Centrifuge path.
-	cnNode, err := orchestration.NewCentrifugeNode()
-	if err == nil {
-		hub.SetCentrifugeNode(cnNode)
+	if hub.CentrifugeNode() == nil {
+		cnNode, err := orchestration.NewCentrifugeNode()
+		if err == nil {
+			hub.SetCentrifugeNode(cnNode)
+			slog.Info("centrifuge WebSocket endpoint registered at /connection/websocket")
+		} else {
+			slog.Warn("centrifuge node init failed; real-time WebSocket disabled", "error", err)
+		}
+	}
+	if cnNode := hub.CentrifugeNode(); cnNode != nil {
 		mux.Handle("/connection/websocket", cnNode.Handler())
-		slog.Info("centrifuge WebSocket endpoint registered at /connection/websocket")
-	} else {
-		slog.Warn("centrifuge node init failed; real-time WebSocket disabled", "error", err)
 	}
 
 	// Config wizard API endpoints.
