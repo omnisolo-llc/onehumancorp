@@ -1,0 +1,5 @@
+status: "online"
+queue_status: "empty"
+metrics:
+  health: "100%"
+  latency: "0ms"
