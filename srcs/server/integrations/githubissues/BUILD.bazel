@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "githubissues",
+    srcs = ["client.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/githubissues",
+    visibility = ["//visibility:public"],
+)
