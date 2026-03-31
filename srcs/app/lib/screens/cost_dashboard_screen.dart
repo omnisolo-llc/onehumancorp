@@ -118,60 +118,68 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                                   ? agentCost.costUSD / costs.totalCostUSD
                                   : 0.0;
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      agent.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
+                          return Semantics(
+                            label:
+                                'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        agent.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      currencyFormat.format(agentCost.costUSD),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Stack(
-                                  children: [
-                                    Container(
-                                      height: 8,
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        color: colors.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(4),
+                                      Text(
+                                        currencyFormat.format(
+                                          agentCost.costUSD,
+                                        ),
                                       ),
-                                    ),
-                                    FractionallySizedBox(
-                                      widthFactor: ratio.clamp(0.0, 1.0),
-                                      child: Container(
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Stack(
+                                    children: [
+                                      Container(
                                         height: 8,
+                                        width: double.infinity,
                                         decoration: BoxDecoration(
-                                          color: colors.primary,
+                                          color: colors.surfaceContainerHighest,
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: colors.onSurfaceVariant,
+                                      FractionallySizedBox(
+                                        widthFactor: ratio.clamp(0.0, 1.0),
+                                        child: Container(
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: colors.primary,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         }).toList(),
@@ -256,28 +264,34 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
+    return Semantics(
+      label: '$title: $value',
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
