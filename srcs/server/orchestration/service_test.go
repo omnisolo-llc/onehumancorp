@@ -487,6 +487,7 @@ func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 }
 
 func TestNewMinimaxClient(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("test-key")
 	if client == nil {
 		t.Fatalf("expected non-nil MinimaxClient")
@@ -564,6 +565,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 			minimaxAPIURL = ts.URL
 
 			hub := NewHub()
+			ResetGlobalCircuitBreakerForTest()
 			hub.SetMinimaxAPIKey(tt.apiKey)
 			server := NewHubServiceServer(hub)
 			ctx := context.Background()
@@ -969,6 +971,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	agentID := "test-agent"
 	validPayload := []byte(`{"context": "some data to summarize"}`)
@@ -1076,6 +1079,7 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	// 2. Initialize Hub and set a fake API key
 	hub := NewHub()
 	hub.mu.Lock()
+	ResetGlobalCircuitBreakerForTest()
 	hub.minimaxAPIKey = "fake-key"
 	hub.mu.Unlock()
 
