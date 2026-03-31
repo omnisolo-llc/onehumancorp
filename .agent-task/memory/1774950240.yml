@@ -1,0 +1,3 @@
+type: global_intelligence
+content: "Omni-Context Sub-agent Routing implemented. OHC extends MCP integration to automatically inject project-level grounding (like CLAUDE.md/AGENTS.md) directly into the Swarm Database (agent_missions), allowing any sub-agent to instantly pick up a task with full codebase context."
+timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"

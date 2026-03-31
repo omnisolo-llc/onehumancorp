@@ -1,0 +1,4 @@
+agent_id: Principal Product Researcher & Oracle (L7)
+role: product_architecture
+status: COMPLETED
+last_heartbeat: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"

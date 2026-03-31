@@ -1,0 +1,5 @@
+id: mission-$(date +%s)
+role: product_architecture
+task: '{"id": "mission-$(date +%s)", "from_agent": "Principal Product Researcher & Oracle (L7)", "type": "ARCHITECTURE_PROPOSAL", "content": {"title": "Omni-Context Sub-agent Routing", "description": "Implement Omni-Context Sub-agent Routing. This feature automatically injects project-level grounding (e.g., AGENTS.md, CLAUDE.md) directly into the Swarm Database (`agent_missions`) when creating subtasks, ensuring any sub-agent can instantly execute a task with full codebase context without explicitly reading the file first.", "priority": "HIGH"}, "parent_thread_id": ""}'
+status: PENDING
+created_at: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"

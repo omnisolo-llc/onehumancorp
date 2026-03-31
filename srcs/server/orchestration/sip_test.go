@@ -4,6 +4,8 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -564,4 +566,61 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 
 	_ = db.CompleteMission(ctx, "nonexistent")
 	_ = db.PruneStaleMissions(ctx, 0)
+}
+
+func TestSIPDB_DelegateMission_WithContext(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	// Create dummy context files in the current working directory to test
+	// the file reading mechanism.
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+
+	agentsMdPath := filepath.Join(cwd, "AGENTS.md")
+	claudeMdPath := filepath.Join(cwd, "CLAUDE.md")
+
+	err = os.WriteFile(agentsMdPath, []byte("Test AGENTS.md content"), 0644)
+	if err != nil {
+		t.Fatalf("failed to create dummy AGENTS.md: %v", err)
+	}
+	defer os.Remove(agentsMdPath)
+
+	err = os.WriteFile(claudeMdPath, []byte("Test CLAUDE.md content"), 0644)
+	if err != nil {
+		t.Fatalf("failed to create dummy CLAUDE.md: %v", err)
+	}
+	defer os.Remove(claudeMdPath)
+
+	ctx := context.Background()
+	msg := Message{ID: "m2", Content: "Build a feature with context", Type: EventTask}
+	err = db.DelegateMission(ctx, "m2", "SOFTWARE_ENGINEER", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions))
+	}
+	if missions[0].ID != "m2" {
+		t.Fatalf("expected mission ID m2, got %s", missions[0].ID)
+	}
+
+	if !strings.Contains(missions[0].Content, "Test AGENTS.md content") {
+		t.Fatalf("expected mission content to contain 'Test AGENTS.md content', got: %s", missions[0].Content)
+	}
+
+	if !strings.Contains(missions[0].Content, "Test CLAUDE.md content") {
+		t.Fatalf("expected mission content to contain 'Test CLAUDE.md content', got: %s", missions[0].Content)
+	}
 }

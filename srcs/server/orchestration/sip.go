@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"os"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -237,6 +238,19 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	// Omni-Context Sub-agent Routing
+	var contextStr string
+	if b, err := os.ReadFile("AGENTS.md"); err == nil {
+		contextStr += string(b) + "\n\n"
+	}
+	if b, err := os.ReadFile("CLAUDE.md"); err == nil {
+		contextStr += string(b) + "\n\n"
+	}
+
+	if contextStr != "" {
+		task.Content = "[Project Context]\n" + contextStr + "[Task]\n" + task.Content
+	}
+
 	taskBytes, err := json.Marshal(task)
 	if err != nil {
 		return err
