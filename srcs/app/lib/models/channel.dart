@@ -24,25 +24,26 @@ class ChatChannel {
       organizationId: json['organization_id'] as String? ?? '',
       name: json['name'] as String,
       backend: ChatBackend.fromJson(json['backend']),
-      config: (json['config'] as Map<String, dynamic>?)
-              ?.cast<String, String>() ??
+      config:
+          (json['config'] as Map<String, dynamic>?)?.cast<String, String>() ??
           {},
       enabled: json['enabled'] as bool? ?? true,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'] as String)
+              : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'organization_id': organizationId,
-        'name': name,
-        'backend': backend.toJson(),
-        'config': config,
-        'enabled': enabled,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'organization_id': organizationId,
+    'name': name,
+    'backend': backend.toJson(),
+    'config': config,
+    'enabled': enabled,
+    'created_at': createdAt.toIso8601String(),
+  };
 }
 
 /// Supported chat backends — mirrors the Rust ChatBackend enum.

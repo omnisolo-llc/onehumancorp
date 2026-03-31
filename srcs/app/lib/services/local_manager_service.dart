@@ -11,7 +11,8 @@ class LocalManagerService {
   final String? _homeOverride;
 
   Directory get _openclawDir {
-    final home = _homeOverride ??
+    final home =
+        _homeOverride ??
         Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '.';
@@ -42,7 +43,11 @@ class LocalManagerService {
   Future<bool> isServiceRunning() async {
     try {
       // Check if something is listening on the default port
-      final socket = await Socket.connect('localhost', 18789, timeout: const Duration(milliseconds: 500));
+      final socket = await Socket.connect(
+        'localhost',
+        18789,
+        timeout: const Duration(milliseconds: 500),
+      );
       socket.destroy();
       return true;
     } catch (_) {
@@ -144,9 +149,9 @@ final standaloneManagerProvider = Provider<void>((ref) {
   if (settings == null || !settings.standaloneMode) return;
 
   final manager = ref.read(localManagerServiceProvider);
-  
+
   // Start the service on initialization
   manager.startService();
-  
+
   // No explicit dispose needed for a daemon, but could add if necessary
 });
