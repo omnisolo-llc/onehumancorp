@@ -13,6 +13,7 @@ import (
 )
 
 func TestTaskWorker_pollAndAssign(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	tests := []struct {
 		name           string
 		setupMock      func() *httptest.Server
@@ -147,6 +148,7 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 }
 
 func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Simple test to exercise the context cancellation branch
 	worker := NewTaskWorker(nil)
 	worker.pollInterval = 10 * time.Millisecond
@@ -159,6 +161,7 @@ func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
 }
 
 func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	mockSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"results": []interface{}{}})
@@ -189,6 +192,7 @@ func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 }
 
 func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	os.Unsetenv("PLANE_URL")
 	os.Unsetenv("PLANE_API_KEY")
 
@@ -199,6 +203,7 @@ func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
 
 
 func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Directly call to guarantee execution
 	os.Unsetenv("PLANE_URL")
 	os.Unsetenv("PLANE_API_KEY")

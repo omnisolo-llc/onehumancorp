@@ -15,6 +15,7 @@ import (
 )
 
 func TestDelegateSubTask_Success(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
 	server := NewHubServiceServer(hub)
@@ -68,6 +69,7 @@ func TestDelegateSubTask_Success(t *testing.T) {
 }
 
 func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
@@ -102,6 +104,7 @@ func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
 }
 
 func TestDelegateSubTask_MissingFields(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
@@ -142,6 +145,7 @@ func TestDelegateSubTask_MissingFields(t *testing.T) {
 
 // TestDelegateSubTask_Integration checks the real data law by seeing if the message gets processed properly
 func TestDelegateSubTask_Integration(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
 	server := NewHubServiceServer(hub)
@@ -195,6 +199,7 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 }
 
 func TestDelegateSubTask_Validation(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{
 		ID:             "sys-agent",
@@ -266,6 +271,7 @@ func TestDelegateSubTask_Validation(t *testing.T) {
 }
 
 func TestDelegateSubTask_WithSIPDB(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	db, err := NewSIPDB(filepath.Join(t.TempDir(), "test.db"))
 	if err == nil {
@@ -297,6 +303,7 @@ func TestDelegateSubTask_WithSIPDB(t *testing.T) {
 }
 
 func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender-fail", Name: "Sender", Role: "PM", Status: StatusIdle})
 	server := NewHubServiceServer(hub)
@@ -334,6 +341,7 @@ func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
 }
 
 func TestDelegateSubTask_MissingSenderCover(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	// Deliberately DO NOT register sender
 	server := NewHubServiceServer(hub)

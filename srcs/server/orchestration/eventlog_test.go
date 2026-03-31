@@ -8,6 +8,7 @@ import (
 )
 
 func TestEventLogWorker_CoverageGaps(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Create a new Hub instance
 	hub := NewHub()
 

@@ -34,6 +34,7 @@ func mockSPIFFEContext(spiffeID string) context.Context {
 }
 
 func TestExtractSPIFFEID_Success(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/a1")
 
 	id, err := ExtractSPIFFEID(ctx)
@@ -46,6 +47,7 @@ func TestExtractSPIFFEID_Success(t *testing.T) {
 }
 
 func TestExtractSPIFFEID_MissingPeer(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	_, err := ExtractSPIFFEID(context.Background())
 	if err == nil {
 		t.Fatalf("expected error")
@@ -53,6 +55,7 @@ func TestExtractSPIFFEID_MissingPeer(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_MissingSlash(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorpiowithoutslahesha")
 
@@ -70,6 +73,7 @@ func TestSPIFFEAuthInterceptor_MissingSlash(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_EscapeDotDot(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/../org-1/agent-1")
 
@@ -87,6 +91,7 @@ func TestSPIFFEAuthInterceptor_EscapeDotDot(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_EscapeDoubleSlash(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io//org-1/agent-1")
 
@@ -104,6 +109,7 @@ func TestSPIFFEAuthInterceptor_EscapeDoubleSlash(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_DelegateTask(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
 
@@ -128,6 +134,7 @@ func TestSPIFFEAuthInterceptor_DelegateTask(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_MissingID(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := context.Background()
 	_, err := interceptor(ctx, nil, nil, func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -144,6 +151,7 @@ func TestSPIFFEAuthInterceptor_MissingID(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_InvalidFormat(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("invalid-id")
 
@@ -161,6 +169,7 @@ func TestSPIFFEAuthInterceptor_InvalidFormat(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_ShortPath(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/short")
 
@@ -181,6 +190,7 @@ func TestSPIFFEAuthInterceptor_ShortPath(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_Spoofing_Publish(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
 
@@ -207,6 +217,7 @@ func TestSPIFFEAuthInterceptor_Spoofing_Publish(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_BoundaryEscape_Publish(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	// Malicious SPIFFE ID exploiting the old logic which just split by the last slash
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent/target-agent")
@@ -234,6 +245,7 @@ func TestSPIFFEAuthInterceptor_BoundaryEscape_Publish(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_BoundaryEscape_OHCOSDomain(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	// Malicious SPIFFE ID exploiting the old logic for ohc.os domain
 	ctx := mockSPIFFEContext("spiffe://ohc.os/agent/attacker-agent/target-agent")
@@ -261,6 +273,7 @@ func TestSPIFFEAuthInterceptor_BoundaryEscape_OHCOSDomain(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_Spoofing_Register(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
 
@@ -287,6 +300,7 @@ func TestSPIFFEAuthInterceptor_Spoofing_Register(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_Valid(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/a1")
 
@@ -332,6 +346,7 @@ func (m *mockServerStream) RecvMsg(req interface{}) error {
 }
 
 func TestExtractSPIFFEID_MissingURI(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	cert := &x509.Certificate{
 		URIs: []*url.URL{},
 	}
@@ -355,6 +370,7 @@ func TestExtractSPIFFEID_MissingURI(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_OHCLocalDomain(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 
 	tests := []struct {
@@ -446,6 +462,7 @@ func TestSPIFFEAuthInterceptor_OHCLocalDomain(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_OHCOSDomain(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 
 	tests := []struct {
@@ -529,6 +546,7 @@ func TestSPIFFEAuthInterceptor_OHCOSDomain(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_OHCGlobalDomain(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 
 	tests := []struct {
@@ -624,6 +642,7 @@ func TestSPIFFEAuthInterceptor_OHCGlobalDomain(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_UnsupportedTrustDomain(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://unknown.domain/agent/agent-1")
 	req := pb.RegisterAgentRequest_builder{
@@ -646,6 +665,7 @@ func TestSPIFFEAuthInterceptor_UnsupportedTrustDomain(t *testing.T) {
 }
 
 func TestSPIFFEStreamInterceptor(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEStreamInterceptor()
 
 	tests := []struct {
@@ -886,6 +906,7 @@ func TestSPIFFEStreamInterceptor(t *testing.T) {
 }
 
 func TestRecvWrapper_RecvMsgError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	errStream := &mockErrorServerStream{
 		err: status.Errorf(codes.Internal, "stream error"),
 	}
@@ -915,6 +936,7 @@ func (m *mockErrorServerStream) RecvMsg(req interface{}) error {
 }
 
 func TestSPIFFEAuthInterceptor_CoverageGaps(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 
 	tests := []struct {
@@ -998,6 +1020,7 @@ func TestSPIFFEAuthInterceptor_CoverageGaps(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Spoofing(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
 
@@ -1022,6 +1045,7 @@ func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Spoofing(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Valid(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
 
@@ -1039,6 +1063,7 @@ func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Valid(t *testing.T) {
 }
 
 func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEStreamInterceptor()
 
 	tests := []struct {
@@ -1157,6 +1182,7 @@ func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
 
@@ -1181,6 +1207,7 @@ func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 }
 
 func TestUnaryAuthInterceptor_ReasonRequest(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://ohc.os/agent/agent-123")
 
@@ -1224,6 +1251,7 @@ func TestUnaryAuthInterceptor_ReasonRequest(t *testing.T) {
 }
 
 func TestUnaryAuthInterceptor_OpenMeetingRequest(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	interceptor := SPIFFEAuthInterceptor()
 	ctx := mockSPIFFEContext("spiffe://ohc.os/agent/agent-123")
 

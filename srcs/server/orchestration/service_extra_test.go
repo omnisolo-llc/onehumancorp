@@ -14,6 +14,7 @@ import (
 )
 
 func TestPublish_ContextSummarization_Success(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Mock the Minimax API
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -75,6 +76,7 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 }
 
 func TestPublish_ChannelFull(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -100,6 +102,7 @@ func TestPublish_ChannelFull(t *testing.T) {
 }
 
 func TestPublish_MeetingChannelFull(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -128,6 +131,7 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 }
 
 func TestMinimaxClient_Reason_NewRequestError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("test")
 	originalURL := MinimaxAPIURL
 	MinimaxAPIURL = string([]byte{0x7f}) // Control character to fail http.NewRequestWithContext
@@ -153,6 +157,7 @@ func (m *mockStreamMessagesServerError) Send(msg *pb.Message) error {
 }
 
 func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -182,6 +187,7 @@ func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 }
 
 func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
@@ -217,6 +223,7 @@ func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 }
 
 func TestPublish_ContextSummarization_Failure(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Mock the Minimax API to return an error (e.g. 500 Internal Server Error)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -268,6 +275,7 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 }
 
 func TestService_CoverageExt(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// 1. Array in redactInterfacePII (lines 51-55)
 	arr := []interface{}{"555-555-5555"}
 	redacted := redactInterfacePII(arr).([]interface{})
@@ -327,6 +335,7 @@ func TestService_CoverageExt(t *testing.T) {
 }
 
 func TestEventLogWorker_Errors(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := &Hub{
 		eventLogChan: make(chan interface{}, 10),
 	}

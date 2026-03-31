@@ -9,6 +9,7 @@ import (
 )
 
 func TestSIPDB_Init(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to initialize SIPDB: %v", err)
@@ -71,6 +72,7 @@ func TestSIPDB_Init(t *testing.T) {
 }
 
 func TestSIPDB_NewSIPDB_Fail(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Attempt to create a database on a read-only directory to trigger an error.
 	// We'll just provide a path we know will fail SQLite open.
 	_, err := NewSIPDB("/root/illegal/path/db.sqlite")
@@ -80,6 +82,7 @@ func TestSIPDB_NewSIPDB_Fail(t *testing.T) {
 }
 
 func TestSIPDB_PollMissions_ScanError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -114,6 +117,7 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 }
 
 func TestSIPDB_CompleteMission_RowsAffectedError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// We can't easily trigger RowsAffected() error with go-sqlite3 normally,
 	// but let's at least test the "mission not found" path.
 	dbPath := filepath.Join(t.TempDir(), "test.db")
@@ -130,6 +134,7 @@ func TestSIPDB_CompleteMission_RowsAffectedError(t *testing.T) {
 }
 
 func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -159,6 +164,7 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 }
 
 func TestSIPDB_CompleteMission_ExecError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -179,6 +185,7 @@ func TestSIPDB_CompleteMission_ExecError(t *testing.T) {
 }
 
 func TestSIPDB_PruneStaleMissions(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -236,6 +243,7 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 }
 
 func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -250,6 +258,7 @@ func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
 }
 
 func TestSIPDB_CompleteMission_ExecErrorAgain(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Let's create a test that calls CompleteMission on a closed DB
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
@@ -265,6 +274,7 @@ func TestSIPDB_CompleteMission_ExecErrorAgain(t *testing.T) {
 }
 
 func TestSIPDB_GetPendingMissions_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -279,6 +289,7 @@ func TestSIPDB_GetPendingMissions_DBError(t *testing.T) {
 }
 
 func TestSIPDB_UpdateMemory_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -293,6 +304,7 @@ func TestSIPDB_UpdateMemory_DBError(t *testing.T) {
 }
 
 func TestSIPDB_SyncMemory_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -307,6 +319,7 @@ func TestSIPDB_SyncMemory_DBError(t *testing.T) {
 }
 
 func TestSIPDB_Heartbeat_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -321,6 +334,7 @@ func TestSIPDB_Heartbeat_DBError(t *testing.T) {
 }
 
 func TestSIPDB_DelegateMission_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -335,6 +349,7 @@ func TestSIPDB_DelegateMission_DBError(t *testing.T) {
 }
 
 func TestSIPDB_InitTables_InvalidDBDir(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := t.TempDir()
 	_, err := NewSIPDB(dbPath)
 	if err == nil {
@@ -343,6 +358,7 @@ func TestSIPDB_InitTables_InvalidDBDir(t *testing.T) {
 }
 
 func TestSIPDB_RegisterCapabilityPlugin(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -392,6 +408,7 @@ func TestSIPDB_RegisterCapabilityPlugin(t *testing.T) {
 }
 
 func TestSIPDB_StoreAndGetEpisodicMemories(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -448,6 +465,7 @@ func TestSIPDB_StoreAndGetEpisodicMemories(t *testing.T) {
 }
 
 func TestSIPDB_GetCapabilityPlugins_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -467,6 +485,7 @@ func TestSIPDB_GetCapabilityPlugins_DBError(t *testing.T) {
 }
 
 func TestSIPDB_GetEpisodicMemoriesByPlugin_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -486,6 +505,7 @@ func TestSIPDB_GetEpisodicMemoriesByPlugin_DBError(t *testing.T) {
 }
 
 func TestSIPDB_RegisterCapabilityPlugin_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -500,6 +520,7 @@ func TestSIPDB_RegisterCapabilityPlugin_DBError(t *testing.T) {
 }
 
 func TestSIPDB_StoreEpisodicMemory_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -514,6 +535,7 @@ func TestSIPDB_StoreEpisodicMemory_DBError(t *testing.T) {
 }
 
 func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -538,6 +560,7 @@ func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
 }
 
 func TestSIPDB_ScanErrors(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	db, err := NewSIPDB(filepath.Join(t.TempDir(), "test_scan.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -569,6 +592,7 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 
 
 func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {

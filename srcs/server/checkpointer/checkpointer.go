@@ -86,7 +86,7 @@ func (p *PGCheckpointer) SaveCheckpoint(ctx context.Context, threadID string, st
 	query := `
 	INSERT INTO checkpoints (thread_id, state)
 	VALUES ($1, $2)
-	ON CONFLICT (thread_id) DO UPDATE SET state = excluded.state;
+	ON CONFLICT (thread_id) DO UPDATE SET state = excluded.state WHERE checkpoints.state != excluded.state;
 	`
 	return p.withRetry(func() error {
 		_, err := p.db.ExecContext(ctx, query, threadID, stateBytes)

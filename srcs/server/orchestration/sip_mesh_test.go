@@ -7,6 +7,7 @@ import (
 )
 
 func TestSIPDB_CapabilityPlugins(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -77,6 +78,7 @@ func TestSIPDB_CapabilityPlugins(t *testing.T) {
 }
 
 func TestSIPDB_EpisodicMemory(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -145,6 +147,7 @@ func TestSIPDB_EpisodicMemory(t *testing.T) {
 }
 
 func TestSIPDB_CapabilityPlugins_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -164,6 +167,7 @@ func TestSIPDB_CapabilityPlugins_DBError(t *testing.T) {
 }
 
 func TestSIPDB_EpisodicMemory_DBError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {

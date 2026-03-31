@@ -40,6 +40,7 @@ func (m *mockNode) OnConnect(h centrifuge.ConnectHandler) {
 }
 
 func TestCentrifugeNode_HandlerMock(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	origCreateNode := createNode
 	defer func() { createNode = origCreateNode }()
 
@@ -60,6 +61,7 @@ func TestCentrifugeNode_HandlerMock(t *testing.T) {
 }
 
 func TestNewCentrifugeNode_CreationError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	origCreateNode := createNode
 	defer func() { createNode = origCreateNode }()
 
@@ -78,6 +80,7 @@ func TestNewCentrifugeNode_CreationError(t *testing.T) {
 }
 
 func TestHubCentrifugeIntegration(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 
 	cn, err := NewCentrifugeNode()
@@ -118,6 +121,7 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 }
 
 func TestHubCentrifugeNilSafe(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 
 	hub.RegisterAgent(Agent{
@@ -146,6 +150,7 @@ func TestHubCentrifugeNilSafe(t *testing.T) {
 }
 
 func TestNewCentrifugeNode_RunError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	origCreateNode := createNode
 	defer func() { createNode = origCreateNode }()
 
@@ -164,6 +169,7 @@ func TestNewCentrifugeNode_RunError(t *testing.T) {
 }
 
 func TestCentrifugeNodePublishErrorPaths(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	origCreateNode := createNode
 	defer func() { createNode = origCreateNode }()
 
@@ -190,6 +196,7 @@ func TestCentrifugeNodePublishErrorPaths(t *testing.T) {
 }
 
 func TestCentrifugeNodeHandlersCoverage(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	origCreateNode := createNode
 	defer func() { createNode = origCreateNode }()
 
@@ -228,6 +235,7 @@ func TestCentrifugeNodeHandlersCoverage(t *testing.T) {
 }
 
 func TestCentrifugeNode_HandlerCheckOrigin(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	origCreateNode := createNode
 	defer func() { createNode = origCreateNode }()
 

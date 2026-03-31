@@ -15,6 +15,7 @@ import (
 )
 
 func TestRegisterAgentViaGRPC(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	srv := NewHubServiceServer(hub)
 
@@ -46,6 +47,7 @@ func TestRegisterAgentViaGRPC(t *testing.T) {
 }
 
 func TestOpenMeetingViaGRPC(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
@@ -75,6 +77,7 @@ func TestOpenMeetingViaGRPC(t *testing.T) {
 }
 
 func TestPublishViaGRPC(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
@@ -123,6 +126,7 @@ func (m *MockStreamServer) SendMsg(m_ interface{}) error { return nil }
 func (m *MockStreamServer) RecvMsg(m_ interface{}) error { return nil }
 
 func TestStreamMessagesViaGRPC(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
@@ -176,6 +180,7 @@ func TestStreamMessagesViaGRPC(t *testing.T) {
 }
 
 func TestHubMinimaxAPIKey(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	if hub.MinimaxAPIKey() != "" {
 		t.Errorf("expected empty API key initially")
@@ -187,6 +192,7 @@ func TestHubMinimaxAPIKey(t *testing.T) {
 }
 
 func TestReasonViaMinimaxEmptyKey(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	srv := NewHubServiceServer(hub)
 
@@ -199,6 +205,7 @@ func TestReasonViaMinimaxEmptyKey(t *testing.T) {
 }
 
 func TestReasonViaMinimaxDummyKey(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	srv := NewHubServiceServer(hub)
 
@@ -211,12 +218,14 @@ func TestReasonViaMinimaxDummyKey(t *testing.T) {
 }
 
 func TestRegisterHubServiceCoverage(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	srv := grpc.NewServer()
 	RegisterHubService(srv, hub)
 }
 
 func TestPublishViaGRPCError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	srv := NewHubServiceServer(hub)
 
@@ -238,6 +247,7 @@ func TestPublishViaGRPCError(t *testing.T) {
 }
 
 func TestStreamMessagesViaGRPCCancellation(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	srv := NewHubServiceServer(hub)
 
@@ -258,6 +268,7 @@ func (errReader) Read(p []byte) (n int, err error) {
 }
 
 func TestMinimaxClientReasonDecodeError(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Let's not test JSON decode error by writing to http.ResponseWriter
 	// because httptest.Server encodes it. But we can send malformed json
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -278,6 +289,7 @@ func TestMinimaxClientReasonDecodeError(t *testing.T) {
 }
 
 func TestMinimaxClientReasonInvalidRequest(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	client := NewMinimaxClient("valid-key")
 	// Using a cancelled context to trigger a request creation or execution error
 	ctx, cancel := context.WithCancel(context.Background())
