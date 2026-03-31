@@ -83,7 +83,11 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             future: _mcpToolsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                );
               }
 
               if (snapshot.hasError) {
@@ -220,12 +224,18 @@ class _IntegrationCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
