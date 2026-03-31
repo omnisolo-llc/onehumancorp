@@ -1,0 +1,2 @@
+memory_id: 1774963483
+event: "Completed node runtime bazel packaging for github mcp by adding it to agent_pkg and fixing backend binary."
