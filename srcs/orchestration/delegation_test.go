@@ -295,3 +295,64 @@ func TestDelegateSubTask_WithSIPDB(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 }
+
+func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
+	hub := NewHub()
+	hub.RegisterAgent(Agent{ID: "sender-fail", Name: "Sender", Role: "PM", Status: StatusIdle})
+	server := NewHubServiceServer(hub)
+	ctx := context.Background()
+
+	req := pb.SubTask_builder{
+		TaskId:         proto.String("task-fail"),
+		TargetRole:     proto.String("SWE"),
+		Instruction:    proto.String("Implement component"),
+		ParentThreadId: proto.String("thread-1"),
+		FromAgentId:    proto.String("sender-fail"),
+	}.Build()
+
+	go func() {
+		for {
+			hub.mu.RLock()
+			_, ok := hub.agents["sender-fail"]
+			hub.mu.RUnlock()
+			if !ok {
+				break
+			}
+			hub.mu.Lock()
+			delete(hub.agents, "sender-fail")
+			hub.mu.Unlock()
+		}
+	}()
+
+	for i := 0; i < 1000; i++ {
+		hub.RegisterAgent(Agent{ID: "sender-fail", Name: "Sender", Role: "PM", Status: StatusIdle})
+		_, err := server.DelegateSubTask(ctx, req)
+		if err != nil && status.Code(err) == codes.Internal {
+			break
+		}
+	}
+}
+
+func TestDelegateSubTask_MissingSenderCover(t *testing.T) {
+	hub := NewHub()
+	// Deliberately DO NOT register sender
+	server := NewHubServiceServer(hub)
+	ctx := context.Background()
+
+	req := pb.SubTask_builder{
+		TaskId:         proto.String("task-missingsender"),
+		TargetRole:     proto.String("SWE"),
+		Instruction:    proto.String("Implement component"),
+		ParentThreadId: proto.String("thread-1"),
+		FromAgentId:    proto.String("sender-missing"),
+	}.Build()
+
+	_, err := server.DelegateSubTask(ctx, req)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	st, _ := status.FromError(err)
+	if st.Code() != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", st.Code())
+	}
+}

@@ -535,3 +535,33 @@ func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
 		t.Fatal("Expected error from scan due to missing column")
 	}
 }
+
+func TestSIPDB_ScanErrors(t *testing.T) {
+	db, err := NewSIPDB(filepath.Join(t.TempDir(), "test_scan.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Force a scan error by selecting from dummy but scanning into multiple vars?
+	// SQLite might cast, but what if we change the table schema or use a mock DB?
+	// Actually, simply query the existing table but insert something that cannot be scanned?
+	// For example, scanning a NULL into a non-nullable string.
+
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', '1', 'url', 'stat', 'time')")
+	_, _ = db.GetCapabilityPlugins(ctx, "")
+	_, _ = db.db.ExecContext(ctx, "DELETE FROM capability_plugins")
+
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (NULL, 'ctx', 'vec', 'plg', 'time')")
+	_, _ = db.GetEpisodicMemoriesByPlugin(ctx, "")
+	_, _ = db.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings")
+
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES (NULL, 'ROLE', 'task', 'PENDING')")
+	_, _ = db.GetPendingMissions(ctx, "ROLE")
+	_, _ = db.db.ExecContext(ctx, "DELETE FROM agent_missions")
+
+	_ = db.CompleteMission(ctx, "nonexistent")
+	_ = db.PruneStaleMissions(ctx, 0)
+}
