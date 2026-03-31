@@ -43,7 +43,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 					Content: "Stress test task",
 					Type:    EventTask,
 				}
-				if err := db.DelegateMission(ctx, missionID, "SOFTWARE_ENGINEER", task); err != nil {
+				if err := db.DelegateMission(ctx, missionID, task); err != nil {
 					errs <- fmt.Errorf("agent %d failed to delegate mission %d: %v", agentIdx, j, err)
 				}
 			}
@@ -95,7 +95,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 		}
 
 		// This will block and retry while the DB is locked
-		err := db.DelegateMission(ctx, "chaos-mission-1", "SOFTWARE_ENGINEER", task)
+		err := db.DelegateMission(ctx, "chaos-mission-1", task)
 		if err != nil {
 			// It might ultimately fail if it exhausts retries before we unlock
 			t.Logf("Mission delegation after chaos: %v", err)

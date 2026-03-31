@@ -38,12 +38,12 @@ func TestSIPDB_Init(t *testing.T) {
 
 	// Test Delegation & Mission
 	msg := Message{ID: "m1", Content: "Build a feature", Type: EventTask}
-	err = db.DelegateMission(ctx, "m1", "SOFTWARE_ENGINEER", msg)
+	err = db.DelegateMission(ctx, "m1", msg)
 	if err != nil {
 		t.Fatalf("DelegateMission failed: %v", err)
 	}
 
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	missions, err := db.GetPendingMissions(ctx)
 	if err != nil {
 		t.Fatalf("GetPendingMissions failed: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestSIPDB_Init(t *testing.T) {
 		t.Fatalf("CompleteMission failed: %v", err)
 	}
 
-	missions, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	missions, err = db.GetPendingMissions(ctx)
 	if err != nil {
 		t.Fatalf("GetPendingMissions failed: %v", err)
 	}
@@ -93,12 +93,12 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 
 	// Manually insert bad JSON
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'invalid-json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', 'invalid-json')")
 	if err != nil {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
 
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	missions, err := db.GetPendingMissions(ctx)
 	if err != nil {
 		t.Fatalf("Expected fallback to message string on JSON unmarshal error, got error: %v", err)
 	}
@@ -137,13 +137,13 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'invalid-json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', 'invalid-json')")
 	if err != nil {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
 
 	// Ensure we handle invalid JSON in GetPendingMissions without blowing up completely
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	missions, err := db.GetPendingMissions(ctx)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -189,15 +189,15 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 
 	// Insert missions:
 	// 1. Pending and new (should not be deleted)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('1', 'ROLE', 'task', 'PENDING', datetime('now'))")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('1', 'PENDING', 'task', datetime('now'))")
 	if err != nil { t.Fatal(err) }
 
 	// 2. Completed (should be deleted regardless of age)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('2', 'ROLE', 'task', 'COMPLETED', datetime('now'))")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('2', 'COMPLETED', 'task', datetime('now'))")
 	if err != nil { t.Fatal(err) }
 
 	// 3. Pending but old (should be deleted)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('3', 'ROLE', 'task', 'PENDING', datetime('now', '-2 days'))")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('3', 'PENDING', 'task', datetime('now', '-2 days'))")
 	if err != nil { t.Fatal(err) }
 
 	// Prune missions older than 24 hours
@@ -261,7 +261,7 @@ func TestSIPDB_GetPendingMissions_DBError(t *testing.T) {
 	}
 	db.Close()
 
-	_, err = db.GetPendingMissions(context.Background(), "role")
+	_, err = db.GetPendingMissions(context.Background())
 	if err == nil {
 		t.Fatal("Expected error querying closed DB")
 	}
@@ -317,7 +317,7 @@ func TestSIPDB_DelegateMission_DBError(t *testing.T) {
 	}
 	db.Close()
 
-	err = db.DelegateMission(context.Background(), "mission", "role", Message{})
+	err = db.DelegateMission(context.Background(), "mission", Message{})
 	if err == nil {
 		t.Fatal("Expected error querying closed DB")
 	}

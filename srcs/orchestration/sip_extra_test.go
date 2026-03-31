@@ -60,12 +60,12 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert malformed JSON task
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m2', 'ROLE', 'invalid_json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', 'invalid_json')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
 
-	missions, err := db.GetPendingMissions(ctx, "ROLE")
+	missions, err := db.GetPendingMissions(ctx)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -87,12 +87,12 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert JSON without ID
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m3', 'ROLE', '{\"type\":\"TASK\"}', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m3', 'PENDING', '{\"type\":\"TASK\"}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
 
-	missions, err := db.GetPendingMissions(ctx, "ROLE")
+	missions, err := db.GetPendingMissions(ctx)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -132,7 +132,7 @@ func TestSIPDB_DBClosedErrors(t *testing.T) {
 		t.Fatalf("expected error on SyncMemory after close")
 	}
 
-	_, err = db.GetPendingMissions(ctx, "ROLE")
+	_, err = db.GetPendingMissions(ctx)
 	if err == nil {
 		t.Fatalf("expected error on GetPendingMissions after close")
 	}
@@ -152,7 +152,7 @@ func TestSIPDB_DBClosedErrors(t *testing.T) {
 		t.Fatalf("expected error on Heartbeat after close")
 	}
 
-	err = db.DelegateMission(ctx, "m1", "r1", Message{ID: "m1"})
+	err = db.DelegateMission(ctx, "m1", Message{ID: "m1"})
 	if err == nil {
 		t.Fatalf("expected error on DelegateMission after close")
 	}

@@ -1413,7 +1413,7 @@ func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	// Let the goroutine run
 	time.Sleep(150 * time.Millisecond) // enough time for sipdb
 
-	missions, _ := db.GetPendingMissions(context.Background(), "SOFTWARE_ENGINEER")
+	missions, _ := db.GetPendingMissions(context.Background())
 	if len(missions) != 1 {
 		t.Fatalf("expected 1 mission, got %d", len(missions))
 	}

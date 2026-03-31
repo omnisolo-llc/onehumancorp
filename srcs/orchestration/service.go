@@ -258,7 +258,7 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
 		go func(t Message, r string) {
-			_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
+			_ = h.sipDB.DelegateMission(context.Background(), t.ID, t)
 		}(task, toAgent.Role)
 	}
 	return err
