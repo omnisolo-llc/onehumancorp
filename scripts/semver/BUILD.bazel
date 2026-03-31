@@ -1,0 +1,15 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_binary(
+    name = "calculate_semver",
+    srcs = ["calculate_semver.sh"],
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "calculate_semver_test",
+    srcs = ["calculate_semver_test.sh"],
+    data = [":calculate_semver"],
+    size = "small",
+)
