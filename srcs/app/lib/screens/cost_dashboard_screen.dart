@@ -38,6 +38,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
         title: const Text('Cost & Token Usage'),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
           ),

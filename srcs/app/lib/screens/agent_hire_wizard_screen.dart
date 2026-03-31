@@ -98,6 +98,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
       appBar: AppBar(
         title: const Text('Hire New Agent'),
         leading: IconButton(
+          tooltip: 'Close',
           icon: const Icon(Icons.close),
           onPressed: () => context.go('/agents'),
         ),

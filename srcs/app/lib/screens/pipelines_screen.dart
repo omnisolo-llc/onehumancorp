@@ -58,7 +58,7 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
       appBar: AppBar(
         title: const Text('SDLC Pipelines'),
         actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+          IconButton(tooltip: 'Refresh', onPressed: _refresh, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: FutureBuilder<List<Pipeline>>(
@@ -150,6 +150,7 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                                 ),
                               ),
                               IconButton(
+                                tooltip: 'Preview link',
                                 icon: const Icon(Icons.open_in_new, size: 16),
                                 onPressed: () {}, // Link preview
                               ),
