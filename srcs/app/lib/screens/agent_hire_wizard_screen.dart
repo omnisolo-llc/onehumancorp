@@ -55,7 +55,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load providers: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -103,7 +103,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to hire agent: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -156,10 +156,13 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     onPressed: _isDeploying ? null : _handleDeploy,
                     child:
                         _isDeploying
-                            ? const SizedBox(
+                            ? SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
                             )
                             : const Text('Deploy Agent'),
                   ),
@@ -195,18 +198,22 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   children:
                       _roles.map((role) {
                         final isSelected = _selectedRole == role;
-                        return ChoiceChip(
-                          label: Text(_formatRole(role)),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(
-                              () => _selectedRole = selected ? role : '',
-                            );
-                            if (selected && _nameController.text.isEmpty) {
-                              _nameController.text =
-                                  'Senior ${_formatRole(role)}';
-                            }
-                          },
+                        return Semantics(
+                          label: 'Role: ${_formatRole(role)}',
+                          button: true,
+                          child: ChoiceChip(
+                            label: Text(_formatRole(role)),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(
+                                () => _selectedRole = selected ? role : '',
+                              );
+                              if (selected && _nameController.text.isEmpty) {
+                                _nameController.text =
+                                    'Senior ${_formatRole(role)}';
+                              }
+                            },
+                          ),
                         );
                       }).toList(),
                 ),
@@ -227,10 +234,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 const Text('Select the AI backend that will power this agent.'),
                 const SizedBox(height: 16),
                 if (_isLoading)
-                  const Center(
+                  Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(),
+                      padding: const EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   )
                 else if (_providers.isEmpty)
@@ -264,12 +273,16 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Agent Name',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Senior Software Engineer',
+                Semantics(
+                  label: 'Agent Name Input',
+                  textField: true,
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Agent Name',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g. Senior Software Engineer',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -306,9 +319,11 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

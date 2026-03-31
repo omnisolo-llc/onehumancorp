@@ -145,9 +145,9 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         ref.invalidate(wizardStatusProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Configuration saved successfully!'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: const Text('Configuration saved successfully!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
         }
@@ -173,9 +173,12 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
             data:
                 (s) =>
                     s.configured
-                        ? const Padding(
-                          padding: EdgeInsets.only(right: 16),
-                          child: Icon(Icons.check_circle, color: Colors.green),
+                        ? Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         )
                         : const SizedBox.shrink(),
             orElse: () => const SizedBox.shrink(),
@@ -189,7 +192,10 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
           children: [
             // Status banner
             statusAsync.when(
-              loading: () => const LinearProgressIndicator(),
+              loading:
+                  () => LinearProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
               error: (e, _) => const SizedBox.shrink(),
               data: (s) => _StatusBanner(status: s),
             ),
@@ -219,7 +225,10 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
             const SizedBox(height: 16),
 
@@ -244,10 +253,13 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                     onPressed: _saving ? null : _save,
                     child:
                         _saving
-                            ? const SizedBox(
+                            ? SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
                             )
                             : const Text('Save Configuration'),
                   ),
@@ -288,7 +300,7 @@ class _StepIndicator extends StatelessWidget {
                   radius: 16,
                   backgroundColor:
                       done
-                          ? Colors.green
+                          ? Theme.of(context).colorScheme.primary
                           : active
                           ? Theme.of(context).colorScheme.primary
                           : Theme.of(
@@ -296,15 +308,18 @@ class _StepIndicator extends StatelessWidget {
                           ).colorScheme.surfaceContainerHighest,
                   child:
                       done
-                          ? const Icon(
+                          ? Icon(
                             Icons.check,
                             size: 16,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           )
                           : Text(
                             '${i + 1}',
                             style: TextStyle(
-                              color: active ? Colors.white : null,
+                              color:
+                                  active
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : null,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -355,14 +370,17 @@ class _StatusBanner extends StatelessWidget {
       return Semantics(
         label: 'Platform is fully configured',
         child: buildGlassCard(
-          color: Colors.green,
-          child: const ListTile(
-            leading: Icon(Icons.check_circle, color: Colors.green),
-            title: Text(
+          color: Theme.of(context).colorScheme.primary,
+          child: ListTile(
+            leading: Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text(
               'Platform is fully configured',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text('All wizard steps have been completed.'),
+            subtitle: const Text('All wizard steps have been completed.'),
           ),
         ),
       );
@@ -374,9 +392,12 @@ class _StatusBanner extends StatelessWidget {
     return Semantics(
       label: 'Configuration incomplete. Remaining: ${missing.join(', ')}',
       child: buildGlassCard(
-        color: Colors.orange,
+        color: Theme.of(context).colorScheme.error,
         child: ListTile(
-          leading: const Icon(Icons.warning_amber, color: Colors.orange),
+          leading: Icon(
+            Icons.warning_amber,
+            color: Theme.of(context).colorScheme.error,
+          ),
           title: const Text(
             'Configuration incomplete',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -407,23 +428,31 @@ class _ServerStep extends StatelessWidget {
           'and where it stores persistent data.',
         ),
         const SizedBox(height: 24),
-        TextField(
-          controller: listenAddrCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Listen Address',
-            hintText: 'host:port',
-            helperText: 'Host and port the server will bind to',
-            border: OutlineInputBorder(),
+        Semantics(
+          label: 'Listen Address Input',
+          textField: true,
+          child: TextField(
+            controller: listenAddrCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Listen Address',
+              hintText: 'host:port',
+              helperText: 'Host and port the server will bind to',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: dbPathCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Database Path',
-            hintText: 'ohc.db',
-            helperText: 'Path to the SQLite database file',
-            border: OutlineInputBorder(),
+        Semantics(
+          label: 'Database Path Input',
+          textField: true,
+          child: TextField(
+            controller: dbPathCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Database Path',
+              hintText: 'ohc.db',
+              helperText: 'Path to the SQLite database file',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
       ],
@@ -528,13 +557,17 @@ class _CentrifugeStep extends StatelessWidget {
           'by the OHC backend.',
         ),
         const SizedBox(height: 24),
-        TextField(
-          controller: urlCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Centrifuge WebSocket URL',
-            hintText: 'ws://localhost:8000/connection/websocket',
-            helperText: 'WebSocket endpoint of the Centrifuge server',
-            border: OutlineInputBorder(),
+        Semantics(
+          label: 'Centrifuge WebSocket URL Input',
+          textField: true,
+          child: TextField(
+            controller: urlCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Centrifuge WebSocket URL',
+              hintText: 'ws://localhost:8000/connection/websocket',
+              helperText: 'WebSocket endpoint of the Centrifuge server',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(height: 16),
