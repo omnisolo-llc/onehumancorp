@@ -105,3 +105,29 @@ service HubService {
   rpc Reason(ReasonRequest) returns (ReasonResponse);
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
 }
+
+message WizardField {
+  string key = 1;
+  string label = 2;
+  string type = 3; // e.g., "text", "password", "url"
+  bool required = 4;
+  string description = 5;
+}
+
+message WizardStep {
+  string title = 1;
+  string description = 2;
+  repeated WizardField fields = 3;
+}
+
+message IntegrationMetadata {
+  string id = 1;
+  string name = 2;
+  string type = 3;      
+  string category = 4;  
+  string base_url = 5;
+  string description = 6;
+  string publisher = 7;
+  string icon = 8;
+  repeated string tags = 9;
+}

@@ -14,6 +14,7 @@ exports_files([
 ])
 
 # gazelle:exclude srcs/proto
+# gazelle:resolve go github.com/onehumancorp/mono/srcs/proto //srcs/proto:hub_go_proto
 gazelle(name = "gazelle")
 
 gazelle(
@@ -61,7 +62,7 @@ alias(
 # Alias to start the backend (Go)
 alias(
     name = "start-backend",
-    actual = "//srcs/cmd/ohc:ohc",
+    actual = "//srcs/server:ohc",
     visibility = ["//visibility:public"],
 )
 

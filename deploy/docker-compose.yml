@@ -79,7 +79,7 @@ services:
       POSTGRES_USER: ohc
       POSTGRES_PASSWORD: ohc
       POSTGRES_DB: ohc
-      POSTGRES_MULTIPLE_DATABASES: ohc,chatwoot
+      POSTGRES_MULTIPLE_DATABASES: ohc,chatwoot,plane
     volumes:
       - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
     ports:
@@ -154,3 +154,37 @@ services:
     depends_on:
       - prometheus
 
+  plane-web:
+    image: makeplane/plane-frontend:latest
+    ports:
+      - "3003:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - plane-api
+
+  plane-api:
+    image: makeplane/plane-backend:latest
+    command: ./bin/takeoff
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://ohc:ohc@postgres:5432/plane?sslmode=disable
+      - REDIS_URL=redis://redis:6379/1
+      - SECRET_KEY=an_extremely_secret_key_that_is_long_enough_for_plane
+      - WEB_URL=http://localhost:3003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  plane-worker:
+    image: makeplane/plane-backend:latest
+    command: ./bin/worker
+    environment:
+      - DATABASE_URL=postgres://ohc:ohc@postgres:5432/plane?sslmode=disable
+      - REDIS_URL=redis://redis:6379/1
+      - SECRET_KEY=an_extremely_secret_key_that_is_long_enough_for_plane
+    depends_on:
+      - plane-api
