@@ -60,7 +60,7 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert malformed JSON task
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m2', 'ROLE', 'invalid_json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, payload, status) VALUES ('m2', 'ROLE', 'invalid_json', 'PENDING')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert JSON without ID
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m3', 'ROLE', '{\"type\":\"TASK\"}', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, payload, status) VALUES ('m3', 'ROLE', '{\"type\":\"TASK\"}', 'PENDING')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}

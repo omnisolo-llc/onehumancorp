@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -58,6 +59,15 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		return nil, err
 	}
 
+	db.SetMaxOpenConns(1)
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+		_, err = db.Exec("PRAGMA journal_mode=WAL;")
+		if err == nil {
+			db.Exec("PRAGMA synchronous=NORMAL;")
+			db.Exec("PRAGMA busy_timeout=5000;")
+		}
+	}
+
 	if err := initializeTables(db); err != nil {
 		return nil, err
 	}
@@ -75,7 +85,7 @@ func initializeTables(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
 			role TEXT NOT NULL,
-			task TEXT NOT NULL,
+			payload TEXT NOT NULL,
 			status TEXT NOT NULL,
 			assigned_to TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -153,7 +163,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
 		if err != nil {
 			return err
 		}
@@ -230,7 +240,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+			"INSERT INTO agent_missions (id, role, payload, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
 			missionID, role, string(taskBytes),
 		)
 		return err
@@ -252,11 +262,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,6 +19,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/scheduler"
 	"github.com/onehumancorp/mono/srcs/settings"
 	"github.com/onehumancorp/mono/srcs/telemetry"
+
+	"github.com/onehumancorp/mono/src/agents"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -72,44 +73,14 @@ func redactInterfacePII(val interface{}) interface{} {
 	}
 }
 
-// Status indicates the current operational phase of an AI agent within the workforce.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Status string
+type Status = agents.Status
 
 const (
-	// StatusIdle represents the IDLE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusIdle Status = "IDLE"
-	// StatusActive represents the ACTIVE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusActive Status = "ACTIVE"
-	// StatusInMeeting represents the INMEETING lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusInMeeting Status = "IN_MEETING"
-	// StatusBlocked represents the BLOCKED lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusBlocked Status = "BLOCKED"
-	// StatusWaitingForTools represents the WAITINGFORTOOLS lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusWaitingForTools Status = "WAITING_FOR_TOOLS"
+	StatusIdle            = agents.StatusIdle
+	StatusActive          = agents.StatusActive
+	StatusInMeeting       = agents.StatusInMeeting
+	StatusBlocked         = agents.StatusBlocked
+	StatusWaitingForTools = agents.StatusWaitingForTools
 )
 
 // Event type constants for the asynchronous pub/sub agent interaction protocol.
@@ -194,23 +165,7 @@ const (
 	EventApprovalNeeded = "ApprovalNeeded"
 )
 
-// Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Agent struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Role           string `json:"role"`
-	OrganizationID string `json:"organizationId"`
-	Status         Status `json:"status"`
-	// ProviderType identifies the external agent implementation backing this worker
-	// (e.g. "claude", "gemini", "opencode").  An empty string or "builtin" means
-	// the platform's own lightweight agent is used.
-	ProviderType string `json:"providerType,omitempty"`
-	Region       string `json:"region,omitempty"`
-}
+type Agent = agents.Agent
 
 // Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.
 // Accepts no parameters.
@@ -1172,6 +1127,7 @@ var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Has no side effects.
 type MinimaxClient struct {
 	APIKey string
+	cb     *CircuitBreaker
 }
 
 // NewMinimaxClient functionality.
@@ -1180,7 +1136,10 @@ type MinimaxClient struct {
 // Produces no errors.
 // Has no side effects.
 func NewMinimaxClient(apiKey string) *MinimaxClient {
-	return &MinimaxClient{APIKey: apiKey}
+	return &MinimaxClient{
+		APIKey: apiKey,
+		cb:     NewCircuitBreaker(3, 5*time.Second),
+	}
 }
 
 var bufferPool = sync.Pool{
@@ -1228,16 +1187,26 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 	// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
 	// Prevents severe connection and resource leaks by reusing connection pools on every request.
-	resp, err := sharedHTTPClient.Do(req)
+
+	var resp *http.Response
+	err = c.cb.Execute(func() error {
+		var reqErr error
+		resp, reqErr = sharedHTTPClient.Do(req)
+		if reqErr != nil {
+			return reqErr
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("http error: %d", resp.StatusCode)
+		}
+		return nil
+	})
 	if err != nil {
+		if resp != nil {
+			resp.Body.Close()
+		}
 		return "", err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-	}
 
 	var result struct {
 		Choices []struct {
@@ -1256,4 +1225,52 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	}
 
 	return result.Choices[0].Message.Content, nil
+}
+
+type CircuitBreaker struct {
+	mu           sync.Mutex
+	failures     int
+	maxFailures  int
+	lastFailure  time.Time
+	resetTimeout time.Duration
+	state        string
+}
+
+func NewCircuitBreaker(maxFailures int, resetTimeout time.Duration) *CircuitBreaker {
+	return &CircuitBreaker{
+		maxFailures:  maxFailures,
+		resetTimeout: resetTimeout,
+		state:        "CLOSED",
+	}
+}
+
+func (cb *CircuitBreaker) Execute(operation func() error) error {
+	cb.mu.Lock()
+	if cb.state == "OPEN" {
+		if time.Since(cb.lastFailure) > cb.resetTimeout {
+			cb.state = "HALF_OPEN"
+		} else {
+			cb.mu.Unlock()
+			return fmt.Errorf("circuit breaker is OPEN")
+		}
+	}
+	cb.mu.Unlock()
+
+	err := operation()
+
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+
+	if err != nil {
+		cb.failures++
+		cb.lastFailure = time.Now()
+		if cb.failures >= cb.maxFailures {
+			cb.state = "OPEN"
+		}
+		return err
+	}
+
+	cb.failures = 0
+	cb.state = "CLOSED"
+	return nil
 }
