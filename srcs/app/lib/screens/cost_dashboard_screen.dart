@@ -38,10 +38,24 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
       appBar: AppBar(
         title: const Text('Cost & Token Usage'),
         actions: [
-          IconButton(
-            onPressed: _refresh,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh costs',
+          FutureBuilder<DashboardSnapshot>(
+            future: _dashboardFuture,
+            builder: (context, snapshot) {
+              final isRefreshing =
+                  snapshot.connectionState == ConnectionState.waiting;
+              return IconButton(
+                onPressed: isRefreshing ? null : _refresh,
+                icon:
+                    isRefreshing
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.refresh),
+                tooltip: 'Refresh costs',
+              );
+            },
           ),
         ],
       ),
