@@ -145,80 +145,83 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               final handoff = handoffs[index];
               final isProcessing = _processingIds.contains(handoff.id);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+              return Semantics(
+                label: 'Handoff from agent to human. Intent: ${handoff.intent}',
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.primaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Intent: ${handoff.intent.toUpperCase()}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onPrimaryContainer,
+                                ),
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: colors.primaryContainer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Intent: ${handoff.intent.toUpperCase()}',
+                            Text(
+                              DateFormat.yMMMd().add_jm().format(
+                                handoff.createdAt,
+                              ),
                               style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: colors.onPrimaryContainer,
+                                fontSize: 12,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Escalated by Agent: ${handoff.fromAgentId}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          handoff.currentState,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        if (handoff.visualGroundTruth != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.black12,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_outlined,
+                                size: 48,
+                                color: Colors.grey,
                               ),
                             ),
                           ),
-                          Text(
-                            DateFormat.yMMMd().add_jm().format(
-                              handoff.createdAt,
-                            ),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
                         ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Escalated by Agent: ${handoff.fromAgentId}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        handoff.currentState,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      if (handoff.visualGroundTruth != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          height: 200,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.image_outlined,
-                              size: 48,
-                              color: Colors.grey,
-                            ),
-                          ),
+                        const SizedBox(height: 24),
+                        SlideToApprove(
+                          disabled: isProcessing,
+                          onApprove: () => _handleApprove(handoff.id),
+                          onReject: () => _handleReject(handoff.id),
                         ),
                       ],
-                      const SizedBox(height: 24),
-                      SlideToApprove(
-                        disabled: isProcessing,
-                        onApprove: () => _handleApprove(handoff.id),
-                        onReject: () => _handleReject(handoff.id),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               );

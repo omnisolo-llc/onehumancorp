@@ -91,115 +91,118 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
               final pipeline = pipelines[index];
               final isProcessing = _processingIds.contains(pipeline.id);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 24),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                pipeline.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+              return Semantics(
+                label: 'Pipeline: ${pipeline.name}, Status: ${pipeline.status}',
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  pipeline.name,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.account_tree_outlined,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    pipeline.branch,
-                                    style: TextStyle(
-                                      color: colors.onSurfaceVariant,
-                                      fontSize: 12,
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.account_tree_outlined,
+                                      size: 14,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      pipeline.branch,
+                                      style: TextStyle(
+                                        color: colors.onSurfaceVariant,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            _StatusBadge(status: pipeline.status),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Initiated by: ${pipeline.initiatedBy ?? "System"}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Updated: ${DateFormat.MMMd().add_jm().format(pipeline.updatedAt)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onSurfaceVariant,
                               ),
-                            ],
-                          ),
-                          _StatusBadge(status: pipeline.status),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          const Icon(Icons.person_outline, size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Initiated by: ${pipeline.initiatedBy ?? "System"}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          const Spacer(),
-                          Text(
-                            'Updated: ${DateFormat.MMMd().add_jm().format(pipeline.updatedAt)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colors.onSurfaceVariant,
+                            ),
+                          ],
+                        ),
+                        if (pipeline.stagingUrl != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: colors.secondaryContainer.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.link, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    pipeline.stagingUrl!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.open_in_new, size: 16),
+                                  tooltip: 'Open staging URL',
+                                  onPressed: () {}, // Link preview
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
-                      if (pipeline.stagingUrl != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colors.secondaryContainer.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 24),
+                        if (pipeline.status == 'staging') ...[
+                          const Text(
+                            'Promote to Production',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.link, size: 16),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  pipeline.stagingUrl!,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontFamily: 'monospace',
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.open_in_new, size: 16),
-                                tooltip: 'Open staging URL',
-                                onPressed: () {}, // Link preview
-                              ),
-                            ],
+                          const SizedBox(height: 12),
+                          SlideToApprove(
+                            disabled: isProcessing,
+                            onApprove: () => _handlePromote(pipeline.id),
+                            onReject: () {}, // Optional cancel
                           ),
-                        ),
+                        ],
                       ],
-                      const SizedBox(height: 24),
-                      if (pipeline.status == 'staging') ...[
-                        const Text(
-                          'Promote to Production',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SlideToApprove(
-                          disabled: isProcessing,
-                          onApprove: () => _handlePromote(pipeline.id),
-                          onReject: () {}, // Optional cancel
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
               );

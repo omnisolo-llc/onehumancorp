@@ -1,0 +1,3 @@
+type: memory
+timestamp: 1774972912
+content: "Identified a recurring omission of Semantics around Card widgets in Flutter screens (Handoffs, Pipelines, Security, Settings). Wrapped them with Semantics labels interpolating contextual variables (e.g. Pipeline name and status, Handoff intent, Security issue severity, and Backend status) to dramatically improve screen reader support per PALETTE's Axioms. Removed temporary script patch_tooltips.py."
