@@ -5,31 +5,7 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 runfiles_base="${RUNFILES_DIR:-${BASH_SOURCE[0]}.runfiles}"
 
-resolve_helper() {
-	local candidate
-
-	for candidate in \
-		"${script_dir}/bazel_helpers.sh" \
-		"${runfiles_base}/${TEST_WORKSPACE:-mono}/srcs/app/test/bazel_helpers.sh" \
-		"${runfiles_base}/_main/srcs/app/test/bazel_helpers.sh" \
-		"${runfiles_base}/__main__/srcs/app/test/bazel_helpers.sh"; do
-		if [[ -n "${candidate}" && -f "${candidate}" ]]; then
-			printf '%s\n' "${candidate}"
-			return 0
-		fi
-	done
-
-	return 1
-}
-helper_path="$(resolve_helper || true)"
-if [[ -z "${helper_path}" ]]; then
-	echo "ERROR: could not locate bazel_helpers.sh." >&2
-	exit 1
-fi
-source "${helper_path}"
-
 port="${1:-8081}"
-workspace_root="${BUILD_WORKSPACE_DIRECTORY:-${repo_root}}"
 
 find_runfiles_root() {
 	local candidate
@@ -73,10 +49,9 @@ if [[ -n "${runfiles_root}" ]]; then
 fi
 
 if [[ -z "${web_artifacts}" ]]; then
-	run_bazel build //srcs/app:app_web
-	web_artifacts="$(find_web_artifacts "${workspace_root}" \
-		"bazel-bin/srcs/app/app_web.web_build_artifacts" \
-		"bazel-bin/srcs/app/app_web_build_artifacts")"
+	echo "ERROR: could not locate Bazel-built Flutter web artifacts in runfiles." >&2
+	echo "Ensure this helper is launched via 'bazelisk run //srcs/app:start'." >&2
+	exit 1
 fi
 
 echo "Serving Bazel-built Flutter app from ${web_artifacts}"

@@ -112,6 +112,26 @@ flutter_library(
 
 # (Individual tests are now in lib/*/BUILD.bazel)
 
+test_suite(
+    name = "flutter_unit_tests",
+    tags = ["manual"],
+    tests = [
+        "//srcs/app/lib/models:all_tests",
+        "//srcs/app/lib/screens:all_tests",
+        "//srcs/app/lib/services:all_tests",
+    ],
+)
+
+test_suite(
+    name = "flutter_coverage_tests",
+    tags = ["manual"],
+    tests = [
+        "//srcs/app/lib/models:coverage_test",
+        "//srcs/app/lib/screens:coverage_test",
+        "//srcs/app/lib/services:coverage_test",
+    ],
+)
+
 # ── Layout / structure test (no Flutter required) ─────────────────────────────
 # Verifies all expected source files are present in the app tree.
 # Always runs; no Flutter SDK needed.
@@ -190,10 +210,7 @@ sh_test(
 sh_binary(
     name = "start",
     srcs = ["test/start_web.sh"],
-    data = [
-        "test/bazel_helpers.sh",
-        ":app",
-    ],
+    data = [":app"],
     visibility = ["//visibility:public"],
 )
 
@@ -202,7 +219,6 @@ sh_binary(
     srcs = ["test/capture_screenshots.sh"],
     data = [
         "e2e/capture_screenshots.mjs",
-        "test/bazel_helpers.sh",
         ":app",
         "//:node_modules/@playwright/test",
     ],

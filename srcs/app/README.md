@@ -15,7 +15,7 @@ srcs/app/
 │   ├── screens/            # Full-page UI screens + widget tests
 │   └── services/           # API, auth, local manager, and service tests
 ├── e2e/                    # Playwright specs + screenshot capture runner
-├── test/                   # Bazel wrapper scripts + desktop e2e test
+├── test/                   # Bazel-run test/server helpers + desktop e2e test
 ├── android/                # Android-specific files
 ├── ios/                    # iOS-specific files
 ├── macos/                  # macOS-specific files
@@ -43,20 +43,20 @@ bazelisk run //srcs/app:start
 
 ## Developer Workflow
 
-The wrapper scripts under `srcs/app/test/` are now thin Bazel front ends:
+Use Bazel targets directly for all supported app workflows:
 
 ```bash
 # All app unit + widget tests
-srcs/app/test/flutter_unit_test.sh
+bazelisk test //srcs/app:flutter_unit_tests
 
-# One specific test file
-srcs/app/test/flutter_single_test.sh lib/services/local_manager_service_test.dart
+# One specific test file (per-file Bazel target)
+bazelisk test //srcs/app/lib/services:local_manager_service_test
 
 # Per-package coverage checks (>= 90% each)
-srcs/app/test/flutter_coverage_check.sh
+bazelisk test //srcs/app:flutter_coverage_tests
 ```
 
-Direct Bazel targets are available for non-wrapper workflows:
+Other Bazel-native targets:
 
 ```bash
 # Layout validation
