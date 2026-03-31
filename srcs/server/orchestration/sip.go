@@ -59,7 +59,7 @@ func withRetry(ctx context.Context, op func() error) error {
 func NewSIPDB(dbPath string) (*SIPDB, error) {
 
 	dsn := dbPath
-	if dbPath != ":memory:" {
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
 		if !strings.Contains(dsn, "?") {
 			dsn += "?"
 		} else {

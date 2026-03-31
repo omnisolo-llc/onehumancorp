@@ -12,19 +12,21 @@ import (
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)
 // and randomly assigns an idle agent to them by injecting the task into their context.
 type TaskWorker struct {
-	planeClient *plane.Client
+	planeClient  *plane.Client
+	pollInterval time.Duration
 }
 
 // NewTaskWorker creates a new TaskWorker.
 func NewTaskWorker(pc *plane.Client) *TaskWorker {
 	return &TaskWorker{
-		planeClient: pc,
+		planeClient:  pc,
+		pollInterval: 30 * time.Second,
 	}
 }
 
 // Start begins the background polling loop for the task worker.
 func (tw *TaskWorker) Start(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(tw.pollInterval)
 	go func() {
 		defer ticker.Stop()
 		for {
