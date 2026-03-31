@@ -53,25 +53,25 @@ class _DashboardContent extends StatelessWidget {
               label: 'Active Agents',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
-              color: Colors.indigo,
+              color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
               label: 'Dashboard Updates',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
-              color: Colors.orange,
+              color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
               label: 'Open Meetings',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
-              color: Colors.teal,
+              color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
               label: 'Total Org Members',
               value: data.organization.members.length.toString(),
               icon: Icons.people,
-              color: Colors.purple,
+              color: Theme.of(context).colorScheme.primaryContainer,
             ),
           ],
         ),
@@ -88,7 +88,9 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(
+        context,
+      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 }
@@ -118,51 +120,73 @@ class _StatCard extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(<double>[
-                1.787, -0.715, -0.072, 0, 0,
-                -0.213, 1.285, -0.072, 0, 0,
-                -0.213, -0.715, 1.928, 0, 0,
-                0, 0, 0, 1, 0,
+                1.787,
+                -0.715,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                1.285,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                -0.715,
+                1.928,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
               ]),
               inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             ),
             child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.08),
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {},
-                    splashColor: color.withOpacity(0.1),
-                    highlightColor: color.withOpacity(0.05),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(icon, color: color, size: 28),
-                          const SizedBox(height: 12),
-                          Text(
-                            value,
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                            ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {},
+                  splashColor: color.withOpacity(0.1),
+                  highlightColor: color.withOpacity(0.05),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(icon, color: color, size: 28),
+                        const SizedBox(height: 12),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: color,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            label,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
+            ),
           ),
         ),
       ),

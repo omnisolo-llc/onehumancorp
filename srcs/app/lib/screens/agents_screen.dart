@@ -31,9 +31,11 @@ class AgentsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (agents) => agents.isEmpty
-            ? _EmptyAgents(onHire: () => context.go('/agents/hire'))
-            : _AgentList(agents: agents),
+        data:
+            (agents) =>
+                agents.isEmpty
+                    ? _EmptyAgents(onHire: () => context.go('/agents/hire'))
+                    : _AgentList(agents: agents),
       ),
     );
   }
@@ -51,10 +53,7 @@ class _EmptyAgents extends StatelessWidget {
         children: [
           const Icon(Icons.smart_toy, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          Text(
-            'No agents yet',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('No agents yet', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Text('Hire your first AI agent to get started.'),
           const SizedBox(height: 24),
@@ -93,10 +92,14 @@ class _AgentCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: agent.isRunning ? Colors.green : Colors.grey.shade300,
+          backgroundColor:
+              agent.isRunning ? Colors.green : Colors.grey.shade300,
           child: const Icon(Icons.smart_toy, color: Colors.white),
         ),
-        title: Text(agent.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          agent.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Text(agent.role),
         trailing: Chip(
           label: Text(agent.status),
