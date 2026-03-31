@@ -109,3 +109,45 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleMCPInvokeGithubMCP(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	authStore := auth.NewStore()
+
+	_, err := authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"})
+	if err != nil {
+		t.Fatal("create user failed", err)
+	}
+	user, err := authStore.Authenticate("adminuser", "adminpass123")
+	if err != nil {
+		t.Fatal("auth failed", err)
+	}
+	token, _ := authStore.IssueToken(user)
+
+	srv := &Server{
+		org:             org,
+		hub:             hub,
+		tracker:         tracker,
+		authStore:       authStore,
+		dynamicMCPTools: []MCPTool{{ID: "github-mcp", Name: "GitHub (MCP)", Status: "available"}},
+	}
+
+	t.Run("invoke github-mcp", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "github-mcp", "params": {"a": "b"}}`))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		handler := auth.Middleware(authStore)(http.HandlerFunc(srv.handleMCPInvoke))
+		handler.ServeHTTP(w, req)
+
+		// Unimplemented default branch should return 200 with an acknowledgement for dynamically found tools
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+		}
+		if !strings.Contains(w.Body.String(), "Tool invocation recorded") {
+			t.Errorf("expected response to contain acknowledgement, got %s", w.Body.String())
+		}
+	})
+}

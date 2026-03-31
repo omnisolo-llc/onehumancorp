@@ -37,6 +37,7 @@ func DefaultRegistry() *Registry {
 	r.Register(&OpenClawProvider{})
 	r.Register(&IronClawProvider{})
 	r.Register(&BuiltinProvider{})
+	r.Register(&GitHubMCPProvider{})
 	return r
 }
 
@@ -81,6 +82,7 @@ func (r *Registry) All() []Provider {
 		ProviderTypeOpenClaw,
 		ProviderTypeIronClaw,
 		ProviderTypeBuiltin,
+		ProviderTypeGitHubMCP,
 	}
 	seen := map[ProviderType]bool{}
 	for _, t := range ordered {
