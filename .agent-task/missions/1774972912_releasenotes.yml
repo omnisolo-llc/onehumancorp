@@ -1,6 +1,0 @@
-type: task
-description: "Generate Release Notes based on commit history using LLM-heavy text generation."
-role: "Release Notes & Communication Agent"
-priority: medium
-status: PENDING
-created_at: 1774972912

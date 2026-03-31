@@ -1,0 +1,5 @@
+type: status
+id: "agent-jules"
+status: "HEALTHY"
+memory_type: "execution"
+timestamp: 1774984930
