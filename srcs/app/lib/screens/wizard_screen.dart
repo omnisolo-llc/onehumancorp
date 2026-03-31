@@ -274,9 +274,11 @@ class _StepIndicator extends StatelessWidget {
         final done = i < current;
         final active = i == current;
         return Expanded(
-          child: Row(
-            children: [
-              CircleAvatar(
+          child: Semantics(
+            label: 'Step ${i + 1}: ${_labels[i]}, Status: ${done ? 'Completed' : active ? 'Active' : 'Pending'}',
+            child: Row(
+              children: [
+                CircleAvatar(
                 radius: 16,
                 backgroundColor: done
                     ? Colors.green
@@ -300,7 +302,8 @@ class _StepIndicator extends StatelessWidget {
                         active ? FontWeight.bold : FontWeight.normal,
                   )),
               if (i < _labels.length - 1) const Expanded(child: Divider()),
-            ],
+              ],
+            ),
           ),
         );
       }),
@@ -334,13 +337,16 @@ class _StatusBanner extends StatelessWidget {
     }
 
     if (status.configured) {
-      return buildGlassCard(
-        color: Colors.green,
-        child: const ListTile(
+      return Semantics(
+        label: 'Platform is fully configured',
+        child: buildGlassCard(
+          color: Colors.green,
+          child: const ListTile(
           leading: Icon(Icons.check_circle, color: Colors.green),
           title: Text('Platform is fully configured',
               style: TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text('All wizard steps have been completed.'),
+        ),
         ),
       );
     }
@@ -348,13 +354,16 @@ class _StatusBanner extends StatelessWidget {
     if (!status.serverStep) missing.add('Server');
     if (!status.aiProviderStep) missing.add('AI Provider');
     if (!status.centrifugeStep) missing.add('Centrifuge');
-    return buildGlassCard(
-      color: Colors.orange,
-      child: ListTile(
+    return Semantics(
+      label: 'Configuration incomplete. Remaining: ${missing.join(', ')}',
+      child: buildGlassCard(
+        color: Colors.orange,
+        child: ListTile(
         leading: const Icon(Icons.warning_amber, color: Colors.orange),
         title: const Text('Configuration incomplete',
             style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text('Remaining: ${missing.join(', ')}'),
+        ),
       ),
     );
   }
