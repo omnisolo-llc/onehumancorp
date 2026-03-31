@@ -20,6 +20,7 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
+        "//srcs/agents",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",

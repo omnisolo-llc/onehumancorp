@@ -87,12 +87,9 @@ func initializeTables(db *sql.DB) error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
-			role TEXT NOT NULL,
-			task TEXT NOT NULL,
 			status TEXT NOT NULL,
-			assigned_to TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			payload TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,
@@ -166,8 +163,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		// Extract role from the JSON payload (assuming task message has a specific role mapping or fallback based on payload contents).
+		// Since we must query by role, we can use json_extract.
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND json_extract(payload, '$.role') = ?", role)
 		if err != nil {
+			// fallback if json_extract is not supported or there are issues:
+			// "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND payload LIKE '%\"role\":\"" + role + "\"%'"
+			// However sqlite modernc supports json_extract.
 			return err
 		}
 		defer rows.Close()
@@ -176,6 +178,30 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 			var id, taskStr string
 			if err := rows.Scan(&id, &taskStr); err != nil {
 				return err
+			}
+
+			var payloadWrapper struct {
+				Task json.RawMessage `json:"task"`
+			}
+
+			// Try to unmarshal into a wrapper first in case payload was saved with `role` and `task` keys.
+			if err := json.Unmarshal([]byte(taskStr), &payloadWrapper); err == nil && len(payloadWrapper.Task) > 0 {
+				var msg Message
+				if err := json.Unmarshal(payloadWrapper.Task, &msg); err != nil {
+					// fallback for inner task
+					var strTask string
+					if err := json.Unmarshal(payloadWrapper.Task, &strTask); err == nil {
+						msg = Message{ID: id, Content: strTask, Type: EventTask}
+					} else {
+						msg = Message{ID: id, Content: string(payloadWrapper.Task), Type: EventTask}
+					}
+				} else {
+					if msg.ID == "" {
+						msg.ID = id
+					}
+				}
+				missions = append(missions, msg)
+				continue
 			}
 
 			var msg Message
@@ -201,7 +227,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", missionID)
+		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
 		if err != nil {
 			return err
 		}
@@ -237,14 +263,18 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	taskBytes, err := json.Marshal(task)
+	payloadMap := map[string]interface{}{
+		"role": role,
+		"task": task,
+	}
+	payloadBytes, err := json.Marshal(payloadMap)
 	if err != nil {
 		return err
 	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-			missionID, role, string(taskBytes),
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			missionID, string(payloadBytes),
 		)
 		return err
 	})

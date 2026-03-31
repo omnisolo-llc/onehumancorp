@@ -61,7 +61,7 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert malformed JSON task
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m2', 'ROLE', 'invalid_json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', '{\"role\": \"ROLE\", \"task\": \"invalid_json\"}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert JSON without ID
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m3', 'ROLE', '{\"type\":\"TASK\"}', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m3', 'PENDING', '{\"role\": \"ROLE\", \"task\": {\"type\":\"TASK\"}}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -229,10 +229,13 @@ func TestSIPDB_GetPendingMissions_ScanError_Coverage(t *testing.T) {
 	defer db.Close()
 	ctx := context.Background()
 	_, _ = db.db.Exec("DROP TABLE agent_missions")
-	_, _ = db.db.Exec("CREATE TABLE agent_missions (id TEXT, role TEXT, task TEXT, status TEXT)")
-	_, _ = db.db.Exec("INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'ROLE', NULL, 'PENDING')")
+	_, _ = db.db.Exec("CREATE TABLE agent_missions (id TEXT, status TEXT, payload TEXT)")
+	// SQLite json_extract will fail if we query by role and it's null, but we need the scan to fail.
+	// We can't really make scan fail when using `SELECT id, payload ... json_extract(...) = ?` without it skipping the row.
+	// So instead let's just assert no error but 0 results, or modify schema.
+	_, _ = db.db.Exec("INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\"}')")
 	_, err = db.GetPendingMissions(ctx, "ROLE")
 	if err == nil {
-		t.Fatal("Expected scan error due to NULL task")
+		t.Fatal("Expected scan error due to NULL id")
 	}
 }
