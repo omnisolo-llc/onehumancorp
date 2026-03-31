@@ -113,8 +113,9 @@ void main() {
   group('CentrifugeService publish', () {
     setUp(() {
       when(() => mockClient.connect()).thenAnswer((_) async {});
-      when(() => mockClient.publish(any(), any()))
-          .thenAnswer((_) async => centrifuge.PublishResult());
+      when(
+        () => mockClient.publish(any(), any()),
+      ).thenAnswer((_) async => centrifuge.PublishResult());
     });
 
     test('publish sends message to channel', () async {
@@ -124,10 +125,13 @@ void main() {
       verify(() => mockClient.publish(any(), any())).called(1);
     });
 
-    test('publish without connect does not throw (null client check)', () async {
-      // _client is null, publish uses ?. operator
-      await expectLater(svc.publish('general', 'test'), completes);
-    });
+    test(
+      'publish without connect does not throw (null client check)',
+      () async {
+        // _client is null, publish uses ?. operator
+        await expectLater(svc.publish('general', 'test'), completes);
+      },
+    );
   });
 
   group('CentrifugeService disconnect with subscriptions', () {
@@ -177,12 +181,14 @@ void main() {
         'sent_at': '2025-01-01T10:00:00.000Z',
       });
 
-      pubController.add(centrifuge.PublicationEvent(
-        utf8.encode(msgData),
-        fixnum.Int64.ZERO,
-        null,
-        {},
-      ));
+      pubController.add(
+        centrifuge.PublicationEvent(
+          utf8.encode(msgData),
+          fixnum.Int64.ZERO,
+          null,
+          {},
+        ),
+      );
 
       await Future.delayed(const Duration(milliseconds: 10));
       expect(received, hasLength(1));
@@ -209,12 +215,14 @@ void main() {
       final sub = stream.listen(received.add);
 
       // Send invalid JSON
-      pubController.add(centrifuge.PublicationEvent(
-        utf8.encode('not-valid-json{{{'),
-        fixnum.Int64.ZERO,
-        null,
-        {},
-      ));
+      pubController.add(
+        centrifuge.PublicationEvent(
+          utf8.encode('not-valid-json{{{'),
+          fixnum.Int64.ZERO,
+          null,
+          {},
+        ),
+      );
 
       await Future.delayed(const Duration(milliseconds: 10));
       expect(received, isEmpty);
@@ -227,8 +235,10 @@ void main() {
   group('centrifugeUrlProvider', () {
     test('returns default URL', () {
       expect(
-        const String.fromEnvironment('CENTRIFUGE_URL',
-            defaultValue: 'ws://localhost:8000/connection/websocket'),
+        const String.fromEnvironment(
+          'CENTRIFUGE_URL',
+          defaultValue: 'ws://localhost:8000/connection/websocket',
+        ),
         'ws://localhost:8000/connection/websocket',
       );
     });

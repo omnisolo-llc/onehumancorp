@@ -14,7 +14,9 @@ class Settings {
 
   factory Settings.fromJson(Map<String, dynamic> json) {
     return Settings(
-      minimaxApiKey: json['minimax_api_key'] as String? ?? json['minimaxApiKey'] as String?,
+      minimaxApiKey:
+          json['minimax_api_key'] as String? ??
+          json['minimaxApiKey'] as String?,
       theme: json['theme'] as String?,
       backendUrl: json['backend_url'] as String?,
       standaloneMode: json['standalone_mode'] as bool? ?? false,
@@ -22,9 +24,9 @@ class Settings {
   }
 
   Map<String, dynamic> toJson() => {
-        'minimax_api_key': minimaxApiKey,
-        'theme': theme,
-        'backend_url': backendUrl,
-        'standalone_mode': standaloneMode,
-      };
+    'minimax_api_key': minimaxApiKey,
+    'theme': theme,
+    'backend_url': backendUrl,
+    'standalone_mode': standaloneMode,
+  };
 }

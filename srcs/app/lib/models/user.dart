@@ -30,13 +30,13 @@ class UserPublic {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'username': username,
-        'email': email,
-        'roles': roles,
-        'active': active,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'username': username,
+    'email': email,
+    'roles': roles,
+    'active': active,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   bool get isAdmin => roles.contains('admin');
 }

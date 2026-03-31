@@ -38,13 +38,13 @@ class CentrifugeMessage {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'channel_id': channelId,
-        'author_id': authorId,
-        'author_name': authorName,
-        'body': body,
-        'sent_at': sentAt.toIso8601String(),
-      };
+    'id': id,
+    'channel_id': channelId,
+    'author_id': authorId,
+    'author_name': authorName,
+    'body': body,
+    'sent_at': sentAt.toIso8601String(),
+  };
 }
 
 /// Manages a real-time chat connection to a Centrifuge server.
@@ -66,7 +66,7 @@ class CentrifugeService {
   /// default [centrifuge.createClient] function is used. Inject a custom
   /// factory in tests to avoid real network connections.
   final centrifuge.Client Function(String, centrifuge.ClientConfig)?
-      clientFactory;
+  clientFactory;
 
   CentrifugeService({
     required this.serverUrl,
@@ -79,12 +79,7 @@ class CentrifugeService {
   /// Connect to the Centrifuge server.
   Future<void> connect() async {
     final factory = clientFactory ?? centrifuge.createClient;
-    _client = factory(
-      serverUrl,
-      centrifuge.ClientConfig(
-        token: token,
-      ),
-    );
+    _client = factory(serverUrl, centrifuge.ClientConfig(token: token));
     await _client!.connect();
   }
 
@@ -103,7 +98,8 @@ class CentrifugeService {
     final sub = _client!.newSubscription(channel);
     sub.publication.listen((event) {
       try {
-        final json = jsonDecode(utf8.decode(event.data)) as Map<String, dynamic>;
+        final json =
+            jsonDecode(utf8.decode(event.data)) as Map<String, dynamic>;
         controller.add(CentrifugeMessage.fromJson(json));
       } catch (e) {
         debugPrint('[CentrifugeService] Failed to parse message: $e');
