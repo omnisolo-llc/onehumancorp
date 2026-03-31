@@ -164,7 +164,7 @@ func seededAccounting(now time.Time) (domain.Organization, *orchestration.Hub, *
 		AgentID:          "cfo-1",
 		AgentRole:        "CFO",
 		OrganizationID:   org.ID,
-		Model:            "claude-3.5-sonnet",
+		Model:            "gpt-4o-mini",
 		PromptTokens:     1500,
 		CompletionTokens: 500,
 		OccurredAt:       now.Add(-3 * time.Minute),
