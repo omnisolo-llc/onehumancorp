@@ -589,7 +589,7 @@ func TestHandleMCPInvokeUnknownTool(t *testing.T) {
 	app, _, _ := newTestServer(t)
 
 	// Since we added strict validation, unknown tools should return 404
-	reqBody := `{"toolId":"unknown-tool","params":{}}`
+	reqBody := `{"toolId":"unknown-tool","params":{},"spiffeId":"spiffe://ohc.os/agent/test-agent"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/mcp/tools/invoke", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -619,7 +619,7 @@ func TestHandleMCPInvokeWithNilParams(t *testing.T) {
 	// Add a dummy tool to bypass the unknown tool check for testing nil params specifically
 	app.dynamicMCPTools = append(app.dynamicMCPTools, MCPTool{ID: "dummy-tool"})
 
-	reqBody := `{"toolId":"dummy-tool"}`
+	reqBody := `{"toolId":"dummy-tool", "spiffeId":"spiffe://ohc.os/agent/test-agent"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/mcp/tools/invoke", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

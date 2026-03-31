@@ -42,7 +42,7 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  toolID,
 			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"params":  json.RawMessage(`{"integrationId": "123"}`), "spiffeId": "spiffe://ohc.os/agent/test-agent",
 			"agentId": agentID,
 		})
 
@@ -93,7 +93,7 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "slack-mcp",
 			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"params":  json.RawMessage(`{"integrationId": "123"}`), "spiffeId": "spiffe://ohc.os/agent/test-agent",
 			"agentId": "agent-2",
 		})
 
@@ -142,7 +142,7 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  toolID,
 			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"params":  json.RawMessage(`{"integrationId": "123"}`), "spiffeId": "spiffe://ohc.os/agent/test-agent",
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -250,7 +250,7 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "slack-mcp",
 			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"params":  json.RawMessage(`{"integrationId": "123"}`), "spiffeId": "spiffe://ohc.os/agent/test-agent",
 			"agentId": "agent-max",
 		})
 
@@ -313,7 +313,7 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 			// which contains "429", matching the rate limit error check!
 			"toolId":  "tool-429",
 			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"params":  json.RawMessage(`{"integrationId": "123"}`), "spiffeId": "spiffe://ohc.os/agent/test-agent",
 			"agentId": "agent-limited",
 		})
 
@@ -409,7 +409,7 @@ func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			"toolId":  "custom-success-tool",
 			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"params":  json.RawMessage(`{"integrationId": "123"}`), "spiffeId": "spiffe://ohc.os/agent/test-agent",
 			"agentId": "agent-success",
 		})
 

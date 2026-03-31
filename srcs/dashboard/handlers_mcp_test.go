@@ -61,7 +61,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	})
 
 	t.Run("missing params", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy"}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "spiffeId":"spiffe://ohc.os/agent/test-agent"}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -71,7 +71,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	})
 
 	t.Run("success_valid_tool_no_meeting_id", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "params": {"a": "b"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy", "params": {"a": "b"}, "spiffeId":"spiffe://ohc.os/agent/test-agent"}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -97,7 +97,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 		// Register a dummy meeting
 		hub.OpenMeeting("m-1", []string{})
 
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy-tool", "params": {"a": "b"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"toolId": "dummy-tool", "params": {"a": "b"}, "spiffeId":"spiffe://ohc.os/agent/test-agent"}`))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
