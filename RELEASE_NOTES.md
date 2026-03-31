@@ -1,3 +1,6 @@
 # Release Notes
-## v0.2.1
-181cbe23 🎨 Palette: Enhance Accessibility and Micro-Interactions in Integrations Screen (#804)
+
+## Changes
+- `5fd86ac5` chore(agents): Handle empty mission queue autonomously (#849)
+
+Generated automatically.
