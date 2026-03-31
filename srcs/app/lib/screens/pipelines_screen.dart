@@ -97,6 +97,7 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
 
               return Semantics(
                 label: 'Pipeline: ${pipeline.name}, Status: ${pipeline.status}',
+                excludeSemantics: true,
                 child: Card(
                   margin: const EdgeInsets.only(bottom: 24),
                   child: Padding(
@@ -180,10 +181,17 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.open_in_new, size: 16),
-                                  tooltip: 'Open staging URL',
-                                  onPressed: () {}, // Link preview
+                                Semantics(
+                                  button: true,
+                                  label: 'Open staging URL',
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.open_in_new,
+                                      size: 16,
+                                    ),
+                                    tooltip: 'Open staging URL',
+                                    onPressed: () {}, // Link preview
+                                  ),
                                 ),
                               ],
                             ),
