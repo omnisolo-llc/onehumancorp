@@ -1,0 +1,2 @@
+task: "1774897181.yml"
+resolution: "Added github-mcp to package.json and created the Bazel target with a node.js wrapper in index.js. Tested it and it expects GITHUB_PERSONAL_ACCESS_TOKEN. Added github to AvailableMCPBundles inside srcs/agents/agent.go ensuring it's loaded as part of srcs/agents/ capabilities. Completed Bazel e2e testing the bundle locally using the provided testing file format native_test in srcs/agents/mcp/BUILD.bazel. The bundle compiles and launches properly. Tested the tests to verify the integrations."
