@@ -58,6 +58,5 @@ jobs:
               --bes_results_url="" \
               --bes_backend="" \
               --remote_upload_local_results=false \
-              --jobs=200 \
               --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY
           fi
