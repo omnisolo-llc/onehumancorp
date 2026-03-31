@@ -18,7 +18,7 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
 - **Autonomous Orchestration**: Enable agents to delegate tasks to specialists without human intervention.
-- **Cost Observability**: Provide real-time USD cost tracking based on specific model pricing (GPT-4o, Claude 3.5, etc.).
+- **Cost Observability**: Provide real-time USD cost tracking based on specific model pricing (GPT-4o-mini, Claude 3.5, etc.).
 - **Verifiable Identity**: Use SPIFFE SVIDs for mTLS-backed agent-to-agent and agent-to-tool communication.
 - **Zero Lock-in**: Abstract all external tools behind the Model Context Protocol (MCP).
 ### 2.2 Non-Goals

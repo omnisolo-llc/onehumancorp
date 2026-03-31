@@ -61,7 +61,7 @@ When you first open the platform you will see the **One Human Corp Dashboard** w
 3. Fill in:
    - **Name**: display name for the agent
    - **Role**: e.g. `PRODUCT_MANAGER`, `SOFTWARE_ENGINEER`, `GUARDIAN`
-   - **Model** (optional): AI model override, e.g. `gpt-4o`, `gemini-pro`
+   - **Model** (optional): AI model override, e.g. `gpt-4o-mini`, `gemini-pro`
 4. Click **Confirm**.
 
 The new agent appears in the agent list and is available for meetings.
@@ -129,7 +129,7 @@ The **Costs** panel shows real-time token usage across all agents.
 
 | Column | Description |
 |--------|-------------|
-| Model | The AI model used (e.g. `gpt-4o`, `gemini-pro`) |
+| Model | The AI model used (e.g. `gpt-4o-mini`, `gemini-pro`) |
 | Prompt Tokens | Tokens sent to the model |
 | Completion Tokens | Tokens returned by the model |
 | Cost (USD) | Estimated cost based on public pricing |
