@@ -24,3 +24,10 @@ enum AgentStatus {
   IN_MEETING = 3;
   BLOCKED = 4;
 }
+
+message EmptyMessage {}
+
+service DummyCommonService {
+  // Empty service to force protoc-gen-go-grpc to generate common_grpc.pb.go
+  rpc Ping(EmptyMessage) returns (EmptyMessage);
+}

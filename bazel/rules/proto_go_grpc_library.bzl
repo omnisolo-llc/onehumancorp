@@ -23,10 +23,19 @@ def _proto_go_srcs_impl(ctx):
     gen_go_grpc = ctx.executable._gen_go_grpc
 
     # Build proto_path args
-    proto_paths = {}
-    for src in srcs:
+    proto_paths = {".": True}
+    for src in proto_info.transitive_sources.to_list():
         if proto_root and proto_root != ".":
             proto_paths[proto_root] = True
+        elif src.dirname.startswith("bazel-out/"):
+            parts = src.dirname.split("/")
+            if "_virtual_imports" in parts:
+                idx = parts.index("_virtual_imports")
+                if idx + 1 < len(parts):
+                    # add the exact virtual imports dir (e.g. _virtual_imports/agent_proto)
+                    proto_paths["/".join(parts[:idx+2])] = True
+            else:
+                proto_paths[src.dirname] = True
         else:
             proto_paths[src.dirname] = True
 
@@ -36,6 +45,7 @@ def _proto_go_srcs_impl(ctx):
 
     wrapper = ctx.actions.declare_file(ctx.label.name + "_protoc_go_wrapper.sh")
     wrapper_content = "#!/bin/bash\nset -euo pipefail\n"
+    # To fix 'srcs/proto/' subdirectories in output when using multiple proto_paths, we use module_relative options
     wrapper_content += "{protoc} --plugin=protoc-gen-go={gen_go} --plugin=protoc-gen-go-grpc={gen_go_grpc} --go_out={out_dir} --go_opt=paths=source_relative --go-grpc_out={out_dir} --go-grpc_opt=paths=source_relative {proto_path_args} {proto_files}\n".format(
         protoc = protoc.path,
         gen_go = gen_go.path,
@@ -43,6 +53,9 @@ def _proto_go_srcs_impl(ctx):
         out_dir = out_dir,
         proto_path_args = proto_path_args,
         proto_files = proto_files,
+    )
+    wrapper_content += "if [ -d {out_dir}/srcs/proto ]; then\n  mv {out_dir}/srcs/proto/* {out_dir}/\n  rm -rf {out_dir}/srcs\nfi\n".format(
+        out_dir = out_dir,
     )
 
     ctx.actions.write(
@@ -91,7 +104,7 @@ _proto_go_srcs = rule(
     },
 )
 
-def proto_go_grpc_library(name, protos, importpath, visibility = None):
+def proto_go_grpc_library(name, protos, importpath, deps = None, visibility = None):
     """Generates a Go library from protobuf with gRPC support.
 
     Uses modern protoc-gen-go and protoc-gen-go-grpc that support Edition 2024.
@@ -100,6 +113,7 @@ def proto_go_grpc_library(name, protos, importpath, visibility = None):
         name: Name of the resulting go_library target.
         protos: Label of the proto_library target.
         importpath: Go import path for the generated library.
+        deps: Additional Go dependencies.
         visibility: Visibility of the generated library.
     """
     srcs_name = name + "_pb_srcs"
@@ -109,17 +123,21 @@ def proto_go_grpc_library(name, protos, importpath, visibility = None):
         protos = protos,
     )
 
+    go_deps = [
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "@@gazelle++go_deps+org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@@gazelle++go_deps+org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@@gazelle++go_deps+org_golang_google_protobuf//types/known/timestamppb:timestamppb",
+    ]
+    if deps:
+        go_deps.extend(deps)
+
     go_library(
         name = name,
         srcs = [":" + srcs_name],
         importpath = importpath,
         visibility = visibility,
-        deps = [
-            "@org_golang_google_grpc//:go_default_library",
-            "@org_golang_google_grpc//codes:go_default_library",
-            "@org_golang_google_grpc//status:go_default_library",
-            "@@gazelle++go_deps+org_golang_google_protobuf//reflect/protoreflect:go_default_library",
-            "@@gazelle++go_deps+org_golang_google_protobuf//runtime/protoimpl:go_default_library",
-            "@@gazelle++go_deps+org_golang_google_protobuf//types/known/timestamppb:timestamppb",
-        ],
+        deps = go_deps,
     )

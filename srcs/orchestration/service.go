@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/domain/agent"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/scheduler"
 	"github.com/onehumancorp/mono/srcs/settings"
@@ -71,46 +72,6 @@ func redactInterfacePII(val interface{}) interface{} {
 		return val
 	}
 }
-
-// Status indicates the current operational phase of an AI agent within the workforce.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Status string
-
-const (
-	// StatusIdle represents the IDLE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusIdle Status = "IDLE"
-	// StatusActive represents the ACTIVE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusActive Status = "ACTIVE"
-	// StatusInMeeting represents the INMEETING lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusInMeeting Status = "IN_MEETING"
-	// StatusBlocked represents the BLOCKED lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusBlocked Status = "BLOCKED"
-	// StatusWaitingForTools represents the WAITINGFORTOOLS lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusWaitingForTools Status = "WAITING_FOR_TOOLS"
-)
 
 // Event type constants for the asynchronous pub/sub agent interaction protocol.
 const (
@@ -194,38 +155,18 @@ const (
 	EventApprovalNeeded = "ApprovalNeeded"
 )
 
-// Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Agent struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Role           string `json:"role"`
-	OrganizationID string `json:"organizationId"`
-	Status         Status `json:"status"`
-	// ProviderType identifies the external agent implementation backing this worker
-	// (e.g. "claude", "gemini", "opencode").  An empty string or "builtin" means
-	// the platform's own lightweight agent is used.
-	ProviderType string `json:"providerType,omitempty"`
-	Region       string `json:"region,omitempty"`
-}
-
-// Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Message struct {
-	ID         string    `json:"id"`
-	FromAgent  string    `json:"fromAgent"`
-	ToAgent    string    `json:"toAgent"`
-	Type       string    `json:"type"`
-	Content    string    `json:"content"`
-	MeetingID  string    `json:"meetingId,omitempty"`
-	OccurredAt time.Time `json:"occurredAt"`
-}
+// Type aliases for cleaner handoffs and to avoid massive refactoring everywhere.
+type Status = agent.Status
+const (
+	StatusIdle            = agent.StatusIdle
+	StatusActive          = agent.StatusActive
+	StatusInMeeting       = agent.StatusInMeeting
+	StatusBlocked         = agent.StatusBlocked
+	StatusWaitingForTools = agent.StatusWaitingForTools
+)
+type Agent = agent.Agent
+type Message = agent.Message
+type MeetingRoom = agent.MeetingRoom
 
 // DelegateTask allows an agent in Delegate Mode to act as a routing proxy.
 // It inspects an incoming task, updates the sender and recipient fields,
@@ -262,18 +203,6 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 		}(task, toAgent.Role)
 	}
 	return err
-}
-
-// MeetingRoom provides a thread-safe, isolated collaborative space where multiple agents can exchange messages and context.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type MeetingRoom struct {
-	ID           string    `json:"id"`
-	Agenda       string    `json:"agenda,omitempty"`
-	Participants []string  `json:"participants"`
-	Transcript   []Message `json:"transcript"`
 }
 
 // Hub acts as the central, thread-safe asynchronous message broker and state registry for all active agents and meeting rooms.

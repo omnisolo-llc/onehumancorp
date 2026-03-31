@@ -41,13 +41,14 @@ func TestDelegateSubTask_Success(t *testing.T) {
 
 	var subAgentID string
 	for id := range hub.agents {
-		if id != "SYSTEM" {
+		if strings.HasPrefix(id, "sub-agent-SWE-") {
 			subAgentID = id
+			break
 		}
 	}
 
-	if !strings.HasPrefix(subAgentID, "sub-agent-SWE-") {
-		t.Fatalf("unexpected agent ID: %s", subAgentID)
+	if subAgentID == "" {
+		t.Fatalf("sub-agent was not properly registered or created")
 	}
 
 	msgs := hub.inbox[subAgentID]
@@ -165,14 +166,15 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 
 	var subAgentID string
 	for id := range hub.agents {
-		if id != "SYSTEM" {
+		if strings.HasPrefix(id, "sub-agent-QA-") {
 			subAgentID = id
+			break
 		}
 	}
 
 	agent, exists := hub.agents[subAgentID]
-	if !exists {
-		t.Fatalf("agent does not exist")
+	if !exists || subAgentID == "" {
+		t.Fatalf("sub-agent does not exist")
 	}
 
 	if agent.ProviderType != "builtin" {
