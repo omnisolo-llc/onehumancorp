@@ -5,7 +5,8 @@ go_library(
     srcs = [
         "provider.go",
         "registry.go",
-    ],
+            "agent.go",
+],
     importpath = "github.com/onehumancorp/mono/srcs/agents",
     visibility = ["//visibility:public"],
 )
