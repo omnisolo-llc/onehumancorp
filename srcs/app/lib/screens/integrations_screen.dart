@@ -105,9 +105,12 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                           ),
                           const SizedBox(height: 16),
                           const Text('No MCP tools active'),
-                          TextButton(
-                            onPressed: _refresh,
-                            child: const Text('Refresh'),
+                          Tooltip(
+                            message: 'Refresh MCP tools list',
+                            child: TextButton(
+                              onPressed: _refresh,
+                              child: const Text('Refresh'),
+                            ),
                           ),
                         ],
                       ),
@@ -185,48 +188,56 @@ class _IntegrationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Semantics(
+      label: 'Connect to $title. $subtitle',
+      button: true,
+      child: Card(
+        child: InkWell(
+          onTap: onConnect,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icon, color: color, size: 24),
+                    ),
+                    const Spacer(),
+                    const Text(
+                      'Inactive',
+                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                const Text(
-                  'Inactive',
-                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onConnect,
+                    child: const Text('Configure'),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onConnect,
-                child: const Text('Configure'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -240,25 +251,28 @@ class _MCPToolTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final name = tool['name'] as String? ?? 'Unknown Tool';
     final description = tool['description'] as String? ?? '';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: const Icon(Icons.build_circle_outlined),
-        title: Text(name),
-        subtitle: Text(
-          description,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+    return Semantics(
+      label: 'Invoke MCP Tool: $name. $description',
+      button: true,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: ListTile(
+          leading: const Icon(Icons.build_circle_outlined),
+          title: Text(name),
+          subtitle: Text(
+            description,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: OutlinedButton(
+            onPressed: () {}, // Invoke dialog
+            child: const Text('Invoke'),
+          ),
+          onTap: () {},
         ),
-        trailing: OutlinedButton(
-          onPressed: () {}, // Invoke dialog
-          child: const Text('Invoke'),
-        ),
-        onTap: () {},
       ),
     );
   }
