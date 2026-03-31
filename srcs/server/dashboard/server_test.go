@@ -83,6 +83,79 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 	return app, server, token
 }
 
+func TestNewServerBootstrapsInternalDefaultAgentWhenHubEmpty(t *testing.T) {
+	org := domain.NewSoftwareCompany("org-empty", "Empty Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+
+	NewServer(org, hub, tracker)
+
+	agents := hub.Agents()
+	if len(agents) != 1 {
+		t.Fatalf("expected 1 bootstrapped agent, got %d", len(agents))
+	}
+	agent := agents[0]
+	if agent.ID != "org-empty-agent-internal-default" {
+		t.Fatalf("expected internal default agent ID, got %q", agent.ID)
+	}
+	if agent.Name != "Internal Default Agent" {
+		t.Fatalf("expected internal default agent name, got %q", agent.Name)
+	}
+	if agent.ProviderType != "builtin" {
+		t.Fatalf("expected builtin provider type, got %q", agent.ProviderType)
+	}
+	if agent.Region != "docker" {
+		t.Fatalf("expected docker region, got %q", agent.Region)
+	}
+	if agent.Role == "" {
+		t.Fatal("expected bootstrapped agent role to be set")
+	}
+}
+
+func TestNewServerBootstrapsInternalDefaultAgentFromEnv(t *testing.T) {
+	t.Setenv("OHC_DEFAULT_AGENT_NAME", "Claude-Class Internal Agent")
+	t.Setenv("OHC_DEFAULT_AGENT_ROLE", "SOFTWARE_ENGINEER")
+	t.Setenv("OHC_DEFAULT_AGENT_REGION", "bazel-docker")
+
+	org := domain.NewSoftwareCompany("org-env", "Configurable Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+
+	NewServer(org, hub, tracker)
+
+	agents := hub.Agents()
+	if len(agents) != 1 {
+		t.Fatalf("expected 1 bootstrapped agent, got %d", len(agents))
+	}
+	agent := agents[0]
+	if agent.Name != "Claude-Class Internal Agent" {
+		t.Fatalf("expected env configured name, got %q", agent.Name)
+	}
+	if agent.Role != "SOFTWARE_ENGINEER" {
+		t.Fatalf("expected env configured role, got %q", agent.Role)
+	}
+	if agent.Region != "bazel-docker" {
+		t.Fatalf("expected env configured region, got %q", agent.Region)
+	}
+}
+
+func TestNewServerDoesNotBootstrapInternalDefaultAgentWhenAgentsExist(t *testing.T) {
+	org := domain.NewSoftwareCompany("org-existing", "Existing Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	hub.RegisterAgent(orchestration.Agent{ID: "existing-1", Name: "Existing", Role: "CEO", OrganizationID: org.ID})
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+
+	NewServer(org, hub, tracker)
+
+	agents := hub.Agents()
+	if len(agents) != 1 {
+		t.Fatalf("expected existing agent set to remain unchanged, got %d agents", len(agents))
+	}
+	if agents[0].ID != "existing-1" {
+		t.Fatalf("expected existing agent to remain, got %q", agents[0].ID)
+	}
+}
+
 func TestServerServesAPIs(t *testing.T) {
 	_, server, token := newTestServer(t)
 	client := authedClient(token)
@@ -3871,7 +3944,7 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 	t.Run("Missing Tool ID and Name", func(t *testing.T) {
 		payload := map[string]interface{}{
 			"spiffeId": "spiffe://onehumancorp.io/agent/test",
-			"tool": map[string]interface{}{},
+			"tool":     map[string]interface{}{},
 		}
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/mcp/tools/register", bytes.NewReader(body))
