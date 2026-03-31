@@ -95,7 +95,7 @@ flutter_test(
     srcs = SCREEN_TESTS,
     coverage = True,
     coverage_min = 90,
-    embed = ["//srcs/app:app_lib"],
+    embed = ["//srcs/app:app_for_tests"],
     tags = ["manual"],
     test_files = ["."],
     workspace_pubspec = "//:pubspec.yaml",
