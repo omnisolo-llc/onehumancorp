@@ -44,11 +44,21 @@ else
     fi
 
     echo "Attempting to create a new Kind cluster..."
-    kind create cluster
-    kubectl config use-context kind-kind
+    # Suppress IPv6 iptables errors that happen in restricted docker environments
+    export KIND_EXPERIMENTAL_DOCKER_NETWORK=bridge
+    if ! kind create cluster >/dev/null 2>&1; then
+        echo "Warning: Failed to create Kind cluster (this is common in CI/Sandbox environments without raw privileged docker access)."
+        echo "Will skip Kind cluster creation and continue with single-docker deploy mode."
+    else
+        kubectl config use-context kind-kind
+    fi
 fi
 
-echo "--- Local K8s Context Configured ---"
-echo "You are now using context: $(kubectl config current-context)"
+if command -v kubectl >/dev/null 2>&1 && kubectl config current-context >/dev/null 2>&1; then
+    echo "--- Local K8s Context Configured ---"
+    echo "You are now using context: $(kubectl config current-context)"
+else
+    echo "--- Local K8s skipped or failed. Falling back to single-docker mode ---"
+fi
 echo ""
 echo "Run the application easily using: bazelisk run //:up"
