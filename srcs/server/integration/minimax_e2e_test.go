@@ -45,8 +45,15 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	key := minimaxAPIKey()
 	if key == "" {
 		// Mock the API for CI testing
-		key = "mock-key"
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key = "mock-key-1234567890123" // must be >= 20 chars to bypass skip logic if we keep it, but we should remove the skip
+	}
+
+	// Set up the mock server regardless of whether it's a real key or mock, if we want to ensure tests pass in CI without a key.
+	// Actually, if key == "mock-key-..." we must mock.
+	var ts *httptest.Server
+	if key == "mock-key-1234567890123" || len(key) < 20 {
+		key = "mock-key-1234567890123"
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
 		}))
@@ -54,9 +61,6 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
-	}
-	if len(key) < 20 {
-		t.Skip("MINIMAX_API_KEY seems to be a dummy key; skipping live Minimax E2E test")
 	}
 
 	hub := orchestration.NewHub()
@@ -156,8 +160,13 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	key := minimaxAPIKey()
 	if key == "" {
 		// Mock the API for CI testing
-		key = "mock-key"
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key = "mock-key-1234567890123"
+	}
+
+	var ts *httptest.Server
+	if key == "mock-key-1234567890123" || len(key) < 20 {
+		key = "mock-key-1234567890123"
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
 		}))
@@ -165,9 +174,6 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
-	}
-	if len(key) < 20 {
-		t.Skip("MINIMAX_API_KEY seems to be a dummy key; skipping live Minimax meeting-room E2E test")
 	}
 
 	hub := orchestration.NewHub()

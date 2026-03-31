@@ -72,6 +72,12 @@ echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
 BACKEND_BIN=""
 for candidate in \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc" \
     "${RUNFILES}/${WORKSPACE}/srcs/server/server_/server" \
     "${RUNFILES}/_main/srcs/server/server_/server" \
     "${RUNFILES}/__main__/srcs/server/server_/server" \
@@ -85,7 +91,7 @@ for candidate in \
 done
 
 if [ -z "$BACKEND_BIN" ]; then
-  echo "ERROR: Go backend binary not found. Ensure //srcs/server:server is included in data." >&2
+  echo "ERROR: Go backend binary not found. Ensure //srcs/server:ohc is included in data." >&2
   # Fallback to Python server if we can't find the backend binary (e.g. during local dev)
   python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
   SERVER_PID=$!
@@ -186,6 +192,23 @@ if [ -z "$SPEC_FILE" ]; then
   exit 1
 fi
 
+HANDOFF_SPEC_REL="srcs/app/e2e/handoff.spec.ts"
+HANDOFF_SPEC_FILE=""
+for candidate in \
+    "${RUNFILES}/${WORKSPACE}/${HANDOFF_SPEC_REL}" \
+    "${RUNFILES}/_main/${HANDOFF_SPEC_REL}" \
+    "${RUNFILES}/__main__/${HANDOFF_SPEC_REL}"; do
+  if [ -f "$candidate" ]; then
+    HANDOFF_SPEC_FILE="$candidate"
+    break
+  fi
+done
+
+if [ -z "$HANDOFF_SPEC_FILE" ]; then
+  echo "ERROR: handoff.spec.ts not found" >&2
+  exit 1
+fi
+
 NODE_MODULES_DIR=""
 for candidate in \
     "${RUNFILES}/${WORKSPACE}/node_modules" \
@@ -208,6 +231,7 @@ E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
 cp "${CONFIG}" "${E2E_TMP_DIR}/playwright.config.ts"
 cp "${SPEC_FILE}" "${E2E_TMP_DIR}/web.spec.ts"
+cp "${HANDOFF_SPEC_FILE}" "${E2E_TMP_DIR}/handoff.spec.ts"
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
 export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 

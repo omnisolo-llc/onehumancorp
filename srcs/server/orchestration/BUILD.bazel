@@ -37,7 +37,6 @@ go_test(
         "auth_interceptor_test.go",
         "benchmark_test.go",
         "centrifuge_hub_test.go",
-        "chaos_test.go",
         "agent_task_worker_test.go",
         "delegation_test.go",
         "eventlog_test.go",
@@ -48,6 +47,26 @@ go_test(
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
+    ],
+    embed = [":orchestration"],
+    deps = [
+        "//srcs/proto:hub_go_proto",
+        "//srcs/server/settings",
+        "@com_github_centrifugal_centrifuge//:centrifuge",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//metadata",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "chaos_test",
+    srcs = [
+        "chaos_test.go",
     ],
     embed = [":orchestration"],
     deps = [

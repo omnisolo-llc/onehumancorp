@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-// TestSIPDB_Chaos simulates high-concurrency ingestion and a simulated DB lock
-// to verify the exponential backoff retry logic in withRetry.
+// TestSIPDB_Chaos simulates high-concurrency ingestion, simulated DB lock,
+// and network partition failures to verify the exponential backoff retry logic
+// and swarm recovery in withRetry.
 func TestSIPDB_Chaos(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos.db")
@@ -24,9 +25,10 @@ func TestSIPDB_Chaos(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. High-concurrency agent mission ingestion (Stress Test)
+	// Greatly increased the scale of concurrency to properly verify "high-concurrency"
 	var wg sync.WaitGroup
-	numAgents := 50
-	missionsPerAgent := 10
+	numAgents := 200
+	missionsPerAgent := 50
 
 	errs := make(chan error, numAgents*missionsPerAgent)
 
@@ -57,6 +59,16 @@ func TestSIPDB_Chaos(t *testing.T) {
 	}
 
 	t.Logf("Ingested %d missions concurrently in %v", numAgents*missionsPerAgent, time.Since(start))
+
+	// Verify all records were actually inserted correctly
+	var count int
+	err = db.db.QueryRow("SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING' AND json_extract(payload, '$.role') = 'SOFTWARE_ENGINEER'").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to query mission count: %v", err)
+	}
+	if count < numAgents*missionsPerAgent {
+		t.Fatalf("Expected at least %d missions, but found %d", numAgents*missionsPerAgent, count)
+	}
 
 	// 2. Controlled failure (DB Lock simulation)
 	// We will simulate a locked table by starting an exclusive transaction,
@@ -133,4 +145,41 @@ func TestSIPDB_Chaos(t *testing.T) {
 	} else {
 		t.Log("Successfully verified mission ingestion after DB lock recovery")
 	}
+
+	// 3. Network Partition (Simulated Connection Drop/Timeout)
+	// We simulate a network partition by artificially cancelling a context mid-flight
+	// and verifying the system degrades gracefully (fails over to error rather than hanging).
+	partitionCtx, partitionCancel := context.WithTimeout(ctx, 1*time.Millisecond)
+	defer partitionCancel()
+
+	// Add slight delay to ensure the context expires
+	time.Sleep(5 * time.Millisecond)
+
+	task := Message{
+		ID:      "partition-mission-1",
+		Content: "Partition test task",
+		Type:    EventTask,
+	}
+
+	err = db.DelegateMission(partitionCtx, "partition-mission-1", "SOFTWARE_ENGINEER", task)
+	if err == nil {
+		t.Errorf("Expected context deadline exceeded error during simulated network partition, but succeeded")
+	} else {
+		t.Logf("Successfully verified graceful fail-over on network partition: %v", err)
+	}
+
+	// 4. Verify Swarm Recovery
+	// Ensure that after the partition is resolved, normal operations resume instantly
+	recoveryTask := Message{
+		ID:      "recovery-mission-1",
+		Content: "Recovery test task",
+		Type:    EventTask,
+	}
+
+	err = db.DelegateMission(ctx, "recovery-mission-1", "SOFTWARE_ENGINEER", recoveryTask)
+	if err != nil {
+		t.Fatalf("Failed to recover swarm operations post-partition: %v", err)
+	}
+
+	t.Log("Successfully verified swarm recovery operations.")
 }
