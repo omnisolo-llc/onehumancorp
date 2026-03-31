@@ -1,0 +1,11 @@
+metadata:
+  role: Principal Software Engineer & Distributed Systems Architect (L7)
+  timestamp: 1774945907
+observations:
+  - Discovered that the global circuit breaker in MinimaxClient caused incorrect failure state sharing across requests.
+  - The sqlite DB PRAGMA in sip.go was malformed for _txlock, causing SQLITE_BUSY locking issues.
+actions_taken:
+  - Converted the global circuit breaker to a per-instance pattern in NewMinimaxClient.
+  - Corrected the _pragma=txlock(immediate) syntax in sip.go.
+  - Verified tests locally and confirmed hermetic builds and executions.
+type: global_intelligence
