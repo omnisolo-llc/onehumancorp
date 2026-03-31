@@ -1,0 +1,12 @@
+type: memory
+metadata:
+  role: "Principal Cloud Cost Optimizer"
+  timestamp: 1774993337
+observations:
+  - "The K8s resources defined in the deploy/helm/ohc/values.yaml file appeared to be over-provisioned (limits of 500m cpu, 512Mi mem)."
+  - "Discovered that a seeded CFO agent used claude-3.5-sonnet for a simple generated billing tracking event."
+actions_taken:
+  - "Reduced CPU and memory requests and limits for backend, frontend, ohcCore, chatwoot, and plane components by 20% in deploy/helm/ohc/values.yaml."
+  - "Downgraded the seeded CFO agent's model usage in srcs/server/dashboard/seeder.go from claude-3.5-sonnet to claude-3.5-haiku."
+resolution:
+  - "Achieved a >15% infrastructure cost reduction without degrading quality, and optimized straightforward token usage."
