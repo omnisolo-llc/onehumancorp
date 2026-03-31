@@ -1,5 +1,6 @@
+import 'dart:io';
 /// Tests for Chat screen, router, and remaining uncovered screen interactions.
-library;
+
 
 import 'dart:async';
 import 'dart:convert';
@@ -92,8 +93,66 @@ const _loggedInUser = AuthUser(
 );
 
 void main() {
+
+  HttpServer? _testServer;
+
+  setUpAll(() async {
+    registerFallbackValue(FakeUri());
+    registerFallbackValue(FakeClientConfig());
+    SharedPreferences.setMockInitialValues({});
+
+    _testServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 8082);
+    _testServer!.listen((HttpRequest request) {
+      request.response.headers.contentType = ContentType.json;
+      request.response.headers.add('Access-Control-Allow-Origin', '*');
+
+      final path = request.uri.path;
+      if (path.contains('/api/meetings')) {
+        if (request.method == 'POST') {
+          request.response.write('{"id": "m1", "name": "launch-readiness"}');
+        } else {
+          request.response.write('[{"id": "m1", "name": "launch-readiness", "participants": []}]');
+        }
+      } else if (path.contains('/api/agents/providers')) {
+         request.response.write('[{"id": "p1", "name": "gpt-4o-mini"}]');
+      } else if (path.contains('/api/agents/hire')) {
+         request.response.write('{"id": "a2", "name": "New Agent"}');
+      } else if (path.contains('/api/agents/fire')) {
+         request.response.write('{}');
+      } else if (path.contains('/api/agents')) {
+         request.response.write('[{"id": "a1", "name": "Software Engineer"}]');
+      } else if (path.contains('/api/ai/providers')) {
+         if (request.method == 'POST' || request.method == 'PATCH') {
+             request.response.write('{"id": "p1", "name": "gpt-4o-mini", "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "models": ["gpt-4o-mini"], "is_official": true}');
+         } else {
+             request.response.write('[{"id": "p1", "name": "gpt-4o-mini", "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "models": ["gpt-4o-mini"], "is_official": true}]');
+         }
+      } else if (path.contains('/api/providers')) {
+         request.response.write('[{"id": "p1", "name": "gpt-4o-mini", "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "models": ["gpt-4o-mini"], "is_official": true}]');
+      } else if (path.contains('/api/skills')) {
+         request.response.write('[{"name": "web_search", "version": "1.0.0", "description": "Search the web", "category": "official", "installed": true, "enabled": true}]');
+      } else if (path.contains('/api/channels')) {
+         if (request.method == 'POST') {
+             request.response.write('{"id": "c1", "name": "general", "type": "public"}');
+         } else {
+             request.response.write('[]');
+         }
+      } else if (path.contains('/auth/login')) {
+         request.response.write('{"token": "new-token", "user": {"id": "u1", "email": "a@b.com", "name": "Alice", "role": "admin", "organization_id": "org-1"}}');
+      } else {
+        request.response.write('[]');
+      }
+      request.response.close();
+    });
+  });
+
+  tearDownAll(() async {
+    await _testServer?.close(force: true);
+  });
+
   setUpAll(() {
     registerFallbackValue(FakeUri());
+    registerFallbackValue(FakeClientConfig());
     registerFallbackValue(FakeClientConfig());
     SharedPreferences.setMockInitialValues({});
   });
@@ -125,6 +184,8 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       expect(find.text('child content'), findsOneWidget);
@@ -173,6 +234,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('One Human Corp'), findsOneWidget);
       expect(find.text('Dashboard'), findsWidgets);
@@ -208,6 +271,8 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle(); // Trigger initState
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -228,6 +293,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('No messages yet. Say hello!'), findsOneWidget);
     });
@@ -243,6 +310,8 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -276,6 +345,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Type and send a message
       await tester.enterText(find.byType(TextField), 'Hello World');
@@ -298,6 +369,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.byIcon(Icons.meeting_room));
       await tester.pumpAndSettle();
@@ -316,6 +389,8 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -339,6 +414,8 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(_loggedInUser)),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -387,6 +464,8 @@ void main() {
         ],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'a@b.com');
@@ -412,6 +491,8 @@ void main() {
           backendUrlProvider.overrideWith((ref) => 'http://localhost'),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -449,6 +530,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Join'));
       await tester.pump(const Duration(milliseconds: 200));
@@ -476,6 +559,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Join'));
       await tester.pump(const Duration(milliseconds: 200));
@@ -498,6 +583,8 @@ void main() {
         const MeetingsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       // Empty state has create button
@@ -536,6 +623,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('Weak password'), findsOneWidget);
       // Tap Fix button
@@ -570,6 +659,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('Old Issue'), findsOneWidget);
       expect(find.text('1 resolved'), findsOneWidget);
@@ -603,6 +694,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('code_runner'), findsOneWidget);
       await tester.tap(find.text('Install'));
@@ -634,6 +727,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Remove'));
       await tester.pump(const Duration(milliseconds: 200));
@@ -664,6 +759,8 @@ void main() {
         const SkillsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       // Find and toggle the Switch widget
@@ -705,6 +802,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('web_search'), findsOneWidget);
       expect(find.text('custom_tool'), findsOneWidget);
@@ -743,6 +842,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       // Find edit key button (icon button)
       await tester.tap(find.byIcon(Icons.edit_outlined));
@@ -773,6 +874,8 @@ void main() {
         const AiConfigScreen(),
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.edit_outlined));
@@ -808,6 +911,8 @@ void main() {
         const AiConfigScreen(),
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.edit_outlined));
@@ -846,6 +951,8 @@ void main() {
         const AiConfigScreen(),
         overrides: [apiServiceProvider.overrideWithValue(api)],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Add Provider').first);

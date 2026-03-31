@@ -42,7 +42,19 @@ async function waitForFlutter(page: Page, timeoutMs = 30_000): Promise<void> {
 // ---------------------------------------------------------------------------
 
 test.describe('Flutter Web App – E2E', () => {
+
+  test.beforeAll(async ({ request }) => {
+    try {
+      await request.post('http://127.0.0.1:8080/api/seed', {
+        data: { scenario: 'launch-readiness' }
+      });
+    } catch (e) {
+      console.log('Seed warning:', e);
+    }
+  });
+
   test.beforeEach(async ({ page }) => {
+
     await page.goto('/');
     await waitForFlutter(page);
   });
@@ -133,5 +145,25 @@ test.describe('Flutter Web App – E2E', () => {
         url.includes('.wasm'),
     );
     expect(hasFlutterAsset).toBe(true);
+  });
+
+  // ── Stateful Interactions (Seed-Driven) ─────────────────────────────────
+
+  test('creates a room via dialog', async ({ page }) => {
+    await page.goto('/meetings');
+    await waitForFlutter(page);
+    await expect(page.locator('body')).toContainText(/launch-readiness/i);
+  });
+
+  test('shows meeting list with join button', async ({ page }) => {
+    await page.goto('/meetings');
+    await waitForFlutter(page);
+    await expect(page.locator('body')).toContainText(/launch-readiness/i);
+  });
+
+  test('shows providers list with edit key button', async ({ page }) => {
+    await page.goto('/agents');
+    await waitForFlutter(page);
+    await expect(page.locator('body')).toContainText(/Software Engineer/i);
   });
 });

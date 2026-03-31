@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
 
@@ -47,6 +48,62 @@ ApiService _mockApi(MockHttpClient client) =>
     ApiService(baseUrl: 'http://localhost', token: 'tok', client: client);
 
 void main() {
+
+  HttpServer? _testServer;
+
+  setUpAll(() async {
+    registerFallbackValue(FakeUri());
+    SharedPreferences.setMockInitialValues({});
+
+    _testServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 8083);
+    _testServer!.listen((HttpRequest request) {
+      request.response.headers.contentType = ContentType.json;
+      request.response.headers.add('Access-Control-Allow-Origin', '*');
+
+      final path = request.uri.path;
+      if (path.contains('/api/meetings')) {
+        if (request.method == 'POST') {
+          request.response.write('{"id": "m1", "name": "launch-readiness"}');
+        } else {
+          request.response.write('[{"id": "m1", "name": "launch-readiness", "participants": []}]');
+        }
+      } else if (path.contains('/api/agents/providers')) {
+         request.response.write('[{"id": "p1", "name": "gpt-4o-mini"}]');
+      } else if (path.contains('/api/agents/hire')) {
+         request.response.write('{"id": "a2", "name": "New Agent"}');
+      } else if (path.contains('/api/agents/fire')) {
+         request.response.write('{}');
+      } else if (path.contains('/api/agents')) {
+         request.response.write('[{"id": "a1", "name": "Software Engineer"}]');
+      } else if (path.contains('/api/ai/providers')) {
+         if (request.method == 'POST' || request.method == 'PATCH') {
+             request.response.write('{"id": "p1", "name": "gpt-4o-mini", "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "models": ["gpt-4o-mini"], "is_official": true}');
+         } else {
+             request.response.write('[{"id": "p1", "name": "gpt-4o-mini", "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "models": ["gpt-4o-mini"], "is_official": true}]');
+         }
+      } else if (path.contains('/api/providers')) {
+         request.response.write('[{"id": "p1", "name": "gpt-4o-mini", "base_url": "https://api.openai.com/v1", "api_key": "sk-...", "models": ["gpt-4o-mini"], "is_official": true}]');
+      } else if (path.contains('/api/skills')) {
+         request.response.write('[{"name": "web_search", "version": "1.0.0", "description": "Search the web", "category": "official", "installed": true, "enabled": true}]');
+      } else if (path.contains('/api/channels')) {
+         if (request.method == 'POST') {
+             request.response.write('{"id": "c1", "name": "general", "type": "public"}');
+         } else {
+             request.response.write('[]');
+         }
+      } else if (path.contains('/auth/login')) {
+         request.response.write('{"token": "new-token", "user": {"id": "u1", "email": "a@b.com", "name": "Alice", "role": "admin", "organization_id": "org-1"}}');
+      } else {
+        request.response.write('[]');
+      }
+      request.response.close();
+    });
+  });
+
+  tearDownAll(() async {
+    await _testServer?.close(force: true);
+  });
+
   setUpAll(() {
     registerFallbackValue(FakeUri());
     SharedPreferences.setMockInitialValues({});
@@ -169,6 +226,8 @@ void main() {
         (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'test@example.com');
@@ -181,6 +240,8 @@ void main() {
     testWidgets('shows email validation error for invalid email',
         (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -209,6 +270,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Hire Agent'));
       await tester.pumpAndSettle();
@@ -232,6 +295,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('No active meeting rooms.'), findsOneWidget);
       await tester.tap(find.text('Create Room'));
@@ -250,6 +315,8 @@ void main() {
         const MeetingsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Create Room'));
@@ -276,6 +343,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Create Room'));
       await tester.pumpAndSettle();
@@ -301,6 +370,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('Standup'), findsOneWidget);
       expect(find.text('Join'), findsOneWidget);
@@ -321,6 +392,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('No AI providers configured'), findsOneWidget);
 
@@ -340,6 +413,8 @@ void main() {
         const AiConfigScreen(),
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Add Provider').first);
@@ -372,6 +447,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('OpenAI'), findsOneWidget);
     });
@@ -392,6 +469,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('No channels yet'), findsOneWidget);
 
@@ -411,6 +490,8 @@ void main() {
         const ChannelsScreen(),
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Add Channel').first);
@@ -437,6 +518,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('No skills in this category.'), findsOneWidget);
     });
@@ -462,6 +545,8 @@ void main() {
         overrides: [apiServiceProvider.overrideWithValue(_mockApi(mockClient))],
       ));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.text('web_search'), findsOneWidget);
     });
@@ -480,6 +565,8 @@ void main() {
           authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
@@ -501,6 +588,8 @@ void main() {
               )),
         ],
       ));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
     });
