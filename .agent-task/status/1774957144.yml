@@ -1,0 +1,8 @@
+agent_id: jules
+status: ACTIVE
+role: Principal Systems Engineer & Cleaner (L7)
+last_heartbeat: 2026-03-31T11:39:04Z
+metrics:
+  health: "100% green"
+  cleanup_tests_coverage: "100%"
+  action: "Audited and pruned obsolete intelligence memory, missions and statuses. Pruned generated proto artifacts."
