@@ -44,7 +44,7 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Promotion failed: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -225,25 +225,26 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     Color color;
     switch (status.toLowerCase()) {
       case 'running':
       case 'active':
-        color = Colors.blue;
+        color = colors.primary;
         break;
       case 'staging':
-        color = Colors.orange;
+        color = colors.tertiary;
         break;
       case 'completed':
       case 'merged':
       case 'success':
-        color = Colors.green;
+        color = colors.secondary;
         break;
       case 'failed':
-        color = Colors.red;
+        color = colors.error;
         break;
       default:
-        color = Colors.grey;
+        color = colors.onSurfaceVariant;
     }
 
     return Container(

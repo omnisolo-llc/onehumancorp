@@ -57,17 +57,23 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         title: const Text('Service Logs'),
         actions: [
           // Line count selector
-          DropdownButton<int>(
-            value: _lines,
-            underline: const SizedBox(),
-            items: const [
-              DropdownMenuItem(value: 50, child: Text('50 lines')),
-              DropdownMenuItem(value: 100, child: Text('100 lines')),
-              DropdownMenuItem(value: 500, child: Text('500 lines')),
-            ],
-            onChanged: (v) {
-              if (v != null) setState(() => _lines = v);
-            },
+          Semantics(
+            label: 'Select number of log lines to show',
+            child: Tooltip(
+              message: 'Number of log lines',
+              child: DropdownButton<int>(
+                value: _lines,
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: 50, child: Text('50 lines')),
+                  DropdownMenuItem(value: 100, child: Text('100 lines')),
+                  DropdownMenuItem(value: 500, child: Text('500 lines')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _lines = v);
+                },
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           IconButton(
@@ -87,7 +93,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
             return const Center(child: Text('No logs yet.'));
           }
           return Container(
-            color: const Color(0xFF1a1a2e),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: ListView.builder(
               controller: _scrollCtrl,
               padding: const EdgeInsets.all(12),
@@ -107,14 +113,22 @@ class _LogLine extends StatelessWidget {
 
   const _LogLine({required this.line, required this.index});
 
-  Color _color() {
+  Color _color(BuildContext context) {
     final lower = line.toLowerCase();
-    if (lower.contains('error') || lower.contains('fatal'))
-      return Colors.red.shade300;
-    if (lower.contains('warn')) return Colors.orange.shade300;
-    if (lower.contains('info')) return Colors.green.shade300;
-    if (lower.contains('debug')) return Colors.grey.shade400;
-    return Colors.grey.shade200;
+    final scheme = Theme.of(context).colorScheme;
+    if (lower.contains('error') || lower.contains('fatal')) {
+      return scheme.error;
+    }
+    if (lower.contains('warn')) {
+      return scheme.tertiary; // Often used for warnings
+    }
+    if (lower.contains('info')) {
+      return scheme.secondary;
+    }
+    if (lower.contains('debug')) {
+      return scheme.onSurfaceVariant.withOpacity(0.7);
+    }
+    return scheme.onSurfaceVariant;
   }
 
   @override
@@ -139,7 +153,7 @@ class _LogLine extends StatelessWidget {
             child: SelectableText(
               line,
               style: TextStyle(
-                color: _color(),
+                color: _color(context),
                 fontFamily: 'monospace',
                 fontSize: 12,
               ),
