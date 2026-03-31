@@ -1,0 +1,154 @@
+WARNING: The following configs were expanded more than once: [remote, buildbuddy-official]. For repeatable flags, repeats are counted twice and may lead to unexpected behavior.
+INFO: Invocation ID: 0b40b08c-15fc-485d-aabc-20391fe6c151
+INFO: Streaming build results to: https://onehumancorp.buildbuddy.io/invocation/0b40b08c-15fc-485d-aabc-20391fe6c151
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=0 --terminal_columns=80
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  Inherited 'build' options: --config=remote --disk_cache=~/.cache/bazel-disk-cache --action_env=CGO_ENABLED=1 --spawn_strategy=sandboxed,local --incompatible_strict_action_env --announce_rc --action_env=GEMINI_API_KEY --action_env=MINIMAX_API_KEY --action_env=MCP_BUNDLE_DIR --action_env=CI
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  'test' options: --config=remote --test_output=errors --build_tests_only --test_timeout=300,600,900,1800 --test_env=GEMINI_API_KEY --test_env=MINIMAX_API_KEY --test_env=MCP_BUNDLE_DIR --test_env=CI --test_env=HOME --test_env=MCPANY_DEBUG --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS --test_env=PATH --jobs=200
+INFO: Found applicable config definition build:remote in file /app/.bazelrc: --remote_download_all --config=buildbuddy-official
+INFO: Found applicable config definition common:buildbuddy-official in file /app/.bazelrc: --remote_cache=grpcs://onehumancorp.buildbuddy.io --remote_upload_local_results --remote_timeout=10m --remote_executor=grpcs://onehumancorp.buildbuddy.io --remote_cache_compression --jobs=200 --remote_local_fallback --remote_header=x-buildbuddy-api-key=vGFjlQg7X49NwoQHAfRW
+INFO: Found applicable config definition build:buildbuddy-official in file /app/.bazelrc: --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/ --bes_backend=grpcs://onehumancorp.buildbuddy.io
+INFO: Found applicable config definition test:remote in file /app/.bazelrc: --local_test_jobs=8
+INFO: Found applicable config definition build:remote in file /app/.bazelrc: --remote_download_all --config=buildbuddy-official
+INFO: Found applicable config definition common:buildbuddy-official in file /app/.bazelrc: --remote_cache=grpcs://onehumancorp.buildbuddy.io --remote_upload_local_results --remote_timeout=10m --remote_executor=grpcs://onehumancorp.buildbuddy.io --remote_cache_compression --jobs=200 --remote_local_fallback --remote_header=x-buildbuddy-api-key=vGFjlQg7X49NwoQHAfRW
+INFO: Found applicable config definition build:buildbuddy-official in file /app/.bazelrc: --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/ --bes_backend=grpcs://onehumancorp.buildbuddy.io
+INFO: Found applicable config definition test:remote in file /app/.bazelrc: --local_test_jobs=8
+WARNING: --remote_upload_local_results is set, but the remote cache does not support uploading action results or the current account is not authorized to write local results to the remote cache.
+INFO: Checking for file changes...
+Computing main repo mapping:
+Loading:
+Loading: 0 packages loaded
+Analyzing: 37 targets (0 packages loaded)
+Analyzing: 37 targets (0 packages loaded, 0 targets configured)
+Analyzing: 37 targets (0 packages loaded, 0 targets configured)
+
+Analyzing: 37 targets (1 packages loaded, 27 targets configured)
+[16 / 19] Testing //deploy:deploy_artifacts_test; 0s disk-cache, remote-cache, linux-sandbox ... (3 actions, 1 running)
+Analyzing: 37 targets (1 packages loaded, 49 targets configured)
+[42 / 53] 3 / 8 tests; checking cached actions
+Analyzing: 37 targets (1 packages loaded, 54 targets configured)
+[53 / 55] 3 / 8 tests; [Prepa] Testing //srcs/app/lib/models:security_issue_model_test ... (2 actions, 0 running)
+Analyzing: 37 targets (1 packages loaded, 81 targets configured)
+[240 / 317] 3 / 17 tests; Testing //srcs/app/lib/models:security_issue_model_test; 0s disk-cache, remote-cache, linux-sandbox ... (7 actions, 5 running)
+Analyzing: 37 targets (1 packages loaded, 125 targets configured)
+[247 / 324] 3 / 17 tests; Testing //srcs/app/lib/models:security_issue_model_test; 2s disk-cache, remote-cache, linux-sandbox ... (9 actions, 7 running)
+Analyzing: 37 targets (1 packages loaded, 249 targets configured)
+[325 / 428] 3 / 26 tests; Testing //srcs/app/lib/models:security_issue_model_test; 3s disk-cache, remote-cache, linux-sandbox ... (9 actions running)
+INFO: Analyzed 37 targets (1 packages loaded, 394 targets configured).
+[590 / 1,475] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 4s disk-cache, remote-cache, linux-sandbox ... (12 actions, 9 running)
+INFO: From Compiling upb/wire/decode.c [for tool]:
+In function 'upb_Decoder_DecodeMessageSetItem',
+    inlined from '_upb_Decoder_DecodeFieldData' at external/protobuf+/upb/wire/decode.c:1152:16,
+    inlined from '_upb_Decoder_DecodeFieldNoFast' at external/protobuf+/upb/wire/decode.c:1178:9,
+    inlined from '_upb_Decoder_DecodeField' at external/protobuf+/upb/wire/decode.c:1232:10,
+    inlined from '_upb_Decoder_DecodeMessage' at external/protobuf+/upb/wire/decode.c:1243:11:
+external/protobuf+/upb/wire/decode.c:742:11: warning: '*(const char **)((char *)&sv + offsetof(upb_StringView, data))' may be used uninitialized [-Wmaybe-uninitialized]
+  742 |           upb_Decoder_AddMessageSetItem(d, msg, layout, type_id, sv.data,
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  743 |                                         sv.size);
+      |                                         ~~~~~~~~
+external/protobuf+/upb/wire/decode.c: In function '_upb_Decoder_DecodeMessage':
+external/protobuf+/upb/wire/decode.c:732:24: note: '*(const char **)((char *)&sv + offsetof(upb_StringView, data))' was declared here
+  732 |         upb_StringView sv;
+      |                        ^~
+In function 'upb_Decoder_DecodeMessageSetItem',
+    inlined from '_upb_Decoder_DecodeFieldData' at external/protobuf+/upb/wire/decode.c:1152:16,
+    inlined from '_upb_Decoder_DecodeFieldNoFast' at external/protobuf+/upb/wire/decode.c:1178:9,
+    inlined from '_upb_Decoder_DecodeField' at external/protobuf+/upb/wire/decode.c:1232:10,
+    inlined from '_upb_Decoder_DecodeMessage' at external/protobuf+/upb/wire/decode.c:1243:11:
+external/protobuf+/upb/wire/decode.c:742:11: warning: '*(size_t *)((char *)&sv + offsetof(upb_StringView, size))' may be used uninitialized [-Wmaybe-uninitialized]
+  742 |           upb_Decoder_AddMessageSetItem(d, msg, layout, type_id, sv.data,
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  743 |                                         sv.size);
+      |                                         ~~~~~~~~
+external/protobuf+/upb/wire/decode.c: In function '_upb_Decoder_DecodeMessage':
+external/protobuf+/upb/wire/decode.c:732:24: note: '*(size_t *)((char *)&sv + offsetof(upb_StringView, size))' was declared here
+  732 |         upb_StringView sv;
+      |                        ^~
+In file included from /usr/include/string.h:548,
+                 from external/protobuf+/upb/mem/internal/arena.h:13,
+                 from external/protobuf+/upb/mem/arena.h:28,
+                 from external/protobuf+/upb/wire/decode.h:16,
+                 from external/protobuf+/upb/wire/decode.c:8:
+In function 'memcpy',
+    inlined from '_upb_Decoder_DecodeFixedPacked' at external/protobuf+/upb/wire/decode.c:296:5,
+    inlined from '_upb_Decoder_DecodeToArray' at external/protobuf+/upb/wire/decode.c:442:14,
+    inlined from '_upb_Decoder_DecodeKnownField' at external/protobuf+/upb/wire/decode.c:1006:14,
+    inlined from '_upb_Decoder_DecodeFieldData' at external/protobuf+/upb/wire/decode.c:1145:12,
+    inlined from '_upb_Decoder_DecodeFieldNoFast' at external/protobuf+/upb/wire/decode.c:1178:9,
+    inlined from '_upb_Decoder_DecodeField' at external/protobuf+/upb/wire/decode.c:1232:10,
+    inlined from '_upb_Decoder_DecodeMessage' at external/protobuf+/upb/wire/decode.c:1243:11:
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:29:10: warning: '*(const char **)((char *)&sv + offsetof(upb_StringView, data))' may be used uninitialized [-Wmaybe-uninitialized]
+   29 |   return __builtin___memcpy_chk (__dest, __src, __len,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   30 |                                  __glibc_objsize0 (__dest));
+      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/protobuf+/upb/wire/decode.c: In function '_upb_Decoder_DecodeMessage':
+external/protobuf+/upb/wire/decode.c:281:18: note: '*(const char **)((char *)&sv + offsetof(upb_StringView, data))' was declared here
+  281 |   upb_StringView sv;
+      |                  ^~
+In function 'memcpy',
+    inlined from '_upb_Decoder_DecodeFixedPacked' at external/protobuf+/upb/wire/decode.c:296:5,
+    inlined from '_upb_Decoder_DecodeToArray' at external/protobuf+/upb/wire/decode.c:442:14,
+    inlined from '_upb_Decoder_DecodeKnownField' at external/protobuf+/upb/wire/decode.c:1006:14,
+    inlined from '_upb_Decoder_DecodeFieldData' at external/protobuf+/upb/wire/decode.c:1145:12,
+    inlined from '_upb_Decoder_DecodeFieldNoFast' at external/protobuf+/upb/wire/decode.c:1178:9,
+    inlined from '_upb_Decoder_DecodeField' at external/protobuf+/upb/wire/decode.c:1232:10,
+    inlined from '_upb_Decoder_DecodeMessage' at external/protobuf+/upb/wire/decode.c:1243:11:
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:29:10: warning: '*(size_t *)((char *)&sv + offsetof(upb_StringView, size))' may be used uninitialized [-Wmaybe-uninitialized]
+   29 |   return __builtin___memcpy_chk (__dest, __src, __len,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   30 |                                  __glibc_objsize0 (__dest));
+      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+external/protobuf+/upb/wire/decode.c: In function '_upb_Decoder_DecodeMessage':
+external/protobuf+/upb/wire/decode.c:281:18: note: '*(size_t *)((char *)&sv + offsetof(upb_StringView, size))' was declared here
+  281 |   upb_StringView sv;
+      |                  ^~
+In function '_upb_Decoder_DecodeUnknownField',
+    inlined from '_upb_Decoder_DecodeFieldData' at external/protobuf+/upb/wire/decode.c:1149:16,
+    inlined from '_upb_Decoder_DecodeFieldNoFast' at external/protobuf+/upb/wire/decode.c:1178:9,
+    inlined from '_upb_Decoder_DecodeField' at external/protobuf+/upb/wire/decode.c:1232:10,
+    inlined from '_upb_Decoder_DecodeMessage' at external/protobuf+/upb/wire/decode.c:1243:11:
+external/protobuf+/upb/wire/decode.c:1094:8: warning: 'sv.data' may be used uninitialized [-Wmaybe-uninitialized]
+ 1094 |     if (sv.data != d->input.buffer_start) {
+      |        ^
+external/protobuf+/upb/wire/decode.c: In function '_upb_Decoder_DecodeMessage':
+external/protobuf+/upb/wire/decode.c:1089:18: note: 'sv.data' was declared here
+ 1089 |   upb_StringView sv;
+      |                  ^~
+In file included from external/protobuf+/upb/message/internal/message.h:31,
+                 from external/protobuf+/upb/message/message.h:22,
+                 from external/protobuf+/upb/wire/decode.h:17:
+In function '_upb_Message_AddUnknown_dont_copy_me__upb_internal_use_only',
+    inlined from '_upb_Decoder_DecodeUnknownField' at external/protobuf+/upb/wire/decode.c:1103:8,
+    inlined from '_upb_Decoder_DecodeFieldData' at external/protobuf+/upb/wire/decode.c:1149:16,
+    inlined from '_upb_Decoder_DecodeFieldNoFast' at external/protobuf+/upb/wire/decode.c:1178:9,
+    inlined from '_upb_Decoder_DecodeField' at external/protobuf+/upb/wire/decode.c:1232:10,
+    inlined from '_upb_Decoder_DecodeMessage' at external/protobuf+/upb/wire/decode.c:1243:11:
+external/protobuf+/upb/message/internal/message.h:217:22: warning: 'sv.size' may be used uninitialized [-Wmaybe-uninitialized]
+  217 |   return UPB_PRIVATE(_upb_Message_AddUnknownSlowPath)(
+      |                      ^
+external/protobuf+/upb/port/def.inc:406:24: note: in definition of macro 'UPB_PRIVATE'
+  406 | #define UPB_PRIVATE(x) x##_dont_copy_me__upb_internal_use_only
+      |                        ^
+external/protobuf+/upb/wire/decode.c: In function '_upb_Decoder_DecodeMessage':
+external/protobuf+/upb/wire/decode.c:1089:18: note: 'sv.size' was declared here
+ 1089 |   upb_StringView sv;
+      |                  ^~
+[897 / 1,486] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 5s disk-cache, remote-cache, linux-sandbox ... (52 actions, 10 running)
+[1,050 / 1,489] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 7s disk-cache, remote-cache, linux-sandbox ... (10 actions running)
+[1,185 / 1,490] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 8s disk-cache, remote-cache, linux-sandbox ... (13 actions, 12 running)
+[1,185 / 1,490] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 11s disk-cache, remote-cache, linux-sandbox ... (14 actions, 12 running)
+[1,328 / 1,498] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 12s disk-cache, remote-cache, linux-sandbox ... (44 actions, 12 running)
+[1,426 / 1,502] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 13s disk-cache, remote-cache, linux-sandbox ... (27 actions, 12 running)
+[1,456 / 1,504] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 14s disk-cache, remote-cache, linux-sandbox ... (29 actions, 12 running)
+[1,463 / 1,509] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 16s disk-cache, remote-cache, linux-sandbox ... (34 actions, 12 running)
+[1,463 / 1,509] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 26s disk-cache, remote-cache, linux-sandbox ... (34 actions, 12 running)
+[1,467 / 1,509] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 51s disk-cache, remote-cache, linux-sandbox ... (30 actions, 8 running)
+[1,467 / 1,509] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 57s disk-cache, remote-cache, linux-sandbox ... (31 actions, 8 running)
+[1,467 / 1,509] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 61s disk-cache, remote-cache, linux-sandbox ... (31 actions, 8 running)
+[1,467 / 1,509] 3 / 37 tests; Testing //srcs/app/lib/models:security_issue_model_test; 62s disk-cache, remote-cache, linux-sandbox ... (31 actions, 9 running)
+
+Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/home/jules/.cache/bazel/_bazel_jules/8c069df52082beee3c95ca17836fb8e2/server/jvm.out')
