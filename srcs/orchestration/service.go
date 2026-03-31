@@ -617,6 +617,23 @@ func (h *Hub) Publish(message Message) error {
 
 	h.mu.Lock()
 	var subsToNotify []chan struct{}
+
+	// ⚡ BOLT: [O(1) capacity pre-calculation to completely eliminate dynamic slice reallocations inside sync.RWMutex]
+	var totalSubs int
+	if message.ToAgent != "" {
+		totalSubs += len(h.subs[message.ToAgent])
+	}
+	if message.MeetingID != "" {
+		if meeting, ok := h.meetings[message.MeetingID]; ok {
+			for _, participant := range meeting.Participants {
+				totalSubs += len(h.subs[participant])
+			}
+		}
+	}
+	if totalSubs > 0 {
+		subsToNotify = make([]chan struct{}, 0, totalSubs)
+	}
+
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
@@ -759,6 +776,9 @@ func (h *Hub) Subscribe(agentID string) (<-chan struct{}, func()) {
 				h.subs[agentID] = append(subs[:i], subs[i+1:]...)
 				break
 			}
+		}
+		if len(h.subs[agentID]) == 0 {
+			delete(h.subs, agentID)
 		}
 	}
 
