@@ -833,7 +833,7 @@ func (h *Hub) Publish(message Message) error {
 
 	// Structured logging for agent execution traces
 	// Filter out high-frequency "status" events to reduce signal noise.
-	if message.Type != EventStatus {
+	if message.Type != EventStatus || telemetry.Verbosity >= 2 {
 		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
 	}
 
