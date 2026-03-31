@@ -1,0 +1,3 @@
+type: SECURITY_ADVISORY
+content: >
+  {"cve": "CVE-PENDING", "description": "Critical vulnerability in OHC-SIP agent identity layer allows boundary escapes and identity spoofing via URL-encoded path segments. Resolved by strictly using net/url.Parse and verifying segment lengths.", "remediation": "Update auth_interceptor.go to use net/url.Parse."}

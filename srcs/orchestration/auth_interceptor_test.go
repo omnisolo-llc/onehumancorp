@@ -1067,7 +1067,7 @@ func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
 			},
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,
-			errMsg:      "SPIFFE ID lacks required path segments",
+			errMsg:      "invalid SPIFFE ID format",
 		},
 		{
 			name: "URL Encoded Slash stream",
