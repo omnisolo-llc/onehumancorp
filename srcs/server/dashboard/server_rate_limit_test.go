@@ -12,7 +12,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
