@@ -675,3 +675,129 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected injected instruction, got %q", missions3[0].Content)
 	}
 }
+func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission_missing.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// 4. TC4: Both AGENTS.md and CLAUDE.md present, AGENTS.md should take priority
+	tempDir3 := t.TempDir()
+	db.SetContextRoot(tempDir3)
+
+	agentsMdContent := "AGENTS.md rules"
+	err = os.WriteFile(filepath.Join(tempDir3, "AGENTS.md"), []byte(agentsMdContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write AGENTS.md: %v", err)
+	}
+
+	claudeMdContent := "CLAUDE.md rules"
+	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte(claudeMdContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write CLAUDE.md: %v", err)
+	}
+
+	msg4 := Message{
+		ID:         "msg-4",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-5",
+		Type:       EventTask,
+		Content:    "Fourth instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-4", "PRIORITY_TESTER", msg4)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions4, err := db.GetPendingMissions(ctx, "PRIORITY_TESTER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions4) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions4))
+	}
+
+	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]:\n" + agentsMdContent
+	if missions4[0].Content != expectedContent3 {
+		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
+	}
+
+	// 5. TC5: Context Root set but missing files
+	tempDir4 := t.TempDir()
+	db.SetContextRoot(tempDir4)
+
+	msg5 := Message{
+		ID:         "msg-5",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-6",
+		Type:       EventTask,
+		Content:    "Fifth instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-5", "MISSING_FILES_TESTER", msg5)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions5, err := db.GetPendingMissions(ctx, "MISSING_FILES_TESTER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions5) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions5))
+	}
+
+	if missions5[0].Content != "Fifth instruction" {
+		t.Fatalf("expected unmodified instruction, got %q", missions5[0].Content)
+	}
+}
+
+func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_get_pending_fallbacks.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// 1. Missing "task" object in payload -> unmarshal directly
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-1', 'PENDING', '{\"role\":\"TESTER1\",\"Content\":\"Direct Content\"}')")
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	missions1, err := db.GetPendingMissions(ctx, "TESTER1")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions1) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions1))
+	}
+	if missions1[0].Content != "Direct Content" {
+		t.Fatalf("expected Direct Content, got %q", missions1[0].Content)
+	}
+
+	// 2. Completely invalid JSON -> fallback raw
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-3', 'PENDING', '{\"role\":\"TESTER2\",\"task\":\"some string\"}')")
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	missions2, err := db.GetPendingMissions(ctx, "TESTER2")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions2) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions2))
+	}
+	if missions2[0].Content != "some string" && missions2[0].Content != "\"some string\"" {
+		t.Fatalf("expected \"some string\", got %q", missions2[0].Content)
+	}
+}
