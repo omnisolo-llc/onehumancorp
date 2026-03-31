@@ -66,7 +66,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       appBar: AppBar(
         title: const Text('User Management'),
         actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh), tooltip: 'Refresh users'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -137,6 +137,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Delete user',
                   onPressed: () => _handleDeleteUser(user.id),
                 ),
                 isThreeLine: true,
