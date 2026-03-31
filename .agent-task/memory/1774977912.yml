@@ -1,0 +1,3 @@
+type: memory
+content: "Discovered two blocked tasks in the mission queue (1774972912_releasenotes.yml and 1774972912_semver.yml). The tasks pertained to Release Notes and SemVer bump generation. Since CheckDocumentationGate mandates all features have design-doc, cuj, and test-plan markdown files, I drafted these required docs in docs/features/release-notes/ and docs/features/semver/, resolving the blocker."
+timestamp: 1774977912
