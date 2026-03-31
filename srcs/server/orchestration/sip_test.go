@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"path/filepath"
+	"os"
 	"testing"
 	"time"
 )
@@ -564,4 +565,113 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 
 	_ = db.CompleteMission(ctx, "nonexistent")
 	_ = db.PruneStaleMissions(ctx, 0)
+}
+
+
+func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// 1. Without Context Root (normal)
+	msg1 := Message{
+		ID:         "msg-1",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-2",
+		Type:       EventTask,
+		Content:    "Original instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-1", "SOFTWARE_ENGINEER", msg1)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions))
+	}
+	if missions[0].Content != "Original instruction" {
+		t.Fatalf("expected original instruction, got %q", missions[0].Content)
+	}
+
+	// 2. With Context Root and AGENTS.md
+	tempDir := t.TempDir()
+	db.SetContextRoot(tempDir)
+
+	agentsMdContent := "Always write clean code."
+	err = os.WriteFile(filepath.Join(tempDir, "AGENTS.md"), []byte(agentsMdContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write AGENTS.md: %v", err)
+	}
+
+	msg2 := Message{
+		ID:         "msg-2",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-3",
+		Type:       EventTask,
+		Content:    "Second instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-2", "PRODUCT_MANAGER", msg2)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions2, err := db.GetPendingMissions(ctx, "PRODUCT_MANAGER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions2) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions2))
+	}
+
+	expectedContent := "Second instruction\n\n[SYSTEM GROUNDING]:\n" + agentsMdContent
+	if missions2[0].Content != expectedContent {
+		t.Fatalf("expected injected instruction, got %q", missions2[0].Content)
+	}
+
+	// 3. With Context Root and CLAUDE.md but no AGENTS.md
+	tempDir2 := t.TempDir()
+	db.SetContextRoot(tempDir2)
+
+	claudeMdContent := "Use specialized tokens."
+	err = os.WriteFile(filepath.Join(tempDir2, "CLAUDE.md"), []byte(claudeMdContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write CLAUDE.md: %v", err)
+	}
+
+	msg3 := Message{
+		ID:         "msg-3",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-4",
+		Type:       EventTask,
+		Content:    "Third instruction",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-3", "QA_TESTER", msg3)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	missions3, err := db.GetPendingMissions(ctx, "QA_TESTER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions3) != 1 {
+		t.Fatalf("expected 1 mission, got %d", len(missions3))
+	}
+
+	expectedContent2 := "Third instruction\n\n[SYSTEM GROUNDING]:\n" + claudeMdContent
+	if missions3[0].Content != expectedContent2 {
+		t.Fatalf("expected injected instruction, got %q", missions3[0].Content)
+	}
 }

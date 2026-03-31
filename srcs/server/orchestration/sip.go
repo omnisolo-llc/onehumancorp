@@ -3,6 +3,8 @@ package orchestration
 import (
 	"context"
 	"database/sql"
+	"os"
+	"path/filepath"
 	"strings"
 	"encoding/json"
 	"errors"
@@ -18,7 +20,8 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db *sql.DB
+	db          *sql.DB
+	ContextRoot string
 }
 
 const (
@@ -237,6 +240,16 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	if s.ContextRoot != "" {
+		for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
+			path := filepath.Join(s.ContextRoot, filename)
+			if content, err := os.ReadFile(path); err == nil {
+				task.Content += "\n\n[SYSTEM GROUNDING]:\n" + string(content)
+				break
+			}
+		}
+	}
+
 	taskBytes, err := json.Marshal(task)
 	if err != nil {
 		return err
@@ -401,4 +414,9 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 // Has no side effects.
 func (s *SIPDB) Close() error {
 	return s.db.Close()
+}
+
+// SetContextRoot sets the context root for the SIPDB
+func (s *SIPDB) SetContextRoot(path string) {
+	s.ContextRoot = path
 }
