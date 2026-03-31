@@ -1161,9 +1161,9 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
 }
 
-// minimaxAPIURL is the endpoint for Minimax reasoning.
+// MinimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
-var minimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
+var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 
 // MinimaxClient handles interaction with the Minimax Model 2.7.
 // Accepts no parameters.
@@ -1203,7 +1203,7 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		return "", errors.New("minimax API key is not configured")
 	}
 
-	url := minimaxAPIURL
+	url := MinimaxAPIURL
 	// Optimization: construct the JSON payload manually to avoid
 	// maps and slices allocations.
 	buf := bufferPool.Get().(*bytes.Buffer)
