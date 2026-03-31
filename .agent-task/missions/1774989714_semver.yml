@@ -1,0 +1,5 @@
+role: "SemVer Automation Agent"
+status: "PENDING"
+task: "Calculate SemVer bump based on git history and commit messages."
+priority: "high"
+created_at: 1774989714
