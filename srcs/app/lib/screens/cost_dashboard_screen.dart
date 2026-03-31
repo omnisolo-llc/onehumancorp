@@ -38,10 +38,24 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
       appBar: AppBar(
         title: const Text('Cost & Token Usage'),
         actions: [
-          IconButton(
-            onPressed: _refresh,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh costs',
+          FutureBuilder<DashboardSnapshot>(
+            future: _dashboardFuture,
+            builder: (context, snapshot) {
+              final isRefreshing =
+                  snapshot.connectionState == ConnectionState.waiting;
+              return IconButton(
+                onPressed: isRefreshing ? null : _refresh,
+                icon:
+                    isRefreshing
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.refresh),
+                tooltip: 'Refresh costs',
+              );
+            },
           ),
         ],
       ),
@@ -256,28 +270,34 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
+    return Semantics(
+      label: '$title: $value',
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
