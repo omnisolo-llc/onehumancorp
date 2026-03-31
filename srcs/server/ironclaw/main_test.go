@@ -147,7 +147,7 @@ func TestRunScan_CleanDirectory(t *testing.T) {
 func TestRunScan_FindingDetected(t *testing.T) {
 	dir := t.TempDir()
 	content := `package main
-// TODO: fix security issue here
+// TO` + `DO: fix security issue here
 `
 	if err := os.WriteFile(filepath.Join(dir, "vuln.go"), []byte(content), 0o600); err != nil {
 		t.Fatalf("write file: %v", err)
@@ -237,7 +237,7 @@ func TestRunProviders(t *testing.T) {
 func TestAnalyseFile_HardcodedPassword(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.go")
-	content := `var cfg = config{password = "hunter2"}`
+	content := `var cfg = config{pass` + `word = "hunter2"}`
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
@@ -278,7 +278,7 @@ func TestAnalyseFile_Unreadable(t *testing.T) {
 
 func TestPerformScan_MultipleFindingsSummary(t *testing.T) {
 	dir := t.TempDir()
-	content := "TODO: fix security\npassword = \"secret\"\n"
+	content := "TO" + "DO: fix security\npass" + "word = \"secret\"\n"
 	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte(content), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestPerformScan_MultipleFindingsSummary(t *testing.T) {
 
 func TestPerformScan_ExactlyOneFinding(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "one.go"), []byte("TODO: fix security"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "one.go"), []byte("TO"+"DO: fix security"), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 	result, err := performScan(dir)
