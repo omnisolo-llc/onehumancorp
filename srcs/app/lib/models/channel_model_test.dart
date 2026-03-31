@@ -26,8 +26,9 @@ void main() {
 
     test('toJson for centrifuge round-trips', () {
       final b = ChatBackend(
-          type: ChatBackendType.centrifuge,
-          url: 'ws://localhost:8000/connection/websocket');
+        type: ChatBackendType.centrifuge,
+        url: 'ws://localhost:8000/connection/websocket',
+      );
       final json = b.toJson();
       expect(json['centrifuge'], 'ws://localhost:8000/connection/websocket');
     });
