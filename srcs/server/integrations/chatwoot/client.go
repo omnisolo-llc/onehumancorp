@@ -16,7 +16,8 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/integrations"
 )
 
 // DefaultBaseURL is the in-cluster URL for the Chatwoot service.
@@ -50,7 +51,7 @@ func NewClientFromEnv() *Client {
 	}
 	return &Client{
 		BaseURL:    base,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: integrations.InitSafeHTTPClient(),
 	}
 }
 
@@ -62,7 +63,7 @@ func NewClientFromEnv() *Client {
 func NewClient(baseURL string) *Client {
 	return &Client{
 		BaseURL:    baseURL,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: integrations.InitSafeHTTPClient(),
 	}
 }
 
