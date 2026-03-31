@@ -1,3 +1,4 @@
+startup --host_jvm_args=-Xmx2g
 # Bazel configuration for MCP Any
 
 build --config=remote

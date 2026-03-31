@@ -40,8 +40,8 @@ func TestDelegateSubTask_Success(t *testing.T) {
 	defer hub.mu.RUnlock()
 
 	var subAgentID string
-	for id := range hub.agents {
-		if id != "SYSTEM" {
+	for id, a := range hub.agents {
+		if id != "SYSTEM" && id != "sender-1" && a.Role == "SWE" {
 			subAgentID = id
 		}
 	}

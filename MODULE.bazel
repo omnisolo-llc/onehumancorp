@@ -15,6 +15,13 @@ bazel_dep(name = "rules_android", version = "0.7.1")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+single_version_override(
+    module_name = "aspect_bazel_lib",
+    patch_cmds = [
+        "sed -i 's|https://github.com/bats-core/bats-core/archive/v1.10.0.tar.gz|https://api.github.com/repos/bats-core/bats-core/tarball/v1.10.0|' lib/repositories.bzl",
+    ],
+    version = "2.22.5",
+)
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 
