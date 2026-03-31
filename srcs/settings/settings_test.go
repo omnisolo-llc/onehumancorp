@@ -79,3 +79,50 @@ func TestStore_CentrifugeAndMinimax(t *testing.T) {
 		t.Errorf("MinimaxAPIKey = %q, want %q", loaded.MinimaxAPIKey, "sk-test-key")
 	}
 }
+
+func TestStore_FromFileErrors(t *testing.T) {
+	// write invalid json
+	f, _ := os.CreateTemp("", "bad-*.json")
+	f.Write([]byte("{bad json"))
+	f.Close()
+	defer os.Remove(f.Name())
+
+	_, err := FromFile(f.Name())
+	if err == nil {
+		t.Fatal("expected error on bad json")
+	}
+
+	// Unreadable file (directory)
+	_, err = FromFile(t.TempDir())
+	if err == nil {
+		t.Fatal("expected error on dir")
+	}
+}
+
+func TestStore_SaveErrors(t *testing.T) {
+	// Cannot create dir
+	store := &Store{path: "/root/unauthorized/file.json"}
+	err := store.Save()
+	if err == nil {
+		t.Fatal("expected error creating dir")
+	}
+
+	// Cannot write file
+	d := t.TempDir()
+	store2 := &Store{path: filepath.Join(d, "file.json")}
+	// Make dir read-only so we can't create file
+	os.Chmod(d, 0555)
+	err = store2.Save()
+	if err == nil {
+		t.Fatal("expected error writing file")
+	}
+	os.Chmod(d, 0755) // restore so it can be cleaned up
+}
+
+func TestStore_SetExtraEmptyExtras(t *testing.T) {
+	store := NewStore()
+	store.data.Extras = nil
+	if err := store.SetExtra("key1", "val1"); err != nil {
+		t.Fatalf("failed to set extra on nil map: %v", err)
+	}
+}
