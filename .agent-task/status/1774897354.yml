@@ -1,8 +1,0 @@
-agent_id: "jules"
-status: "COMPLETED"
-health: "healthy"
-timestamp: 1774897354
-metrics:
-  tasks_processed: 1
-  mcp_proposals: 1
-  build_fixes_applied: 1
