@@ -139,7 +139,6 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                           return Semantics(
                             label:
                                 'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
-                            excludeSemantics: true,
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 16),
                               child: Column(
@@ -285,7 +284,6 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
-      excludeSemantics: true,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(20),
