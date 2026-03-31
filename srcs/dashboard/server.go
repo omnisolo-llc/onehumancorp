@@ -339,6 +339,7 @@ var availableDomains = []DomainInfo{
 
 var defaultMcpTools = []MCPTool{
 	{ID: "git-mcp", Name: "Git", Description: "Source control operations: clone, commit, pull-request, review via GitHub or Gitea.", Category: "code", Status: "available"},
+	{ID: "github-mcp", Name: "GitHub (MCP)", Description: "Full repository introspections, PR management, issue tracking, and automated code review.", Category: "code", Status: "available"},
 	{ID: "jira-mcp", Name: "Jira / Plane", Description: "Task and issue tracking: create tickets, update status, list sprint items.", Category: "project_management", Status: "available"},
 	{ID: "linear-mcp", Name: "Linear", Description: "Modern issue tracking: manage issues, cycles, and roadmaps for high-velocity teams.", Category: "project_management", Status: "available"},
 	{ID: "figma-mcp", Name: "Figma", Description: "Design file access: read wireframes, export assets, inspect component specs.", Category: "design", Status: "available"},
