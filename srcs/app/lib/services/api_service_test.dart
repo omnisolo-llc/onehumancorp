@@ -43,10 +43,11 @@ void main() {
           'status': 'running',
           'organization_id': 'org-1',
           'created_at': '2025-01-01T00:00:00Z',
-        }
+        },
       ];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(agentJson), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(agentJson), 200));
 
       final agents = await api.listAgents();
       expect(agents, hasLength(1));
@@ -62,11 +63,13 @@ void main() {
         'organization_id': 'org-1',
         'created_at': '2025-01-02T00:00:00Z',
       };
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response(jsonEncode(agentJson), 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response(jsonEncode(agentJson), 200));
 
       final agent = await api.hireAgent('Bob', 'manager');
       expect(agent.id, 'a2');
@@ -74,21 +77,28 @@ void main() {
     });
 
     test('fireAgent sends post request', () async {
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.fireAgent('a1');
-      verify(() => mockClient.post(any(),
+      verify(
+        () => mockClient.post(
+          any(),
           headers: any(named: 'headers'),
-          body: any(named: 'body'))).called(1);
+          body: any(named: 'body'),
+        ),
+      ).called(1);
     });
 
     test('listAgents throws on error status', () async {
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('Forbidden', 403));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('Forbidden', 403));
 
       expect(() => api.listAgents(), throwsA(isA<Exception>()));
     });
@@ -112,8 +122,9 @@ void main() {
           'members': [],
         },
       };
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(data), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(data), 200));
 
       final result = await api.getDashboard();
       expect(result.costs.totalTokens, 1000000);
@@ -126,10 +137,11 @@ void main() {
   group('ApiService meetings', () {
     test('listMeetings returns list', () async {
       final meetings = [
-        {'id': 'm1', 'name': 'Standup'}
+        {'id': 'm1', 'name': 'Standup'},
       ];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(meetings), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(meetings), 200));
 
       final result = await api.listMeetings();
       expect(result, hasLength(1));
@@ -138,11 +150,13 @@ void main() {
 
     test('createMeeting returns new meeting', () async {
       final meeting = {'id': 'm2', 'name': 'Sync'};
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response(jsonEncode(meeting), 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response(jsonEncode(meeting), 200));
 
       final result = await api.createMeeting('Sync');
       expect(result['id'], 'm2');
@@ -150,10 +164,9 @@ void main() {
 
     test('joinMeeting returns join info', () async {
       final info = {'token': 'lk-token', 'url': 'wss://lk.example.com'};
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-          )).thenAnswer((_) async => http.Response(jsonEncode(info), 200));
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(info), 200));
 
       final result = await api.joinMeeting('m1');
       expect(result['token'], 'lk-token');
@@ -173,10 +186,11 @@ void main() {
           'config': <String, String>{},
           'enabled': true,
           'created_at': '2025-01-01T00:00:00Z',
-        }
+        },
       ];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(channels), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(channels), 200));
 
       final result = await api.listChannels();
       expect(result, hasLength(1));
@@ -193,12 +207,13 @@ void main() {
         'enabled': true,
         'created_at': '2025-02-01T00:00:00Z',
       };
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async =>
-          http.Response(jsonEncode(channelJson), 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response(jsonEncode(channelJson), 200));
 
       final result = await api.addChannel(
         name: 'support',
@@ -209,12 +224,14 @@ void main() {
     });
 
     test('deleteChannel calls delete endpoint', () async {
-      when(() => mockClient.delete(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.delete(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.deleteChannel('ch1');
-      verify(() => mockClient.delete(any(),
-          headers: any(named: 'headers'))).called(1);
+      verify(
+        () => mockClient.delete(any(), headers: any(named: 'headers')),
+      ).called(1);
     });
   });
 
@@ -230,10 +247,11 @@ void main() {
           'api_key': 'sk-...',
           'models': ['gpt-4'],
           'is_official': true,
-        }
+        },
       ];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(providers), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(providers), 200));
 
       final result = await api.listAiProviders();
       expect(result, hasLength(1));
@@ -249,12 +267,13 @@ void main() {
         'models': ['claude-3'],
         'is_official': false,
       };
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async =>
-          http.Response(jsonEncode(providerJson), 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response(jsonEncode(providerJson), 200));
 
       final result = await api.addAiProvider(
         name: 'Anthropic',
@@ -266,16 +285,22 @@ void main() {
     });
 
     test('saveAiProviderKey calls patch endpoint', () async {
-      when(() => mockClient.patch(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.patch(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.saveAiProviderKey('p1', 'new-key');
-      verify(() => mockClient.patch(any(),
+      verify(
+        () => mockClient.patch(
+          any(),
           headers: any(named: 'headers'),
-          body: any(named: 'body'))).called(1);
+          body: any(named: 'body'),
+        ),
+      ).called(1);
     });
   });
 
@@ -291,10 +316,11 @@ void main() {
           'category': 'official',
           'installed': true,
           'enabled': true,
-        }
+        },
       ];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(skills), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(skills), 200));
 
       final result = await api.listSkills();
       expect(result, hasLength(1));
@@ -302,38 +328,44 @@ void main() {
     });
 
     test('installSkill calls install endpoint', () async {
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.installSkill('web_search');
-      verify(() => mockClient.post(any(),
-          headers: any(named: 'headers'))).called(1);
+      verify(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).called(1);
     });
 
     test('uninstallSkill calls uninstall endpoint', () async {
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.uninstallSkill('web_search');
-      verify(() => mockClient.post(any(),
-          headers: any(named: 'headers'))).called(1);
+      verify(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).called(1);
     });
 
     test('setSkillEnabled calls patch endpoint', () async {
-      when(() => mockClient.patch(
-            any(),
-            headers: any(named: 'headers'),
-            body: any(named: 'body'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.patch(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.setSkillEnabled('web_search', true);
-      verify(() => mockClient.patch(any(),
+      verify(
+        () => mockClient.patch(
+          any(),
           headers: any(named: 'headers'),
-          body: any(named: 'body'))).called(1);
+          body: any(named: 'body'),
+        ),
+      ).called(1);
     });
   });
 
@@ -350,10 +382,11 @@ void main() {
           'fixable': true,
           'fixed': false,
           'category': 'auth',
-        }
+        },
       ];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(issues), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(issues), 200));
 
       final result = await api.listSecurityIssues();
       expect(result, hasLength(1));
@@ -361,14 +394,14 @@ void main() {
     });
 
     test('fixSecurityIssue calls fix endpoint', () async {
-      when(() => mockClient.post(
-            any(),
-            headers: any(named: 'headers'),
-          )).thenAnswer((_) async => http.Response('', 200));
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('', 200));
 
       await api.fixSecurityIssue('i1');
-      verify(() => mockClient.post(any(),
-          headers: any(named: 'headers'))).called(1);
+      verify(
+        () => mockClient.post(any(), headers: any(named: 'headers')),
+      ).called(1);
     });
   });
 
@@ -377,8 +410,9 @@ void main() {
   group('ApiService logs', () {
     test('getLogs returns list of strings', () async {
       final logs = ['line 1', 'line 2', 'line 3'];
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(logs), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(logs), 200));
 
       final result = await api.getLogs();
       expect(result, hasLength(3));
@@ -386,8 +420,9 @@ void main() {
     });
 
     test('getLogs with custom lines param', () async {
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(jsonEncode(<String>[]), 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<String>[]), 200));
 
       final result = await api.getLogs(lines: 50);
       expect(result, isEmpty);

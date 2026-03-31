@@ -23,20 +23,21 @@ class Agent {
       role: json['role'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       organizationId: json['organization_id'] as String? ?? '',
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'] as String)
+              : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'role': role,
-        'status': status,
-        'organization_id': organizationId,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'role': role,
+    'status': status,
+    'organization_id': organizationId,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   bool get isRunning => status == 'running';
   bool get isPending => status == 'pending';

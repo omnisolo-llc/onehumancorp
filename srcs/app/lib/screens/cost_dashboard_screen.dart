@@ -10,7 +10,8 @@ class CostDashboardScreen extends ConsumerStatefulWidget {
   const CostDashboardScreen({super.key});
 
   @override
-  ConsumerState<CostDashboardScreen> createState() => _CostDashboardScreenState();
+  ConsumerState<CostDashboardScreen> createState() =>
+      _CostDashboardScreenState();
 }
 
 class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
@@ -88,74 +89,92 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
               // Usage per Agent Chart
               Text(
                 'Usage per Agent',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
-                    children: costs.agents.map((agentCost) {
-                      final agent = data.agents.firstWhere(
-                        (a) => a.id == agentCost.agentId,
-                        orElse: () => Agent(
-                          id: agentCost.agentId,
-                          name: 'Unknown Agent',
-                          role: '',
-                          status: '',
-                          organizationId: '',
-                          createdAt: DateTime.now(),
-                        ),
-                      );
-
-                      final ratio = costs.totalCostUSD > 0
-                          ? agentCost.costUSD / costs.totalCostUSD
-                          : 0.0;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(agent.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                                Text(currencyFormat.format(agentCost.costUSD)),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Stack(
-                              children: [
-                                Container(
-                                  height: 8,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: colors.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+                    children:
+                        costs.agents.map((agentCost) {
+                          final agent = data.agents.firstWhere(
+                            (a) => a.id == agentCost.agentId,
+                            orElse:
+                                () => Agent(
+                                  id: agentCost.agentId,
+                                  name: 'Unknown Agent',
+                                  role: '',
+                                  status: '',
+                                  organizationId: '',
+                                  createdAt: DateTime.now(),
                                 ),
-                                FractionallySizedBox(
-                                  widthFactor: ratio.clamp(0.0, 1.0),
-                                  child: Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: colors.primary,
-                                      borderRadius: BorderRadius.circular(4),
+                          );
+
+                          final ratio =
+                              costs.totalCostUSD > 0
+                                  ? agentCost.costUSD / costs.totalCostUSD
+                                  : 0.0;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      agent.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
+                                    Text(
+                                      currencyFormat.format(agentCost.costUSD),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Stack(
+                                  children: [
+                                    Container(
+                                      height: 8,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: colors.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    FractionallySizedBox(
+                                      widthFactor: ratio.clamp(0.0, 1.0),
+                                      child: Container(
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: colors.primary,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: colors.onSurfaceVariant,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
-                              style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
                   ),
                 ),
               ),
@@ -164,7 +183,9 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
               // Organization Hierarchy Preview
               Text(
                 'Organization View',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Card(
@@ -186,12 +207,19 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                         ],
                       ),
                       const Divider(height: 32),
-                      ...data.organization.members.take(3).map((m) => ListTile(
-                            leading: Icon(m.isHuman ? Icons.person : Icons.smart_toy, size: 20),
-                            title: Text(m.name),
-                            subtitle: Text(m.role),
-                            dense: true,
-                          )),
+                      ...data.organization.members
+                          .take(3)
+                          .map(
+                            (m) => ListTile(
+                              leading: Icon(
+                                m.isHuman ? Icons.person : Icons.smart_toy,
+                                size: 20,
+                              ),
+                              title: Text(m.name),
+                              subtitle: Text(m.role),
+                              dense: true,
+                            ),
+                          ),
                       if (data.organization.members.length > 3)
                         Center(
                           child: TextButton(
@@ -247,10 +275,7 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),

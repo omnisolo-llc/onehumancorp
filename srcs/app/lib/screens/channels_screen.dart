@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final _channelsProvider =
-    FutureProvider<List<ChatChannel>>((ref) async {
+final _channelsProvider = FutureProvider<List<ChatChannel>>((ref) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) return [];
   return api.listChannels();
@@ -71,7 +70,11 @@ const _channelDefs = <_ChannelDef>[
         secret: true,
         hint: '123456:ABC-DEF1234...',
       ),
-      _FieldDef(key: 'allowed_chats', label: 'Allowed Chat IDs', hint: '-100123456,987654'),
+      _FieldDef(
+        key: 'allowed_chats',
+        label: 'Allowed Chat IDs',
+        hint: '-100123456,987654',
+      ),
     ],
   ),
   _ChannelDef(
@@ -80,7 +83,12 @@ const _channelDefs = <_ChannelDef>[
     description: 'Connect via Discord Bot.',
     guideUrl: 'https://discord.com/developers/docs/intro',
     fields: [
-      _FieldDef(key: 'bot_token', label: 'Bot Token', secret: true, hint: 'MTxxxxxxx.xxx.xxx'),
+      _FieldDef(
+        key: 'bot_token',
+        label: 'Bot Token',
+        secret: true,
+        hint: 'MTxxxxxxx.xxx.xxx',
+      ),
       _FieldDef(key: 'server_id', label: 'Server ID'),
       _FieldDef(key: 'channel_id', label: 'Default Channel ID'),
     ],
@@ -91,8 +99,18 @@ const _channelDefs = <_ChannelDef>[
     description: 'Connect via Slack Bot.',
     guideUrl: 'https://api.slack.com/apps',
     fields: [
-      _FieldDef(key: 'bot_token', label: 'Bot OAuth Token', secret: true, hint: 'xoxb-...'),
-      _FieldDef(key: 'app_token', label: 'App-Level Token', secret: true, hint: 'xapp-...'),
+      _FieldDef(
+        key: 'bot_token',
+        label: 'Bot OAuth Token',
+        secret: true,
+        hint: 'xoxb-...',
+      ),
+      _FieldDef(
+        key: 'app_token',
+        label: 'App-Level Token',
+        secret: true,
+        hint: 'xapp-...',
+      ),
       _FieldDef(key: 'channel', label: 'Default Channel', hint: '#general'),
     ],
   ),
@@ -102,7 +120,11 @@ const _channelDefs = <_ChannelDef>[
     description: 'Connect to a self-hosted or cloud Chatwoot instance.',
     guideUrl: 'https://www.chatwoot.com/docs',
     fields: [
-      _FieldDef(key: 'api_url', label: 'Chatwoot URL', hint: 'https://app.chatwoot.com'),
+      _FieldDef(
+        key: 'api_url',
+        label: 'Chatwoot URL',
+        hint: 'https://app.chatwoot.com',
+      ),
       _FieldDef(key: 'api_key', label: 'API Key', secret: true),
       _FieldDef(key: 'account_id', label: 'Account ID'),
       _FieldDef(key: 'inbox_id', label: 'Inbox ID'),
@@ -122,9 +144,14 @@ const _channelDefs = <_ChannelDef>[
     type: ChatBackendType.mattermost,
     icon: '🔵',
     description: 'Connect via Mattermost Bot.',
-    guideUrl: 'https://developers.mattermost.com/integrate/reference/bot-accounts/',
+    guideUrl:
+        'https://developers.mattermost.com/integrate/reference/bot-accounts/',
     fields: [
-      _FieldDef(key: 'server_url', label: 'Mattermost URL', hint: 'https://mattermost.example.com'),
+      _FieldDef(
+        key: 'server_url',
+        label: 'Mattermost URL',
+        hint: 'https://mattermost.example.com',
+      ),
       _FieldDef(key: 'bot_token', label: 'Bot Token', secret: true),
       _FieldDef(key: 'team', label: 'Team Name'),
       _FieldDef(key: 'channel', label: 'Default Channel'),
@@ -165,18 +192,17 @@ class ChannelsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (channels) => channels.isEmpty
-            ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
-            : _ChannelList(channels: channels),
+        data:
+            (channels) =>
+                channels.isEmpty
+                    ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
+                    : _ChannelList(channels: channels),
       ),
     );
   }
 
   void _showAddDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (_) => _AddChannelDialog(ref: ref),
-    );
+    showDialog(context: context, builder: (_) => _AddChannelDialog(ref: ref));
   }
 }
 
@@ -194,8 +220,10 @@ class _EmptyChannels extends StatelessWidget {
         children: [
           const Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          Text('No channels yet',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'No channels yet',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
           const Text('Add a channel to start receiving messages.'),
           const SizedBox(height: 24),
@@ -243,17 +271,20 @@ class _ChannelCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
-        title: Text(channel.name,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          channel.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Text(channel.backend.displayName),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Chip(
               label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
-              backgroundColor: channel.enabled
-                  ? Colors.green.shade100
-                  : Colors.grey.shade200,
+              backgroundColor:
+                  channel.enabled
+                      ? Colors.green.shade100
+                      : Colors.grey.shade200,
             ),
           ],
         ),
@@ -321,8 +352,9 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -347,21 +379,26 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                   labelText: 'Backend',
                   border: OutlineInputBorder(),
                 ),
-                items: _channelDefs
-                    .map((d) => DropdownMenuItem(
-                          value: d,
-                          child: Row(
-                            children: [
-                              Text(d.icon),
-                              const SizedBox(width: 8),
-                              Text(d.type.name == 'centrifuge'
-                                  ? 'Native (Centrifuge)'
-                                  : d.type.name[0].toUpperCase() +
-                                      d.type.name.substring(1)),
-                            ],
+                items:
+                    _channelDefs
+                        .map(
+                          (d) => DropdownMenuItem(
+                            value: d,
+                            child: Row(
+                              children: [
+                                Text(d.icon),
+                                const SizedBox(width: 8),
+                                Text(
+                                  d.type.name == 'centrifuge'
+                                      ? 'Native (Centrifuge)'
+                                      : d.type.name[0].toUpperCase() +
+                                          d.type.name.substring(1),
+                                ),
+                              ],
+                            ),
                           ),
-                        ))
-                    .toList(),
+                        )
+                        .toList(),
                 onChanged: (val) {
                   if (val == null) return;
                   setState(() {
@@ -386,20 +423,22 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
               ),
               const SizedBox(height: 12),
               // Dynamic fields
-              ..._selected.fields.map((f) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: TextField(
-                      controller: _fieldCtrls[f.key],
-                      obscureText: f.secret,
-                      decoration: InputDecoration(
-                        labelText: f.label,
-                        hintText: f.hint,
-                        border: const OutlineInputBorder(),
-                        suffixIcon:
-                            f.secret ? const Icon(Icons.lock_outline) : null,
-                      ),
+              ..._selected.fields.map(
+                (f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: _fieldCtrls[f.key],
+                    obscureText: f.secret,
+                    decoration: InputDecoration(
+                      labelText: f.label,
+                      hintText: f.hint,
+                      border: const OutlineInputBorder(),
+                      suffixIcon:
+                          f.secret ? const Icon(Icons.lock_outline) : null,
                     ),
-                  )),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -411,13 +450,14 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child: _loading
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Add'),
+          child:
+              _loading
+                  ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Add'),
         ),
       ],
     );

@@ -39,11 +39,11 @@ class Skill {
   }
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'version': version,
-        'description': description,
-        'category': category,
-        'installed': installed,
-        'enabled': enabled,
-      };
+    'name': name,
+    'version': version,
+    'description': description,
+    'category': category,
+    'installed': installed,
+    'enabled': enabled,
+  };
 }

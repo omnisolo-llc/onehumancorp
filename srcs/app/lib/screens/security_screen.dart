@@ -44,18 +44,16 @@ class SecurityScreen extends ConsumerWidget {
               if (open.isNotEmpty) ...[
                 _SectionHeader(
                   '${open.length} open issue${open.length != 1 ? 's' : ''}',
-                  color: open.any((i) => i.severity == 'high')
-                      ? Colors.red
-                      : Colors.orange,
+                  color:
+                      open.any((i) => i.severity == 'high')
+                          ? Colors.red
+                          : Colors.orange,
                 ),
                 ...open.map((i) => _IssueCard(issue: i, ref: ref)),
                 const SizedBox(height: 16),
               ],
               if (fixed.isNotEmpty) ...[
-                _SectionHeader(
-                  '${fixed.length} resolved',
-                  color: Colors.green,
-                ),
+                _SectionHeader('${fixed.length} resolved', color: Colors.green),
                 ...fixed.map((i) => _IssueCard(issue: i, ref: ref)),
               ],
             ],
@@ -79,8 +77,10 @@ class _AllClear extends StatelessWidget {
         children: [
           Icon(Icons.verified_user, size: 64, color: Colors.green),
           SizedBox(height: 16),
-          Text('No security issues found',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            'No security issues found',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           SizedBox(height: 8),
           Text('Your configuration looks good.'),
         ],
@@ -150,8 +150,9 @@ class _IssueCardState extends State<_IssueCard> {
       widget.ref.invalidate(_securityProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Fix failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fix failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -185,32 +186,39 @@ class _IssueCardState extends State<_IssueCard> {
                   label: Text(issue.severity.toUpperCase()),
                   backgroundColor: _severityColor().withAlpha(30),
                   labelStyle: TextStyle(
-                      color: _severityColor(), fontWeight: FontWeight.bold),
+                    color: _severityColor(),
+                    fontWeight: FontWeight.bold,
+                  ),
                   visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(issue.description,
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              issue.description,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             if (issue.detail != null) ...[
               const SizedBox(height: 4),
-              Text(issue.detail!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                        color: Colors.grey,
-                      )),
+              Text(
+                issue.detail!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: Colors.grey,
+                ),
+              ),
             ],
             if (issue.fixable && !_fixed) ...[
               const SizedBox(height: 12),
               FilledButton.icon(
-                icon: _busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.build, size: 16),
+                icon:
+                    _busy
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.build, size: 16),
                 label: const Text('Auto-fix'),
                 onPressed: _busy ? null : _fix,
               ),

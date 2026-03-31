@@ -27,17 +27,21 @@ class SkillsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (skills) {
-          final filtered = category == 'all'
-              ? skills
-              : skills.where((s) => s.category == category).toList();
+          final filtered =
+              category == 'all'
+                  ? skills
+                  : skills.where((s) => s.category == category).toList();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _CategoryBar(skills: skills),
               Expanded(
-                child: filtered.isEmpty
-                    ? const Center(child: Text('No skills in this category.'))
-                    : _SkillList(skills: filtered, ref: ref),
+                child:
+                    filtered.isEmpty
+                        ? const Center(
+                          child: Text('No skills in this category.'),
+                        )
+                        : _SkillList(skills: filtered, ref: ref),
               ),
             ],
           );
@@ -62,20 +66,26 @@ class _CategoryBar extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        children: cats.map((c) {
-          final count = c == 'all'
-              ? skills.length
-              : skills.where((s) => s.category == c).length;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text('${c[0].toUpperCase()}${c.substring(1)} ($count)'),
-              selected: selected == c,
-              onSelected: (_) =>
-                  ref.read(_selectedCategoryProvider.notifier).state = c,
-            ),
-          );
-        }).toList(),
+        children:
+            cats.map((c) {
+              final count =
+                  c == 'all'
+                      ? skills.length
+                      : skills.where((s) => s.category == c).length;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(
+                    '${c[0].toUpperCase()}${c.substring(1)} ($count)',
+                  ),
+                  selected: selected == c,
+                  onSelected:
+                      (_) =>
+                          ref.read(_selectedCategoryProvider.notifier).state =
+                              c,
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -149,8 +159,9 @@ class _SkillCardState extends State<_SkillCard> {
       widget.ref.invalidate(_skillsProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -166,8 +177,9 @@ class _SkillCardState extends State<_SkillCard> {
       widget.ref.invalidate(_skillsProvider);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -193,12 +205,18 @@ class _SkillCardState extends State<_SkillCard> {
                   visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(width: 8),
-                Text(s.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(
+                  s.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(width: 4),
-                Text('v${s.version}',
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'v${s.version}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const Spacer(),
                 if (_installed)
                   Switch(
@@ -208,20 +226,19 @@ class _SkillCardState extends State<_SkillCard> {
                 const SizedBox(width: 8),
                 _busy
                     ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                     : OutlinedButton(
-                        onPressed: _toggleInstall,
-                        child: Text(_installed ? 'Remove' : 'Install'),
-                      ),
+                      onPressed: _toggleInstall,
+                      child: Text(_installed ? 'Remove' : 'Install'),
+                    ),
               ],
             ),
             if (s.description.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(s.description,
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(s.description, style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
         ),

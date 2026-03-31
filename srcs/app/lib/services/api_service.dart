@@ -20,41 +20,54 @@ class ApiService {
   final String token;
   final http.Client _client;
 
-  ApiService({
-    required this.baseUrl,
-    required this.token,
-    http.Client? client,
-  }) : _client = client ?? http.Client();
+  ApiService({required this.baseUrl, required this.token, http.Client? client})
+    : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
 
   // ── Agents ──────────────────────────────────────────────────────────────
 
   Future<List<Agent>> listAgents() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/agents'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/agents'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => Agent.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<Agent> hireAgent(String name, String role, {String providerType = 'openclaw'}) async {
+  Future<Agent> hireAgent(
+    String name,
+    String role, {
+    String providerType = 'openclaw',
+  }) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/agents/hire'),
       headers: _headers,
-      body: jsonEncode({'name': name, 'role': role, 'providerType': providerType}),
+      body: jsonEncode({
+        'name': name,
+        'role': role,
+        'providerType': providerType,
+      }),
     );
     _checkStatus(res);
     return Agent.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<List<AgentProvider>> listAgentProviders() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/agents/providers'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/agents/providers'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => AgentProvider.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => AgentProvider.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> fireAgent(String agentId) async {
@@ -78,9 +91,14 @@ class ApiService {
   // ── Dashboard & Analytics ────────────────────────────────────────────────
 
   Future<DashboardSnapshot> getDashboard() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/dashboard'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/dashboard'),
+      headers: _headers,
+    );
     _checkStatus(res);
-    return DashboardSnapshot.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    return DashboardSnapshot.fromJson(
+      jsonDecode(res.body) as Map<String, dynamic>,
+    );
   }
 
   Future<void> seedScenario(String scenario) async {
@@ -95,10 +113,15 @@ class ApiService {
   // ── Handoffs & Approvals ─────────────────────────────────────────────────
 
   Future<List<HandoffPackage>> listHandoffs() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/handoffs'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/handoffs'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => HandoffPackage.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => HandoffPackage.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> resolveHandoff(String handoffId, String resolution) async {
@@ -122,10 +145,15 @@ class ApiService {
   // ── Pipelines ─────────────────────────────────────────────────────────────
 
   Future<List<Pipeline>> listPipelines() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/pipelines'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/pipelines'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => Pipeline.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => Pipeline.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Pipeline> createPipeline(String name, String branch) async {
@@ -149,10 +177,15 @@ class ApiService {
   // ── Users & RBAC ─────────────────────────────────────────────────────────
 
   Future<List<UserPublic>> listUsers() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/users'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/users'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => UserPublic.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => UserPublic.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<UserPublic> createUser(Map<String, dynamic> data) async {
@@ -166,20 +199,30 @@ class ApiService {
   }
 
   Future<void> deleteUser(String userId) async {
-    final res = await _client.delete(Uri.parse('$baseUrl/api/users/$userId'), headers: _headers);
+    final res = await _client.delete(
+      Uri.parse('$baseUrl/api/users/$userId'),
+      headers: _headers,
+    );
     _checkStatus(res);
   }
 
   // ── MCP Tools ────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> listMCPTools() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/mcp/tools'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/mcp/tools'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.cast<Map<String, dynamic>>();
   }
 
-  Future<dynamic> invokeMCPTool(String toolId, String action, Map<String, dynamic> params) async {
+  Future<dynamic> invokeMCPTool(
+    String toolId,
+    String action,
+    Map<String, dynamic> params,
+  ) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/mcp/tools/$toolId/invoke'),
       headers: _headers,
@@ -192,7 +235,10 @@ class ApiService {
   // ── Meetings ─────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> listMeetings() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/meetings'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/meetings'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.cast<Map<String, dynamic>>();
@@ -220,7 +266,10 @@ class ApiService {
   // ── Channels ─────────────────────────────────────────────────────────────
 
   Future<List<ChatChannel>> listChannels() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/channels'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/channels'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list
@@ -253,7 +302,10 @@ class ApiService {
   // ── Settings ─────────────────────────────────────────────────────────────
 
   Future<Settings> getSettings() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/settings'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/settings'),
+      headers: _headers,
+    );
     _checkStatus(res);
     return Settings.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -279,7 +331,10 @@ class ApiService {
   // ── AI Providers ──────────────────────────────────────────────────────────
 
   Future<List<AiProvider>> listAiProviders() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/ai/providers'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/ai/providers'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list
@@ -310,7 +365,10 @@ class ApiService {
   // ── Skills ────────────────────────────────────────────────────────────────
 
   Future<List<Skill>> listSkills() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/skills'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/skills'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => Skill.fromJson(e as Map<String, dynamic>)).toList();
@@ -344,7 +402,10 @@ class ApiService {
   // ── Security ──────────────────────────────────────────────────────────────
 
   Future<List<SecurityIssue>> listSecurityIssues() async {
-    final res = await _client.get(Uri.parse('$baseUrl/api/security/issues'), headers: _headers);
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/security/issues'),
+      headers: _headers,
+    );
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list
@@ -372,7 +433,6 @@ class ApiService {
     return list.cast<String>();
   }
 
-
   Stream<String> streamScaleEvents() async* {
     final req = http.Request('GET', Uri.parse('$baseUrl/api/v1/scale/stream'));
     req.headers.addAll(_headers);
@@ -395,7 +455,6 @@ class ApiService {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-
 
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {

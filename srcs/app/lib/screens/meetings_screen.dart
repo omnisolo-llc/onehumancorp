@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final _meetingsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final _meetingsProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) return [];
   return api.listMeetings();
@@ -29,18 +31,19 @@ class MeetingsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (rooms) => rooms.isEmpty
-            ? _EmptyRooms(onCreate: () => _showCreateDialog(context, ref))
-            : _RoomList(rooms: rooms, ref: ref),
+        data:
+            (rooms) =>
+                rooms.isEmpty
+                    ? _EmptyRooms(
+                      onCreate: () => _showCreateDialog(context, ref),
+                    )
+                    : _RoomList(rooms: rooms, ref: ref),
       ),
     );
   }
 
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (_) => _CreateRoomDialog(ref: ref),
-    );
+    showDialog(context: context, builder: (_) => _CreateRoomDialog(ref: ref));
   }
 }
 
@@ -58,8 +61,10 @@ class _EmptyRooms extends StatelessWidget {
         children: [
           const Icon(Icons.video_call, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          Text('No active meeting rooms.',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'No active meeting rooms.',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
           const Text('Create a meeting room to collaborate with your team.'),
           const SizedBox(height: 24),
@@ -128,8 +133,9 @@ class _RoomCardState extends State<_RoomCard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Join failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Join failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _joining = false);
@@ -139,34 +145,45 @@ class _RoomCardState extends State<_RoomCard> {
   void _showJoinInfo(BuildContext context, Map<String, dynamic> info) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Join Meeting'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (info['join_url'] != null) ...[
-              const Text('Join URL:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              SelectableText(info['join_url'] as String),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Join Meeting'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (info['join_url'] != null) ...[
+                  const Text(
+                    'Join URL:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(info['join_url'] as String),
+                ],
+                if (info['token'] != null) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Token:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    info['token'] as String,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
             ],
-            if (info['token'] != null) ...[
-              const SizedBox(height: 12),
-              const Text('Token:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              SelectableText(info['token'] as String,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-            ],
-          ],
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Done'),
           ),
-        ],
-      ),
     );
   }
 
@@ -189,7 +206,9 @@ class _RoomCardState extends State<_RoomCard> {
                   Text(
                     room['name'] as String? ?? 'Meeting Room',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -205,16 +224,16 @@ class _RoomCardState extends State<_RoomCard> {
                       ),
                       Text(
                         room['status'] as String? ?? '',
-                        style: TextStyle(
-                            color: _statusColor(), fontSize: 12),
+                        style: TextStyle(color: _statusColor(), fontSize: 12),
                       ),
                       const SizedBox(width: 12),
                       if (participantCount > 0) ...[
-                        const Icon(Icons.people, size: 14,
-                            color: Colors.grey),
+                        const Icon(Icons.people, size: 14, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text('$participantCount',
-                            style: Theme.of(context).textTheme.bodySmall),
+                        Text(
+                          '$participantCount',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ],
                   ),
@@ -222,13 +241,14 @@ class _RoomCardState extends State<_RoomCard> {
               ),
             ),
             FilledButton.icon(
-              icon: _joining
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.login, size: 18),
+              icon:
+                  _joining
+                      ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.login, size: 18),
               label: const Text('Join'),
               onPressed: _joining ? null : _join,
             ),
@@ -269,8 +289,9 @@ class _CreateRoomDialogState extends State<_CreateRoomDialog> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -298,13 +319,14 @@ class _CreateRoomDialogState extends State<_CreateRoomDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child: _loading
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Create'),
+          child:
+              _loading
+                  ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Create'),
         ),
       ],
     );

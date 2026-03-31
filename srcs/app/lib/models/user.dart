@@ -23,20 +23,21 @@ class UserPublic {
       email: json['email'] as String? ?? '',
       roles: (json['roles'] as List<dynamic>?)?.cast<String>() ?? [],
       active: json['active'] as bool? ?? true,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'] as String)
+              : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'username': username,
-        'email': email,
-        'roles': roles,
-        'active': active,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'username': username,
+    'email': email,
+    'roles': roles,
+    'active': active,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   bool get isAdmin => roles.contains('admin');
 }

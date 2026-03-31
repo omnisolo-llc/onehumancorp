@@ -55,9 +55,9 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
     try {
       await ref.read(apiServiceProvider)!.resolveHandoff(id, 'rejected');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Handoff rejected')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Handoff rejected')));
         _refresh();
       }
     } catch (e) {
@@ -100,8 +100,14 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                 children: [
                   const Icon(Icons.error_outline, size: 60, color: Colors.red),
                   const SizedBox(height: 16),
-                  Text('Failed to load handoffs', style: Theme.of(context).textTheme.titleLarge),
-                  TextButton(onPressed: _refresh, child: const Text('Try Again')),
+                  Text(
+                    'Failed to load handoffs',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  TextButton(
+                    onPressed: _refresh,
+                    child: const Text('Try Again'),
+                  ),
                 ],
               ),
             );
@@ -113,10 +119,20 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check_circle_outline, size: 64, color: colors.primary.withOpacity(0.5)),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 64,
+                    color: colors.primary.withOpacity(0.5),
+                  ),
                   const SizedBox(height: 16),
-                  const Text('No pending handoffs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
-                  const Text('Your agents are operating autonomously.', style: TextStyle(color: Colors.grey)),
+                  const Text(
+                    'No pending handoffs',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                  const Text(
+                    'Your agents are operating autonomously.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
             );
@@ -140,7 +156,10 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: colors.primaryContainer,
                               borderRadius: BorderRadius.circular(4),
@@ -155,8 +174,13 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                             ),
                           ),
                           Text(
-                            DateFormat.yMMMd().add_jm().format(handoff.createdAt),
-                            style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                            DateFormat.yMMMd().add_jm().format(
+                              handoff.createdAt,
+                            ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -180,7 +204,11 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Center(
-                            child: Icon(Icons.image_outlined, size: 48, color: Colors.grey),
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
                       ],

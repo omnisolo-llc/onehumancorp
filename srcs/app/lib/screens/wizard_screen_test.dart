@@ -7,11 +7,7 @@ void main() {
   group('SetupWizardScreen', () {
     testWidgets('renders wizard with three steps', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SetupWizardScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
       );
       await tester.pumpAndSettle();
 
@@ -23,11 +19,7 @@ void main() {
 
     testWidgets('shows server step content by default', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SetupWizardScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
       );
       await tester.pumpAndSettle();
 
@@ -37,11 +29,7 @@ void main() {
 
     testWidgets('can navigate to AI provider step', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SetupWizardScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
       );
       await tester.pumpAndSettle();
 
@@ -54,11 +42,7 @@ void main() {
 
     testWidgets('can navigate to Centrifuge step', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SetupWizardScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
       );
       await tester.pumpAndSettle();
 
@@ -76,11 +60,7 @@ void main() {
 
     testWidgets('can navigate back from step 2', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SetupWizardScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
       );
       await tester.pumpAndSettle();
 
@@ -95,11 +75,7 @@ void main() {
 
     testWidgets('default listen address is pre-populated', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SetupWizardScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
       );
       await tester.pumpAndSettle();
 
@@ -111,11 +87,7 @@ void main() {
     test('fromJson parses all fields', () {
       final json = {
         'configured': true,
-        'steps': {
-          'server': true,
-          'ai_provider': false,
-          'centrifuge': true,
-        },
+        'steps': {'server': true, 'ai_provider': false, 'centrifuge': true},
       };
       final status = WizardStatus.fromJson(json);
       expect(status.configured, isTrue);

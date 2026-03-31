@@ -37,10 +37,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
@@ -133,14 +130,7 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          _Sidebar(),
-          Expanded(child: child),
-        ],
-      ),
-    );
+    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
   }
 }
 
@@ -162,22 +152,54 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
-        _NavItem(icon: Icons.transfer_within_a_station, label: 'Handoffs', path: '/handoffs'),
+        _NavItem(
+          icon: Icons.transfer_within_a_station,
+          label: 'Handoffs',
+          path: '/handoffs',
+        ),
         _NavItem(icon: Icons.bar_chart, label: 'Cost & Usage', path: '/cost'),
-        _NavItem(icon: Icons.rocket_launch, label: 'Dynamic Scaling', path: '/scaling'),
+        _NavItem(
+          icon: Icons.rocket_launch,
+          label: 'Dynamic Scaling',
+          path: '/scaling',
+        ),
         _NavItem(icon: Icons.alt_route, label: 'Pipelines', path: '/pipelines'),
-        _NavItem(icon: Icons.extension, label: 'Integrations & Tools', path: '/integrations'),
-        _NavItem(icon: Icons.people_outline, label: 'User Management', path: '/users'),
-        _NavItem(icon: Icons.chat_bubble_outline, label: 'Channels', path: '/channels'),
+        _NavItem(
+          icon: Icons.extension,
+          label: 'Integrations & Tools',
+          path: '/integrations',
+        ),
+        _NavItem(
+          icon: Icons.people_outline,
+          label: 'User Management',
+          path: '/users',
+        ),
+        _NavItem(
+          icon: Icons.chat_bubble_outline,
+          label: 'Channels',
+          path: '/channels',
+        ),
         const Divider(),
-        _NavItem(icon: Icons.psychology, label: 'AI Providers', path: '/ai-config'),
+        _NavItem(
+          icon: Icons.psychology,
+          label: 'AI Providers',
+          path: '/ai-config',
+        ),
         _NavItem(icon: Icons.extension, label: 'Skills', path: '/skills'),
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
         const SizedBox(height: 8),
         _NavItem(icon: Icons.settings, label: 'Settings', path: '/settings'),
-        _NavItem(icon: Icons.computer, label: 'Service Management', path: '/service'),
-        _NavItem(icon: Icons.auto_fix_high, label: 'Setup Wizard', path: '/wizard'),
+        _NavItem(
+          icon: Icons.computer,
+          label: 'Service Management',
+          path: '/service',
+        ),
+        _NavItem(
+          icon: Icons.auto_fix_high,
+          label: 'Setup Wizard',
+          path: '/wizard',
+        ),
         const SizedBox(height: 16),
       ],
     );
@@ -189,11 +211,7 @@ class _NavItem extends StatelessWidget {
   final String label;
   final String path;
 
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.path,
-  });
+  const _NavItem({required this.icon, required this.label, required this.path});
 
   @override
   Widget build(BuildContext context) {
