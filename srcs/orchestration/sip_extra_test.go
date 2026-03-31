@@ -61,7 +61,7 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert malformed JSON task
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"invalid_json\"}')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, status, payload) VALUES ('m2', 'ROLE', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"invalid_json\"}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert JSON without ID
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m3', 'PENDING', '{\"role\":\"ROLE\",\"task\":{\"type\":\"TASK\"}}')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, status, payload) VALUES ('m3', 'ROLE', 'PENDING', '{\"role\":\"ROLE\",\"task\":{\"type\":\"TASK\"}}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -229,8 +229,8 @@ func TestSIPDB_GetPendingMissions_ScanError_Coverage(t *testing.T) {
 	defer db.Close()
 	ctx := context.Background()
 	_, _ = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
-	_, _ = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT, status TEXT, payload TEXT, created_at DATETIME)")
-	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\"}')")
+	_, _ = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT, role TEXT, status TEXT, payload TEXT, created_at DATETIME)")
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, status, payload) VALUES (NULL, 'ROLE', 'PENDING', '{\"role\":\"ROLE\"}')")
 	_, err = db.GetPendingMissions(ctx, "ROLE")
 	if err == nil {
 		t.Fatal("Expected scan error due to NULL task")

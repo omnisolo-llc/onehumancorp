@@ -10,7 +10,7 @@ go_test(
         "//srcs/server/domain",
         "//srcs/server/frontend/server",
         "//srcs/server/integrations",
-        "//srcs/server/orchestration",
+        "//srcs/orchestration",
     ],
 )
 
@@ -30,6 +30,6 @@ go_test(
         "//srcs/server/frontend/server",
         "//srcs/server/integrations",
         "//srcs/server/integrations/chatwoot",
-        "//srcs/server/orchestration",
+        "//srcs/orchestration",
     ],
 )

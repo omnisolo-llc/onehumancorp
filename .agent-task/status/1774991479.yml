@@ -1,0 +1,5 @@
+type: status
+id: orchestrator-1
+status: alive
+memory_type: heartbeat
+timestamp: $(date +%s)

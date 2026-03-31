@@ -89,6 +89,7 @@ func initializeTables(db *sql.DB) error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
+			role TEXT NOT NULL,
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -165,7 +166,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'", role)
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
 		if err != nil {
 			return err
 		}
@@ -271,8 +272,8 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	taskBytes, _ := json.Marshal(wrapper)
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
-			missionID, string(taskBytes),
+			"INSERT INTO agent_missions (id, role, status, payload, created_at) VALUES (?, ?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			missionID, role, string(taskBytes),
 		)
 		return err
 	})
