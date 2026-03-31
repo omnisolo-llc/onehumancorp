@@ -19,6 +19,17 @@ spec:
         - name: plane-api
           image: "{{ .Values.plane.backendImage }}"
           command: ["./bin/takeoff"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - "ALL"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - name: http
               containerPort: 8000
@@ -34,6 +45,9 @@ spec:
               value: "http://{{ include "ohc.fullname" . }}-plane-web"
           resources:
             {{- toYaml .Values.plane.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -70,6 +84,17 @@ spec:
       containers:
         - name: plane-web
           image: "{{ .Values.plane.frontendImage }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - "ALL"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - name: http
               containerPort: 3000
@@ -79,6 +104,9 @@ spec:
               value: "http://{{ include "ohc.fullname" . }}-plane-api:8000"
           resources:
             {{- toYaml .Values.plane.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -116,6 +144,17 @@ spec:
         - name: plane-worker
           image: "{{ .Values.plane.backendImage }}"
           command: ["./bin/worker"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - "ALL"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           env:
             - name: DATABASE_URL
               value: "postgres://ohc:ohc@{{ include "ohc.fullname" . }}-postgres:5432/plane?sslmode=disable"
@@ -125,4 +164,7 @@ spec:
               value: {{ .Values.plane.secretKey | quote }}
           resources:
             {{- toYaml .Values.plane.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 {{- end }}

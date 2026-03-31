@@ -29,6 +29,9 @@ spec:
             capabilities:
               drop:
                 - "ALL"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           ports:
@@ -80,3 +83,6 @@ spec:
               port: {{ .Values.backend.service.port }}
             initialDelaySeconds: 3
             periodSeconds: 5
+      volumes:
+        - name: tmp
+          emptyDir: {}
