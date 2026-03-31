@@ -60,3 +60,8 @@ A high-level summary of the testing strategy for the Automated Implementation Pi
 - **DNS Resolution Failures**: In strict Bazel sandboxing, tests requiring external DNS (e.g., fetching dependencies) might time out. The test suite explicitly falls back to local `go test` runs if Bazel network sandboxing is overly restrictive during local development.
 - **Flaky E2E Tests**: Staging environment provisioning can occasionally timeout due to K8s node exhaustion. The E2E suite incorporates an intelligent polling retry mechanism before failing the build.
 - **Dangling Preview Namespaces**: Test failures midway through a pipeline run might leave orphaned K8s namespaces. The test harness includes a strict `t.Cleanup()` function to reap temporary staging resources regardless of test outcome.
+
+## 7. Additional SDLC Validation (Expanded)
+- **Pipeline Latency Tracking**: Verify the latency between `CodeReady` and `TestsPassed` is correctly logged and falls under the expected 5-minute threshold.
+- **Rollback Resilience**: Validate that failing `readiness` probes correctly trigger an automatic rollback to the previous known-good state.
+- **Dynamic Worker Assignments**: Verify that the SDLC pipeline orchestrator can dynamically assign the right SWE Agent based on role and current workload.

@@ -34,6 +34,18 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RoleEngineeringDirector Role = "ENGINEERING_DIRECTOR"
+	// RoleSemVerAutomationAgent defines the agent responsible for semantic version bumping.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleSemVerAutomationAgent Role = "SEMVER_AUTOMATION"
+	// RoleReleaseNotesAgent defines the agent responsible for Release Notes generation.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleReleaseNotesAgent Role = "RELEASE_NOTES_COMMUNICATOR"
 	// RoleQATester defines the standard operational responsibilities and system access boundaries for the QATester persona.
 	// Accepts no parameters.
 	// Returns nothing.
@@ -187,6 +199,8 @@ func NewSoftwareCompany(id, name, ceoName string, now time.Time) Organization {
 		{ID: id + "-swe-2", Name: "Software Engineer 2", Role: RoleSoftwareEngineer, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-qa-1", Name: "QA Tester", Role: RoleQATester, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-security-1", Name: "Security Engineer", Role: RoleSecurityEngineer, ManagerID: directorID, IsHuman: false},
+		{ID: id + "-semver-1", Name: "SemVer Automation Agent", Role: RoleSemVerAutomationAgent, ManagerID: directorID, IsHuman: false},
+		{ID: id + "-release-1", Name: "Release Notes Agent", Role: RoleReleaseNotesAgent, ManagerID: directorID, IsHuman: false},
 	}
 
 	return Organization{
@@ -367,6 +381,33 @@ func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 				"code diffs",
 				"dependency inventory",
 				"deployment risk",
+			},
+		},
+		{
+			Role:       RoleSemVerAutomationAgent,
+			BasePrompt: "Parse Git history deterministically to automate Semantic Version bumping based on commit conventions.",
+			Capabilities: []string{
+				"Parse Git logs",
+				"Calculate version bumps",
+				"Update manifest files",
+			},
+			ContextInputs: []string{
+				"Git commit history",
+				"Current version",
+			},
+		},
+		{
+			Role:       RoleReleaseNotesAgent,
+			BasePrompt: "Generate asynchronous, context-heavy LLM-driven release notes based on the SemVer output.",
+			Capabilities: []string{
+				"Draft Release Notes",
+				"Review merged PRs",
+				"Communicate updates",
+			},
+			ContextInputs: []string{
+				"SemVer output",
+				"Merged PR descriptions",
+				"Commit messages",
 			},
 		},
 	}

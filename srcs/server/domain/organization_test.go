@@ -13,11 +13,11 @@ func TestNewSoftwareCompany(t *testing.T) {
 		t.Fatalf("unexpected domain: %s", org.Domain)
 	}
 
-	if len(org.Members) != 9 {
-		t.Fatalf("expected 9 members, got %d", len(org.Members))
+	if len(org.Members) != 11 {
+		t.Fatalf("expected 11 members, got %d", len(org.Members))
 	}
-	if len(org.RoleProfiles) != 8 {
-		t.Fatalf("expected 8 role profiles, got %d", len(org.RoleProfiles))
+	if len(org.RoleProfiles) != 10 {
+		t.Fatalf("expected 10 role profiles, got %d", len(org.RoleProfiles))
 	}
 
 	ceo, ok := org.MemberByID(org.CEOID)
@@ -30,8 +30,8 @@ func TestNewSoftwareCompany(t *testing.T) {
 	}
 
 	reports := org.MembersByManager("acme-director-eng")
-	if len(reports) != 4 {
-		t.Fatalf("expected 4 engineering reports, got %d", len(reports))
+	if len(reports) != 6 {
+		t.Fatalf("expected 6 engineering reports, got %d", len(reports))
 	}
 
 	profile, ok := org.RoleProfile(RoleSoftwareEngineer)

@@ -10,3 +10,4 @@ content: >
   and communicating via stdio as specified by the MCP protocol.
 
   Next Step for Swarm: Implement the Node runtime Bazel packaging for the `@modelcontextprotocol/server-github` module.
+status: DONE

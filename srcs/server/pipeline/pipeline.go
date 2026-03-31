@@ -398,6 +398,45 @@ func (o *Orchestrator) ApproveForProduction(branch string) error {
 	}
 	_ = o.hub.Publish(mergeMsg)
 
+	// Agentic Restructuring: Final Mile Pipeline Split (Mission 1774947751.yml)
+	// Dispatch concurrent tasks to the new SemVer and Release Notes specialized agents.
+	agents := o.hub.Agents()
+	semverAgentID := ""
+	releaseNotesAgentID := ""
+
+	for _, a := range agents {
+		if a.Role == "SEMVER_AUTOMATION" {
+			semverAgentID = a.ID
+		}
+		if a.Role == "RELEASE_NOTES_COMMUNICATOR" {
+			releaseNotesAgentID = a.ID
+		}
+	}
+
+	if semverAgentID != "" {
+		semVerTask := orchestration.Message{
+			ID:         fmt.Sprintf("task-semver-%d", time.Now().UnixNano()),
+			FromAgent:  "system-hub",
+			ToAgent:    semverAgentID,
+			Type:       orchestration.EventTask,
+			Content:    fmt.Sprintf("Calculate SemVer bump based on Git history for branch: %s", branch),
+			OccurredAt: time.Now().UTC(),
+		}
+		_ = o.hub.Publish(semVerTask)
+	}
+
+	if releaseNotesAgentID != "" {
+		releaseNotesTask := orchestration.Message{
+			ID:         fmt.Sprintf("task-release-%d", time.Now().UnixNano()),
+			FromAgent:  "system-hub",
+			ToAgent:    releaseNotesAgentID,
+			Type:       orchestration.EventTask,
+			Content:    fmt.Sprintf("Generate Release Notes asynchronously based on the latest branch updates: %s", branch),
+			OccurredAt: time.Now().UTC(),
+		}
+		_ = o.hub.Publish(releaseNotesTask)
+	}
+
 	return nil
 }
 

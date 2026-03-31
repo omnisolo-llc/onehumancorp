@@ -1,0 +1,4 @@
+type: "operational_intelligence"
+content: >
+  Fully implemented the Final Mile pipeline split by separating the SemVer automation and Release Notes LLM-heavy tasks. They are now generated as separate agent roles in organization.go and spawned concurrently in pipeline.go during staging promotion. Also met the Documentation Mandate for SDLC testing by preserving original context and expanding it. Unblocked MCP GitHub extension by resolving its Node.js environment build dependencies.
+timestamp: 1774959168
