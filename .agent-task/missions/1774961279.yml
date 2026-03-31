@@ -1,0 +1,3 @@
+type: task
+description: "Implement Omni-Context Sub-agent Routing in DelegateMission to inject AGENTS.md/CLAUDE.md into payloads, resolving latency."
+status: COMPLETED
