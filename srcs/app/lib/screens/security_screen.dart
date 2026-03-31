@@ -162,68 +162,71 @@ class _IssueCardState extends State<_IssueCard> {
   @override
   Widget build(BuildContext context) {
     final issue = widget.issue;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _fixed ? Icons.check_circle : Icons.warning_amber,
-                  color: _fixed ? Colors.green : _severityColor(),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    issue.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+    return Semantics(
+      label: 'Security issue: ${issue.title}, Severity: ${issue.severity}',
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _fixed ? Icons.check_circle : Icons.warning_amber,
+                    color: _fixed ? Colors.green : _severityColor(),
                   ),
-                ),
-                Chip(
-                  label: Text(issue.severity.toUpperCase()),
-                  backgroundColor: _severityColor().withAlpha(30),
-                  labelStyle: TextStyle(
-                    color: _severityColor(),
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      issue.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  visualDensity: VisualDensity.compact,
+                  Chip(
+                    label: Text(issue.severity.toUpperCase()),
+                    backgroundColor: _severityColor().withAlpha(30),
+                    labelStyle: TextStyle(
+                      color: _severityColor(),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                issue.description,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (issue.detail != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  issue.detail!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                    color: Colors.grey,
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              issue.description,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (issue.detail != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                issue.detail!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
-                  color: Colors.grey,
+              if (issue.fixable && !_fixed) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  icon:
+                      _busy
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.build, size: 16),
+                  label: const Text('Auto-fix'),
+                  onPressed: _busy ? null : _fix,
                 ),
-              ),
+              ],
             ],
-            if (issue.fixable && !_fixed) ...[
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                icon:
-                    _busy
-                        ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                        : const Icon(Icons.build, size: 16),
-                label: const Text('Auto-fix'),
-                onPressed: _busy ? null : _fix,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
