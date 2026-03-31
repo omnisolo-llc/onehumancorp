@@ -84,7 +84,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                       title: 'Total Spend',
                       value: currencyFormat.format(costs.totalCostUSD),
                       icon: Icons.account_balance_wallet,
-                      color: Colors.green,
+                      color: colors.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -93,7 +93,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                       title: 'Total Tokens',
                       value: NumberFormat.compact().format(costs.totalTokens),
                       icon: Icons.generating_tokens,
-                      color: Colors.blue,
+                      color: colors.secondary,
                     ),
                   ),
                 ],
@@ -135,6 +135,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                           return Semantics(
                             label:
                                 'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
+                            excludeSemantics: true,
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 16),
                               child: Column(
@@ -280,6 +281,7 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
+      excludeSemantics: true,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(20),
