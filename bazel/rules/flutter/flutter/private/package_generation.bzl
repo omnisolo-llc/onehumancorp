@@ -22,6 +22,10 @@ _DEF_LOAD_STMT = 'load("@rules_flutter//flutter:defs.bzl", "dart_library", "flut
 _DEF_VISIBILITY = '    visibility = ["//visibility:public"],'
 
 def _ensure_pub_deps(repository_ctx, package_name, package_dir):
+    return False
+
+    return False
+
     """Ensure pub_deps.json exists by running pub deps --json when necessary."""
 
     if package_dir in (".", ""):
