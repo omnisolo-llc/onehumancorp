@@ -1,0 +1,3 @@
+status: "success"
+heartbeat: "healthy"
+message: "No missions in queue. Ready for next assignment."
