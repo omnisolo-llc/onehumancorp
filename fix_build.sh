@@ -1,0 +1,1 @@
+sed -i.bak 's|https://github.com/bats-core/bats-core/archive/v1.10.0.tar.gz|https://api.github.com/repos/bats-core/bats-core/tarball/v1.10.0|' ~/.cache/bazel/_bazel_jules/8c069df52082beee3c95ca17836fb8e2/external/aspect_bazel_lib+/lib/bats_toolchains.bzl || true

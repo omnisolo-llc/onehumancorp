@@ -1,6 +1,12 @@
 # One Human Corp: Strategic Roadmap
 
 ## Vision
+
+<div style="backdrop-filter: blur(15px); background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px;">
+  <img src="screenshots/web/login.png" alt="Agents Overview" width="100%" />
+  <p><em>Fig: OHC Visual Representation</em></p>
+</div>
+
 "One Human Corp" is an innovative application that aggregates tools and orchestrates highly specialized AI agents, empowering a single individual to run an entire enterprise. The ultimate goal is to provide everything a customer needs to work on *any* given area. We provide a flexible, extensible framework so that users can continuously import new skills, business areas, and domain knowledge to tackle any market.
 
 ## Market Research: Pain Points of Real Online Small Businesses

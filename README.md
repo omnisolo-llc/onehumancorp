@@ -1,6 +1,9 @@
 # One Human Corp
 
 ## Identity
+
+![Dashboard Overview](docs/screenshots/dashboard_overview.png "Dashboard Overview")
+
 One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) that empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents natively on Kubernetes.
 
 ## Architecture

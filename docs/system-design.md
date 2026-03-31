@@ -5,6 +5,12 @@
 **Last Updated:** 2026-03-28
 
 ## 1. Overview
+
+<div style="backdrop-filter: blur(15px); background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px;">
+  <img src="screenshots/dashboard_overview.png" alt="Platform Capability Mesh" width="100%" />
+  <p><em>Fig 1: OHC Command Center</em></p>
+</div>
+
 One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost/billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
 
 The platform is built on 4 conceptual layers:
