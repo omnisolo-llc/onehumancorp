@@ -266,9 +266,8 @@ func TestMinimaxClientReasonDecodeError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")

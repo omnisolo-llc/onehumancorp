@@ -122,9 +122,8 @@ func BenchmarkReason(b *testing.B) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("test-key")
 	ctx := context.Background()

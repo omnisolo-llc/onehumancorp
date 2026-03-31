@@ -29,9 +29,8 @@ func TestMinimaxClientReasonSuccess(t *testing.T) {
 	defer ts.Close()
 
 	// Use our own internal package variable URL to point to the test server
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("valid-key")
 	res, err := client.Reason(context.Background(), "What is 6x7?")
@@ -50,9 +49,8 @@ func TestMinimaxClientReasonFailure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")
@@ -70,9 +68,8 @@ func TestMinimaxClientReasonEmptyResponse(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	originalURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalURL }()
+	originalURL := SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalURL) }()
 
 	client := NewMinimaxClient("valid-key")
 	_, err := client.Reason(context.Background(), "test")

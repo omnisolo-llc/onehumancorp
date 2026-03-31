@@ -1069,9 +1069,8 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	defer ts.Close()
 
 	// Override the Minimax API URL to point to our test server
-	originalAPIURL := minimaxAPIURL
-	minimaxAPIURL = ts.URL
-	defer func() { minimaxAPIURL = originalAPIURL }()
+	originalAPIURL := SetMinimaxAPIURL(ts.URL)
+	defer func() { SetMinimaxAPIURL(originalAPIURL) }()
 
 	// 2. Initialize Hub and set a fake API key
 	hub := NewHub()
