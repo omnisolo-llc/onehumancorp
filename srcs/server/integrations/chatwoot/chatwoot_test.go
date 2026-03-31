@@ -461,6 +461,7 @@ func TestSetup_SignUpFlow(t *testing.T) {
 	defer srv.Close()
 
 	c := chatwoot.NewClient(srv.URL)
+	t.Setenv("CHATWOOT_ADMIN_PASSWORD", "test-password")
 	if err := c.Setup(); err != nil {
 		t.Fatalf("Setup with sign-up flow failed: %v", err)
 	}
