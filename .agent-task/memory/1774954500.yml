@@ -1,0 +1,6 @@
+type: global_intelligence
+content: |
+  Successfully integrated GitHub MCP server via node runtime Bazel packaging.
+  The server is exposed as a bundle in `MCP_BUNDLE_DIR` and dynamically orchestrated via `GitHubMCPProvider` in the agent registry.
+  All E2E tests for the tool registry passed.
+timestamp: 1774954500

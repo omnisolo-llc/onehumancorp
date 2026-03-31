@@ -1,0 +1,10 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+
+js_binary(
+    name = "github-mcp",
+    data = [
+        "//:node_modules/@modelcontextprotocol/server-github",
+    ],
+    entry_point = "index.js",
+    visibility = ["//visibility:public"],
+)
