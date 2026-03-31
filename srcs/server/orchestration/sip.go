@@ -3,12 +3,12 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	"os"
-	"path/filepath"
-	"strings"
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -73,7 +73,6 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 	}
 	db.SetMaxOpenConns(1)
 
-
 	if err := initializeTables(db); err != nil {
 		return nil, err
 	}
@@ -90,12 +89,9 @@ func initializeTables(db *sql.DB) error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
-			role TEXT NOT NULL,
-			task TEXT NOT NULL,
 			status TEXT NOT NULL,
-			assigned_to TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			payload TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,
@@ -169,7 +165,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'", role)
 		if err != nil {
 			return err
 		}
@@ -181,11 +177,27 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 				return err
 			}
 
+			var payloadMap map[string]interface{}
 			var msg Message
-			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+			if err := json.Unmarshal([]byte(taskStr), &payloadMap); err == nil {
+				if taskRaw, ok := payloadMap["task"]; ok {
+					taskBytes, _ := json.Marshal(taskRaw)
+					if err := json.Unmarshal(taskBytes, &msg); err != nil {
+						msg = Message{ID: id, Content: string(taskBytes), Type: EventTask}
+					}
+				} else {
+					if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
+						msg = Message{ID: id, Content: taskStr, Type: EventTask}
+					}
+				}
 			} else {
+				// fallback raw
+				if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
+					msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				}
+			}
+
+			if true {
 				if msg.ID == "" {
 					msg.ID = id
 				}
@@ -204,7 +216,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", missionID)
+		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
 		if err != nil {
 			return err
 		}
@@ -250,14 +262,18 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		}
 	}
 
-	taskBytes, err := json.Marshal(task)
+	wrapper := map[string]interface{}{
+		"role": role,
+		"task": task,
+	}
+	taskBytes, err := json.Marshal(wrapper)
 	if err != nil {
 		return err
 	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-			missionID, role, string(taskBytes),
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			missionID, string(taskBytes),
 		)
 		return err
 	})
@@ -278,11 +294,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 // CapabilityPlugin represents an MCP plugin registration.
 type CapabilityPlugin struct {
-	PluginID    string    `json:"plugin_id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	ManifestURL string    `json:"manifest_url"`
-	Status      string    `json:"status"`
+	PluginID     string    `json:"plugin_id"`
+	Name         string    `json:"name"`
+	Version      string    `json:"version"`
+	ManifestURL  string    `json:"manifest_url"`
+	Status       string    `json:"status"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 
