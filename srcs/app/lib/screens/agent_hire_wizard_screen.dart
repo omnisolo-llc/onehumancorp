@@ -123,22 +123,31 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             child: Row(
               children: [
                 if (_step < 3)
-                  ElevatedButton(
-                    onPressed: (_step == 0 && _selectedRole.isEmpty) ? null : details.onStepContinue,
-                    child: const Text('Next'),
+                  Tooltip(
+                    message: 'Proceed to next step',
+                    child: ElevatedButton(
+                      onPressed: (_step == 0 && _selectedRole.isEmpty) ? null : details.onStepContinue,
+                      child: const Text('Next'),
+                    ),
                   )
                 else
                   ElevatedButton(
                     onPressed: _isDeploying ? null : _handleDeploy,
                     child: _isDeploying
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? Semantics(
+                            label: 'Deploying agent...',
+                            child: const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
                         : const Text('Deploy Agent'),
                   ),
                 const SizedBox(width: 12),
                 if (_step > 0)
-                  TextButton(
-                    onPressed: details.onStepCancel,
-                    child: const Text('Back'),
+                  Tooltip(
+                    message: 'Go to previous step',
+                    child: TextButton(
+                      onPressed: details.onStepCancel,
+                      child: const Text('Back'),
+                    ),
                   ),
               ],
             ),
@@ -155,22 +164,25 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 const SizedBox(height: 8),
                 const Text('Choose the primary capability profile for this new agent.'),
                 const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: _roles.map((role) {
-                    final isSelected = _selectedRole == role;
-                    return ChoiceChip(
-                      label: Text(_formatRole(role)),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() => _selectedRole = selected ? role : '');
-                        if (selected && _nameController.text.isEmpty) {
-                          _nameController.text = 'Senior ${_formatRole(role)}';
-                        }
-                      },
-                    );
-                  }).toList(),
+                Semantics(
+                  label: 'Agent roles selection',
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: _roles.map((role) {
+                      final isSelected = _selectedRole == role;
+                      return ChoiceChip(
+                        label: Text(_formatRole(role)),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() => _selectedRole = selected ? role : '');
+                          if (selected && _nameController.text.isEmpty) {
+                            _nameController.text = 'Senior ${_formatRole(role)}';
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
               ],
             ),

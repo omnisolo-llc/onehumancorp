@@ -21,10 +21,13 @@ class AiConfigScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('AI Providers'),
         actions: [
-          FilledButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('Add Provider'),
-            onPressed: () => _showAddDialog(context, ref),
+          Tooltip(
+            message: 'Add a new AI Provider',
+            child: FilledButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Add Provider'),
+              onPressed: () => _showAddDialog(context, ref),
+            ),
           ),
           const SizedBox(width: 16),
         ],
@@ -59,17 +62,23 @@ class _EmptyProviders extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.psychology, size: 64, color: Colors.grey),
+          Semantics(
+            label: 'Empty state illustration: No AI providers',
+            child: const Icon(Icons.psychology, size: 64, color: Colors.grey),
+          ),
           const SizedBox(height: 16),
           Text('No AI providers configured',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Text('Add an OpenAI-compatible provider to enable AI agents.'),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('Add Provider'),
-            onPressed: onAdd,
+          Tooltip(
+            message: 'Add your first AI provider',
+            child: FilledButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Add Provider'),
+              onPressed: onAdd,
+            ),
           ),
         ],
       ),
@@ -119,9 +128,12 @@ class _ProviderCard extends StatelessWidget {
                         fontWeight: FontWeight.bold, fontSize: 16)),
                 const Spacer(),
                 if (provider.isOfficial)
-                  Chip(
-                    label: const Text('Official'),
-                    backgroundColor: Colors.indigo.shade100,
+                  Semantics(
+                    label: 'Official provider badge',
+                    child: Chip(
+                      label: const Text('Official'),
+                      backgroundColor: Colors.indigo.shade100,
+                    ),
                   ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),

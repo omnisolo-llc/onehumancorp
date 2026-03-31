@@ -20,10 +20,13 @@ class AgentsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Agents'),
         actions: [
-          FilledButton.icon(
-            onPressed: () => context.go('/agents/hire'),
-            icon: const Icon(Icons.add),
-            label: const Text('Hire Agent'),
+          Tooltip(
+            message: 'Hire a new AI Agent',
+            child: FilledButton.icon(
+              onPressed: () => context.go('/agents/hire'),
+              icon: const Icon(Icons.add),
+              label: const Text('Hire Agent'),
+            ),
           ),
           const SizedBox(width: 16),
         ],
@@ -49,7 +52,10 @@ class _EmptyAgents extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.smart_toy, size: 64, color: Colors.grey),
+          Semantics(
+            label: 'Empty state illustration: No agents',
+            child: const Icon(Icons.smart_toy, size: 64, color: Colors.grey),
+          ),
           const SizedBox(height: 16),
           Text(
             'No agents yet',
@@ -58,10 +64,13 @@ class _EmptyAgents extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('Hire your first AI agent to get started.'),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: onHire,
-            icon: const Icon(Icons.add),
-            label: const Text('Hire New Agent'),
+          Tooltip(
+            message: 'Hire your first AI agent',
+            child: FilledButton.icon(
+              onPressed: onHire,
+              icon: const Icon(Icons.add),
+              label: const Text('Hire New Agent'),
+            ),
           ),
         ],
       ),
@@ -91,17 +100,24 @@ class _AgentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: agent.isRunning ? Colors.green : Colors.grey.shade300,
-          child: const Icon(Icons.smart_toy, color: Colors.white),
-        ),
-        title: Text(agent.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(agent.role),
-        trailing: Chip(
-          label: Text(agent.status),
-          backgroundColor:
-              agent.isRunning ? Colors.green.shade100 : Colors.grey.shade200,
+      child: InkWell(
+        onTap: () {}, // Provide tap feedback
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          leading: Semantics(
+            label: 'Agent status: ${agent.isRunning ? "Running" : "Stopped"}',
+            child: CircleAvatar(
+              backgroundColor: agent.isRunning ? Colors.green : Colors.grey.shade300,
+              child: const Icon(Icons.smart_toy, color: Colors.white),
+            ),
+          ),
+          title: Text(agent.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Text(agent.role),
+          trailing: Chip(
+            label: Text(agent.status),
+            backgroundColor:
+                agent.isRunning ? Colors.green.shade100 : Colors.grey.shade200,
+          ),
         ),
       ),
     );
