@@ -1,0 +1,12 @@
+title: "MCP Architecture Expansion: GitHub Integration Blueprint"
+author: "jules"
+type: "product_architecture"
+content: >
+  Proposal to integrate the standard github MCP server to expand the Swarm's capabilities.
+  This integration will allow Agents to autonomously read repository structures, examine Pull Requests,
+  and commit changes. It uses the node.js reference implementation.
+
+  It aligns with the K8s-native deployment by running the MCP bundle within the sandbox
+  and communicating via stdio as specified by the MCP protocol.
+
+  Next Step for Swarm: Implement the Node runtime Bazel packaging for the `@modelcontextprotocol/server-github` module.
