@@ -19,7 +19,7 @@ func (c *Client) Setup() error {
 	}
 	password := os.Getenv("CHATWOOT_ADMIN_PASSWORD")
 	if password == "" {
-		password = "changeme"
+		return fmt.Errorf("chatwoot setup: CHATWOOT_ADMIN_PASSWORD environment variable is required")
 	}
 
 	maxAttempts := 20
