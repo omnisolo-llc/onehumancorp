@@ -1,0 +1,3 @@
+type: global_intelligence
+content: Refactored agent_missions schema to remove deprecated columns (role, task, assigned_to, updated_at). All queries now use id, status, payload, created_at. Handled payload JSON serialization and deserialization.
+timestamp: 1774952638

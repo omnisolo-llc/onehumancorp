@@ -87,12 +87,9 @@ func initializeTables(db *sql.DB) error {
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_missions (
 			id TEXT PRIMARY KEY,
-			role TEXT NOT NULL,
-			task TEXT NOT NULL,
 			status TEXT NOT NULL,
-			assigned_to TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			payload TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,
@@ -166,27 +163,66 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, task FROM agent_missions WHERE role = ? AND status = 'PENDING'", role)
+		// Since role is not in the schema anymore, we must fetch all PENDING missions and filter in-memory,
+		// or if payload contains role, we can query all and deserialize. Let's fetch all and filter.
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING'")
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, taskStr string
-			if err := rows.Scan(&id, &taskStr); err != nil {
+			var id, payloadStr string
+			if err := rows.Scan(&id, &payloadStr); err != nil {
 				return err
 			}
 
+			// We wrap the task in a struct with "role" and "task" when inserting.
+			// Let's try to unmarshal into that wrapper first.
+			var wrapper struct {
+				Role string  `json:"role"`
+				Task Message `json:"task"`
+			}
 			var msg Message
-			if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
-				// fallback
-				msg = Message{ID: id, Content: taskStr, Type: EventTask}
-			} else {
-				if msg.ID == "" {
-					msg.ID = id
+
+			if err := json.Unmarshal([]byte(payloadStr), &wrapper); err == nil && wrapper.Role != "" {
+				// Successfully decoded wrapper but we need to ensure it was ACTUALLY a wrapper
+				// Check if 'task' key exists in the raw JSON
+				var check map[string]interface{}
+				_ = json.Unmarshal([]byte(payloadStr), &check)
+				if _, hasTask := check["task"]; hasTask {
+					if wrapper.Role != role {
+						continue
+					}
+					msg = wrapper.Task
+					if msg.ID == "" {
+						msg.ID = id
+					}
+					missions = append(missions, msg)
+					continue
 				}
 			}
+
+			// Fallback or legacy formats: check if "role" is in the root map
+				var data map[string]interface{}
+				if err := json.Unmarshal([]byte(payloadStr), &data); err == nil {
+					if r, ok := data["role"].(string); ok && r != role {
+						continue // mismatch
+					}
+					// It's a Message directly serialized
+					_ = json.Unmarshal([]byte(payloadStr), &msg)
+					if msg.ID == "" {
+						msg.ID = id
+					}
+					// If the resulting message is basically empty, use fallback
+					if msg.Content == "" && msg.Type == "" {
+						msg = Message{ID: id, Content: payloadStr, Type: EventTask}
+					}
+				} else {
+					// completely invalid json fallback
+					msg = Message{ID: id, Content: payloadStr, Type: EventTask}
+				}
+
 			missions = append(missions, msg)
 		}
 		return nil
@@ -201,7 +237,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", missionID)
+		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
 		if err != nil {
 			return err
 		}
@@ -237,14 +273,23 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	taskBytes, err := json.Marshal(task)
+	// Embed the role into the payload so we can filter by it when retrieving missions
+	wrapper := struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}{
+		Role: role,
+		Task: task,
+	}
+	taskBytes, err := json.Marshal(wrapper)
 	if err != nil {
 		return err
 	}
+
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, role, task, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-			missionID, role, string(taskBytes),
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			missionID, string(taskBytes),
 		)
 		return err
 	})

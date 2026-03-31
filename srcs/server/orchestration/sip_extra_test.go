@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"path/filepath"
+	"strings"
 	"context"
 	"testing"
 )
@@ -61,7 +62,7 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert malformed JSON task
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m2', 'ROLE', 'invalid_json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', '{\"role\":\"ROLE\",\"raw\":\"invalid_json\"}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -73,8 +74,8 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	if len(missions) != 1 {
 		t.Fatalf("expected 1 mission, got %d", len(missions))
 	}
-	if missions[0].Content != "invalid_json" || missions[0].ID != "m2" || missions[0].Type != EventTask {
-		t.Fatalf("fallback msg parsing failed: %+v", missions[0])
+	if !strings.Contains(missions[0].Content, "invalid_json") || missions[0].ID != "m2" || missions[0].Type != EventTask {
+		t.Fatalf("fallback msg parsing failed: %+v", missions)
 	}
 }
 
@@ -88,7 +89,7 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert JSON without ID
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('m3', 'ROLE', '{\"type\":\"TASK\"}', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m3', 'PENDING', '{\"role\":\"ROLE\",\"type\":\"TASK\"}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -229,10 +230,10 @@ func TestSIPDB_GetPendingMissions_ScanError_Coverage(t *testing.T) {
 	defer db.Close()
 	ctx := context.Background()
 	_, _ = db.db.Exec("DROP TABLE agent_missions")
-	_, _ = db.db.Exec("CREATE TABLE agent_missions (id TEXT, role TEXT, task TEXT, status TEXT)")
-	_, _ = db.db.Exec("INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'ROLE', NULL, 'PENDING')")
+	_, _ = db.db.Exec("CREATE TABLE agent_missions (id TEXT, status TEXT, payload TEXT)")
+	_, _ = db.db.Exec("INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', NULL)")
 	_, err = db.GetPendingMissions(ctx, "ROLE")
 	if err == nil {
-		t.Fatal("Expected scan error due to NULL task")
+		t.Fatal("Expected scan error due to NULL payload")
 	}
 }

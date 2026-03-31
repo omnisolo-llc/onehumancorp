@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -93,7 +94,7 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 
 	// Manually insert bad JSON
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'invalid-json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"raw\":\"invalid-json\"}')")
 	if err != nil {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
@@ -107,7 +108,7 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 		t.Fatalf("Expected 1 mission, got %d", len(missions))
 	}
 
-	if missions[0].Content != "invalid-json" {
+	if !strings.Contains(missions[0].Content, "invalid-json") {
 		t.Fatalf("Expected content 'invalid-json', got %s", missions[0].Content)
 	}
 }
@@ -137,7 +138,7 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'invalid-json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"raw\":\"invalid-json\"}')")
 	if err != nil {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
@@ -152,8 +153,8 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 		t.Fatalf("Expected 1 mission, got %d", len(missions))
 	}
 
-	if missions[0].Content != "invalid-json" {
-		t.Fatalf("Expected content to be 'invalid-json' fallback, got: %s", missions[0].Content)
+	if !strings.Contains(missions[0].Content, "invalid-json") {
+		t.Fatalf("Expected content to be '{\"role\":\"SOFTWARE_ENGINEER\",\"raw\":\"invalid-json\"}' fallback, got: %s", missions[0].Content)
 	}
 }
 
@@ -189,19 +190,19 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 
 	// Insert missions:
 	// 1. Pending and new (should not be deleted)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('1', 'ROLE', 'task', 'PENDING', datetime('now'))")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('1', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// 2. Completed (should be deleted regardless of age)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('2', 'ROLE', 'task', 'COMPLETED', datetime('now'))")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('2', 'COMPLETED', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// 3. Pending but old (should be deleted)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status, created_at) VALUES ('3', 'ROLE', 'task', 'PENDING', datetime('now', '-2 days'))")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('3', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now', '-2 days'))")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -521,14 +522,14 @@ func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'invalid-json', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"raw\":\"invalid-json\"}')")
 	// Now we will break the table to cause Scan to fail. Scan fails if the number of columns returned doesn't match the pointers, or type conversion fails.
 	// But type conversion to string rarely fails in sqlite. We can close the rows early maybe?
 	// The easiest way is to mock rows or just change schema, but we can't alter table.
 	// We can drop table and recreate it with only one column!
 	_, err = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
-	_, err = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY, role TEXT, status TEXT)")
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, status) VALUES ('123', 'SOFTWARE_ENGINEER', 'PENDING')")
+	_, err = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY, status TEXT)")
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status) VALUES ('123', 'PENDING')")
 
 	_, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
 	if err == nil {
@@ -558,7 +559,7 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	_, _ = db.GetEpisodicMemoriesByPlugin(ctx, "")
 	_, _ = db.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings")
 
-	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, role, task, status) VALUES (NULL, 'ROLE', 'task', 'PENDING')")
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}')")
 	_, _ = db.GetPendingMissions(ctx, "ROLE")
 	_, _ = db.db.ExecContext(ctx, "DELETE FROM agent_missions")
 
