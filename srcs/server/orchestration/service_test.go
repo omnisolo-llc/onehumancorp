@@ -497,6 +497,7 @@ func TestNewMinimaxClient(t *testing.T) {
 }
 
 func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// Save the original URL to restore it later
 	originalURL := MinimaxAPIURL
 	defer func() { MinimaxAPIURL = originalURL }()
@@ -969,6 +970,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
 	agentID := "test-agent"
 	validPayload := []byte(`{"context": "some data to summarize"}`)
@@ -1052,6 +1054,7 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 }
 
 func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
+	ResetGlobalCircuitBreakerForTest()
 	// 1. Setup Mock Server for Minimax
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

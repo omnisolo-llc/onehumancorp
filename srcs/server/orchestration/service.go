@@ -17,6 +17,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -72,160 +73,34 @@ func redactInterfacePII(val interface{}) interface{} {
 	}
 }
 
-// Status indicates the current operational phase of an AI agent within the workforce.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Status string
+type Status = agents.Status
 
 const (
-	// StatusIdle represents the IDLE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusIdle Status = "IDLE"
-	// StatusActive represents the ACTIVE lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusActive Status = "ACTIVE"
-	// StatusInMeeting represents the INMEETING lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusInMeeting Status = "IN_MEETING"
-	// StatusBlocked represents the BLOCKED lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusBlocked Status = "BLOCKED"
-	// StatusWaitingForTools represents the WAITINGFORTOOLS lifecycle phase of a tracked entity within the event-driven state machine.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	StatusWaitingForTools Status = "WAITING_FOR_TOOLS"
+	StatusIdle            = agents.StatusIdle
+	StatusActive          = agents.StatusActive
+	StatusInMeeting       = agents.StatusInMeeting
+	StatusBlocked         = agents.StatusBlocked
+	StatusWaitingForTools = agents.StatusWaitingForTools
 )
 
-// Event type constants for the asynchronous pub/sub agent interaction protocol.
 const (
-	// EventTask provides domain-specific context and typed constraints for EventTask operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventTask = "task"
-	// EventStatus provides domain-specific context and typed constraints for EventStatus operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventStatus = "status"
-	// EventHandoff provides domain-specific context and typed constraints for EventHandoff operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventHandoff = "handoff"
-	// EventCodeReviewed provides domain-specific context and typed constraints for EventCodeReviewed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventCodeReviewed = "CodeReviewed"
-	// EventTestsFailed provides domain-specific context and typed constraints for EventTestsFailed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventTestsFailed = "TestsFailed"
-	// EventTestsPassed provides domain-specific context and typed constraints for EventTestsPassed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventTestsPassed = "TestsPassed"
-	// EventSpecApproved provides domain-specific context and typed constraints for EventSpecApproved operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventSpecApproved = "SpecApproved"
-	// EventBlockerRaised provides domain-specific context and typed constraints for EventBlockerRaised operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventBlockerRaised = "BlockerRaised"
-	// EventBlockerCleared provides domain-specific context and typed constraints for EventBlockerCleared operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventBlockerCleared = "BlockerCleared"
-	// EventPRCreated provides domain-specific context and typed constraints for EventPRCreated operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventPRCreated = "PRCreated"
-	// EventPRMerged provides domain-specific context and typed constraints for EventPRMerged operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventPRMerged = "PRMerged"
-	// EventDesignReviewed provides domain-specific context and typed constraints for EventDesignReviewed operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventDesignReviewed = "DesignReviewed"
-	// EventApprovalNeeded provides domain-specific context and typed constraints for EventApprovalNeeded operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	EventApprovalNeeded = "ApprovalNeeded"
+	EventTask           = agents.EventTask
+	EventStatus         = agents.EventStatus
+	EventHandoff        = agents.EventHandoff
+	EventCodeReviewed   = agents.EventCodeReviewed
+	EventTestsFailed    = agents.EventTestsFailed
+	EventTestsPassed    = agents.EventTestsPassed
+	EventSpecApproved   = agents.EventSpecApproved
+	EventBlockerRaised  = agents.EventBlockerRaised
+	EventBlockerCleared = agents.EventBlockerCleared
+	EventPRCreated      = agents.EventPRCreated
+	EventPRMerged       = agents.EventPRMerged
+	EventDesignReviewed = agents.EventDesignReviewed
+	EventApprovalNeeded = agents.EventApprovalNeeded
 )
 
-// Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Agent struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Role           string `json:"role"`
-	OrganizationID string `json:"organizationId"`
-	Status         Status `json:"status"`
-	// ProviderType identifies the external agent implementation backing this worker
-	// (e.g. "claude", "gemini", "opencode").  An empty string or "builtin" means
-	// the platform's own lightweight agent is used.
-	ProviderType string `json:"providerType,omitempty"`
-	Region       string `json:"region,omitempty"`
-}
-
-// Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type Message struct {
-	ID         string    `json:"id"`
-	FromAgent  string    `json:"fromAgent"`
-	ToAgent    string    `json:"toAgent"`
-	Type       string    `json:"type"`
-	Content    string    `json:"content"`
-	MeetingID  string    `json:"meetingId,omitempty"`
-	OccurredAt time.Time `json:"occurredAt"`
-}
+type Agent = agents.Agent
+type Message = agents.Message
 
 // DelegateTask allows an agent in Delegate Mode to act as a routing proxy.
 // It inspects an incoming task, updates the sender and recipient fields,
@@ -1192,6 +1067,47 @@ var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 // Has no side effects.
 type MinimaxClient struct {
 	APIKey string
+	cb     *CircuitBreaker
+}
+
+// CircuitBreaker state
+type CircuitBreaker struct {
+	mu           sync.Mutex
+	failures     int
+	lastFailure  time.Time
+	maxFailures  int
+	resetTimeout time.Duration
+}
+
+func (cb *CircuitBreaker) Allow() bool {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	if cb.failures >= cb.maxFailures {
+		if time.Since(cb.lastFailure) > cb.resetTimeout {
+			cb.failures = 0
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (cb *CircuitBreaker) RecordSuccess() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures = 0
+}
+
+func (cb *CircuitBreaker) RecordFailure() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures++
+	cb.lastFailure = time.Now()
+}
+
+var globalCircuitBreaker = &CircuitBreaker{
+	maxFailures:  3,
+	resetTimeout: 30 * time.Second,
 }
 
 // NewMinimaxClient functionality.
@@ -1200,7 +1116,10 @@ type MinimaxClient struct {
 // Produces no errors.
 // Has no side effects.
 func NewMinimaxClient(apiKey string) *MinimaxClient {
-	return &MinimaxClient{APIKey: apiKey}
+	return &MinimaxClient{
+		APIKey: apiKey,
+		cb:     globalCircuitBreaker,
+	}
 }
 
 var bufferPool = sync.Pool{
@@ -1220,6 +1139,7 @@ var sharedHTTPClient = &http.Client{
 // Has no side effects.
 func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
 	if c.APIKey == "" {
+		c.cb.RecordFailure()
 		return "", errors.New("minimax API key is not configured")
 	}
 
@@ -1241,6 +1161,10 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	// Retry loop to handle transient empty responses from Minimax.
 	var lastErr error
 	for i := 0; i < 3; i++ {
+		if !c.cb.Allow() {
+			return "", errors.New("circuit breaker is open")
+		}
+
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(buf.Bytes()))
@@ -1255,12 +1179,14 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		// Prevents severe connection and resource leaks by reusing connection pools on every request.
 		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
+			c.cb.RecordFailure()
 			lastErr = err
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			c.cb.RecordFailure()
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
@@ -1277,6 +1203,7 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			c.cb.RecordFailure()
 			resp.Body.Close()
 			lastErr = err
 			time.Sleep(1 * time.Second)
@@ -1284,15 +1211,21 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 		}
 
 		if len(result.Choices) == 0 {
+			c.cb.RecordFailure()
 			resp.Body.Close()
 			lastErr = errors.New("empty response from minimax")
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
+		c.cb.RecordSuccess()
 		resp.Body.Close()
 		return result.Choices[0].Message.Content, nil
 	}
 
 	return "", lastErr
+}
+
+func ResetGlobalCircuitBreakerForTest() {
+	globalCircuitBreaker.RecordSuccess()
 }

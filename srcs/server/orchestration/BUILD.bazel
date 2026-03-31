@@ -16,6 +16,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/agents",
         "//srcs/server/integrations/plane",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
@@ -34,11 +35,11 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
+        "agent_task_worker_test.go",
         "auth_interceptor_test.go",
         "benchmark_test.go",
         "centrifuge_hub_test.go",
         "chaos_test.go",
-        "agent_task_worker_test.go",
         "delegation_test.go",
         "eventlog_test.go",
         "minimax_client_test.go",
@@ -52,6 +53,7 @@ go_test(
     embed = [":orchestration"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/integrations/plane",
         "//srcs/server/settings",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@org_golang_google_grpc//:grpc",
