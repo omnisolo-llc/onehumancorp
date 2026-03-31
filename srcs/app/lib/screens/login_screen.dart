@@ -31,10 +31,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref.read(authStateProvider.notifier).login(
-            _emailCtrl.text.trim(),
-            _passwordCtrl.text,
-          );
+      await ref
+          .read(authStateProvider.notifier)
+          .login(_emailCtrl.text.trim(), _passwordCtrl.text);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -67,7 +66,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Text(
                       'One Human Corp',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -84,8 +86,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.email_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Enter a valid email'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -96,8 +99,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.lock_outline),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Enter your password' : null,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Enter your password'
+                          : null,
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
@@ -114,10 +118,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     FilledButton(
                       onPressed: _loading ? null : _submit,
                       child: _loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? Semantics(
+                              label: 'Signing in...',
+                              child: const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
                             )
                           : const Text('Sign In'),
                     ),

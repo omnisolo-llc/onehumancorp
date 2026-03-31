@@ -9,8 +9,9 @@ import 'package:ohc_app/services/auth_service.dart';
 // ── Providers ─────────────────────────────────────────────────────────────
 
 /// Provider that fetches the wizard status from the backend.
-final wizardStatusProvider =
-    FutureProvider.autoDispose<WizardStatus>((ref) async {
+final wizardStatusProvider = FutureProvider.autoDispose<WizardStatus>((
+  ref,
+) async {
   final user = ref.watch(authStateProvider).valueOrNull;
   if (user == null) return WizardStatus.empty();
   final baseUrl = const String.fromEnvironment(
@@ -42,11 +43,11 @@ class WizardStatus {
   });
 
   factory WizardStatus.empty() => const WizardStatus(
-        configured: false,
-        serverStep: false,
-        aiProviderStep: false,
-        centrifugeStep: false,
-      );
+    configured: false,
+    serverStep: false,
+    aiProviderStep: false,
+    centrifugeStep: false,
+  );
 
   factory WizardStatus.fromJson(Map<String, dynamic> json) {
     final steps = json['steps'] as Map<String, dynamic>? ?? {};
@@ -79,8 +80,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   String? _error;
 
   // Step 1 – Server
-  final _listenAddrCtrl =
-      TextEditingController(text: '0.0.0.0:18789');
+  final _listenAddrCtrl = TextEditingController(text: '0.0.0.0:18789');
   final _dbPathCtrl = TextEditingController(text: 'ohc.db');
 
   // Step 2 – AI Provider
@@ -89,7 +89,8 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
   // Step 3 – Centrifuge
   final _centrifugeUrlCtrl = TextEditingController(
-      text: 'ws://localhost:8000/connection/websocket');
+    text: 'ws://localhost:8000/connection/websocket',
+  );
 
   @override
   void dispose() {
@@ -127,7 +128,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
           'api_key': _minimaxKeyCtrl.text.trim(),
           'model': _modelCtrl.text.trim(),
           'enabled': true,
-        }
+        },
       ];
     }
 
@@ -216,10 +217,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.red),
-              ),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
             ],
             const SizedBox(height: 16),
 
@@ -243,10 +241,13 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                   FilledButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        ? Semantics(
+                            label: 'Saving configuration...',
+                            child: const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           )
                         : const Text('Save Configuration'),
                   ),
@@ -281,8 +282,8 @@ class _StepIndicator extends StatelessWidget {
                 backgroundColor: done
                     ? Colors.green
                     : active
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: done
                     ? const Icon(Icons.check, size: 16, color: Colors.white)
                     : Text(
@@ -294,11 +295,12 @@ class _StepIndicator extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 4),
-              Text(_labels[i],
-                  style: TextStyle(
-                    fontWeight:
-                        active ? FontWeight.bold : FontWeight.normal,
-                  )),
+              Text(
+                _labels[i],
+                style: TextStyle(
+                  fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
               if (i < _labels.length - 1) const Expanded(child: Divider()),
             ],
           ),
@@ -338,8 +340,10 @@ class _StatusBanner extends StatelessWidget {
         color: Colors.green,
         child: const ListTile(
           leading: Icon(Icons.check_circle, color: Colors.green),
-          title: Text('Platform is fully configured',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(
+            'Platform is fully configured',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           subtitle: Text('All wizard steps have been completed.'),
         ),
       );
@@ -352,8 +356,10 @@ class _StatusBanner extends StatelessWidget {
       color: Colors.orange,
       child: ListTile(
         leading: const Icon(Icons.warning_amber, color: Colors.orange),
-        title: const Text('Configuration incomplete',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Configuration incomplete',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text('Remaining: ${missing.join(', ')}'),
       ),
     );
@@ -365,17 +371,13 @@ class _StatusBanner extends StatelessWidget {
 class _ServerStep extends StatelessWidget {
   final TextEditingController listenAddrCtrl;
   final TextEditingController dbPathCtrl;
-  const _ServerStep({
-    required this.listenAddrCtrl,
-    required this.dbPathCtrl,
-  });
+  const _ServerStep({required this.listenAddrCtrl, required this.dbPathCtrl});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        Text('Server Settings',
-            style: Theme.of(context).textTheme.titleLarge),
+        Text('Server Settings', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         const Text(
           'Configure the OHC backend server address and database path. '
@@ -425,8 +427,10 @@ class _AiProviderStepState extends State<_AiProviderStep> {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        Text('AI Provider — Minimax',
-            style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'AI Provider — Minimax',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         const Text(
           'Connect the OHC platform to the Minimax AI service. '
@@ -489,8 +493,10 @@ class _CentrifugeStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        Text('Real-time Messaging (Centrifuge)',
-            style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Real-time Messaging (Centrifuge)',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         const Text(
           'OHC uses the Centrifuge real-time messaging protocol to deliver '
@@ -505,8 +511,7 @@ class _CentrifugeStep extends StatelessWidget {
           decoration: const InputDecoration(
             labelText: 'Centrifuge WebSocket URL',
             hintText: 'ws://localhost:8000/connection/websocket',
-            helperText:
-                'WebSocket endpoint of the Centrifuge server',
+            helperText: 'WebSocket endpoint of the Centrifuge server',
             border: OutlineInputBorder(),
           ),
         ),
@@ -519,8 +524,10 @@ class _CentrifugeStep extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Channel convention',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Channel convention',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   SizedBox(height: 4),
                   Text('• meeting:<id>  — live transcript updates'),
                   Text('• chat:<room>   — real-time chat messages'),

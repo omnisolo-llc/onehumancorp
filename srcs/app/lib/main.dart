@@ -3,11 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/router.dart';
 
 void main() {
-  runApp(
-    const ProviderScope(
-      child: OhcApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: OhcApp()));
 }
 
 class OhcApp extends ConsumerWidget {

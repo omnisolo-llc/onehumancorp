@@ -61,8 +61,10 @@ class _EmptyProviders extends StatelessWidget {
         children: [
           const Icon(Icons.psychology, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          Text('No AI providers configured',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'No AI providers configured',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
           const Text('Add an OpenAI-compatible provider to enable AI agents.'),
           const SizedBox(height: 24),
@@ -114,9 +116,13 @@ class _ProviderCard extends StatelessWidget {
               children: [
                 const Icon(Icons.psychology, color: Colors.indigo),
                 const SizedBox(width: 8),
-                Text(provider.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  provider.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const Spacer(),
                 if (provider.isOfficial)
                   Chip(
@@ -131,18 +137,22 @@ class _ProviderCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(provider.baseUrl,
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              provider.baseUrl,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             if (provider.models.isNotEmpty) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
                 children: provider.models
-                    .map((m) => Chip(
-                          label: Text(m),
-                          visualDensity: VisualDensity.compact,
-                        ))
+                    .map(
+                      (m) => Chip(
+                        label: Text(m),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -190,9 +200,21 @@ class _ProviderCard extends StatelessWidget {
 // ── Add provider dialog ────────────────────────────────────────────────────
 
 const _presetProviders = [
-  {'name': 'OpenAI', 'base_url': 'https://api.openai.com/v1', 'models': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo']},
-  {'name': 'Anthropic', 'base_url': 'https://api.anthropic.com/v1', 'models': ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']},
-  {'name': 'Ollama (local)', 'base_url': 'http://localhost:11434/v1', 'models': ['llama3', 'mistral', 'phi3']},
+  {
+    'name': 'OpenAI',
+    'base_url': 'https://api.openai.com/v1',
+    'models': ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  },
+  {
+    'name': 'Anthropic',
+    'base_url': 'https://api.anthropic.com/v1',
+    'models': ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
+  },
+  {
+    'name': 'Ollama (local)',
+    'base_url': 'http://localhost:11434/v1',
+    'models': ['llama3', 'mistral', 'phi3'],
+  },
   {'name': 'Custom', 'base_url': '', 'models': []},
 ];
 
@@ -255,8 +277,9 @@ class _ProviderDialogState extends State<_ProviderDialog> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -293,13 +316,17 @@ class _ProviderDialogState extends State<_ProviderDialog> {
               TextField(
                 controller: _nameCtrl,
                 decoration: const InputDecoration(
-                    labelText: 'Provider Name', border: OutlineInputBorder()),
+                  labelText: 'Provider Name',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _urlCtrl,
                 decoration: const InputDecoration(
-                    labelText: 'Base URL', border: OutlineInputBorder()),
+                  labelText: 'Base URL',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
