@@ -1,3 +1,0 @@
-type: task
-description: "Transition stable code to deployment branches once CI and QA agents are green"
-status: DONE
