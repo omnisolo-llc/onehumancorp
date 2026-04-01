@@ -149,10 +149,11 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	key := minimaxAPIKey()
+	var ts *httptest.Server
 	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
 		key = "mock-key-for-testing-purposes"
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
 		}))

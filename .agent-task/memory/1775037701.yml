@@ -1,0 +1,15 @@
+type: memory
+metadata:
+  role: Sentry
+  timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+observations:
+  - Identified `GetPendingMissions` in `sip.go` using SQLite-specific `json_extract`.
+  - Fixed `GetPendingMissions` to use an agnostic `LIKE` operator to ensure Cloud-Native (Postgres) and Standalone (SQLite) mode parity.
+  - Implemented `chaos_postgres_test.go` to inject failures during ingestion/consumption to verify Postgres-based hub reliability and queue consumption via `DELETE ... RETURNING`.
+  - Added Playwright-based script `parity.spec.ts` to test and ensure both environments respond identically.
+actions_taken:
+  - Modified `srcs/server/orchestration/sip.go` to replace `json_extract` with `LIKE`.
+  - Created `chaos_postgres_test.go` to test Postgres mode parity in chaos conditions.
+  - Updated `minimax_e2e_test.go` to use `var ts *httptest.Server` instead of short-declaring variable inside `if`.
+  - Created `srcs/app/e2e/parity.spec.ts` for frontend playwright testing, and appended it to `BUILD.bazel`.
+resolution: Complete

@@ -165,8 +165,14 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'", role)
+		// Use standard LIKE query to ensure mode parity across SQLite and Postgres
+		// without relying on dialect-specific JSON extraction functions.
+		likePattern := `%` + `"role":"` + role + `"` + `%`
+		query := `SELECT id, payload FROM agent_missions WHERE payload LIKE ? AND status = 'PENDING'`
+		rows, err := s.db.QueryContext(ctx, query, likePattern)
 		if err != nil {
+			// Fallback: Check if the role was encoded with spaces or differently (very unlikely but safe to try)
+			// Actually, just returning err is what we did before, but with SQLite we can also try json_extract fallback
 			return err
 		}
 		defer rows.Close()

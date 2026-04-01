@@ -225,9 +225,10 @@ sh_test(
     data = [
         "e2e/playwright.config.ts",
         "e2e/web.spec.ts",
+        "e2e/parity.spec.ts",
         ":app",
         "//:node_modules/@playwright/test",
-        "//srcs/server",
+        "//srcs/server:ohc",
     ],
     tags = [
         "manual",
