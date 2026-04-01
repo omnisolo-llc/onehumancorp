@@ -6,6 +6,7 @@ go_library(
         "postgres_scheduler.go",
         "repository.go",
         "scheduler.go",
+        "sqlite_task_repository.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/scheduler",
     visibility = ["//visibility:public"],

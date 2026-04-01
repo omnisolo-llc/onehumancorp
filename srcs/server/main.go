@@ -65,12 +65,32 @@ func envBoolDefault(key string, fallback bool) bool {
 
 func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
+		var hubRepo orchestration.HubRepository
+		var taskRepo scheduler.TaskRepository
+		var usageRepo billing.UsageRepository
+
+		switch pool.Provider.(type) {
+		case *db.SqliteProvider:
+			hubRepo = orchestration.NewSqliteHubRepository(pool.Provider)
+			taskRepo = scheduler.NewSqliteTaskRepository(pool.Provider)
+			usageRepo = billing.NewSqliteUsageRepository(pool.Provider, billing.DefaultCatalog)
+		case *db.PgProvider:
+			hubRepo = orchestration.NewPgHubRepository(pool.Provider)
+			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
+			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
+		default:
+			// Fallback if neither matches directly
+			hubRepo = orchestration.NewPgHubRepository(pool.Provider)
+			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
+			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
+		}
+
 		return orchestration.NewHubWithRepository(
-				orchestration.NewPgHubRepository(pool.Provider),
-				scheduler.NewPgTaskRepository(pool.Provider),
+				hubRepo,
+				taskRepo,
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
-				billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog),
+				usageRepo,
 			)
 	}
 
