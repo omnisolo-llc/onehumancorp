@@ -11,11 +11,11 @@ backend:
     targetCPUUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "25m"
-      memory: "40Mi"
+      cpu: "15m"
+      memory: "30Mi"
     limits:
-      cpu: "150m"
-      memory: "150Mi"
+      cpu: "100m"
+      memory: "128Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -31,11 +31,11 @@ ohcCore:
     port: 18789
   resources:
     requests:
-      cpu: "25m"
-      memory: "20Mi"
+      cpu: "15m"
+      memory: "15Mi"
     limits:
-      cpu: "150m"
-      memory: "80Mi"
+      cpu: "100m"
+      memory: "64Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -65,11 +65,11 @@ chatwoot:
     port: 3000
   resources:
     requests:
-      cpu: "106m"
-      memory: "80Mi"
+      cpu: "50m"
+      memory: "64Mi"
     limits:
-      cpu: "425m"
-      memory: "435Mi"
+      cpu: "250m"
+      memory: "256Mi"
   # Secret key base – MUST be overridden in production with a 64+ char random string.
   secretKeyBase: changeme_secret_key_base_at_least_64_chars_long_for_production
   # Admin credentials used by OHC backend to auto-configure the inbox.
@@ -98,11 +98,11 @@ plane:
   secretKey: an_extremely_secret_key_that_is_long_enough_for_plane
   resources:
     requests:
-      cpu: "106m"
-      memory: "80Mi"
+      cpu: "50m"
+      memory: "64Mi"
     limits:
-      cpu: "425m"
-      memory: "435Mi"
+      cpu: "250m"
+      memory: "256Mi"
 
 
 backend:
