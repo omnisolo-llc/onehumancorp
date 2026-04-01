@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"log/slog"
 	"net/http"
 	"os"
@@ -23,10 +24,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 *sql.DB
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              *sql.DB
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -700,11 +701,25 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
+		// Implement Hybrid MCP RAG Protocol: Sanitize payload to prevent sensitive data leakage
+		var parsed map[string]interface{}
+		if unmarshalErr := json.Unmarshal([]byte(m.payload), &parsed); unmarshalErr == nil {
+			parsed = redactInterfacePII(parsed).(map[string]interface{})
+			if b, marshalErr := json.Marshal(parsed); marshalErr == nil {
+				m.payload = string(b)
+			}
+		} else {
+			m.payload = redactPII(m.payload)
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+
+		// Ensure robust conflict resolution prioritizing the local client
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
@@ -715,6 +730,9 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 				})
 				if updateErr == nil {
 					syncedCount++
+
+					// Emit OpenTelemetry metrics for the sync process
+					go telemetry.RecordAgentApiCall(context.Background(), "daemon", "synchronizer", "sync_mission")
 				}
 			}
 			resp.Body.Close()
