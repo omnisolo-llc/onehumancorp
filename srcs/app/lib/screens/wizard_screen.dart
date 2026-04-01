@@ -167,7 +167,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Setup Wizard'),
+        title: const Text('Setup Wizard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         actions: [
           statusAsync.maybeWhen(
             data:
@@ -234,28 +234,46 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (_step > 0)
-                  OutlinedButton(
-                    onPressed: () => setState(() => _step--),
-                    child: const Text('Back'),
+                  Semantics(
+                    label: 'Go back to previous step',
+                    child: Tooltip(
+                      message: 'Previous step',
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _step--),
+                        child: const Text('Back'),
+                      ),
+                    ),
                   )
                 else
                   const SizedBox.shrink(),
                 if (_step < 2)
-                  FilledButton(
-                    onPressed: () => setState(() => _step++),
-                    child: const Text('Next'),
+                  Semantics(
+                    label: 'Proceed to next step',
+                    child: Tooltip(
+                      message: 'Next step',
+                      child: FilledButton(
+                        onPressed: () => setState(() => _step++),
+                        child: const Text('Next'),
+                      ),
+                    ),
                   )
                 else
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child:
-                        _saving
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Text('Save Configuration'),
+                  Semantics(
+                    label: 'Save and finish wizard',
+                    child: Tooltip(
+                      message: 'Save all configuration settings',
+                      child: FilledButton(
+                        onPressed: _saving ? null : _save,
+                        child:
+                            _saving
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                                : const Text('Save Configuration'),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -349,7 +367,31 @@ class _StatusBanner extends StatelessWidget {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(<double>[
+              1.787,
+              -0.715,
+              -0.072,
+              0,
+              0,
+              -0.213,
+              1.285,
+              -0.072,
+              0,
+              0,
+              -0.213,
+              -0.715,
+              1.928,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
           child: Container(
             decoration: BoxDecoration(
               color: color.withOpacity(0.03),
