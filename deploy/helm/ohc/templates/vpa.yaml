@@ -8,4 +8,8 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-backend
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        controlledResources: ["memory"]
