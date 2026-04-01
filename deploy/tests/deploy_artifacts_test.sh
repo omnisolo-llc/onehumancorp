@@ -21,8 +21,10 @@ done
 # Verify OCI bazel rules are present (Dockerfiles replaced by rules_oci).
 grep -q "oci_image" "$build_file"
 grep -q "backend_image" "$build_file"
+grep -q "default_agent_image" "$build_file"
 grep -q "frontend_image" "$build_file"
 grep -q "distroless" "$build_file"
+grep -q "internal-default-agent:bazel" "$build_file"
 
 # Verify docker-compose uses the Bazel OCI image tags.
 grep -q "backend:" "$compose_file"
