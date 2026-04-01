@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -1004,5 +1005,130 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSIPDB_SyncMissions(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_missions.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert missions into agent_missions, one with rag_context and one without
+	payload1 := `{"role":"r1","task":{"id":"m1","content":"task 1","rag_context":"sensitive data"}}`
+	payload2 := `{"role":"r2","task":{"id":"m2","content":"task 2"},"rag_context":"secret"}`
+
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m1', 'PENDING', ?)", payload1)
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', ?)", payload2)
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+
+	var reqBodies []string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		reqBodies = append(reqBodies, string(body))
+
+		// Ensure correct header is sent
+		if r.Header.Get("X-Conflict-Resolution") != "client-wins" {
+			t.Errorf("Expected X-Conflict-Resolution: client-wins, got %s", r.Header.Get("X-Conflict-Resolution"))
+		}
+
+		// Return 409 Conflict to test successful resolution
+		w.WriteHeader(http.StatusConflict)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if syncedCount != 2 {
+		t.Fatalf("Expected 2 synced records (409 Conflict treated as success), got %d", syncedCount)
+	}
+
+	if len(reqBodies) != 2 {
+		t.Fatalf("Expected 2 requests, got %d", len(reqBodies))
+	}
+
+	// Verify sensitive info is stripped
+	for _, body := range reqBodies {
+		if strings.Contains(body, "rag_context") || strings.Contains(body, "sensitive data") || strings.Contains(body, "secret") {
+			t.Fatalf("Payload contained sensitive data after sync stripping: %s", body)
+		}
+	}
+
+	// Verify local DB status updated to SYNCED
+	var count int
+	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'SYNCED'").Scan(&count)
+	if err != nil || count != 2 {
+		t.Fatalf("Expected 2 SYNCED missions after sync, got %d", count)
+	}
+}
+
+func TestSIPDB_SyncMissionRecord(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_record.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	task1 := Message{ID: "t1", Content: "content 1"}
+	task1_updated := Message{ID: "t1", Content: "updated content"}
+
+	// Insert new
+	err = db.SyncMissionRecord(ctx, "t1", "ROLE", task1, true)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Verify insertion
+	var payload string
+	err = db.db.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = 't1'").Scan(&payload)
+	if err != nil {
+		t.Fatalf("Query failed: %v", err)
+	}
+	if !strings.Contains(payload, "content 1") {
+		t.Fatalf("Expected 'content 1', got %s", payload)
+	}
+
+	// Update (clientWins = true)
+	err = db.SyncMissionRecord(ctx, "t1", "ROLE", task1_updated, true)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Verify update
+	err = db.db.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = 't1'").Scan(&payload)
+	if err != nil {
+		t.Fatalf("Query failed: %v", err)
+	}
+	if !strings.Contains(payload, "updated content") {
+		t.Fatalf("Expected 'updated content', got %s", payload)
+	}
+
+	// Update (clientWins = false)
+	err = db.SyncMissionRecord(ctx, "t1", "ROLE", task1, false)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Verify NO update because clientWins was false (and ON CONFLICT DO NOTHING was used)
+	err = db.db.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = 't1'").Scan(&payload)
+	if err != nil {
+		t.Fatalf("Query failed: %v", err)
+	}
+	if !strings.Contains(payload, "updated content") {
+		t.Fatalf("Expected to retain 'updated content', got %s", payload)
 	}
 }

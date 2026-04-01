@@ -541,6 +541,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
+	mux.HandleFunc("/api/missions/sync", server.handleSyncMissions)
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
 	mux.HandleFunc("/api/clusters/", server.handleClusterStatus)
@@ -593,6 +594,61 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
 	return telemetry.Middleware(auth.Middleware(store)(mux))
+}
+
+// handleSyncMissions receives pending missions from standalone instances and
+// integrates them into the cloud Postgres database using robust conflict resolution.
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body", http.StatusInternalServerError)
+		return
+	}
+
+	// Assuming payload is a JSON array of missions or a single mission.
+	// Actually, the sender in `SyncMissions` iterates over missions and sends one by one
+	// in `strings.NewReader(m.payload)`. Wait, it sends `m.payload`.
+	// Let's parse it as JSON to ensure it's valid and extract an ID if we need to UPSERT.
+	// The problem is `agent_missions` in Postgres is managed by SIPDB.
+	// But `sipdb.db` is just a sql.DB. Wait, `s.hub.SIPDB()` ? We don't have direct access
+	// to `agent_missions` table unless we use `s.hub.SIPDB()`.
+
+	conflictResolution := r.Header.Get("X-Conflict-Resolution")
+
+	sipdb := s.hub.SIPDB()
+	if sipdb == nil {
+		http.Error(w, "SIPDB not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	var wrapper struct {
+		Role string                `json:"role"`
+		Task orchestration.Message `json:"task"`
+	}
+	if err := json.Unmarshal(body, &wrapper); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	missionID := wrapper.Task.ID
+	if missionID == "" {
+		http.Error(w, "missing mission id", http.StatusBadRequest)
+		return
+	}
+
+	// Since we need to UPSERT, we should add SyncMission method to SIPDB.
+	err = sipdb.SyncMissionRecord(r.Context(), missionID, wrapper.Role, wrapper.Task, conflictResolution == "client-wins")
+	if err != nil {
+		http.Error(w, "failed to sync mission", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching

@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -314,7 +316,24 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 var (
 	// throttleSemaphore limits concurrent DelegateMission executions in SQLite standalone mode.
 	throttleSemaphore = make(chan struct{}, 2)
+
+	// OpenTelemetry metrics
+	sipMissionsSynced metric.Int64Counter
+	sipMissionsSyncErrors metric.Int64Counter
 )
+
+func init() {
+	meter := otel.Meter("orchestration")
+	var err error
+	sipMissionsSynced, err = meter.Int64Counter("sip.missions.synced", metric.WithDescription("Number of successfully synchronized missions"))
+	if err != nil {
+		slog.Warn("failed to initialize sip.missions.synced metric", "error", err)
+	}
+	sipMissionsSyncErrors, err = meter.Int64Counter("sip.missions.sync_errors", metric.WithDescription("Number of mission synchronization errors"))
+	if err != nil {
+		slog.Warn("failed to initialize sip.missions.sync_errors metric", "error", err)
+	}
+}
 
 func envBoolDefault(key string, fallback bool) bool {
 	value, ok := os.LookupEnv(key)
@@ -379,6 +398,40 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 			missionID, string(taskBytes),
 		)
 		return err
+	})
+}
+
+// SyncMissionRecord implements conflict resolution prioritizing the local client by using an UPSERT query
+// (ON CONFLICT(id) DO UPDATE SET) to ensure robust synchronization and SQL parity.
+// Accepts parameters: ctx context.Context, missionID, role string, task Message, clientWins bool.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Inserts or updates a record in the agent_missions table.
+func (s *SIPDB) SyncMissionRecord(ctx context.Context, missionID, role string, task Message, clientWins bool) error {
+	wrapper := struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}{
+		Role: role,
+		Task: task,
+	}
+	taskBytes, _ := json.Marshal(wrapper)
+
+	return withRetry(ctx, func() error {
+		if clientWins {
+			_, err := s.db.ExecContext(ctx,
+				"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, status=excluded.status",
+				missionID, string(taskBytes),
+			)
+			return err
+		} else {
+			// If not client wins, we might just INSERT and ignore conflict, but usually we just want UPSERT anyway.
+			_, err := s.db.ExecContext(ctx,
+				"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO NOTHING",
+				missionID, string(taskBytes),
+			)
+			return err
+		}
 	})
 }
 
@@ -699,26 +752,57 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
+	var syncErrors int64
+
 	for _, m := range missions {
+		// Explicitly parse the payload and delete the sensitive `rag_context` key
+		var payloadObj map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &payloadObj); err == nil {
+			delete(payloadObj, "rag_context")
+			if taskObj, ok := payloadObj["task"].(map[string]interface{}); ok {
+				delete(taskObj, "rag_context")
+			}
+			if sanitizedPayload, err := json.Marshal(payloadObj); err == nil {
+				m.payload = string(sanitizedPayload)
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
+			syncErrors++
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		// Include the header to enforce robust conflict resolution prioritizing the local client
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// Treat HTTP 409 Conflict responses as successful synchronizations
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+				} else {
+					syncErrors++
 				}
+			} else {
+				syncErrors++
 			}
 			resp.Body.Close()
+		} else {
+			syncErrors++
 		}
+	}
+
+	if sipMissionsSynced != nil {
+		sipMissionsSynced.Add(ctx, int64(syncedCount))
+	}
+	if sipMissionsSyncErrors != nil {
+		sipMissionsSyncErrors.Add(ctx, syncErrors)
 	}
 
 	return syncedCount, nil
