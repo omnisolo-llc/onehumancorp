@@ -242,6 +242,17 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
+	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isSQLite := h.sipDB != nil && h.sipDB.db != nil
+	if !isMultiTenant && isSQLite {
+		select {
+		case throttleSemaphore <- struct{}{}:
+			defer func() { <-throttleSemaphore }()
+		case <-context.Background().Done():
+			// Not cancellable since it doesn't take context
+		}
+	}
+
 	if err := CheckDocumentationGate(task.Content); err != nil {
 		return err
 	}
