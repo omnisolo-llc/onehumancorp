@@ -137,7 +137,6 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                                   : 0.0;
 
                           return Semantics(
-                            excludeSemantics: true,
                             label:
                                 'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
                             child: Padding(
@@ -284,7 +283,6 @@ class _SummaryCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Semantics(
-      excludeSemantics: true,
       label: '$title: $value',
       child: Card(
         child: Padding(
