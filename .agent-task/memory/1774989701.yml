@@ -1,7 +1,0 @@
-type: journal
-metadata:
-  role: "General Mission Worker"
-  timestamp: 1774989701
-observations: "Checked .agent-task/missions/ directory, found it empty."
-actions_taken: "Verified empty queue. Continuing to run observation."
-resolution: "Queue is drained. Success."
