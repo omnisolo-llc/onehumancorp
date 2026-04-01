@@ -141,7 +141,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                       decoration: BoxDecoration(
                         color:
                             widget.disabled && _position == _maxDrag
-                                ? Colors.green.withOpacity(0.2)
+                                ? colors.primaryContainer
                                 : colors.primary,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
@@ -155,14 +155,14 @@ class _SlideToApproveState extends State<SlideToApprove> {
                       child: Center(
                         child:
                             widget.disabled && _position == _maxDrag
-                                ? const Icon(
+                                ? Icon(
                                   Icons.check,
-                                  color: Colors.green,
+                                  color: colors.onPrimaryContainer,
                                   size: 24,
                                 )
-                                : const Icon(
+                                : Icon(
                                   Icons.chevron_right,
-                                  color: Colors.white,
+                                  color: colors.onPrimary,
                                   size: 24,
                                 ),
                       ),
@@ -179,9 +179,9 @@ class _SlideToApproveState extends State<SlideToApprove> {
           child: TextButton(
             onPressed: widget.disabled ? null : widget.onReject,
             style: TextButton.styleFrom(
-              backgroundColor: Colors.red.withOpacity(0.05),
-              foregroundColor: Colors.red,
-              side: BorderSide(color: Colors.red.withOpacity(0.1)),
+              backgroundColor: colors.errorContainer.withOpacity(0.5),
+              foregroundColor: colors.error,
+              side: BorderSide(color: colors.errorContainer),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
