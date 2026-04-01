@@ -14,7 +14,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	_ "modernc.org/sqlite"
+)
+
+var (
+	sipMeter                 = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	missionsSyncedCounter, _ = sipMeter.Int64Counter("sip.missions.synced", metric.WithDescription("Number of successfully synced missions"))
+	missionSyncErrorsCounter, _ = sipMeter.Int64Counter("sip.missions.sync_errors", metric.WithDescription("Number of mission sync errors"))
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -700,24 +709,69 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		var parsedPayload map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &parsedPayload); err != nil {
+			if missionSyncErrorsCounter != nil {
+				missionSyncErrorsCounter.Add(ctx, 1)
+			}
+			continue
+		}
+
+		delete(parsedPayload, "rag_context")
+
+		sanitizedPayloadBytes, err := json.Marshal(parsedPayload)
 		if err != nil {
+			if missionSyncErrorsCounter != nil {
+				missionSyncErrorsCounter.Add(ctx, 1)
+			}
+			continue
+		}
+
+		sanitizedPayload := telemetry.RedactPII(string(sanitizedPayloadBytes))
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(sanitizedPayload))
+		if err != nil {
+			if missionSyncErrorsCounter != nil {
+				missionSyncErrorsCounter.Add(ctx, 1)
+			}
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// A 409 Conflict is treated as success to prioritize local state.
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+					if missionsSyncedCounter != nil {
+						missionsSyncedCounter.Add(ctx, 1)
+					}
+					// Ensure local deletion of rag_context related to sync context to prevent loop.
+					_ = withRetry(ctx, func() error {
+						_, _ = s.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings WHERE memory_id = ?", m.id)
+						return nil
+					})
+				} else {
+					if missionSyncErrorsCounter != nil {
+						missionSyncErrorsCounter.Add(ctx, 1)
+					}
+				}
+			} else {
+				if missionSyncErrorsCounter != nil {
+					missionSyncErrorsCounter.Add(ctx, 1)
 				}
 			}
 			resp.Body.Close()
+		} else {
+			if missionSyncErrorsCounter != nil {
+				missionSyncErrorsCounter.Add(ctx, 1)
+			}
 		}
 	}
 
