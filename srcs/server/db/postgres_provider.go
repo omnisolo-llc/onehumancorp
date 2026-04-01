@@ -58,6 +58,10 @@ func (p *PgProvider) Close() {
 	p.pool.Close()
 }
 
+func (p *PgProvider) IsSQLite() bool {
+	return false
+}
+
 // PgRows implements Rows using pgx.Rows.
 type PgRows struct {
 	rows pgx.Rows

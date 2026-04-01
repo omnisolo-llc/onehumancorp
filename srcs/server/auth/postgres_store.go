@@ -22,9 +22,8 @@ func NewPgUserRepository(pool db.Provider) *PgUserRepository {
 
 func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 	rolesJSON, _ := json.Marshal(user.Roles)
-	_, isSqlite := r.pool.(*db.SqliteProvider)
 	var rolesArg any = user.Roles
-	if isSqlite {
+	if r.pool.IsSQLite() {
 		rolesArg = string(rolesJSON)
 	}
 
@@ -66,10 +65,9 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 	defer rows.Close()
 
 	var users []*User
-	_, isSqlite := r.pool.(*db.SqliteProvider)
 	for rows.Next() {
 		u := &User{}
-		if isSqlite {
+		if r.pool.IsSQLite() {
 			var rolesJSON string
 			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
 				return nil, fmt.Errorf("pg: scan user: %w", err)
@@ -87,9 +85,8 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 
 func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 	rolesJSON, _ := json.Marshal(user.Roles)
-	_, isSqlite := r.pool.(*db.SqliteProvider)
 	var rolesArg any = user.Roles
-	if isSqlite {
+	if r.pool.IsSQLite() {
 		rolesArg = string(rolesJSON)
 	}
 
@@ -140,9 +137,8 @@ func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, err
 
 func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...any) (*User, error) {
 	u := &User{}
-	_, isSqlite := r.pool.(*db.SqliteProvider)
 
-	if isSqlite {
+	if r.pool.IsSQLite() {
 		var rolesJSON string
 		err := r.pool.QueryRow(ctx, query, args...).Scan(
 			&u.ID, &u.Username, &u.Email, &u.PasswordHash,

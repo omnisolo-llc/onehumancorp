@@ -69,17 +69,11 @@ func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 		var taskRepo scheduler.TaskRepository
 		var usageRepo billing.UsageRepository
 
-		switch pool.Provider.(type) {
-		case *db.SqliteProvider:
+		if pool.Provider.IsSQLite() {
 			hubRepo = orchestration.NewSqliteHubRepository(pool.Provider)
 			taskRepo = scheduler.NewSqliteTaskRepository(pool.Provider)
 			usageRepo = billing.NewSqliteUsageRepository(pool.Provider, billing.DefaultCatalog)
-		case *db.PgProvider:
-			hubRepo = orchestration.NewPgHubRepository(pool.Provider)
-			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
-			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
-		default:
-			// Fallback if neither matches directly
+		} else {
 			hubRepo = orchestration.NewPgHubRepository(pool.Provider)
 			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
 			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
@@ -245,7 +239,19 @@ func run(now time.Time, listen listenFunc) error {
 	}
 
 	// Set up the SIPDB instance to connect to SQLite.
-	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
+	var dbPath string
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		if err := os.MkdirAll(".agent-task", 0700); err != nil {
+			slog.Warn("failed to create .agent-task directory", "error", err)
+		}
+		dbPath = filepath.Join(".agent-task", "swarm.db")
+	} else {
+		openclawDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
+		if err := os.MkdirAll(openclawDir, 0700); err != nil {
+			slog.Warn("failed to create .openclaw directory", "error", err)
+		}
+		dbPath = filepath.Join(openclawDir, "ohc.db")
+	}
 	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
