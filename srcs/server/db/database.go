@@ -153,6 +153,11 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		sqlStr := string(sqlBytes)
 
+		if strings.Contains(strings.ToUpper(sqlStr), "CREATE PUBLICATION") && p.Provider.IsSQLite() {
+			slog.Info("db: skipping postgres publication migration for sqlite", "file", f)
+			continue
+		}
+
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.

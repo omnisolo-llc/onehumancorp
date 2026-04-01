@@ -77,6 +77,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    command: postgres -c wal_level=logical
     environment:
       POSTGRES_USER: ohc
       POSTGRES_PASSWORD: ohc
@@ -91,6 +92,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  powersync:
+    image: journeyapps/powersync-service:latest
+    environment:
+      PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      PS_JWKS_URL: http://server:8080/api/powersync/jwks
+      PS_PORT: "8080"
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_started
 
   chatwoot-migrate:
     image: chatwoot/chatwoot:latest

@@ -592,6 +592,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
+	// PowerSync endpoints
+	mux.HandleFunc("/api/powersync/rules", server.handlePowerSyncRules)
+	mux.HandleFunc("/api/powersync/jwks", server.handlePowerSyncJWKS)
+
 	return telemetry.Middleware(auth.Middleware(store)(mux))
 }
 

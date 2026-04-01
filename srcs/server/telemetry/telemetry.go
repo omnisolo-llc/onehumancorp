@@ -26,6 +26,7 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	powersyncSyncsCounter    metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -124,6 +125,14 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	powersyncSyncsCounter, err = m.Int64Counter(
+		"ohc_powersync_syncs_total",
+		metric.WithDescription("Total PowerSync sync operations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -274,6 +283,23 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 			"type": interactionType,
 		})
 		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
+	}
+}
+
+// RecordPowerSyncSync increments the global counter for PowerSync sync events.
+func RecordPowerSyncSync(ctx context.Context, tenantID string) {
+	if powersyncSyncsCounter == nil {
+		return
+	}
+	powersyncSyncsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("tenant_id", tenantID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"tenant_id": tenantID,
+		})
+		_ = BufferMetricFunc(ctx, "powersync_sync", string(payloadBytes))
 	}
 }
 
