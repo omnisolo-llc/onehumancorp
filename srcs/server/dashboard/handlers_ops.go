@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -419,4 +420,52 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body", http.StatusInternalServerError)
+		return
+	}
+
+	var payload struct {
+		Role string `json:"role"`
+		Task struct {
+			ID      string `json:"id"`
+			Content string `json:"content"`
+			Type    string `json:"type"`
+		} `json:"task"`
+	}
+
+	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Task.ID == "" {
+		http.Error(w, "missing task ID", http.StatusBadRequest)
+		return
+	}
+
+	isClientWins := r.Header.Get("X-Conflict-Resolution") == "client-wins"
+
+	if s.hub.SIPDB() != nil {
+		err := s.hub.SIPDB().ReceiveSyncedMission(r.Context(), payload.Task.ID, payload.Role, string(bodyBytes), isClientWins)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Mock logic or return error if SIPDB is not initialized
+		http.Error(w, "SIPDB not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
 }

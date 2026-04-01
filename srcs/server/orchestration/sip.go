@@ -15,6 +15,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -382,6 +384,49 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	})
 }
 
+// ReceiveSyncedMission handles incoming mission syncs from clients, using UPSERT.
+func (s *SIPDB) ReceiveSyncedMission(ctx context.Context, missionID, role, rawPayload string, clientWins bool) error {
+	return withRetry(ctx, func() error {
+		var wrapper struct {
+			Role string  `json:"role"`
+			Task Message `json:"task"`
+		}
+
+		// Attempt to unmarshal to ensure we're storing the properly structured payload
+		if err := json.Unmarshal([]byte(rawPayload), &wrapper); err != nil {
+			// If we can't unmarshal it directly into the wrapper, maybe it's just the task message.
+			var msg Message
+			if err2 := json.Unmarshal([]byte(rawPayload), &msg); err2 == nil {
+				wrapper.Role = role
+				wrapper.Task = msg
+				b, _ := json.Marshal(wrapper)
+				rawPayload = string(b)
+			}
+		}
+
+		if clientWins {
+			// UPSERT logic: Insert if not exists, otherwise update existing payload and set status to PENDING
+			_, err := s.db.ExecContext(ctx,
+				`INSERT INTO agent_missions (id, status, payload, created_at)
+				 VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)
+				 ON CONFLICT(id) DO UPDATE SET
+				 payload=excluded.payload, status='PENDING', created_at=CURRENT_TIMESTAMP`,
+				missionID, rawPayload,
+			)
+			return err
+		} else {
+			// Standard insert, ignore if already exists (DO NOTHING fallback)
+			_, err := s.db.ExecContext(ctx,
+				`INSERT INTO agent_missions (id, status, payload, created_at)
+				 VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)
+				 ON CONFLICT(id) DO NOTHING`,
+				missionID, rawPayload,
+			)
+			return err
+		}
+	})
+}
+
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
 // It also sanitizes stuck PENDING missions by converting them to FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
@@ -699,16 +744,32 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
+	errorCount := 0
 	for _, m := range missions {
+		var payloadObj map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &payloadObj); err == nil {
+			// Strip Hybrid MCP RAG state to maintain tenant isolation and privacy
+			delete(payloadObj, "rag_context")
+
+			// Sanitize all data to prevent sensitive data leakage
+			sanitizedObj := redactInterfacePII(payloadObj)
+
+			if sanitizedBytes, err := json.Marshal(sanitizedObj); err == nil {
+				m.payload = string(sanitizedBytes)
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
+			errorCount++
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
@@ -716,9 +777,19 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 				if updateErr == nil {
 					syncedCount++
 				}
+			} else {
+				errorCount++
 			}
 			resp.Body.Close()
+		} else {
+			errorCount++
 		}
+	}
+
+	// Record telemetry metrics
+	telemetry.RecordMissionsSynced(ctx, int64(syncedCount))
+	if errorCount > 0 {
+		telemetry.RecordSyncError(ctx, int64(errorCount))
 	}
 
 	return syncedCount, nil

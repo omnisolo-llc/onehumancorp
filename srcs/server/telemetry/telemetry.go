@@ -28,6 +28,9 @@ var (
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
 
+	missionsSyncedCounter metric.Int64Counter
+	syncErrorsCounter     metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -131,6 +134,22 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	missionsSyncedCounter, err = m.Int64Counter(
+		"sip.missions.synced",
+		metric.WithDescription("Total missions successfully synced to the cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncErrorsCounter, err = m.Int64Counter(
+		"sip.missions.sync_errors",
+		metric.WithDescription("Total errors encountered while syncing missions"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -331,6 +350,20 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"event_type", eventType,
 		"content", redactPII(content),
 	)
+}
+
+// RecordMissionsSynced increments the global counter for missions successfully synced to the cloud.
+func RecordMissionsSynced(ctx context.Context, count int64) {
+	if missionsSyncedCounter != nil {
+		missionsSyncedCounter.Add(ctx, count)
+	}
+}
+
+// RecordSyncError increments the global counter for mission sync errors.
+func RecordSyncError(ctx context.Context, count int64) {
+	if syncErrorsCounter != nil {
+		syncErrorsCounter.Add(ctx, count)
+	}
 }
 
 // Global buffer function pointer to inject dependency without circular imports.
