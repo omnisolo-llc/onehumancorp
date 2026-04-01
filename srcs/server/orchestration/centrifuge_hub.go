@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -53,6 +54,33 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	node, err := createNode(cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL != "" {
+		if realNode, ok := node.(*centrifuge.Node); ok {
+			// Use Redis broker for multi-node deployments.
+			// centrifuge.NewRedisBroker requires node to be of type *centrifuge.Node.
+			shard, err := centrifuge.NewRedisShard(realNode, centrifuge.RedisShardConfig{
+				Address: redisURL,
+			})
+			if err != nil {
+				slog.Error("centrifuge redis shard init failed", "error", err)
+				return nil, err
+			}
+			broker, err := centrifuge.NewRedisBroker(realNode, centrifuge.RedisBrokerConfig{
+				Shards: []*centrifuge.RedisShard{shard},
+			})
+			if err != nil {
+				slog.Error("centrifuge redis broker init failed", "error", err)
+				return nil, err
+			}
+			realNode.SetBroker(broker)
+			slog.Info("centrifuge redis broker initialized", "url", redisURL)
+		}
+	} else {
+		// Fallback to local memory broker for Standalone Mode.
+		slog.Info("REDIS_URL not set; using local memory broker for centrifuge")
 	}
 
 	node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {

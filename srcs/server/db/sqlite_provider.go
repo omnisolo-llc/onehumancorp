@@ -8,6 +8,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+import (
+	"regexp"
+	"strings"
+)
+
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
 	db *sql.DB
@@ -17,10 +22,73 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 	return &SqliteProvider{db: db}
 }
 
-// translateArgs translates pgx-style args if needed, though typically SQL standard positional args are similar enough.
-// SQLite natively expects `?` instead of `$1`, `$2`. Wait, no, SQLite actually accepts `$1`, `$2` bindings if using proper parameter names, but default `database/sql` positional parameters are usually just `?`. Wait, `database/sql` driver for SQLite usually supports `?`, `$1`, and `:name`. Let's assume standard passing works unless proven otherwise.
+var jsonPathRegex = regexp.MustCompile(`([a-zA-Z0-9_]+)::json->>'([a-zA-Z0-9_]+)'`)
+
+// convertBindVars translates PostgreSQL syntax to SQLite syntax.
+// It maps positional parameters (e.g., $1) to SQLite numbered variables (?1),
+// dynamically strips unsupported clauses like FOR UPDATE SKIP LOCKED,
+// and maps JSON extraction syntax.
+func convertBindVars(sql string) string {
+	var out strings.Builder
+	var inQuote bool
+	var inDoubleQuote bool
+	var inEscape bool
+
+	out.Grow(len(sql))
+
+	// Some basic syntax translations needed for Postgres to SQLite:
+	sql = strings.ReplaceAll(sql, "FOR UPDATE SKIP LOCKED", "")
+
+	for i := 0; i < len(sql); i++ {
+		c := sql[i]
+		if inEscape {
+			out.WriteByte(c)
+			inEscape = false
+			continue
+		}
+		if c == '\\' {
+			inEscape = true
+			out.WriteByte(c)
+			continue
+		}
+		if c == '\'' && !inDoubleQuote {
+			inQuote = !inQuote
+			out.WriteByte(c)
+			continue
+		}
+		if c == '"' && !inQuote {
+			inDoubleQuote = !inDoubleQuote
+			out.WriteByte(c)
+			continue
+		}
+		if !inQuote && !inDoubleQuote {
+			if c == '$' && i+1 < len(sql) && sql[i+1] >= '0' && sql[i+1] <= '9' {
+				// Parse the number
+				start := i + 1
+				end := start
+				for end < len(sql) && sql[end] >= '0' && sql[end] <= '9' {
+					end++
+				}
+				paramStr := sql[start:end]
+				out.WriteString("?" + paramStr)
+				i = end - 1
+				continue
+			}
+		}
+		out.WriteByte(c)
+	}
+
+	res := out.String()
+
+	// Dynamic JSON path mapping
+	res = jsonPathRegex.ReplaceAllString(res, `json_extract($1, '$$.$2')`)
+
+	return res
+}
+
 func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
 	start := time.Now()
+	sqlQuery = convertBindVars(sqlQuery)
 	res, err := p.db.ExecContext(ctx, sqlQuery, arguments...)
 	trackQuery(ctx, "Exec", err, time.Since(start))
 	if err != nil {
@@ -31,6 +99,7 @@ func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ..
 
 func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
+	sqlQuery = convertBindVars(sqlQuery)
 	rows, err := p.db.QueryContext(ctx, sqlQuery, optionsAndArgs...)
 	trackQuery(ctx, "Query", err, time.Since(start))
 	if err != nil {
@@ -41,6 +110,7 @@ func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndA
 
 func (p *SqliteProvider) QueryRow(ctx context.Context, sqlQuery string, optionsAndArgs ...any) Row {
 	start := time.Now()
+	sqlQuery = convertBindVars(sqlQuery)
 	row := p.db.QueryRowContext(ctx, sqlQuery, optionsAndArgs...)
 	trackQuery(ctx, "QueryRow", nil, time.Since(start))
 	return &SqliteRow{row: row}
@@ -97,6 +167,7 @@ type SqliteTx struct {
 
 func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
 	start := time.Now()
+	sqlQuery = convertBindVars(sqlQuery)
 	res, err := t.tx.ExecContext(ctx, sqlQuery, arguments...)
 	trackQuery(ctx, "Tx.Exec", err, time.Since(start))
 	if err != nil {
@@ -107,6 +178,7 @@ func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) 
 
 func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
+	sqlQuery = convertBindVars(sqlQuery)
 	rows, err := t.tx.QueryContext(ctx, sqlQuery, optionsAndArgs...)
 	trackQuery(ctx, "Tx.Query", err, time.Since(start))
 	if err != nil {
@@ -117,6 +189,7 @@ func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ..
 
 func (t *SqliteTx) QueryRow(ctx context.Context, sqlQuery string, optionsAndArgs ...any) Row {
 	start := time.Now()
+	sqlQuery = convertBindVars(sqlQuery)
 	row := t.tx.QueryRowContext(ctx, sqlQuery, optionsAndArgs...)
 	trackQuery(ctx, "Tx.QueryRow", nil, time.Since(start))
 	return &SqliteRow{row: row}
