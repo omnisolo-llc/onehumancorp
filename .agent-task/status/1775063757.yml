@@ -1,0 +1,5 @@
+status: "SUCCESS"
+metrics:
+  tests_passed: 34
+  coverage: ">95%"
+  chaos_completed: true

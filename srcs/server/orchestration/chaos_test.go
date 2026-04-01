@@ -104,7 +104,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 	}()
 
 	// Hold the lock for a short duration to trigger retries
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Release the lock
 	if err := tx.Commit(); err != nil {

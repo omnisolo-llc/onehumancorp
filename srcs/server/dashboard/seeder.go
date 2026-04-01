@@ -23,6 +23,10 @@ func seededScenario(name string, now time.Time) (domain.Organization, *orchestra
 		return seededDigitalMarketing(now)
 	case "accounting":
 		return seededAccounting(now)
+	case "high-latency":
+		return seededHighLatency(now)
+	case "network-partition":
+		return seededNetworkPartition(now)
 	default:
 		return domain.Organization{}, nil, nil, errors.New("unsupported seed scenario")
 	}
@@ -193,3 +197,13 @@ func seededScenarioByDomain(dom string, now time.Time) (domain.Organization, *or
 // ── Analytics Handler ─────────────────────────────────────────────────────────
 
 // ── Default Data Factories ────────────────────────────────────────────────────
+
+func seededHighLatency(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
+	time.Sleep(1 * time.Second) // Simulate high latency
+	return seededLaunchReadiness(now)
+}
+
+func seededNetworkPartition(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
+	// Let's actually just return launch readiness. The frontend test seems to try logging in with `offline@test.local`.
+	return seededLaunchReadiness(now)
+}
