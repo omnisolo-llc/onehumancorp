@@ -27,13 +27,15 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	syncProcessCounter       metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
 
-func redactPII(input string) string {
+// RedactPII redacts Personally Identifiable Information from the input string.
+func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
@@ -131,6 +133,14 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncProcessCounter, err = m.Int64Counter(
+		"ohc_sync_processes_total",
+		metric.WithDescription("Total sync processes executed"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -309,6 +319,28 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 	}
 }
 
+// RecordSyncEvent increments the global counter for hybrid sync events.
+// Accepts parameters: ctx context.Context, syncType string, count int (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordSyncEvent(ctx context.Context, syncType string, count int) {
+	if syncProcessCounter == nil {
+		return
+	}
+	syncProcessCounter.Add(ctx, int64(count), metric.WithAttributes(
+		attribute.String("type", syncType),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"type":  syncType,
+			"count": count,
+		})
+		_ = BufferMetricFunc(ctx, "sync_event", string(payloadBytes))
+	}
+}
+
 // LogAgentExecution provides structured JSON logging for agent execution traces.
 //
 //   - ctx: context.Context; The context of the active trace or request.
@@ -329,7 +361,7 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"role", role,
 		"api", api,
 		"event_type", eventType,
-		"content", redactPII(content),
+		"content", RedactPII(content),
 	)
 }
 

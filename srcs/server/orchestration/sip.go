@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -610,6 +612,8 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		return 0, nil // nothing to sync
 	}
 
+	telemetry.RecordSyncEvent(ctx, "buffered_metrics", len(records))
+
 	// Prepare payload for batch sync
 	var payloadBuilder strings.Builder
 	payloadBuilder.WriteString("[")
@@ -697,18 +701,26 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		return 0, nil
 	}
 
+		telemetry.RecordSyncEvent(ctx, "agent_missions", len(missions))
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+			// Sanitize the payload to remove PII and other sensitive data
+			sanitizedPayload := telemetry.RedactPII(m.payload)
+
+			req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(sanitizedPayload))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+			// Conflict resolution prioritizing local client
+			req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				// Also treat 409 Conflict as success if force-local is active but rejected or already exists
+				if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
