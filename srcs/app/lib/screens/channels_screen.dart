@@ -432,16 +432,30 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
               ..._selected.fields.map(
                 (f) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: TextField(
-                    controller: _fieldCtrls[f.key],
-                    obscureText: f.secret,
-                    decoration: InputDecoration(
-                      labelText: f.label,
-                      hintText: f.hint,
-                      border: const OutlineInputBorder(),
-                      suffixIcon:
-                          f.secret ? const Icon(Icons.lock_outline) : null,
-                    ),
+                  child: StatefulBuilder(
+                    builder: (context, setState) {
+                      bool obscure = f.secret;
+                      return TextField(
+                        controller: _fieldCtrls[f.key],
+                        obscureText: obscure,
+                        decoration: InputDecoration(
+                          labelText: f.label,
+                          hintText: f.hint,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: f.secret ? IconButton(
+                            icon: Icon(
+                              obscure ? Icons.visibility : Icons.visibility_off,
+                            ),
+                            tooltip: obscure ? 'Show' : 'Hide',
+                            onPressed: () {
+                              setState(() {
+                                obscure = !obscure;
+                              });
+                            },
+                          ) : null,
+                        ),
+                      );
+                    }
                   ),
                 ),
               ),

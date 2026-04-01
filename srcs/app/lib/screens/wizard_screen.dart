@@ -374,7 +374,7 @@ class _StatusBanner extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.compose(
             outer: ColorFilter.matrix(<double>[
-              1.787,
+              1.213,
               -0.715,
               -0.072,
               0,

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -47,12 +48,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Form(
-                key: _formKey,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(<double>[
+                  1.213, -0.715, -0.072, 0, 0,
+                  -0.213, 1.285, -0.072, 0, 0,
+                  -0.213, -0.715, 1.928, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withOpacity(0.03),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.08),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Form(
+                    key: _formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,19 +119,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordCtrl,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator:
-                          (v) =>
-                              (v == null || v.isEmpty)
-                                  ? 'Enter your password'
-                                  : null,
+                    StatefulBuilder(
+                      builder: (context, setState) {
+                        bool obscurePassword = true;
+                        return TextFormField(
+                          controller: _passwordCtrl,
+                          obscureText: obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              ),
+                              tooltip: obscurePassword ? 'Show Password' : 'Hide Password',
+                              onPressed: () {
+                                setState(() {
+                                  obscurePassword = !obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                          validator:
+                              (v) =>
+                                  (v == null || v.isEmpty)
+                                      ? 'Enter your password'
+                                      : null,
+                        );
+                      }
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
@@ -145,6 +180,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+      ),
+      ),
       ),
     );
   }

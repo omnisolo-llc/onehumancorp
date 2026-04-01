@@ -179,14 +179,30 @@ class _ProviderCard extends StatelessWidget {
       builder:
           (_) => AlertDialog(
             title: Text('API Key — ${provider.name}'),
-            content: TextField(
-              controller: ctrl,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'API Key',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.key),
-              ),
+            content: StatefulBuilder(
+              builder: (context, setState) {
+                bool obscureKey = true;
+                return TextField(
+                  controller: ctrl,
+                  obscureText: obscureKey,
+                  decoration: InputDecoration(
+                    labelText: 'API Key',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.key),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscureKey ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      tooltip: obscureKey ? 'Show API Key' : 'Hide API Key',
+                      onPressed: () {
+                        setState(() {
+                          obscureKey = !obscureKey;
+                        });
+                      },
+                    ),
+                  ),
+                );
+              }
             ),
             actions: [
               TextButton(
@@ -341,14 +357,30 @@ class _ProviderDialogState extends State<_ProviderDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _keyCtrl,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'API Key',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.key),
-                ),
+              StatefulBuilder(
+                builder: (context, setState) {
+                  bool obscureKey = true;
+                  return TextField(
+                    controller: _keyCtrl,
+                    obscureText: obscureKey,
+                    decoration: InputDecoration(
+                      labelText: 'API Key',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.key),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureKey ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        tooltip: obscureKey ? 'Show API Key' : 'Hide API Key',
+                        onPressed: () {
+                          setState(() {
+                            obscureKey = !obscureKey;
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                }
               ),
               const SizedBox(height: 12),
               TextField(

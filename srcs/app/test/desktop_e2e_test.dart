@@ -36,11 +36,18 @@ import 'package:ohc_app/screens/skills_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
 class MockHttpClient extends Mock implements http.Client {}
+
+class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
+  _FakeClientSettingsNotifier(super.ref, ClientSettings settings) {
+    state = AsyncData(settings);
+  }
+}
 
 class FakeUri extends Fake implements Uri {}
 
@@ -236,10 +243,18 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref, const ClientSettings(
+              backendUrl: 'http://localhost:18789',
+              standaloneMode: false,
+            ))),
+            standaloneManagerProvider.overrideWith((ref) {}),
           ],
         ),
       );
       await tester.pumpAndSettle();
+
+      // Ensure we scroll to the bottom if needed
+      await tester.scrollUntilVisible(find.text('Sign Out'), 50.0);
 
       expect(find.text('Sign Out'), findsOneWidget);
 
@@ -255,6 +270,11 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref, const ClientSettings(
+              backendUrl: 'http://localhost:18789',
+              standaloneMode: false,
+            ))),
+            standaloneManagerProvider.overrideWith((ref) {}),
           ],
         ),
       );

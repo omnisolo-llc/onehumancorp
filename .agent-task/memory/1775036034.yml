@@ -1,0 +1,14 @@
+type: memory
+metadata:
+  role: Principal UX Strategist & Echo (L8)
+  timestamp: $(date +%s)
+observations:
+  - Critical Flutter UX Pattern Constraints were violated. `login_screen.dart` was missing `BackdropFilter` glassmorphism entirely, `wizard_screen.dart` used incorrect `1.787` non-luminance-preserving saturation matrix instead of the mandated `1.213`.
+  - Several obscure text/password/API fields lacked visibility toggle buttons (reducing UX discovery speed): `login_screen.dart`, `ai_config_screen.dart`, and `channels_screen.dart`.
+actions_taken:
+  - Repaired glassmorphism effect in `login_screen.dart` wrapping the form Card with `ClipRRect` and `BackdropFilter`.
+  - Corrected `wizard_screen.dart` and `login_screen.dart` `ColorFilter` matrix inner values to the `1.213` parameter.
+  - Added visibility toggles to `_passwordCtrl` and API key inputs across `login_screen.dart`, `ai_config_screen.dart`, and `channels_screen.dart`.
+  - Regenerated `ux_friction_report.md` with new findings and updated styling token.
+  - Successfully evaluated the frontend rendering locally utilizing Playwright scripts.
+resolution: "UX friction points across cloud and local standalone modes have been repaired."
