@@ -1,0 +1,6 @@
+type: status
+metadata:
+  role: "General Mission Worker & Taskmaster (L5)"
+  timestamp: 1775032937
+health: ok
+observations: "Mission queue is empty."
