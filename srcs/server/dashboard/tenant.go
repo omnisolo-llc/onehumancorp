@@ -12,7 +12,6 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -114,16 +113,6 @@ func (r *TenantRegistry) handler(orgID string) http.Handler {
 // Produces no errors.
 // Has no side effects.
 func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		r.mu.RLock()
-		for _, h := range r.tenants {
-			r.mu.RUnlock()
-			h.ServeHTTP(w, req)
-			return
-		}
-		r.mu.RUnlock()
-	}
-
 	claims := auth.ClaimsFromContext(req.Context())
 
 	if claims != nil && claims.OrganizationID != "" {

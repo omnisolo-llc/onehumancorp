@@ -140,6 +140,7 @@ start_daemon() {
   local port="$1"
 
   mkdir -p "${STATE_DIR}"
+  chmod 700 "${STATE_DIR}"
 
   if is_pid_running; then
     echo "ohc already running on port ${port}"
@@ -155,7 +156,7 @@ start_daemon() {
     GOMEMLIMIT="${GOMEMLIMIT:-150MiB}" \
     GOGC="${GOGC:-50}" \
     OHC_STANDALONE="true" \
-    nohup "${SERVER_BIN}" >>"${LOG_FILE}" 2>&1 &
+    nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
 
@@ -178,6 +179,7 @@ stop_daemon() {
   local attempt
   pid="$(cat "${PID_FILE}")"
 
+  pkill -P "${pid}" 2>/dev/null || true
   kill "${pid}" 2>/dev/null || true
   for attempt in $(seq 1 20); do
     if ! kill -0 "${pid}" 2>/dev/null; then
@@ -188,6 +190,7 @@ stop_daemon() {
     sleep 0.25
   done
 
+  pkill -9 -P "${pid}" 2>/dev/null || true
   kill -9 "${pid}" 2>/dev/null || true
   rm -f "${PID_FILE}"
   echo "ohc stopped"
