@@ -28,51 +28,8 @@ import (
 )
 
 var (
-	emailRegex   = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
-	phoneRegex   = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
-	ssnRegex     = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
-func redactPII(input string) string {
-	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
-	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
-	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
-	return s
-}
-
-func redactInterfacePII(val interface{}) interface{} {
-	switch v := val.(type) {
-	case string:
-		return redactPII(v)
-	case map[string]interface{}:
-		for k, val := range v {
-			v[k] = redactInterfacePII(val)
-		}
-		return v
-	case []interface{}:
-		for i, val := range v {
-			v[i] = redactInterfacePII(val)
-		}
-		return v
-	case []string:
-		res := make([]string, len(v))
-		for i, str := range v {
-			res[i] = redactPII(str)
-		}
-		return res
-	case []map[string]interface{}:
-		for i, m := range v {
-			for k, val := range m {
-				m[k] = redactInterfacePII(val)
-			}
-			v[i] = m
-		}
-		return v
-	default:
-		return val
-	}
-}
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -388,7 +345,7 @@ func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
 
 			var m map[string]interface{}
 			if err := json.Unmarshal(b, &m); err == nil {
-				redactInterfacePII(m)
+				telemetry.RedactInterfacePII(m)
 				b, _ = json.Marshal(m)
 			}
 
@@ -466,7 +423,7 @@ func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payloa
 
 	// Safely encode the untrusted payload as JSON to prevent prompt injection.
 	contextPayload, _ := json.Marshal(map[string]string{
-		"context": redactPII(temp.Context),
+		"context": telemetry.RedactPII(temp.Context),
 	})
 	prompt := fmt.Sprintf("Summarize the following context efficiently to save tokens: %s", string(contextPayload))
 	summarizedContext, err := client.Reason(context.Background(), prompt)
@@ -912,7 +869,7 @@ func (h *Hub) Publish(message Message) error {
 				}
 				var lines []transcriptLine
 				for _, msg := range transcript {
-					lines = append(lines, transcriptLine{Agent: msg.FromAgent, Content: redactPII(msg.Content)})
+					lines = append(lines, transcriptLine{Agent: msg.FromAgent, Content: telemetry.RedactPII(msg.Content)})
 				}
 				jsonPayload, _ := json.Marshal(lines)
 				prompt := "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n" + string(jsonPayload)
@@ -980,7 +937,7 @@ func (h *Hub) Publish(message Message) error {
 	// Structured logging for agent execution traces
 	// Filter out high-frequency "status" events to reduce signal noise.
 	if message.Type != EventStatus {
-		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, redactPII(message.Content))
+		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, telemetry.RedactPII(message.Content))
 	}
 
 	// Forward to Centrifuge for real-time client delivery (non-blocking).
@@ -1060,7 +1017,7 @@ func (h *Hub) publishRepository(message Message) error {
 
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
 	if message.Type != EventStatus {
-		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, redactPII(message.Content))
+		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, telemetry.RedactPII(message.Content))
 	}
 
 	if cn != nil {

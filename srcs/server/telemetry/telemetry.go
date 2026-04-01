@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,18 +26,7 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
-
-	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
-	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
-	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
-
-func redactPII(input string) string {
-	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
-	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
-	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
-	return s
-}
 
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
 //
@@ -329,7 +317,7 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"role", role,
 		"api", api,
 		"event_type", eventType,
-		"content", redactPII(content),
+		"content", RedactPII(content),
 	)
 }
 
