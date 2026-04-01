@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ohc_app/router.dart';
 
 void main() {
@@ -21,7 +22,7 @@ class OhcApp extends ConsumerWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -29,7 +30,9 @@ class OhcApp extends ConsumerWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        textTheme: GoogleFonts.interTextTheme(
+          Theme.of(context).textTheme,
+        ).apply(bodyColor: Colors.white, displayColor: Colors.white),
       ),
       themeMode: ThemeMode.system,
       routerConfig: router,
