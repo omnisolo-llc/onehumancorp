@@ -1,8 +1,15 @@
-load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_binary(
     name = "cleanup",
-    srcs = ["main.go"],
-    deps = ["//scripts/cleanup:cleanup_lib"],
+    embed = [":cmd_lib"],
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "cmd_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/onehumancorp/mono/scripts/cleanup/cmd",
+    visibility = ["//visibility:private"],
+    deps = ["//scripts/cleanup:cleanup_lib"],
 )

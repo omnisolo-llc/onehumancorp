@@ -1,5 +1,4 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 
 write_file(
@@ -10,10 +9,10 @@ write_file(
 
 js_binary(
     name = "github",
-    entry_point = "index.js",
     data = [
         "//:node_modules/@modelcontextprotocol/server-github",
         "//:node_modules/zod",
     ],
+    entry_point = "index.js",
     visibility = ["//visibility:public"],
 )
