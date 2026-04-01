@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"bytes"
 	"sync"
 	"time"
 
@@ -23,10 +24,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 *sql.DB
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              *sql.DB
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -115,6 +116,13 @@ func initializeTables(db *sql.DB) error {
 			vector_embedding BLOB,
 			source_plugin TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE IF NOT EXISTS local_metrics_buffer (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			metric_name TEXT NOT NULL,
+			metric_value INTEGER NOT NULL,
+			attributes TEXT NOT NULL,
+			recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 	}
 
@@ -537,4 +545,140 @@ func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
 	s.cachedGrounding = ""
 	s.groundingOnce = &sync.Once{}
+}
+
+// BufferMetric asynchronously stores a metric locally for future synchronization.
+// Accepts parameters: ctx context.Context, name string, value int64, attrs map[string]string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Inserts a record into the local_metrics_buffer table.
+func (s *SIPDB) BufferMetric(ctx context.Context, name string, value int64, attrs map[string]string) error {
+	attrJSON, err := json.Marshal(attrs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal attributes: %w", err)
+	}
+
+	return withRetry(ctx, func() error {
+		_, err := s.db.ExecContext(ctx,
+			"INSERT INTO local_metrics_buffer (metric_name, metric_value, attributes, recorded_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+			name, value, string(attrJSON),
+		)
+		return err
+	})
+}
+
+// SyncBufferedMetrics retrieves buffered metrics and sends them to a cloud endpoint.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Modifies the local_metrics_buffer table upon successful sync.
+func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) error {
+	if remoteEndpoint == "" {
+		return nil // Nothing to sync to
+	}
+
+	var batch []struct {
+		ID         int64
+		Name       string
+		Value      int64
+		Attributes string
+	}
+
+	err := withRetry(ctx, func() error {
+		batch = nil // Reset batch on retry
+
+		rows, err := s.db.QueryContext(ctx, "SELECT id, metric_name, metric_value, attributes FROM local_metrics_buffer LIMIT 500")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var b struct {
+				ID         int64
+				Name       string
+				Value      int64
+				Attributes string
+			}
+			if err := rows.Scan(&b.ID, &b.Name, &b.Value, &b.Attributes); err != nil {
+				return err
+			}
+			batch = append(batch, b)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query buffered metrics: %w", err)
+	}
+
+	if len(batch) == 0 {
+		return nil
+	}
+
+	// Prepare payload for sync
+	type payloadItem struct {
+		Name       string            `json:"name"`
+		Value      int64             `json:"value"`
+		Attributes map[string]string `json:"attributes"`
+	}
+	var payload []payloadItem
+
+	var idsToDelete []int64
+	for _, b := range batch {
+		var attrs map[string]string
+		if err := json.Unmarshal([]byte(b.Attributes), &attrs); err != nil {
+			slog.Warn("failed to unmarshal metric attributes, skipping", "id", b.ID, "error", err)
+			idsToDelete = append(idsToDelete, b.ID) // Still delete so we don't get stuck
+			continue
+		}
+		payload = append(payload, payloadItem{
+			Name:       b.Name,
+			Value:      b.Value,
+			Attributes: attrs,
+		})
+		idsToDelete = append(idsToDelete, b.ID)
+	}
+
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal sync payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, bytes.NewReader(payloadJSON))
+	if err != nil {
+		return fmt.Errorf("failed to create sync request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to sync metrics: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+	}
+
+	// Delete successful syncs
+	if len(idsToDelete) > 0 {
+		err = withRetry(ctx, func() error {
+			// Construct an IN clause
+			placeholders := make([]string, len(idsToDelete))
+			args := make([]any, len(idsToDelete))
+			for i, id := range idsToDelete {
+				placeholders[i] = "?"
+				args[i] = id
+			}
+			query := fmt.Sprintf("DELETE FROM local_metrics_buffer WHERE id IN (%s)", strings.Join(placeholders, ","))
+			_, err := s.db.ExecContext(ctx, query, args...)
+			return err
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete synced metrics: %w", err)
+		}
+	}
+
+	return nil
 }

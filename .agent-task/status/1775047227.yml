@@ -1,0 +1,6 @@
+type: status
+target: Standalone Mode Telemetry Aggregator
+status: COMPLETED
+metrics:
+  tests_passed: true
+  build_successful: true

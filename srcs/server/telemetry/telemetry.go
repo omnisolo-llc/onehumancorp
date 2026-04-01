@@ -38,6 +38,9 @@ func redactPII(input string) string {
 	return s
 }
 
+// BufferMetricFunc dynamically delegates telemetry buffering to the SIPDB local sync queue when in Standalone mode.
+var BufferMetricFunc func(ctx context.Context, name string, value int64, attrs map[string]string) error
+
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
 //
 //
@@ -212,6 +215,15 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		attribute.String("model", model),
 		attribute.String("type", tokenType),
 	))
+
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "ohc_token_usage_total", count, map[string]string{
+			"agent_id": agentID,
+			"role":     role,
+			"model":    model,
+			"type":     tokenType,
+		})
+	}
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -235,6 +247,14 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		attribute.String("role", role),
 		attribute.String("api", api),
 	))
+
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "ohc_agent_api_calls_total", 1, map[string]string{
+			"agent_id": agentID,
+			"role":     role,
+			"api":      api,
+		})
+	}
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.
@@ -254,6 +274,12 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 	humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("type", interactionType),
 	))
+
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "ohc_human_interactions_total", 1, map[string]string{
+			"type": interactionType,
+		})
+	}
 }
 
 // RecordMeetingEvent increments the global counter for collaborative meeting room actions.
@@ -273,6 +299,12 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 	meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("type", eventType),
 	))
+
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "ohc_meeting_events_total", 1, map[string]string{
+			"type": eventType,
+		})
+	}
 }
 
 // LogAgentExecution provides structured JSON logging for agent execution traces.

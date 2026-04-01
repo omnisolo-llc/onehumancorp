@@ -247,6 +247,26 @@ func run(now time.Time, listen listenFunc) error {
 				}
 			}
 		}()
+		telemetry.BufferMetricFunc = sipdb.BufferMetric
+		go func() {
+			// We only want to sync to a cloud DB if the endpoint is set
+			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
+			if cloudEndpoint == "" {
+				return
+			}
+			ticker := time.NewTicker(5 * time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					if err := sipdb.SyncBufferedMetrics(ctx, cloudEndpoint); err != nil {
+						slog.Error("failed to sync buffered telemetry metrics", "error", err)
+					}
+				}
+			}
+		}()
 	} else {
 		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
 	}
