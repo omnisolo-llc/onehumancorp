@@ -4,7 +4,7 @@ actions:
     resource_requests:
       cpu: "8"
       memory: "16GB"
-      disk: "40GB"
+      disk: "100GB"
     timeout: "1h"
     triggers:
       push:
