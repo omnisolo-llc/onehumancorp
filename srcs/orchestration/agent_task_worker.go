@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"math/rand"
 	"time"
@@ -13,13 +14,15 @@ import (
 // and randomly assigns an idle agent to them by injecting the task into their context.
 type TaskWorker struct {
 	planeClient *plane.Client
+	hub         *Hub
 	pollInterval time.Duration
 }
 
 // NewTaskWorker creates a new TaskWorker.
-func NewTaskWorker(pc *plane.Client) *TaskWorker {
+func NewTaskWorker(pc *plane.Client, hub *Hub) *TaskWorker {
 	return &TaskWorker{
 		planeClient: pc,
+		hub:         hub,
 		pollInterval: 30 * time.Second,
 	}
 }
@@ -68,6 +71,37 @@ func (tw *TaskWorker) pollAndAssign() {
 		return
 	}
 
-	// TODO: Inject issue descriptor into an available agent's prompt queue.
-	slog.Info("agent task worker: issue marked in_progress, delegating to agent")
+	agentFound := false
+	if tw.hub != nil {
+		agents := tw.hub.Agents()
+		for _, a := range agents {
+			if a.Status == StatusActive || a.Status == StatusWaitingForTools {
+				// Encode the issue payload securely as JSON to prevent prompt injection.
+				// The agent's framework is responsible for parsing this data blob
+				// rather than blindly executing unstructured text.
+				payload, _ := json.Marshal(map[string]string{
+					"issue_id":   issue.ID,
+					"issue_name": issue.Name,
+					"directive":  "Please resolve the attached issue descriptor.",
+				})
+
+				msg := Message{
+					ID:         "task-" + issue.ID,
+					FromAgent:  "SYSTEM",
+					ToAgent:    a.ID,
+					Type:       "TaskAssignment",
+					Content:    string(payload),
+					OccurredAt: time.Now().UTC(),
+				}
+				_ = tw.hub.Publish(msg)
+				slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", a.ID)
+				agentFound = true
+				break
+			}
+		}
+	}
+
+	if !agentFound {
+		slog.Warn("agent task worker: issue marked in_progress but no available agents to delegate to")
+	}
 }
