@@ -1,8 +1,12 @@
 package orchestration
 
 import (
-	"path/filepath"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"testing"
 )
 
@@ -234,5 +238,119 @@ func TestSIPDB_GetPendingMissions_ScanError_Coverage(t *testing.T) {
 	_, err = db.GetPendingMissions(ctx, "ROLE")
 	if err == nil {
 		t.Fatal("Expected scan error due to NULL task")
+	}
+}
+
+
+
+
+func TestSIPDB_SyncMissions_RagContextAndHeader(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_rag.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert a pending mission with rag_context
+	payload := map[string]interface{}{
+		"role": "AGENT",
+		"task": map[string]interface{}{
+			"Content": "Some task",
+		},
+		"rag_context": "highly_sensitive_data",
+		"other_key": "safe_data",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-rag-1', 'PENDING', ?)", string(payloadBytes))
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+
+	var reqBody []byte
+	var reqHeader string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqBody, _ = io.ReadAll(r.Body)
+		reqHeader = r.Header.Get("X-Conflict-Resolution")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if syncedCount != 1 {
+		t.Fatalf("Expected 1 synced record, got %d", syncedCount)
+	}
+
+	if reqHeader != "client-wins" {
+		t.Fatalf("Expected X-Conflict-Resolution header to be 'client-wins', got '%s'", reqHeader)
+	}
+
+	var parsedBody map[string]interface{}
+	if err := json.Unmarshal(reqBody, &parsedBody); err != nil {
+		t.Fatalf("Failed to parse request body: %v", err)
+	}
+
+	if _, ok := parsedBody["rag_context"]; ok {
+		t.Fatalf("Expected rag_context to be stripped, but it was present in payload: %s", string(reqBody))
+	}
+
+	if parsedBody["other_key"] != "safe_data" {
+		t.Fatalf("Expected other_key to be preserved, got %v", parsedBody["other_key"])
+	}
+
+	// Verify status updated to SYNCED
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm-rag-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "SYNCED" {
+		t.Fatalf("Expected status SYNCED, got %s", status)
+	}
+}
+
+func TestSIPDB_SyncMissions_ConflictResolution(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_conflict.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-conflict-1', 'PENDING', '{}')")
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate 409 Conflict
+		w.WriteHeader(http.StatusConflict)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if syncedCount != 1 {
+		t.Fatalf("Expected HTTP 409 Conflict to be treated as successful sync, got %d synced records", syncedCount)
+	}
+
+	// Verify status updated to SYNCED
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm-conflict-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "SYNCED" {
+		t.Fatalf("Expected status SYNCED on conflict, got %s", status)
 	}
 }
