@@ -1,15 +1,17 @@
+{{- if .Values.ohcCore.autoscaling.enabled }}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ .Release.Name }}-backend-vpa
+  name: {{ .Release.Name }}-ohc-core-vpa
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind:       Deployment
-    name:       {{ .Release.Name }}-backend
+    name:       {{ .Release.Name }}-ohc-core
   updatePolicy:
     updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: '*'
         controlledResources: ["memory"]
+{{- end }}

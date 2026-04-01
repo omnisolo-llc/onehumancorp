@@ -24,6 +24,21 @@ fi
 
 export PATH="${libexec_dir}:${PATH}"
 
+echo "--- Starting OHC Backend (Standalone Mode) ---"
+if command -v ohc >/dev/null 2>&1; then
+  ohc start --daemon
+else
+  echo "Warning: ohc backend wrapper not found in PATH." >&2
+fi
+
+cleanup() {
+  echo "--- Stopping OHC Backend ---"
+  if command -v ohc >/dev/null 2>&1; then
+    ohc stop
+  fi
+}
+trap cleanup EXIT
+
 echo "--- Starting OHC Desktop App (Standalone Mode, Platform: ${platform}) ---"
 cd "${app_dir}"
-exec flutter run -d "${platform}" --dart-define=OHC_STANDALONE=true
+flutter run -d "${platform}" --dart-define=OHC_STANDALONE=true

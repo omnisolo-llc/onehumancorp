@@ -114,7 +114,7 @@
         }
       ],
       "title": "HTTP Request Rate (Cloud vs Standalone)",
-      "type": "timeseries"
+      "type": "timeseries", "transparent": true
     },
     {
       "datasource": {
@@ -141,7 +141,7 @@
         }
       ],
       "title": "P95 Latency",
-      "type": "timeseries"
+      "type": "timeseries", "transparent": true
     },
     {
       "datasource": {
@@ -168,7 +168,7 @@
         }
       ],
       "title": "Token Usage Rate",
-      "type": "timeseries"
+      "type": "timeseries", "transparent": true
     },
     {
       "datasource": {
@@ -195,7 +195,7 @@
         }
       ],
       "title": "Agent API Calls Rate",
-      "type": "timeseries"
+      "type": "timeseries", "transparent": true
     }
   ],
   "refresh": "",

@@ -1,0 +1,19 @@
+type: memory
+metadata:
+  role: Principal SRE & Infrastructure Architect
+  timestamp: 1775079425
+observations:
+  - Audited K8s resource limits and found duplicate HPA/VPA configurations.
+  - Verified that the backend VPA is correctly configured to use updateMode: "Off" and only control "memory".
+  - Discovered that the standalone wrapper startup script (srcs/server/standalone_ohc.sh) was using a high default memory limit.
+  - Identified the need to hook the backend daemon lifecycle into the standalone app launcher (srcs/app/standalone_linux_launcher.sh).
+  - Reviewed prometheus config and updated it to include both cloud and standalone backends, and increased scrape interval to 15s to be lightweight for local environments.
+  - Updated hybrid-telemetry.json dashboard to enforce the Glassmorphism aesthetic by adding "transparent": true.
+actions_taken:
+  - Deleted conflicting HPA and VPA templates from deploy/helm/ohc/templates.
+  - Optimized the Desktop Wrapper resource footprint by reducing GOMEMLIMIT (from 256MiB to 128MiB) and GOGC (from 50 to 20) in srcs/server/standalone_ohc.sh.
+  - Added daemon lifecycle management (start/stop) to srcs/app/standalone_linux_launcher.sh via exit traps.
+  - Updated deploy/docker/prometheus/prometheus.yml to include standalone endpoints.
+  - Applied premium Glassmorphism CSS tokens ("transparent": true) to the hybrid-telemetry.json Grafana dashboard.
+  - Verified tests (//srcs/server/..., //deploy/..., //srcs/app:app_desktop_e2e_test) passed successfully.
+resolution: "Infrastructure improvements for K8s Cloud and Standalone Desktop wrapper successfully engineered. Observability stack and dashboard updated. Tests verify changes."

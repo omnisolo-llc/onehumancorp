@@ -1,7 +1,15 @@
 global:
-  scrape_interval: 5s
+  scrape_interval: 15s
 
 scrape_configs:
   - job_name: 'ohc-backend'
     static_configs:
       - targets: ['backend:8080']
+        labels:
+          environment: 'cloud'
+
+  - job_name: 'ohc-standalone'
+    static_configs:
+      - targets: ['host.docker.internal:18789']
+        labels:
+          environment: 'standalone'
