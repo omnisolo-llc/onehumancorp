@@ -287,7 +287,28 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
-		}
+			// Background sync for standalone missions to cloud
+			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
+			if missionsEndpoint != "" {
+				go func() {
+					ticker := time.NewTicker(2 * time.Second)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							syncedCount, err := sipdb.SyncMissions(ctx, missionsEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync standalone missions", "error", err)
+							} else if syncedCount > 0 {
+								slog.Info("Successfully synced standalone missions to cloud", "count", syncedCount)
+							}
+						}
+					}
+				}()
+			}
+	}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
