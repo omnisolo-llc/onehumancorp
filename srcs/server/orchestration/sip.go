@@ -177,7 +177,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 		query := "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'"
 
 		driverName := fmt.Sprintf("%T", s.db.Driver())
-		if strings.Contains(driverName, "pgx") || strings.Contains(driverName, "postgres") || strings.Contains(driverName, "pg") {
+		if !strings.Contains(driverName, "sqlite") {
 			query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
 		}
 
