@@ -90,7 +90,11 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
         future: _handoffsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -147,6 +151,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
 
               return Semantics(
                 label: 'Handoff from agent to human. Intent: ${handoff.intent}',
+                excludeSemantics: true,
                 child: Card(
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Padding(

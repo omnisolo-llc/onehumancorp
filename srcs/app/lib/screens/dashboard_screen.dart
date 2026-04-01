@@ -136,19 +136,19 @@ class _StatCard extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(<double>[
-                1.787,
-                -0.715,
+                1.213,
+                -0.213,
                 -0.072,
                 0,
                 0,
                 -0.213,
-                1.285,
+                1.213,
                 -0.072,
                 0,
                 0,
                 -0.213,
-                -0.715,
-                1.928,
+                -0.213,
+                1.213,
                 0,
                 0,
                 0,
@@ -167,32 +167,36 @@ class _StatCard extends StatelessWidget {
               ),
               child: Material(
                 color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {},
-                  borderRadius: BorderRadius.circular(12),
-                  splashColor: color.withOpacity(0.1),
-                  highlightColor: color.withOpacity(0.05),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(icon, color: effectiveIconColor, size: 28),
-                        const SizedBox(height: 12),
-                        Text(
-                          value,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: effectiveIconColor,
+                child: Semantics(
+                  button: true,
+                  label: '$label: $value action',
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(12),
+                    splashColor: color.withOpacity(0.1),
+                    highlightColor: color.withOpacity(0.05),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(icon, color: effectiveIconColor, size: 28),
+                          const SizedBox(height: 12),
+                          Text(
+                            value,
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: effectiveIconColor,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          label,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            label,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

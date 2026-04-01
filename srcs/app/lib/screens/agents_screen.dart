@@ -126,9 +126,9 @@ class _AgentCard extends StatelessWidget {
             : colorScheme.onSurfaceVariant;
 
     return Semantics(
+      excludeSemantics: true,
       label:
           'Agent ${agent.name}, Role: ${agent.role}, Status: ${agent.status}',
-      button: true,
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         elevation: 0,
@@ -142,31 +142,34 @@ class _AgentCard extends StatelessWidget {
           onTap: () {
             // Optional: Handle agent card tap
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: isRunningColor,
-                child: Icon(Icons.smart_toy, color: isRunningIconColor),
-              ),
-              title: Text(
-                agent.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
+          child: Tooltip(
+            message: 'View details for ${agent.name}',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isRunningColor,
+                  child: Icon(Icons.smart_toy, color: isRunningIconColor),
                 ),
-              ),
-              subtitle: Text(
-                agent.role,
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
-              ),
-              trailing: Chip(
-                label: Text(
-                  agent.status,
-                  style: TextStyle(color: chipTextColor),
+                title: Text(
+                  agent.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
-                backgroundColor: chipBgColor,
-                side: BorderSide.none,
+                subtitle: Text(
+                  agent.role,
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
+                ),
+                trailing: Chip(
+                  label: Text(
+                    agent.status,
+                    style: TextStyle(color: chipTextColor),
+                  ),
+                  backgroundColor: chipBgColor,
+                  side: BorderSide.none,
+                ),
               ),
             ),
           ),

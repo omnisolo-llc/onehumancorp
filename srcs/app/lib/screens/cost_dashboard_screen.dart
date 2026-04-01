@@ -63,7 +63,11 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
         future: _dashboardFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -84,7 +88,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                       title: 'Total Spend',
                       value: currencyFormat.format(costs.totalCostUSD),
                       icon: Icons.account_balance_wallet,
-                      color: Colors.green,
+                      color: colors.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -93,7 +97,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                       title: 'Total Tokens',
                       value: NumberFormat.compact().format(costs.totalTokens),
                       icon: Icons.generating_tokens,
-                      color: Colors.blue,
+                      color: colors.secondary,
                     ),
                   ),
                 ],
@@ -133,6 +137,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                                   : 0.0;
 
                           return Semantics(
+                            excludeSemantics: true,
                             label:
                                 'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
                             child: Padding(
@@ -279,6 +284,7 @@ class _SummaryCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Semantics(
+      excludeSemantics: true,
       label: '$title: $value',
       child: Card(
         child: Padding(

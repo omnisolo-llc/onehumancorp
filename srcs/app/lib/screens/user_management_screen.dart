@@ -87,7 +87,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         future: _usersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -154,10 +158,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     ),
                   ],
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'Delete user',
-                  onPressed: () => _handleDeleteUser(user.id),
+                trailing: Semantics(
+                  button: true,
+                  label: 'Delete user',
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    tooltip: 'Delete user',
+                    onPressed: () => _handleDeleteUser(user.id),
+                  ),
                 ),
                 isThreeLine: true,
               );
