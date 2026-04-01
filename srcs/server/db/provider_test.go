@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func TestConvertBindVarsJSONPath(t *testing.T) {
+	query := "SELECT id FROM test WHERE payload::json->>'role' = $1 AND meta :: json ->> 'status' = $2"
+	expected := "SELECT id FROM test WHERE json_extract(payload, '$.role') = ?1 AND json_extract(meta, '$.status') = ?2"
+
+	result := convertBindVars(query)
+	if result != expected {
+		t.Errorf("convertBindVars() = %v, want %v", result, expected)
+	}
+}
+
 func TestSqliteProviderIsSQLite(t *testing.T) {
 	// Let's create an empty SqliteProvider and test its IsSQLite method.
 	p := &SqliteProvider{}
