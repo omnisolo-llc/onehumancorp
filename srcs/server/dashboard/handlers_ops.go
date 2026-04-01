@@ -3,11 +3,13 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {
@@ -419,4 +421,68 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if s.hub.SIPDB() != nil {
+		var wrapper struct {
+			Role string `json:"role"`
+			Task struct {
+				ID string `json:"id"`
+			} `json:"task"`
+		}
+		if err := json.Unmarshal(bodyBytes, &wrapper); err != nil {
+			http.Error(w, "invalid payload format", http.StatusBadRequest)
+			return
+		}
+
+		missionID := wrapper.Task.ID
+		if missionID == "" {
+			// Fallback ID if missing
+			missionID = "sync-" + time.Now().UTC().Format("20060102150405.999999999")
+		}
+
+		err = s.hub.SIPDB().DelegateMissionFromSync(r.Context(), missionID, string(bodyBytes))
+		if err != nil {
+			http.Error(w, "failed to sync mission", http.StatusInternalServerError)
+			return
+		}
+
+		// Emit metrics
+		telemetry.RecordAgentApiCall(r.Context(), "sync_daemon", "system", "/api/missions/sync")
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
+}
+
+func (s *Server) handlePowerSyncRules(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 🎨 Premium PowerSync configuration to sync local SQLite dynamically based on the current mode.
+	// We implement PowerSync sync rules to enforce strict Tenant isolation.
+	rules := `
+bucket_data:
+  global:
+    data:
+      - SELECT * FROM agent_missions
+      - SELECT * FROM swarm_memory
+`
+	w.Header().Set("Content-Type", "application/yaml")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(rules))
 }

@@ -723,3 +723,18 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	return syncedCount, nil
 }
+
+// DelegateMissionFromSync allows syncing a raw payload from local SQLite to Cloud Postgres
+// prioritizing the local client's state. It UPSERTs the record into agent_missions.
+func (s *SIPDB) DelegateMissionFromSync(ctx context.Context, missionID string, rawPayload string) error {
+	return withRetry(ctx, func() error {
+		// UPSERT for conflict resolution prioritizing local client
+		// Postgres supports ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, status=excluded.status
+		// SQLite supports ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, status=excluded.status
+		_, err := s.db.ExecContext(ctx,
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status='PENDING', payload=excluded.payload, created_at=CURRENT_TIMESTAMP",
+			missionID, rawPayload,
+		)
+		return err
+	})
+}
