@@ -17,7 +17,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/domain"
-	frontend "github.com/onehumancorp/mono/srcs/server/frontend/server"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/orchestration"
 )
@@ -92,7 +91,7 @@ func authedPost(t *testing.T, url, token string, body any) *http.Response {
 
 // ── Existing integration test ─────────────────────────────────────────────────
 
-func TestFrontendCanReachBackendAPI(t *testing.T) {
+func TestBackendServesUI(t *testing.T) {
 	org := domain.NewSoftwareCompany("org-1", "Acme", "CEO", time.Now().UTC())
 	hub := orchestration.NewHub()
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
@@ -104,9 +103,28 @@ func TestFrontendCanReachBackendAPI(t *testing.T) {
 	t.Setenv("ADMIN_PASSWORD", "adminpass")
 	t.Setenv("ADMIN_EMAIL", "admin@test.local")
 
+	staticDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("<html>frontend</html>"), 0o644); err != nil {
+		t.Fatalf("write index file: %v", err)
+	}
+
+	t.Setenv("FRONTEND_STATIC_DIR", staticDir)
+
 	backendServer := httptest.NewServer(dashboard.NewServer(org, hub, tracker))
 	defer backendServer.Close()
 
+	// 1. Verify that it serves the static assets.
+	assetResp, err := http.Get(backendServer.URL + "/")
+	if err != nil {
+		t.Fatalf("GET / (static): %v", err)
+	}
+	defer assetResp.Body.Close()
+	assetBody, _ := io.ReadAll(assetResp.Body)
+	if !bytes.Contains(assetBody, []byte("frontend")) {
+		t.Fatalf("expected 'frontend' in body, got %s", string(assetBody))
+	}
+
+	// 2. Verify that it still serves the API.
 	// Log in so we have a token for the authenticated endpoint.
 	loginBody, _ := json.Marshal(map[string]string{"username": "admin", "password": "adminpass"})
 	loginResp, err := http.Post(backendServer.URL+"/api/auth/login", "application/json", bytes.NewReader(loginBody))
@@ -118,27 +136,11 @@ func TestFrontendCanReachBackendAPI(t *testing.T) {
 	_ = json.NewDecoder(loginResp.Body).Decode(&loginResult)
 	token, _ := loginResult["token"].(string)
 
-	staticDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("<html>frontend</html>"), 0o644); err != nil {
-		t.Fatalf("write index file: %v", err)
-	}
-
-	t.Setenv("BACKEND_URL", backendServer.URL)
-	t.Setenv("FRONTEND_STATIC_DIR", staticDir)
-
-	frontendServer, err := frontend.New()
-	if err != nil {
-		t.Fatalf("frontend.New error: %v", err)
-	}
-
-	proxyServer := httptest.NewServer(frontendServer.Handler())
-	defer proxyServer.Close()
-
-	req, _ := http.NewRequest(http.MethodGet, proxyServer.URL+"/api/org", nil)
+	req, _ := http.NewRequest(http.MethodGet, backendServer.URL+"/api/org", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatalf("GET /api/org through frontend server: %v", err)
+		t.Fatalf("GET /api/org: %v", err)
 	}
 	defer resp.Body.Close()
 

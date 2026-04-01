@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_binary")
-
-go_binary(
-    name = "cleanup",
-    srcs = ["main.go"],
-    deps = ["//scripts/cleanup:cleanup_lib"],
-    visibility = ["//visibility:public"],
-)

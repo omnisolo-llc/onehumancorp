@@ -246,17 +246,13 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 		return err
 	}
 
-	h.mu.RLock()
-	if _, ok := h.agents[fromAgentID]; !ok {
-		h.mu.RUnlock()
+	if _, ok := h.Agent(fromAgentID); !ok {
 		return errors.New("sender agent is not registered")
 	}
-	toAgent, ok := h.agents[toAgentID]
+	toAgent, ok := h.Agent(toAgentID)
 	if !ok {
-		h.mu.RUnlock()
 		return errors.New("recipient agent is not registered")
 	}
-	h.mu.RUnlock()
 
 	task.FromAgent = fromAgentID
 	task.ToAgent = toAgentID
@@ -298,6 +294,7 @@ type Hub struct {
 	tokenTrackers  map[string]struct{}
 	autoCorTrack   map[string]struct{}
 	eventLogChan   chan interface{}
+	repo           HubRepository
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
@@ -310,6 +307,20 @@ type Hub struct {
 // Produces no errors.
 // Has no side effects.
 func NewHub() *Hub {
+	return newHub(nil, nil)
+}
+
+// NewHubWithRepository creates a Hub backed by the provided repositories.
+func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	return newHub(repo, taskRepo)
+}
+
+func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	sched := scheduler.NewScheduler()
+	if taskRepo != nil {
+		sched = scheduler.NewSchedulerWithRepository(taskRepo)
+	}
+
 	h := &Hub{
 		agents:        map[string]Agent{},
 		inbox:         map[string][]Message{},
@@ -318,7 +329,8 @@ func NewHub() *Hub {
 		tokenTrackers: map[string]struct{}{},
 		autoCorTrack:  map[string]struct{}{},
 		eventLogChan:  make(chan interface{}, 100),
-		scheduler:     scheduler.NewScheduler(),
+		repo:          repo,
+		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
@@ -570,12 +582,29 @@ func (h *Hub) GetSIPDB() *SIPDB {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) RegisterAgent(agent Agent) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	if agent.Status == "" {
 		agent.Status = StatusIdle
 	}
+
+	if h.repo != nil {
+		if err := h.repo.RegisterAgent(context.Background(), agent); err != nil {
+			slog.Error("failed to register agent in repository", "agent_id", agent.ID, "error", err)
+			return
+		}
+
+		h.mu.RLock()
+		sipDB := h.sipDB
+		h.mu.RUnlock()
+		if sipDB != nil {
+			go func(a Agent) {
+				_ = sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
+			}(agent)
+		}
+		return
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	h.agents[agent.ID] = agent
 
@@ -648,6 +677,15 @@ func (h *Hub) CentrifugeNode() *CentrifugeNode {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) Agent(id string) (Agent, bool) {
+	if h.repo != nil {
+		agent, ok, err := h.repo.GetAgent(context.Background(), id)
+		if err != nil {
+			slog.Error("failed to load agent from repository", "agent_id", id, "error", err)
+			return Agent{}, false
+		}
+		return agent, ok
+	}
+
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -665,6 +703,23 @@ func (h *Hub) Agent(id string) (Agent, bool) {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
+	if h.repo != nil {
+		ctx := context.Background()
+		meeting := MeetingRoom{ID: id, Participants: append([]string(nil), participants...)}
+		if err := h.repo.CreateMeeting(ctx, meeting); err != nil {
+			slog.Error("failed to create meeting in repository", "meeting_id", id, "error", err)
+			return MeetingRoom{}
+		}
+		for _, participant := range participants {
+			if err := h.repo.UpdateAgentStatus(ctx, participant, StatusInMeeting); err != nil {
+				slog.Warn("failed to mark participant in meeting", "meeting_id", id, "agent_id", participant, "error", err)
+			}
+		}
+
+		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meeting
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -691,6 +746,23 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) MeetingRoom {
+	if h.repo != nil {
+		ctx := context.Background()
+		meeting := MeetingRoom{ID: id, Agenda: agenda, Participants: append([]string(nil), participants...)}
+		if err := h.repo.CreateMeeting(ctx, meeting); err != nil {
+			slog.Error("failed to create meeting with agenda in repository", "meeting_id", id, "error", err)
+			return MeetingRoom{}
+		}
+		for _, participant := range participants {
+			if err := h.repo.UpdateAgentStatus(ctx, participant, StatusInMeeting); err != nil {
+				slog.Warn("failed to mark participant in meeting", "meeting_id", id, "agent_id", participant, "error", err)
+			}
+		}
+
+		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meeting
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -712,6 +784,13 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) FireAgent(id string) {
+	if h.repo != nil {
+		if err := h.repo.RemoveAgent(context.Background(), id); err != nil {
+			slog.Error("failed to remove agent from repository", "agent_id", id, "error", err)
+		}
+		return
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -728,6 +807,10 @@ func (h *Hub) FireAgent(id string) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) Publish(message Message) error {
+	if h.repo != nil {
+		return h.publishRepository(message)
+	}
+
 	h.mu.RLock()
 	if _, ok := h.agents[message.FromAgent]; !ok {
 		h.mu.RUnlock()
@@ -879,6 +962,112 @@ func (h *Hub) Publish(message Message) error {
 	return nil
 }
 
+func (h *Hub) publishRepository(message Message) error {
+	ctx := context.Background()
+
+	sender, ok, err := h.repo.GetAgent(ctx, message.FromAgent)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("sender agent is not registered")
+	}
+
+	var meetingParticipants []string
+	if message.MeetingID != "" {
+		meeting, ok, err := h.repo.GetMeeting(ctx, message.MeetingID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("meeting room is not registered")
+		}
+		meetingParticipants = append([]string(nil), meeting.Participants...)
+	}
+
+	if message.ToAgent != "" {
+		_, ok, err := h.repo.GetAgent(ctx, message.ToAgent)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("recipient agent is not registered")
+		}
+	}
+
+	if message.ToAgent != "" {
+		if err := h.repo.PushMessage(ctx, message.ToAgent, message); err != nil {
+			return err
+		}
+	}
+
+	if message.MeetingID != "" {
+		if err := h.repo.AppendTranscript(ctx, message.MeetingID, message); err != nil {
+			return err
+		}
+		sender.Status = StatusInMeeting
+	} else {
+		sender.Status = StatusActive
+	}
+
+	if err := h.repo.UpdateAgentStatus(ctx, message.FromAgent, sender.Status); err != nil {
+		slog.Error("failed to update sender status in repository", "agent_id", message.FromAgent, "status", sender.Status, "error", err)
+	}
+
+	cn, subsToNotify := h.collectRealtimeTargets(message, meetingParticipants)
+	for _, sub := range subsToNotify {
+		select {
+		case sub <- struct{}{}:
+		default:
+		}
+	}
+
+	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
+	if message.Type != EventStatus {
+		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
+	}
+
+	if cn != nil {
+		go func() {
+			if message.MeetingID != "" {
+				cn.PublishMeetingMessage(message.MeetingID, message)
+			}
+			if message.ToAgent != "" {
+				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+		}()
+	}
+
+	return nil
+}
+
+func (h *Hub) collectRealtimeTargets(message Message, meetingParticipants []string) (*CentrifugeNode, []chan struct{}) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	totalSubs := 0
+	if message.ToAgent != "" {
+		totalSubs += len(h.subs[message.ToAgent])
+	}
+	for _, participant := range meetingParticipants {
+		totalSubs += len(h.subs[participant])
+	}
+
+	var subsToNotify []chan struct{}
+	if totalSubs > 0 {
+		subsToNotify = make([]chan struct{}, 0, totalSubs)
+	}
+
+	if message.ToAgent != "" {
+		subsToNotify = append(subsToNotify, h.subs[message.ToAgent]...)
+	}
+	for _, participant := range meetingParticipants {
+		subsToNotify = append(subsToNotify, h.subs[participant]...)
+	}
+
+	return h.centrifugeNode, subsToNotify
+}
+
 // Subscribe returns a channel that receives real-time messages for the given agent.
 // Accepts no parameters.
 //   - agentID: string; Description
@@ -922,6 +1111,15 @@ func (h *Hub) Subscribe(agentID string) (<-chan struct{}, func()) {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) Inbox(agentID string) []Message {
+	if h.repo != nil {
+		inbox, err := h.repo.PopMessages(context.Background(), agentID)
+		if err != nil {
+			slog.Error("failed to read inbox from repository", "agent_id", agentID, "error", err)
+			return nil
+		}
+		return inbox
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -966,6 +1164,16 @@ func putMessageSlice(s []Message) {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) Meeting(id string) (MeetingRoom, bool) {
+	if h.repo != nil {
+		meeting, ok, err := h.repo.GetMeeting(context.Background(), id)
+		if err != nil {
+			slog.Error("failed to load meeting from repository", "meeting_id", id, "error", err)
+			return MeetingRoom{}, false
+		}
+		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meeting, ok
+	}
+
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -981,6 +1189,16 @@ func (h *Hub) Meeting(id string) (MeetingRoom, bool) {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) Meetings() []MeetingRoom {
+	if h.repo != nil {
+		meetings, err := h.repo.ListMeetings(context.Background())
+		if err != nil {
+			slog.Error("failed to list meetings from repository", "error", err)
+			return nil
+		}
+		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meetings
+	}
+
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -1000,6 +1218,18 @@ func (h *Hub) Meetings() []MeetingRoom {
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) Agents() []Agent {
+	if h.repo != nil {
+		agents, err := h.repo.ListAgents(context.Background())
+		if err != nil {
+			slog.Error("failed to list agents from repository", "error", err)
+			return nil
+		}
+		sort.Slice(agents, func(i, j int) bool {
+			return agents[i].ID < agents[j].ID
+		})
+		return agents
+	}
+
 	h.mu.RLock()
 	agents := make([]Agent, 0, len(h.agents))
 	for _, agent := range h.agents {
