@@ -143,7 +143,7 @@ class SettingsScreen extends ConsumerWidget {
             content: TextField(
               controller: controller,
               decoration: const InputDecoration(
-                labelText: 'URL (e.g. http://localhost:8080)',
+                labelText: 'URL (e.g. https://api.onehumancorp.com)',
               ),
             ),
             actions: [

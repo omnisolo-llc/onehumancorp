@@ -51,7 +51,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       // In a real app this would open a webview or use an OAuth library
       // For Thin Client mode, simulate variable-latency remote calls
-      await Future.delayed(const Duration(milliseconds: 1500));
+
+      final clientSettingsAsync = ref.read(clientSettingsProvider);
+      final isStandalone = clientSettingsAsync.valueOrNull?.standaloneMode ?? true;
+
+      if (isStandalone) {
+        // Simulating faster local response
+        await Future.delayed(const Duration(milliseconds: 300));
+      } else {
+        // Simulating variable-latency remote call
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+
       await ref
           .read(authStateProvider.notifier)
           .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
@@ -132,7 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             style: const TextStyle(fontFamily: 'Inter'),
                             decoration: InputDecoration(
                               labelText: 'Backend URL',
-                              hintText: 'e.g. http://localhost:18789',
+                                hintText: 'e.g. https://api.onehumancorp.com',
                               prefixIcon: const Icon(Icons.link),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -109,15 +110,31 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 'Usage per Agent',
                 style: Theme.of(
                   context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
               ),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children:
-                        costs.agents.map((agentCost) {
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(<double>[
+                      1.168, -0.153, -0.015, 0, 0,
+                      -0.046, 1.061, -0.015, 0, 0,
+                      -0.046, -0.152, 1.198, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children:
+                          costs.agents.map((agentCost) {
                           final agent = data.agents.firstWhere(
                             (a) => a.id == agentCost.agentId,
                             orElse:
@@ -194,6 +211,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: colors.onSurfaceVariant,
+                                        fontFamily: 'Inter',
                                     ),
                                   ),
                                 ],
@@ -201,6 +219,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                             ),
                           );
                         }).toList(),
+                    ),
                   ),
                 ),
               ),
@@ -211,49 +230,66 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 'Organization View',
                 style: Theme.of(
                   context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
               ),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.business, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            data.organization.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const Spacer(),
-                          Text(data.organization.domain),
-                        ],
-                      ),
-                      const Divider(height: 32),
-                      ...data.organization.members
-                          .take(3)
-                          .map(
-                            (m) => ListTile(
-                              leading: Icon(
-                                m.isHuman ? Icons.person : Icons.smart_toy,
-                                size: 20,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(<double>[
+                      1.168, -0.153, -0.015, 0, 0,
+                      -0.046, 1.061, -0.015, 0, 0,
+                      -0.046, -0.152, 1.198, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.business, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              data.organization.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', fontSize: 18),
+                            ),
+                            const Spacer(),
+                            Text(data.organization.domain, style: const TextStyle(fontFamily: 'Inter')),
+                          ],
+                        ),
+                        const Divider(height: 32),
+                        ...data.organization.members
+                            .take(3)
+                            .map(
+                              (m) => ListTile(
+                                leading: Icon(
+                                  m.isHuman ? Icons.person : Icons.smart_toy,
+                                  size: 20,
+                                ),
+                                title: Text(m.name, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                                subtitle: Text(m.role, style: const TextStyle(fontFamily: 'Inter')),
+                                dense: true,
                               ),
-                              title: Text(m.name),
-                              subtitle: Text(m.role),
-                              dense: true,
+                            ),
+                        if (data.organization.members.length > 3)
+                          Center(
+                            child: TextButton(
+                              onPressed: () {},
+                              child: const Text('View Full Org Tree', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
                             ),
                           ),
-                      if (data.organization.members.length > 3)
-                        Center(
-                          child: TextButton(
-                            onPressed: () {},
-                            child: const Text('View Full Org Tree'),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -284,31 +320,51 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(<double>[
+              1.168, -0.153, -0.015, 0, 0,
+              -0.046, 1.061, -0.015, 0, 0,
+              -0.046, -0.152, 1.198, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: color, size: 28),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Inter',
+                    color: color,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
