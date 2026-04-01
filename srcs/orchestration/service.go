@@ -878,10 +878,11 @@ func (h *Hub) Publish(message Message) error {
 		// ⚡ BOLT: [Aggressive AI Context Summarization] - Randomized Selection from Top 5
 		// Reduces token burn by summarizing transcripts when they exceed a threshold (e.g. 15 msgs)
 		if len(meeting.Transcript) > 10 && h.minimaxAPIKey != "" {
+			minimaxKey := h.minimaxAPIKey
 			go func(mID string, transcript []Message) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				client := NewMinimaxClient(h.MinimaxAPIKey())
+				client := NewMinimaxClient(minimaxKey)
 
 				// Encode the transcript safely as JSON to prevent prompt injection.
 				type transcriptLine struct {
@@ -940,6 +941,7 @@ func (h *Hub) Publish(message Message) error {
 		sender.Status = StatusActive
 	}
 	h.agents[message.FromAgent] = sender
+	centrifugeNode := h.centrifugeNode
 
 	// Release the lock BEFORE network telemetry or iterating channels
 	h.mu.Unlock()
@@ -961,7 +963,7 @@ func (h *Hub) Publish(message Message) error {
 	}
 
 	// Forward to Centrifuge for real-time client delivery (non-blocking).
-	if cn := h.centrifugeNode; cn != nil {
+	if cn := centrifugeNode; cn != nil {
 		go func() {
 			if message.MeetingID != "" {
 				cn.PublishMeetingMessage(message.MeetingID, message)
