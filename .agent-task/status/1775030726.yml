@@ -1,0 +1,4 @@
+domain: SRE & Infrastructure
+task: Optimize K8s manifests (HPA/VPA), orchestrate Prometheus/Grafana stack, and harden K8s network policies.
+outcome: HPA and VPA manifests created for backend, ohc-core, and chatwoot. Network policies added for tenant isolation. Prometheus and Grafana manifests added to the Helm chart with ConfigMaps for Dashboard-as-Code. Local wrapper limits explicitly set in docker-compose.yml.
+status: SUCCESS

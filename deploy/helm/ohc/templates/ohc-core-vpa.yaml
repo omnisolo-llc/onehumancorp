@@ -1,0 +1,15 @@
+{{- if .Values.ohcCore.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-ohc-core
+  labels:
+    app: {{ .Release.Name }}-ohc-core
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ .Release.Name }}-ohc-core
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}

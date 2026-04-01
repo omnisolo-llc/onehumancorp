@@ -1,0 +1,172 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-grafana
+  labels:
+    app: {{ .Release.Name }}-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-grafana
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          env:
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Admin"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/grafana/provisioning/datasources/
+            - name: dashboards-volume
+              mountPath: /var/lib/grafana/dashboards/
+            - name: dashboards-providers-volume
+              mountPath: /etc/grafana/provisioning/dashboards/
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 472
+            capabilities:
+              drop:
+                - "ALL"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-grafana-datasource
+        - name: dashboards-volume
+          configMap:
+            name: {{ .Release.Name }}-grafana-dashboards
+        - name: dashboards-providers-volume
+          configMap:
+            name: {{ .Release.Name }}-grafana-dashboard-providers
+        - name: tmp-volume
+          emptyDir: {}
+        - name: grafana-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-grafana
+spec:
+  selector:
+    app: {{ .Release.Name }}-grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-datasource
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://{{ .Release.Name }}-prometheus:9090
+      access: proxy
+      isDefault: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboard-providers
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboards
+data:
+  ohc-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Backend CPU Usage",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "rate(container_cpu_usage_seconds_total{pod=~\"{{ .Release.Name }}-backend-.*\"}[5m])",
+              "legendFormat": "CPU Usage"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Backend Memory Usage",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "container_memory_usage_bytes{pod=~\"{{ .Release.Name }}-backend-.*\"}",
+              "legendFormat": "Memory"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 30,
+      "style": "dark",
+      "tags": [],
+      "templating": { "list": [] },
+      "time": { "from": "now-6h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "OHC Platform Metrics",
+      "uid": "ohc-platform-1",
+      "version": 1,
+      "style": {
+        "background": "glassmorphism",
+        "blur": "20px"
+      }
+    }
+{{- end }}

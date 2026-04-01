@@ -1,0 +1,364 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-deny-all
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-dns
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-redis-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
+        {{- if .Values.ohcCore.enabled }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-ohc-core
+        {{- end }}
+        {{- if .Values.chatwoot.enabled }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot-worker
+        {{- end }}
+        {{- if .Values.plane.enabled }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: plane-api
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: plane-worker
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-postgres-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
+        {{- if .Values.ohcCore.enabled }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-ohc-core
+        {{- end }}
+        {{- if .Values.chatwoot.enabled }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot-worker
+        {{- end }}
+        {{- if .Values.plane.enabled }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: plane-api
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: plane-worker
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+{{- if .Values.prometheus.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-prometheus-network-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-prometheus
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+      {{- if .Values.grafana.enabled }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-grafana
+      {{- end }}
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+{{- end }}
+---
+{{- if .Values.grafana.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-grafana-network-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-grafana
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    - to:
+      {{- if .Values.prometheus.enabled }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-prometheus
+      {{- end }}
+      ports:
+        - protocol: TCP
+          port: 9090
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+{{- end }}
+---
+{{- if .Values.plane.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-plane-network-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app.kubernetes.io/name, operator: In, values: [plane-api, plane-web, plane-worker]}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 3003
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: plane-api
+      ports:
+        - protocol: TCP
+          port: 8000
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: plane-web
+      ports:
+        - protocol: TCP
+          port: 3000
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-backend-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.backend.service.port }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-ohc-core
+      ports:
+        - protocol: TCP
+          port: {{ .Values.ohcCore.service.port }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot
+      ports:
+        - protocol: TCP
+          port: {{ .Values.chatwoot.service.port }}
+    # Allow egress to internet for external APIs
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+---
+{{- if .Values.ohcCore.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-ohc-core-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-ohc-core
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.ohcCore.service.port }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow egress to internet for external APIs
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+{{- end }}
+---
+{{- if .Values.chatwoot.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-chatwoot-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-chatwoot
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.chatwoot.service.port }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+{{- end }}

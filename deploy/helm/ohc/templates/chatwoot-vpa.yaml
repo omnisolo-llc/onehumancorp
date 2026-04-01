@@ -1,0 +1,15 @@
+{{- if .Values.chatwoot.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-chatwoot
+  labels:
+    app: {{ .Release.Name }}-chatwoot
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ .Release.Name }}-chatwoot
+  updatePolicy:
+    updateMode: "Off"
+{{- end }}

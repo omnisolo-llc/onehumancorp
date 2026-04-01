@@ -11,6 +11,11 @@ backend:
     limits:
       cpu: "212m"
       memory: "217Mi"
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -31,6 +36,11 @@ ohcCore:
     limits:
       cpu: "212m"
       memory: "108Mi"
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -65,6 +75,11 @@ chatwoot:
     limits:
       cpu: "425m"
       memory: "435Mi"
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   # Secret key base – MUST be overridden in production with a 64+ char random string.
   secretKeyBase: changeme_secret_key_base_at_least_64_chars_long_for_production
   # Admin credentials used by OHC backend to auto-configure the inbox.
@@ -99,3 +114,8 @@ plane:
       cpu: "425m"
       memory: "435Mi"
 
+prometheus:
+  enabled: true
+
+grafana:
+  enabled: true

@@ -1,0 +1,7 @@
+domain: SRE & Infrastructure
+context: Optimized the OHC Helm chart and Docker Compose configurations for the Hybrid Agentic OS.
+learnings:
+  - Added HorizontalPodAutoscaler (HPA) and VerticalPodAutoscaler (VPA) for the `backend`, `ohc-core`, and `chatwoot` components to scale resources dynamically.
+  - Implemented network policies (`networkpolicy.yaml`) for tenant isolation and explicitly defined resource quotas (`resourcequota.yaml`) in the multi-tenant cloud-native mode.
+  - Deployed Prometheus and Grafana as part of the observability stack in the Helm chart. Automated dashboard configuration via a ConfigMap (`grafana-dashboards`) using premium CSS style ("glassmorphism", "20px blur").
+  - Hardened local development and lightweight single-docker setup by explicitly assigning CPU and memory limits inside `deploy/docker-compose.yml` to prevent unbounded resource consumption on the host machine.
