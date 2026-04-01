@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
-	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func TestTaskWorker_pollAndAssign(t *testing.T) {

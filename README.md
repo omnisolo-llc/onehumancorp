@@ -33,7 +33,9 @@ graph TD;
 |-----------|----------|---------|
 | `srcs/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
 | `srcs/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
-| `srcs/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
+| `srcs/server/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
+| `srcs/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
+| `srcs/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
 | `srcs/proto/` | **Protobuf** | gRPC service definitions |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
