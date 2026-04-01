@@ -656,3 +656,70 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	})
 	return len(records), err
 }
+
+// SyncMissions aggregates and syncs pending missions with the OHC-SIP Cloud DB.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Posts pending missions to a remote endpoint and updates local status to SYNCED.
+// Returns the number of synced records and an error.
+func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, error) {
+	var missions []struct {
+		id      string
+		payload string
+	}
+
+	err := withRetry(ctx, func() error {
+		missions = nil
+		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 100")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id, payload string
+			if err := rows.Scan(&id, &payload); err != nil {
+				return err
+			}
+			missions = append(missions, struct {
+				id      string
+				payload string
+			}{id, payload})
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(missions) == 0 {
+		return 0, nil
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	syncedCount := 0
+	for _, m := range missions {
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				updateErr := withRetry(ctx, func() error {
+					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
+					return updateErr
+				})
+				if updateErr == nil {
+					syncedCount++
+				}
+			}
+			resp.Body.Close()
+		}
+	}
+
+	return syncedCount, nil
+}
