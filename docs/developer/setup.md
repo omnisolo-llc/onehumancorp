@@ -20,7 +20,7 @@ To completely configure your environment, simply execute the `ohc-setup` script.
 **What this does:**
 1. Checks for required dependencies (`bazelisk`, `docker`).
 2. Generates a `.env` template if one does not exist.
-3. Performs a dry-run build for both `Standalone` and `Cloud` targets to ensure your environment is fully operational.
+3. Performs a dry-run build for `Standalone`, `Cloud`, and `Headless` targets to ensure your environment is fully operational across all modes.
 4. Generates an intelligence log in `.agent-task/memory/` confirming successful provisioning.
 
 ## Mode Switching CLI
