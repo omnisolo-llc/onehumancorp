@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Advanced Agentic Capabilities
 
 **Author(s):** TPM Agent
@@ -54,3 +56,6 @@ A high-level summary of the testing strategy for the Advanced Agentic Capabiliti
 | HITL-01 | Hub -> DB | Verify Handoff package creation | Handoff state saved as PENDING | Pending |
 | HITL-02 | Webhook | Validate Slack/Mattermost hook | Valid payload sent | Pending |
 | HITL-03 | Approval Gate | Verify cryptographically signed token | Task resumes only on valid token | Pending |
+
+
+</div>

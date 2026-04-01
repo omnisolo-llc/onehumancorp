@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Release Notes Generation
 
 **Author(s):** TPM Agent
@@ -18,3 +20,6 @@ Triggered automatically during the CI/CD pipeline when a new tag is pushed or ma
 ## 4. Implementation Details
 - Stack: Go for orchestration, LLM via MCP for text generation.
 - Data Mocks: Must use real commit history during testing.
+
+
+</div>

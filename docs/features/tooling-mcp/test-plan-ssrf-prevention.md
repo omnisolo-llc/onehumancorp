@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Integrations Registry SSRF Prevention
 
 **Author(s):** AI Agent
@@ -38,3 +40,6 @@ This test plan details the testing strategy for the SSRF prevention feature in t
 - **DNS Rebinding:** Ensure the test suite considers DNS resolution and specifically tests `net.LookupIP` mocking.
 - **Protocol Mismatch:** Testing malformed URL formats.
 - **Missing host:** Validation of URL parsing logic when host is missing.
+
+
+</div>

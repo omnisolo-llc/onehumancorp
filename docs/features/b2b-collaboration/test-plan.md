@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: B2B Agent Exchange
 
 ## 1. Objective
@@ -36,3 +38,5 @@ This test plan covers the `TrustAgreement` lifecycle, the `b2b-gateway` message 
 - **Description:** Ensure cross-org messages do not pollute internal semantic memory.
 - **Action:** Complete a successful negotiation in an Inter-Org Room. Trigger the Semantic Distillation Worker.
 - **Expected Result:** Inspect the `swarm_memory_embeddings` table. Verify that no messages flagged with `CrossOrg: true` were embedded or stored in the long-term knowledge base.
+
+</div>

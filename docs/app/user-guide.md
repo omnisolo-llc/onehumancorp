@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: OHC Flutter App
 
 ## 1. Overview
@@ -29,24 +31,27 @@ Generated images are written to:
 
 ### Web
 
-![OHC Flutter app on web](./web/login.png)
+![OHC Flutter app on web](../../srcs/app/web/login.png)
 
 ### macOS
 
-![OHC Flutter app with macOS profile](./macos/login.png)
+![OHC Flutter app with macOS profile](../../srcs/app/macos/login.png)
 
 ### iOS
 
-![OHC Flutter app with iOS profile](./ios/login.png)
+![OHC Flutter app with iOS profile](../../srcs/app/ios/login.png)
 
 ### Windows
 
-![OHC Flutter app with Windows profile](./windows/login.png)
+![OHC Flutter app with Windows profile](../../srcs/app/windows/login.png)
 
 ### Android
 
-![OHC Flutter app with Android profile](./android/login.png)
+![OHC Flutter app with Android profile](../../srcs/app/android/login.png)
 
 ### Linux
 
-![OHC Flutter app with Linux profile](./linux/login.png)
+![OHC Flutter app with Linux profile](../../srcs/app/linux/login.png)
+
+
+</div>

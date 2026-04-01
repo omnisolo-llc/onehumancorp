@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Hook: Stateful Episodic Memory & Checkpointing via LangGraph
 
 ## Executive Summary
@@ -31,3 +33,6 @@ Instead of carrying raw tokens forward:
 - Execute a proof-of-concept integrating a LangGraph Postgres Checkpointer directly into the K8s Operator cluster.
 - Define the explicit gRPC streaming payload structure for checkpoint transmission to eliminate polling loops.
 - Provision the Redis/Pinecone backings for the short/long term semantic memory stores.
+
+
+</div>

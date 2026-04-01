@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Unfair Advantage: K8s-Native Episodic Memory & LangGraph Checkpointing
 
 <style>
@@ -67,3 +69,6 @@ To secure the OHC Competitive Edge, the following high-priority mission must be 
 **Target Output:** A fully operational K8s-backed state manager enabling sub-50ms context retrieval for autonomous agents.
 
 This capability must be hardened against standard OHC zero-trust and visual excellence mandates.
+
+
+</div>

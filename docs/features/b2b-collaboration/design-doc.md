@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: B2B Collaboration
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ The B2B Collaboration feature provides a secure, auditable, and isolated environ
 - **Network Partitions**: During inter-cluster communication, network drops trigger an exponential backoff retry logic to prevent orphaned transactions.
 - **Revoked Trust Domains**: If a partner organization's trust domain is suddenly untrusted, the MCP Gateway fails closed and severs the connection immediately.
 - **Context Limit Differences**: Organizations may use different LLM backends with different context window limits. The B2B protocol enforces a standardized minimum context payload size for all shared transactions.
+
+</div>

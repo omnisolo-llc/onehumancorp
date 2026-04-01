@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Human-in-the-Loop Handoff UI
 
 ## 1. Testing Strategy
@@ -17,3 +19,6 @@ Validate the end-to-end handoff lifecycle, including agent pausing, UI presentat
 ## 3. Automation & CI/CD
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the `HandoffService` and the React frontend components.
+
+
+</div>

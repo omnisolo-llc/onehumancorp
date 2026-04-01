@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Ecosystem Interoperability (Framework Adapters)
 
 **Author(s):** TPM Agent
@@ -36,3 +38,6 @@ The core OHC control plane exposes a `UniversalAgent` interface. Every supported
 - **State Desync**: If an external framework agent drops a connection, the adapter forces a localized rollback to the last known-good LangGraph checkpoint.
 - **Tool Access Denial**: Framework agents attempting to access restricted tools via MCP will be blocked by the Switchboard based on their specific SPIFFE ID's RBAC policy.
 - **Payload Bloat**: To prevent AutoGen conversational histories from exceeding memory limits, the adapter enforces active summarization before writing to the LangGraph state.
+
+
+</div>

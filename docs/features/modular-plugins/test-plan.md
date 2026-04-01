@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Modular Plugin System
 
 ## Scope
@@ -19,3 +21,6 @@ Validate the dynamic ingestion, registration, usage of external capability plugi
 5. **Aesthetic Compliance**:
    - *Action*: Run Playwright verification scripts against the updated OHC dashboard.
    - *Expected*: Ensure UI elements for plugin management conform to the Glassmorphism tokens (`backdrop-filter: blur(15px)`, semi-transparent backgrounds, subtle borders) mandated in the `design-doc.md`.
+
+
+</div>
