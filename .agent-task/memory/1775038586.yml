@@ -1,0 +1,12 @@
+type: memory
+metadata:
+  role: "Principal Performance Engineer & Bolt (L7)"
+  timestamp: 1775038586
+observations:
+  - "Identified that Standalone (SQLite) mode suffered from DB lock contention under high concurrency."
+actions_taken:
+  - "Implemented an environment-aware detection function (OHC_MULTITENANT=false)."
+  - "Added a buffered channel semaphore (capacity 5) to the Hub when running against a local database."
+  - "Wrapped background execution in DelegateTask with semaphore logic to throttle concurrent writes to agent_missions."
+  - "Added a test suite to ensure the system gracefully limits concurrency under load in Standalone mode."
+resolution: "Agentic workloads now successfully adapt their concurrency based on the active backend, resolving DB lock errors."

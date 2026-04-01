@@ -260,6 +260,10 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
 		go func(t Message, r string) {
+			if h.throttleSem != nil {
+				h.throttleSem <- struct{}{}
+				defer func() { <-h.throttleSem }()
+			}
 			_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
 		}(task, toAgent.Role)
 	}
@@ -298,6 +302,30 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+
+	// Hybrid-aware concurrency throttle for agent missions
+	throttleSem    chan struct{}
+}
+
+func envBoolDefault(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	switch value {
+	case "1", "true", "TRUE", "yes", "YES", "on", "ON":
+		return true
+	case "0", "false", "FALSE", "no", "NO", "off", "OFF":
+		return false
+	default:
+		return fallback
+	}
+}
+
+// isStandaloneMode returns true if the system is running in standalone desktop mode
+// (not multitenant, and no Postgres DB configured).
+func isStandaloneMode(repo HubRepository) bool {
+	return !envBoolDefault("OHC_MULTITENANT", false) && repo == nil
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -321,6 +349,13 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		sched = scheduler.NewSchedulerWithRepository(taskRepo)
 	}
 
+	var throttle chan struct{}
+	// ⚡ BOLT: [Hybrid Concurrency Throttling]
+	// Throttle concurrent agent executions specifically when operating against local SQLite
+	if isStandaloneMode(repo) {
+		throttle = make(chan struct{}, 5) // Cap concurrency in standalone mode
+	}
+
 	h := &Hub{
 		agents:        map[string]Agent{},
 		inbox:         map[string][]Message{},
@@ -332,6 +367,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		repo:          repo,
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
+		throttleSem:   throttle,
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
