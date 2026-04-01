@@ -1,0 +1,39 @@
+#!/bin/bash
+# OHC Hybrid Development Mode Switcher
+
+MODE=$1
+
+if [ -z "$MODE" ]; then
+  echo "Usage: source ./ohc-mode.sh [cloud|standalone|headless]"
+  return 1 2>/dev/null || exit 1
+fi
+
+echo "Switching OHC Development Environment to: $MODE"
+
+case $MODE in
+  cloud)
+    export OHC_MULTITENANT=true
+    export OHC_HEADLESS=false
+    export OHC_SOURCE_MODE=cloud
+    echo "Configured for Cloud-Native Multi-Tenant Mode."
+    ;;
+  standalone)
+    export OHC_MULTITENANT=false
+    export OHC_HEADLESS=false
+    export OHC_SOURCE_MODE=standalone
+    echo "Configured for Standalone Desktop Mode."
+    ;;
+  headless)
+    export OHC_MULTITENANT=false
+    export OHC_HEADLESS=true
+    export OHC_SOURCE_MODE=cloud
+    echo "Configured for Headless API Mode."
+    ;;
+  *)
+    echo "Unknown mode: $MODE"
+    echo "Valid modes: cloud, standalone, headless"
+    return 1 2>/dev/null || exit 1
+    ;;
+esac
+
+echo "Environment variables set. You can now run bazelisk commands."
