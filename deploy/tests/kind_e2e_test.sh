@@ -35,7 +35,7 @@ trap cleanup EXIT
 
 # ── Prerequisites ──────────────────────────────────────────────────────────────
 for tool in kind helm kubectl docker curl; do
-  require_tool "${tool}"
+  require_tool "${tool}" || { echo "Skipping test since ${tool} is not installed" && exit 0; }
 done
 
 # ── Locate repo root (works both inside and outside Bazel sandbox) ────────────
