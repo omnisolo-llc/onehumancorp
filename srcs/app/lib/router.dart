@@ -20,6 +20,7 @@ import 'package:ohc_app/screens/pipelines_screen.dart';
 import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
+import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -27,16 +28,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/landing',
     redirect: (context, state) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
+      final isLandingRoute = state.matchedLocation == '/landing';
 
-      if (!isLoggedIn && !isLoginRoute) return '/login';
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) return '/landing';
       if (isLoggedIn && isLoginRoute) return '/dashboard';
       return null;
     },
     routes: [
+      GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),

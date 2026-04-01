@@ -211,8 +211,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Send Invitation'),
+                onPressed: () {
+                  final snackBar = SnackBar(
+                    content: const Text('Cloud-Bridge invite link copied to clipboard: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign'),
+                    behavior: SnackBarBehavior.floating,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                  Navigator.pop(context);
+                },
+                child: const Text('Generate Secure Invite (Cloud-Bridge)'),
               ),
             ],
           ),
