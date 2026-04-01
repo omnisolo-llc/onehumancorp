@@ -1,0 +1,14 @@
+type: memory
+metadata:
+  role: Principal Reliability Engineer & Sentry (L7)
+  timestamp: 1775041341
+observations:
+  - SQLite requires special handling for native database array types like TEXT[]. This requires explicitly marshaling the values to JSON.
+  - To prevent SQLite database lock contention during concurrent write access, it's critical to use WAL journal mode and a busy_timeout pragma connection string (e.g. `?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)`).
+  - Bazel BUILD definitions must be manually re-generated via Gazelle when moving or adding new .go files to packages that have Bazel definitions.
+actions_taken:
+  - Created a robust db.Provider to dynamically select Postgres or SQLite based on the `DATABASE_URL` or `OHC_MULTITENANT` configuration.
+  - Implemented missing SQLite repositories for Hub, Tasks, Usage, and User definitions, bridging the Mode Parity.
+  - Authored a Playwright script to verify UI fail-safe degradation on Thin Client models without crashing.
+  - Engineered chaos testing to verify SQLite and Postgres backends against high-concurrency ingestion and lock-wait recoveries.
+resolution: "All hybrid data modes behave with identical feature capability, verified by E2E testing, with zero regressions."

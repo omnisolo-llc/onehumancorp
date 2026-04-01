@@ -440,3 +440,18 @@ func (s *SIPDB) SetContextRoot(path string) {
 	s.cachedGrounding = ""
 	s.groundingOnce = &sync.Once{}
 }
+
+
+// DB returns the underlying database connection.
+func (s *SIPDB) DB() *sql.DB {
+	return s.db
+}
+
+// NewSIPDBFromDB initializes SIPDB using an existing *sql.DB.
+func NewSIPDBFromDB(db *sql.DB) (*SIPDB, error) {
+	s := &SIPDB{
+		db: db,
+		groundingOnce: &sync.Once{},
+	}
+	return s, nil
+}

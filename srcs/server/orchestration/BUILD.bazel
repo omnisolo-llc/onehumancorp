@@ -12,6 +12,7 @@ go_library(
         "repository.go",
         "service.go",
         "sip.go",
+        "sqlite_hub.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -41,6 +42,7 @@ go_test(
         "chaos_test.go",
         "delegation_test.go",
         "eventlog_test.go",
+        "hub_chaos_test.go",
         "minimax_client_test.go",
         "service_extra_test.go",
         "service_grpc_test.go",
@@ -52,6 +54,7 @@ go_test(
     embed = [":orchestration"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/db",
         "//srcs/server/settings",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@org_golang_google_grpc//:grpc",

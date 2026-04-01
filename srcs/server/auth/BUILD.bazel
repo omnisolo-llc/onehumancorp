@@ -9,6 +9,7 @@ go_library(
         "oidc.go",
         "postgres_store.go",
         "repository.go",
+        "sqlite_store.go",
         "store.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/auth",

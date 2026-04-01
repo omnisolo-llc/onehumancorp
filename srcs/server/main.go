@@ -63,14 +63,22 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
-	if pool != nil {
+func newHubAndTracker(pool *db.Provider, sipdb *orchestration.SIPDB) (*orchestration.Hub, *billing.Tracker) {
+	if pool != nil && pool.Type == "postgres" {
 		return orchestration.NewHubWithRepository(
-				orchestration.NewPgHubRepository(pool.Pool),
-				scheduler.NewPgTaskRepository(pool.Pool),
+				orchestration.NewPgHubRepository(pool.PgPool),
+				scheduler.NewPgTaskRepository(pool.PgPool),
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
-				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
+				billing.NewPgUsageRepository(pool.PgPool, billing.DefaultCatalog),
+			)
+	} else if pool != nil && pool.Type == "sqlite" {
+		return orchestration.NewHubWithRepository(
+				orchestration.NewSqliteHubRepository(pool.Sqlite),
+				scheduler.NewSqliteTaskRepository(pool.Sqlite),
+			), billing.NewTrackerWithRepository(
+				billing.DefaultCatalog,
+				billing.NewSqliteUsageRepository(pool.Sqlite, billing.DefaultCatalog),
 			)
 	}
 
@@ -167,7 +175,7 @@ func run(now time.Time, listen listenFunc) error {
 	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
 
-	pool, err := db.New(ctx)
+	pool, err := db.NewProvider(ctx)
 	if err != nil {
 		return err
 	}
@@ -176,11 +184,15 @@ func run(now time.Time, listen listenFunc) error {
 		if err := pool.RunMigrations(ctx); err != nil {
 			return err
 		}
-		slog.Info("using Postgres-backed repositories")
+		if pool.Type == "postgres" {
+			slog.Info("using Postgres-backed repositories")
+		} else {
+			slog.Info("using SQLite-backed repositories")
+		}
 	} else {
 		slog.Info("DATABASE_URL not set, using in-memory repositories")
 	}
-	if multiTenant && pool == nil {
+	if multiTenant && (pool == nil || pool.Type != "postgres") {
 		slog.Warn("multi-tenant mode enabled without Postgres; tenant state will remain process-local")
 	}
 
@@ -200,29 +212,20 @@ func run(now time.Time, listen listenFunc) error {
 		sipdb     *orchestration.SIPDB
 	)
 
-	hub, tracker = newHubAndTracker(pool)
-	if pool != nil {
-		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
-	} else {
-		authStore = auth.NewStore()
-	}
-	hub.SetSettingsStore(store)
-	baseSettings := store.Get()
-
-	if chatwoot.IsEnabled() {
-		go func() {
-			c := chatwoot.NewClientFromEnv()
-			if err := chatwootSetup(c); err != nil {
-				slog.Error("chatwoot setup", "error", err)
-			}
-		}()
-	}
-
 	// Set up the SIPDB instance to connect to SQLite.
-	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
-	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
+	var createdSIPDB *orchestration.SIPDB
+	var errSIPDB error
+
+	if pool != nil && pool.Type == "sqlite" {
+		createdSIPDB, errSIPDB = orchestration.NewSIPDBFromDB(pool.Sqlite)
+	} else {
+		dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
+		createdSIPDB, errSIPDB = orchestration.NewSIPDB(dbPath)
+	}
+
+	if errSIPDB == nil && createdSIPDB != nil {
 		sipdb = createdSIPDB
-		hub.SetSIPDB(sipdb)
+		// hub.SetSIPDB(sipdb) will be done after hub creation
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
 			ticker := time.NewTicker(1 * time.Hour)
@@ -242,13 +245,38 @@ func run(now time.Time, listen listenFunc) error {
 			}
 		}()
 	} else {
-		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
+		slog.Error("failed to initialize SIPDB", "error", errSIPDB)
+	}
+
+	hub, tracker = newHubAndTracker(pool, sipdb)
+
+	if pool != nil && pool.Type == "postgres" {
+		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.PgPool))
+	} else if pool != nil && pool.Type == "sqlite" {
+		authStore = auth.NewStoreWithRepository(auth.NewSqliteUserRepository(pool.Sqlite))
+	} else {
+		authStore = auth.NewStore()
+	}
+	hub.SetSettingsStore(store)
+	baseSettings := store.Get()
+
+	if chatwoot.IsEnabled() {
+		go func() {
+			c := chatwoot.NewClientFromEnv()
+			if err := chatwootSetup(c); err != nil {
+				slog.Error("chatwoot setup", "error", err)
+			}
+		}()
+	}
+
+	if sipdb != nil {
+		hub.SetSIPDB(sipdb)
 	}
 
 	var handler http.Handler
 	if multiTenant {
 		factory := func(org domain.Organization) http.Handler {
-			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantHub, tenantTracker := newHubAndTracker(pool, sipdb)
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)
