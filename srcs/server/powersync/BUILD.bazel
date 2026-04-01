@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "powersync",
+    srcs = [
+        "auth.go",
+        "rules.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/powersync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_jwt_jwt_v5//:jwt",
+    ],
+)

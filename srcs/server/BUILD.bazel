@@ -13,6 +13,7 @@ go_library(
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
+        "//srcs/server/powersync",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",

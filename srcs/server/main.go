@@ -19,6 +19,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/powersync"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -365,6 +366,14 @@ func run(now time.Time, listen listenFunc) error {
 		handler = newDemoHandler(now, hub, tracker, authStore)
 		slog.Info("using single-tenant dashboard server", "headless", headless)
 	}
+
+	// Wrap handler to inject PowerSync endpoints
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+	mux.Handle("/api/powersync/rules", powersync.RulesHandler())
+	mux.Handle("/api/auth/jwks", powersync.JWKSHandler())
+	mux.Handle("/api/auth/token", powersync.TokenHandler())
+	handler = mux
 
 	// 4. Start Scheduler Background Task
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {

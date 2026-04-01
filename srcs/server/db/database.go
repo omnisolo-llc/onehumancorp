@@ -174,6 +174,18 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read', 'write']", "'[\"read\", \"write\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read']", "'[\"read\"]'")
+
+			// PowerSync constraints: Skip postgres-specific CREATE PUBLICATION
+			if strings.Contains(sqlStr, "CREATE PUBLICATION") {
+				slog.Info("db: skipping PUBLICATION migration for SQLite", "file", f)
+
+				// Ensure we mark it as applied
+				_, err = p.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES (?)", f)
+				if err != nil {
+					return fmt.Errorf("db: record skipped migration %s: %w", f, err)
+				}
+				continue
+			}
 		}
 
 		tx, err := p.Begin(ctx)
