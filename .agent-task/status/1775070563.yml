@@ -1,0 +1,4 @@
+status: "nominal"
+tests: "passing"
+coverage: ">90%"
+wip: 0

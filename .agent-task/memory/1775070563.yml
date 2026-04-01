@@ -1,0 +1,2 @@
+intelligence:
+  ux_parity: "Implemented Glassmorphism UX updates using ImageFilter.compose with saturation matrix across LoginScreen and DashboardScreen."
