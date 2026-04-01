@@ -8,7 +8,7 @@ go_library(
         "provider.go",
         "sqlite_provider.go",
     ],
-    embedsrcs = glob(["migrations/*.sql"]),
+    embedsrcs = ["//srcs/server/db/migrations:all_files"],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [

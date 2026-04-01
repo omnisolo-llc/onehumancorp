@@ -276,11 +276,20 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 			return fmt.Errorf("failed to retrieve mission payload for syncing: %w", err)
 		}
 
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(payload), &payloadMap); err == nil {
+			redactedMap := redactInterfacePII(payloadMap)
+			if redactedBytes, err := json.Marshal(redactedMap); err == nil {
+				payload = string(redactedBytes)
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payload))
 		if err != nil {
 			return fmt.Errorf("failed to create sync request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
@@ -700,11 +709,22 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		var payloadMap map[string]interface{}
+		var syncPayload = m.payload
+		if err := json.Unmarshal([]byte(syncPayload), &payloadMap); err == nil {
+			redactedMap := redactInterfacePII(payloadMap)
+			if redactedBytes, err := json.Marshal(redactedMap); err == nil {
+				syncPayload = string(redactedBytes)
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(syncPayload))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		// "When synchronizing local SQLite Hybrid MCP RAG state to the Cloud Postgres orchestration engine via HTTP API (e.g., SyncMissions), include the header X-Conflict-Resolution: client-wins to enforce robust conflict resolution prioritizing the local client."
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
