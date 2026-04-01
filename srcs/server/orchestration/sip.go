@@ -118,6 +118,7 @@ func initializeTables(db *sql.DB) error {
 			context TEXT NOT NULL,
 			vector_embedding BLOB,
 			source_plugin TEXT,
+			synced BOOLEAN DEFAULT FALSE,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS local_metrics_buffer (
@@ -718,6 +719,95 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 				}
 			}
 			resp.Body.Close()
+		}
+	}
+
+	return syncedCount, nil
+}
+
+// SyncRAGState selectively syncs local SQLite RAG state to the cloud Postgres 'agent_missions' table.
+func (s *SIPDB) SyncRAGState(ctx context.Context, remoteEndpoint string) (int, error) {
+	var memories []EpisodicMemory
+	err := withRetry(ctx, func() error {
+		memories = nil
+		// Fetch unsynced RAG state by querying records lacking a 'synced' flag
+		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE synced = FALSE OR synced IS NULL ORDER BY created_at ASC LIMIT 100")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var m EpisodicMemory
+			var t string
+			if err := rows.Scan(&m.MemoryID, &m.Context, &m.VectorEmbedding, &m.SourcePlugin, &t); err != nil {
+				return err
+			}
+			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			memories = append(memories, m)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(memories) == 0 {
+		return 0, nil
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	syncedCount := 0
+	for _, m := range memories {
+		// Construct sanitized payload for the cloud agent_missions table
+		sanitizedContent := fmt.Sprintf("Hybrid RAG Context: %s", m.Context)
+
+		msg := Message{
+			ID:         fmt.Sprintf("rag-sync-%s", m.MemoryID),
+			Type:       EventTask,
+			Content:    sanitizedContent,
+			OccurredAt: time.Now().UTC(),
+		}
+
+		wrapper := struct {
+			Role string  `json:"role"`
+			Task Message `json:"task"`
+		}{
+			Role: "RAG_CONTEXT_SYNC",
+			Task: msg,
+		}
+
+		payloadBytes, err := json.Marshal(wrapper)
+		if err != nil {
+			continue
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(payloadBytes)))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				// Mark as synced locally
+				updateErr := withRetry(ctx, func() error {
+					_, err := s.db.ExecContext(ctx, "UPDATE swarm_memory_embeddings SET synced = TRUE WHERE memory_id = ?", m.MemoryID)
+					return err
+				})
+				if updateErr == nil {
+					syncedCount++
+					recordRAGSync(ctx, true)
+				} else {
+					recordRAGSync(ctx, false)
+				}
+			} else {
+				recordRAGSync(ctx, false)
+			}
+			resp.Body.Close()
+		} else {
+			recordRAGSync(ctx, false)
 		}
 	}
 

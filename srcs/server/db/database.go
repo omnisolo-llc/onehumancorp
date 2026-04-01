@@ -155,6 +155,18 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
+			// Explicitly skip Postgres-specific migrations (like CREATE PUBLICATION)
+			if strings.Contains(strings.ToUpper(sqlStr), "CREATE PUBLICATION") {
+				slog.Info("db: skipping Postgres-specific migration in SQLite mode", "file", f)
+
+				// We still need to record that the migration was "applied" so it isn't retried
+				_, err = p.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES (?)", f)
+				if err != nil {
+					return fmt.Errorf("db: record skipped migration %s: %w", f, err)
+				}
+				continue
+			}
+
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
 			// Bigserial -> INTEGER PRIMARY KEY AUTOINCREMENT
 			// TIMESTAMPTZ -> DATETIME

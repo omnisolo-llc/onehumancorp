@@ -2,6 +2,12 @@
   "configVersion": 2,
   "packages": [
     {
+      "name": "args",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/args-2.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
       "name": "async",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/async-2.13.1",
       "packageUri": "lib/",
@@ -26,10 +32,22 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "checked_yaml",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/checked_yaml-2.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "clock",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/clock-1.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "code_assets",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/code_assets-1.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "collection",
@@ -54,6 +72,18 @@
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/fake_async-1.3.3",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "fetch_api",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/fetch_api-2.3.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "fetch_client",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/fetch_client-1.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "ffi",
@@ -104,10 +134,22 @@
       "languageVersion": "3.9"
     },
     {
+      "name": "glob",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/glob-2.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
       "name": "go_router",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/go_router-14.8.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "hooks",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/hooks-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
     },
     {
       "name": "http",
@@ -126,6 +168,12 @@
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/intl-0.19.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "json_annotation",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/json_annotation-4.11.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
     },
     {
       "name": "leak_tracker",
@@ -182,10 +230,46 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "mutex",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/mutex-3.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.15"
+    },
+    {
+      "name": "native_toolchain_c",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/native_toolchain_c-0.17.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "objective_c",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/objective_c-9.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "path",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/path-1.9.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "path_provider",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/path_provider-2.1.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "path_provider_android",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/path_provider_android-2.2.23",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "path_provider_foundation",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/path_provider_foundation-2.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
     },
     {
       "name": "path_provider_linux",
@@ -218,10 +302,34 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "powersync",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/powersync-1.8.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "powersync_flutter_libs",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/powersync_flutter_libs-0.4.15+1",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
       "name": "protobuf",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/protobuf-3.1.0",
       "packageUri": "lib/",
       "languageVersion": "2.19"
+    },
+    {
+      "name": "pub_semver",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/pub_semver-2.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "pubspec_parse",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/pubspec_parse-1.5.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
     },
     {
       "name": "riverpod",
@@ -284,6 +392,60 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "sqflite",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqflite-2.4.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "sqflite_android",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+3",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "sqflite_common",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqflite_common-2.5.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "sqflite_darwin",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "sqflite_platform_interface",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqflite_platform_interface-2.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "sqlite3",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqlite3-2.4.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "sqlite3_flutter_libs",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqlite3_flutter_libs-0.5.42",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "sqlite3_web",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqlite3_web-0.1.2-wip",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "sqlite_async",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/sqlite_async-0.8.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "stack_trace",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/stack_trace-1.12.1",
       "packageUri": "lib/",
@@ -308,6 +470,12 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "synchronized",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/synchronized-3.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "term_glyph",
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/term_glyph-1.2.2",
       "packageUri": "lib/",
@@ -324,6 +492,12 @@
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/typed_data-1.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "universal_io",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/universal_io-2.3.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
     },
     {
       "name": "uuid",
@@ -360,6 +534,12 @@
       "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/xdg_directories-1.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "yaml",
+      "rootUri": "file:///home/jules/.pub-cache/hosted/pub.dev/yaml-3.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "ohc_monorepo",

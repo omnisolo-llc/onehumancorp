@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "server_lib",
-    srcs = ["main.go"],
+    srcs = [
+        "main.go",
+        "powersync.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server",
     visibility = ["//visibility:private"],
     deps = [
@@ -16,6 +19,7 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
+        "@com_github_golang_jwt_jwt_v5//:go_default_library",
         "@org_golang_google_grpc//:grpc",
     ],
 )

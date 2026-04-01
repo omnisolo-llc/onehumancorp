@@ -173,7 +173,14 @@ func newDemoHandler(now time.Time, hub *orchestration.Hub, tracker *billing.Trac
 		authStore = auth.NewStore()
 	}
 
-	return dashboard.NewServer(org, hub, tracker, authStore)
+	mux := http.NewServeMux()
+	mux.Handle("/", dashboard.NewServer(org, hub, tracker, authStore))
+	mux.HandleFunc("/api/powersync/rules", syncRulesHandler)
+	mux.HandleFunc("/api/powersync/jwks", jwksHandler)
+	mux.Handle("/api/powersync/token", authStore.Middleware()(http.HandlerFunc(tokenHandler)))
+	// Since newDemoHandler doesn't pass the DB pool and typically runs memory DB, upload will just drop or error without pool.
+	// But in reality, newDemoHandler doesn't need powersync upload for demo, so we omit or mock it.
+	return mux
 }
 
 // Runs the API server.
@@ -304,6 +311,14 @@ func run(now time.Time, listen listenFunc) error {
 							} else if syncedCount > 0 {
 								slog.Info("Successfully synced standalone missions to cloud", "count", syncedCount)
 							}
+
+							// Hybrid RAG Sync
+							ragCount, err := sipdb.SyncRAGState(ctx, missionsEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync standalone RAG state", "error", err)
+							} else if ragCount > 0 {
+								slog.Info("Successfully synced standalone RAG state to cloud", "count", ragCount)
+							}
 						}
 					}
 				}()
@@ -359,7 +374,13 @@ func run(now time.Time, listen listenFunc) error {
 		registry, multiTenantHandler := dashboard.NewMultiTenantServerWithRegistry(authStore, factory)
 		bootstrapOrg := bootstrapTenantOrganization(now)
 		registry.Provision(bootstrapOrg)
-		handler = multiTenantHandler
+		mux := http.NewServeMux()
+		mux.Handle("/", multiTenantHandler)
+		mux.HandleFunc("/api/powersync/rules", syncRulesHandler)
+		mux.HandleFunc("/api/powersync/jwks", jwksHandler)
+		mux.Handle("/api/powersync/token", authStore.Middleware()(http.HandlerFunc(tokenHandler)))
+		mux.Handle("/api/powersync/upload", authStore.Middleware()(newUploadHandler(pool)))
+		handler = mux
 		slog.Info("using multi-tenant dashboard server", "bootstrap_org", bootstrapOrg.ID, "headless", headless)
 	} else {
 		handler = newDemoHandler(now, hub, tracker, authStore)

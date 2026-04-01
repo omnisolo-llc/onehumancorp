@@ -1,9 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/router.dart';
+import 'package:ohc_app/services/powersync_service.dart';
 
-void main() {
-  runApp(const ProviderScope(child: OhcApp()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize PowerSync dynamically based on the current mode (Standalone vs Cloud-Native).
+  final isStandalone = const bool.fromEnvironment('OHC_STANDALONE', defaultValue: false);
+  final powerSyncService = PowerSyncService();
+  try {
+    await powerSyncService.init(isStandalone);
+  } catch (e) {
+    debugPrint("PowerSync initialization failed: $e");
+  }
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        powerSyncServiceProvider.overrideWithValue(powerSyncService),
+      ],
+      child: const OhcApp(),
+    ),
+  );
 }
 
 class OhcApp extends ConsumerWidget {
