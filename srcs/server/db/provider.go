@@ -42,7 +42,9 @@ type Provider interface {
 	QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row
 	Begin(ctx context.Context) (Tx, error)
 	Close()
+	IsSQLite() bool
 }
+
 
 // Rows abstracts multiple rows returned from a query.
 type Rows interface {

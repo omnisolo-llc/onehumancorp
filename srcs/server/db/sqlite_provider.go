@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,12 +19,17 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 	return &SqliteProvider{db: db}
 }
 
+var jsonPathRegex = regexp.MustCompile(`([a-zA-Z0-9_]+)(?:::json)?->>'([a-zA-Z0-9_]+)'`)
+
 // convertBindVars parses PostgreSQL queries and translates them to SQLite syntax.
 // It tracks string literal states to avoid replacing `$` inside quotes, maps Postgres
 // positional parameters (e.g., `$1`) to SQLite numbered variables (e.g., `?1`),
 // and dynamically strips natively unsupported clauses like `FOR UPDATE SKIP LOCKED`.
 func convertBindVars(query string) string {
 	query = strings.ReplaceAll(query, "FOR UPDATE SKIP LOCKED", "")
+
+	// map JSON paths: col::json->>'key' OR col->>'key' => json_extract(col, '$.key')
+	query = jsonPathRegex.ReplaceAllString(query, "json_extract($1, '$$.$2')")
 
 	var result strings.Builder
 	result.Grow(len(query))
@@ -99,6 +105,10 @@ func (p *SqliteProvider) Begin(ctx context.Context) (Tx, error) {
 
 func (p *SqliteProvider) Close() {
 	p.db.Close()
+}
+
+func (p *SqliteProvider) IsSQLite() bool {
+	return true
 }
 
 // SqliteRows implements Rows using sql.Rows.
