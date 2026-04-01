@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC AI Agent Platform Strategy & Blueprint
 
 ## Top 5 Urgent Ecosystem Gaps
@@ -33,3 +35,6 @@ Based on cross-framework ingestion (OpenClaw, CrewAI, AutoGen, Claude Code), we 
     }
     ```
 *   **Retrieval Optimization:** During the pre-flight node of the LangGraph cycle, a semantic search resolves only the top `k` relevant memory interactions, appending them as optimized System Prompt contexts.
+
+
+</div>

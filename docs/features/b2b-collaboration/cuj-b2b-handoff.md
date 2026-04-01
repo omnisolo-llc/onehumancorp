@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Cross-Org Collaboration (B2B Agent Negotiation)
 
 **Author(s):** TPM Agent
@@ -38,3 +40,6 @@ The CEO of Acme Corp wants to purchase 100 server racks from Globex. Acme's "Pur
 - Relies on event-driven state transitions.
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
+
+
+</div>

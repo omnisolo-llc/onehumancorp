@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Dynamic Scaling UI ("Hire/Fire")
 
 ## 1. Objective
@@ -41,3 +43,6 @@ This test plan covers the real-time React component responsible for replica coun
 - **Pre-condition:** Dashboard is open; a scaling action has been initiated.
 - **Action:** Backend emits an SSE event `{"event": "AgentHired", "status": "Ready"}`.
 - **Expected Result:** The UI updates its real-time trace log and progress bar without requiring a manual page refresh.
+
+
+</div>

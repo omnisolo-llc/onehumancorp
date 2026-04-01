@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Dynamic Tool Registration via MCP
 
 ## 1. Testing Strategy
@@ -29,3 +31,6 @@ Validate the dynamic synthesis and injection of tool schemas, verify secure rout
 - All unit and integration tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for `srcs/server/orchestration/mcp_gateway.go`.
 - Avoid arbitrary `time.Sleep()` for async tool executions; strictly use deterministic polling loops.
+
+
+</div>

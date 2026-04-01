@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Tooling & MCP Integrations
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ The CEO expands the capability of their AI workforce by linking an external tool
 - **Stale Contexts**: Tool metadata is updated dynamically. If a tool becomes unavailable mid-task, the MCP Gateway returns an explicit "ToolOffline" error to the agent, prompting it to wait or re-plan.
 - **Authentication Handshake Failures**: If the OAuth token expires and refresh fails, the Gateway intercepts all tool calls and escalates a notification to the CEO for re-authentication, preventing agents from endlessly looping on 401s.
 - **Payload Limits**: Extremely large API responses (e.g., a massive JSON dump from a database) are truncated by the Gateway before returning to the agent to avoid context window explosion.
+
+</div>

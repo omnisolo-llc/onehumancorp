@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC Strategy: Top 5 Urgent Capability Gaps
 
 Based on triangulation of leading AI frameworks (OpenClaw, CrewAI, AutoGen, Claude Code), we have identified the top 5 urgent capability gaps. This document provides actionable designs to merge these features into One Human Corp's architecture, heavily utilizing the OHC Advantage (K8s / LangGraph).
@@ -26,3 +28,6 @@ Based on triangulation of leading AI frameworks (OpenClaw, CrewAI, AutoGen, Clau
 - **Gap:** Traditional frameworks fail at handling cyclic workflows (looping, retrying, reflecting) gracefully, often crashing or repeating identical hallucinated loops. There are no cyclic, stateful workflows that allow agents to loop, reflect, and retry failed actions based on a persistent graph state.
 - **OHC Advantage:** Direct integration of LangGraph state machines natively managed by our Control Plane.
 - **Actionable Design:** Migrate all core workflows from static prompting chains to LangGraph state transitions. Use deterministic state syncing to ensure we can instantly halt and recover via CSI Snapshots.
+
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Tooling & MCP Gateway
 
 **Author(s):** TPM Agent
@@ -59,3 +61,6 @@ A high-level summary of the testing strategy for the Tooling & MCP Gateway featu
 | DTR-01 | MCP Gateway | Dynamic search for capability | Correct capability mapped | Pending |
 | DTR-02 | Agent Binding | Request tool bind with valid SVID | Tool successfully bound | Pending |
 | DTR-03 | Agent Reject | Request bind with invalid SVID | Bind rejected securely | Pending |
+
+
+</div>

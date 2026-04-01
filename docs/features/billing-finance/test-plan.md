@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Billing & Finance Engine
 
 **Author(s):** TPM Agent
@@ -52,3 +54,6 @@ A high-level summary of the testing strategy for the Billing & Finance Engine fe
 - **Streaming Token Interruption**: Tests simulate a mid-stream WebSocket failure to ensure the billing engine accurately records the chunk count received up to the failure point, preventing unbilled usage.
 - **Zero-Cost Models**: A test explicitly sets an open-source model's price to `$0.00` to verify that division-by-zero errors do not occur when calculating ROI or efficiency metrics.
 - **Concurrent Threshold Stampedes**: The E2E suite spins up 50 mock agents that simultaneously cross the monthly budget threshold, ensuring the database transaction lock accurately suspends agents without double-billing or race conditions.
+
+
+</div>

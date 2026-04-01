@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Hierarchical Task Delegation (Delegate SubTask)
 
 **Author(s):** TPM Agent
@@ -42,3 +44,6 @@ graph TD;
 ## 5. UI/UX Details
 - The UI can display a "Spawning Specialized [Role] Agent" indicator in the transcript, reflecting dynamic team assembly.
 - Quota errors should be surfaced as a "VRAM Quota Reached: Cannot spawn additional agents" notification to the human CEO.
+
+
+</div>

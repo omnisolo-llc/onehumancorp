@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC Mono v2.0 is LIVE 🐝🔥
 
 Are you still asking agents for permission?
@@ -18,3 +20,6 @@ Our agents don't ask for permission. They propose and execute based on your Visi
 Are you ready to build the future? Check out the new OHC Swarm.
 
 #OneHumanCorp #AI #AgenticOS #Bazel #Kubernetes #GoLang #Flutter #MachineLearning #AIAgents
+
+
+</div>

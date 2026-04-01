@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Hardware-Aware Agent Scheduling
 
 **Author(s):** TPM Agent
@@ -58,3 +60,6 @@ A high-level summary of the testing strategy for the Hardware-Aware Agent Schedu
 |---------|-----------|-------------|-----------------|--------|
 | BURN-01 | Forecasting | Ensure extrapolated token usage meets forecast within margin | Forecast accurate to ~5% | Pending |
 | BURN-02 | Throttling | Verify Agent is queued gracefully on quota hit | Queueing mechanism invoked | Pending |
+
+
+</div>

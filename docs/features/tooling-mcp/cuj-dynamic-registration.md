@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Dynamic Tool Registration via MCP
 
 **Persona:** External Agent / Developer | **Context:** Registering a new tool without a restart.
@@ -29,3 +31,6 @@ A developer or an automated pipeline registers a new external tool on the One Hu
 
 ## 5. Security & Privacy
 - The system employs `interop.ValidateSPIFFEID` which checks that `SPIFFE ID` formats and trust domains align strictly with allowed definitions.
+
+
+</div>

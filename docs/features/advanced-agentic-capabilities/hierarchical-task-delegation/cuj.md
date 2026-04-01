@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Hierarchical Task Delegation
 
 **Persona:** Manager Agent | **Context:** Orchestrating a complex epic requiring multiple specialized sub-tasks.
@@ -30,3 +32,6 @@ When a Manager Agent is assigned a complex epic (e.g., "Build and deploy a new f
 
 ## 5. Security & Privacy
 - **Sub-Agent Scoping**: Sub-agents inherit only a strict subset of the Manager Agent's permissions via narrowed SPIFFE SVIDs, ensuring least privilege access during execution.
+
+
+</div>

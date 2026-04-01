@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Document: Just In Time Tool Synthesis
 
 ## 1. Executive Summary
@@ -27,3 +29,6 @@ message JustInTimeToolSynthesisEvent {
 - Maintain minimal memory overhead by avoiding O(N) string manipulations in hot paths.
 - All K8s pods associated with this feature will enforce least privilege (e.g., `runAsNonRoot: true`, `readOnlyRootFilesystem: true`).
 - Implement bounded memory growth by explicitly deleting map entries upon successful execution.
+
+
+</div>

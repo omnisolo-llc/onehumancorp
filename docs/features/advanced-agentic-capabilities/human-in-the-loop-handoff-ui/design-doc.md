@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Document: Human-in-the-Loop Handoff UI
 
 ## 1. Executive Summary
@@ -30,3 +32,6 @@ message HandoffPackage {
 - Implement structured JSON validation for all handoff payloads.
 - Ensure the UI components properly utilize React state and suspense for real-time updates.
 - Maintain Zero-Lock stack compatibility.
+
+
+</div>

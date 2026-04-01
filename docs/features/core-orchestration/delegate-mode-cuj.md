@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Agent Delegate Mode
 
 **Author(s):** TPM Agent
@@ -23,3 +25,5 @@ An agent receives a task that requires specialized skills it does not possess. I
 
 ## 5. UI/UX Details
 - The UI can display a "Delegated to [Agent Name]" badge next to tasks in the transcript.
+
+</div>

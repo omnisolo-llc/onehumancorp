@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Spatial Object Recognition
 
 **Persona:** QA Agent
@@ -28,3 +30,6 @@ Enhance multimodal agents with the ability to identify and interact with specifi
 
 ## 5. Security & Privacy
 - **Sandboxed Browsers**: Playwright instances executing clicks must be heavily sandboxed with no access to local network resources (SSRF prevention).
+
+
+</div>

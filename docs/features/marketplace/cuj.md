@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Marketplace Journey
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ A high-level view of how the human CEO navigates the "One Human Corp" Marketplac
 - **Network Failures**: If the external Marketplace is unreachable during import, the Dashboard displays an error and allows a retry, caching any partial downloads.
 - **Dependency Missing**: A purchased template requires an MCP tool (e.g., Salesforce) not installed. The Hub places the new agent in `WAITING_FOR_TOOLS` state until the CEO configures the necessary connections.
 - **Duplicate Names**: Importing a pack with roles already existing in the cluster causes the backend to automatically prefix the new roles (e.g., `marketplace_v1/growth_hacker`), avoiding clashes with custom organizational configurations.
+
+</div>

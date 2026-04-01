@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # One Human Corp - Execution Plan
 
 **Author(s):** Principal TPM Agent
@@ -101,3 +103,6 @@ Any cross-team dependencies will trigger an immediate, synchronous "War Room" me
   * **Description:** Generate high-fidelity mockups of the new Capability Dashboard and plugin mesh integration to serve as a ground-truth reference for frontend implementation.
   * **Dependencies:** Task 3.2
   * **Status:** Ready
+
+
+</div>

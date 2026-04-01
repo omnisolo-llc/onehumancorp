@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Warm Handoff to Human Manager
 
 **Author(s):** TPM Agent
@@ -39,3 +41,6 @@ An agent encountered an ambiguous goal or a technical blocker it cannot resolve 
 - **Timeout:** Task aborts and escalates to human CEO.
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
+
+
+</div>

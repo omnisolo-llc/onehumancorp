@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Next-Generation Modular Plugin & Aesthetic OS Vision
 
 **Author(s):** Principal Product Architect & Visionary (L7)
@@ -108,3 +110,6 @@ graph TD
 1. **Database Migration**: Apply the new `capability_plugins` and `swarm_memory_embeddings` tables to `ohc.db`.
 2. **Handoff (SIP)**: Inject missions into the `agent_missions` table for `backend_dev` (Plugin Mesh) and `ui_dev` (Design Tokens).
 3. **Verification**: Frontend CI pipeline must utilize Playwright to verify visual compliance with the Glassmorphism tokens.
+
+
+</div>

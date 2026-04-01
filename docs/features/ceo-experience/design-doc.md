@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: CEO Experience & Control Plane
 
 **Author(s):** TPM Agent
@@ -24,3 +26,5 @@ The CEO Experience refers to the unified frontend dashboard and interaction mode
 - **Browser Disconnects**: If the SSE connection drops, the UI attempts exponential backoff reconnection and refetches missed events.
 - **Virtualization**: In Virtual Meeting Rooms with rapid agent interactions, the UI virtualizes the transcript list to prevent DOM bloat and memory leaks in the browser.
 - **Concurrent Locks**: Two managers approving a critical action simultaneously hits a transactional lock; the second receives a conflict error.
+
+</div>

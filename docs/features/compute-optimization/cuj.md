@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Compute Optimization Journey
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ The CEO utilizes the Compute Optimization layer to ensure their highest-priority
 - **Quota Thrashing**: Rapidly changing the VRAM quota might cause the scheduler to repeatedly evict and spin up pods. The system uses a 5-minute cooldown window on quota changes.
 - **Partial Checkpoints**: If a GPU node dies mid-inference before the event log writes to Postgres, the agent will resume from the last known complete checkpoint, losing at most a few seconds of 'thought'.
 - **Network Bandwidth Issues**: Distributing heavily weighted model inferences across zones could cause latency; the scheduler prefers co-locating interacting agents on the same physical rack.
+
+</div>

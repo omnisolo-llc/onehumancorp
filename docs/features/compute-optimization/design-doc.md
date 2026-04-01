@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Compute Optimization
 
 **Author(s):** TPM Agent
@@ -27,3 +29,6 @@ The Compute Optimization engine maximizes throughput and Return on Investment (R
 Enterprise adoption is hindered by unpredictable LLM costs and runaway compute. OHC implements strict **VRAM Quota Management** and **Hardware-Aware Scheduling**, coupled with real-time billing metrics tracked precisely by the MCP Gateway intercept layer.
 - **Forecasting Models**: Telemetry is gathered from individual Agent's LLM consumption. Extrapolations based on active workflow queues build real-time projections.
 - **Quota Throttling**: Runaway compute costs are halted seamlessly by gracefully queuing further actions when defined VRAM / Cost quotas approach their hard limits.
+
+
+</div>

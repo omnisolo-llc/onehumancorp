@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Dashboard Load (The Organization Command Center)
 
 **Author(s):** TPM Agent
@@ -39,3 +41,6 @@ The CEO logs into the One Human Corp platform. They expect a high-level view of 
 - Relies on event-driven state transitions.
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
+
+
+</div>

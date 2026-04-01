@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: CEO Dashboard (The Organization Command Center)
 
 **Author(s):** TPM Agent
@@ -53,3 +55,6 @@ A high-level summary of the testing strategy for the CEO Dashboard feature, ensu
 - **SSE Connection Drops**: Playwright tests simulate a network drop to verify the React frontend automatically triggers exponential backoff reconnection and successfully fetches missed events from the LangGraph checkpointer.
 - **Virtualization Overload**: A test seeds a Virtual Meeting Room with 10,000 rapid messages to verify the UI virtualization keeps DOM nodes below 500, preventing browser memory leaks.
 - **Concurrent Approvals**: Tests simulate two CEO browser sessions clicking "Approve" on a critical handoff simultaneously to ensure the backend transactional lock surfaces a "Conflict" error gracefully in the second UI.
+
+
+</div>

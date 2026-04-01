@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: LangGraph Checkpointing
 
 **Persona:** SWE Agent
@@ -29,3 +31,6 @@ Implement robust cross-session context persistence using LangGraph Checkpointer 
 ## 5. Security & Privacy
 - **Data at Rest**: Checkpoint data in PostgreSQL must be encrypted at rest.
 - **Isolation**: Tenant-specific isolation of checkpointer tables.
+
+
+</div>

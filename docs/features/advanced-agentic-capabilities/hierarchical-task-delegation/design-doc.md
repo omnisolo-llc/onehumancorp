@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Document: Hierarchical Task Delegation
 
 ## 1. Executive Summary
@@ -32,3 +34,6 @@ message SubTask {
 - **VRAM Quota Enforcement:** Before spawning a sub-agent, the `DelegationService` must check the organization's VRAM limits. If limits are exceeded, the task is queued.
 - **Garbage Collection:** Once a sub-agent completes its task and the Manager Agent acknowledges it, the temporary `TeamMember` CRD is deleted by the Hub to free compute resources.
 - **Security:** Sub-agents must not receive the full context of the epic, only the specific `instruction` provided, to prevent token waste and limit exposure.
+
+
+</div>

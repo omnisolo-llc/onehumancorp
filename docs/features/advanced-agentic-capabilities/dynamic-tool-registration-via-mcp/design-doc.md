@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Document: Dynamic Tool Registration via MCP
 
 ## 1. Executive Summary
@@ -32,3 +34,6 @@ type MCPSchema struct {
 - **Schema Validation:** Ensure `json.NewDecoder` combined with `dec.DisallowUnknownFields()` is used to strictly validate tool payloads to prevent schema drift or injection attacks.
 - **Zero-Lock Paradigm:** The `MCPRegistryService` must support any standard OpenAPI v3 specification to ensure zero vendor lock-in and allow importing custom tools easily.
 - **Performance:** Caching of OpenAPI schemas in the `MCPRegistryService` must be implemented to ensure sub-50ms latency routing for tool discovery requests.
+
+
+</div>

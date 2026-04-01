@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: [Journey Name]
 
 **Persona:** [User Role] | **Context:** [Starting state]
@@ -28,3 +30,6 @@ A narrative description of what a successful journey looks like from the user's 
 ## 5. Security & Privacy
 - Data encryption during transit.
 - Audit trail entry format for this specific journey.
+
+
+</div>

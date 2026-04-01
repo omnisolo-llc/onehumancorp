@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # 2024-05-18 - Cross-Cluster Handoff UI: Aesthetic & Technical Blueprint
 
 ## 1. Executive Summary & Aesthetic Spec
@@ -54,3 +56,6 @@ sequenceDiagram
 - **K8s Operator:** Must support dynamic resource requests across distinct namespaces or federated clusters for target pods.
 - **SSE Stream:** The Gateway (`/api/v1/handoff/stream`) will aggregate and push the handoff events.
 - **Next.js Rendering:** The visual graph must use a lightweight SVG/Canvas overlay to render the "Neon Arteries" (the connecting curves) between agent DOM nodes, utilizing React Server Components where feasible to minimize client payload.
+
+
+</div>

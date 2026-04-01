@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Server Roadmap\n\n## Phase 1\n- [x] Cross-Cluster Handoff UI\n- Dynamic Org Scaling
 
 ## Phase 2: AI Agent Framework Evolution (Top 50 Feature Mandate)
@@ -69,3 +71,6 @@
 * **Token Efficiency:** Strategies like map-reduce chunking for 'Document Summarization' and dynamic token compression algorithms for 'Context Window Management' ensure maximum value per token consumed.
 * **Statefulness by Design:** Moving 'Agent Memory' to native K8s StatefulSets ensures durability without relying on ad-hoc sidecars, perfectly complementing LangGraph's cyclic flow control.
 * **Zero-Trust Collaboration:** By coupling SPIFFE/SPIRE endpoints to 'Dynamic Tool Discovery' and gRPC Hub routes for 'Multi-Agent Collaboration', OHC inherently prevents multi-tenant escalation exploits.
+
+
+</div>

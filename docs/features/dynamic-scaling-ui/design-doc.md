@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Dynamic Scaling (Hire/Fire) UI
 Date: 2024-05-18
 
@@ -42,3 +44,6 @@ sequenceDiagram
     Gateway API-->>Dashboard UI: SSE stream: { "event": "AgentHired", "status": "Ready" }
     Dashboard UI-->>CEO: Real-time UI Update (Progress Bar Complete)
 ```
+
+
+</div>

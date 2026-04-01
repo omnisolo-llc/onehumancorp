@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Automated SDLC
 
 **Author(s):** TPM Agent
@@ -32,3 +34,6 @@ The system relies on Kubernetes CRDs and the Hub state.
 - **Network Sandboxing**: If strict sandboxing prevents necessary network resolution (e.g., pulling images or fetching external modules), the pipeline gracefully falls back to a restricted `go test` and logs a warning for the DevOps agent.
 - **Read-Only File Systems (EROFS)**: During sandboxed `npm install` runs, default cache directories may fail. The pipeline dynamically sets `npm_config_cache` to a writable temporary directory.
 - **Infinite Test Loops**: A malformed test written by an agent could run indefinitely. The pipeline enforces a strict 10-minute timeout per test target before terminating the pod and flagging a failure.
+
+
+</div>

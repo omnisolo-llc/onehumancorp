@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: Hybrid Identity Management
 
 ## Introduction
@@ -28,3 +30,6 @@ Human managers can enable MFA via the settings dashboard for an extra layer of s
 - **Revocation Latency**: When an agent is "Fired", there is a maximum 5-second SVID revocation window where the agent could theoretically act before the SPIRE server updates the trust bundle.
 - **Node Eviction**: If a K8s node is evicted and an agent pod moves, it must re-attest to SPIRE before continuing its tasks, momentarily pausing its workflow.
 - **External Collaboration**: B2B (Cross-Cluster) handoffs require Federated SPIRE setups; if the remote trust bundle is unavailable due to network issues, the system fails closed and prevents B2B API access.
+
+
+</div>

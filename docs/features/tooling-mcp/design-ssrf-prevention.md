@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Integrations Registry SSRF Prevention
 
 **Author(s):** AI Agent
@@ -47,3 +49,6 @@ The `Connect()` method in `Registry` will be updated to call `validateURL()` on 
 - **Location:** `srcs/integrations/registry.go` and `srcs/integrations/registry_test.go`.
 - **Language:** Go 1.25.
 - **Dependencies:** Standard library `net` and `net/url`.
+
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Agent-to-Agent (A2A) Interaction Protocol
 
 **Author(s):** Antigravity
@@ -71,3 +73,6 @@ All A2A gRPC traffic is mandatorily encrypted via Mutual TLS (mTLS).
 - **Stale SVIDs**: If an agent pod's SVID expires mid-conversation, mTLS handshakes fail, and the agent must undergo dynamic re-attestation before resuming.
 - **Context Bloat**: Prolonged multi-agent debates may exceed standard LLM token limits; the Engine utilizes proactive, continuous summarization to cull old transcript history.
 - **Event Storms**: Misbehaving agents entering an infinite retry loop risk overwhelming Redis. The Operator enforces circuit breakers triggering a forced pod restart and Warm Handoff.
+
+
+</div>

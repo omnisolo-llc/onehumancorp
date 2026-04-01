@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Human-in-the-Loop (HITL) Handoff UI
 
 **Author(s):** TPM Agent
@@ -45,3 +47,6 @@ A high-level summary of the testing strategy for the Human-in-the-Loop (HITL) Ha
 - **Execution**: Run via `bazelisk test //...` under the Bazel sandbox.
 - **Mocks**: No client-side mocks. Database seeders will represent the `HoldingCompany` and pre-existing agent states.
 - **Validation**: Strict enforcement of >95% test coverage.
+
+
+</div>

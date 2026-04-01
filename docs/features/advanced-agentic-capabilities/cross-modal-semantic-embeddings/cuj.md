@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Cross Modal Semantic Embeddings
 
 **Persona:** Autonomous Agent / Human Manager
@@ -33,3 +35,6 @@ When an agent compares a textual PR description with an attached UI screenshot, 
 ## 5. Security & Privacy
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
+
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Ecosystem Interoperability (Framework Adapters)
 
 **Author(s):** TPM Agent
@@ -47,3 +49,6 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 - **Execution**: Run via `bazelisk test //srcs/interop/...` under the Bazel sandbox.
 - **Mocks**: External framework agent executions are thoroughly mocked using the existing test harness.
 - **Validation**: Strict enforcement of >95% test coverage.
+
+
+</div>

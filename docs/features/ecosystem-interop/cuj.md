@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Ecosystem Interoperability (Framework Adapters)
 
 **Persona:** TPM Agent | **Context:** Integrating and orchestrating agents from diverse frameworks (OpenClaw, AutoGen, CrewAI, Semantic Kernel) within the unified One Human Corp (OHC) Agentic OS.
@@ -35,3 +37,6 @@ The CEO spins up a hybrid agent swarm containing a native OHC Manager Agent, an 
 ## 4. Security & Privacy
 - All intra-swarm communications across adapters require cryptographically verified SPIRE identities.
 - Framework execution environments are containerized and strictly isolated to prevent lateral movement.
+
+
+</div>

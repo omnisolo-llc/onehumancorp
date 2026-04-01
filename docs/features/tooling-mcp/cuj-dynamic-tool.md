@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Dynamic Tool Registration via MCP
 
 **Persona:** Autonomous AI Agent
@@ -23,3 +25,6 @@ When an AI agent is instantiated or encounters a novel task, it queries the unif
 
 ## 4. Security & Privacy
 - **Zero-Trust Binding**: Tools are strictly gated by SPIFFE SVIDs and RBAC policies, ensuring an agent cannot access tools outside its assigned domain.
+
+
+</div>

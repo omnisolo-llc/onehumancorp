@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Automated Implementation Pipelines
 
 **Author(s):** TPM Agent
@@ -60,3 +62,6 @@ A high-level summary of the testing strategy for the Automated Implementation Pi
 - **DNS Resolution Failures**: In strict Bazel sandboxing, tests requiring external DNS (e.g., fetching dependencies) might time out. The test suite explicitly falls back to local `go test` runs if Bazel network sandboxing is overly restrictive during local development.
 - **Flaky E2E Tests**: Staging environment provisioning can occasionally timeout due to K8s node exhaustion. The E2E suite incorporates an intelligent polling retry mechanism before failing the build.
 - **Dangling Preview Namespaces**: Test failures midway through a pipeline run might leave orphaned K8s namespaces. The test harness includes a strict `t.Cleanup()` function to reap temporary staging resources regardless of test outcome.
+
+
+</div>

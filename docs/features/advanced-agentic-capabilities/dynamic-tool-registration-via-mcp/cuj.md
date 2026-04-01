@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Dynamic Tool Registration via MCP
 
 **Persona:** SWE Agent / QA Agent | **Context:** An agent needs a specific capability (e.g., executing a GitHub API call) that is not currently bound to its default prompt context.
@@ -30,3 +32,6 @@ When an AI agent (e.g., SWE Agent) realizes it lacks a specific capability to co
 
 ## 5. Security & Privacy
 - **Dynamic Access Control**: Tool execution is strictly gated by SPIFFE/SPIRE. An agent can only bind to a tool if its `RoleProfile` is explicitly authorized to use it, preventing a compromised SWE Agent from executing Finance/Accounting tool calls.
+
+
+</div>
