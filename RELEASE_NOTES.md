@@ -1,4 +1,8 @@
 # Release Notes
+
+## v0.2.3
+9242ea4d Fix Flutter Linux desktop support, test asset propagation, and e2e test flutter interception (#886)
+
 ## v0.2.2
 3bd2195c fix(ui): improve accessibility and semantic colors in dashboard widgets (#856)
 
