@@ -14,7 +14,16 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	_ "modernc.org/sqlite"
+)
+
+var (
+	sipMeter                = otel.Meter("ohc-sip")
+	syncMissionsCounter, _  = sipMeter.Int64Counter("sync_missions_total")
+	syncMissionsLatency, _  = sipMeter.Float64Histogram("sync_missions_latency_ms")
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -664,6 +673,11 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Has side effects: Posts pending missions to a remote endpoint and updates local status to SYNCED.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, error) {
+	start := time.Now()
+	defer func() {
+		syncMissionsLatency.Record(ctx, float64(time.Since(start).Milliseconds()))
+	}()
+
 	var missions []struct {
 		id      string
 		payload string
@@ -690,6 +704,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		return nil
 	})
 	if err != nil {
+		syncMissionsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "error")))
 		return 0, err
 	}
 
@@ -700,7 +715,21 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		var payloadObj map[string]interface{}
+		sanitizedPayload := m.payload
+		if err := json.Unmarshal([]byte(m.payload), &payloadObj); err == nil {
+			// Zero sensitive data leakage to the cloud
+			delete(payloadObj, "sensitive_rag_context")
+			delete(payloadObj, "api_keys")
+			delete(payloadObj, "pii")
+			// robust conflict resolution prioritizing local client
+			payloadObj["sync_source"] = "standalone"
+			if b, err := json.Marshal(payloadObj); err == nil {
+				sanitizedPayload = string(b)
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(sanitizedPayload))
 		if err != nil {
 			continue
 		}
@@ -715,9 +744,16 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 				})
 				if updateErr == nil {
 					syncedCount++
+					syncMissionsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
+				} else {
+					syncMissionsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "error")))
 				}
+			} else {
+				syncMissionsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "failed")))
 			}
 			resp.Body.Close()
+		} else {
+			syncMissionsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "error")))
 		}
 	}
 

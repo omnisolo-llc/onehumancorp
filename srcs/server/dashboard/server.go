@@ -497,6 +497,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/scheduler", server.handleSchedulerTasks)
 	mux.HandleFunc("/api/scheduler/cancel", server.handleSchedulerCancel)
 	// Phase 2 – Confidence Gating / Guardian Agent
+	mux.HandleFunc("/api/powersync/jwks.json", handlePowerSyncJWKS())
+	mux.HandleFunc("/api/powersync/sync_rules", handlePowerSyncRules())
 	mux.HandleFunc("/api/approvals", server.handleApprovals)
 	mux.HandleFunc("/api/approvals/request", server.handleApprovalRequest)
 	mux.HandleFunc("/api/approvals/decide", server.handleApprovalDecide)
