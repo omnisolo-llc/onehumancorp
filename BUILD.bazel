@@ -204,3 +204,21 @@ alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
 )
+
+config_setting(
+    name = "cloud_mode",
+    values = {"define": "OHC_MODE=cloud"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "standalone_mode",
+    values = {"define": "OHC_MODE=standalone"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "headless_mode",
+    values = {"define": "OHC_MODE=headless"},
+    visibility = ["//visibility:public"],
+)
