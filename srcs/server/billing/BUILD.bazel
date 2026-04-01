@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "postgres_tracker.go",
         "repository.go",
+        "sqlite_tracker.go",
         "tracker.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/billing",
