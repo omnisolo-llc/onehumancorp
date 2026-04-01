@@ -8,26 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func TestSyncMissions_SuccessAndConflict(t *testing.T) {
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test_sync.db")
 
-	provider, err := db.NewSqliteProvider(dbPath)
+	sipdb, err := NewSIPDB(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
-	defer provider.Close()
 
-	if err := provider.RunMigrations(context.Background()); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	rawDB := provider.GetDB()
-	sipdb := NewSIPDB(rawDB, tempDir)
+	rawDB := sipdb.db
 
 	// Create pending missions
 	_, err = rawDB.ExecContext(context.Background(), "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('m1', 'PENDING', '{\"role\":\"test\",\"rag_context\":\"secret\",\"data\":\"value1\"}', CURRENT_TIMESTAMP)")
