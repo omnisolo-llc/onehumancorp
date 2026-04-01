@@ -190,3 +190,68 @@ test.describe('Flutter Web App – E2E', () => {
     expect(hasFlutterAsset).toBe(true);
   });
 });
+
+  // ── Chaos & Degradation Tests ───────────────────────────────────────────
+
+  test('app gracefully handles backend latency (Thin Client Mode)', async ({ page, request }) => {
+    // DO NOT USE page.route to mock networks. Instead use seed endpoint to create realistic lag.
+    // Ensure the backend simulates high latency via seed target.
+    await request.post(process.env.API_BASE_URL ? `${process.env.API_BASE_URL}/api/dev/seed` : 'http://localhost:8080/api/dev/seed', {
+      data: { scenario: 'high-latency' },
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await page.goto('/login');
+    await waitForFlutter(page);
+
+    // Attempt interaction, ensure no unhandled promise rejections or white screen of death
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('slow@test.local');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('slowpass');
+    await page.keyboard.press('Enter');
+
+    // Should remain on login or show a timeout/loading state, but absolutely must not crash
+    await page.waitForTimeout(1000);
+    const bodyHtml = await page.content();
+    expect(bodyHtml.length).toBeGreaterThan(100);
+
+    // In our robust aesthetic framework, the canvas should still exist
+    const flutterPresent = await page.evaluate(() => {
+      return (
+        document.querySelector('flt-glass-pane') !== null ||
+        document.querySelector('canvas') !== null
+      );
+    });
+    expect(flutterPresent).toBe(true);
+  });
+
+  test('app gracefully handles offline simulation without page.route (Network Partition)', async ({ page, request }) => {
+    // Instead of mocking the network, use the backend's scenario to return a 503 or 504 to emulate drop.
+    await request.post(process.env.API_BASE_URL ? `${process.env.API_BASE_URL}/api/dev/seed` : 'http://localhost:8080/api/dev/seed', {
+      data: { scenario: 'network-partition' },
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await page.goto('/login');
+    await waitForFlutter(page);
+
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('offline@test.local');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('offlinepass');
+    await page.keyboard.press('Enter');
+
+    // Should handle the offline error without crashing the canvas
+    await page.waitForTimeout(500);
+    const flutterPresent = await page.evaluate(() => {
+      return (
+        document.querySelector('flt-glass-pane') !== null ||
+        document.querySelector('canvas') !== null
+      );
+    });
+    expect(flutterPresent).toBe(true);
+  });
+});
