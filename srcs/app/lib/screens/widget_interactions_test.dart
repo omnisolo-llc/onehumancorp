@@ -195,7 +195,8 @@ void main() {
         find.widgetWithText(TextFormField, 'Email'),
         'test@example.com',
       );
-      await tester.tap(find.text('Sign In'));
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign In'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
       await tester.pumpAndSettle();
 
       expect(find.text('Enter your password'), findsOneWidget);
@@ -215,7 +216,9 @@ void main() {
         find.widgetWithText(TextFormField, 'Password'),
         'password',
       );
-      await tester.tap(find.text('Sign In'));
+
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign In'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
       await tester.pumpAndSettle();
 
       expect(find.text('Enter a valid email'), findsOneWidget);

@@ -2,9 +2,9 @@
 
 ## 1. Overview
 
-This guide covers the Bazel-native Flutter app workflow in `srcs/app`.
-The app's screenshots are generated from the Bazel-built Flutter web bundle by
-running Playwright with platform-specific viewport and device profiles.
+This guide covers the Bazel-native Flutter app workflow in `srcs/app` for the One Human Corp platform.
+The app's screenshots are generated from the local Flutter web bundle running on the Hybrid Agentic OS,
+showcasing the Glassmorphism UI aesthetic, Outfit/Inter typography, and native integration features.
 
 ## 2. Regenerate Screenshots
 
@@ -33,20 +33,20 @@ Generated images are written to:
 
 ### macOS
 
-![OHC Flutter app with macOS profile](./macos/login.png)
+![OHC Flutter app with macOS profile (Glassmorphism UI)](./macos/login.png)
 
 ### iOS
 
-![OHC Flutter app with iOS profile](./ios/login.png)
+![OHC Flutter app with iOS profile (Glassmorphism UI)](./ios/login.png)
 
 ### Windows
 
-![OHC Flutter app with Windows profile](./windows/login.png)
+![OHC Flutter app with Windows profile (Glassmorphism UI)](./windows/login.png)
 
 ### Android
 
-![OHC Flutter app with Android profile](./android/login.png)
+![OHC Flutter app with Android profile (Glassmorphism UI)](./android/login.png)
 
 ### Linux
 
-![OHC Flutter app with Linux profile](./linux/login.png)
+![OHC Flutter app with Linux profile (Glassmorphism UI)](./linux/login.png)

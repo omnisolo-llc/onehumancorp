@@ -77,7 +77,8 @@ void main() {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Sign In'));
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign In'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
       await tester.pumpAndSettle();
 
       expect(find.text('Enter a valid email'), findsOneWidget);
