@@ -34,41 +34,28 @@ else
 fi
 
 echo "--- Loading Bazel-built images ---"
-# bazel run outputs the tarballs to fixed locations in the runfiles.
-# We'll use the environment variable if available, or just check the current dir.
+
+# The oci_load target `//deploy:server_load` provides an executable script to load the image.
+# We need to find and execute it.
+# It should be in the runfiles tree.
+SERVER_LOAD_SCRIPT=$(find . -name "server_load" -type f -executable | head -n 1)
+
+if [[ -n "$SERVER_LOAD_SCRIPT" && -x "$SERVER_LOAD_SCRIPT" ]]; then
+  echo "Loading server image using $SERVER_LOAD_SCRIPT"
+  "$SERVER_LOAD_SCRIPT"
+else
+  # Try running the load script via bazel if it's not in runfiles
+  echo "server_load script not found in runfiles, falling back to trying from project root"
+  cd "$PROJECT_ROOT"
+  if [[ -f "bazel-bin/deploy/server_load" ]]; then
+      "bazel-bin/deploy/server_load"
+  else
+      echo "Error: could not find server_load script. Make sure //deploy:server_load is built and included in data."
+      exit 1
+  fi
+fi
+
 cd "$PROJECT_ROOT"
-
-# Load backend
-if [[ -f "bazel-bin/deploy/backend_tarball.tar" ]]; then
-  docker load -i bazel-bin/deploy/backend_tarball.tar
-elif [[ -f "deploy/backend_tarball.tar" ]]; then
-  docker load -i deploy/backend_tarball.tar
-else
-  # Try to find it in the current directory (runfiles setup)
-  # When running via 'bazel run', the tarball is in the runfiles tree.
-  BACKEND_TAR=$(find . -name backend_tarball.tar | head -n 1)
-  if [[ -n "$BACKEND_TAR" ]]; then
-    docker load -i "$BACKEND_TAR"
-  else
-    echo "Error: backend_tarball.tar not found. Make sure it's built."
-    exit 1
-  fi
-fi
-
-# Load frontend
-if [[ -f "bazel-bin/deploy/frontend_tarball.tar" ]]; then
-  docker load -i bazel-bin/deploy/frontend_tarball.tar
-elif [[ -f "deploy/frontend_tarball.tar" ]]; then
-  docker load -i deploy/frontend_tarball.tar
-else
-  FRONTEND_TAR=$(find . -name frontend_tarball.tar | head -n 1)
-  if [[ -n "$FRONTEND_TAR" ]]; then
-    docker load -i "$FRONTEND_TAR"
-  else
-    echo "Error: frontend_tarball.tar not found. Make sure it's built."
-    exit 1
-  fi
-fi
 
 echo "--- Starting services from $PROJECT_ROOT ---"
 # Run docker-compose without --build because we just loaded the images.
