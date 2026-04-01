@@ -27,4 +27,4 @@ A high-level summary of the testing strategy for the Hierarchical Task Delegatio
 - Ensure `SYSTEM` agent is properly verified or created to avoid publishing errors.
 
 ## 6. Environment & Prerequisites
-- Standard unit testing environment via `bazelisk test //srcs/orchestration/...`.
+- Standard unit testing environment via `bazelisk test //srcs/server/orchestration/...`.
