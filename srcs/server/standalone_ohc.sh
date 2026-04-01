@@ -148,10 +148,14 @@ start_daemon() {
 
   rm -f "${PID_FILE}"
 
+  # Optimize memory footprint in standalone mode using GOMEMLIMIT and GOGC
+  # This configures Go's runtime for an environment with limited resources.
   env \
     HOME="${HOME}" \
     PORT="${port}" \
     GRPC_PORT="${GRPC_PORT:-0}" \
+    GOMEMLIMIT="${GOMEMLIMIT:-250MiB}" \
+    GOGC="${GOGC:-50}" \
     nohup "${SERVER_BIN}" >>"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"

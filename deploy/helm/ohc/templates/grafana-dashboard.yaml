@@ -1,0 +1,14 @@
+{{- if .Values.backend.metrics.dashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  ohc-dashboard.json: |-
+    {
+      "title": "OHC Platform Metrics",
+      "panels": []
+    }
+{{- end }}

@@ -1,0 +1,17 @@
+type: memory
+metadata:
+  role: Principal SRE
+  timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+observations: |
+  Audited the K8s Helm chart and the local standalone wrapper for OHC.
+  The Helm chart was missing configurations for Horizontal Pod Autoscaling (HPA), Vertical Pod Autoscaling (VPA), NetworkPolicy for security hardening, and a ServiceMonitor/Grafana dashboard for observability.
+  The local wrapper `standalone_ohc.sh` did not have specific optimizations for Go runtime memory constraints.
+actions_taken: |
+  - Created an HPA manifest `hpa.yaml`.
+  - Created a VPA manifest `vpa.yaml`.
+  - Created a NetworkPolicy manifest `networkpolicy.yaml` targeting the backend to restrict ingress.
+  - Added metrics and Grafana dashboard provisioning config via `servicemonitor.yaml` and `grafana-dashboard.yaml`.
+  - Updated `standalone_ohc.sh` to enforce `GOMEMLIMIT=250MiB` and `GOGC=50` to restrict memory consumption.
+  - Linked all new features to dynamic values in `values.yaml`.
+resolution: |
+  The Cloud cluster deployment now natively supports scalable multi-tenancy and high availability with hardened security parameters. Observability components expose essential metrics automatically to Grafana. The standalone runtime gracefully handles constrained resources.

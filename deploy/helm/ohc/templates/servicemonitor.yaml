@@ -1,0 +1,16 @@
+{{- if and .Values.backend.metrics.enabled .Values.backend.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-backend
+  labels:
+    app: {{ .Release.Name }}-backend
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-backend
+  endpoints:
+    - port: http
+      interval: {{ .Values.backend.metrics.serviceMonitor.interval }}
+      path: /metrics
+{{- end }}
