@@ -229,6 +229,8 @@ func run(now time.Time, listen listenFunc) error {
 	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
+		telemetry.SetSIPDB(sipdb) // Ensure telemetry buffer uses SIPDB to flush metrics
+
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
 			ticker := time.NewTicker(1 * time.Hour)

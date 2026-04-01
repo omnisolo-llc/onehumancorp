@@ -212,6 +212,16 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		attribute.String("model", model),
 		attribute.String("type", tokenType),
 	))
+
+	bufferMetric(MetricPayload{
+		Type:      "token_usage",
+		AgentID:   agentID,
+		Role:      role,
+		Model:     model,
+		TokenType: tokenType,
+		Count:     count,
+		Timestamp: time.Now().UTC(),
+	})
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -235,6 +245,14 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		attribute.String("role", role),
 		attribute.String("api", api),
 	))
+
+	bufferMetric(MetricPayload{
+		Type:      "agent_api_call",
+		AgentID:   agentID,
+		Role:      role,
+		API:       api,
+		Timestamp: time.Now().UTC(),
+	})
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.
@@ -254,6 +272,12 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 	humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("type", interactionType),
 	))
+
+	bufferMetric(MetricPayload{
+		Type:      "human_interaction",
+		Extra:     interactionType,
+		Timestamp: time.Now().UTC(),
+	})
 }
 
 // RecordMeetingEvent increments the global counter for collaborative meeting room actions.
@@ -273,6 +297,12 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 	meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("type", eventType),
 	))
+
+	bufferMetric(MetricPayload{
+		Type:      "meeting_event",
+		Extra:     eventType,
+		Timestamp: time.Now().UTC(),
+	})
 }
 
 // LogAgentExecution provides structured JSON logging for agent execution traces.
