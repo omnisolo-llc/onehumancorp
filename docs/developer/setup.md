@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC Hybrid Developer Setup
 
 This guide walks you through setting up a development environment capable of working across OHC's various hybrid execution modes.
@@ -9,6 +11,17 @@ OHC is designed as a single monorepo that targets vastly different runtime envir
 - **Headless API**: An API-only target optimized for remote client connection.
 
 Manually toggling `OHC_MULTITENANT`, `OHC_HEADLESS`, and `DATABASE_URL` during development can cause significant friction.
+
+```mermaid
+graph TD;
+    DevEnv[Developer Environment] --> Setup[ohc-setup.sh];
+    Setup --> Cloud[Cloud-Native K8s / Docker];
+    Setup --> Standalone[Standalone Desktop];
+    Setup --> Headless[Headless Cloud API];
+    Cloud --> PG[(Postgres / Redis)];
+    Standalone --> SQL[(Local SQLite)];
+    Headless --> API[API Server Only];
+```
 
 ## Automated Setup
 To completely configure your environment, simply execute the `ohc-setup` script.
@@ -52,3 +65,5 @@ Under the hood, `ohc-mode.sh` manages the following environment variables:
 As outlined in the OHC Architecture guidelines, all interfaces (including the CLI setup logs) must maintain absolute clarity.
 
 > Note: For any E2E frontend development, if you require dynamic network conditions (such as simulating a degraded connection in Headless Mode), refer to the Playwright intercept patterns outlined in the central developer guide.
+
+</div>
