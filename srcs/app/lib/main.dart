@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/router.dart';
+import 'package:ohc_app/powersync_manager.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Conditionally initialize PowerSync based on mode.
+  // In a real environment, you might read mode/endpoint from Env variables or local storage.
+  // const mode = String.fromEnvironment('OHC_MODE', defaultValue: 'cloud');
+  // const endpoint = String.fromEnvironment('OHC_POWERSYNC_URL', defaultValue: '');
+  // if (mode == 'standalone' && endpoint.isNotEmpty) {
+  //   await PowerSyncManager().init(mode, endpoint, 'sample-token');
+  // }
+
   runApp(const ProviderScope(child: OhcApp()));
 }
 

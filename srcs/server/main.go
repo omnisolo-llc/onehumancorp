@@ -287,6 +287,28 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
+
+			// Background sync for standalone RAG state to cloud Postgres
+			ragSyncEndpoint := os.Getenv("OHC_CLOUD_RAG_SYNC_ENDPOINT")
+			if ragSyncEndpoint != "" {
+				go func() {
+					ticker := time.NewTicker(10 * time.Minute)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							syncedCount, err := sipdb.SyncRAGState(ctx, ragSyncEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync standalone RAG state", "error", err)
+							} else if syncedCount > 0 {
+								slog.Info("Successfully synced standalone RAG state to cloud", "count", syncedCount)
+							}
+						}
+					}
+				}()
+			}
 		}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically

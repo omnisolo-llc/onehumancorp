@@ -34,6 +34,11 @@ dependencies:
   uuid: ^4.4.2
   # flutter_svg: ^2.0.10 # Disabled for Bazel build compatibility
 
+  # PowerSync integration
+  path_provider: ^2.1.2
+  sqflite: ^2.3.0
+  powersync: ^1.8.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

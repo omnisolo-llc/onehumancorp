@@ -1,0 +1,20 @@
+<<<<<<< SEARCH
+  redis:
+=======
+  powersync:
+    image: journeyapps/powersync-service:latest
+    ports:
+      - "8081:8080"
+    environment:
+      # The database URL needs to point to the host/postgres container
+      # using the exact database OHC uses (e.g. `ohc`).
+      - PS_DATA_SOURCE_URI=postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      # This enables the PowerSync server to accept JWTs issued by the OHC server.
+      # Needs a shared secret to verify the JWT signatures.
+      - PS_JWT_SECRET=changeme_secret_key_base_at_least_64_chars_long_for_production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+>>>>>>> REPLACE

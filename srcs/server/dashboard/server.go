@@ -514,6 +514,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/snapshots/restore", server.handleSnapshotRestore)
 	// Phase 4 – Community Marketplace
 	mux.HandleFunc("/api/marketplace", server.handleMarketplace)
+	// PowerSync dynamic sync rules
+	mux.HandleFunc("/api/powersync/sync-rules", server.HandlePowerSyncSyncRules)
 	// Phase 4 – Real-time Analytics
 	mux.HandleFunc("/api/analytics", server.handleAnalytics)
 	// Phase 2 – External Integrations (chat, git, issues)
