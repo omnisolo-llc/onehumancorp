@@ -1,8 +1,9 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "db",
     srcs = [
+        "convert.go",
         "database.go",
         "postgres_provider.go",
         "provider.go",
@@ -21,4 +22,10 @@ go_library(
         "@io_opentelemetry_go_otel_metric//:metric",
         "@org_modernc_sqlite//:sqlite",
     ],
+)
+
+go_test(
+    name = "db_test",
+    srcs = ["convert_test.go"],
+    embed = [":db"],
 )

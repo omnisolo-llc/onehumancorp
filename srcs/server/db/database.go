@@ -27,7 +27,8 @@ type DB struct {
 }
 
 // New creates a new Provider from DATABASE_URL.
-// If DATABASE_URL is empty, it defaults to a local SQLite database in ~/.openclaw/ohc_state.db.
+// If DATABASE_URL is empty and OHC_STANDALONE=true, it defaults to a local SQLite database at .agent-task/swarm.db
+// Otherwise, if DATABASE_URL is empty, it defaults to ~/.openclaw/ohc_state.db
 // If DATABASE_URL starts with sqlite:// it uses SQLite.
 // Otherwise it assumes PostgreSQL.
 func New(ctx context.Context) (*DB, error) {
@@ -35,15 +36,23 @@ func New(ctx context.Context) (*DB, error) {
 	if dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
 		var dbPath string
 		if dsn == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("db: find home dir: %w", err)
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				agentTaskDir := ".agent-task"
+				if err := os.MkdirAll(agentTaskDir, 0755); err != nil {
+					return nil, fmt.Errorf("db: create .agent-task dir: %w", err)
+				}
+				dbPath = filepath.Join(agentTaskDir, "swarm.db")
+			} else {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return nil, fmt.Errorf("db: find home dir: %w", err)
+				}
+				openclawDir := filepath.Join(homeDir, ".openclaw")
+				if err := os.MkdirAll(openclawDir, 0755); err != nil {
+					return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
+				}
+				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
-			openclawDir := filepath.Join(homeDir, ".openclaw")
-			if err := os.MkdirAll(openclawDir, 0755); err != nil {
-				return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
-			}
-			dbPath = filepath.Join(openclawDir, "ohc_state.db")
 		} else {
 			dbPath = strings.TrimPrefix(dsn, "sqlite://")
 		}

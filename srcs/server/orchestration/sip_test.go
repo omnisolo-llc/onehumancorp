@@ -97,7 +97,7 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 
 	// Manually insert bad JSON
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"task\":\"invalid-json\"}')")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"task\":\"invalid-json\"}')")
 	if err != nil {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"task\":\"invalid-json\"}')")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"task\":\"invalid-json\"}')")
 	if err != nil {
 		t.Fatalf("Failed to insert bad json: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestSIPDB_CompleteMission_ExecError(t *testing.T) {
 	defer db.Close()
 
 	// drop table to cause error
-	_, err = db.db.ExecContext(context.Background(), "DROP TABLE agent_missions")
+	_, err = db.db.Exec(context.Background(), "DROP TABLE agent_missions")
 	if err != nil {
 		t.Fatalf("Failed to drop table: %v", err)
 	}
@@ -193,19 +193,19 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 
 	// Insert missions:
 	// 1. Pending and new (should not be deleted)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('1', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('1', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// 2. Completed (should be deleted regardless of age)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('2', 'COMPLETED', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('2', 'COMPLETED', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// 3. Pending but old (should be deleted)
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('3', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now', '-2 days'))")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('3', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now', '-2 days'))")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	}
 
 	var count int
-	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM agent_missions").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions").Scan(&count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 
 	// Verify the remaining mission is the correct one
 	var id string
-	err = db.db.QueryRowContext(ctx, "SELECT id FROM agent_missions").Scan(&id)
+	err = db.db.QueryRow(ctx, "SELECT id FROM agent_missions").Scan(&id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,14 +525,14 @@ func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"task\":\"invalid-json\"}')")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\",\"task\":\"invalid-json\"}')")
 	// Now we will break the table to cause Scan to fail. Scan fails if the number of columns returned doesn't match the pointers, or type conversion fails.
 	// But type conversion to string rarely fails in sqlite. We can close the rows early maybe?
 	// The easiest way is to mock rows or just change schema, but we can't alter table.
 	// We can drop table and recreate it with only one column!
-	_, err = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
-	_, err = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY)")
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\"}')")
+	_, err = db.db.Exec(ctx, "DROP TABLE agent_missions")
+	_, err = db.db.Exec(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY)")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\"}')")
 
 	_, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
 	if err == nil {
@@ -554,17 +554,17 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	// Actually, simply query the existing table but insert something that cannot be scanned?
 	// For example, scanning a NULL into a non-nullable string.
 
-	_, _ = db.db.ExecContext(ctx, "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', '1', 'url', 'stat', 'time')")
+	_, _ = db.db.Exec(ctx, "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', '1', 'url', 'stat', 'time')")
 	_, _ = db.GetCapabilityPlugins(ctx, "")
-	_, _ = db.db.ExecContext(ctx, "DELETE FROM capability_plugins")
+	_, _ = db.db.Exec(ctx, "DELETE FROM capability_plugins")
 
-	_, _ = db.db.ExecContext(ctx, "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (NULL, 'ctx', 'vec', 'plg', 'time')")
+	_, _ = db.db.Exec(ctx, "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (NULL, 'ctx', 'vec', 'plg', 'time')")
 	_, _ = db.GetEpisodicMemoriesByPlugin(ctx, "")
-	_, _ = db.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings")
+	_, _ = db.db.Exec(ctx, "DELETE FROM swarm_memory_embeddings")
 
-	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}')")
+	_, _ = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}')")
 	_, _ = db.GetPendingMissions(ctx, "ROLE")
-	_, _ = db.db.ExecContext(ctx, "DELETE FROM agent_missions")
+	_, _ = db.db.Exec(ctx, "DELETE FROM agent_missions")
 
 	_ = db.CompleteMission(ctx, "nonexistent")
 	_ = db.PruneStaleMissions(ctx, 0)
@@ -602,7 +602,7 @@ func TestSIPDB_BurstMission(t *testing.T) {
 
 	// Verify status updated to BURSTING
 	var status string
-	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-1'").Scan(&status)
+	err = db.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-1'").Scan(&status)
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}
@@ -630,7 +630,7 @@ func TestSIPDB_BurstMission(t *testing.T) {
 	}
 
 	// Verify status updated to BURSTING
-	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-2'").Scan(&status)
+	err = db.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-2'").Scan(&status)
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}
@@ -922,7 +922,7 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Missing "task" object in payload -> unmarshal directly
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-1', 'PENDING', '{\"role\":\"TESTER1\",\"Content\":\"Direct Content\"}')")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-1', 'PENDING', '{\"role\":\"TESTER1\",\"Content\":\"Direct Content\"}')")
 	if err != nil {
 		t.Fatalf("Failed to insert: %v", err)
 	}
@@ -939,7 +939,7 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 	}
 
 	// 2. Completely invalid JSON -> fallback raw
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-3', 'PENDING', '{\"role\":\"TESTER2\",\"task\":\"some string\"}')")
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-3', 'PENDING', '{\"role\":\"TESTER2\",\"task\":\"some string\"}')")
 	if err != nil {
 		t.Fatalf("Failed to insert: %v", err)
 	}

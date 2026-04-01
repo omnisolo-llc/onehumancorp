@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -38,7 +39,20 @@ type CentrifugeNode struct {
 
 // createNode is a package-level hook to allow mocking centrifuge.New in tests.
 var createNode = func(cfg centrifuge.Config) (Node, error) {
-	return centrifuge.New(cfg)
+	node, err := centrifuge.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL != "" {
+		// Redis broker would be configured here.
+		// For now, if REDIS_URL is absent, Centrifuge defaults to local memory broker automatically.
+	} else if os.Getenv("OHC_STANDALONE") == "true" {
+		slog.Info("[centrifuge] REDIS_URL not set and OHC_STANDALONE=true, using local memory broker")
+	}
+
+	return node, nil
 }
 
 // NewCentrifugeNode creates and configures a centrifuge Node ready to serve
