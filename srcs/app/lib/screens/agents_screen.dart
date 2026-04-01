@@ -130,7 +130,6 @@ class _AgentCard extends StatelessWidget {
       label:
           'Agent ${agent.name}, Role: ${agent.role}, Status: ${agent.status}',
       button: true,
-      excludeSemantics: true,
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         elevation: 0,
