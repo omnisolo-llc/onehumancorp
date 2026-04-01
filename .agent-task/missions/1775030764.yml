@@ -1,0 +1,17 @@
+type: mission
+id: architect-hybrid-throttle-1775030764
+role: Principal Software Engineer & Distributed Systems Architect (L7)
+priority: high
+status: pending
+timestamp: 1775030764
+objective: Implement hybrid-aware connection and concurrency throttling.
+context: Telemetry reveals SQLite-backed Standalone modes suffer from connection contention,
+  while Postgres Cloud modes scale effortlessly. Agentic workloads must adapt their
+  concurrency based on the active backend.
+tasks:
+- Read the OHC_MULTITENANT flag or database DSN at runtime to detect the environment
+  (Cloud vs Standalone).
+- Implement a dynamic worker pool or semaphore inside the orchestration layer that
+  throttles parallel agent executions when using SQLite.
+- Ensure max parallelism is uncapped or scaled higher when operating against the Cloud
+  Postgres instances.
