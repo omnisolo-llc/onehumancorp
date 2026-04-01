@@ -21,9 +21,10 @@ if(NOT EXISTS "${FLUTTER_LIBRARY}")
   add_custom_command(
     OUTPUT "${FLUTTER_LIBRARY}"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-      "${FLUTTER_ROOT}/bin/cache/artifacts/engine/linux-x64"
+      "${FLUTTER_ROOT}/bin/cache/artifacts/engine/${FLUTTER_TARGET_PLATFORM}"
       "${EPHEMERAL_DIR}"
     COMMENT "Copying Flutter Linux engine libraries"
+  VERBATIM
   )
 endif()
 
