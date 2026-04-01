@@ -213,7 +213,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               FilledButton(
                 onPressed: () {
                   final snackBar = SnackBar(
-                    content: const Text('Cloud-Bridge invite link copied to clipboard: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign'),
+                    content: const Text(
+                      'Cloud-Bridge invite link copied to clipboard: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                    ),
                     behavior: SnackBarBehavior.floating,
                   );
                   ScaffoldMessenger.of(context).showSnackBar(snackBar);

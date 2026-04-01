@@ -1,0 +1,5 @@
+health: ok
+metrics:
+  observability_widget_added: true
+  auth_flows_updated: true
+  tests_passed: true

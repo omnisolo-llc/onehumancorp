@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
@@ -138,24 +139,44 @@ class SettingsScreen extends ConsumerWidget {
     final result = await showDialog<String>(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Edit Backend URL'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'URL (e.g. http://localhost:8080)',
+          (context) => BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            child: AlertDialog(
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: 0.8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
               ),
+              title: const Text(
+                'Edit Backend URL',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'URL (e.g. http://localhost:8080)',
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, controller.text),
+                  child: const Text('Save'),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, controller.text),
-                child: const Text('Save'),
-              ),
-            ],
           ),
     );
     if (result != null && result.isNotEmpty) {
@@ -207,43 +228,132 @@ class _LocalBackendStatusCardState
         return Semantics(
           label:
               'Local Backend Service Status: ${running ? "Running" : "Stopped"}',
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Row(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(<double>[
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     children: [
-                      Icon(
-                        running ? Icons.check_circle : Icons.error,
-                        color:
-                            running
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.error,
+                      Row(
+                        children: [
+                          Icon(
+                            running ? Icons.check_circle : Icons.error,
+                            color:
+                                running
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(running ? 'Service Running' : 'Service Stopped'),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed:
+                                _isToggling
+                                    ? null
+                                    : () async {
+                                      setState(() => _isToggling = true);
+                                      try {
+                                        if (running) {
+                                          await manager.stopService();
+                                        } else {
+                                          await manager.startService();
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() => _isToggling = false);
+                                        }
+                                      }
+                                    },
+                            child:
+                                _isToggling
+                                    ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : Text(running ? 'Stop' : 'Start'),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(running ? 'Service Running' : 'Service Stopped'),
-                      const Spacer(),
-                      ElevatedButton(
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
                         onPressed:
-                            _isToggling
+                            _isRunningDoctor
                                 ? null
                                 : () async {
-                                  setState(() => _isToggling = true);
+                                  setState(() => _isRunningDoctor = true);
                                   try {
-                                    if (running) {
-                                      await manager.stopService();
-                                    } else {
-                                      await manager.startService();
+                                    final report = await manager.runDoctor();
+                                    if (context.mounted) {
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: const Text(
+                                                'System Doctor',
+                                              ),
+                                              content: SingleChildScrollView(
+                                                child: Text(report),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                      ),
+                                                  child: const Text('Close'),
+                                                ),
+                                              ],
+                                            ),
+                                      );
                                     }
                                   } finally {
-                                    if (mounted) {
-                                      setState(() => _isToggling = false);
-                                    }
+                                    if (mounted)
+                                      setState(() => _isRunningDoctor = false);
                                   }
                                 },
-                        child:
-                            _isToggling
+                        icon:
+                            _isRunningDoctor
                                 ? const SizedBox(
                                   width: 16,
                                   height: 16,
@@ -251,54 +361,12 @@ class _LocalBackendStatusCardState
                                     strokeWidth: 2,
                                   ),
                                 )
-                                : Text(running ? 'Stop' : 'Start'),
+                                : const Icon(Icons.medical_services),
+                        label: const Text('Run Doctor Diagnostics'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed:
-                        _isRunningDoctor
-                            ? null
-                            : () async {
-                              setState(() => _isRunningDoctor = true);
-                              try {
-                                final report = await manager.runDoctor();
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
-                                          content: SingleChildScrollView(
-                                            child: Text(report),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(context),
-                                              child: const Text('Close'),
-                                            ),
-                                          ],
-                                        ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted)
-                                  setState(() => _isRunningDoctor = false);
-                              }
-                            },
-                    icon:
-                        _isRunningDoctor
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.medical_services),
-                    label: const Text('Run Doctor Diagnostics'),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
