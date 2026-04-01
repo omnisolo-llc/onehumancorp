@@ -817,7 +817,8 @@ func (h *Hub) Publish(message Message) error {
 	}
 
 	h.mu.RLock()
-	if _, ok := h.agents[message.FromAgent]; !ok {
+	sender, senderOk := h.agents[message.FromAgent]
+	if !senderOk {
 		h.mu.RUnlock()
 		return errors.New("sender agent is not registered")
 	}
@@ -827,12 +828,7 @@ func (h *Hub) Publish(message Message) error {
 			return errors.New("recipient agent is not registered")
 		}
 	}
-	h.mu.RUnlock()
 
-	h.mu.Lock()
-	var subsToNotify []chan struct{}
-
-	// ⚡ BOLT: [O(1) capacity pre-calculation to completely eliminate dynamic slice reallocations inside sync.RWMutex]
 	var totalSubs int
 	if message.ToAgent != "" {
 		totalSubs += len(h.subs[message.ToAgent])
@@ -842,8 +838,15 @@ func (h *Hub) Publish(message Message) error {
 			for _, participant := range meeting.Participants {
 				totalSubs += len(h.subs[participant])
 			}
+		} else {
+			h.mu.RUnlock()
+			return errors.New("meeting room is not registered")
 		}
 	}
+	h.mu.RUnlock()
+
+	h.mu.Lock()
+	var subsToNotify []chan struct{}
 	if totalSubs > 0 {
 		subsToNotify = make([]chan struct{}, 0, totalSubs)
 	}
@@ -862,7 +865,6 @@ func (h *Hub) Publish(message Message) error {
 		}
 	}
 
-	sender := h.agents[message.FromAgent]
 	if message.MeetingID != "" {
 		meeting, ok := h.meetings[message.MeetingID]
 		if !ok {
@@ -1135,15 +1137,23 @@ func (h *Hub) Inbox(agentID string) []Message {
 		return inbox
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.mu.RLock()
+	inboxLen := len(h.inbox[agentID])
+	h.mu.RUnlock()
 
+	if inboxLen == 0 {
+		return nil
+	}
+
+	h.mu.Lock()
 	inbox := h.inbox[agentID]
 	if len(inbox) == 0 {
+		h.mu.Unlock()
 		return nil
 	}
 	// ⚡ BOLT: [O(1) Inbox draining instead of O(N) slice copy] - Randomized Selection from Top 5
 	h.inbox[agentID] = nil
+	h.mu.Unlock()
 	return inbox
 }
 
@@ -1537,20 +1547,21 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	buf.Reset()
 	defer bufferPool.Put(buf)
 
+	// Escape the prompt manually
+	escapedPrompt, _ := json.Marshal(prompt)
 	buf.WriteString(`{"model":"MiniMax-M2.7","messages":[{"role":"user","content":`)
-	enc := json.NewEncoder(buf)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(prompt)
-	// Encode adds a newline, so we slice it off and add the closing brackets
-	buf.Truncate(buf.Len() - 1)
+	buf.Write(escapedPrompt)
 	buf.WriteString(`}]}`)
+
+	// Retrieve bytes once
+	payloadBytes := buf.Bytes()
 
 	// Retry loop to handle transient empty responses from Minimax.
 	var lastErr error
 	for i := 0; i < 3; i++ {
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
-		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(buf.Bytes()))
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
 			return "", err
 		}
@@ -1585,9 +1596,11 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 			} `json:"choices"`
 		}
 
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		resp.Body.Close()
+
+		if err != nil {
 			c.cb.RecordFailure()
-			resp.Body.Close()
 			lastErr = err
 			time.Sleep(1 * time.Second)
 			continue
@@ -1595,14 +1608,12 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 
 		if len(result.Choices) == 0 {
 			c.cb.RecordFailure()
-			resp.Body.Close()
 			lastErr = errors.New("empty response from minimax")
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		c.cb.RecordSuccess()
-		resp.Body.Close()
 		return result.Choices[0].Message.Content, nil
 	}
 
