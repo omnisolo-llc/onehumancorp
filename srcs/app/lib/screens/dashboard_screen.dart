@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
+  ref,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -77,6 +79,7 @@ class _DashboardContent extends StatelessWidget {
           spacing: 16,
           runSpacing: 16,
           children: [
+            _ObservabilityWidget(dashboard: data),
             _StatCard(
               label: 'Active Agents',
               value: data.agents.where((a) => a.isRunning).length.toString(),
@@ -110,21 +113,18 @@ class _DashboardContent extends StatelessWidget {
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 16,
           runSpacing: 16,
-          children: roleList.map((role) {
-            final count = data.agents.where((a) => a.role == role).length;
-            return _RoleScaleCard(
-              role: role,
-              count: count,
-              ref: ref,
-            );
-          }).toList(),
+          children:
+              roleList.map((role) {
+                final count = data.agents.where((a) => a.role == role).length;
+                return _RoleScaleCard(role: role, count: count, ref: ref);
+              }).toList(),
         ),
       ],
     );
@@ -177,10 +177,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = widget.role
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
     return Semantics(
       label: 'Scale $formattedRole role',
@@ -191,10 +195,26 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(<double>[
-                1.213, -0.213, -0.072, 0, 0,
-                -0.213, 1.213, -0.072, 0, 0,
-                -0.213, -0.213, 1.213, 0, 0,
-                0, 0, 0, 1, 0,
+                1.213,
+                -0.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                1.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                -0.213,
+                1.213,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
               ]),
               inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             ),
@@ -202,10 +222,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
               decoration: BoxDecoration(
                 color: colors.surfaceContainerHighest.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.outlineVariant.withOpacity(0.5)),
+                border: Border.all(
+                  color: colors.outlineVariant.withOpacity(0.5),
+                ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -242,31 +267,33 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           child: IconButton(
                             icon: const Icon(Icons.remove_circle_outline),
                             color: colors.primary,
-                            onPressed: widget.count > 0 && !_isScaling
-                                ? () => _scaleTo(widget.count - 1)
-                                : null,
+                            onPressed:
+                                widget.count > 0 && !_isScaling
+                                    ? () => _scaleTo(widget.count - 1)
+                                    : null,
                             tooltip: 'Fire Agent',
                           ),
                         ),
                         SizedBox(
                           width: 24,
                           child: Center(
-                            child: _isScaling
-                                ? SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: colors.primary,
+                            child:
+                                _isScaling
+                                    ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colors.primary,
+                                      ),
+                                    )
+                                    : Text(
+                                      '${widget.count}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                  )
-                                : Text(
-                                    '${widget.count}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
                           ),
                         ),
                         Semantics(
@@ -275,9 +302,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           child: IconButton(
                             icon: const Icon(Icons.add_circle_outline),
                             color: colors.primary,
-                            onPressed: !_isScaling
-                                ? () => _scaleTo(widget.count + 1)
-                                : null,
+                            onPressed:
+                                !_isScaling
+                                    ? () => _scaleTo(widget.count + 1)
+                                    : null,
                             tooltip: 'Hire Agent',
                           ),
                         ),
@@ -411,6 +439,219 @@ class _StatCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ObservabilityWidget extends StatelessWidget {
+  final DashboardSnapshot dashboard;
+
+  const _ObservabilityWidget({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final int missionCount =
+        dashboard.agents.where((a) => a.isRunning).length; // Simulated
+    final bool systemHealthy = dashboard.statuses.isNotEmpty;
+
+    return Semantics(
+      label: 'Observability Health Metrics Widget',
+      child: SizedBox(
+        width: 380,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(<double>[
+                1.213,
+                -0.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                1.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                -0.213,
+                1.213,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colors.surface.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: colors.outlineVariant.withOpacity(0.4),
+                  width: 1.5,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.insights, color: colors.primary, size: 28),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'System Observability',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                systemHealthy
+                                    ? Colors.green.withOpacity(0.2)
+                                    : colors.error.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color:
+                                  systemHealthy
+                                      ? Colors.green.withOpacity(0.5)
+                                      : colors.error.withOpacity(0.5),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color:
+                                      systemHealthy
+                                          ? Colors.green
+                                          : colors.error,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                systemHealthy ? 'HEALTHY' : 'DEGRADED',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      systemHealthy
+                                          ? Colors.green
+                                          : colors.error,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: _MetricsColumn(
+                            label: 'ACTIVE MISSIONS',
+                            value: '$missionCount',
+                            icon: Icons.track_changes,
+                          ),
+                        ),
+                        Expanded(
+                          child: _MetricsColumn(
+                            label: 'TOTAL EVENTS',
+                            value: '${dashboard.statuses.length}',
+                            icon: Icons.timeline,
+                          ),
+                        ),
+                        const Expanded(
+                          child: _MetricsColumn(
+                            label: 'NODE LATENCY',
+                            value: '14ms', // Placeholder for UX preview
+                            icon: Icons.speed,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricsColumn extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _MetricsColumn({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

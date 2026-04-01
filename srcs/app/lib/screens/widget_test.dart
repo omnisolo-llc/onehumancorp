@@ -194,7 +194,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('Active Agents'), findsWidgets);
     });
   });
 

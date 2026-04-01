@@ -1,0 +1,12 @@
+--- srcs/app/lib/screens/dashboard_screen.dart
++++ srcs/app/lib/screens/dashboard_screen.dart
+@@ -69,6 +69,9 @@
+           spacing: 16,
+           runSpacing: 16,
+           children: [
++            _ObservabilityWidget(
++              dashboard: data,
++            ),
+             _StatCard(
+               label: 'Active Agents',
+               value: data.agents.where((a) => a.isRunning).length.toString(),

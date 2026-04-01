@@ -139,11 +139,27 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Edit Backend URL'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Edit Backend URL',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Outfit',
+              ),
+            ),
             content: TextField(
               controller: controller,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'URL (e.g. http://localhost:8080)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               ),
             ),
             actions: [
@@ -151,8 +167,13 @@ class SettingsScreen extends ConsumerWidget {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              FilledButton(
                 onPressed: () => Navigator.pop(context, controller.text),
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: const Text('Save'),
               ),
             ],
