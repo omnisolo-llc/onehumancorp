@@ -1,0 +1,8 @@
+type: status
+id: pii_redaction_update
+status: ok
+memory_type: observability
+timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+health: ok
+observations: |
+  PII redaction added to LogAgentExecution via regex to prevent data leakage in telemetry.

@@ -327,7 +327,8 @@ func TestLogAgentExecution(t *testing.T) {
 	defer slog.SetDefault(originalLogger)
 
 	ctx := context.Background()
-	LogAgentExecution(ctx, "agent-1", "role-1", "api-1", "event-1", "content-1")
+	contentWithPII := "user user@example.com phone 123-456-7890 ssn 123-45-6789 and regular text"
+	LogAgentExecution(ctx, "agent-1", "role-1", "api-1", "event-1", contentWithPII)
 
 	output := buf.String()
 	if !bytes.Contains(buf.Bytes(), []byte("agent execution trace")) {
@@ -338,6 +339,24 @@ func TestLogAgentExecution(t *testing.T) {
 	}
 	if !bytes.Contains(buf.Bytes(), []byte("role=role-1")) {
 		t.Errorf("Expected output to contain 'role=role-1', got %q", output)
+	}
+	if bytes.Contains(buf.Bytes(), []byte("user@example.com")) {
+		t.Errorf("Expected email to be redacted, got %q", output)
+	}
+	if bytes.Contains(buf.Bytes(), []byte("123-456-7890")) {
+		t.Errorf("Expected phone to be redacted, got %q", output)
+	}
+	if bytes.Contains(buf.Bytes(), []byte("123-45-6789")) {
+		t.Errorf("Expected ssn to be redacted, got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("[REDACTED_EMAIL]")) {
+		t.Errorf("Expected output to contain '[REDACTED_EMAIL]', got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("[REDACTED_PHONE]")) {
+		t.Errorf("Expected output to contain '[REDACTED_PHONE]', got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("[REDACTED_SSN]")) {
+		t.Errorf("Expected output to contain '[REDACTED_SSN]', got %q", output)
 	}
 }
 
