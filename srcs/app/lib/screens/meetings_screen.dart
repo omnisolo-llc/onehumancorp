@@ -64,7 +64,7 @@ class _EmptyRooms extends StatelessWidget {
             size: 64,
             color: Theme.of(
               context,
-            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
           const SizedBox(height: 16),
           Text(
@@ -246,7 +246,7 @@ class _RoomCardState extends State<_RoomCard> {
                           size: 14,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                         ),
                         const SizedBox(width: 4),
                         Text(

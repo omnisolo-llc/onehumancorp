@@ -219,7 +219,7 @@ class _IssueCardState extends State<_IssueCard> {
                     fontFamily: 'monospace',
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
               ],
