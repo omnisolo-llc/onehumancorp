@@ -1,0 +1,5 @@
+context: "Completed Phase 1-4 of the OHC Hybrid UX updates."
+learnings:
+  - "When implementing Glassmorphism (20px blur) using BackdropFilter in Flutter, explicitly compose the blur ImageFilter with a ColorFilter matrix to maintain proper luminance and saturation per OHC design tokens."
+  - "When rendering a showDialog that requires a variable loading state before dismissal (Thin Client connectivity), use a StatefulBuilder to ensure the dialog correctly rebuilds to show the CircularProgressIndicator without popping immediately."
+commit_reference: "🎨 Palette: [Hybrid UX improvement]"

@@ -69,19 +69,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (settings == null) return;
 
     final controller = TextEditingController(text: settings.backendUrl);
-    final result = await showDialog<String>(
+    await showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder:
-          (context) => Dialog(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: ClipRRect(
+          (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              bool dialogLoading = false;
+              return Dialog(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(<double>[
+                      1.168,
+                      -0.153,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      1.061,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      -0.152,
+                      1.198,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      1,
+                      0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
                   child: Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
@@ -147,7 +175,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: dialogLoading ? null : () => Navigator.pop(context),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
@@ -158,8 +186,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               button: true,
                               label: 'Save Settings',
                               child: FilledButton.icon(
-                                onPressed: () => Navigator.pop(context, controller.text),
-                                icon: const Icon(Icons.check, size: 18),
+                                onPressed: dialogLoading ? null : () async {
+                                  setDialogState(() => dialogLoading = true);
+                                  await Future.delayed(const Duration(milliseconds: 500)); // Simulate remote validation latency
+                                  final result = controller.text;
+                                  if (result.isNotEmpty) {
+                                    ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
+                                  }
+                                  if (context.mounted) {
+                                    setDialogState(() => dialogLoading = false);
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                icon: dialogLoading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.check, size: 18),
                                 label: const Text('Save', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -176,13 +221,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-            ),
+                ),
+              );
+            },
           ),
     );
-
-    if (result != null && result.isNotEmpty) {
-      ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
-    }
   }
 
   @override
@@ -203,7 +246,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(<double>[
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
