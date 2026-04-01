@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Core User Journey: B2B Agent Exchange
 
 ## 1. Overview
@@ -21,3 +23,5 @@ This document outlines the user journey for establishing and utilizing a Cross-O
 - Both organizations maintain completely isolated execution environments.
 - Context window boundaries ensure that no proprietary internal data from `globex.com` is leaked into `acme.corp`'s long-term agent memory.
 - The transaction is fully auditable via `events.jsonl` in both environments.
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Identity & Security
 
 **Author(s):** TPM Agent
@@ -28,3 +30,6 @@ Inter-agent collaboration is heavily restricted to single-organization silos. OH
 - **Trust Agreements**: B2B organizations securely establish trust using SPIRE's federated endpoints.
 - **Real-Time Rooms**: Negotiation environments between B2B agents utilize validated mTLS.
 - **Zero Lock-In**: OHC agents can seamlessly verify inter-org SVIDs and securely perform tasks.
+
+
+</div>

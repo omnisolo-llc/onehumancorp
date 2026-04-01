@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: Billing & Cost Management
 
 ## Introduction
@@ -31,3 +33,6 @@ If you are using a self-hosted LLM, you can update the pricing in the "Model Cat
 - **Streaming Tokens**: Calculating cost on streaming LLM responses requires chunk counting. Disconnects mid-stream will log the exact chunk count received before the failure.
 - **Self-Hosted / Zero-Cost Models**: If a user runs a local `ollama` model or sets pricing to 0, the system must handle division-by-zero errors in the ROI/efficiency calculations.
 - **Stale Catalog Cache**: If a provider drops their prices (e.g., OpenAI API price cut), the billing engine relies on a Redis-cached catalog. Un-expired caches may briefly over-report cost.
+
+
+</div>

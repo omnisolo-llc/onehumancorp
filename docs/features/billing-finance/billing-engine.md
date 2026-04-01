@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Cost Estimation & Billing Engine (CEO Financial Dashboard)
 
 **Author(s):** Antigravity
@@ -67,3 +69,6 @@ The Billing API is locked to the `CEOID`. Agents cannot read their own cost summ
 - **Network Partitions:** Fallback to cached state and retry logic for tool calls.
 - **Database Unavailability:** Circuit breakers open, gracefully degrade to read-only mode if possible.
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
+
+
+</div>

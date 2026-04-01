@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Customer User Journey: Dynamic Scaling UI ("Hire/Fire")
 
 ## 1. Overview
@@ -16,3 +18,6 @@ This document outlines the user journey for the Dynamic Scaling UI ("Hire/Fire")
 - The Support Department now has 5 active agents.
 - The bottleneck is resolved as new agents begin processing tickets.
 - The CEO Dashboard accurately reflects the updated headcount and operational metrics.
+
+
+</div>

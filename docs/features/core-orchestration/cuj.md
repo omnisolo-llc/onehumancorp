@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Core Orchestration Journey
 
 **Author(s):** TPM Agent
@@ -33,3 +35,5 @@ The CEO provides a massive goal and watches the Orchestrator spin up departments
 ## 6. Security & Privacy
 - SPIFFE IDs ensure that only agents assigned to a specific task force can read the meeting room transcript.
 - All intra-agent communication is secured via mTLS.
+
+</div>

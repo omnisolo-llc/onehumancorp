@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: [Feature Name]
 
 **Author(s):** [Your Name]
@@ -38,3 +40,6 @@ A high-level summary of the testing strategy for [Feature Name], ensuring it mee
 
 ## 6. Environment & Prerequisites
 - Details on the setup required to run these tests.
+
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: One Human Corp Platform
 
 ## Introduction
@@ -205,3 +207,6 @@ A: Integrations are registered at server startup via the `integrations.Registry`
 - **Browser Disconnects**: If the SSE connection to the backend drops, the UI will automatically attempt exponential backoff reconnection and refetch missed events.
 - **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI virtualizes the transcript list to prevent DOM bloat and memory leaks in the browser.
 - **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the backend enforces a transactional lock; the second manager receives a "State Changed" conflict error.
+
+
+</div>

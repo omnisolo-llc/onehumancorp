@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC UX Friction Report & Remediation
 ## Executive Summary
 During the end-to-end customer journey testing, we identified critical UX friction points that fail the Aesthetic Excellence Mandate and slow down discovery.
@@ -20,3 +22,6 @@ During the end-to-end customer journey testing, we identified critical UX fricti
 ![Wizard Step 3](screenshots/2026-03-30/05_wizard_3.png)
 ![Wizard Done](screenshots/2026-03-30/06_wizard_done.png)
 ![Agent Deployed](screenshots/2026-03-30/07_agent_deployed.png)
+
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Human-in-the-Loop Handoff UI
 
 **Persona:** CEO / Manager
@@ -29,3 +31,6 @@ When an AI agent reaches a decision gate it is unauthorized to cross (e.g., spen
 
 ## 5. Security & Privacy
 - **Approval Gating**: Relies on SPIFFE-gated confidence approvals to prevent unauthorized users from clearing handoffs.
+
+
+</div>

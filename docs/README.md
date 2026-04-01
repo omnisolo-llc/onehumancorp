@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # One Human Corp: Platform Documentation
 
 ## Identity
@@ -63,3 +65,6 @@ The following environment variables and configurations are commonly used:
 - `MCP_BUNDLE_DIR`: Directory for MCP bundles.
 - `MONO_FRONTEND_DIST`: Path to the compiled frontend dist directory.
 - Kubernetes Secrets are used to inject runtime credentials safely without committing secrets to the repo.
+
+
+</div>

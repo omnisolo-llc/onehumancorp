@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Extensible Skill Import Framework
 
 **Persona:** Human CEO | **Context:** Evolving "One Human Corp" from a Software Company into a Digital Marketing Agency by importing a custom Skill Blueprint.
@@ -41,3 +43,5 @@ The CEO wants to expand their business into Digital Marketing. Instead of waitin
 ## 5. Security & Privacy
 - **Injection Prevention**: All string fields in the blueprint are strictly sanitized to prevent prompt injection or malicious code execution within agent contexts.
 - **SPIFFE Validation**: The newly generated agents are strictly scoped to the tools defined in their blueprint, enforced by SPIFFE SVIDs, preventing lateral movement or unauthorized API access.
+
+</div>
