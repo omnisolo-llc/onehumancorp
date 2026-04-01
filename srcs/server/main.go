@@ -287,6 +287,28 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
+
+			// Background sync for Hybrid RAG to cloud
+			ragEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT") // Reuse missions endpoint for RAG delegation
+			if ragEndpoint != "" {
+				go func() {
+					ticker := time.NewTicker(5 * time.Second)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							syncedCount, err := sipdb.SyncHybridRAGState(ctx, ragEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync hybrid RAG state", "error", err)
+							} else if syncedCount > 0 {
+								slog.Info("Successfully synced hybrid RAG state to cloud", "count", syncedCount)
+							}
+						}
+					}
+				}()
+			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
 			if missionsEndpoint != "" {

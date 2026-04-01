@@ -37,5 +37,6 @@ CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
     context          TEXT NOT NULL,
     vector_embedding BYTEA,
     source_plugin    TEXT,
+    sync_status      TEXT DEFAULT 'LOCAL',
     created_at       TIMESTAMPTZ DEFAULT NOW()
 );
