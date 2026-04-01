@@ -97,7 +97,6 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
 
               return Semantics(
                 label: 'Pipeline: ${pipeline.name}, Status: ${pipeline.status}',
-                excludeSemantics: true,
                 child: Card(
                   margin: const EdgeInsets.only(bottom: 24),
                   child: Padding(

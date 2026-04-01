@@ -276,7 +276,6 @@ class _MCPToolTile extends StatelessWidget {
     return Semantics(
       label: 'Invoke MCP Tool: $name. $description',
       button: true,
-      excludeSemantics: true,
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         child: InkWell(

@@ -56,7 +56,6 @@ class _OrgMemberRow extends StatelessWidget {
     return Semantics(
       label:
           'Organization member: ${member.name}, Role: ${member.role.replaceAll('_', ' ')}${member.isHuman ? ', YOU' : ''}',
-      excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Row(

@@ -163,7 +163,6 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
 
               return Semantics(
                 label: 'Handoff from agent to human. Intent: ${handoff.intent}',
-                excludeSemantics: true,
                 child: Card(
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Padding(
