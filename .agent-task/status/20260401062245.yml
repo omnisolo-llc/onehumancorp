@@ -1,0 +1,5 @@
+status: "healthy"
+message: "Mission queue is empty."
+timestamp: "20260401062245"
+role: "Taskmaster"
+environment: "hybrid"
