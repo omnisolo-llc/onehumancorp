@@ -65,6 +65,10 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 
 	dsn := dbPath
 	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+		dir := filepath.Dir(dbPath)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			return nil, err
+		}
 		if !strings.Contains(dsn, "?") {
 			dsn += "?"
 		} else {
