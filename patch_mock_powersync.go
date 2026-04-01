@@ -6,12 +6,17 @@ import (
 )
 
 func main() {
-    b, err := ioutil.ReadFile("srcs/app/lib/services/powersync_service.dart")
+    b, err := ioutil.ReadFile("srcs/app/lib/main.dart")
     if err != nil { panic(err) }
     content := string(b)
 
-    // We mock powerSyncProvider in test
-    // Actually the test environment does not have the `.so` for PowerSync.
-    // I can add sqlite3_flutter_libs to fix `libpowersync_x64.so` issue.
-    // Or better, let's add powersync_flutter_libs to pubspec!
+    // add import
+    importSection := `import 'dart:io';`
+    if !strings.Contains(content, "import 'dart:io';") {
+        content = strings.Replace(content, "import 'package:flutter/material.dart';", "import 'package:flutter/material.dart';\n"+importSection, 1)
+    }
+
+    content = strings.Replace(content, "Future.microtask(() => ref.read(powerSyncProvider).init());", "if (!Platform.environment.containsKey('FLUTTER_TEST')) {\n      Future.microtask(() => ref.read(powerSyncProvider).init());\n    }", 1)
+
+    ioutil.WriteFile("srcs/app/lib/main.dart", []byte(content), 0644)
 }

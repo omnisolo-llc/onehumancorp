@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/router.dart';
 import 'package:ohc_app/services/powersync_service.dart';
@@ -19,7 +20,9 @@ class _OhcAppState extends ConsumerState<OhcApp> {
   void initState() {
     super.initState();
     // Initialize PowerSync
-    Future.microtask(() => ref.read(powerSyncProvider).init());
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      Future.microtask(() => ref.read(powerSyncProvider).init());
+    }
   }
 
   @override
