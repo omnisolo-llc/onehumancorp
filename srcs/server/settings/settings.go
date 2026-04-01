@@ -83,7 +83,7 @@ func (s *Store) Save() error {
 		return nil // In-memory only
 	}
 
-	if err := os.MkdirAll(filepath.Dir(s.path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -92,7 +92,7 @@ func (s *Store) Save() error {
 		return fmt.Errorf("failed to marshal settings: %w", err)
 	}
 
-	if err := os.WriteFile(s.path, data, 0644); err != nil {
+	if err := os.WriteFile(s.path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write settings file: %w", err)
 	}
 
