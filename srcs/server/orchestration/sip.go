@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	_ "modernc.org/sqlite"
 )
 
@@ -699,12 +700,23 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
+	startTime := time.Now()
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		var payloadMap map[string]interface{}
+		sanitizedPayload := m.payload
+		if err := json.Unmarshal([]byte(m.payload), &payloadMap); err == nil {
+			telemetry.RedactInterfacePII(payloadMap)
+			if b, err := json.Marshal(payloadMap); err == nil {
+				sanitizedPayload = string(b)
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(sanitizedPayload))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
@@ -720,6 +732,10 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 			resp.Body.Close()
 		}
 	}
+
+	duration := time.Since(startTime).Seconds()
+	telemetry.IncCounter(ctx, "sipdb_missions_synced_total", map[string]string{"status": "success"}, float64(syncedCount))
+	telemetry.ObserveHistogram(ctx, "sipdb_missions_sync_duration_seconds", map[string]string{}, duration)
 
 	return syncedCount, nil
 }

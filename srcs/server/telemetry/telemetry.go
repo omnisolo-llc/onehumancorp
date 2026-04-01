@@ -28,16 +28,56 @@ var (
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
 
+	sipdbMissionsSyncedTotal          metric.Float64Counter
+	sipdbMissionsSyncDurationSeconds metric.Float64Histogram
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
 
-func redactPII(input string) string {
+func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
 	return s
+}
+
+func redactPII(input string) string {
+	return RedactPII(input)
+}
+
+func RedactInterfacePII(val interface{}) interface{} {
+	switch v := val.(type) {
+	case string:
+		return RedactPII(v)
+	case map[string]interface{}:
+		for k, val := range v {
+			v[k] = RedactInterfacePII(val)
+		}
+		return v
+	case []interface{}:
+		for i, val := range v {
+			v[i] = RedactInterfacePII(val)
+		}
+		return v
+	case []string:
+		res := make([]string, len(v))
+		for i, str := range v {
+			res[i] = RedactPII(str)
+		}
+		return res
+	case []map[string]interface{}:
+		for i, m := range v {
+			for k, val := range m {
+				m[k] = RedactInterfacePII(val)
+			}
+			v[i] = m
+		}
+		return v
+	default:
+		return val
+	}
 }
 
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
@@ -77,6 +117,7 @@ func InitTelemetry() (func(), error) {
 // We take any interface that implements the needed method to allow easy mocking
 type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
+	Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 }
 
@@ -131,6 +172,22 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sipdbMissionsSyncedTotal, err = m.Float64Counter(
+		"sipdb_missions_synced_total",
+		metric.WithDescription("Total number of SIP missions synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sipdbMissionsSyncDurationSeconds, err = m.Float64Histogram(
+		"sipdb_missions_sync_duration_seconds",
+		metric.WithDescription("Duration of SIP missions sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -306,6 +363,36 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 			"type": eventType,
 		})
 		_ = BufferMetricFunc(ctx, "meeting_event", string(payloadBytes))
+	}
+}
+
+// IncCounter provides a generic counter incrementer.
+func IncCounter(ctx context.Context, name string, attrs map[string]string, value float64) {
+	var otelAttrs []attribute.KeyValue
+	for k, v := range attrs {
+		otelAttrs = append(otelAttrs, attribute.String(k, v))
+	}
+
+	switch name {
+	case "sipdb_missions_synced_total":
+		if sipdbMissionsSyncedTotal != nil {
+			sipdbMissionsSyncedTotal.Add(ctx, value, metric.WithAttributes(otelAttrs...))
+		}
+	}
+}
+
+// ObserveHistogram provides a generic histogram observation.
+func ObserveHistogram(ctx context.Context, name string, attrs map[string]string, value float64) {
+	var otelAttrs []attribute.KeyValue
+	for k, v := range attrs {
+		otelAttrs = append(otelAttrs, attribute.String(k, v))
+	}
+
+	switch name {
+	case "sipdb_missions_sync_duration_seconds":
+		if sipdbMissionsSyncDurationSeconds != nil {
+			sipdbMissionsSyncDurationSeconds.Record(ctx, value, metric.WithAttributes(otelAttrs...))
+		}
 	}
 }
 

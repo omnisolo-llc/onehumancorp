@@ -1006,3 +1006,64 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
 	}
 }
+
+func TestSIPDB_SyncMissions(t *testing.T) {
+	db, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to initialize SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert test data
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-sync-1', 'PENDING', '{\"role\":\"TESTER1\",\"Content\":\"Email me at test@example.com\"}')")
+	if err != nil {
+		t.Fatalf("failed to insert test mission 1: %v", err)
+	}
+
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-sync-2', 'COMPLETED', '{\"role\":\"TESTER1\",\"task\":\"some string\"}')")
+	if err != nil {
+		t.Fatalf("failed to insert test mission 2: %v", err)
+	}
+
+	// Create mock server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Conflict-Resolution") != "client-wins" {
+			t.Errorf("expected X-Conflict-Resolution header to be 'client-wins', got '%s'", r.Header.Get("X-Conflict-Resolution"))
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed to read body: %v", err)
+		}
+
+		expectedSanitizedPayload1 := "{\"role\":\"TESTER1\",\"Content\":\"Email me at [REDACTED_EMAIL]\"}"
+		expectedSanitizedPayload2 := "{\"Content\":\"Email me at [REDACTED_EMAIL]\",\"role\":\"TESTER1\"}"
+		if string(body) != expectedSanitizedPayload1 && string(body) != expectedSanitizedPayload2 {
+			t.Errorf("expected payload to be %s, got %s", expectedSanitizedPayload1, string(body))
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer mockServer.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, mockServer.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+
+	if syncedCount != 1 {
+		t.Errorf("expected 1 mission to be synced, got %d", syncedCount)
+	}
+
+	// Verify status updated to SYNCED
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm-sync-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query status: %v", err)
+	}
+	if status != "SYNCED" {
+		t.Errorf("expected status 'SYNCED', got '%s'", status)
+	}
+}

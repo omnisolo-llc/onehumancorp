@@ -42,36 +42,7 @@ func redactPII(input string) string {
 }
 
 func redactInterfacePII(val interface{}) interface{} {
-	switch v := val.(type) {
-	case string:
-		return redactPII(v)
-	case map[string]interface{}:
-		for k, val := range v {
-			v[k] = redactInterfacePII(val)
-		}
-		return v
-	case []interface{}:
-		for i, val := range v {
-			v[i] = redactInterfacePII(val)
-		}
-		return v
-	case []string:
-		res := make([]string, len(v))
-		for i, str := range v {
-			res[i] = redactPII(str)
-		}
-		return res
-	case []map[string]interface{}:
-		for i, m := range v {
-			for k, val := range m {
-				m[k] = redactInterfacePII(val)
-			}
-			v[i] = m
-		}
-		return v
-	default:
-		return val
-	}
+	return telemetry.RedactInterfacePII(val)
 }
 
 // Status indicates the current operational phase of an AI agent within the workforce.
