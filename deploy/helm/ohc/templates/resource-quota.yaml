@@ -1,0 +1,13 @@
+{{- if .Values.backend.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-tenant-quota
+spec:
+  hard:
+    requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu | default "1" }}
+    requests.memory: {{ .Values.backend.resourceQuota.requests.memory | default "1Gi" }}
+    limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "2" }}
+    limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "2Gi" }}
+    pods: "10"
+{{- end }}
