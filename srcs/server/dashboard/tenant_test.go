@@ -75,6 +75,9 @@ func TestTenantRegistry_RoutesByOrg(t *testing.T) {
 }
 
 func TestTenantRegistry_UnknownOrgIsLazyProvisioned(t *testing.T) {
+	// Disable standalone mode for this cloud-specific test.
+	t.Setenv("OHC_STANDALONE", "false")
+
 	reg := NewTenantRegistry(sharedAuthStore, nil)
 	tok := adminToken(t)
 
@@ -91,6 +94,9 @@ func TestTenantRegistry_UnknownOrgIsLazyProvisioned(t *testing.T) {
 }
 
 func TestTenantRegistry_TenantsAreIsolated(t *testing.T) {
+	// Disable standalone mode for this cloud-specific test.
+	t.Setenv("OHC_STANDALONE", "false")
+
 	reg := newTestRegistry()
 	tok := adminToken(t)
 
@@ -138,6 +144,9 @@ func TestTenantRegistry_HandleOrgRegister(t *testing.T) {
 }
 
 func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
+	// Disable standalone mode for this cloud-specific test.
+	t.Setenv("OHC_STANDALONE", "false")
+
 	reg := newTestRegistry()
 	tok := adminToken(t)
 

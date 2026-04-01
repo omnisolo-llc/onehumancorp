@@ -15,6 +15,9 @@ import (
 )
 
 func TestInitTelemetry(t *testing.T) {
+	// Need to ensure Standalone mode isn't bypassing initialization during the test
+	t.Setenv("OHC_STANDALONE", "false")
+
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
 	// Happy path: initialization succeeds
@@ -75,10 +78,14 @@ type mockFloat64Histogram struct {
 	metric.Float64Histogram
 }
 
+func (m *mockFloat64Histogram) Record(ctx context.Context, value float64, options ...metric.RecordOption) {}
+
 // mockInt64Counter implements metric.Int64Counter
 type mockInt64Counter struct {
 	metric.Int64Counter
 }
+
+func (m *mockInt64Counter) Add(ctx context.Context, value int64, options ...metric.AddOption) {}
 
 func (m *mockMeter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	if m.failCounters {
@@ -150,6 +157,8 @@ func (m *mockMeter) Int64Gauge(name string, options ...metric.Int64GaugeOption) 
 func (m *mockMeter) meter() {}
 
 func TestInitTelemetryError(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "false")
+
 	originalReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
 
@@ -376,6 +385,8 @@ func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 }
 
 func TestInitTelemetry_PrometheusError(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "false")
+
 	originalReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
 
