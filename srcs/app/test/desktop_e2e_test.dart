@@ -50,7 +50,9 @@ class FakeUri extends Fake implements Uri {}
 
 class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
   _FakeClientSettingsNotifier(Ref ref) : super(ref) {
-    state = const AsyncData(ClientSettings(backendUrl: 'http://localhost', standaloneMode: false));
+    state = const AsyncData(
+      ClientSettings(backendUrl: 'http://localhost', standaloneMode: false),
+    );
   }
 }
 
@@ -244,7 +246,9 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
+            clientSettingsProvider.overrideWith(
+              (ref) => _FakeClientSettingsNotifier(ref),
+            ),
           ],
         ),
       );
@@ -256,9 +260,9 @@ void main() {
 
       // Because we scroll to the bottom, sometimes the element isn't visible yet
       await tester.dragUntilVisible(
-          signOutFinder,
-          find.byType(ListView),
-          const Offset(0, -500),
+        signOutFinder,
+        find.byType(ListView),
+        const Offset(0, -500),
       );
       await tester.pumpAndSettle();
 
@@ -276,7 +280,9 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
+            clientSettingsProvider.overrideWith(
+              (ref) => _FakeClientSettingsNotifier(ref),
+            ),
           ],
         ),
       );
