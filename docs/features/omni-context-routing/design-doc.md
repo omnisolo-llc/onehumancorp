@@ -15,5 +15,4 @@ Extend `DelegateMission` in `sip.go` to automatically read `AGENTS.md` or `CLAUD
 - Webhook based injection: Too slow and relies on network.
 - Explicit tool calls: Retains the latency issue.
 
-
 </div>

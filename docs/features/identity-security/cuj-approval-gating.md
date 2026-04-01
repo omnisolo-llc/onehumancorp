@@ -48,5 +48,4 @@ An agent wants to perform a high-risk action (e.g., spending >$500 or production
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
 
-
 </div>

@@ -77,5 +77,4 @@ Current frameworks tightly couple agents to hardcoded tool schemas. OHC utilizes
 - **Runtime Binding**: Agents can query the registry and dynamically bind to necessary tools based on task requirements, minimizing error loops caused by missing hardcoded configurations.
 - **Seamless Integrations**: Supports a wide array of tools via standardized Model Context Protocols.
 
-
 </div>

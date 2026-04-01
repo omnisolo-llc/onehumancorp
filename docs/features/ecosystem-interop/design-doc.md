@@ -39,5 +39,4 @@ The core OHC control plane exposes a `UniversalAgent` interface. Every supported
 - **Tool Access Denial**: Framework agents attempting to access restricted tools via MCP will be blocked by the Switchboard based on their specific SPIFFE ID's RBAC policy.
 - **Payload Bloat**: To prevent AutoGen conversational histories from exceeding memory limits, the adapter enforces active summarization before writing to the LangGraph state.
 
-
 </div>

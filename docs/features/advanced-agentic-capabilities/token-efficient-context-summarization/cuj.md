@@ -36,5 +36,4 @@ When an agent's context window approaches its maximum token limit, the system gr
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

@@ -42,5 +42,4 @@ The CFO needs to monitor operational expenses related to AI agent usage.
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
 
-
 </div>

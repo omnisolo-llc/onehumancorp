@@ -55,5 +55,4 @@ A high-level summary of the testing strategy for the Persistence & Disaster Reco
 - **Corrupted Snapshots**: A test intentionally modifies a byte in the CSI snapshot file to verify the Hub calculates checksums before restoration. If corrupted, the system fails closed and aborts the restore to prevent partial org states.
 - **Storage Limit Pruning**: Tests simulate a full storage quota to verify that automated snapshot pruning correctly deletes older snapshots, prioritizing those without a labeled "keep" tag.
 
-
 </div>

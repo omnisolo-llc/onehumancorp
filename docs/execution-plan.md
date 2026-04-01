@@ -104,5 +104,4 @@ Any cross-team dependencies will trigger an immediate, synchronous "War Room" me
   * **Dependencies:** Task 3.2
   * **Status:** Ready
 
-
 </div>

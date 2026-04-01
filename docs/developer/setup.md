@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC Hybrid Developer Setup
 
 This guide walks you through setting up a development environment capable of working across OHC's various hybrid execution modes.
@@ -52,3 +54,5 @@ Under the hood, `ohc-mode.sh` manages the following environment variables:
 As outlined in the OHC Architecture guidelines, all interfaces (including the CLI setup logs) must maintain absolute clarity.
 
 > Note: For any E2E frontend development, if you require dynamic network conditions (such as simulating a degraded connection in Headless Mode), refer to the Playwright intercept patterns outlined in the central developer guide.
+
+</div>

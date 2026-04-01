@@ -69,5 +69,4 @@ Orchestrators struggle to seamlessly hand off critical tasks to human operators 
 - **Visual Ground Truth**: The system captures and bundles the agent's recent context, intent, and visual state (e.g., screenshots, UI diffs) into a structured Handoff package.
 - **Approval Gating**: Human managers review the package in the CEO Dashboard and provide cryptographically signed approval tokens to resume or abort the execution thread.
 
-
 </div>
