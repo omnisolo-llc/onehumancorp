@@ -6,8 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // Handles hiring a new agent.
@@ -105,6 +108,44 @@ func (s *Server) handleFireAgent(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 
 	writeJSON(w, snapshot)
+}
+
+// Handles syncing offline missions to the cloud agent_missions table.
+func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.hub.SIPDB() == nil {
+		http.Error(w, "SIPDB is not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	var wrapper struct {
+		Role string                `json:"role"`
+		Task orchestration.Message `json:"task"`
+	}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	if err := dec.Decode(&wrapper); err != nil {
+		http.Error(w, "invalid mission payload structure", http.StatusBadRequest)
+		return
+	}
+
+	missionID := uuid.New().String()
+	ctx := r.Context()
+
+	err := s.hub.SIPDB().DelegateMission(ctx, missionID, wrapper.Role, wrapper.Task)
+	if err == nil {
+		telemetry.RecordAgentApiCall(ctx, "sync", wrapper.Role, "DelegateMission")
+	}
+
+	if err != nil {
+		http.Error(w, "failed to sync mission", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 // Handles delegating a task to an agent.

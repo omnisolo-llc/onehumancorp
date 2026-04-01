@@ -156,6 +156,7 @@ start_daemon() {
     GOMEMLIMIT="${GOMEMLIMIT:-256MiB}" \
     GOGC="${GOGC:-50}" \
     OHC_STANDALONE="true" \
+    OHC_CLOUD_MISSIONS_ENDPOINT="${OHC_CLOUD_MISSIONS_ENDPOINT:-}" \
     nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
@@ -203,6 +204,7 @@ CONFIG_FILE="${STATE_DIR}/openclaw.json"
 PID_FILE="${STATE_DIR}/ohc.pid"
 LOG_FILE="${STATE_DIR}/ohc.log"
 LISTEN_ADDR="${OHC_LISTEN_ADDR:-$(config_string listen_addr)}"
+OHC_CLOUD_MISSIONS_ENDPOINT="${OHC_CLOUD_MISSIONS_ENDPOINT:-$(config_string cloud_missions_endpoint)}"
 PORT_VALUE="$(resolve_port)"
 SERVER_BIN="$(find_server_bin "${SCRIPT_DIR}" || true)"
 

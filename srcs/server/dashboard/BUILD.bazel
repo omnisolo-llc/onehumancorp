@@ -29,12 +29,14 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
+        "@com_github_google_uuid//:uuid",
     ],
 )
 
 go_test(
     name = "dashboard_test",
     srcs = [
+        "handlers_agent_test.go",
         "handlers_b2b_extra_test.go",
         "handlers_mcp_test.go",
         "handlers_ops_extra_test.go",
