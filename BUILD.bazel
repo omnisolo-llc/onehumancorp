@@ -51,10 +51,12 @@ sh_binary(
     name = "deploy_dev",
     srcs = ["//deploy:deploy_dev.sh"],
     data = [
-        "//deploy:backend_load",
+        "//deploy:server_load",
         "//deploy:docker-compose.yml",
-        "//deploy:frontend_load",
         "//deploy:setup_k8s.sh",
+    ],
+    deps = [
+        "@bazel_tools//tools/bash/runfiles",
     ],
     tags = ["manual"],
 )

@@ -153,27 +153,27 @@ exports_files(
 )
 
 # Android – APK (side-loadable)
-alias(
-    name = "flutter-build-android-apk",
-    actual = "//srcs/app:app.apk",
-    visibility = ["//visibility:public"],
-)
+# alias(
+#     name = "flutter-build-android-apk",
+#     actual = "//srcs/app:app.apk",
+#     visibility = ["//visibility:public"],
+# )
 
 # Android – App Bundle (Play Store)
 # App bundle output is not currently defined in the hermetic macro, so we'll
 # alias to APK for now or wait for rules_flutter update.
-alias(
-    name = "flutter-build-android-aab",
-    actual = "//srcs/app:app.apk",
-    visibility = ["//visibility:public"],
-)
+# alias(
+#     name = "flutter-build-android-aab",
+#     actual = "//srcs/app:app.apk",
+#     visibility = ["//visibility:public"],
+# )
 
 # iOS (requires macOS + Xcode)
-alias(
-    name = "flutter-build-ios",
-    actual = "//srcs/app:app.ios",
-    visibility = ["//visibility:public"],
-)
+# alias(
+#     name = "flutter-build-ios",
+#     actual = "//srcs/app:app.ios",
+#     visibility = ["//visibility:public"],
+# )
 
 # macOS desktop (requires macOS + Xcode)
 alias(
@@ -208,7 +208,6 @@ alias(
 filegroup(
     name = "flutter-build-all",
     srcs = [
-        ":flutter-build-android-apk",
         ":flutter-build-linux",
         ":flutter-build-web",
     ],

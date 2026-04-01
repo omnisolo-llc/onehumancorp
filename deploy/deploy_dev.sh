@@ -38,36 +38,25 @@ echo "--- Loading Bazel-built images ---"
 # We'll use the environment variable if available, or just check the current dir.
 cd "$PROJECT_ROOT"
 
-# Load backend
-if [[ -f "bazel-bin/deploy/backend_tarball.tar" ]]; then
-  docker load -i bazel-bin/deploy/backend_tarball.tar
-elif [[ -f "deploy/backend_tarball.tar" ]]; then
-  docker load -i deploy/backend_tarball.tar
-else
-  # Try to find it in the current directory (runfiles setup)
-  # When running via 'bazel run', the tarball is in the runfiles tree.
-  BACKEND_TAR=$(find . -name backend_tarball.tar | head -n 1)
-  if [[ -n "$BACKEND_TAR" ]]; then
-    docker load -i "$BACKEND_TAR"
-  else
-    echo "Error: backend_tarball.tar not found. Make sure it's built."
-    exit 1
-  fi
+# Load server image
+echo "--- Loading Bazel-built images ---"
+if [[ -n "$BUILD_WORKSPACE_DIRECTORY" ]]; then
+  cd "$BUILD_WORKSPACE_DIRECTORY"
 fi
 
-# Load frontend
-if [[ -f "bazel-bin/deploy/frontend_tarball.tar" ]]; then
-  docker load -i bazel-bin/deploy/frontend_tarball.tar
-elif [[ -f "deploy/frontend_tarball.tar" ]]; then
-  docker load -i deploy/frontend_tarball.tar
-else
-  FRONTEND_TAR=$(find . -name frontend_tarball.tar | head -n 1)
-  if [[ -n "$FRONTEND_TAR" ]]; then
-    docker load -i "$FRONTEND_TAR"
+if [[ -n "$RUNFILES_DIR" ]]; then
+  SERVER_LOAD=$(find -L "$RUNFILES_DIR" -name "server_load.sh" | head -n 1)
+  if [[ -n "$SERVER_LOAD" ]]; then
+     bash "$SERVER_LOAD"
   else
-    echo "Error: frontend_tarball.tar not found. Make sure it's built."
-    exit 1
+     echo "Could not find server_load.sh in runfiles."
+     exit 1
   fi
+elif [[ -f "bazel-bin/deploy/server_load/tarball.tar" ]]; then
+  docker load -i bazel-bin/deploy/server_load/tarball.tar
+else
+  echo "Error: Please run via bazel run //:deploy_dev"
+  exit 1
 fi
 
 echo "--- Starting services from $PROJECT_ROOT ---"
