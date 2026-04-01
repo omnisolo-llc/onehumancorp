@@ -259,9 +259,17 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
-		go func(t Message, r string) {
-			_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
-		}(task, toAgent.Role)
+		isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+		if !isMultiTenant {
+			// In standalone mode, synchronously delegate to prevent connection contention
+			// caused by thousands of unbounded goroutines hitting the SIPDB.
+			_ = h.sipDB.DelegateMission(context.Background(), task.ID, toAgent.Role, task)
+		} else {
+			// In cloud mode, Postgres can handle concurrent connections easily.
+			go func(t Message, r string) {
+				_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
+			}(task, toAgent.Role)
+		}
 	}
 	return err
 }
