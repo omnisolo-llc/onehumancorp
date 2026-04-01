@@ -30,7 +30,6 @@ import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/logs_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
-import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/skills_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';

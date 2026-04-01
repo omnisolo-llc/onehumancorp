@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
-import 'package:ohc_app/services/local_manager_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -11,8 +10,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).valueOrNull;
     final clientSettingsAsync = ref.watch(clientSettingsProvider);
-    // Trigger lifecycle management
-    ref.watch(standaloneManagerProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -46,25 +43,6 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 _SectionHeader(title: 'Communication'),
-                Card(
-                  child: ListTile(
-                    leading: Icon(
-                      settings.standaloneMode
-                          ? Icons.laptop_windows
-                          : Icons.cloud_queue,
-                    ),
-                    title: Text(
-                      settings.standaloneMode
-                          ? 'Desktop Standalone Mode'
-                          : 'Remote Client Mode',
-                    ),
-                    subtitle: Text(
-                      settings.standaloneMode
-                          ? 'This device manages a local backend and lightweight local services.'
-                          : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
-                    ),
-                  ),
-                ),
                 ListTile(
                   leading: const Icon(Icons.link),
                   title: const Text('Backend URL'),
@@ -77,25 +55,6 @@ class SettingsScreen extends ConsumerWidget {
                             _editBackendUrl(context, ref, settings.backendUrl),
                   ),
                 ),
-
-                SwitchListTile(
-                  secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
-                  subtitle: const Text(
-                    'Run a local desktop backend. Disable this to use the app as a remote client.',
-                  ),
-                  value: settings.standaloneMode,
-                  onChanged:
-                      (value) => ref
-                          .read(clientSettingsProvider.notifier)
-                          .updateStandaloneMode(value),
-                ),
-
-                if (settings.standaloneMode) ...[
-                  const Divider(),
-                  _SectionHeader(title: 'Local Backend'),
-                  _LocalBackendStatusCard(),
-                ],
 
                 const Divider(),
                 _SectionHeader(title: 'Account'),
@@ -179,131 +138,6 @@ class _SectionHeader extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-    );
-  }
-}
-
-class _LocalBackendStatusCard extends ConsumerStatefulWidget {
-  const _LocalBackendStatusCard();
-
-  @override
-  ConsumerState<_LocalBackendStatusCard> createState() =>
-      _LocalBackendStatusCardState();
-}
-
-class _LocalBackendStatusCardState
-    extends ConsumerState<_LocalBackendStatusCard> {
-  bool _isToggling = false;
-  bool _isRunningDoctor = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final manager = ref.watch(localManagerServiceProvider);
-
-    return FutureBuilder<bool>(
-      future: manager.isServiceRunning(),
-      builder: (context, snapshot) {
-        final running = snapshot.data ?? false;
-        return Semantics(
-          label:
-              'Local Backend Service Status: ${running ? "Running" : "Stopped"}',
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        running ? Icons.check_circle : Icons.error,
-                        color:
-                            running
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.error,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(running ? 'Service Running' : 'Service Stopped'),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed:
-                            _isToggling
-                                ? null
-                                : () async {
-                                  setState(() => _isToggling = true);
-                                  try {
-                                    if (running) {
-                                      await manager.stopService();
-                                    } else {
-                                      await manager.startService();
-                                    }
-                                  } finally {
-                                    if (mounted) {
-                                      setState(() => _isToggling = false);
-                                    }
-                                  }
-                                },
-                        child:
-                            _isToggling
-                                ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : Text(running ? 'Stop' : 'Start'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed:
-                        _isRunningDoctor
-                            ? null
-                            : () async {
-                              setState(() => _isRunningDoctor = true);
-                              try {
-                                final report = await manager.runDoctor();
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
-                                          content: SingleChildScrollView(
-                                            child: Text(report),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(context),
-                                              child: const Text('Close'),
-                                            ),
-                                          ],
-                                        ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted)
-                                  setState(() => _isRunningDoctor = false);
-                              }
-                            },
-                    icon:
-                        _isRunningDoctor
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.medical_services),
-                    label: const Text('Run Doctor Diagnostics'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

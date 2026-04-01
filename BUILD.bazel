@@ -163,18 +163,11 @@ sh_binary(
     srcs = [":gen_desktop_sh"],
     data = [
         "//srcs/server:ohc",
-        "//srcs/server:standalone_ohc_exec",
         "//srcs/app:srcs",
         "//:pubspec.yaml",
         "@flutter_sdk//:flutter_sdk",
     ],
     tags = ["manual"],
-)
-
-sh_test(
-    name = "standalone_e2e_test",
-    srcs = ["//srcs/app:test/standalone_e2e_test.sh"],
-    data = [":desktop"],
 )
 
 sh_test(
@@ -198,7 +191,6 @@ sh_test(
 test_suite(
     name = "desktop_packaging_tests",
     tests = [
-        ":standalone_e2e_test",
         ":app_deb_structure_test",
     ],
 )

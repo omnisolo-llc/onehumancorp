@@ -12,9 +12,7 @@ APP_PACKAGE_VERSION = "0.1.2"
 exports_files([
     "pubspec.yaml",
     "pub_deps.json",
-    "standalone_linux_launcher.sh",
     "test/linux_package_structure_test.sh",
-    "test/standalone_e2e_test.sh",
 ])
 
 # ── App assets (logo, images, etc.) ──────────────────────────────────────────
@@ -48,7 +46,6 @@ filegroup(
             "pubspec.yaml",
             "pubspec.lock",
             "pub_deps.json",
-            "standalone_linux_launcher.sh",
         ],
         allow_empty = True,
     ) + [
@@ -272,27 +269,11 @@ pkg_files(
     name = "linux_runtime_binaries",
     srcs = [
         "//srcs/server:ohc",
-        "//srcs/server:standalone_ohc_exec",
-        "standalone_linux_launcher.sh",
     ],
     attributes = pkg_attributes(mode = "0755"),
     renames = {
         "//srcs/server:ohc": "opt/ohc-desktop/libexec/ohc-server",
-        "//srcs/server:standalone_ohc_exec": "opt/ohc-desktop/libexec/ohc",
-        "//srcs/app:standalone_linux_launcher.sh": "opt/ohc-desktop/libexec/ohc-desktop",
     },
-)
-
-pkg_mklink(
-    name = "linux_runtime_ohc_link",
-    link_name = "usr/bin/ohc",
-    target = "/opt/ohc-desktop/libexec/ohc",
-)
-
-pkg_mklink(
-    name = "linux_runtime_launcher_link",
-    link_name = "usr/bin/ohc-desktop",
-    target = "/opt/ohc-desktop/libexec/ohc-desktop",
 )
 
 pkg_filegroup(
@@ -301,8 +282,6 @@ pkg_filegroup(
         ":app_workspace_files",
         ":app_workspace_pubspec",
         ":linux_runtime_binaries",
-        ":linux_runtime_ohc_link",
-        ":linux_runtime_launcher_link",
     ],
 )
 

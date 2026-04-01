@@ -3,13 +3,11 @@ class Settings {
   final String? minimaxApiKey;
   final String? theme;
   final String? backendUrl;
-  final bool standaloneMode;
 
   const Settings({
     this.minimaxApiKey,
     this.theme,
     this.backendUrl,
-    this.standaloneMode = false,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) {
@@ -19,7 +17,6 @@ class Settings {
           json['minimaxApiKey'] as String?,
       theme: json['theme'] as String?,
       backendUrl: json['backend_url'] as String?,
-      standaloneMode: json['standalone_mode'] as bool? ?? false,
     );
   }
 
@@ -27,6 +24,5 @@ class Settings {
     'minimax_api_key': minimaxApiKey,
     'theme': theme,
     'backend_url': backendUrl,
-    'standalone_mode': standaloneMode,
   };
 }
