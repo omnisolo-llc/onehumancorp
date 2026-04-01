@@ -12,12 +12,13 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -37,6 +38,56 @@ func getEnvOrDefault(key, fallback string) string {
 		return ":" + val
 	}
 	return fallback
+}
+
+func getValueOrDefault(key, fallback string) string {
+	if val, ok := os.LookupEnv(key); ok && val != "" {
+		return val
+	}
+	return fallback
+}
+
+func envBoolDefault(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+
+	switch value {
+	case "1", "true", "TRUE", "yes", "YES", "on", "ON":
+		return true
+	case "0", "false", "FALSE", "no", "NO", "off", "OFF":
+		return false
+	default:
+		return fallback
+	}
+}
+
+func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
+	if pool != nil {
+		return orchestration.NewHubWithRepository(
+				orchestration.NewPgHubRepository(pool.Pool),
+				scheduler.NewPgTaskRepository(pool.Pool),
+			), billing.NewTrackerWithRepository(
+				billing.DefaultCatalog,
+				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
+			)
+	}
+
+	return orchestration.NewHub(), billing.NewTracker(billing.DefaultCatalog)
+}
+
+func bootstrapTenantOrganization(now time.Time) domain.Organization {
+	org := domain.NewSoftwareCompany(
+		getValueOrDefault("OHC_BOOTSTRAP_ORG_ID", "bootstrap"),
+		getValueOrDefault("OHC_BOOTSTRAP_ORG_NAME", "Bootstrap Organization"),
+		getValueOrDefault("OHC_BOOTSTRAP_CEO_NAME", "Platform Admin"),
+		now.UTC(),
+	)
+	if configuredDomain := os.Getenv("OHC_BOOTSTRAP_ORG_DOMAIN"); configuredDomain != "" {
+		org.Domain = configuredDomain
+	}
+	return org
 }
 
 var (
@@ -70,25 +121,25 @@ func init() {
 // Returns (domain.Organization, *orchestration.Hub, *billing.Tracker).
 // Produces no errors.
 // Has no side effects.
-func newDemoSystem(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker) {
+func newDemoSystem(now time.Time, hub *orchestration.Hub, tracker *billing.Tracker) domain.Organization {
 	org := domain.NewSoftwareCompany("demo", "Demo Software Company", "Human CEO", now.UTC())
-	hub := orchestration.NewHub()
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
-	tracker := billing.NewTracker(billing.DefaultCatalog)
-	_, _ = tracker.Track(billing.Usage{
-		AgentID:          "swe-1",
-		AgentRole:        "SOFTWARE_ENGINEER",
-		OrganizationID:   org.ID,
-		Model:            "gpt-4o-mini",
-		PromptTokens:     1500,
-		CompletionTokens: 700,
-		OccurredAt:       now.UTC(),
-	})
+	if tracker.Summary(org.ID).TotalTokens == 0 {
+		_, _ = tracker.Track(billing.Usage{
+			AgentID:          "swe-1",
+			AgentRole:        "SOFTWARE_ENGINEER",
+			OrganizationID:   org.ID,
+			Model:            "gpt-4o-mini",
+			PromptTokens:     1500,
+			CompletionTokens: 700,
+			OccurredAt:       now.UTC(),
+		})
+	}
 
-	return org, hub, tracker
+	return org
 }
 
 // Creates a new demo handler.
@@ -96,21 +147,13 @@ func newDemoSystem(now time.Time) (domain.Organization, *orchestration.Hub, *bil
 // Returns (http.Handler, *orchestration.Hub).
 // Produces no errors.
 // Has no side effects.
-func newDemoHandler(now time.Time) (http.Handler, *orchestration.Hub) {
-	org, hub, tracker := newDemoSystem(now)
-	authStore := auth.NewStore()
-
-	// Start Chatwoot auto-setup in the background when enabled.
-	if chatwoot.IsEnabled() {
-		go func() {
-			c := chatwoot.NewClientFromEnv()
-			if err := chatwootSetup(c); err != nil {
-				slog.Error("chatwoot setup", "error", err)
-			}
-		}()
+func newDemoHandler(now time.Time, hub *orchestration.Hub, tracker *billing.Tracker, authStore *auth.Store) http.Handler {
+	org := newDemoSystem(now, hub, tracker)
+	if authStore == nil {
+		authStore = auth.NewStore()
 	}
 
-	return dashboard.NewServer(org, hub, tracker, authStore), hub
+	return dashboard.NewServer(org, hub, tracker, authStore)
 }
 
 // Runs the API server.
@@ -121,6 +164,25 @@ func newDemoHandler(now time.Time) (http.Handler, *orchestration.Hub) {
 func run(now time.Time, listen listenFunc) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
+
+	pool, err := db.New(ctx)
+	if err != nil {
+		return err
+	}
+	if pool != nil {
+		defer pool.Close()
+		if err := pool.RunMigrations(ctx); err != nil {
+			return err
+		}
+		slog.Info("using Postgres-backed repositories")
+	} else {
+		slog.Info("DATABASE_URL not set, using in-memory repositories")
+	}
+	if multiTenant && pool == nil {
+		slog.Warn("multi-tenant mode enabled without Postgres; tenant state will remain process-local")
+	}
 
 	// 1. Initialize Settings
 	configPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "openclaw.json")
@@ -130,13 +192,36 @@ func run(now time.Time, listen listenFunc) error {
 		store = settings.NewStore()
 	}
 
-	// 2. Initialize Hub with Settings
-	handler, hub := newDemoHandler(now)
-	hub.SetSettingsStore(store)
+	// 2. Initialize core stores
+	var (
+		hub       *orchestration.Hub
+		tracker   *billing.Tracker
+		authStore *auth.Store
+		sipdb     *orchestration.SIPDB
+	)
 
-	// Set up the SIPDB instance to connect to SQLite
+	hub, tracker = newHubAndTracker(pool)
+	if pool != nil {
+		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
+	} else {
+		authStore = auth.NewStore()
+	}
+	hub.SetSettingsStore(store)
+	baseSettings := store.Get()
+
+	if chatwoot.IsEnabled() {
+		go func() {
+			c := chatwoot.NewClientFromEnv()
+			if err := chatwootSetup(c); err != nil {
+				slog.Error("chatwoot setup", "error", err)
+			}
+		}()
+	}
+
+	// Set up the SIPDB instance to connect to SQLite.
 	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
-	if sipdb, err := orchestration.NewSIPDB(dbPath); err == nil {
+	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
+		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
@@ -160,7 +245,30 @@ func run(now time.Time, listen listenFunc) error {
 		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
 	}
 
-	// 3. Start Scheduler Background Task
+	var handler http.Handler
+	if multiTenant {
+		factory := func(org domain.Organization) http.Handler {
+			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantSettings := settings.NewStore()
+			_ = tenantSettings.Update(baseSettings)
+			tenantHub.SetSettingsStore(tenantSettings)
+			if sipdb != nil {
+				tenantHub.SetSIPDB(sipdb)
+			}
+			return dashboard.NewServer(org, tenantHub, tenantTracker, authStore)
+		}
+
+		registry, multiTenantHandler := dashboard.NewMultiTenantServerWithRegistry(authStore, factory)
+		bootstrapOrg := bootstrapTenantOrganization(now)
+		registry.Provision(bootstrapOrg)
+		handler = multiTenantHandler
+		slog.Info("using multi-tenant dashboard server", "bootstrap_org", bootstrapOrg.ID, "headless", headless)
+	} else {
+		handler = newDemoHandler(now, hub, tracker, authStore)
+		slog.Info("using single-tenant dashboard server", "headless", headless)
+	}
+
+	// 4. Start Scheduler Background Task
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {
 		slog.Info("executing scheduled task", "task_id", task.ID, "name", task.Name)
 		// Mark as running
@@ -178,7 +286,7 @@ func run(now time.Time, listen listenFunc) error {
 			Content:    fmt.Sprintf("Scheduled Task triggered: %s. Payload: %s", task.Name, string(task.Payload)),
 			OccurredAt: time.Now().UTC(),
 		}
-		
+
 		// In a real scenario, we'd need to register 'system-scheduler' or similar.
 		// For this migration, we'll just log and mark done for now.
 		err := hub.Publish(msg)

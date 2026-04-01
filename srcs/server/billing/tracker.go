@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sort"
 	"sync"
 	"time"
@@ -122,6 +123,7 @@ type trackerShard struct {
 // Has no side effects.
 type Tracker struct {
 	catalog map[string]Price
+	repo    UsageRepository
 	shards  [numShards]*trackerShard
 }
 
@@ -143,12 +145,21 @@ func getShardIndex(orgID string) uint32 {
 // Produces no errors.
 // Has no side effects.
 func NewTracker(catalog map[string]Price) *Tracker {
+	return newTracker(catalog, nil)
+}
+
+// NewTrackerWithRepository creates a tracker backed by the provided repository.
+func NewTrackerWithRepository(catalog map[string]Price, repo UsageRepository) *Tracker {
+	return newTracker(catalog, repo)
+}
+
+func newTracker(catalog map[string]Price, repo UsageRepository) *Tracker {
 	copied := make(map[string]Price, len(catalog))
 	for model, price := range catalog {
 		copied[model] = price
 	}
 
-	t := &Tracker{catalog: copied}
+	t := &Tracker{catalog: copied, repo: repo}
 	for i := 0; i < numShards; i++ {
 		t.shards[i] = &trackerShard{}
 	}
@@ -166,6 +177,17 @@ func NewTracker(catalog map[string]Price) *Tracker {
 //
 // Has side effects: Modifies the internal append-only slice of usages.
 func (t *Tracker) Track(usage Usage) (Usage, error) {
+	if t.repo != nil {
+		tracked, err := t.repo.Track(context.Background(), usage)
+		if err != nil {
+			return Usage{}, err
+		}
+
+		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "prompt", tracked.PromptTokens)
+		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "completion", tracked.CompletionTokens)
+		return tracked, nil
+	}
+
 	price, ok := t.catalog[usage.Model]
 	if !ok {
 		return Usage{}, errors.New("unknown model pricing")
@@ -195,6 +217,15 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 // Produces no errors.
 // Has no side effects.
 func (t *Tracker) Summary(organizationID string) Summary {
+	if t.repo != nil {
+		summary, err := t.repo.Summary(context.Background(), organizationID)
+		if err != nil {
+			slog.Error("failed to load billing summary from repository", "organization_id", organizationID, "error", err)
+			return Summary{OrganizationID: organizationID}
+		}
+		return summary
+	}
+
 	shard := t.shards[getShardIndex(organizationID)]
 	shard.mu.RLock()
 	defer shard.mu.RUnlock()

@@ -2,10 +2,13 @@ package dashboard
 
 import (
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,6 +51,8 @@ type Server struct {
 	agentProviderRegistry *agents.Registry
 	dynamicMCPTools       []MCPTool
 	rateLimitStates       map[string]*RateLimitState
+	staticDir             string
+	serveUI               bool
 }
 
 // RateLimitState functionality.
@@ -369,6 +374,29 @@ var statusOrder = []orchestration.Status{
 	orchestration.StatusInMeeting,
 }
 
+func envBoolDefault(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
+}
+
+func shouldServeUI() bool {
+	if envBoolDefault("OHC_HEADLESS", false) {
+		return false
+	}
+	return envBoolDefault("OHC_SERVE_UI", true)
+}
+
 // NewServer initializes a new Dashboard HTTP handler that routes all API and frontend requests.
 //
 //   - org: domain.Organization; The base organizational structure.
@@ -412,6 +440,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		agentProviderRegistry: agents.DefaultRegistry(),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
 		rateLimitStates:       make(map[string]*RateLimitState),
+		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),
+		serveUI:               shouldServeUI(),
+	}
+	if server.staticDir == "" {
+		server.staticDir = "srcs/app/build/web"
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
@@ -441,7 +474,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		_ = server.agentProviderRegistry.Authenticate(agents.ProviderTypeOpenCode, agents.Credentials{APIKey: key})
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", server.handleIndex)
+	if server.serveUI {
+		mux.HandleFunc("/", server.handleApp)
+	}
 	mux.HandleFunc("/api/dashboard", server.handleDashboard)
 	mux.HandleFunc("/api/org", server.handleOrg)
 	mux.HandleFunc("/api/meetings", server.handleMeetings)
@@ -558,7 +593,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {
-	if s == nil || s.hub == nil || len(s.hub.Agents()) != 0 {
+	if s == nil || s.hub == nil {
+		return
+	}
+	if len(s.orgAgentsLocked()) != 0 {
 		return
 	}
 
@@ -623,10 +661,29 @@ const indexHTML = `<!doctype html>
 </body>
 </html>`
 
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
+	if !s.serveUI {
+		http.Error(w, "frontend disabled in headless mode", http.StatusNotFound)
+		return
+	}
+
+	if r.URL.Path != "/" {
+		assetPath := filepath.Join(s.staticDir, strings.TrimPrefix(filepath.Clean(r.URL.Path), "/"))
+		if info, err := os.Stat(assetPath); err == nil && !info.IsDir() {
+			http.ServeFile(w, r, assetPath)
+			return
+		}
+	}
+
+	indexPath := filepath.Join(s.staticDir, "index.html")
+	if info, err := os.Stat(indexPath); err == nil && !info.IsDir() {
+		http.ServeFile(w, r, indexPath)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(indexHTML))
+	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
 }
 
 func (s *Server) handleCosts(w http.ResponseWriter, _ *http.Request) {
@@ -728,15 +785,113 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.hub.Agents()
+	agents := s.orgAgentsLocked()
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.hub.Meetings(),
+		Meetings:     s.orgMeetingsLocked(),
 		Costs:        s.tracker.Summary(s.org.ID),
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		UpdatedAt:    time.Now().UTC(),
 	}
+}
+
+func (s *Server) orgAgentsLocked() []orchestration.Agent {
+	if s == nil || s.hub == nil {
+		return []orchestration.Agent{}
+	}
+	return filterAgentsByOrg(s.hub.Agents(), s.org.ID)
+}
+
+func (s *Server) orgMeetingsLocked() []orchestration.MeetingRoom {
+	if s == nil || s.hub == nil {
+		return []orchestration.MeetingRoom{}
+	}
+	return filterMeetingsByAgentIDs(s.hub.Meetings(), s.orgAgentIndexLocked())
+}
+
+func (s *Server) orgAgentIndexLocked() map[string]struct{} {
+	agents := s.orgAgentsLocked()
+	index := make(map[string]struct{}, len(agents))
+	for _, agent := range agents {
+		index[agent.ID] = struct{}{}
+	}
+	return index
+}
+
+func (s *Server) agentOrgStatus(agentID string) (bool, bool) {
+	if s == nil || s.hub == nil || agentID == "" {
+		return false, false
+	}
+	agent, ok := s.hub.Agent(agentID)
+	if !ok {
+		return false, false
+	}
+	if agent.OrganizationID == "" && !strings.HasPrefix(agent.ID, s.org.ID+"-") {
+		return false, false
+	}
+	return true, agentInOrg(agent, s.org.ID)
+}
+
+func (s *Server) meetingOrgStatus(meetingID string) (bool, bool) {
+	if s == nil || s.hub == nil || meetingID == "" {
+		return false, false
+	}
+	meeting, ok := s.hub.Meeting(meetingID)
+	if !ok {
+		return false, false
+	}
+	return true, meetingVisibleToOrg(meeting, s.orgAgentIndexLocked())
+}
+
+func agentInOrg(agent orchestration.Agent, orgID string) bool {
+	if agent.OrganizationID != "" {
+		return agent.OrganizationID == orgID
+	}
+	return strings.HasPrefix(agent.ID, orgID+"-")
+}
+
+func filterAgentsByOrg(agents []orchestration.Agent, orgID string) []orchestration.Agent {
+	filtered := make([]orchestration.Agent, 0, len(agents))
+	for _, agent := range agents {
+		if agentInOrg(agent, orgID) {
+			filtered = append(filtered, agent)
+		}
+	}
+	return filtered
+}
+
+func filterMeetingsByAgentIDs(meetings []orchestration.MeetingRoom, allowedAgentIDs map[string]struct{}) []orchestration.MeetingRoom {
+	filtered := make([]orchestration.MeetingRoom, 0, len(meetings))
+	for _, meeting := range meetings {
+		if meetingVisibleToOrg(meeting, allowedAgentIDs) {
+			filtered = append(filtered, meeting)
+		}
+	}
+	return filtered
+}
+
+func meetingVisibleToOrg(meeting orchestration.MeetingRoom, allowedAgentIDs map[string]struct{}) bool {
+	if len(allowedAgentIDs) == 0 {
+		return false
+	}
+
+	for _, participant := range meeting.Participants {
+		if _, ok := allowedAgentIDs[participant]; ok {
+			return true
+		}
+	}
+
+	for _, message := range meeting.Transcript {
+		if _, ok := allowedAgentIDs[message.FromAgent]; ok {
+			return true
+		}
+		if _, ok := allowedAgentIDs[message.ToAgent]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func writeJSON(w http.ResponseWriter, value any) {

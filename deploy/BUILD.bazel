@@ -17,21 +17,8 @@ pkg_tar(
     package_dir = "/usr/local/bin",
 )
 
-oci_image(
-    name = "backend_image",
-    base = "@distroless_static",
-    entrypoint = ["/usr/local/bin/ohc"],
-    tars = [":backend_pkg"],
-)
-
-oci_load(
-    name = "backend_load",
-    image = ":backend_image",
-    repo_tags = ["onehumancorp/mono-backend:bazel"],
-    visibility = ["//visibility:public"],
-)
-
-# Published as onehumancorp/server – the canonical backend server image.
+# Published as onehumancorp/server – the single canonical image.
+# Serves both the API and the Flutter web UI (static assets).
 oci_image(
     name = "server_image",
     base = "@distroless_static",
@@ -42,7 +29,7 @@ oci_image(
 oci_load(
     name = "server_load",
     image = ":server_image",
-    repo_tags = ["onehumancorp/server:bazel"],
+    repo_tags = ["onehumancorp/server:latest"],
     visibility = ["//visibility:public"],
 )
 
@@ -120,75 +107,6 @@ oci_push(
     visibility = ["//visibility:public"],
 )
 
-# Package Flutter web static assets for the frontend image.
-# The React frontend has been migrated to Flutter – the Flutter web app is now
-# the canonical frontend and runs on web, mobile, and desktop from a single
-# codebase.
-pkg_tar(
-    name = "frontend_static_assets",
-    srcs = ["//srcs/app:app.web"],
-    package_dir = "/",
-    strip_prefix = "/srcs/app/app.web_build_artifacts",  # Correct name based on the 'app.web' target
-)
-
-pkg_tar(
-    name = "frontend_server_pkg",
-    srcs = ["//srcs/server/frontend/server/cmd/frontend"],
-    package_dir = "/usr/local/bin",
-)
-
-# Combine static assets and server binary
-oci_image(
-    name = "frontend_image",
-    base = "@distroless_static",
-    entrypoint = ["/usr/local/bin/frontend"],
-    tars = [
-        ":frontend_server_pkg",
-        ":frontend_static_assets",
-    ],
-)
-
-oci_load(
-    name = "frontend_load",
-    image = ":frontend_image",
-    repo_tags = ["onehumancorp/mono-frontend:bazel"],
-    visibility = ["//visibility:public"],
-)
-
-# ── ui image (onehumancorp/ui) ────────────────────────────────────────────────
-# Published as onehumancorp/ui – the canonical frontend image.
-
-oci_image(
-    name = "ui_image",
-    base = "@distroless_static",
-    entrypoint = ["/usr/local/bin/frontend"],
-    tars = [
-        ":frontend_server_pkg",
-        ":frontend_static_assets",
-    ],
-)
-
-oci_load(
-    name = "ui_load",
-    image = ":ui_image",
-    repo_tags = ["onehumancorp/ui:bazel"],
-    visibility = ["//visibility:public"],
-)
-
-oci_push(
-    name = "ui_push_ghcr",
-    image = ":ui_image",
-    repository = "ghcr.io/onehumancorp/ui",
-    visibility = ["//visibility:public"],
-)
-
-oci_push(
-    name = "ui_push_dockerhub",
-    image = ":ui_image",
-    repository = "index.docker.io/onehumancorp/ui",
-    visibility = ["//visibility:public"],
-)
-
 sh_test(
     name = "deploy_artifacts_test",
     srcs = ["tests/deploy_artifacts_test.sh"],
@@ -211,8 +129,7 @@ sh_test(
         "helm/ohc/**",
         "docker-compose.yml",
     ]) + [
-        ":backend_load",
-        ":ui_load",
+        ":server_load",
         "//:go.mod",
         "//srcs/server:ohc",
     ],

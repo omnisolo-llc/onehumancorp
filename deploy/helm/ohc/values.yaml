@@ -1,6 +1,7 @@
 backend:
-  image: onehumancorp/mono-backend:latest
+  image: onehumancorp/server:latest
   replicas: 1
+  headless: false
   service:
     port: 8080
   resources:
@@ -14,19 +15,6 @@ backend:
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
   multiTenant: false
-
-frontend:
-  image: onehumancorp/mono-frontend:latest
-  replicas: 1
-  service:
-    port: 8081
-  resources:
-    requests:
-      cpu: "21m"
-      memory: "27Mi"
-    limits:
-      cpu: "106m"
-      memory: "108Mi"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
