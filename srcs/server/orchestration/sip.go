@@ -229,17 +229,20 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
-	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
-		if err != nil {
-			return err
-		}
-		affected, _ := res.RowsAffected()
-		if affected == 0 {
-			return errors.New("mission not found")
-		}
-		return nil
+	var res sql.Result
+	err := withRetry(ctx, func() error {
+		var err error
+		res, err = s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
+		return err
 	})
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return errors.New("mission not found")
+	}
+	return nil
 }
 
 // BurstMission updates the mission status to BURSTING and optionally syncs it.
@@ -248,19 +251,18 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Produces errors: Explicit error handling.
 // Has side effects: Updates mission status in agent_missions table and syncs to remote.
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
+	var res sql.Result
 	err := withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ?", missionID)
-		if err != nil {
-			return err
-		}
-		affected, _ := res.RowsAffected()
-		if affected == 0 {
-			return errors.New("mission not found")
-		}
-		return nil
+		var err error
+		res, err = s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ?", missionID)
+		return err
 	})
 	if err != nil {
 		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return errors.New("mission not found")
 	}
 
 	if remoteEndpoint != "" {
