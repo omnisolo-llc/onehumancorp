@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Memory Forgetting Decay Logic
 
 **Persona:** Autonomous Agent / Human Manager
@@ -33,3 +35,6 @@ To prevent an agent's memory bank from becoming polluted with outdated or irrele
 ## 5. Security & Privacy
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
+
+
+</div>
