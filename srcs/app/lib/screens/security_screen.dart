@@ -46,14 +46,17 @@ class SecurityScreen extends ConsumerWidget {
                   '${open.length} open issue${open.length != 1 ? 's' : ''}',
                   color:
                       open.any((i) => i.severity == 'high')
-                          ? Colors.red
-                          : Colors.orange,
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.tertiary,
                 ),
                 ...open.map((i) => _IssueCard(issue: i, ref: ref)),
                 const SizedBox(height: 16),
               ],
               if (fixed.isNotEmpty) ...[
-                _SectionHeader('${fixed.length} resolved', color: Colors.green),
+                _SectionHeader(
+                  '${fixed.length} resolved',
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
                 ...fixed.map((i) => _IssueCard(issue: i, ref: ref)),
               ],
             ],
@@ -71,18 +74,22 @@ class _AllClear extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified_user, size: 64, color: Colors.green),
-          SizedBox(height: 16),
-          Text(
+          Icon(
+            Icons.verified_user,
+            size: 64,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+          const SizedBox(height: 16),
+          const Text(
             'No security issues found',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 8),
-          Text('Your configuration looks good.'),
+          const SizedBox(height: 8),
+          const Text('Your configuration looks good.'),
         ],
       ),
     );
@@ -130,14 +137,14 @@ class _IssueCardState extends State<_IssueCard> {
     _fixed = widget.issue.fixed;
   }
 
-  Color _severityColor() {
+  Color _severityColor(BuildContext context) {
     switch (widget.issue.severity) {
       case 'high':
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
       case 'medium':
-        return Colors.orange;
+        return Theme.of(context).colorScheme.tertiary;
       default:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
@@ -176,7 +183,10 @@ class _IssueCardState extends State<_IssueCard> {
                 children: [
                   Icon(
                     _fixed ? Icons.check_circle : Icons.warning_amber,
-                    color: _fixed ? Colors.green : _severityColor(),
+                    color:
+                        _fixed
+                            ? Theme.of(context).colorScheme.secondary
+                            : _severityColor(context),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -187,9 +197,9 @@ class _IssueCardState extends State<_IssueCard> {
                   ),
                   Chip(
                     label: Text(issue.severity.toUpperCase()),
-                    backgroundColor: _severityColor().withAlpha(30),
+                    backgroundColor: _severityColor(context).withAlpha(30),
                     labelStyle: TextStyle(
-                      color: _severityColor(),
+                      color: _severityColor(context),
                       fontWeight: FontWeight.bold,
                     ),
                     visualDensity: VisualDensity.compact,
@@ -207,7 +217,9 @@ class _IssueCardState extends State<_IssueCard> {
                   issue.detail!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontFamily: 'monospace',
-                    color: Colors.grey,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                   ),
                 ),
               ],

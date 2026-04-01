@@ -55,7 +55,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load providers: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -103,7 +103,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to hire agent: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -116,7 +116,10 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hire New Agent', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Hire New Agent',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
           tooltip: 'Close wizard',
@@ -169,7 +172,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                                 ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                                 : const Text('Deploy Agent'),
                       ),
@@ -326,9 +331,13 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),

@@ -167,7 +167,10 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Setup Wizard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Setup Wizard',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        ),
         actions: [
           statusAsync.maybeWhen(
             data:
@@ -269,7 +272,9 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                                 ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                                 : const Text('Save Configuration'),
                       ),

@@ -59,7 +59,13 @@ class _EmptyRooms extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.video_call, size: 64, color: Colors.grey),
+          Icon(
+            Icons.video_call,
+            size: 64,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+          ),
           const SizedBox(height: 16),
           Text(
             'No active meeting rooms.',
@@ -110,16 +116,16 @@ class _RoomCard extends StatefulWidget {
 class _RoomCardState extends State<_RoomCard> {
   bool _joining = false;
 
-  Color _statusColor() {
+  Color _statusColor(BuildContext context) {
     switch (widget.room['status'] as String? ?? '') {
       case 'active':
-        return Colors.green;
+        return Theme.of(context).colorScheme.secondary;
       case 'scheduled':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'ended':
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
       default:
-        return Colors.orange;
+        return Theme.of(context).colorScheme.tertiary;
     }
   }
 
@@ -197,7 +203,11 @@ class _RoomCardState extends State<_RoomCard> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.video_call, color: Colors.teal, size: 36),
+            Icon(
+              Icons.video_call,
+              color: Theme.of(context).colorScheme.primary,
+              size: 36,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -218,17 +228,26 @@ class _RoomCardState extends State<_RoomCard> {
                         height: 8,
                         margin: const EdgeInsets.only(right: 4),
                         decoration: BoxDecoration(
-                          color: _statusColor(),
+                          color: _statusColor(context),
                           shape: BoxShape.circle,
                         ),
                       ),
                       Text(
                         room['status'] as String? ?? '',
-                        style: TextStyle(color: _statusColor(), fontSize: 12),
+                        style: TextStyle(
+                          color: _statusColor(context),
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       if (participantCount > 0) ...[
-                        const Icon(Icons.people, size: 14, color: Colors.grey),
+                        Icon(
+                          Icons.people,
+                          size: 14,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '$participantCount',
