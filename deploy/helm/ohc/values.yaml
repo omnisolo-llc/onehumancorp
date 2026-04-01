@@ -6,11 +6,11 @@ backend:
     port: 8080
   resources:
     requests:
-      cpu: "42m"
-      memory: "54Mi"
+      cpu: "25m"
+      memory: "40Mi"
     limits:
-      cpu: "212m"
-      memory: "217Mi"
+      cpu: "150m"
+      memory: "150Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -26,11 +26,11 @@ ohcCore:
     port: 18789
   resources:
     requests:
-      cpu: "42m"
-      memory: "27Mi"
+      cpu: "25m"
+      memory: "20Mi"
     limits:
-      cpu: "212m"
-      memory: "108Mi"
+      cpu: "150m"
+      memory: "80Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -61,7 +61,7 @@ chatwoot:
   resources:
     requests:
       cpu: "106m"
-      memory: "108Mi"
+      memory: "80Mi"
     limits:
       cpu: "425m"
       memory: "435Mi"
@@ -94,7 +94,7 @@ plane:
   resources:
     requests:
       cpu: "106m"
-      memory: "108Mi"
+      memory: "80Mi"
     limits:
       cpu: "425m"
       memory: "435Mi"
