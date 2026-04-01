@@ -1,0 +1,5 @@
+status: nominal
+component: app/ui
+metrics:
+  health_score: 100
+  active_pods: 1
