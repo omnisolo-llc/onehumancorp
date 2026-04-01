@@ -1,0 +1,5 @@
+mission_id: "hybrid-ux-parity-${TIMESTAMP}"
+status: "COMPLETED"
+agent: "Palette (L7)"
+objective: "Implement remote endpoint selection and OAuth login flows, build the observability widget, and harmonize UX with stable glassmorphism."
+outcome: "Ensured UI stability, added proper tokens via manual diff patches to avoid regex overlaps, and created necessary OHC-SIP records."
