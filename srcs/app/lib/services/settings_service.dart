@@ -62,7 +62,14 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
           'BACKEND_URL',
           defaultValue: 'http://localhost:18789',
         );
-        return ClientSettings(backendUrl: envUrl, standaloneMode: false);
+        const envStandalone = bool.fromEnvironment(
+          'OHC_STANDALONE',
+          defaultValue: false,
+        );
+        return ClientSettings(
+          backendUrl: envUrl,
+          standaloneMode: envStandalone,
+        );
       }
       return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
     });

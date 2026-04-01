@@ -17,6 +17,25 @@ exports_files([
 # gazelle:resolve go github.com/onehumancorp/mono/srcs/proto //srcs/proto:hub_go_proto
 gazelle(name = "gazelle")
 
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "macos",
+    constraint_values = ["@platforms//os:macos"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+    visibility = ["//visibility:public"],
+)
+
+
 gazelle(
     name = "gazelle-update-repos",
     args = [
@@ -76,6 +95,65 @@ sh_binary(
     ],
     tags = ["manual"],
 )
+
+# Unified Desktop target (Standalone Mode)
+# This launches the Flutter app in native mode, which then manages its own backend.
+genrule(
+    name = "gen_desktop_sh",
+    outs = ["desktop_generated.sh"],
+    cmd = """
+cat << 'EOF' > $@
+#!/usr/bin/env bash
+# Standalone Desktop App orchestrator
+set -e
+
+# Support for the app to manage its own backend lifecycle.
+# The ohc binary must be in the PATH.
+export PATH=$$PWD/srcs/server:$$PATH
+
+# Detect platform if not explicitly provided
+PLATFORM="auto"
+if [ "$$PLATFORM" = "auto" ]; then
+  case "$$(uname -s)" in
+    Linux*)     PLATFORM=linux;;
+    Darwin*)    PLATFORM=macos;;
+    MSYS*|MINGW*|CYGWIN*) PLATFORM=windows;;
+    *)          PLATFORM=linux;;
+  esac
+fi
+
+# Enable Standalone Mode via dart-define so the app knows to start its backend.
+echo "--- Starting OHC Desktop App (Standalone Mode, Platform: $$PLATFORM) ---"
+cd srcs/app
+flutter run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
+EOF
+""",
+)
+
+
+
+sh_binary(
+    name = "desktop",
+    srcs = [":gen_desktop_sh"],
+    data = [
+        "//srcs/server:ohc",
+        "//srcs/app:srcs",
+    ] + select({
+        ":linux": ["//srcs/app:app.linux"],
+        ":macos": ["//srcs/app:app.macos"],
+        ":windows": ["//srcs/app:app.windows"],
+        "//conditions:default": [],
+    }),
+    tags = ["manual"],
+)
+
+
+# Alias to start the standalone desktop environment quickly.
+alias(
+    name = "up-desktop",
+    actual = ":desktop",
+)
+
 
 # Alias to start the local developer environment quickly.
 alias(
