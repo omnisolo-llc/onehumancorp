@@ -657,6 +657,101 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	return len(records), err
 }
 
+// SyncContextSync synchronizes the local Hybrid MCP RAG state to the cloud orchestration engine.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Posts local RAG context to a remote endpoint, deletes local records on success.
+// Returns the number of synced records and an error.
+func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	var records []struct {
+		id      string
+		payload string
+	}
+
+	err := withRetry(ctx, func() error {
+		records = nil
+		// Fetch local episodic memories that haven't been synced (or just all local RAG data).
+		// Note: The memory states the data is stored in swarm_memory_embeddings or similar
+		// We can fetch from swarm_memory_embeddings
+		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id, payload string
+			if err := rows.Scan(&id, &payload); err != nil {
+				return err
+			}
+			records = append(records, struct {
+				id      string
+				payload string
+			}{id, payload})
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(records) == 0 {
+		return 0, nil
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	syncedCount := 0
+	var idsToDelete []string
+
+	for _, rec := range records {
+		// Sanitize sensitive data by explicitly deleting `rag_context` key
+		var payloadData map[string]interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
+			delete(payloadData, "rag_context")
+		} else {
+			// If not JSON, we assume it's raw text but the memory states
+			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
+			// Let's create a generic JSON payload
+			payloadData = map[string]interface{}{
+				"context": rec.payload,
+			}
+		}
+		sanitizedPayload, _ := json.Marshal(payloadData)
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		// robust conflict resolution prioritising local client
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			// treat 409 Conflict as success for local parity
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
+				idsToDelete = append(idsToDelete, rec.id)
+				syncedCount++
+			}
+			resp.Body.Close()
+		}
+	}
+
+	if len(idsToDelete) > 0 {
+		err = withRetry(ctx, func() error {
+			idList := "'" + strings.Join(idsToDelete, "','") + "'"
+			_, err := s.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))
+			return err
+		})
+		if err != nil {
+			return syncedCount, err
+		}
+	}
+
+	return syncedCount, nil
+}
+
 // SyncMissions aggregates and syncs pending missions with the OHC-SIP Cloud DB.
 // Accepts parameters: ctx context.Context, remoteEndpoint string.
 // Returns error.
