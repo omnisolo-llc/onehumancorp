@@ -363,14 +363,23 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 }
 
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
+// It also sanitizes stuck PENDING missions by converting them to FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Deletes records from the agent_missions table.
+// Has side effects: Deletes records from the agent_missions table and updates stuck records.
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
 	return withRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
-		_, err := s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR created_at < ?", thresholdTime)
+
+		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
+		_, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < ?", thresholdTime)
+		if err != nil {
+			return err
+		}
+
+		// 2. Remove COMPLETED, or very old FAILED missions
+		_, err = s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR (status = 'FAILED' AND created_at < ?)", thresholdTime)
 		return err
 	})
 }
