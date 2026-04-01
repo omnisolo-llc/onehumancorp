@@ -31,17 +31,28 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 
 ```mermaid
 graph TD
-    Mobile[Flutter Mobile Client] -->|HTTP/JSON| BE[Backend Server :8080]
-    Desktop[Flutter Desktop Client] -->|HTTP/JSON| BE
-    Web[Flutter Web Client] -->|HTTP/JSON| BE
-    BE -->|optional static UI| UI[Embedded Web Assets]
+    subgraph "Thin Client Mode (UI-Only)"
+        Mobile[Flutter Mobile Client] -->|API/OAuth| BE[OHC Backend Server]
+        Desktop[Flutter Desktop Client] -->|API/OAuth| BE
+        Web[Flutter Web Client] -->|API/OAuth| BE
+    end
     
-    subgraph "Backend Core"
+    subgraph "Cloud-Native Mode (Multi-Tenant)"
         BE --> Hub[Orchestration Hub]
         BE --> Billing[Billing Tracker]
         BE --> Approval[Approval Engine]
-        Hub --> Meetings[Meeting Rooms / Transcripts]
-        Hub --> Registry[Agent Registry]
+        BE --> DB[(Postgres: Persistence)]
+        BE --> Redis[(Redis: Session/PubSub)]
+    end
+
+    subgraph "Standalone Desktop Mode (Local Single-User)"
+        DesktopShell[Desktop Wrapper] -->|Manages| LocalBE[Local OHC Backend]
+        LocalBE --> LocalHub[Local Orchestration Hub]
+        LocalBE --> LocalDB[(SQLite: Persistence)]
+    end
+
+    subgraph "Core Orchestration"
+        BE --> Hub[Orchestration Hub]
     end
 
     subgraph "Data Tier"
@@ -61,14 +72,19 @@ graph TD
 - **Desktop standalone mode**: the desktop shell manages a local backend lifecycle, local SQLite-backed state, and optional public integrations.
 - **Remote client mode**: the Flutter app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
 
-### 3.2 Orchestration Hub (`srcs/server/orchestration/`)
+### 3.2 Hybrid Parity and Graceful Degradation
+- **Standalone Wrapper Spec**: The desktop wrapper must instantiate the Go backend as a child process, utilizing SQLite instead of Postgres and relying on local process boundaries rather than strict multi-tenant container isolation.
+- **Thin Client APIs**: All UI actions must map to identical REST or gRPC definitions regardless of the target backend. Endpoints gracefully degrade if a service is unavailable (e.g., if Redis Pub/Sub is missing, fallback to local memory channels).
+- **Verification**: Architectural changes must maintain parity across both hybrid targets.
+
+### 3.3 Orchestration Hub (`srcs/server/orchestration/`)
 The `Hub` is the central coordinator using a thread-safe registry (`sync.RWMutex`). It manages:
 - **Agent Lifecycle**: `RegisterAgent(Agent)`, `FireAgent(id)`.
 - **Communication**: `Publish(Message)` routes events to specific agent inboxes or meeting room transcripts.
 - **Meeting Rooms**: Persisted workspaces for multi-agent collaboration on specific tasks. This is where cross-functional roles (e.g., a PM, UI/UX Designer, and SWE) converse, debate constraints, define scopes, design products, and implement them based on the CEO's goal.
 - **Capability Plugin Mesh**: A decentralized capability system where agents dynamically ingest "Capability Plugins" at runtime. Capabilities are hosted as standalone K8s services exposing a standardized `CapabilityManifest`, enabling agents to discover and adopt new tools and roles on the fly via the MCP Gateway.
 
-### 3.3 Data Models (Go & Protobuf)
+### 3.4 Data Models (Go & Protobuf)
 #### Domain Entities (`srcs/server/domain/organization.go`)
 ```go
 type Organization struct {
@@ -188,9 +204,9 @@ To reflect the fluidity of the new Agentic OS, the OHC frontend adopts the Next-
 
 ### 12.1 Design System Tokens
 *   **Backdrop & Depth**: Glassmorphism is the core structural element.
-    *   `backdrop-filter: blur(15px) saturate(180%)`
+    *   `backdrop-filter: blur(20px) saturate(200%)`
 *   **Surfaces**: Ghostly, semi-transparent layers to indicate dynamic, ephemeral agent capabilities.
-    *   `background: rgba(255, 255, 255, 0.05)`
+    *   `background: rgba(255, 255, 255, 0.03)`
 *   **Borders**: Subtle definition.
     *   `border: 1px solid rgba(255, 255, 255, 0.1)`
 *   **Typography**: Clean, geometric sans-serif for clarity at a glance.
