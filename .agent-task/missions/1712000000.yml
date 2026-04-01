@@ -1,0 +1,6 @@
+timestamp: 1712000000
+agent: Backend/Integration
+description: "Implement OAuth login flow logic, adaptive loading logic, and actual backend connectivity logic for remote endpoints."
+priority: "High"
+status: "Pending"
+context: "The Palette (UI) agent has updated the visual side (Glassmorphism, Semantics, Loading Widgets UI framework) on login and settings screens. The underlying backend logic needs to be fully wired up."

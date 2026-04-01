@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -43,20 +44,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _oauthLogin(String provider) async {
-    // Simulated OAuth flow with Graceful Degradation / Loading states for Thin Client
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      // In a real app this would open a webview or use an OAuth library
-      // For Thin Client mode, simulate variable-latency remote calls
-      await Future.delayed(const Duration(milliseconds: 1500));
-      await ref
-          .read(authStateProvider.notifier)
-          .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
+      final backendUrl = ref.read(backendUrlProvider);
+      final oauthUrl = Uri.parse('$backendUrl/api/auth/oauth/login?provider=$provider');
+      if (await canLaunchUrl(oauthUrl)) {
+        await launchUrl(
+          oauthUrl,
+          mode: LaunchMode.externalApplication,
+        );
+        // Normally, deep linking would bring us back here.
+        // For the sake of keeping the thin client generic and reactive to the network response,
+        // we await the deep link handler or polling mechanism here.
+      } else {
+        throw Exception("Could not launch OAuth provider URL");
+      }
     } catch (e) {
-      // Handle missing context or network degradation gracefully
       setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -81,7 +87,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(<double>[
+                      1.168, -0.153, -0.015, 0, 0,
+                      -0.046, 1.061, -0.015, 0, 0,
+                      -0.046, -0.152, 1.198, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
                   child: Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
@@ -203,7 +217,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(<double>[
+                  1.168, -0.153, -0.015, 0, 0,
+                  -0.046, 1.061, -0.015, 0, 0,
+                  -0.046, -0.152, 1.198, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
@@ -312,12 +334,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             child:
                                 _loading
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                       height: 20,
                                       width: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                       ),
                                     )
                                     : const Text(
@@ -361,11 +383,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                             icon: _loading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   )
                                 : const Icon(Icons.shield_outlined),

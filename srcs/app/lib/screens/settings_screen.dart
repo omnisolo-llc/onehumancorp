@@ -144,7 +144,15 @@ class SettingsScreen extends ConsumerWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                filter: ImageFilter.compose(
+                  outer: ColorFilter.matrix(<double>[
+                    1.168, -0.153, -0.015, 0, 0,
+                    -0.046, 1.061, -0.015, 0, 0,
+                    -0.046, -0.152, 1.198, 0, 0,
+                    0, 0, 0, 1, 0,
+                  ]),
+                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                ),
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -158,31 +166,48 @@ class SettingsScreen extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Edit Backend URL',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.cloud_sync_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Remote Connection',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Outfit',
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Configure the URL for the OHC Cloud or local backend.',
+                        'Configure the OHC Cloud or local backend URL for Thin Client mode. Requires restart to fully apply.',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontFamily: 'Inter',
                         ),
                       ),
                       const SizedBox(height: 24),
-                      TextField(
-                        controller: controller,
-                        decoration: InputDecoration(
-                          labelText: 'URL (e.g. http://localhost:8080)',
-                          prefixIcon: const Icon(Icons.link),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      Semantics(
+                        label: 'Backend URL Input',
+                        child: TextField(
+                          controller: controller,
+                          style: const TextStyle(fontFamily: 'Inter'),
+                          decoration: InputDecoration(
+                            labelText: 'Backend URL',
+                            hintText: 'e.g. http://localhost:18789',
+                            prefixIcon: const Icon(Icons.link),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                           ),
                         ),
                       ),
