@@ -33,6 +33,14 @@ required_files=(
   "test/flutter_web_e2e_test.sh"
   "test/start_web.sh"
   "test/capture_screenshots.sh"
+  "linux/CMakeLists.txt"
+  "linux/main.cc"
+  "linux/my_application.h"
+  "linux/my_application.cc"
+  "linux/flutter/CMakeLists.txt"
+  "linux/flutter/generated_plugin_registrant.cc"
+  "linux/flutter/generated_plugin_registrant.h"
+  "linux/flutter/generated_plugins.cmake"
 )
 
 for file in "${required_files[@]}"; do

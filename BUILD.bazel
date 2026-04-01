@@ -136,15 +136,20 @@ fi
 # Enable Standalone Mode via dart-define so the app knows to start its backend.
 echo "--- Starting OHC Desktop App (Standalone Mode, Platform: $$PLATFORM) ---"
 
-# Use the hermetic Flutter SDK from the runfiles
-if [[ "$$PLATFORM" == "windows" ]]; then
-  FLUTTER_BIN="REPLACE_ME_WIN"
+# Resolve the Flutter binary to use.
+# FLUTTER_BIN_OVERRIDE may be set by tests (or tooling) to point to a
+# custom/fake Flutter executable.  When not set, the hermetic SDK binary that
+# was baked into this launcher at build time is used.
+if [[ -n "$${FLUTTER_BIN_OVERRIDE:-}" ]]; then
+  FLUTTER_CMD="$${FLUTTER_BIN_OVERRIDE}"
+elif [[ "$$PLATFORM" == "windows" ]]; then
+  FLUTTER_CMD="../../REPLACE_ME_WIN"
 else
-  FLUTTER_BIN="REPLACE_ME_UNIX"
+  FLUTTER_CMD="../../REPLACE_ME_UNIX"
 fi
 
 cd srcs/app
-../../$$FLUTTER_BIN run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
+"$${FLUTTER_CMD}" run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
 EOF
 sed -i "s|REPLACE_ME_UNIX|$$FLUTTER_UNIX|g" $@
 sed -i "s|REPLACE_ME_WIN|$$FLUTTER_WIN|g" $@
