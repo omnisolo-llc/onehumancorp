@@ -241,12 +241,43 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 	})
 }
 
+var (
+	// throttleSemaphore limits concurrent DelegateMission executions in SQLite standalone mode.
+	throttleSemaphore = make(chan struct{}, 2)
+)
+
+func envBoolDefault(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	switch value {
+	case "1", "true", "TRUE", "yes", "YES", "on", "ON":
+		return true
+	case "0", "false", "FALSE", "no", "NO", "off", "OFF":
+		return false
+	default:
+		return fallback
+	}
+}
+
 // DelegateMission delegates specialized tasks via the agent_missions table.
 // Accepts parameters: s *SIPDB (No Constraints).
 // Returns DelegateMission(ctx context.Context, missionID, role string, task Message) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
+	if !isMultiTenant && isSQLite {
+		select {
+		case throttleSemaphore <- struct{}{}:
+			defer func() { <-throttleSemaphore }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
