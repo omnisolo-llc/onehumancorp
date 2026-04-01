@@ -168,6 +168,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// Because SQLite does not support arrays.
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage
 			sqlStr = strings.ReplaceAll(sqlStr, "TEXT[] NOT NULL DEFAULT '{}'", "TEXT NOT NULL DEFAULT '[]'")
+			sqlStr = strings.ReplaceAll(sqlStr, "TEXT[]", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "NOW()", "CURRENT_TIMESTAMP")
 
 			// Replace specific Postgres Array insert syntax used in migrations

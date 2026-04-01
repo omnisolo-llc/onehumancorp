@@ -59,7 +59,7 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	// Type assert to verify we have a real centrifuge.Node to configure
 	if realNode, ok := node.(*centrifuge.Node); ok {
 		redisURL := os.Getenv("REDIS_URL")
-		if redisURL != "" {
+		if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 			shard, err := centrifuge.NewRedisShard(realNode, centrifuge.RedisShardConfig{Address: redisURL})
 			if err != nil {
 				return nil, err
@@ -82,7 +82,11 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 
 			presenceManager, _ := centrifuge.NewMemoryPresenceManager(realNode, centrifuge.MemoryPresenceManagerConfig{})
 			realNode.SetPresenceManager(presenceManager)
-			slog.Info("centrifuge: REDIS_URL not set, falling back to local MemoryBroker")
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				slog.Info("centrifuge: Standalone Mode active, forcing local MemoryBroker")
+			} else {
+				slog.Info("centrifuge: REDIS_URL not set, falling back to local MemoryBroker")
+			}
 		}
 	}
 

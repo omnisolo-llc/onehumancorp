@@ -25,6 +25,8 @@ dependencies:
 
   # Local storage
   shared_preferences: ^2.2.3
+  powersync_flutter: ^1.7.0
+  sqlite_async: ^1.2.5
 
   # Icons
   cupertino_icons: ^1.0.6

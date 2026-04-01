@@ -192,3 +192,16 @@ services:
       - SECRET_KEY=an_extremely_secret_key_that_is_long_enough_for_plane
     depends_on:
       - plane-api
+
+  powersync:
+    image: journeyapps/powersync-service:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - PS_DATA_SOURCE_URI=postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      - PS_JWKS_URL=http://server:8080/.well-known/jwks.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_started

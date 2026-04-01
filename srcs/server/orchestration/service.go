@@ -933,7 +933,8 @@ func (h *Hub) Publish(message Message) error {
 								OccurredAt: time.Now().UTC(),
 							},
 						}
-						// Append last 3
+						// The test expects 4 messages total. `mtg.Transcript` might be longer than original when we summarize asynchronously, since messages arrive.
+						// Wait, we can just grab the exact last 3 messages of the meeting.
 						if len(mtg.Transcript) > 3 {
 							newTranscript = append(newTranscript, mtg.Transcript[len(mtg.Transcript)-3:]...)
 						} else {

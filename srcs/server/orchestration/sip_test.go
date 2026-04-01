@@ -532,12 +532,17 @@ func TestSIPDB_GetPendingMissions_ScanError2(t *testing.T) {
 	// We can drop table and recreate it with only one column!
 	_, err = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
 	_, err = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY)")
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('123', 'PENDING', '{\"role\":\"SOFTWARE_ENGINEER\"}')")
+	// Ignore errors from missing columns here as this is exactly what we test
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id) VALUES ('123')")
 
 	_, err = db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
 	if err == nil {
 		t.Fatal("Expected error from scan due to missing column")
 	}
+
+	// Restore schema
+	_, _ = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
+	_, _ = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY, status TEXT, payload TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
 }
 
 func TestSIPDB_ScanErrors(t *testing.T) {
@@ -554,6 +559,11 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	// Actually, simply query the existing table but insert something that cannot be scanned?
 	// For example, scanning a NULL into a non-nullable string.
 
+	// Wait, inserting NULL to PRIMARY KEY may fail immediately depending on sqlite settings. But even if it doesn't fail,
+	// scanning it into a non-nullable string triggers a scan error. Wait, we changed `local_metrics_buffer` schema
+	// in 007_local_metrics_buffer.sql but local SIPDB tests run on SQLite standalone without 007 file maybe?
+	// The problem was "SQL logic error: no such column: payload". Where is it?
+
 	_, _ = db.db.ExecContext(ctx, "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', '1', 'url', 'stat', 'time')")
 	_, _ = db.GetCapabilityPlugins(ctx, "")
 	_, _ = db.db.ExecContext(ctx, "DELETE FROM capability_plugins")
@@ -562,6 +572,11 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	_, _ = db.GetEpisodicMemoriesByPlugin(ctx, "")
 	_, _ = db.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings")
 
+	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}')")
+	// The problem is agent_missions schema was altered by the previous test `TestSIPDB_GetPendingMissions_ScanError2` which
+	// dropped it and didn't restore it correctly maybe? Let's drop it and restore it here to avoid test pollution
+	_, _ = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
+	_, _ = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT PRIMARY KEY, status TEXT, payload TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
 	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}')")
 	_, _ = db.GetPendingMissions(ctx, "ROLE")
 	_, _ = db.db.ExecContext(ctx, "DELETE FROM agent_missions")

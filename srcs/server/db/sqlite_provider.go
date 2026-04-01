@@ -3,11 +3,14 @@ package db
 import (
 	"context"
 	"database/sql"
+	"regexp"
 	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
+
+var jsonExtractRegex = regexp.MustCompile(`([a-zA-Z0-9_]+)::json->>'([a-zA-Z0-9_]+)'`)
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
@@ -24,6 +27,9 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 // and dynamically strips natively unsupported clauses like `FOR UPDATE SKIP LOCKED`.
 func convertBindVars(query string) string {
 	query = strings.ReplaceAll(query, "FOR UPDATE SKIP LOCKED", "")
+
+	// Map col::json->>'key' to json_extract(col, '$.key')
+	query = jsonExtractRegex.ReplaceAllString(query, "json_extract($1, '$$.$2')")
 
 	var result strings.Builder
 	result.Grow(len(query))
