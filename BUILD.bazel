@@ -160,6 +160,7 @@ sh_binary(
         "//srcs/server:ohc",
         "//srcs/server:standalone_ohc_exec",
         "//srcs/app:srcs",
+        "//:pubspec.yaml",
         "@flutter_sdk//:flutter_sdk",
     ],
     tags = ["manual"],
