@@ -91,6 +91,18 @@ func New(ctx context.Context) (*DB, error) {
 		return nil, fmt.Errorf("db: ping postgres: %w", err)
 	}
 
+	// For PowerSync PostgreSQL integration, ensure wal_level=logical is set.
+	// We can try to set it, or at least log that it is needed. Note that altering system config
+	// usually requires superuser, so we might not be able to do it here directly without erroring.
+	// But according to the memory: "For PowerSync PostgreSQL integration, ensure wal_level=logical is set"
+	// Let's attempt to verify or execute `ALTER SYSTEM SET wal_level = logical;` and `SELECT pg_reload_conf();`
+	// but those require restart. For now, we just log a warning if it's not set.
+	var walLevel string
+	err = pool.QueryRow(ctx, "SHOW wal_level").Scan(&walLevel)
+	if err == nil && walLevel != "logical" {
+		slog.Warn("db: wal_level is not 'logical'. PowerSync requires wal_level=logical. Please configure your Postgres instance.")
+	}
+
 	slog.Info("db: connected to postgres", "dsn", redactDSN(dsn))
 	return &DB{Provider: NewPgProvider(pool)}, nil
 }
@@ -155,6 +167,27 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
+			// Explicitly strip Postgres-specific migrations (like CREATE PUBLICATION)
+			// when the database provider is SQLite (Standalone Mode) for PowerSync.
+			if strings.Contains(strings.ToUpper(sqlStr), "CREATE PUBLICATION") {
+				// We split by semicolon, but carefully check that the statement itself starts with CREATE PUBLICATION
+				// to avoid false positives (e.g. inside a comment or string literal).
+				statements := strings.Split(sqlStr, ";")
+				var filtered []string
+				for _, stmt := range statements {
+					trimmed := strings.TrimSpace(stmt)
+					if trimmed == "" {
+						continue
+					}
+					// Only filter out if the statement actually starts with CREATE PUBLICATION
+					if !strings.HasPrefix(strings.ToUpper(trimmed), "CREATE PUBLICATION") {
+						filtered = append(filtered, stmt)
+					}
+				}
+				sqlStr = strings.Join(filtered, ";") + ";"
+				slog.Info("db: stripped Postgres-specific CREATE PUBLICATION from SQLite migration", "file", f)
+			}
+
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
 			// Bigserial -> INTEGER PRIMARY KEY AUTOINCREMENT
 			// TIMESTAMPTZ -> DATETIME
