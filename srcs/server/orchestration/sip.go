@@ -167,7 +167,15 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'", role)
+
+		query := "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'"
+
+		driverName := fmt.Sprintf("%T", s.db.Driver())
+		if strings.Contains(driverName, "pgx") || strings.Contains(driverName, "postgres") || strings.Contains(driverName, "pg") {
+			query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
+		}
+
+		rows, err := s.db.QueryContext(ctx, query, role)
 		if err != nil {
 			return err
 		}
