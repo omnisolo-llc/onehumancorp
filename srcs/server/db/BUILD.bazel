@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "db",
@@ -8,9 +8,9 @@ go_library(
         "provider.go",
         "sqlite_provider.go",
     ],
-    embedsrcs = glob([
-        "migrations/*.sql",
-    ]),
+
+
+    embedsrcs = glob(["migrations/*.sql"]),
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
@@ -21,4 +21,10 @@ go_library(
         "@io_opentelemetry_go_otel_metric//:metric",
         "@org_modernc_sqlite//:sqlite",
     ],
+)
+
+go_test(
+    name = "db_test",
+    srcs = ["provider_test.go"],
+    embed = [":db"],
 )
