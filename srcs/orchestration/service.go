@@ -432,7 +432,12 @@ func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payloa
 	}
 
 	client := NewMinimaxClient(h.MinimaxAPIKey())
-	prompt := fmt.Sprintf("Summarize the following context efficiently to save tokens: %s", redactPII(temp.Context))
+
+	// Safely encode the untrusted payload as JSON to prevent prompt injection.
+	contextPayload, _ := json.Marshal(map[string]string{
+		"context": redactPII(temp.Context),
+	})
+	prompt := fmt.Sprintf("Summarize the following context efficiently to save tokens: %s", string(contextPayload))
 	summarizedContext, err := client.Reason(context.Background(), prompt)
 	if err != nil {
 		return fmt.Errorf("summarization failed: %w", err)
@@ -794,10 +799,18 @@ func (h *Hub) Publish(message Message) error {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				client := NewMinimaxClient(h.MinimaxAPIKey())
-				prompt := "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n"
-				for _, msg := range transcript {
-					prompt += "- " + msg.FromAgent + ": " + redactPII(msg.Content) + "\n"
+
+				// Encode the transcript safely as JSON to prevent prompt injection.
+				type transcriptLine struct {
+					Agent   string `json:"agent"`
+					Content string `json:"content"`
 				}
+				var lines []transcriptLine
+				for _, msg := range transcript {
+					lines = append(lines, transcriptLine{Agent: msg.FromAgent, Content: redactPII(msg.Content)})
+				}
+				jsonPayload, _ := json.Marshal(lines)
+				prompt := "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n" + string(jsonPayload)
 
 				summary, err := client.Reason(ctx, prompt)
 				if err == nil && summary != "" {

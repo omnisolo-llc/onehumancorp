@@ -138,7 +138,8 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 			defer tt.envTeardown()
 
 			client := plane.NewClientFromEnv()
-			worker := NewTaskWorker(client)
+			hub := NewHub()
+			worker := NewTaskWorker(client, hub)
 
 			// Doesn't return anything or error, just covering branches
 			worker.pollAndAssign()
@@ -148,7 +149,8 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 
 func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
 	// Simple test to exercise the context cancellation branch
-	worker := NewTaskWorker(nil)
+	hub := NewHub()
+	worker := NewTaskWorker(nil, hub)
 	worker.pollInterval = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
@@ -175,7 +177,8 @@ func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 	}()
 
 	client := plane.NewClientFromEnv()
-	worker := NewTaskWorker(client)
+	hub := NewHub()
+	worker := NewTaskWorker(client, hub)
 	worker.pollInterval = 10 * time.Millisecond
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -193,7 +196,8 @@ func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
 	os.Unsetenv("PLANE_API_KEY")
 
 	client := plane.NewClientFromEnv()
-	worker := NewTaskWorker(client)
+	hub := NewHub()
+	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
 
@@ -204,6 +208,7 @@ func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
 	os.Unsetenv("PLANE_API_KEY")
 
 	client := plane.NewClientFromEnv()
-	worker := NewTaskWorker(client)
+	hub := NewHub()
+	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
