@@ -2,11 +2,24 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "db",
-    srcs = ["postgres.go"],
-    embedsrcs = glob(["migrations/*.sql"]),
+    srcs = ["provider.go"],
+    embedsrcs = [
+        "migrations/001_users.sql",
+        "migrations/002_billing.sql",
+        "migrations/003_scheduler.sql",
+        "migrations/004_hub.sql",
+        "migrations/005_sip.sql",
+        "migrations_sqlite/001_users.sql",
+        "migrations_sqlite/002_billing.sql",
+        "migrations_sqlite/003_scheduler.sql",
+        "migrations_sqlite/004_hub.sql",
+        "migrations_sqlite/005_sip.sql",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_jackc_pgx_v5//pgxpool",
+        "@com_github_jackc_pgx_v5//stdlib",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

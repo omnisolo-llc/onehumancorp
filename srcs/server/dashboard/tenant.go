@@ -12,6 +12,8 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -123,6 +125,27 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		h.ServeHTTP(w, req)
 		return
+	}
+
+	// Single-User Bypass for Standalone Local Executions
+	if claims != nil && claims.OrganizationID == "" {
+		dsn := os.Getenv("DATABASE_URL")
+		standalone := os.Getenv("OHC_STANDALONE") == "true"
+
+		if standalone || dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
+			r.mu.RLock()
+			var fallback http.Handler
+			for _, h := range r.tenants {
+				fallback = h
+				break
+			}
+			r.mu.RUnlock()
+			if fallback != nil {
+				fallback.ServeHTTP(w, req)
+				return
+			}
+		}
+
 	}
 
 	if claims != nil && claims.OrganizationID == "" {

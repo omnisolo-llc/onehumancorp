@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -138,6 +139,16 @@ func TestTenantRegistry_HandleOrgRegister(t *testing.T) {
 }
 
 func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
+	// Ensure we are testing multi-tenant mode not standalone
+	origStandalone := os.Getenv("OHC_STANDALONE")
+	os.Setenv("OHC_STANDALONE", "false")
+	origDSN := os.Getenv("DATABASE_URL")
+	os.Setenv("DATABASE_URL", "postgres://test")
+	defer func() {
+		os.Setenv("OHC_STANDALONE", origStandalone)
+		os.Setenv("DATABASE_URL", origDSN)
+	}()
+
 	reg := newTestRegistry()
 	tok := adminToken(t)
 
