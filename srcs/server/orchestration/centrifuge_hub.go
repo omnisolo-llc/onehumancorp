@@ -59,7 +59,7 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	// Type assert to verify we have a real centrifuge.Node to configure
 	if realNode, ok := node.(*centrifuge.Node); ok {
 		redisURL := os.Getenv("REDIS_URL")
-		if redisURL != "" {
+		if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 			shard, err := centrifuge.NewRedisShard(realNode, centrifuge.RedisShardConfig{Address: redisURL})
 			if err != nil {
 				return nil, err
