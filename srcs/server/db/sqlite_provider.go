@@ -8,6 +8,10 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+import (
+	"strings"
+)
+
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
 	db *sql.DB
@@ -17,11 +21,37 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 	return &SqliteProvider{db: db}
 }
 
-// translateArgs translates pgx-style args if needed, though typically SQL standard positional args are similar enough.
-// SQLite natively expects `?` instead of `$1`, `$2`. Wait, no, SQLite actually accepts `$1`, `$2` bindings if using proper parameter names, but default `database/sql` positional parameters are usually just `?`. Wait, `database/sql` driver for SQLite usually supports `?`, `$1`, and `:name`. Let's assume standard passing works unless proven otherwise.
+// convertBindVars translates pgx-style args ($1, $2) to SQLite style args (?1, ?2) safely avoiding literals.
+// It also strips out Postgres-specific clauses like FOR UPDATE SKIP LOCKED.
+func convertBindVars(query string) string {
+	query = strings.ReplaceAll(query, "FOR UPDATE SKIP LOCKED", "")
+
+	var result strings.Builder
+	inString := false
+
+	for i := 0; i < len(query); i++ {
+		c := query[i]
+		if c == '\'' {
+			inString = !inString
+		}
+
+		if c == '$' && !inString {
+			// Check if the next characters are digits
+			if i+1 < len(query) && query[i+1] >= '0' && query[i+1] <= '9' {
+				result.WriteByte('?')
+				continue
+			}
+		}
+
+		result.WriteByte(c)
+	}
+
+	return result.String()
+}
+
 func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
 	start := time.Now()
-	res, err := p.db.ExecContext(ctx, sqlQuery, arguments...)
+	res, err := p.db.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
 	trackQuery(ctx, "Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
@@ -31,7 +61,7 @@ func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ..
 
 func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
-	rows, err := p.db.QueryContext(ctx, sqlQuery, optionsAndArgs...)
+	rows, err := p.db.QueryContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
 	trackQuery(ctx, "Query", err, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -41,7 +71,7 @@ func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndA
 
 func (p *SqliteProvider) QueryRow(ctx context.Context, sqlQuery string, optionsAndArgs ...any) Row {
 	start := time.Now()
-	row := p.db.QueryRowContext(ctx, sqlQuery, optionsAndArgs...)
+	row := p.db.QueryRowContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
 	trackQuery(ctx, "QueryRow", nil, time.Since(start))
 	return &SqliteRow{row: row}
 }
@@ -58,6 +88,10 @@ func (p *SqliteProvider) Begin(ctx context.Context) (Tx, error) {
 
 func (p *SqliteProvider) Close() {
 	p.db.Close()
+}
+
+func (p *SqliteProvider) IsSQLite() bool {
+	return true
 }
 
 // SqliteRows implements Rows using sql.Rows.
@@ -97,7 +131,7 @@ type SqliteTx struct {
 
 func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
 	start := time.Now()
-	res, err := t.tx.ExecContext(ctx, sqlQuery, arguments...)
+	res, err := t.tx.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
 	trackQuery(ctx, "Tx.Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
@@ -107,7 +141,7 @@ func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) 
 
 func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
-	rows, err := t.tx.QueryContext(ctx, sqlQuery, optionsAndArgs...)
+	rows, err := t.tx.QueryContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
 	trackQuery(ctx, "Tx.Query", err, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -117,7 +151,7 @@ func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ..
 
 func (t *SqliteTx) QueryRow(ctx context.Context, sqlQuery string, optionsAndArgs ...any) Row {
 	start := time.Now()
-	row := t.tx.QueryRowContext(ctx, sqlQuery, optionsAndArgs...)
+	row := t.tx.QueryRowContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
 	trackQuery(ctx, "Tx.QueryRow", nil, time.Since(start))
 	return &SqliteRow{row: row}
 }
