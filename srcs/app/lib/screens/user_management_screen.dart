@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -184,100 +185,116 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   void _showAddUserDialog() {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.2), // Semi-transparent barrier for glass effect
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: const ColorFilter.matrix([
-              1, 0, 0, 0, 0,
-              0, 1, 0, 0, 0,
-              0, 0, 1, 0, 0,
-              0, 0, 0, 1, 0, // Using backdrop filter for glassmorphism
-            ]),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                  width: 1.5,
+      barrierColor: Colors.black.withValues(
+        alpha: 0.2,
+      ), // Semi-transparent barrier for glass effect
+      builder:
+          (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.compose(
+                  outer: const ColorFilter.mode(
+                    Colors.white24,
+                    BlendMode.saturation,
+                  ),
+                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                 ),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Invite New User',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.2),
+                      width: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Expand your sovereign swarm. This will generate a Cloud-Bridge invite link.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Email Address',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                      Text(
+                        'Invite New User',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () {
-                          final snackBar = SnackBar(
-                            content: Text(
-                                'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                  fontFamily: 'Inter',
+                      const SizedBox(height: 8),
+                      Text(
+                        'Expand your sovereign swarm. This will generate a Cloud-Bridge invite link.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const TextField(
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const TextField(
+                        decoration: InputDecoration(
+                          labelText: 'Email Address',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () {
+                              final snackBar = SnackBar(
+                                content: Text(
+                                  'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
-                            ),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Generate Secure Invite'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
+                              );
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(snackBar);
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Generate Secure Invite'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 }

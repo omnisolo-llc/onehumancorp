@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
+  ref,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -19,7 +21,10 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        ),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -36,7 +41,10 @@ class DashboardScreen extends ConsumerWidget {
             (e, _) => Center(
               child: Text(
                 'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
         data: (data) => _DashboardContent(data: data, ref: ref),
@@ -114,22 +122,19 @@ class _DashboardContent extends StatelessWidget {
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontFamily: 'Inter',
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontFamily: 'Inter',
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 16,
           runSpacing: 16,
-          children: roleList.map((role) {
-            final count = data.agents.where((a) => a.role == role).length;
-            return _RoleScaleCard(
-              role: role,
-              count: count,
-              ref: ref,
-            );
-          }).toList(),
+          children:
+              roleList.map((role) {
+                final count = data.agents.where((a) => a.role == role).length;
+                return _RoleScaleCard(role: role, count: count, ref: ref);
+              }).toList(),
         ),
       ],
     );
@@ -147,7 +152,11 @@ class _ObservabilityWidget extends StatelessWidget {
 
     final activeMissions = data.statuses.length; // Approximate from statuses
     final totalAgents = data.agents.length;
-    final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
+    final healthScore =
+        totalAgents > 0
+            ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100)
+                .round()
+            : 100;
 
     return Semantics(
       label: 'System Observability Panel',
@@ -156,12 +165,20 @@ class _ObservabilityWidget extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ImageFilter.compose(
+              outer: const ColorFilter.mode(
+                Colors.white24,
+                BlendMode.saturation,
+              ),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
             child: Container(
               decoration: BoxDecoration(
                 color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: colors.outlineVariant.withValues(alpha: 0.4),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -192,7 +209,11 @@ class _ObservabilityWidget extends StatelessWidget {
                                 color: colors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.monitor_heart, color: colors.primary, size: 28),
+                              child: Icon(
+                                Icons.monitor_heart,
+                                color: colors.primary,
+                                size: 28,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Text(
@@ -212,10 +233,31 @@ class _ObservabilityWidget extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(
+                              label: 'Health Score',
+                              value: '$healthScore%',
+                              color: colors.primary,
+                              icon: Icons.health_and_safety,
+                            ),
+                            _Metric(
+                              label: 'Active Missions',
+                              value: '$activeMissions',
+                              color: colors.secondary,
+                              icon: Icons.rocket_launch,
+                            ),
+                            _Metric(
+                              label: 'Latency (Avg)',
+                              value: '12ms',
+                              color: colors.tertiary,
+                              icon: Icons.speed,
+                            ),
+                            _Metric(
+                              label: 'Active Pods',
+                              value: '$totalAgents',
+                              color: colors.primaryContainer,
+                              icon: Icons.dns,
+                              iconColor: colors.onPrimaryContainer,
+                            ),
                           ],
                         ),
                       ],
@@ -252,10 +294,7 @@ class _StatusBadge extends StatelessWidget {
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Text(
@@ -280,7 +319,13 @@ class _Metric extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
 
-  const _Metric({required this.label, required this.value, required this.color, required this.icon, this.iconColor});
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +389,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to scale ${widget.role}: $e', style: const TextStyle(fontFamily: 'Inter')),
+            content: Text(
+              'Failed to scale ${widget.role}: $e',
+              style: const TextStyle(fontFamily: 'Inter'),
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -359,10 +407,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = widget.role
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
     return Semantics(
       label: 'Scale $formattedRole role',
@@ -374,38 +426,25 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
             borderRadius: BorderRadius.circular(16),
             child: BackdropFilter(
               filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
+                outer: const ColorFilter.mode(
+                  Colors.white24,
+                  BlendMode.saturation,
+                ),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 24,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -442,45 +481,54 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                             button: true,
                             label: 'Decrease $formattedRole count',
                             child: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 28),
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                size: 28,
+                              ),
                               color: colors.primary,
-                              onPressed: widget.count > 0 && !_isScaling
-                                  ? () => _scaleTo(widget.count - 1)
-                                  : null,
+                              onPressed:
+                                  widget.count > 0 && !_isScaling
+                                      ? () => _scaleTo(widget.count - 1)
+                                      : null,
                               tooltip: 'Fire Agent',
                             ),
                           ),
                           SizedBox(
                             width: 32,
                             child: Center(
-                              child: _isScaling
-                                  ? SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: colors.primary,
+                              child:
+                                  _isScaling
+                                      ? SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: colors.primary,
+                                        ),
+                                      )
+                                      : Text(
+                                        '${widget.count}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                          fontFamily: 'Inter',
+                                        ),
                                       ),
-                                    )
-                                  : Text(
-                                      '${widget.count}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
                             ),
                           ),
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
                             child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                size: 28,
+                              ),
                               color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
+                              onPressed:
+                                  !_isScaling
+                                      ? () => _scaleTo(widget.count + 1)
+                                      : null,
                               tooltip: 'Hire Agent',
                             ),
                           ),
@@ -506,9 +554,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+        fontWeight: FontWeight.bold,
+        fontFamily: 'Outfit',
+      ),
     );
   }
 }
@@ -543,33 +592,17 @@ class _StatCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: BackdropFilter(
               filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
+                outer: const ColorFilter.mode(
+                  Colors.white24,
+                  BlendMode.saturation,
+                ),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.03),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: Theme.of(
@@ -606,7 +639,9 @@ class _StatCard extends StatelessWidget {
                             const SizedBox(height: 6),
                             Text(
                               label,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w500,
                               ),

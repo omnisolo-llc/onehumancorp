@@ -1,0 +1,5 @@
+timestamp: "2026-04-01T22:11:50Z"
+findings:
+  - "Flutter Web (CanvasKit) crashes when complex ColorFilter.matrix is used inside a BackdropFilter."
+  - "Replacing ColorFilter.matrix with ColorFilter.mode(Colors.white24, BlendMode.saturation) + ImageFilter.blur(20.0) provides stable and performant glassmorphism that satisfies the Premium Branding mandate."
+  - "Hardcoded endpoints in auth_service and centrifuge_service were successfully replaced with dynamic providers relying on user settings to support Thin Client and Standalone routing."

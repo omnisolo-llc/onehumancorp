@@ -109,7 +109,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                           Icon(
                             Icons.construction,
                             size: 48,
-                            color: colors.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: colors.onSurfaceVariant.withValues(
+                              alpha: 0.3,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           const Text('No MCP tools active'),
