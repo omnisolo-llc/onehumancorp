@@ -254,7 +254,7 @@ func run(now time.Time, listen listenFunc) error {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
 
 			// Background sync for standalone metrics to cloud
-			cloudEndpoint := os.Getenv("OHC_CLOUD_METRICS_ENDPOINT")
+			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
 			if cloudEndpoint != "" {
 				go func() {
 					ticker := time.NewTicker(5 * time.Minute)
