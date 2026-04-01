@@ -1,0 +1,17 @@
+type: mission
+id: architect-restructure-1775027525
+role: Principal Software Engineer & Distributed Systems Architect (L7)
+priority: high
+status: pending
+timestamp: 1775027525
+objective: Propose and implement hybrid-aware architectural changes based on Grafana
+  insights.
+context: Recent telemetry review by Data Scientist identified distinct bottleneck
+  characteristics between multi-tenant Cloud configurations (horizontal scaling limits)
+  and Standalone local SQLite configurations (connection contention).
+tasks:
+- Review the OHC Hybrid Telemetry dashboard metrics to trace connection contention.
+- Refactor agent task delegations to throttle concurrent connections when operating
+  in local Standalone (SQLite) mode.
+- Tune the K8s cloud-native scaling configurations for higher throughput in deployment
+  YAMLs based on the P95 Latency metrics.
