@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
@@ -45,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
                   const Divider(),
                 ],
 
-                _SectionHeader(title: 'Communication'),
+                const _SectionHeader(title: 'Communication'),
                 Card(
                   child: ListTile(
                     leading: Icon(
@@ -93,12 +94,12 @@ class SettingsScreen extends ConsumerWidget {
 
                 if (settings.standaloneMode) ...[
                   const Divider(),
-                  _SectionHeader(title: 'Local Backend'),
-                  _LocalBackendStatusCard(),
+                  const _SectionHeader(title: 'Local Backend'),
+                  const _LocalBackendStatusCard(),
                 ],
 
                 const Divider(),
-                _SectionHeader(title: 'Account'),
+                const _SectionHeader(title: 'Account'),
                 ListTile(
                   leading: const Icon(Icons.business),
                   title: const Text('Organization'),
@@ -138,24 +139,78 @@ class SettingsScreen extends ConsumerWidget {
     final result = await showDialog<String>(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Edit Backend URL'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'URL (e.g. http://localhost:8080)',
+          (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Edit Backend URL',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Outfit',
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Configure the URL for the OHC Cloud or local backend.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          labelText: 'URL (e.g. http://localhost:8080)',
+                          prefixIcon: const Icon(Icons.link),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(context, controller.text),
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, controller.text),
-                child: const Text('Save'),
-              ),
-            ],
           ),
     );
     if (result != null && result.isNotEmpty) {
@@ -284,8 +339,9 @@ class _LocalBackendStatusCardState
                                   );
                                 }
                               } finally {
-                                if (mounted)
+                                if (mounted) {
                                   setState(() => _isRunningDoctor = false);
+                                }
                               }
                             },
                     icon:
