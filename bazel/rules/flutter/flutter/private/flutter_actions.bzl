@@ -274,7 +274,7 @@ fi
 # Dependency caches are Bazel outputs, so rsync -a copies those read-only
 # permissions into our new pub_cache.  Make everything writable so subsequent
 # mkdir/copy operations (e.g. the IS_PUB_PACKAGE block below) can succeed.
-chmod -R u+w "$PUB_CACHE_DIR_ABS" 2>/dev/null || true
+chmod -R u+rwX "$PUB_CACHE_DIR_ABS" 2>/dev/null || true
 echo ""
 
 export PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
