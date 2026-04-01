@@ -2,11 +2,23 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "db",
-    srcs = ["postgres.go"],
-    embedsrcs = glob(["migrations/*.sql"]),
+    srcs = [
+        "database.go",
+        "postgres_provider.go",
+        "provider.go",
+        "sqlite_provider.go",
+    ],
+    embedsrcs = glob([
+        "migrations/*.sql",
+    ]),
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_jackc_pgx_v5//:pgx",
         "@com_github_jackc_pgx_v5//pgxpool",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

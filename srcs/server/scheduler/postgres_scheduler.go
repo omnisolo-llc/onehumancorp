@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgTaskRepository implements TaskRepository backed by PostgreSQL.
 // It uses SELECT ... FOR UPDATE SKIP LOCKED to ensure that concurrent
 // replicas never execute the same task twice.
 type PgTaskRepository struct {
-	pool *pgxpool.Pool
+	pool db.Provider
 }
 
 // NewPgTaskRepository creates a Postgres-backed task repository.
-func NewPgTaskRepository(pool *pgxpool.Pool) *PgTaskRepository {
+func NewPgTaskRepository(pool db.Provider) *PgTaskRepository {
 	return &PgTaskRepository{pool: pool}
 }
 
@@ -28,7 +28,7 @@ func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		task.ID, task.OrganizationID, task.AgentID, task.Name,
 		string(task.Schedule.Type), task.Schedule.At, task.Schedule.IntervalS, task.Schedule.Expression,
-		string(task.Status), payload, task.CreatedAt, task.NextRunAt,
+		string(task.Status), string(payload), task.CreatedAt, task.NextRunAt,
 	)
 	if err != nil {
 		return fmt.Errorf("pg: create task: %w", err)
@@ -39,7 +39,7 @@ func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
 func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 	task := Task{}
 	var schedType, status string
-	var payload []byte
+	var payload string
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks WHERE id = $1`, id).Scan(
@@ -69,7 +69,7 @@ func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task
 	for rows.Next() {
 		var t Task
 		var schedType, status string
-		var payload []byte
+		var payload string
 		if err := rows.Scan(
 			&t.ID, &t.OrganizationID, &t.AgentID, &t.Name,
 			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
@@ -94,34 +94,43 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	rows, err := tx.Query(ctx, `
+	query := `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks
-		WHERE status = 'pending' AND next_run_at <= NOW()
-		FOR UPDATE SKIP LOCKED`)
+		WHERE status = 'pending' AND next_run_at <= CURRENT_TIMESTAMP`
+
+	_, isSqlite := r.pool.(*db.SqliteProvider)
+	if !isSqlite {
+		query += " FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("pg: poll due: %w", err)
 	}
-	defer rows.Close()
 
 	var tasks []Task
 	now := time.Now().UTC()
 	for rows.Next() {
 		var t Task
 		var schedType, status string
-		var payload []byte
+		var payload string
 		if err := rows.Scan(
 			&t.ID, &t.OrganizationID, &t.AgentID, &t.Name,
 			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
 			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
 		); err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("pg: scan due task: %w", err)
 		}
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
 		tasks = append(tasks, t)
+	}
+	rows.Close()
 
+	for _, t := range tasks {
 		// Mark as running within this transaction.
 		if _, err := tx.Exec(ctx, "UPDATE scheduled_tasks SET status='running', last_run_at=$2 WHERE id=$1", t.ID, now); err != nil {
 			return nil, fmt.Errorf("pg: mark running: %w", err)
@@ -136,11 +145,20 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 
 func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status TaskStatus, reschedule bool) error {
 	if reschedule {
-		_, err := r.pool.Exec(ctx, `
-			UPDATE scheduled_tasks
-			SET status = 'pending', next_run_at = NOW() + (interval_s * INTERVAL '1 second')
-			WHERE id = $1`, id)
-		return err
+		_, isSqlite := r.pool.(*db.SqliteProvider)
+		if isSqlite {
+			_, err := r.pool.Exec(ctx, `
+				UPDATE scheduled_tasks
+				SET status = 'pending', next_run_at = datetime(CURRENT_TIMESTAMP, '+' || interval_s || ' seconds')
+				WHERE id = $1`, id)
+			return err
+		} else {
+			_, err := r.pool.Exec(ctx, `
+				UPDATE scheduled_tasks
+				SET status = 'pending', next_run_at = CURRENT_TIMESTAMP + (interval_s * INTERVAL '1 second')
+				WHERE id = $1`, id)
+			return err
+		}
 	}
 	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = $2 WHERE id = $1", id, string(status))
 	return err
