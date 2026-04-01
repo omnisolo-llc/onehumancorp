@@ -41,6 +41,7 @@ type Provider interface {
 	Query(ctx context.Context, sql string, optionsAndArgs ...any) (Rows, error)
 	QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row
 	Begin(ctx context.Context) (Tx, error)
+	IsSQLite() bool
 	Close()
 }
 

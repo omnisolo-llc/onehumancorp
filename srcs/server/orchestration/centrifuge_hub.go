@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -53,6 +54,24 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	node, err := createNode(cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL != "" {
+		if realNode, ok := node.(*centrifuge.Node); ok {
+			broker, err := centrifuge.NewRedisBroker(realNode, centrifuge.RedisBrokerConfig{
+				Prefix: "centrifuge",
+			})
+			if err == nil {
+				realNode.SetBroker(broker)
+			} else {
+				slog.Error("[centrifuge] failed to configure Redis broker", "error", err)
+			}
+		}
+	} else {
+		// explicitly fall back to local memory broker when REDIS_URL is not set
+		// avoiding hard dependencies on Redis in Standalone Mode
+		slog.Info("[centrifuge] using local memory broker")
 	}
 
 	node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {

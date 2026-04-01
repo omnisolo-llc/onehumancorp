@@ -152,6 +152,8 @@ start_daemon() {
     HOME="${HOME}" \
     PORT="${port}" \
     GRPC_PORT="${GRPC_PORT:-0}" \
+    GOMEMLIMIT="${GOMEMLIMIT:-256MiB}" \
+    GOGC="${GOGC:-50}" \
     nohup "${SERVER_BIN}" >>"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
@@ -220,9 +222,13 @@ case "${1:-}" in
     print_doctor "${PORT_VALUE}"
     ;;
   "")
+    export GOMEMLIMIT="${GOMEMLIMIT:-256MiB}"
+    export GOGC="${GOGC:-50}"
     exec "${SERVER_BIN}"
     ;;
   *)
+    export GOMEMLIMIT="${GOMEMLIMIT:-256MiB}"
+    export GOGC="${GOGC:-50}"
     exec "${SERVER_BIN}" "$@"
     ;;
 esac

@@ -220,7 +220,7 @@ func run(now time.Time, listen listenFunc) error {
 
 	// Set up the SIPDB instance to connect to SQLite.
 	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
-	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
+	if createdSIPDB, err := orchestration.NewSIPDBFromPath(dbPath); err == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
 		// Hygiene: Prune stale missions in the agent_missions table periodically

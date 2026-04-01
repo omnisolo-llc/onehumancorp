@@ -13,6 +13,9 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -21,7 +24,7 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 *sql.DB
+	provider           db.Provider
 	ContextRoot        string
 	cachedGrounding    string
 	groundingOnce      *sync.Once
@@ -55,12 +58,20 @@ func withRetry(ctx context.Context, op func() error) error {
 }
 
 // NewSIPDB initializes a new database connection and creates required tables.
-// Accepts parameters: dbPath string (No Constraints).
+// Accepts parameters: provider db.Provider.
 // Returns (*SIPDB, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func NewSIPDB(dbPath string) (*SIPDB, error) {
+func NewSIPDB(provider db.Provider) (*SIPDB, error) {
+	if err := initializeTables(provider); err != nil {
+		return nil, err
+	}
 
+	return &SIPDB{provider: provider, groundingOnce: &sync.Once{}}, nil
+}
+
+// NewSIPDBFromPath initializes a standalone SQLite database connection and creates required tables.
+func NewSIPDBFromPath(dbPath string) (*SIPDB, error) {
 	dsn := dbPath
 	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
 		if !strings.Contains(dsn, "?") {
@@ -70,54 +81,89 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		}
 		dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
 	}
-	db, _ := sql.Open("sqlite", dsn)
-	db.SetMaxOpenConns(1)
+	database, _ := sql.Open("sqlite", dsn)
+	database.SetMaxOpenConns(1)
 
-	if err := initializeTables(db); err != nil {
-		return nil, err
-	}
-
-	return &SIPDB{db: db, groundingOnce: &sync.Once{}}, nil
+	provider := db.NewSqliteProvider(database)
+	return NewSIPDB(provider)
 }
 
-func initializeTables(db *sql.DB) error {
-	queries := []string{
-		`CREATE TABLE IF NOT EXISTS swarm_memory (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);`,
-		`CREATE TABLE IF NOT EXISTS agent_missions (
-			id TEXT PRIMARY KEY,
-			status TEXT NOT NULL,
-			payload TEXT NOT NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);`,
-		`CREATE TABLE IF NOT EXISTS agent_status (
-			agent_id TEXT PRIMARY KEY,
-			role TEXT NOT NULL,
-			status TEXT NOT NULL,
-			last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP
-		);`,
-		`CREATE TABLE IF NOT EXISTS capability_plugins (
-			plugin_id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			version TEXT NOT NULL,
-			manifest_url TEXT NOT NULL,
-			status TEXT NOT NULL,
-			registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);`,
-		`CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
-			memory_id TEXT PRIMARY KEY,
-			context TEXT NOT NULL,
-			vector_embedding BLOB,
-			source_plugin TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);`,
+func initializeTables(provider db.Provider) error {
+	var queries []string
+	if provider.IsSQLite() {
+		queries = []string{
+			`CREATE TABLE IF NOT EXISTS swarm_memory (
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS agent_missions (
+				id TEXT PRIMARY KEY,
+				status TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS agent_status (
+				agent_id TEXT PRIMARY KEY,
+				role TEXT NOT NULL,
+				status TEXT NOT NULL,
+				last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS capability_plugins (
+				plugin_id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				version TEXT NOT NULL,
+				manifest_url TEXT NOT NULL,
+				status TEXT NOT NULL,
+				registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
+				memory_id TEXT PRIMARY KEY,
+				context TEXT NOT NULL,
+				vector_embedding BLOB,
+				source_plugin TEXT,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);`,
+		}
+	} else {
+		queries = []string{
+			`CREATE TABLE IF NOT EXISTS swarm_memory (
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL,
+				updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS agent_missions (
+				id TEXT PRIMARY KEY,
+				status TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS agent_status (
+				agent_id TEXT PRIMARY KEY,
+				role TEXT NOT NULL,
+				status TEXT NOT NULL,
+				last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS capability_plugins (
+				plugin_id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				version TEXT NOT NULL,
+				manifest_url TEXT NOT NULL,
+				status TEXT NOT NULL,
+				registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);`,
+			`CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
+				memory_id TEXT PRIMARY KEY,
+				context TEXT NOT NULL,
+				vector_embedding BYTEA,
+				source_plugin TEXT,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);`,
+		}
 	}
 
 	for _, q := range queries {
-		if _, err := db.Exec(q); err != nil {
+		if _, err := provider.Exec(context.Background(), q); err != nil {
 			return err
 		}
 	}
@@ -130,10 +176,11 @@ func initializeTables(db *sql.DB) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "SyncMemory")
 	var value string
 	err := withRetry(ctx, func() error {
-		err := s.db.QueryRowContext(ctx, "SELECT value FROM swarm_memory WHERE key = ?", key).Scan(&value)
-		if err == sql.ErrNoRows {
+		err := s.provider.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = $1", key).Scan(&value)
+		if err != nil && err.Error() == "no rows in result set" || err == sql.ErrNoRows {
 			return nil
 		}
 		return err
@@ -147,9 +194,10 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "UpdateMemory")
 	return withRetry(ctx, func() error {
-		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO swarm_memory (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
+		_, err := s.provider.Exec(ctx,
+			"INSERT INTO swarm_memory (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=CURRENT_TIMESTAMP",
 			key, value,
 		)
 		return err
@@ -162,10 +210,19 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message, error) {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "GetPendingMissions")
+
+	var query string
+	if s.provider.IsSQLite() {
+		query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING'"
+	} else {
+		query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
+	}
+
 	var missions []Message
 	err := withRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.QueryContext(ctx, "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'", role)
+		rows, err := s.provider.Query(ctx, query, role)
 		if err != nil {
 			return err
 		}
@@ -213,12 +270,12 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "CompleteMission")
 	return withRetry(ctx, func() error {
-		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
+		affected, err := s.provider.Exec(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1", missionID)
 		if err != nil {
 			return err
 		}
-		affected, _ := res.RowsAffected()
 		if affected == 0 {
 			return errors.New("mission not found")
 		}
@@ -232,9 +289,10 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "Heartbeat")
 	return withRetry(ctx, func() error {
-		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP",
+		_, err := s.provider.Exec(ctx,
+			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT(agent_id) DO UPDATE SET role=EXCLUDED.role, status=EXCLUDED.status, last_heartbeat=CURRENT_TIMESTAMP",
 			agentID, role, status,
 		)
 		return err
@@ -267,9 +325,10 @@ func envBoolDefault(key string, fallback bool) bool {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "DelegateMission")
 	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
-	if !isMultiTenant && isSQLite {
+
+	if !isMultiTenant && s.provider.IsSQLite() {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
@@ -304,8 +363,8 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	}
 	taskBytes, _ := json.Marshal(wrapper)
 	return withRetry(ctx, func() error {
-		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+		_, err := s.provider.Exec(ctx,
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP)",
 			missionID, string(taskBytes),
 		)
 		return err
@@ -318,9 +377,10 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table.
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "PruneStaleMissions")
 	return withRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
-		_, err := s.db.ExecContext(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR created_at < ?", thresholdTime)
+		_, err := s.provider.Exec(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR created_at < $1", thresholdTime)
 		return err
 	})
 }
@@ -341,13 +401,14 @@ type CapabilityPlugin struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts or updates a record in the capability_plugins table.
 func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityPlugin) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "RegisterCapabilityPlugin")
 	return withRetry(ctx, func() error {
-		_, err := s.db.ExecContext(ctx,
+		_, err := s.provider.Exec(ctx,
 			`INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at)
-			 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+			 VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
 			 ON CONFLICT(plugin_id) DO UPDATE SET
-			 name=excluded.name, version=excluded.version,
-			 manifest_url=excluded.manifest_url, status=excluded.status,
+			 name=EXCLUDED.name, version=EXCLUDED.version,
+			 manifest_url=EXCLUDED.manifest_url, status=EXCLUDED.status,
 			 registered_at=CURRENT_TIMESTAMP`,
 			plugin.PluginID, plugin.Name, plugin.Version, plugin.ManifestURL, plugin.Status,
 		)
@@ -362,15 +423,16 @@ func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityP
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]CapabilityPlugin, error) {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "GetCapabilityPlugins")
 	var plugins []CapabilityPlugin
 	err := withRetry(ctx, func() error {
 		plugins = nil // reset slice
-		var rows *sql.Rows
+		var rows db.Rows
 		var err error
 		if status == "" {
-			rows, err = s.db.QueryContext(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins")
+			rows, err = s.provider.Query(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins")
 		} else {
-			rows, err = s.db.QueryContext(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE status = ?", status)
+			rows, err = s.provider.Query(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE status = $1", status)
 		}
 
 		if err != nil {
@@ -407,13 +469,14 @@ type EpisodicMemory struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the swarm_memory_embeddings table.
 func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) error {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "StoreEpisodicMemory")
 	return withRetry(ctx, func() error {
-		_, err := s.db.ExecContext(ctx,
+		_, err := s.provider.Exec(ctx,
 			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at)
-			 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+			 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
 			 ON CONFLICT(memory_id) DO UPDATE SET
-			 context=excluded.context, vector_embedding=excluded.vector_embedding,
-			 source_plugin=excluded.source_plugin`,
+			 context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding,
+			 source_plugin=EXCLUDED.source_plugin`,
 			memory.MemoryID, memory.Context, memory.VectorEmbedding, memory.SourcePlugin,
 		)
 		return err
@@ -426,15 +489,16 @@ func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) 
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) ([]EpisodicMemory, error) {
+	telemetry.RecordAgentApiCall(ctx, "system-db", "provider", "GetEpisodicMemoriesByPlugin")
 	var memories []EpisodicMemory
 	err := withRetry(ctx, func() error {
 		memories = nil // reset slice
-		var rows *sql.Rows
+		var rows db.Rows
 		var err error
 		if plugin == "" {
-			rows, err = s.db.QueryContext(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings")
+			rows, err = s.provider.Query(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings")
 		} else {
-			rows, err = s.db.QueryContext(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE source_plugin = ?", plugin)
+			rows, err = s.provider.Query(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE source_plugin = $1", plugin)
 		}
 
 		if err != nil {
@@ -462,7 +526,8 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) Close() error {
-	return s.db.Close()
+	s.provider.Close()
+	return nil
 }
 
 // SetContextRoot sets the context root for the SIPDB

@@ -267,7 +267,7 @@ func TestDelegateSubTask_Validation(t *testing.T) {
 
 func TestDelegateSubTask_WithSIPDB(t *testing.T) {
 	hub := NewHub()
-	db, err := NewSIPDB(filepath.Join(t.TempDir(), "test.db"))
+	db, err := NewSIPDBFromPath(filepath.Join(t.TempDir(), "test.db"))
 	if err == nil {
 		hub.SetSIPDB(db)
 		defer db.Close()

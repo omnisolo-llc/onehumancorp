@@ -278,7 +278,7 @@ func TestService_CoverageExt(t *testing.T) {
 
 	// 2. DelegateTask with sipDB
 	hub := NewHub()
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBFromPath(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)
 	}

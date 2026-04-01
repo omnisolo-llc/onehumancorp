@@ -15,7 +15,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos.db")
 
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBFromPath(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)
 	}
@@ -63,17 +63,17 @@ func TestSIPDB_Chaos(t *testing.T) {
 	// then we'll try to write to it from another goroutine which should trigger retries.
 
 	// Open a raw connection to lock the database
-	tx, err := db.db.Begin()
+	tx, err := db.provider.Begin(ctx)
 	if err != nil {
 		t.Fatalf("Failed to begin transaction: %v", err)
 	}
 
 	// Create an exclusive lock
-	_, err = tx.Exec("BEGIN EXCLUSIVE")
+	_, err = tx.Exec(ctx, "BEGIN EXCLUSIVE")
 	if err != nil {
 		t.Logf("Expected or not: %v", err)
 	} else {
-		_, err = tx.Exec("UPDATE agent_missions SET status = 'LOCKED' WHERE 1=0")
+		_, err = tx.Exec(ctx, "UPDATE agent_missions SET status = 'LOCKED' WHERE 1=0")
 		if err != nil {
 			t.Fatalf("Failed to lock table: %v", err)
 		}
@@ -107,7 +107,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Release the lock
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		t.Fatalf("Failed to commit and release lock: %v", err)
 	}
 
