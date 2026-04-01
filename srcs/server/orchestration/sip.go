@@ -15,6 +15,7 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -382,6 +383,20 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	})
 }
 
+// SyncUpsertMission inserts or updates a mission in the agent_missions table, prioritizing local state.
+func (s *SIPDB) SyncUpsertMission(ctx context.Context, missionID string, payload string) error {
+	return withRetry(ctx, func() error {
+		var err error
+		// Try postgres syntax first
+		_, err = s.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ($1, 'SYNCED', $2, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload, status='SYNCED'", missionID, payload)
+		if err != nil {
+			// Fallback to SQLite syntax on any query error as per the directive
+			_, err = s.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'SYNCED', ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, status='SYNCED'", missionID, payload)
+		}
+		return err
+	})
+}
+
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
 // It also sanitizes stuck PENDING missions by converting them to FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
@@ -700,15 +715,55 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		// Parse payload to generic map to sanitize it
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &payloadMap); err == nil {
+			// Delete rag_context key
+			delete(payloadMap, "rag_context")
+
+			// Also apply PII redaction to string fields or the resulting JSON as instructed
+			// The instructions: "safely decode the JSON payload into an interface{} and type assert to map[string]interface{} (to avoid corrupting arrays or primitives) before utilizing the public telemetry.RedactPII function to strip personally identifiable information."
+			// Since RedactPII takes a string and returns a string, we can do this on the stringified task, or we can recursively clean strings in the map.
+			// Let's recursively clean strings in the map to be safe.
+			var redactMap func(m map[string]interface{})
+			redactMap = func(m map[string]interface{}) {
+				for k, v := range m {
+					switch val := v.(type) {
+					case string:
+						m[k] = telemetry.RedactPII(val)
+					case map[string]interface{}:
+						redactMap(val)
+					case []interface{}:
+						for i, item := range val {
+							if strItem, ok := item.(string); ok {
+								val[i] = telemetry.RedactPII(strItem)
+							} else if mapItem, ok := item.(map[string]interface{}); ok {
+								redactMap(mapItem)
+							}
+						}
+					}
+				}
+			}
+			redactMap(payloadMap)
+		} else {
+			continue // skip invalid payloads
+		}
+
+		sanitizedPayload, err := json.Marshal(payloadMap)
+		if err != nil {
+			continue
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr

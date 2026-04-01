@@ -540,6 +540,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
+	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
@@ -1442,4 +1443,61 @@ type pipelineCreateRequest struct {
 type pipelinePromoteRequest struct {
 	PipelineID string `json:"pipelineId"`
 	ApprovedBy string `json:"approvedBy"`
+}
+
+// handleMissionsSync is the cloud-side endpoint that receives synced missions from local standalone nodes.
+func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body", http.StatusBadRequest)
+		return
+	}
+
+	var rawPayload struct {
+		Role string          `json:"role"`
+		Task json.RawMessage `json:"task"`
+	}
+	_ = json.Unmarshal(body, &rawPayload)
+
+	var id string
+	if len(rawPayload.Task) > 0 {
+		var taskMap map[string]interface{}
+		if err := json.Unmarshal(rawPayload.Task, &taskMap); err == nil {
+			id, _ = taskMap["id"].(string)
+		}
+	}
+
+	if id == "" {
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal(body, &payloadMap); err == nil {
+			id, _ = payloadMap["id"].(string)
+		}
+		if id == "" {
+			http.Error(w, "missing mission id in payload", http.StatusBadRequest)
+			return
+		}
+	}
+
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+	if s.hub != nil && s.hub.SIPDB() != nil {
+		if forceLocal {
+			err = s.hub.SIPDB().SyncUpsertMission(r.Context(), id, string(body))
+			if err != nil {
+				telemetry.RecordSyncError(r.Context(), "mission")
+				http.Error(w, "failed to upsert mission", http.StatusInternalServerError)
+				return
+			}
+			telemetry.RecordMissionSynced(r.Context())
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

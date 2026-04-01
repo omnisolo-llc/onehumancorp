@@ -27,17 +27,24 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	missionSyncedCounter     metric.Int64Counter
+	syncErrorCounter         metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
 
-func redactPII(input string) string {
+// RedactPII strips personally identifiable information from strings.
+func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
 	return s
+}
+
+func redactPII(input string) string {
+	return RedactPII(input)
 }
 
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
@@ -131,6 +138,22 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	missionSyncedCounter, err = m.Int64Counter(
+		"sip.missions.synced",
+		metric.WithDescription("Total successful mission synchronizations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncErrorCounter, err = m.Int64Counter(
+		"sip.missions.sync_errors",
+		metric.WithDescription("Total mission synchronization errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -281,6 +304,35 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 			"type": interactionType,
 		})
 		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
+	}
+}
+
+// RecordSyncError records an error during synchronization.
+func RecordSyncError(ctx context.Context, syncType string) {
+	if syncErrorCounter != nil {
+		syncErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("sync_type", syncType),
+		))
+	}
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"sync_type": syncType,
+			"error":     true,
+		})
+		_ = BufferMetricFunc(ctx, "sync_error", string(payloadBytes))
+	}
+}
+
+// RecordMissionSynced records a successful mission synchronization.
+func RecordMissionSynced(ctx context.Context) {
+	if missionSyncedCounter != nil {
+		missionSyncedCounter.Add(ctx, 1)
+	}
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"synced": true,
+		})
+		_ = BufferMetricFunc(ctx, "mission_synced", string(payloadBytes))
 	}
 }
 
