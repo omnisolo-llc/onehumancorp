@@ -27,6 +27,8 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	syncMissionsSyncedCounter metric.Int64Counter
+	syncMissionsErrorCounter metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -131,6 +133,22 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncMissionsSyncedCounter, err = m.Int64Counter(
+		"sip.missions.synced",
+		metric.WithDescription("Total synced missions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncMissionsErrorCounter, err = m.Int64Counter(
+		"sip.missions.sync_errors",
+		metric.WithDescription("Total failed synced missions"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -331,6 +349,30 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"event_type", eventType,
 		"content", redactPII(content),
 	)
+}
+
+// RecordSyncMissionSuccess records a successful sync.
+// Accepts parameters: ctx context.Context.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordSyncMissionSuccess(ctx context.Context) {
+	if syncMissionsSyncedCounter == nil {
+		return
+	}
+	syncMissionsSyncedCounter.Add(ctx, 1)
+}
+
+// RecordSyncMissionError records a failed sync.
+// Accepts parameters: ctx context.Context.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordSyncMissionError(ctx context.Context) {
+	if syncMissionsErrorCounter == nil {
+		return
+	}
+	syncMissionsErrorCounter.Add(ctx, 1)
 }
 
 // Global buffer function pointer to inject dependency without circular imports.

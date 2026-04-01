@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	_ "modernc.org/sqlite"
 )
 
@@ -700,24 +701,46 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
+		// Parse payload to sanitize
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &payloadMap); err == nil {
+			// Remove the sensitive rag_context key
+			delete(payloadMap, "rag_context")
+
+			// Redact PII in the payload
+			redactedMap := redactInterfacePII(payloadMap)
+			if redactedBytes, err := json.Marshal(redactedMap); err == nil {
+				m.payload = string(redactedBytes)
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
+			telemetry.RecordSyncMissionError(ctx)
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+					telemetry.RecordSyncMissionSuccess(ctx)
+				} else {
+					telemetry.RecordSyncMissionError(ctx)
 				}
+			} else {
+				telemetry.RecordSyncMissionError(ctx)
 			}
 			resp.Body.Close()
+		} else {
+			telemetry.RecordSyncMissionError(ctx)
 		}
 	}
 
