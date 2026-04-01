@@ -10,6 +10,7 @@ package dashboard
 // callers construct a single Server directly via NewServer.
 
 import (
+	"os"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -114,6 +115,21 @@ func (r *TenantRegistry) handler(orgID string) http.Handler {
 // Has no side effects.
 func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	claims := auth.ClaimsFromContext(req.Context())
+
+	// Standalone Single-User bypass
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		r.mu.RLock()
+		var h http.Handler
+		for _, tenantHandler := range r.tenants {
+			h = tenantHandler
+			break
+		}
+		r.mu.RUnlock()
+		if h != nil {
+			h.ServeHTTP(w, req)
+			return
+		}
+	}
 
 	if claims != nil && claims.OrganizationID != "" {
 		// Authenticated request with an org — lazily provision a tenant if needed.

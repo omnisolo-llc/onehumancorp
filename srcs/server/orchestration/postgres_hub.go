@@ -1,24 +1,25 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+
 )
 
 // PgHubRepository implements HubRepository backed by PostgreSQL.
 type PgHubRepository struct {
-	pool *pgxpool.Pool
+	provider *db.Provider
 }
 
 // NewPgHubRepository creates a Postgres-backed hub repository.
-func NewPgHubRepository(pool *pgxpool.Pool) *PgHubRepository {
-	return &PgHubRepository{pool: pool}
+func NewPgHubRepository(provider *db.Provider) *PgHubRepository {
+	return &PgHubRepository{provider: provider}
 }
 
 func (r *PgHubRepository) RegisterAgent(ctx context.Context, agent Agent) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO agents (id, name, role, organization_id, status, provider_type, region)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (id) DO UPDATE SET
@@ -36,7 +37,7 @@ func (r *PgHubRepository) RegisterAgent(ctx context.Context, agent Agent) error 
 func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool, error) {
 	var a Agent
 	var status string
-	err := r.pool.QueryRow(ctx, `
+	err := r.provider.PgPool.QueryRow(ctx, `
 		SELECT id, name, role, organization_id, status, provider_type, region
 		FROM agents WHERE id = $1`, id).Scan(
 		&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region,
@@ -52,7 +53,7 @@ func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool,
 }
 
 func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.provider.PgPool.Query(ctx, `
 		SELECT id, name, role, organization_id, status, provider_type, region
 		FROM agents ORDER BY id`)
 	if err != nil {
@@ -74,7 +75,7 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 }
 
 func (r *PgHubRepository) UpdateAgentStatus(ctx context.Context, id string, status Status) error {
-	_, err := r.pool.Exec(ctx, "UPDATE agents SET status = $2 WHERE id = $1", id, string(status))
+	_, err := r.provider.PgPool.Exec(ctx, "UPDATE agents SET status = $2 WHERE id = $1", id, string(status))
 	if err != nil {
 		return fmt.Errorf("pg: update agent status: %w", err)
 	}
@@ -82,7 +83,7 @@ func (r *PgHubRepository) UpdateAgentStatus(ctx context.Context, id string, stat
 }
 
 func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
-	tx, err := r.pool.Begin(ctx)
+	tx, err := r.provider.PgPool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("pg: begin remove agent: %w", err)
 	}
@@ -98,7 +99,7 @@ func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
 }
 
 func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg Message) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO agent_inbox (agent_id, message_id, from_agent, to_agent, type, content, meeting_id, occurred_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		toAgent, msg.ID, msg.FromAgent, msg.ToAgent, msg.Type, msg.Content, msg.MeetingID, msg.OccurredAt,
@@ -112,7 +113,7 @@ func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg M
 // PopMessages atomically retrieves and removes all pending messages.
 // Uses DELETE ... RETURNING for consume-once semantics.
 func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Message, error) {
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.provider.PgPool.Query(ctx, `
 		DELETE FROM agent_inbox WHERE agent_id = $1
 		RETURNING message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`, agentID)
 	if err != nil {
@@ -132,7 +133,7 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 }
 
 func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]Message, error) {
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.provider.PgPool.Query(ctx, `
 		SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at
 		FROM agent_inbox WHERE agent_id = $1 ORDER BY seq`, agentID)
 	if err != nil {
@@ -152,7 +153,7 @@ func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]M
 }
 
 func (r *PgHubRepository) CreateMeeting(ctx context.Context, room MeetingRoom) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO meeting_rooms (id, agenda, participants)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (id) DO UPDATE SET agenda=EXCLUDED.agenda, participants=EXCLUDED.participants`,
@@ -166,7 +167,7 @@ func (r *PgHubRepository) CreateMeeting(ctx context.Context, room MeetingRoom) e
 
 func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoom, bool, error) {
 	var room MeetingRoom
-	err := r.pool.QueryRow(ctx, "SELECT id, agenda, participants FROM meeting_rooms WHERE id = $1", id).Scan(
+	err := r.provider.PgPool.QueryRow(ctx, "SELECT id, agenda, participants FROM meeting_rooms WHERE id = $1", id).Scan(
 		&room.ID, &room.Agenda, &room.Participants,
 	)
 	if err != nil {
@@ -177,7 +178,7 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 	}
 
 	// Load transcript.
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.provider.PgPool.Query(ctx, `
 		SELECT message_id, from_agent, to_agent, type, content, occurred_at
 		FROM meeting_transcripts WHERE meeting_id = $1 ORDER BY seq`, id)
 	if err != nil {
@@ -197,7 +198,7 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 }
 
 func (r *PgHubRepository) AppendTranscript(ctx context.Context, meetingID string, msg Message) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO meeting_transcripts (meeting_id, message_id, from_agent, to_agent, type, content, occurred_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		meetingID, msg.ID, msg.FromAgent, msg.ToAgent, msg.Type, msg.Content, msg.OccurredAt,
@@ -209,7 +210,7 @@ func (r *PgHubRepository) AppendTranscript(ctx context.Context, meetingID string
 }
 
 func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, error) {
-	rows, err := r.pool.Query(ctx, "SELECT id, agenda, participants FROM meeting_rooms ORDER BY id")
+	rows, err := r.provider.PgPool.Query(ctx, "SELECT id, agenda, participants FROM meeting_rooms ORDER BY id")
 	if err != nil {
 		return nil, fmt.Errorf("pg: list meetings: %w", err)
 	}

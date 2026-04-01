@@ -1,29 +1,30 @@
 package scheduler
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+
 )
 
 // PgTaskRepository implements TaskRepository backed by PostgreSQL.
 // It uses SELECT ... FOR UPDATE SKIP LOCKED to ensure that concurrent
 // replicas never execute the same task twice.
 type PgTaskRepository struct {
-	pool *pgxpool.Pool
+	provider *db.Provider
 }
 
 // NewPgTaskRepository creates a Postgres-backed task repository.
-func NewPgTaskRepository(pool *pgxpool.Pool) *PgTaskRepository {
-	return &PgTaskRepository{pool: pool}
+func NewPgTaskRepository(provider *db.Provider) *PgTaskRepository {
+	return &PgTaskRepository{provider: provider}
 }
 
 func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
 	payload, _ := json.Marshal(task.Payload)
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO scheduled_tasks (id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, next_run_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		task.ID, task.OrganizationID, task.AgentID, task.Name,
@@ -40,7 +41,7 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 	task := Task{}
 	var schedType, status string
 	var payload []byte
-	err := r.pool.QueryRow(ctx, `
+	err := r.provider.PgPool.QueryRow(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks WHERE id = $1`, id).Scan(
 		&task.ID, &task.OrganizationID, &task.AgentID, &task.Name,
@@ -57,7 +58,7 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 }
 
 func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task, error) {
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.provider.PgPool.Query(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks WHERE organization_id = $1 ORDER BY created_at`, orgID)
 	if err != nil {
@@ -88,7 +89,7 @@ func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task
 // PollDue uses SELECT ... FOR UPDATE SKIP LOCKED to claim due tasks
 // atomically.  This prevents duplicate execution across replicas.
 func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
-	tx, err := r.pool.Begin(ctx)
+	tx, err := r.provider.PgPool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("pg: begin poll tx: %w", err)
 	}
@@ -136,17 +137,17 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 
 func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status TaskStatus, reschedule bool) error {
 	if reschedule {
-		_, err := r.pool.Exec(ctx, `
+		_, err := r.provider.PgPool.Exec(ctx, `
 			UPDATE scheduled_tasks
 			SET status = 'pending', next_run_at = NOW() + (interval_s * INTERVAL '1 second')
 			WHERE id = $1`, id)
 		return err
 	}
-	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = $2 WHERE id = $1", id, string(status))
+	_, err := r.provider.PgPool.Exec(ctx, "UPDATE scheduled_tasks SET status = $2 WHERE id = $1", id, string(status))
 	return err
 }
 
 func (r *PgTaskRepository) Cancel(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1", id)
+	_, err := r.provider.PgPool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1", id)
 	return err
 }

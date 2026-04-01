@@ -63,14 +63,14 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
-	if pool != nil {
+func newHubAndTracker(provider *db.Provider) (*orchestration.Hub, *billing.Tracker) {
+	if provider != nil {
 		return orchestration.NewHubWithRepository(
-				orchestration.NewPgHubRepository(pool.Pool),
-				scheduler.NewPgTaskRepository(pool.Pool),
+				orchestration.NewPgHubRepository(provider),
+				scheduler.NewPgTaskRepository(provider),
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
-				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
+				billing.NewPgUsageRepository(provider, billing.DefaultCatalog),
 			)
 	}
 
@@ -167,21 +167,21 @@ func run(now time.Time, listen listenFunc) error {
 	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
 
-	pool, err := db.New(ctx)
+	provider, err := db.NewProvider(ctx)
 	if err != nil {
 		return err
 	}
-	if pool != nil {
-		defer pool.Close()
-		if err := pool.RunMigrations(ctx); err != nil {
+	if provider != nil {
+		defer provider.Close()
+		if err := provider.RunMigrations(ctx); err != nil {
 			return err
 		}
-		slog.Info("using Postgres-backed repositories")
+		slog.Info("using database-backed repositories")
 	} else {
-		slog.Info("DATABASE_URL not set, using in-memory repositories")
+		slog.Info("DATABASE_URL not set and OHC_STANDALONE not true, using in-memory repositories")
 	}
-	if multiTenant && pool == nil {
-		slog.Warn("multi-tenant mode enabled without Postgres; tenant state will remain process-local")
+	if multiTenant && provider == nil {
+		slog.Warn("multi-tenant mode enabled without Database; tenant state will remain process-local")
 	}
 
 	// 1. Initialize Settings
@@ -200,9 +200,9 @@ func run(now time.Time, listen listenFunc) error {
 		sipdb     *orchestration.SIPDB
 	)
 
-	hub, tracker = newHubAndTracker(pool)
-	if pool != nil {
-		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
+	hub, tracker = newHubAndTracker(provider)
+	if provider != nil {
+		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(provider))
 	} else {
 		authStore = auth.NewStore()
 	}
@@ -248,7 +248,7 @@ func run(now time.Time, listen listenFunc) error {
 	var handler http.Handler
 	if multiTenant {
 		factory := func(org domain.Organization) http.Handler {
-			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantHub, tenantTracker := newHubAndTracker(provider)
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)

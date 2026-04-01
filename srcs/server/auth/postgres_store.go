@@ -1,26 +1,27 @@
 package auth
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+
 )
 
 // PgUserRepository implements UserRepository backed by PostgreSQL.
 type PgUserRepository struct {
-	pool *pgxpool.Pool
+	provider *db.Provider
 }
 
 // NewPgUserRepository creates a Postgres-backed user repository.
-func NewPgUserRepository(pool *pgxpool.Pool) *PgUserRepository {
-	return &PgUserRepository{pool: pool}
+func NewPgUserRepository(provider *db.Provider) *PgUserRepository {
+	return &PgUserRepository{provider: provider}
 }
 
 func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		user.ID, user.Username, user.Email, user.PasswordHash,
@@ -51,7 +52,7 @@ func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string) (*U
 }
 
 func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
-	rows, err := r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
+	rows, err := r.provider.PgPool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
 	if err != nil {
 		return nil, fmt.Errorf("pg: list users: %w", err)
 	}
@@ -69,7 +70,7 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 }
 
 func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 		organization_id=$7, oidc_subject=$8, updated_at=$9
 		WHERE id=$1`,
@@ -84,7 +85,7 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 }
 
 func (r *PgUserRepository) DeleteUser(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
+	_, err := r.provider.PgPool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("pg: delete user: %w", err)
 	}
@@ -92,20 +93,20 @@ func (r *PgUserRepository) DeleteUser(ctx context.Context, id string) error {
 }
 
 func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time.Time) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.provider.PgPool.Exec(ctx, `
 		INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
 		ON CONFLICT (jti) DO NOTHING`, jti, exp)
 	if err != nil {
 		return fmt.Errorf("pg: revoke token: %w", err)
 	}
 	// GC expired entries.
-	_, _ = r.pool.Exec(ctx, "DELETE FROM revoked_tokens WHERE expires_at < NOW()")
+	_, _ = r.provider.PgPool.Exec(ctx, "DELETE FROM revoked_tokens WHERE expires_at < NOW()")
 	return nil
 }
 
 func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, error) {
 	var count int
-	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= NOW()", jti).Scan(&count)
+	err := r.provider.PgPool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= NOW()", jti).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("pg: check revoked: %w", err)
 	}
@@ -116,7 +117,7 @@ func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, err
 
 func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...any) (*User, error) {
 	u := &User{}
-	err := r.pool.QueryRow(ctx, query, args...).Scan(
+	err := r.provider.PgPool.QueryRow(ctx, query, args...).Scan(
 		&u.ID, &u.Username, &u.Email, &u.PasswordHash,
 		&u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject,
 		&u.CreatedAt, &u.UpdatedAt,
