@@ -25,6 +25,7 @@ type SIPDB struct {
 	ContextRoot        string
 	cachedGrounding    string
 	groundingOnce      *sync.Once
+	delegateSemaphore  chan struct{}
 }
 
 const (
@@ -77,7 +78,11 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		return nil, err
 	}
 
-	return &SIPDB{db: db, groundingOnce: &sync.Once{}}, nil
+	return &SIPDB{
+		db:                db,
+		groundingOnce:     &sync.Once{},
+		delegateSemaphore: make(chan struct{}, 5),
+	}, nil
 }
 
 func initializeTables(db *sql.DB) error {
@@ -247,6 +252,14 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	if os.Getenv("OHC_MULTITENANT") != "true" {
+		select {
+		case s.delegateSemaphore <- struct{}{}:
+			defer func() { <-s.delegateSemaphore }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
