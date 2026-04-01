@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"log/slog"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -14,13 +15,15 @@ import (
 type TaskWorker struct {
 	planeClient *plane.Client
 	pollInterval time.Duration
+	hub *Hub
 }
 
 // NewTaskWorker creates a new TaskWorker.
-func NewTaskWorker(pc *plane.Client) *TaskWorker {
+func NewTaskWorker(pc *plane.Client, hub *Hub) *TaskWorker {
 	return &TaskWorker{
 		planeClient: pc,
 		pollInterval: 30 * time.Second,
+		hub: hub,
 	}
 }
 
@@ -56,6 +59,18 @@ func (tw *TaskWorker) pollAndAssign() {
 		return
 	}
 
+	var idleAgents []Agent
+	for _, agent := range tw.hub.Agents() {
+		if agent.Status == StatusIdle {
+			idleAgents = append(idleAgents, agent)
+		}
+	}
+
+	if len(idleAgents) == 0 {
+		slog.Info("agent task worker: no idle agents available to take the issue")
+		return
+	}
+
 	// Pick a random issue
 	randomIndex := rand.Intn(len(issues))
 	issue := issues[randomIndex]
@@ -68,6 +83,21 @@ func (tw *TaskWorker) pollAndAssign() {
 		return
 	}
 
-	// TODO: Inject issue descriptor into an available agent's prompt queue.
-	slog.Info("agent task worker: issue marked in_progress, delegating to agent")
+	agent := idleAgents[rand.Intn(len(idleAgents))]
+
+	msg := Message{
+		ID:         fmt.Sprintf("task-%s-%d", issue.ID, time.Now().UnixNano()),
+		FromAgent:  "system-task-worker",
+		ToAgent:    agent.ID,
+		Type:       EventTask,
+		Content:    fmt.Sprintf("Please resolve Plane Issue: %s - %s", issue.Name, issue.Description),
+		OccurredAt: time.Now().UTC(),
+	}
+
+	if err := tw.hub.Publish(msg); err != nil {
+		slog.Error("failed to publish task to agent", "err", err, "agent_id", agent.ID)
+		return
+	}
+
+	slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", agent.ID)
 }
