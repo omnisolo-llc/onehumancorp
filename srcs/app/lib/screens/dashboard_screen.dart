@@ -152,7 +152,7 @@ class _ObservabilityWidget extends StatelessWidget {
     return Semantics(
       label: 'System Observability Panel',
       child: Tooltip(
-        message: 'System Health & Metrics',
+        message: 'View System Health & Metrics',
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
@@ -162,6 +162,13 @@ class _ObservabilityWidget extends StatelessWidget {
                 color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Material(
                 color: Colors.transparent,
@@ -179,12 +186,19 @@ class _ObservabilityWidget extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.monitor_heart, color: colors.primary, size: 28),
-                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.monitor_heart, color: colors.primary, size: 28),
+                            ),
+                            const SizedBox(width: 16),
                             Text(
                               'Full-Spectrum Telemetry',
                               style: TextStyle(
-                                fontSize: 22,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: colors.onSurface,
                                 fontFamily: 'Outfit',
