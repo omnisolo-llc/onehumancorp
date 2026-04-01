@@ -351,3 +351,54 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}, nil
 	}
 }
+
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var reqBody []struct {
+		ID      string `json:"id"`
+		Payload string `json:"payload"`
+	}
+
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&reqBody); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if s.hub.SIPDB() == nil {
+		http.Error(w, "SIPDB not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	synced := 0
+	for _, m := range reqBody {
+		m.Payload = orchestration.RedactPII(m.Payload)
+
+		db := s.hub.SIPDB().DB()
+		if db != nil {
+			_, err := db.ExecContext(r.Context(),
+				"INSERT INTO agent_missions (id, payload, status, created_at) VALUES ($1, $2, 'PENDING', CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload, status=EXCLUDED.status",
+				m.ID, m.Payload,
+			)
+			if err == nil {
+				synced++
+			}
+		}
+	}
+
+	telemetry.RecordAgentApiCall(r.Context(), "system", "sync_daemon", "hybrid_mcp_rag_sync")
+	if telemetry.Verbosity >= 1 {
+		slog.Info("local-to-cloud mission sync", "count", synced, "resolution", "client-wins")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"synced": synced,
+	})
+}
