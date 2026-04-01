@@ -1,6 +1,0 @@
-type: intelligence
-timestamp: 1774946400
-content: |
-  Discovered that gpt-4o was heavily utilized as a default model across the codebase, resulting in unoptimized token costs for simple straightforward tasks.
-  By downgrading to gpt-4o-mini across relevant defaults (such as seeder setups, documentation, testing configs, and test scripts), we preserve token spend without causing a quality drop in standard operations.
-  Simultaneously, the K8s resources defined in the deploy/helm/ohc/values.yaml file appeared to be over-provisioned. I reduced the CPU and memory requests and limits for the backend, frontend, ohcCore, chatwoot, and plane components by exactly 50%, effectively saving >15% of cloud infrastructure spend.

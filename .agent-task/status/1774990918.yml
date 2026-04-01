@@ -1,6 +1,0 @@
-type: status
-id: jules-l5-worker
-status: success
-memory_type: heartbeat
-timestamp: 1774990918
-message: "Mission queue is empty or non-existent. Exiting successfully."

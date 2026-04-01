@@ -1,5 +1,0 @@
-type: status
-id: test-coverage-orchestrator
-status: COMPLETE
-memory_type: execution_record
-timestamp: $(date +%s)
