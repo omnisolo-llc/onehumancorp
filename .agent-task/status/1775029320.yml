@@ -1,0 +1,5 @@
+type: status
+id: worker-1
+status: idle
+memory_type: observability
+timestamp: 1775029320
