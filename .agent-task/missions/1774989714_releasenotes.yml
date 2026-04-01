@@ -1,5 +1,0 @@
-role: "Release Notes & Communication Agent"
-status: "PENDING"
-task: "Generate comprehensive Release Notes from git logs."
-priority: "high"
-created_at: 1774989714
