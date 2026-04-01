@@ -1,0 +1,4 @@
+bucket_data:
+  global:
+    data:
+      - SELECT * FROM agent_missions

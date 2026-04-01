@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:powersync/powersync.dart' hide Column, Row, Table;
+import 'package:ohc_app/services/powersync_service.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -205,6 +207,8 @@ class _ObservabilityWidget extends StatelessWidget {
                               ),
                             ),
                             const Spacer(),
+                            const _SyncStatusBadge(),
+                            const SizedBox(width: 12),
                             _StatusBadge(healthy: healthScore >= 80),
                           ],
                         ),
@@ -622,6 +626,54 @@ class _StatCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SyncStatusBadge extends ConsumerWidget {
+  const _SyncStatusBadge();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final psService = ref.watch(powerSyncProvider);
+
+
+    return StreamBuilder<SyncStatus>(
+      stream: psService.db.statusStream,
+      builder: (context, snapshot) {
+        final colors = Theme.of(context).colorScheme;
+        bool isConnected = snapshot.data?.connected ?? false;
+        bool isDownloading = snapshot.data?.downloading ?? false;
+
+        final color = isConnected ? Colors.green : colors.error;
+        final label = isDownloading ? 'Syncing...' : (isConnected ? 'Cloud Synced' : 'Local Only');
+        final icon = isDownloading ? Icons.sync : (isConnected ? Icons.cloud_done : Icons.cloud_off);
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+        );
+      }
     );
   }
 }

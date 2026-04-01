@@ -77,6 +77,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ohc
       POSTGRES_PASSWORD: ohc
@@ -192,3 +193,20 @@ services:
       - SECRET_KEY=an_extremely_secret_key_that_is_long_enough_for_plane
     depends_on:
       - plane-api
+
+  powersync:
+    image: journeyapps/powersync-service:latest
+    ports:
+      - "8081:8080"
+    environment:
+      - PS_PORT=8080
+      - PS_DATA_SOURCE_URI=postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      - PS_JWKS_URL=http://server:8080/api/powersync/jwks
+      - PS_SYNC_RULES_PATH=/etc/powersync/sync_rules.yaml
+    volumes:
+      - ./docker/powersync/sync_rules.yaml:/etc/powersync/sync_rules.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_started
