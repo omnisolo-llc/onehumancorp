@@ -43,19 +43,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _oauthLogin(String provider) async {
-    // Simulated OAuth flow
+    // Simulated OAuth flow with Graceful Degradation / Loading states for Thin Client
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       // In a real app this would open a webview or use an OAuth library
-      await Future.delayed(const Duration(seconds: 1));
+      // For Thin Client mode, simulate variable-latency remote calls
+      await Future.delayed(const Duration(milliseconds: 1500));
       await ref
           .read(authStateProvider.notifier)
           .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
     } catch (e) {
-      setState(() => _error = "OAuth Login Failed: $e");
+      // Handle missing context or network degradation gracefully
+      setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -72,73 +74,105 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       builder:
           (context) => Dialog(
             backgroundColor: Colors.transparent,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            elevation: 0,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Remote Connection',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Configure the OHC Cloud or local backend URL for Thin Client mode.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      TextField(
-                        controller: controller,
-                        decoration: InputDecoration(
-                          labelText: 'Backend URL',
-                          hintText: 'e.g. http://localhost:18789',
-                          prefixIcon: const Icon(Icons.link),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
-                            style: FilledButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.cloud_sync_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Remote Connection',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Outfit',
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
-                            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Configure the OHC Cloud or local backend URL for Thin Client mode. Requires restart to fully apply.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            height: 1.4,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 24),
+                        Semantics(
+                          label: 'Backend URL Input',
+                          child: TextField(
+                            controller: controller,
+                            style: const TextStyle(fontFamily: 'Inter'),
+                            decoration: InputDecoration(
+                              labelText: 'Backend URL',
+                              hintText: 'e.g. http://localhost:18789',
+                              prefixIcon: const Icon(Icons.link),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                            ),
+                            const SizedBox(width: 12),
+                            Semantics(
+                              button: true,
+                              label: 'Save Settings',
+                              child: FilledButton.icon(
+                                onPressed: () => Navigator.pop(context, controller.text),
+                                icon: const Icon(Icons.check, size: 18),
+                                label: const Text('Save', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
