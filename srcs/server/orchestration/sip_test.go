@@ -2,8 +2,12 @@ package orchestration
 
 import (
 	"context"
-	"path/filepath"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -871,5 +875,150 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 	}
 	if missions2[0].Content != "some string" && missions2[0].Content != "\"some string\"" {
 		t.Fatalf("expected \"some string\", got %q", missions2[0].Content)
+	}
+}
+
+func TestSIPDB_BurstMission_Success(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_burst_success.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	msg := Message{
+		ID:         "burst-1",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-2",
+		Type:       EventTask,
+		Content:    "Heavy payload task",
+		OccurredAt: time.Now().UTC(),
+	}
+
+	err = db.DelegateMission(ctx, "mission-burst-1", "HEAVY_WORKER", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	// Setup a mock HTTP endpoint
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(body), "Heavy payload task") {
+			t.Errorf("Expected payload to contain 'Heavy payload task', got %s", string(body))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	err = db.BurstMission(ctx, "mission-burst-1", ts.URL)
+	if err != nil {
+		t.Fatalf("BurstMission failed: %v", err)
+	}
+
+	// Verify status is BURSTING
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "BURSTING" {
+		t.Fatalf("Expected status BURSTING, got %s", status)
+	}
+}
+
+func TestSIPDB_BurstMission_HTTPFailureRollback(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_burst_failure.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	msg := Message{
+		ID:         "burst-2",
+		Type:       EventTask,
+		Content:    "Fail payload",
+	}
+	err = db.DelegateMission(ctx, "mission-burst-2", "HEAVY_WORKER", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	// Setup a mock HTTP endpoint that fails
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	err = db.BurstMission(ctx, "mission-burst-2", ts.URL)
+	if err == nil {
+		t.Fatalf("Expected BurstMission to fail with 500 error")
+	}
+
+	// Needs time for rollback in background to complete? Wait a bit, although rollback might use background ctx, it executes synchronously in our mock or we can just wait 10ms.
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify status is PENDING (rolled back)
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-2'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "PENDING" {
+		t.Fatalf("Expected status PENDING after rollback, got %s", status)
+	}
+}
+
+func TestSIPDB_BurstMission_NetworkFailureRollback(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_burst_netfail.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	err = db.DelegateMission(ctx, "mission-burst-3", "HEAVY", Message{})
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	// Burst to a non-existent port to cause a network error
+	err = db.BurstMission(ctx, "mission-burst-3", "http://127.0.0.1:12345/nonexistent")
+	if err == nil {
+		t.Fatalf("Expected BurstMission to fail with network error")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-3'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "PENDING" {
+		t.Fatalf("Expected status PENDING after rollback, got %s", status)
+	}
+}
+
+func TestSIPDB_BurstMission_NotFound(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_burst_notfound.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	err = db.BurstMission(ctx, "nonexistent-mission", "http://example.com")
+	if err == nil {
+		t.Fatalf("Expected BurstMission to fail on nonexistent mission")
+	}
+	if !strings.Contains(err.Error(), "mission not found or not PENDING") {
+		t.Fatalf("Expected error to contain 'mission not found', got %v", err)
 	}
 }

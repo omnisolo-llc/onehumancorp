@@ -1,0 +1,6 @@
+status: "Active"
+mission_id: "m-burst-1"
+completion_status: "SUCCESS"
+health: "OK"
+metrics:
+  tasks_completed: 1

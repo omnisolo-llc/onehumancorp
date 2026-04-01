@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -471,3 +473,84 @@ func (s *SIPDB) SetContextRoot(path string) {
 	s.cachedGrounding = ""
 	s.groundingOnce = &sync.Once{}
 }
+
+// BurstMission atomically transitions an agent_missions record from 'PENDING' to 'BURSTING' and synchronizes its payload to a remote API endpoint via HTTP POST.
+// If the external network request fails, it rolls back the state to 'PENDING'.
+// Accepts parameters: ctx context.Context, missionID string, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Updates a record in the agent_missions table and makes an HTTP POST request.
+func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
+	var payload string
+
+	// 1. Atomically transition to 'BURSTING' and fetch the payload
+	err := withRetry(ctx, func() error {
+		tx, err := s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		err = tx.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = ? AND status = 'PENDING'", missionID).Scan(&payload)
+		if err == sql.ErrNoRows {
+			return errors.New("mission not found or not PENDING")
+		} else if err != nil {
+			return err
+		}
+
+		res, err := tx.ExecContext(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ? AND status = 'PENDING'", missionID)
+		if err != nil {
+			return err
+		}
+
+		affected, _ := res.RowsAffected()
+		if affected == 0 {
+			return errors.New("mission not found or not PENDING")
+		}
+
+		return tx.Commit()
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// 2. Perform the external network call
+	// For optimal memory efficiency in Go, prefer strings.NewReader(string) over bytes.NewBuffer([]byte(string)) to avoid unnecessary byte slice allocations.
+	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payload))
+	if err != nil {
+		s.rollbackBurst(missionID)
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		// Rollback to 'PENDING'
+		s.rollbackBurst(missionID)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		s.rollbackBurst(missionID)
+		return fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+// rollbackBurst is a helper to revert a 'BURSTING' mission back to 'PENDING'
+func (s *SIPDB) rollbackBurst(missionID string) {
+	// Use background context for rollback to ensure it runs even if the original context was cancelled
+	ctx := context.Background()
+	_ = withRetry(ctx, func() error {
+		_, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'PENDING' WHERE id = ? AND status = 'BURSTING'", missionID)
+		return err
+	})
+}
+
+
+// BurstMission atomically transitions an agent_missions record from 'PENDING' to 'BURSTING' and synchronizes its payload to a remote API endpoint via HTTP POST.
