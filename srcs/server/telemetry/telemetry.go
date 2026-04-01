@@ -33,11 +33,16 @@ var (
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
 
-func redactPII(input string) string {
+// RedactPII redacts personally identifiable information (PII) from the input string.
+func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
 	return s
+}
+
+func redactPII(input string) string {
+	return RedactPII(input)
 }
 
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.

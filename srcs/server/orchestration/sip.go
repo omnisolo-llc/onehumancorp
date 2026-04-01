@@ -14,8 +14,28 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	_ "modernc.org/sqlite"
 )
+
+var (
+	meter          = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	syncedMissions metric.Int64Counter
+	syncErrors     metric.Int64Counter
+)
+
+func init() {
+	syncedMissions, _ = meter.Int64Counter(
+		"sip.missions.synced",
+		metric.WithDescription("Number of successfully synced local missions"),
+	)
+	syncErrors, _ = meter.Int64Counter(
+		"sip.missions.sync_errors",
+		metric.WithDescription("Number of errors encountered during mission sync"),
+	)
+}
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
 // Accepts no parameters.
@@ -700,24 +720,53 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		payloadToSync := m.payload
+
+		var parsedPayload map[string]interface{}
+		if err := json.Unmarshal([]byte(payloadToSync), &parsedPayload); err == nil {
+			if _, hasRag := parsedPayload["rag_context"]; hasRag {
+				delete(parsedPayload, "rag_context")
+				if redactedBytes, err := json.Marshal(parsedPayload); err == nil {
+					payloadToSync = string(redactedBytes)
+				}
+			}
+		}
+
+		payloadToSync = telemetry.RedactPII(payloadToSync)
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadToSync))
 		if err != nil {
+			if syncErrors != nil {
+				syncErrors.Add(ctx, 1)
+			}
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+					if syncedMissions != nil {
+						syncedMissions.Add(ctx, 1)
+					}
+				}
+			} else {
+				if syncErrors != nil {
+					syncErrors.Add(ctx, 1)
 				}
 			}
 			resp.Body.Close()
+		} else {
+			if syncErrors != nil {
+				syncErrors.Add(ctx, 1)
+			}
 		}
 	}
 
