@@ -3,11 +3,14 @@ package db
 import (
 	"context"
 	"database/sql"
+	"regexp"
 	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
+
+var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
@@ -55,7 +58,11 @@ func convertBindVars(query string) string {
 		result.WriteByte(c)
 	}
 
-	return result.String()
+	resStr := result.String()
+	// Map json paths `col::json->>'key'` to `json_extract(col, '$.key')`
+	resStr = jsonPathRe.ReplaceAllString(resStr, "json_extract($1, '$.$2')")
+
+	return resStr
 }
 
 // translateArgs translates pgx-style args if needed, though typically SQL standard positional args are similar enough.

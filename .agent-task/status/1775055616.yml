@@ -1,0 +1,7 @@
+type: status
+target_queue: product_architecture
+title: "Completed: Database JSON path translation for SQLite"
+metrics:
+  - "Zero sensitive data leakage to the cloud."
+  - "All unit tests passing."
+status: "SUCCESS"
