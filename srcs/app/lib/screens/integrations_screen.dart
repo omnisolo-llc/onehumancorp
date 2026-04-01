@@ -48,7 +48,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                   title: 'Telegram',
                   subtitle: 'Connect your bot for mobile alerts',
                   icon: Icons.send,
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                   onConnect: () => _showConnectionDialog('Telegram'),
                 ),
               ),
@@ -73,9 +73,13 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Manually invoke tools bridged via the Model Context Protocol.',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -215,9 +219,14 @@ class _IntegrationCard extends StatelessWidget {
                       child: Icon(icon, color: color, size: 24),
                     ),
                     const Spacer(),
-                    const Text(
+                    Text(
                       'Inactive',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
                     ),
                   ],
                 ),

@@ -42,7 +42,10 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     } finally {
@@ -63,7 +66,10 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     } finally {
@@ -102,7 +108,11 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                  Icon(
+                    Icons.error_outline,
+                    size: 60,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Failed to load handoffs',
@@ -126,16 +136,18 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Icon(
                     Icons.check_circle_outline,
                     size: 64,
-                    color: colors.primary.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
                   ),
                   const SizedBox(height: 16),
                   const Text(
                     'No pending handoffs',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                   ),
-                  const Text(
+                  Text(
                     'Your agents are operating autonomously.',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
                   ),
                 ],
               ),
@@ -168,7 +180,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: colors.primaryContainer,
+                                color: Theme.of(context).colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -176,7 +188,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: colors.onPrimaryContainer,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                                 ),
                               ),
                             ),
@@ -186,7 +198,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                               ),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: colors.onSurfaceVariant,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -207,14 +219,14 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                             height: 200,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.black12,
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Icon(
                                 Icons.image_outlined,
                                 size: 48,
-                                color: Colors.grey,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
                               ),
                             ),
                           ),
