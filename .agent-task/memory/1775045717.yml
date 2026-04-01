@@ -1,0 +1,11 @@
+type: memory
+metadata:
+  role: Principal Ethics & Compliance Officer (L7)
+  timestamp: "2026-04-01T12:15:17Z"
+observations:
+  - "The OpenTelemetry Prometheus exporter was initialized globally, potentially sending metrics in standalone mode."
+  - "PII tests and implementation already handled previously via LogAgentExecution tests."
+actions_taken:
+  - "Modified srcs/server/telemetry/telemetry.go to return early and disable OpenTelemetry metrics initialization if OHC_TELEMETRY_ENABLED is false or if OHC_STANDALONE is true without explicit consent."
+  - "Updated srcs/server/standalone_ohc.sh to pass OHC_TELEMETRY_ENABLED=false by default, ensuring local privacy sovereignty."
+resolution: "Data privacy and local telemetry sovereignty guaranteed."

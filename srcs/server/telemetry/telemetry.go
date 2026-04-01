@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
 	"time"
 
@@ -47,6 +48,10 @@ func redactPII(input string) string {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitTelemetry() (func(), error) {
+	if os.Getenv("OHC_TELEMETRY_ENABLED") == "false" || (os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") != "true") {
+		return func() {}, nil
+	}
+
 	exporter, err := otelprom.New(otelprom.WithRegisterer(prometheus.DefaultRegisterer))
 	if err != nil {
 		return nil, err

@@ -155,6 +155,7 @@ start_daemon() {
     GOMEMLIMIT="${GOMEMLIMIT:-150MiB}" \
     GOGC="${GOGC:-50}" \
     OHC_STANDALONE="true" \
+    OHC_TELEMETRY_ENABLED="${OHC_TELEMETRY_ENABLED:-false}" \
     nohup "${SERVER_BIN}" >>"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
