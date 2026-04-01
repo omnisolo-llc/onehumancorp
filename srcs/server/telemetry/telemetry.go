@@ -27,6 +27,8 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	missionsSyncedCounter    metric.Int64Counter
+	missionsSyncErrorsCounter metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -131,6 +133,22 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	missionsSyncedCounter, err = m.Int64Counter(
+		"sip_missions_synced",
+		metric.WithDescription("Total missions successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	missionsSyncErrorsCounter, err = m.Int64Counter(
+		"sip_missions_sync_errors",
+		metric.WithDescription("Total mission sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -257,6 +275,20 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		})
 		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
 	}
+}
+
+func RecordMissionSynced(ctx context.Context) {
+	if missionsSyncedCounter == nil {
+		return
+	}
+	missionsSyncedCounter.Add(ctx, 1)
+}
+
+func RecordMissionSyncError(ctx context.Context) {
+	if missionsSyncErrorsCounter == nil {
+		return
+	}
+	missionsSyncErrorsCounter.Add(ctx, 1)
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.

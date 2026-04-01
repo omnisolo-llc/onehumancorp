@@ -15,6 +15,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -23,10 +25,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 *sql.DB
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              *sql.DB
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -700,24 +702,44 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
+		// Parse the payload and delete the sensitive `rag_context` key
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &payloadMap); err == nil {
+			if _, exists := payloadMap["rag_context"]; exists {
+				delete(payloadMap, "rag_context")
+			}
+			if updatedPayload, err := json.Marshal(payloadMap); err == nil {
+				m.payload = string(updatedPayload)
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
+			telemetry.RecordMissionSyncError(ctx)
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+					telemetry.RecordMissionSynced(ctx)
+				} else {
+					telemetry.RecordMissionSyncError(ctx)
 				}
+			} else {
+				telemetry.RecordMissionSyncError(ctx)
 			}
 			resp.Body.Close()
+		} else {
+			telemetry.RecordMissionSyncError(ctx)
 		}
 	}
 

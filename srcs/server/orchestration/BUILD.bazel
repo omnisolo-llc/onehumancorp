@@ -48,11 +48,13 @@ go_test(
         "service_test.go",
         "sip_extra_test.go",
         "sip_mesh_test.go",
+        "sip_sync_test.go",
         "sip_test.go",
     ],
     embed = [":orchestration"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/db",
         "//srcs/server/settings",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@org_golang_google_grpc//:grpc",
