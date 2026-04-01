@@ -1,0 +1,9 @@
+timestamp: 1775028153
+status: healthy
+missions_drained: true
+mode: hybrid
+metrics:
+  cpu_usage_percent: 12
+  memory_usage_mb: 256
+  network_latency_ms: 15
+  active_agents: 0
