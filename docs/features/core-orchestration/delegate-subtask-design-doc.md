@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Hierarchical Task Delegation (Delegate SubTask)
 
 **Author(s):** TPM Agent
@@ -48,3 +50,5 @@ sequenceDiagram
 ## 4. Edge Cases
 - **Missing Arguments**: If the `task_id` or `target_role` are empty strings, an `InvalidArgument` error is immediately returned.
 - **VRAM Quota Exceeded**: If total agents are >= 10, the system proactively blocks the sub-agent's creation and returns an error without publishing any tasks.
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: Agent Interaction Protocol
 
 ## Introduction
@@ -26,3 +28,6 @@ As CEO, you can drop into any meeting and provide direct guidance. Your input is
 - **Message Loss & Redis Failures**: High-load network drops are mitigated by exponential backoff. Failed messages drop into a Redis Dead Letter Queue (DLQ) for DevOps intervention.
 - **Context Flooding**: Lengthy debates triggering LLM context-limit errors are mitigated by an AI summarizer shrinking early transcript context on the fly.
 - **Deadlocks**: If two agents infinitely loop in a disagreement (e.g., SWE vs. Security), the system detects a "timeout" deadlock and escalates a Warm Handoff to a human manager.
+
+
+</div>

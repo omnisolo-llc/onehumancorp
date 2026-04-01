@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: Core Orchestration Engine
 
 ## 1. Introduction & Value Proposition
@@ -58,3 +60,6 @@ For technical issues, please file a ticket via the "OHC Support" portal or conta
 - **Cyclic Dependencies**: If a PM mistakenly assigns two tasks that depend on each other, the Orchestration Engine's DAG evaluator detects the cycle and raises a `DependencyCycleError` for human review.
 - **Node Failures**: If an underlying K8s node dies, the agent pod restarts on a new node and recovers its exact position in the workflow by rehydrating state from the Postgres append-only log.
 - **Unreachable LLM Provider**: If the external AI API (e.g., OpenAI/Gemini) is down, the engine pauses active workflows and places them in a `ProviderRetry` queue rather than silently dropping tasks.
+
+
+</div>

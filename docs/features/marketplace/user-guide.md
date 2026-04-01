@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: Marketplace
 
 ## 1. Introduction & Value Proposition
@@ -40,3 +42,6 @@ The One Human Corp Marketplace is an ecosystem where the CEO can discover, acqui
 
 ## 7. Support & Feedback
 If you encounter an issue with a specific marketplace item, contact the creator directly or report it via the OHC Marketplace support channel.
+
+
+</div>

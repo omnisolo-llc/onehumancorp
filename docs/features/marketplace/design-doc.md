@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: The "One Human Corp" Marketplace
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ The "One Human Corp" Marketplace is a community-driven ecosystem where users can
 ## 4. Edge Cases
 - **Version Conflicts**: If a CEO installs a template that conflicts with an existing Role Profile name (e.g., `swe_agent`), the system automatically namespaces the new role (e.g., `vendorX/swe_agent`) to prevent overwriting active enterprise configurations.
 - **Missing Tooling**: If an imported agent requires an MCP tool not present in the local cluster (e.g., `jira-mcp`), the Hub will flag the agent in an `INCOMPLETE` status until the human manager provides the necessary credentials/tooling via the Switchboard.
+
+</div>

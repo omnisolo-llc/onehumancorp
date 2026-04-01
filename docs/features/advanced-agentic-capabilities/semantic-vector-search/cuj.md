@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Semantic Vector Search
 
 **Persona:** Data / ML Agent
@@ -28,3 +30,6 @@ Implement an asynchronous semantic distillation worker to summarize older checkp
 
 ## 5. Security & Privacy
 - **Tenant Isolation**: Embeddings must be strictly segregated by tenant ID using Row Level Security (RLS) in PostgreSQL.
+
+
+</div>

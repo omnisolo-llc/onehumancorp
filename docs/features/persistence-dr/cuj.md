@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Persistence & DR Journey
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ The CEO utilizes the "Snapshot Fabric" to capture the current state of the organ
 - **Concurrent DB Writes**: The snapshot process temporarily halts new writes to the `events.jsonl` log, queueing them in Redis to ensure snapshot consistency.
 - **Expired Certificates**: SVIDs issued before the snapshot may be expired when the snapshot is restored. Agents will immediately fail mTLS checks and be forced to re-attest on boot.
 - **Loss of Hub Node**: If the main Hub orchestrator node crashes, it automatically rebuilds its state from the latest Postgres `events.jsonl` checkpoint upon scheduling on a new node.
+
+</div>
