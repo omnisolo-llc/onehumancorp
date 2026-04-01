@@ -3,17 +3,18 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"encoding/json"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgHubRepository implements HubRepository backed by PostgreSQL.
 type PgHubRepository struct {
-	pool *pgxpool.Pool
+	pool db.Provider
 }
 
 // NewPgHubRepository creates a Postgres-backed hub repository.
-func NewPgHubRepository(pool *pgxpool.Pool) *PgHubRepository {
+func NewPgHubRepository(pool db.Provider) *PgHubRepository {
 	return &PgHubRepository{pool: pool}
 }
 
@@ -112,6 +113,36 @@ func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg M
 // PopMessages atomically retrieves and removes all pending messages.
 // Uses DELETE ... RETURNING for consume-once semantics.
 func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Message, error) {
+	if _, isSQLite := r.pool.(*db.SqlitePool); isSQLite {
+		tx, err := r.pool.Begin(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("pg: begin pop messages: %w", err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+
+		rows, err := tx.Query(ctx, "SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at FROM agent_inbox WHERE agent_id = $1 ORDER BY seq", agentID)
+		if err != nil {
+			return nil, fmt.Errorf("pg: peek messages for pop: %w", err)
+		}
+
+		var msgs []Message
+		for rows.Next() {
+			var m Message
+			if err := rows.Scan(&m.ID, &m.FromAgent, &m.ToAgent, &m.Type, &m.Content, &m.MeetingID, &m.OccurredAt); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("pg: scan message: %w", err)
+			}
+			msgs = append(msgs, m)
+		}
+		rows.Close()
+
+		if len(msgs) > 0 {
+			if _, err := tx.Exec(ctx, "DELETE FROM agent_inbox WHERE agent_id = $1", agentID); err != nil {
+				return nil, fmt.Errorf("pg: delete messages: %w", err)
+			}
+		}
+		return msgs, tx.Commit(ctx)
+	}
 	rows, err := r.pool.Query(ctx, `
 		DELETE FROM agent_inbox WHERE agent_id = $1
 		RETURNING message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`, agentID)
@@ -152,11 +183,20 @@ func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]M
 }
 
 func (r *PgHubRepository) CreateMeeting(ctx context.Context, room MeetingRoom) error {
+	var participants any = room.Participants
+	if _, isSQLite := r.pool.(*db.SqlitePool); isSQLite {
+		b, err := json.Marshal(room.Participants)
+		if err != nil {
+			return err
+		}
+		participants = string(b)
+	}
+
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO meeting_rooms (id, agenda, participants)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (id) DO UPDATE SET agenda=EXCLUDED.agenda, participants=EXCLUDED.participants`,
-		room.ID, room.Agenda, room.Participants,
+		room.ID, room.Agenda, participants,
 	)
 	if err != nil {
 		return fmt.Errorf("pg: create meeting: %w", err)
@@ -166,14 +206,25 @@ func (r *PgHubRepository) CreateMeeting(ctx context.Context, room MeetingRoom) e
 
 func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoom, bool, error) {
 	var room MeetingRoom
+	var participants any
+	if _, isSQLite := r.pool.(*db.SqlitePool); isSQLite {
+		var participantsJSON string
+		participants = &participantsJSON
+	} else {
+		participants = &room.Participants
+	}
+
 	err := r.pool.QueryRow(ctx, "SELECT id, agenda, participants FROM meeting_rooms WHERE id = $1", id).Scan(
-		&room.ID, &room.Agenda, &room.Participants,
+		&room.ID, &room.Agenda, participants,
 	)
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return MeetingRoom{}, false, nil
 		}
 		return MeetingRoom{}, false, fmt.Errorf("pg: get meeting: %w", err)
+	}
+	if ptr, ok := participants.(*string); ok {
+		_ = json.Unmarshal([]byte(*ptr), &room.Participants)
 	}
 
 	// Load transcript.
@@ -218,8 +269,19 @@ func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, erro
 	var rooms []MeetingRoom
 	for rows.Next() {
 		var room MeetingRoom
-		if err := rows.Scan(&room.ID, &room.Agenda, &room.Participants); err != nil {
+		var participants any
+		if _, isSQLite := r.pool.(*db.SqlitePool); isSQLite {
+			var participantsJSON string
+			participants = &participantsJSON
+		} else {
+			participants = &room.Participants
+		}
+
+		if err := rows.Scan(&room.ID, &room.Agenda, participants); err != nil {
 			return nil, fmt.Errorf("pg: scan meeting: %w", err)
+		}
+		if ptr, ok := participants.(*string); ok {
+			_ = json.Unmarshal([]byte(*ptr), &room.Participants)
 		}
 		rooms = append(rooms, room)
 	}

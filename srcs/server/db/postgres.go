@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"os"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,19 +19,74 @@ var (
 	migrationsFS embed.FS
 )
 
-// Pool wraps a pgxpool.Pool with migration support.
-type Pool struct {
-	*pgxpool.Pool
+// PgPool wraps a pgxpool.Pool with Provider support.
+type PgPool struct {
+	pool *pgxpool.Pool
 }
 
-// New creates a new Postgres connection pool from DATABASE_URL.
-// Returns nil if DATABASE_URL is not set (enabling zero-dep local mode).
-func New(ctx context.Context) (*Pool, error) {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		return nil, nil // no Postgres configured — use in-memory fallback
-	}
+type pgRows struct {
+	pgx.Rows
+}
 
+func (r pgRows) Close() {
+	r.Rows.Close()
+}
+
+func (r pgRows) Next() bool {
+	return r.Rows.Next()
+}
+
+func (r pgRows) Scan(dest ...any) error {
+	return r.Rows.Scan(dest...)
+}
+
+func (r pgRows) Err() error {
+	return r.Rows.Err()
+}
+
+type pgRow struct {
+	pgx.Row
+}
+
+func (r pgRow) Scan(dest ...any) error {
+	return r.Row.Scan(dest...)
+}
+
+type pgTx struct {
+	pgx.Tx
+}
+
+func (tx pgTx) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+	start := time.Now()
+	tag, err := tx.Tx.Exec(ctx, sql, arguments...)
+	recordQuery(ctx, "postgres", err, start)
+	return tag.RowsAffected(), err
+}
+
+func (tx pgTx) Query(ctx context.Context, sql string, args ...any) (Rows, error) {
+	start := time.Now()
+	rows, err := tx.Tx.Query(ctx, sql, args...)
+	recordQuery(ctx, "postgres", err, start)
+	return pgRows{rows}, err
+}
+
+func (tx pgTx) QueryRow(ctx context.Context, sql string, args ...any) Row {
+	start := time.Now()
+	row := tx.Tx.QueryRow(ctx, sql, args...)
+	recordQuery(ctx, "postgres", nil, start)
+	return pgRow{row}
+}
+
+func (tx pgTx) Commit(ctx context.Context) error {
+	return tx.Tx.Commit(ctx)
+}
+
+func (tx pgTx) Rollback(ctx context.Context) error {
+	return tx.Tx.Rollback(ctx)
+}
+
+// NewPostgres creates a new Postgres connection pool from a DSN.
+func NewPostgres(ctx context.Context, dsn string) (Provider, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("db: connect to postgres: %w", err)
@@ -42,15 +98,43 @@ func New(ctx context.Context) (*Pool, error) {
 	}
 
 	slog.Info("db: connected to postgres", "dsn", redactDSN(dsn))
-	return &Pool{Pool: pool}, nil
+	return &PgPool{pool: pool}, nil
 }
 
-// RunMigrations executes all embedded SQL migrations, sorted
-// lexicographically.  Each migration is run inside a transaction.
-// A simple `schema_migrations` table tracks which files have already been
-// applied.
-func (p *Pool) RunMigrations(ctx context.Context) error {
-	// Ensure tracking table exists.
+func (p *PgPool) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+	start := time.Now()
+	tag, err := p.pool.Exec(ctx, sql, arguments...)
+	recordQuery(ctx, "postgres", err, start)
+	return tag.RowsAffected(), err
+}
+
+func (p *PgPool) Query(ctx context.Context, sql string, args ...any) (Rows, error) {
+	start := time.Now()
+	rows, err := p.pool.Query(ctx, sql, args...)
+	recordQuery(ctx, "postgres", err, start)
+	return pgRows{rows}, err
+}
+
+func (p *PgPool) QueryRow(ctx context.Context, sql string, args ...any) Row {
+	start := time.Now()
+	row := p.pool.QueryRow(ctx, sql, args...)
+	recordQuery(ctx, "postgres", nil, start)
+	return pgRow{row}
+}
+
+func (p *PgPool) Begin(ctx context.Context) (Tx, error) {
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return pgTx{tx}, nil
+}
+
+func (p *PgPool) Close() {
+	p.pool.Close()
+}
+
+func (p *PgPool) RunMigrations(ctx context.Context) error {
 	if _, err := p.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			filename TEXT PRIMARY KEY,
@@ -74,16 +158,16 @@ func (p *Pool) RunMigrations(ctx context.Context) error {
 	sort.Strings(files)
 
 	for _, f := range files {
-		// Check if already applied.
 		var count int
-		if err := p.QueryRow(ctx, "SELECT COUNT(*) FROM schema_migrations WHERE filename = $1", f).Scan(&count); err != nil {
+		err := p.QueryRow(ctx, "SELECT COUNT(*) FROM schema_migrations WHERE filename = $1", f).Scan(&count)
+		if err != nil {
 			return fmt.Errorf("db: check migration %s: %w", f, err)
 		}
 		if count > 0 {
 			continue
 		}
 
-		sql, err := fs.ReadFile(migrationsFS, "migrations/"+f)
+		sqlBytes, err := fs.ReadFile(migrationsFS, "migrations/"+f)
 		if err != nil {
 			return fmt.Errorf("db: read migration %s: %w", f, err)
 		}
@@ -93,7 +177,7 @@ func (p *Pool) RunMigrations(ctx context.Context) error {
 			return fmt.Errorf("db: begin tx for %s: %w", f, err)
 		}
 
-		if _, err := tx.Exec(ctx, string(sql)); err != nil {
+		if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("db: exec migration %s: %w", f, err)
 		}
@@ -113,7 +197,6 @@ func (p *Pool) RunMigrations(ctx context.Context) error {
 	return nil
 }
 
-// redactDSN hides the password from a DSN for safe logging.
 func redactDSN(dsn string) string {
 	if i := strings.Index(dsn, "://"); i >= 0 {
 		rest := dsn[i+3:]

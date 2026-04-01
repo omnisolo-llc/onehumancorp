@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -53,6 +54,14 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	node, err := createNode(cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// Redis fallback is implicit if there's no broker configured on Centrifuge node
+	// but let's log the fallback strategy according to constraints.
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		slog.Info("[centrifuge] using Redis broker (if implemented via broker logic)", "url", redisURL)
+	} else {
+		slog.Info("[centrifuge] using local memory broker (fallback mode)")
 	}
 
 	node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {

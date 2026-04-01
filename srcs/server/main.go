@@ -63,14 +63,14 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
+func newHubAndTracker(pool db.Provider) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
 		return orchestration.NewHubWithRepository(
-				orchestration.NewPgHubRepository(pool.Pool),
-				scheduler.NewPgTaskRepository(pool.Pool),
+				orchestration.NewPgHubRepository(pool),
+				scheduler.NewPgTaskRepository(pool),
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
-				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
+				billing.NewPgUsageRepository(pool, billing.DefaultCatalog),
 			)
 	}
 
@@ -167,7 +167,7 @@ func run(now time.Time, listen listenFunc) error {
 	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
 
-	pool, err := db.New(ctx)
+	pool, err := db.NewProvider(ctx)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func run(now time.Time, listen listenFunc) error {
 
 	hub, tracker = newHubAndTracker(pool)
 	if pool != nil {
-		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
+		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool))
 	} else {
 		authStore = auth.NewStore()
 	}

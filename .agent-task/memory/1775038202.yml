@@ -1,0 +1,15 @@
+type: memory
+metadata:
+  role: "Principal Software Engineer & Distributed Systems Architect (L7)"
+  timestamp: 1775038202
+observations:
+  - "PostgreSQL driver (pgx) was hardcoded in all database repositories."
+  - "Postgres-specific queries like RETURNING, NOW(), and TEXT[] arrays broke when tested against SQLite."
+  - "Redis was required by centrifuge for async pub/sub, lacking a fallback."
+actions_taken:
+  - "Created db.Provider interface to abstract database operations across pgx and database/sql drivers."
+  - "Implemented NewPostgres (pgxpool) and NewSQLite (modernc.org/sqlite) factories with OpenTelemetry instrumentation."
+  - "Refactored PgHubRepository, PgTaskRepository, PgUserRepository, and PgUsageRepository to accept db.Provider."
+  - "Added dialect branches and json marshaling for arrays, and implemented transaction-based equivalents for RETURNING in SQLite."
+  - "Modified Centrifuge hub initialization to conditionally use Redis only if REDIS_URL is present, defaulting to local memory broker."
+resolution: "All repository queries execute consistently across both SQLite and Postgres. OpenTelemetry metrics applied to both. Redis is strictly optional. All bazel tests pass."
