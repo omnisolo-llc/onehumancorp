@@ -17,11 +17,11 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/db",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "@com_github_centrifugal_centrifuge//:centrifuge",
-        "@com_github_jackc_pgx_v5//pgxpool",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//credentials",

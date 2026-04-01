@@ -63,14 +63,14 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
+func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
 		return orchestration.NewHubWithRepository(
-				orchestration.NewPgHubRepository(pool.Pool),
-				scheduler.NewPgTaskRepository(pool.Pool),
+				orchestration.NewPgHubRepository(pool.Provider),
+				scheduler.NewPgTaskRepository(pool.Provider),
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
-				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
+				billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog),
 			)
 	}
 
@@ -202,7 +202,7 @@ func run(now time.Time, listen listenFunc) error {
 
 	hub, tracker = newHubAndTracker(pool)
 	if pool != nil {
-		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
+		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Provider))
 	} else {
 		authStore = auth.NewStore()
 	}
