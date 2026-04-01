@@ -22,5 +22,5 @@ Validate the end-to-end functionality of dynamic sub-agent spawning, ensuring co
 
 ## 3. Automation & CI/CD
 - All unit and integration tests must be integrated into the Bazel `//...` test suite.
-- Coverage MUST exceed 95% for `srcs/orchestration/delegation.go` and the associated `ohc-operator` reconciliation loops.
+- Coverage MUST exceed 95% for `srcs/server/orchestration/delegation.go` and the associated `ohc-operator` reconciliation loops.
 - Avoid using arbitrary `time.Sleep()` for asynchronous checks; strictly use deterministic polling loops.

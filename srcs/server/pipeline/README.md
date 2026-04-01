@@ -15,8 +15,8 @@ package main
 import (
 	"fmt"
 	"time"
-	"github.com/onehumancorp/mono/srcs/orchestration"
-	"github.com/onehumancorp/mono/srcs/pipeline"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/pipeline"
 )
 
 func main() {
@@ -51,8 +51,8 @@ func main() {
 ## Developer Workflow
 This module is built and tested using the Bazel build system.
 
-- **Build**: `bazelisk build //srcs/pipeline`
-- **Test**: `bazelisk test //srcs/pipeline/...`
+- **Build**: `bazelisk build //srcs/server/pipeline`
+- **Test**: `bazelisk test //srcs/server/pipeline/...`
 
 ## Configuration
 No environment configuration is strictly required to run the mocked in-memory simulation. The orchestrator is tightly coupled to the `orchestration.Hub` and relies on correct agent registration within the Hub to successfully dispatch tasks.
