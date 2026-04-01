@@ -1,17 +1,20 @@
 package orchestration
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	_ "modernc.org/sqlite"
 )
 
@@ -224,6 +227,79 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 		}
 		return nil
 	})
+}
+
+// BurstMission securely hands off intensive agent_missions to the OHC Cloud-Native API
+// when local compute is saturated, updating the mission status to 'BURSTING'.
+// Accepts parameters: ctx context.Context, missionID, remoteEndpoint string.
+// Returns error.
+func (s *SIPDB) BurstMission(ctx context.Context, missionID, remoteEndpoint string) error {
+	var payload string
+
+	// Transaction to safely fetch and update status
+	err := withRetry(ctx, func() error {
+		tx, err := s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		err = tx.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = ?", missionID).Scan(&payload)
+		if err == sql.ErrNoRows {
+			return errors.New("mission not found")
+		}
+		if err != nil {
+			return err
+		}
+
+		res, err := tx.ExecContext(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ?", missionID)
+		if err != nil {
+			return err
+		}
+		affected, _ := res.RowsAffected()
+		if affected == 0 {
+			return errors.New("mission not found")
+		}
+
+		return tx.Commit()
+	})
+	if err != nil {
+		return err
+	}
+
+	// Synchronize payload to the remote endpoint
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, remoteEndpoint, bytes.NewBufferString(payload))
+	if err != nil {
+		_ = withRetry(ctx, func() error {
+			_, _ = s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'PENDING' WHERE id = ?", missionID)
+			return nil
+		})
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		_ = withRetry(ctx, func() error {
+			_, _ = s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'PENDING' WHERE id = ?", missionID)
+			return nil
+		})
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		_ = withRetry(ctx, func() error {
+			_, _ = s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'PENDING' WHERE id = ?", missionID)
+			return nil
+		})
+		return errors.New("failed to burst mission to remote endpoint: status " + resp.Status)
+	}
+
+	go telemetry.RecordAgentApiCall(context.Background(), "system-db", "provider", "BurstMission")
+
+	return nil
 }
 
 // Heartbeat maintains the agent's heartbeat and domain-health metrics.

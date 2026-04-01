@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"os"
 	"testing"
@@ -871,5 +873,110 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 	}
 	if missions2[0].Content != "some string" && missions2[0].Content != "\"some string\"" {
 		t.Fatalf("expected \"some string\", got %q", missions2[0].Content)
+	}
+}
+
+func TestSIPDB_BurstMission(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert a pending mission
+	payload := `{"role":"product_architecture","task":"Implement Elastic Swarm Bursting"}`
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-burst-1', 'PENDING', ?)", payload)
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+
+	// Create a mock remote endpoint
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST method, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("Expected application/json, got %s", r.Header.Get("Content-Type"))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	// Burst the mission
+	err = db.BurstMission(ctx, "m-burst-1", ts.URL)
+	if err != nil {
+		t.Fatalf("BurstMission failed: %v", err)
+	}
+
+	// Verify status is updated to BURSTING
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm-burst-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "BURSTING" {
+		t.Fatalf("Expected status to be BURSTING, got %s", status)
+	}
+}
+
+func TestSIPDB_BurstMission_NetworkError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert a pending mission
+	payload := `{"role":"product_architecture","task":"Implement Elastic Swarm Bursting"}`
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-burst-2', 'PENDING', ?)", payload)
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+
+	// Create a mock remote endpoint that returns an error
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	// Burst the mission
+	err = db.BurstMission(ctx, "m-burst-2", ts.URL)
+	if err == nil {
+		t.Fatalf("BurstMission should have failed on network error")
+	}
+
+	// Verify status is rolled back to PENDING on network failure
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm-burst-2'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "PENDING" {
+		t.Fatalf("Expected status to be PENDING, got %s", status)
+	}
+}
+
+func TestSIPDB_BurstMission_NotFound(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	err = db.BurstMission(ctx, "m-nonexistent", "http://localhost")
+	if err == nil {
+		t.Fatalf("BurstMission should have failed for nonexistent mission")
+	}
+	if err.Error() != "mission not found" {
+		t.Fatalf("Expected 'mission not found' error, got: %v", err)
 	}
 }

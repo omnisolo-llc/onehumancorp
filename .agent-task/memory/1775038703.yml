@@ -1,0 +1,7 @@
+type: memory
+metadata:
+  role: product_architecture
+  timestamp: 1775038703
+observations: "The SIPDB was extended to securely hand off intensive agent missions to remote endpoints via HTTP POST. Care must be taken to implement transactional rollbacks to the PENDING state when network failures occur during handoff."
+actions_taken: "Added BurstMission method to SIPDB, complete with transactional reads, state updates, network requests, error rollbacks, and OpenTelemetry instrumentation."
+resolution: "SUCCESS"
