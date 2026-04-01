@@ -26,32 +26,59 @@ Generated images are written to:
 - `docs/app/windows/`
 - `docs/app/android/`
 - `docs/app/linux/`
+- `docs/app/standalone/` (for Standalone Mode counterparts)
 
-## 3. Screenshot Gallery
+## 3. Screenshot Gallery (Cloud Mode)
 
 ### Web
 
-![OHC Flutter app on web](../../srcs/app/web/login.png)
+![OHC Flutter app on web](web/login.png)
 
 ### macOS
 
-![OHC Flutter app with macOS profile](../../srcs/app/macos/login.png)
+![OHC Flutter app with macOS profile](macos/login.png)
 
 ### iOS
 
-![OHC Flutter app with iOS profile](../../srcs/app/ios/login.png)
+![OHC Flutter app with iOS profile](ios/login.png)
 
 ### Windows
 
-![OHC Flutter app with Windows profile](../../srcs/app/windows/login.png)
+![OHC Flutter app with Windows profile](windows/login.png)
 
 ### Android
 
-![OHC Flutter app with Android profile](../../srcs/app/android/login.png)
+![OHC Flutter app with Android profile](android/login.png)
 
 ### Linux
 
-![OHC Flutter app with Linux profile](../../srcs/app/linux/login.png)
+![OHC Flutter app with Linux profile](linux/login.png)
+
+## 4. Screenshot Gallery (Standalone Mode)
+
+### Web
+
+![OHC Flutter app on web (Standalone)](standalone/web/login.png)
+
+### macOS
+
+![OHC Flutter app with macOS profile (Standalone)](standalone/macos/login.png)
+
+### iOS
+
+![OHC Flutter app with iOS profile (Standalone)](standalone/ios/login.png)
+
+### Windows
+
+![OHC Flutter app with Windows profile (Standalone)](standalone/windows/login.png)
+
+### Android
+
+![OHC Flutter app with Android profile (Standalone)](standalone/android/login.png)
+
+### Linux
+
+![OHC Flutter app with Linux profile (Standalone)](standalone/linux/login.png)
 
 
 </div>

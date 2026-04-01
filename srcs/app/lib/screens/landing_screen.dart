@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
+import '../services/settings_service.dart';
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -11,10 +12,12 @@ class LandingScreen extends ConsumerStatefulWidget {
 }
 
 class _LandingScreenState extends ConsumerState<LandingScreen> {
-  bool _showVariantB = false;
-
   @override
   Widget build(BuildContext context) {
+    final settingsAsync = ref.watch(clientSettingsProvider);
+    final isStandalone = settingsAsync.valueOrNull?.standaloneMode ?? false;
+    final isCloudMode = !isStandalone;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -37,9 +40,9 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _HeaderSection(isVariantB: _showVariantB),
+                      _HeaderSection(isCloudMode: isCloudMode),
                       const SizedBox(height: 48),
-                      _ValuePropGrid(isVariantB: _showVariantB),
+                      _ValuePropGrid(isCloudMode: isCloudMode),
                       const SizedBox(height: 48),
                       FilledButton.icon(
                         onPressed: () => context.go('/login'),
@@ -61,23 +64,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 ),
               ),
             ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  const Text('A/B Test Variant:'),
-                  Switch(
-                    value: _showVariantB,
-                    onChanged: (val) {
-                      setState(() {
-                        _showVariantB = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -86,8 +72,8 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
 }
 
 class _HeaderSection extends StatelessWidget {
-  final bool isVariantB;
-  const _HeaderSection({required this.isVariantB});
+  final bool isCloudMode;
+  const _HeaderSection({required this.isCloudMode});
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +100,7 @@ class _HeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isVariantB ? 'The Cloud-Native Agentic OS' : 'The Hybrid Agentic OS',
+          isCloudMode ? 'The Cloud-Native Agentic OS' : 'The Hybrid Agentic OS',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -122,7 +108,7 @@ class _HeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isVariantB
+          isCloudMode
               ? 'Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform.'
               : 'Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.',
           style: Theme.of(context).textTheme.bodyLarge,
@@ -134,12 +120,12 @@ class _HeaderSection extends StatelessWidget {
 }
 
 class _ValuePropGrid extends StatelessWidget {
-  final bool isVariantB;
-  const _ValuePropGrid({required this.isVariantB});
+  final bool isCloudMode;
+  const _ValuePropGrid({required this.isCloudMode});
 
   @override
   Widget build(BuildContext context) {
-    if (isVariantB) {
+    if (isCloudMode) {
       return Wrap(
         spacing: 24,
         runSpacing: 24,
