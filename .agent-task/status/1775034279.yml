@@ -1,0 +1,5 @@
+type: status
+id: "ohc-hybrid-sync-discovery"
+status: "healthy"
+memory_type: observability
+timestamp: "$(date +%s)"
