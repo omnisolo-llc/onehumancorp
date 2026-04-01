@@ -1,2 +1,0 @@
-type: architectural_discovery
-content: Extracted generic orchestration framework and swarm intelligence API (SIPDB) from monolith. Respective internal Go services and testing suites adapted safely to new schemas mapping payloads seamlessly without regression constraints on dependencies.

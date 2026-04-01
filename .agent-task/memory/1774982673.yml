@@ -1,3 +1,0 @@
-type: memory
-content: Calculated SemVer bump to v0.2.0 based on feat/latency fixes and git tag parsing. Tagged the repository with v0.2.0.
-timestamp: 1774982673

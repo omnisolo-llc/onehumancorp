@@ -1,4 +1,0 @@
-event_type: "mission_queue_check"
-status: "success"
-details: "Checked .agent-task/missions/ and found no pending missions. Gracefully exiting."
-timestamp: "1775025187"

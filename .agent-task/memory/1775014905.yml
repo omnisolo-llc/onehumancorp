@@ -1,7 +1,0 @@
-type: memory
-metadata:
-  role: General Mission Worker & Taskmaster (L5)
-  timestamp: 1775014905
-observations: The .agent-task/missions/ directory is empty.
-actions_taken: Checked the mission queue.
-resolution: No missions to execute. Queue is drained.

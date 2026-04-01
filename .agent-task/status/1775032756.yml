@@ -1,0 +1,9 @@
+type: status
+id: research-oracle-status
+status: HEALTHY
+memory_type: observability
+timestamp: "2026-04-01T08:39:16Z"
+metrics:
+  tasks_completed: 1
+  research_reports_generated: 1
+  missions_injected: 1

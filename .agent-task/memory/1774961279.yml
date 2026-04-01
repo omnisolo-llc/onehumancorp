@@ -1,9 +1,0 @@
-metadata:
-  role: Principal Product Researcher & Oracle (L7)
-  timestamp: 1774961279
-observations:
-  - Competitor analysis shows OpenClaw using event-driven multi-channel routing, Claude Code relying on CLAUDE.md for sub-agent context, and OpenCode heavily depending on AGENTS.md.
-  - The current Swarm architecture introduces latency when sub-agents must manually read AGENTS.md or CLAUDE.md to understand project grounding.
-actions_taken:
-  - Designed "Omni-Context Sub-agent Routing" allowing the Swarm to directly inject standard grounding files into the agent_missions table payload during task delegation.
-  - Fixed the SIP DB logic to comply with the new agent_missions table schema (id, status, payload, created_at) across srcs/server/orchestration/sip.go and all test files.

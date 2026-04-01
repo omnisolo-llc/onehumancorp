@@ -1,5 +1,0 @@
-type: status
-id: $(date +%s)
-status: COMPLETED
-memory_type: execution
-timestamp: $(date +%s)

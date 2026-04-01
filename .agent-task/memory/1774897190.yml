@@ -1,3 +1,0 @@
-knowledge:
-  - "The Bazel rules_flutter package parsing can fail locally if the vendor fork tries to use 'flutter pub deps --json' in an unexpected workspace format. A permanent Starlark hotfix involves directly outputting a mock empty package dict during the bazel build process to bypass the check."
-  - "The chosen integration is the GitHub Model Context Protocol (MCP) server. It enables the Agentic OS to autonomously read repositories, create PRs, and review changes on GitHub, fitting the OHC continuous evolution mandate."
