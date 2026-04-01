@@ -45,6 +45,7 @@ flutter_library(
     srcs = SCREEN_SRCS,
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
+    data = ["//srcs/app:assets"],
     deps = SCREEN_DEPS,
 )
 

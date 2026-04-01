@@ -31,6 +31,7 @@ flutter_library(
     ),
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
+    data = ["//srcs/app:assets"],
     deps = [
         "//srcs/app/lib/models:models_lib",
         "@flutter_sdk//flutter/packages/flutter",

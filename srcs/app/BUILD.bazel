@@ -10,6 +10,12 @@ exports_files([
 # ── Source filegroup (non-flutter uses, e.g. layout checks) ──────────────────
 
 filegroup(
+    name = "assets",
+    srcs = glob(["assets/**"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "srcs",
     srcs = glob(
         [
