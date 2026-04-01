@@ -5,7 +5,9 @@
 **Last Updated:** 2026-03-28
 
 ## 1. Overview
-One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost/billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
+One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost and billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
+
+The platform is intentionally hybrid. The same backend can run as a multi-tenant cloud service, an API-only headless deployment for remote clients, or the local backend managed by a standalone desktop wrapper.
 
 The platform is built on 4 conceptual layers:
 1. **Domain Knowledge**: The industry or area the corporation operates in (e.g., Software Company). This is an extensible framework; users can import new skills, areas, and domain knowledge at any time.
@@ -29,8 +31,10 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 
 ```mermaid
 graph TD
-    Client[Client Browser / React SPA] -->|HTTP/JSON| FE[Frontend Server :8081]
-    FE -->|Proxy /api/*| BE[Backend Server :8080]
+    Mobile[Flutter Mobile Client] -->|HTTP/JSON| BE[Backend Server :8080]
+    Desktop[Flutter Desktop Client] -->|HTTP/JSON| BE
+    Web[Flutter Web Client] -->|HTTP/JSON| BE
+    BE -->|optional static UI| UI[Embedded Web Assets]
     
     subgraph "Backend Core"
         BE --> Hub[Orchestration Hub]
@@ -51,14 +55,20 @@ graph TD
     end
 ```
 
-### 3.1 Orchestration Hub (`srcs/orchestration/`)
+### 3.1 Operating Modes
+- **Cloud-native shared service**: the Go API tier runs in Kubernetes, scales horizontally, and relies on Postgres as the consistency boundary.
+- **Headless remote-service mode**: the backend runs with UI serving disabled so mobile and desktop clients use it as an API-only service.
+- **Desktop standalone mode**: the desktop shell manages a local backend lifecycle, local SQLite-backed state, and optional public integrations.
+- **Remote client mode**: the Flutter app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
+
+### 3.2 Orchestration Hub (`srcs/orchestration/`)
 The `Hub` is the central coordinator using a thread-safe registry (`sync.RWMutex`). It manages:
 - **Agent Lifecycle**: `RegisterAgent(Agent)`, `FireAgent(id)`.
 - **Communication**: `Publish(Message)` routes events to specific agent inboxes or meeting room transcripts.
 - **Meeting Rooms**: Persisted workspaces for multi-agent collaboration on specific tasks. This is where cross-functional roles (e.g., a PM, UI/UX Designer, and SWE) converse, debate constraints, define scopes, design products, and implement them based on the CEO's goal.
 - **Capability Plugin Mesh**: A decentralized capability system where agents dynamically ingest "Capability Plugins" at runtime. Capabilities are hosted as standalone K8s services exposing a standardized `CapabilityManifest`, enabling agents to discover and adopt new tools and roles on the fly via the MCP Gateway.
 
-### 3.2 Data Models (Go & Protobuf)
+### 3.3 Data Models (Go & Protobuf)
 #### Domain Entities (`srcs/domain/organization.go`)
 ```go
 type Organization struct {
@@ -106,6 +116,12 @@ Audit logs and snapshots are stored in a managed Postgres cluster via the CNPG o
 - Point-in-time recovery (PITR) to S3/GCS.
 - Integrated Prometheus metrics for DB health.
 
+### 6.3 Multi-Tenant Routing and Headless Serving
+- `TenantRegistry` routes authenticated requests by `organization_id` and lazily provisions organisation-scoped HTTP servers.
+- `OHC_MULTITENANT=true` enables shared-service routing for cloud deployments.
+- `OHC_HEADLESS=true` disables static UI serving so the backend can act purely as an API for remote mobile and desktop clients.
+- Current persistence hardening is focused on making every shared Postgres query org-aware end to end; the routing layer and dashboard surface already enforce org-scoped behavior.
+
 ## 7. Monitoring & Observability
 - **Metrics**: Standard `net/http` metrics + custom `ohc_tokens_consumed_total`.
 - **Tracing**: W3C Traceparent propagation through agent handoffs for distributed request tracking.
@@ -120,6 +136,7 @@ An agent in "Delegate Mode" acts as a routing proxy: it inspects an incoming tas
 - Horizontal pod autoscaling on both `backend` and `frontend` deployments
 - Redis pub/sub decouples event producers from consumers
 - CloudNative PG read replicas serve read-heavy API paths
+- Multi-tenant routing keeps the API tier stateless so replicas can scale independently while Postgres preserves shared-data consistency
 
 ## 9. Roadmap (Google Golden Standard Extensions)
 
