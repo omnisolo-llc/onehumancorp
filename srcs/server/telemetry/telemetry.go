@@ -287,3 +287,23 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"content", content,
 	)
 }
+
+var (
+	dbQueryDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "ohc_db_query_duration_seconds",
+			Help:    "Duration of database queries in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"operation", "provider"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(dbQueryDuration)
+}
+
+// RecordDBQuery records the duration of a database operation.
+func RecordDBQuery(ctx context.Context, operation string, provider string, duration float64) {
+	dbQueryDuration.WithLabelValues(operation, provider).Observe(duration)
+}

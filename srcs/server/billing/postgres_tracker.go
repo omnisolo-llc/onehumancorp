@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgUsageRepository implements UsageRepository backed by PostgreSQL.
 type PgUsageRepository struct {
-	pool    *pgxpool.Pool
+	pool    db.DatabaseProvider
 	catalog map[string]Price
 }
 
 // NewPgUsageRepository creates a Postgres-backed usage repository.
-func NewPgUsageRepository(pool *pgxpool.Pool, catalog map[string]Price) *PgUsageRepository {
+func NewPgUsageRepository(pool db.DatabaseProvider, catalog map[string]Price) *PgUsageRepository {
 	copied := make(map[string]Price, len(catalog))
 	for model, price := range catalog {
 		copied[model] = price

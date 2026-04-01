@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgTaskRepository implements TaskRepository backed by PostgreSQL.
 // It uses SELECT ... FOR UPDATE SKIP LOCKED to ensure that concurrent
 // replicas never execute the same task twice.
 type PgTaskRepository struct {
-	pool *pgxpool.Pool
+	pool db.DatabaseProvider
 }
 
 // NewPgTaskRepository creates a Postgres-backed task repository.
-func NewPgTaskRepository(pool *pgxpool.Pool) *PgTaskRepository {
+func NewPgTaskRepository(pool db.DatabaseProvider) *PgTaskRepository {
 	return &PgTaskRepository{pool: pool}
 }
 

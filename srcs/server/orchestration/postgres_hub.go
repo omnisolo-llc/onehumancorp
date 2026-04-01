@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgHubRepository implements HubRepository backed by PostgreSQL.
 type PgHubRepository struct {
-	pool *pgxpool.Pool
+	pool db.DatabaseProvider
 }
 
 // NewPgHubRepository creates a Postgres-backed hub repository.
-func NewPgHubRepository(pool *pgxpool.Pool) *PgHubRepository {
+func NewPgHubRepository(pool db.DatabaseProvider) *PgHubRepository {
 	return &PgHubRepository{pool: pool}
 }
 

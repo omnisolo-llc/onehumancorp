@@ -1,12 +1,28 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "db",
-    srcs = ["postgres.go"],
+    srcs = [
+        "postgres.go",
+        "provider.go",
+        "sqlite.go",
+    ],
     embedsrcs = glob(["migrations/*.sql"]),
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/telemetry",
+        "@com_github_jackc_pgx_v5//:pgx",
+        "@com_github_jackc_pgx_v5//pgconn",
         "@com_github_jackc_pgx_v5//pgxpool",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@org_modernc_sqlite//:sqlite",
     ],
+)
+
+go_test(
+    name = "db_test",
+    srcs = ["sqlite_test.go"],
+    embed = [":db"],
 )

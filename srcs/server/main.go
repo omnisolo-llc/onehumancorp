@@ -63,14 +63,14 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
+func newHubAndTracker(pool db.DatabaseProvider) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
 		return orchestration.NewHubWithRepository(
-				orchestration.NewPgHubRepository(pool.Pool),
-				scheduler.NewPgTaskRepository(pool.Pool),
+				orchestration.NewPgHubRepository(pool),
+				scheduler.NewPgTaskRepository(pool),
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
-				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
+				billing.NewPgUsageRepository(pool, billing.DefaultCatalog),
 			)
 	}
 
@@ -167,21 +167,43 @@ func run(now time.Time, listen listenFunc) error {
 	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
 
-	pool, err := db.New(ctx)
+	var pool db.DatabaseProvider
+	pgPool, err := db.New(ctx)
 	if err != nil {
 		return err
 	}
-	if pool != nil {
+	if pgPool != nil {
+		pool = pgPool
 		defer pool.Close()
 		if err := pool.RunMigrations(ctx); err != nil {
 			return err
 		}
 		slog.Info("using Postgres-backed repositories")
 	} else {
-		slog.Info("DATABASE_URL not set, using in-memory repositories")
+		slog.Info("DATABASE_URL not set, attempting SQLite Standalone fallback...")
+		dbDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
+		if err := os.MkdirAll(dbDir, 0755); err != nil {
+			slog.Error("failed to create fallback database directory", "error", err)
+			return err
+		}
+		dbPath := filepath.Join(dbDir, "ohc.db")
+		sqliteDsn := "file:" + dbPath + "?cache=shared&mode=rwc"
+
+		sqliteProvider, err := db.NewSQLite(ctx, sqliteDsn)
+		if err != nil {
+			slog.Error("failed to open SQLite fallback", "error", err)
+			return err
+		}
+		pool = sqliteProvider
+		defer pool.Close()
+		if err := pool.RunMigrations(ctx); err != nil {
+			return err
+		}
+		slog.Info("using SQLite-backed repositories (Standalone mode)")
 	}
-	if multiTenant && pool == nil {
-		slog.Warn("multi-tenant mode enabled without Postgres; tenant state will remain process-local")
+
+	if multiTenant && pgPool == nil {
+		slog.Warn("multi-tenant mode enabled without Postgres; tenant state will be stored locally in SQLite")
 	}
 
 	// 1. Initialize Settings
@@ -202,7 +224,7 @@ func run(now time.Time, listen listenFunc) error {
 
 	hub, tracker = newHubAndTracker(pool)
 	if pool != nil {
-		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
+		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool))
 	} else {
 		authStore = auth.NewStore()
 	}

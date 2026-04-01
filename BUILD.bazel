@@ -36,7 +36,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-
 gazelle(
     name = "gazelle-update-repos",
     args = [
@@ -151,17 +150,15 @@ sed -i "s|REPLACE_ME_WIN|$$FLUTTER_WIN|g" $@
 """,
 )
 
-
-
 sh_binary(
     name = "desktop",
     srcs = [":gen_desktop_sh"],
     data = [
+        "//:pubspec.yaml",
+        "//srcs/app:srcs",
         "//srcs/server:ohc",
         "//srcs/server:standalone_ohc_exec",
-        "//srcs/app:srcs",
-        "//:pubspec.yaml",
-        "@flutter_sdk//:flutter_sdk",
+        "@flutter_sdk",
     ],
     tags = ["manual"],
 )
@@ -193,8 +190,8 @@ sh_test(
 test_suite(
     name = "desktop_packaging_tests",
     tests = [
-        ":standalone_e2e_test",
         ":app_deb_structure_test",
+        ":standalone_e2e_test",
     ],
 )
 

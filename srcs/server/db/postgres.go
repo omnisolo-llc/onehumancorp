@@ -9,8 +9,14 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var (
@@ -124,4 +130,43 @@ func redactDSN(dsn string) string {
 		}
 	}
 	return dsn
+}
+
+func (p *Pool) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
+	start := time.Now()
+	ctx, span := otel.Tracer("db").Start(ctx, "Exec")
+	span.SetAttributes(attribute.String("db.system", "postgresql"), attribute.String("db.statement", sql))
+	defer span.End()
+
+	res, err := p.Pool.Exec(ctx, sql, arguments...)
+	telemetry.RecordDBQuery(ctx, "Exec", "postgres", time.Since(start).Seconds())
+	if err != nil {
+		span.RecordError(err)
+	}
+	return res, err
+}
+
+func (p *Pool) Query(ctx context.Context, sql string, optionsAndArgs ...any) (pgx.Rows, error) {
+	start := time.Now()
+	ctx, span := otel.Tracer("db").Start(ctx, "Query")
+	span.SetAttributes(attribute.String("db.system", "postgresql"), attribute.String("db.statement", sql))
+	defer span.End()
+
+	res, err := p.Pool.Query(ctx, sql, optionsAndArgs...)
+	telemetry.RecordDBQuery(ctx, "Query", "postgres", time.Since(start).Seconds())
+	if err != nil {
+		span.RecordError(err)
+	}
+	return res, err
+}
+
+func (p *Pool) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) pgx.Row {
+	start := time.Now()
+	ctx, span := otel.Tracer("db").Start(ctx, "QueryRow")
+	span.SetAttributes(attribute.String("db.system", "postgresql"), attribute.String("db.statement", sql))
+	defer span.End()
+
+	res := p.Pool.QueryRow(ctx, sql, optionsAndArgs...)
+	telemetry.RecordDBQuery(ctx, "QueryRow", "postgres", time.Since(start).Seconds())
+	return res
 }

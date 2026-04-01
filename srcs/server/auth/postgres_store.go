@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgUserRepository implements UserRepository backed by PostgreSQL.
 type PgUserRepository struct {
-	pool *pgxpool.Pool
+	pool db.DatabaseProvider
 }
 
 // NewPgUserRepository creates a Postgres-backed user repository.
-func NewPgUserRepository(pool *pgxpool.Pool) *PgUserRepository {
+func NewPgUserRepository(pool db.DatabaseProvider) *PgUserRepository {
 	return &PgUserRepository{pool: pool}
 }
 

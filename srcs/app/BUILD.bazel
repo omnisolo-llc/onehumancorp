@@ -7,6 +7,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 APP_PACKAGE_NAME = "ohc-desktop"
+
 APP_PACKAGE_VERSION = "0.1.2"
 
 exports_files([
@@ -260,9 +261,9 @@ pkg_files(
 pkg_files(
     name = "linux_runtime_binaries",
     srcs = [
+        "standalone_linux_launcher.sh",
         "//srcs/server:ohc",
         "//srcs/server:standalone_ohc_exec",
-        "standalone_linux_launcher.sh",
     ],
     attributes = pkg_attributes(mode = "0755"),
     renames = {
@@ -290,8 +291,8 @@ pkg_filegroup(
         ":app_workspace_files",
         ":app_workspace_pubspec",
         ":linux_runtime_binaries",
-        ":linux_runtime_ohc_link",
         ":linux_runtime_launcher_link",
+        ":linux_runtime_ohc_link",
     ],
 )
 
@@ -314,12 +315,12 @@ pkg_deb(
 
 pkg_rpm(
     name = "app_rpm",
+    package_name = APP_PACKAGE_NAME,
+    srcs = [":linux_runtime_payload"],
     architecture = "x86_64",
     description = "OHC standalone desktop runtime package with Bazel-managed app sources and backend wrapper.",
     license = "Apache-2.0",
-    package_name = APP_PACKAGE_NAME,
     release = "1",
-    srcs = [":linux_runtime_payload"],
     summary = "OHC standalone desktop runtime",
     tags = ["manual"],
     version = APP_PACKAGE_VERSION,
