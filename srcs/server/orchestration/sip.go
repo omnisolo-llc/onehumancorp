@@ -15,6 +15,10 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -22,6 +26,12 @@ import (
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+var (
+	sipMeter           = otel.GetMeterProvider().Meter("github.com/onehumancorp/mono/ohc/sip")
+	missionsSynced     metric.Int64Counter
+	missionsSyncErrors metric.Int64Counter
+)
+
 type SIPDB struct {
 	db                 *sql.DB
 	ContextRoot        string
@@ -83,6 +93,19 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		return nil, err
 	}
 
+	// Initialize metrics once
+	if missionsSynced == nil {
+		var err error
+		missionsSynced, err = sipMeter.Int64Counter("sip.missions.synced", metric.WithDescription("Total missions synced to cloud"))
+		if err != nil {
+			slog.Warn("failed to initialize missionsSynced metric", "error", err)
+		}
+		missionsSyncErrors, err = sipMeter.Int64Counter("sip.missions.sync_errors", metric.WithDescription("Total mission sync errors"))
+		if err != nil {
+			slog.Warn("failed to initialize missionsSyncErrors metric", "error", err)
+		}
+	}
+
 	return &SIPDB{db: db, groundingOnce: &sync.Once{}}, nil
 }
 
@@ -118,6 +141,7 @@ func initializeTables(db *sql.DB) error {
 			context TEXT NOT NULL,
 			vector_embedding BLOB,
 			source_plugin TEXT,
+			synced BOOLEAN DEFAULT FALSE,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS local_metrics_buffer (
@@ -133,6 +157,9 @@ func initializeTables(db *sql.DB) error {
 			return err
 		}
 	}
+	// Attempt to add the synced column if it doesn't exist (for existing DBs)
+	_, _ = db.Exec("ALTER TABLE swarm_memory_embeddings ADD COLUMN synced BOOLEAN DEFAULT FALSE;")
+
 	return nil
 }
 
@@ -663,6 +690,72 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Produces errors: Explicit error handling.
 // Has side effects: Posts pending missions to a remote endpoint and updates local status to SYNCED.
 // Returns the number of synced records and an error.
+
+// SyncContextSync aggregates and syncs unsynced swarm memory embeddings to the Cloud DB.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Posts context to a remote endpoint and updates local status to synced=TRUE.
+// Returns the number of synced records and an error.
+func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	var memories []EpisodicMemory
+
+	err := withRetry(ctx, func() error {
+		memories = nil
+		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE synced = FALSE ORDER BY created_at ASC LIMIT 100")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var m EpisodicMemory
+			var t string
+			if err := rows.Scan(&m.MemoryID, &m.Context, &m.VectorEmbedding, &m.SourcePlugin, &t); err != nil {
+				return err
+			}
+			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			memories = append(memories, m)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(memories) == 0 {
+		return 0, nil
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	syncedCount := 0
+	for _, m := range memories {
+		payloadBytes, _ := json.Marshal(m)
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(payloadBytes)))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
+				updateErr := withRetry(ctx, func() error {
+					_, updateErr := s.db.ExecContext(ctx, "UPDATE swarm_memory_embeddings SET synced = TRUE WHERE memory_id = ?", m.MemoryID)
+					return updateErr
+				})
+				if updateErr == nil {
+					syncedCount++
+				}
+			}
+			resp.Body.Close()
+		}
+	}
+
+	return syncedCount, nil
+}
+
 func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, error) {
 	var missions []struct {
 		id      string
@@ -700,24 +793,58 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
+		// Sanitize sensitive Hybrid MCP RAG payload data
+		var genericPayload interface{}
+		if err := json.Unmarshal([]byte(m.payload), &genericPayload); err == nil {
+			if mapPayload, ok := genericPayload.(map[string]interface{}); ok {
+				delete(mapPayload, "rag_context")
+
+				// Also apply RedactPII to string fields if any
+				for k, v := range mapPayload {
+					if strVal, isStr := v.(string); isStr {
+						mapPayload[k] = telemetry.RedactPII(strVal)
+					}
+				}
+
+				if b, err := json.Marshal(mapPayload); err == nil {
+					m.payload = string(b)
+				}
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
+			if missionsSyncErrors != nil {
+				missionsSyncErrors.Add(ctx, 1, metric.WithAttributes(attribute.String("error_type", "request_creation")))
+			}
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+					if missionsSynced != nil {
+						missionsSynced.Add(ctx, 1)
+					}
+				}
+			} else {
+				if missionsSyncErrors != nil {
+					missionsSyncErrors.Add(ctx, 1, metric.WithAttributes(attribute.String("error_type", "http_error")))
 				}
 			}
 			resp.Body.Close()
+		} else {
+			if missionsSyncErrors != nil {
+				missionsSyncErrors.Add(ctx, 1, metric.WithAttributes(attribute.String("error_type", "network_error")))
+			}
 		}
 	}
 

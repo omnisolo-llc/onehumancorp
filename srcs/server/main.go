@@ -287,6 +287,28 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
+
+			// Background sync for standalone Context (Hybrid RAG) to cloud
+			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
+			if contextEndpoint != "" {
+				go func() {
+					ticker := time.NewTicker(2 * time.Second)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							syncedCount, err := sipdb.SyncContextSync(ctx, contextEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync standalone context", "error", err)
+							} else if syncedCount > 0 {
+								slog.Info("Successfully synced standalone context to cloud", "count", syncedCount)
+							}
+						}
+					}
+				}()
+			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
 			if missionsEndpoint != "" {
