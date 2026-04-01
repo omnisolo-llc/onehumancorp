@@ -186,6 +186,10 @@ void main() {
         client: mockClient,
       );
 
+      // We need a larger screen size so that Row content doesn't overflow.
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+
       await tester.pumpWidget(
         _wrap(
           const DashboardScreen(),
@@ -195,6 +199,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('3'), findsOneWidget);
+
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
     });
   });
 

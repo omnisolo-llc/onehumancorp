@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
+  ref,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -26,19 +28,17 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-        error:
-            (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            'Error: $e',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
         data: (data) => _DashboardContent(data: data, ref: ref),
       ),
     );
@@ -105,13 +105,17 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 32),
+        _SectionTitle('Observability & Health'),
+        const SizedBox(height: 16),
+        _ObservabilityWidget(data: data),
+        const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -119,12 +123,199 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: roleList.map((role) {
             final count = data.agents.where((a) => a.role == role).length;
-            return _RoleScaleCard(
-              role: role,
-              count: count,
-              ref: ref,
-            );
+            return _RoleScaleCard(role: role, count: count, ref: ref);
           }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _ObservabilityWidget extends StatelessWidget {
+  final DashboardSnapshot data;
+  const _ObservabilityWidget({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    // Calculate simple health metrics
+    final totalAgents = data.agents.length;
+    final activeAgents = data.agents.where((a) => a.isRunning).length;
+
+    // Status text based on agents
+    String healthStatus = 'Healthy';
+    Color healthColor = Colors.green;
+    IconData healthIcon = Icons.check_circle;
+
+    if (totalAgents > 0 && activeAgents == 0) {
+      healthStatus = 'Inactive';
+      healthColor = colors.onSurfaceVariant;
+      healthIcon = Icons.pause_circle;
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.compose(
+          outer: ColorFilter.matrix(<double>[
+            1.213,
+            -0.213,
+            -0.072,
+            0,
+            0,
+            -0.213,
+            1.213,
+            -0.072,
+            0,
+            0,
+            -0.213,
+            -0.213,
+            1.213,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+          ]),
+          inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant.withOpacity(0.4)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.monitor_heart, color: colors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'System Telemetry',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: healthColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: healthColor.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(healthIcon, size: 14, color: healthColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          healthStatus,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: healthColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MetricItem(
+                      label: 'Fleet Utilization',
+                      value: totalAgents > 0
+                          ? '${((activeAgents / totalAgents) * 100).toInt()}%'
+                          : '0%',
+                      icon: Icons.speed,
+                    ),
+                  ),
+                  Expanded(
+                    child: _MetricItem(
+                      label: 'Active Missions',
+                      value: '${data.statuses.length}',
+                      icon: Icons.rocket_launch,
+                    ),
+                  ),
+                  Expanded(
+                    child: _MetricItem(
+                      label: 'Shared Memory Nodes',
+                      value: '${data.statuses.length * 2}',
+                      icon: Icons.memory,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _MetricItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
         ),
       ],
     );
@@ -177,10 +368,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = widget.role
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
     return Semantics(
       label: 'Scale $formattedRole role',
@@ -191,10 +386,26 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(<double>[
-                1.213, -0.213, -0.072, 0, 0,
-                -0.213, 1.213, -0.072, 0, 0,
-                -0.213, -0.213, 1.213, 0, 0,
-                0, 0, 0, 1, 0,
+                1.213,
+                -0.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                1.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                -0.213,
+                1.213,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
               ]),
               inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             ),
@@ -202,10 +413,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
               decoration: BoxDecoration(
                 color: colors.surfaceContainerHighest.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.outlineVariant.withOpacity(0.5)),
+                border: Border.all(
+                  color: colors.outlineVariant.withOpacity(0.5),
+                ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
                 child: Row(
                   children: [
                     Expanded(
