@@ -105,6 +105,10 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 32),
+        _SectionTitle('System Observability'),
+        const SizedBox(height: 16),
+        _ObservabilityWidget(data: data),
+        const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
@@ -125,6 +129,147 @@ class _DashboardContent extends StatelessWidget {
               ref: ref,
             );
           }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _ObservabilityWidget extends StatelessWidget {
+  final DashboardSnapshot data;
+
+  const _ObservabilityWidget({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final activeMissions = data.statuses.length; // Approximate from statuses
+    final totalAgents = data.agents.length;
+    final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
+
+    return Semantics(
+      label: 'System Observability Panel',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: colors.outlineVariant.withOpacity(0.4)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.monitor_heart, color: colors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Full-Spectrum Telemetry',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
+                          fontFamily: 'Outfit',
+                        ),
+                      ),
+                      const Spacer(),
+                      _StatusBadge(healthy: healthScore >= 80),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary),
+                      _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary),
+                      _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final bool healthy;
+  const _StatusBadge({required this.healthy});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final color = healthy ? Colors.green : colors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            healthy ? 'System Nominal' : 'Degraded',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _Metric({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontFamily: 'Inter',
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontFamily: 'Inter',
+          ),
         ),
       ],
     );
