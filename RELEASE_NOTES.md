@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.5 (Cloud) / v0.1.5+1 (Standalone)
+- Scaling (Cloud): Enhanced PostgreSQL multi-tenant synchronization and scaling via optimized pod concurrency configurations.
+- Privacy/Offline (Standalone): Improved SQLite fallback and offline state syncing for absolute local sovereignty without external database dependencies.
+
 ## v0.2.4
 - Scaling (Cloud): Enhanced PostgreSQL multi-tenant synchronization and scaling.
 - Privacy/Offline (Standalone): Improved SQLite fallback and offline state syncing.
