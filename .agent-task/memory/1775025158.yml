@@ -1,0 +1,5 @@
+global_intelligence:
+  summary: "Mission queue is empty. OHC Hybrid Agentic OS environment is stable."
+  metrics:
+    queue_length: 0
+    status: "idle"
