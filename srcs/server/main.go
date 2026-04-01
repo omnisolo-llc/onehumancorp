@@ -218,13 +218,25 @@ func run(now time.Time, listen listenFunc) error {
 		}()
 	}
 
-	// Set up the SIPDB instance to connect to SQLite.
-	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
-	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
-		sipdb = createdSIPDB
-		hub.SetSIPDB(sipdb)
-		// Hygiene: Prune stale missions in the agent_missions table periodically
-		go func() {
+	// Set up the SIPDB instance.
+	var dbProvider orchestration.DatabaseProvider
+	if pool != nil {
+		dbProvider = orchestration.NewPostgresProvider(pool.Pool)
+	} else {
+		dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
+		sqliteProvider, err := orchestration.NewSQLiteProvider(dbPath)
+		if err != nil {
+			slog.Error("failed to create SQLite provider", "path", dbPath, "error", err)
+		}
+		dbProvider = sqliteProvider
+	}
+
+	if dbProvider != nil {
+		if createdSIPDB, err := orchestration.NewSIPDB(dbProvider); err == nil {
+			sipdb = createdSIPDB
+			hub.SetSIPDB(sipdb)
+			// Hygiene: Prune stale missions in the agent_missions table periodically
+			go func() {
 			ticker := time.NewTicker(1 * time.Hour)
 			defer ticker.Stop()
 			for {
@@ -241,8 +253,9 @@ func run(now time.Time, listen listenFunc) error {
 				}
 			}
 		}()
-	} else {
-		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
+		} else {
+			slog.Error("failed to initialize SIPDB", "error", err)
+		}
 	}
 
 	var handler http.Handler

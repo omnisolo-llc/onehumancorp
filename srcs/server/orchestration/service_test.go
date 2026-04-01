@@ -1289,7 +1289,7 @@ func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 
 func TestSetSIPDB(t *testing.T) {
 	hub := NewHub()
-	db, _ := NewSIPDB("file:dummy_1.db?mode=memory&cache=shared")
+	db, _ := NewSIPDBTest("file:dummy_1.db?mode=memory&cache=shared")
 	hub.SetSIPDB(db)
 	if hub.GetSIPDB() != db {
 		t.Fatal("SetSIPDB/GetSIPDB failed")
@@ -1387,7 +1387,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub := NewHub()
 
-	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")
+	db, err := NewSIPDBTest("file:dummy_2.db?mode=memory&cache=shared")
 	if err != nil {
 		t.Fatalf("failed to create sip db: %v", err)
 	}

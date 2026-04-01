@@ -8,7 +8,7 @@ import (
 
 func TestSIPDB_CapabilityPlugins(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("failed to initialize SIPDB: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestSIPDB_CapabilityPlugins(t *testing.T) {
 
 func TestSIPDB_EpisodicMemory(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("failed to initialize SIPDB: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestSIPDB_EpisodicMemory(t *testing.T) {
 
 func TestSIPDB_CapabilityPlugins_DBError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestSIPDB_CapabilityPlugins_DBError(t *testing.T) {
 
 func TestSIPDB_EpisodicMemory_DBError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}

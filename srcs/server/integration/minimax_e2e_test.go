@@ -52,6 +52,8 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
+	} else {
+		return // Skip integration test if no key
 	}
 
 	hub := orchestration.NewHub()
@@ -160,6 +162,8 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
+	} else {
+		return // Skip integration test if no key
 	}
 
 	hub := orchestration.NewHub()

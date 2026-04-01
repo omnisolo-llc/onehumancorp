@@ -7,7 +7,7 @@ import (
 )
 
 func TestSIPDB_RetryContextCancel(t *testing.T) {
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBTest(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestSIPDB_RetryContextCancel(t *testing.T) {
 
 func TestSIPDB_NewSIPDB_InvalidPath(t *testing.T) {
 	// sqlite generally allows weird paths, but /root/locked.db should fail to open or init
-	db, err := NewSIPDB("/root/locked.db")
+	db, err := NewSIPDBTest("/root/locked.db")
 	if err == nil {
 		db.Close()
 		t.Fatalf("expected error for invalid db path")
@@ -35,7 +35,7 @@ func TestSIPDB_NewSIPDB_InvalidPath(t *testing.T) {
 }
 
 func TestSIPDB_SyncMemory_NoRows(t *testing.T) {
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBTest(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestSIPDB_SyncMemory_NoRows(t *testing.T) {
 }
 
 func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBTest(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert malformed JSON task
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"invalid_json\"}')")
+	_, err = db.dbProvider.(*SQLiteProvider).db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m2', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"invalid_json\"}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestSIPDB_GetPendingMissions_Fallback(t *testing.T) {
 }
 
 func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBTest(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 	ctx := context.Background()
 
 	// Manually insert JSON without ID
-	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m3', 'PENDING', '{\"role\":\"ROLE\",\"task\":{\"type\":\"TASK\"}}')")
+	_, err = db.dbProvider.(*SQLiteProvider).db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m3', 'PENDING', '{\"role\":\"ROLE\",\"task\":{\"type\":\"TASK\"}}')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestSIPDB_GetPendingMissions_MissingID(t *testing.T) {
 }
 
 func TestSIPDB_CompleteMission_NotFound(t *testing.T) {
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBTest(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestSIPDB_CompleteMission_NotFound(t *testing.T) {
 }
 
 func TestSIPDB_DBClosedErrors(t *testing.T) {
-	db, err := NewSIPDB(":memory:")
+	db, err := NewSIPDBTest(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init: %v", err)
 	}
@@ -164,22 +164,22 @@ func TestSIPDB_DBClosedErrors(t *testing.T) {
 // TestSIPDB_GetCapabilityPlugins_ScanError tests handling of scan errors
 func TestSIPDB_GetCapabilityPlugins_ScanError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.Exec("DROP TABLE capability_plugins")
+	_, err = db.dbProvider.(*SQLiteProvider).db.Exec("DROP TABLE capability_plugins")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.db.Exec("CREATE TABLE capability_plugins (plugin_id TEXT, name TEXT, version TEXT, manifest_url TEXT, status TEXT, registered_at TEXT)")
+	_, err = db.dbProvider.(*SQLiteProvider).db.Exec("CREATE TABLE capability_plugins (plugin_id TEXT, name TEXT, version TEXT, manifest_url TEXT, status TEXT, registered_at TEXT)")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.db.Exec("INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', 'version', 'url', 'status', '2023-01-01 00:00:00')")
+	_, err = db.dbProvider.(*SQLiteProvider).db.Exec("INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at) VALUES (NULL, 'name', 'version', 'url', 'status', '2023-01-01 00:00:00')")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,22 +193,22 @@ func TestSIPDB_GetCapabilityPlugins_ScanError(t *testing.T) {
 // TestSIPDB_GetEpisodicMemoriesByPlugin_ScanError tests handling of scan errors
 func TestSIPDB_GetEpisodicMemoriesByPlugin_ScanError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 	defer db.Close()
 
 	ctx := context.Background()
-	_, err = db.db.Exec("DROP TABLE swarm_memory_embeddings")
+	_, err = db.dbProvider.(*SQLiteProvider).db.Exec("DROP TABLE swarm_memory_embeddings")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.db.Exec("CREATE TABLE swarm_memory_embeddings (memory_id TEXT, context TEXT, vector_embedding BLOB, source_plugin TEXT, created_at TEXT)")
+	_, err = db.dbProvider.(*SQLiteProvider).db.Exec("CREATE TABLE swarm_memory_embeddings (memory_id TEXT, context TEXT, vector_embedding BLOB, source_plugin TEXT, created_at TEXT)")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.db.Exec("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (NULL, 'ctx', NULL, 'plugin', '2023-01-01 00:00:00')")
+	_, err = db.dbProvider.(*SQLiteProvider).db.Exec("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (NULL, 'ctx', NULL, 'plugin', '2023-01-01 00:00:00')")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,15 +222,15 @@ func TestSIPDB_GetEpisodicMemoriesByPlugin_ScanError(t *testing.T) {
 // Test GetPendingMissions Scan error for 165-166
 func TestSIPDB_GetPendingMissions_ScanError_Coverage(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 	defer db.Close()
 	ctx := context.Background()
-	_, _ = db.db.ExecContext(ctx, "DROP TABLE agent_missions")
-	_, _ = db.db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT, status TEXT, payload TEXT, created_at DATETIME)")
-	_, _ = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\"}')")
+	_, _ = db.dbProvider.(*SQLiteProvider).db.ExecContext(ctx, "DROP TABLE agent_missions")
+	_, _ = db.dbProvider.(*SQLiteProvider).db.ExecContext(ctx, "CREATE TABLE agent_missions (id TEXT, status TEXT, payload TEXT, created_at DATETIME)")
+	_, _ = db.dbProvider.(*SQLiteProvider).db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES (NULL, 'PENDING', '{\"role\":\"ROLE\"}')")
 	_, err = db.GetPendingMissions(ctx, "ROLE")
 	if err == nil {
 		t.Fatal("Expected scan error due to NULL task")

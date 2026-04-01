@@ -15,7 +15,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos.db")
 
-	db, err := NewSIPDB(dbPath)
+	db, err := NewSIPDBTest(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 	// then we'll try to write to it from another goroutine which should trigger retries.
 
 	// Open a raw connection to lock the database
-	tx, err := db.db.Begin()
+	tx, err := db.dbProvider.(*SQLiteProvider).db.Begin()
 	if err != nil {
 		t.Fatalf("Failed to begin transaction: %v", err)
 	}
