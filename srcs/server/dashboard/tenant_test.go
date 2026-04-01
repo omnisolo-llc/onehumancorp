@@ -158,13 +158,13 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 }
 
 func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
-	// Test the fallback to first registered tenant for unauthenticated requests
+	// Test that unauthenticated requests hit a fresh public handler, not a random tenant
 	reg := newTestRegistry()
 	// "/api/auth/login" is a valid public route, so we expect 405 Method Not Allowed or 400 Bad Request
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/login", nil)
 	rr := httptest.NewRecorder()
 	reg.ServeHTTP(rr, req)
-	// Fallback hits a tenant, the tenant auth middleware intercepts if it's not a public route.
+	// Fallback hits a fresh handler, the tenant auth middleware intercepts if it's not a public route.
 	// Since "/api/auth/login" is public, the tenant's router will handle it.
 	// Since we send a GET request to a POST endpoint, we expect 405 Method Not Allowed.
 	if rr.Code != http.StatusMethodNotAllowed {
@@ -176,8 +176,8 @@ func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 	reqEmpty := httptest.NewRequest(http.MethodGet, "/api/auth/login", nil)
 	rrEmpty := httptest.NewRecorder()
 	regEmpty.ServeHTTP(rrEmpty, reqEmpty)
-	if rrEmpty.Code != http.StatusServiceUnavailable {
-		t.Errorf("expected 503 Service Unavailable, got %d", rrEmpty.Code)
+	if rrEmpty.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405 Method Not Allowed, got %d", rrEmpty.Code)
 	}
 }
 
