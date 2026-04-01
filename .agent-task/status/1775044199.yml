@@ -1,0 +1,4 @@
+status: "Success"
+metrics:
+  health: "Healthy"
+  tests: "Passed"
