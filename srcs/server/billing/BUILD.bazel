@@ -2,10 +2,17 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "billing",
-    srcs = ["tracker.go"],
+    srcs = [
+        "postgres_tracker.go",
+        "repository.go",
+        "tracker.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/billing",
     visibility = ["//visibility:public"],
-    deps = ["//srcs/server/telemetry"],
+    deps = [
+        "//srcs/server/telemetry",
+        "@com_github_jackc_pgx_v5//pgxpool",
+    ],
 )
 
 go_test(

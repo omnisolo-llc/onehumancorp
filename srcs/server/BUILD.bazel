@@ -9,6 +9,7 @@ go_library(
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/dashboard",
+        "//srcs/server/db",
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
         "//srcs/orchestration",

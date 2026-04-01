@@ -70,38 +70,24 @@ kubectl wait --for=condition=Ready node --all --timeout=120s
 # In a manual run, we fallback to docker build (for dev convenience).
 if [[ -n "${TEST_SRCDIR:-}" ]]; then
   log "Bazel environment detected. Loading images from bazel-bin..."
-  # Locate the load scripts
-  BACKEND_LOADER="${REPO_ROOT}/deploy/backend_load"
-  UI_LOADER="${REPO_ROOT}/deploy/ui_load"
+  # Locate the load script
+  SERVER_LOADER="${REPO_ROOT}/deploy/server_load"
   
-  if [[ ! -x "${BACKEND_LOADER}" || ! -x "${UI_LOADER}" ]]; then
-    # In some sandboxes, we might need to find them in the runfiles tree
-    BACKEND_LOADER="$(find "${TEST_SRCDIR}" -name "backend_load" -type f -executable | head -1)"
-    UI_LOADER="$(find "${TEST_SRCDIR}" -name "ui_load" -type f -executable | head -1)"
+  if [[ ! -x "${SERVER_LOADER}" ]]; then
+    # In some sandboxes, we might need to find it in the runfiles tree
+    SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "server_load" -type f -executable | head -1)"
   fi
   
-  log "Executing backend loader: ${BACKEND_LOADER}"
-  "${BACKEND_LOADER}"
-  
-  log "Executing UI loader: ${UI_LOADER}"
-  "${UI_LOADER}"
+  log "Executing server loader: ${SERVER_LOADER}"
+  "${SERVER_LOADER}"
   
   # Standardize tags for the test
-  docker tag onehumancorp/mono-backend:bazel onehumancorp/mono-backend:e2e
-  docker tag onehumancorp/ui:bazel onehumancorp/mono-frontend:e2e
+  docker tag onehumancorp/server:latest onehumancorp/server:e2e
 else
-  log "Manual run detected. Building images via Dockerfiles..."
-  log "Building backend image ..."
-  docker build \
-    -f "${REPO_ROOT}/deploy/docker/backend/Dockerfile" \
-    -t onehumancorp/mono-backend:e2e \
-    "${REPO_ROOT}"
-
-  log "Building frontend image ..."
-  docker build \
-    -f "${REPO_ROOT}/deploy/docker/frontend/Dockerfile" \
-    -t onehumancorp/mono-frontend:e2e \
-    "${REPO_ROOT}"
+  require_tool bazelisk
+  log "Manual run detected. Building server image via Bazel..."
+  bazelisk run //deploy:server_load
+  docker tag onehumancorp/server:latest onehumancorp/server:e2e
 fi
 
 # ── Helm Verification ──────────────────────────────────────────────────────────
@@ -110,8 +96,7 @@ helm lint "${REPO_ROOT}/deploy/helm/ohc"
 helm template "${RELEASE_NAME}" "${REPO_ROOT}/deploy/helm/ohc" > /dev/null
 
 log "Loading images into Kind cluster ..."
-kind load docker-image onehumancorp/mono-backend:e2e --name "${CLUSTER_NAME}"
-kind load docker-image onehumancorp/mono-frontend:e2e --name "${CLUSTER_NAME}"
+kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
 
 # ── Create namespace ───────────────────────────────────────────────────────────
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
@@ -133,8 +118,7 @@ helm upgrade --install redis bitnami/redis \
 log "Installing OHC Helm chart ..."
 helm upgrade --install "${RELEASE_NAME}" "${REPO_ROOT}/deploy/helm/ohc" \
   --namespace "${NAMESPACE}" \
-  --set backend.image=onehumancorp/mono-backend:e2e \
-  --set frontend.image=onehumancorp/mono-frontend:e2e \
+  --set backend.image=onehumancorp/server:e2e \
   --set redis.enabled=false \
   --set cnpg.enabled=false \
   --set "backend.env.REDIS_ADDR=redis-master:6379" \

@@ -3,8 +3,25 @@
 ## Introduction
 This guide is intended for engineers who want to contribute to the One Human Corp (OHC) platform. It covers everything from local setup to adding new features and deploying to Kubernetes.
 
+## Operating Modes
+
+The repo is intentionally built as a hybrid cloud-native and desktop product:
+
+1. Cloud-native shared service: a horizontally scalable Go API tier backed by Postgres, with `OHC_MULTITENANT=true` enabling org-aware routing.
+2. Headless API deployment: the same backend with `OHC_HEADLESS=true`, used by remote mobile or desktop clients that should not receive a hosted web UI.
+3. Desktop standalone mode: the Flutter desktop app manages a local backend lifecycle and local SQLite-backed state.
+4. Remote client mode: the Flutter app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OHC deployment.
+
 ## Prerequisites
-{Existing table}
+| Tool | Minimum Version | Install |
+|------|----------------|---------|
+| [Bazelisk](https://github.com/bazelbuild/bazelisk) | latest | `brew install bazelisk` or `go install github.com/bazelbuild/bazelisk@latest` |
+| Go | 1.25 | managed by Bazel automatically |
+| Node.js | 22 | only needed for IDE tooling; tests run inside Bazel |
+| Docker | 24 | required for local Docker Compose and Kind e2e |
+| [Kind](https://kind.sigs.k8s.io/) | 0.23+ | `brew install kind` |
+| [Helm](https://helm.sh/) | 3.14+ | `brew install helm` |
+| kubectl | 1.30+ | `brew install kubectl` |
 
 ## Setup
 ### 1. Clone the Repository
@@ -20,17 +37,7 @@ Create a `.env` file in the root directory (see [Environment Variables](#environ
 ```bash
 docker compose -f deploy/docker-compose.yml up --build
 ```
-Navigate to `http://localhost:8081` to view the dashboard.
-
-| Tool | Minimum Version | Install |
-|------|----------------|---------|
-| [Bazelisk](https://github.com/bazelbuild/bazelisk) | latest | `brew install bazelisk` or `go install github.com/bazelbuild/bazelisk@latest` |
-| Go | 1.25 | managed by Bazel automatically |
-| Node.js | 22 | only needed for IDE tooling; tests run inside Bazel |
-| Docker | 24 | required for local Docker Compose and Kind e2e |
-| [Kind](https://kind.sigs.k8s.io/) | 0.23+ | `brew install kind` |
-| [Helm](https://helm.sh/) | 3.14+ | `brew install helm` |
-| kubectl | 1.30+ | `brew install kubectl` |
+Navigate to `http://localhost:8080` to use the integrated API and UI stack. Set `OHC_HEADLESS=true` if you want the backend to run without serving the web client.
 
 > All build and test commands below are issued as `bazel …` (via Bazelisk).
 
@@ -47,7 +54,7 @@ mono/
 ├── deploy/
 │   ├── docker/              Dockerfiles (backend + frontend)
 │   ├── docker-compose.yml   Local dev compose stack
-│   ├── helm/ohc/            Helm chart (backend, frontend, Redis, CNPG)
+│   ├── helm/ohc/            Helm chart (server, ui, Redis, CNPG)
 │   └── tests/               Deploy artefact and Kind e2e tests
 ├── docs/
 │   ├── features/            Feature-centric documentation (Design + CUJ + Guide)
@@ -56,16 +63,11 @@ mono/
 │   ├── system-design.md     Top-level architecture
 │   └── roadmap.md           Strategic technical roadmap
 └── srcs/
-    ├── billing/             Billing tracker
-    ├── cmd/ohc/             Backend binary entrypoint
-    ├── dashboard/           REST API handlers
-    ├── domain/              Domain model (Org / Dept / Role)
-    ├── frontend/            React SPA + vitest + Playwright tests
-    ├── frontend/server/     Go server that serves the SPA
-    ├── integration/         Go integration tests
-    ├── integrations/        Integration registry
-    ├── orchestration/       Agent hub and meeting rooms
-    └── proto/               Protobuf definitions
+  ├── app/                 Flutter client for mobile, desktop, and web
+  ├── server/              Go backend services and runtime entrypoint
+  ├── orchestration/       Agent hub and meeting rooms
+  ├── domain/              Domain model (Org / Dept / Role)
+  └── proto/               Protobuf definitions
 ```
 
 ---
@@ -79,10 +81,10 @@ mono/
 bazel build //...
 
 # Build just the backend binary
-bazel build //srcs/cmd/ohc
+bazel build //srcs/server:ohc
 
-# Build just the frontend Go server
-bazel build //srcs/frontend/server
+# Build the Flutter web app (via Bazel)
+bazel build //srcs/app:app
 ```
 
 ### Test
@@ -92,13 +94,16 @@ bazel build //srcs/frontend/server
 bazel test //...
 
 # Run all Go unit tests
-bazel test //srcs/...
+bazel test //srcs/server/... //srcs/orchestration/...
 
-# Run frontend npm unit tests (vitest)
-bazel test //srcs/frontend:frontend_unit_test
+# Run Flutter widget and service tests
+bazel test //srcs/app/lib/...
 
-# Run frontend Playwright e2e tests
-bazel test //srcs/frontend:frontend_e2e_test
+# Run Flutter desktop e2e tests
+bazel test //srcs/app:app_desktop_e2e_test
+
+# Run Flutter web e2e tests
+bazel test //srcs/app:app_web_e2e_test
 
 # Run deploy artefact verification
 bazel test //deploy:deploy_artifacts_test
@@ -111,6 +116,9 @@ bazel test //... --config=verbose
 
 # Re-run tests even if cached
 bazel test //... --cache_test_results=no
+
+# Launch the local development environment (Backend + Flutter Web)
+bazelisk run //:dev
 ```
 
 ### Lint / Type-check
@@ -119,8 +127,8 @@ bazel test //... --cache_test_results=no
 # Go vet (run via Bazel nogo)
 bazel build //... --keep_going
 
-# TypeScript type-check (npm, outside Bazel)
-cd srcs/frontend && npm run typecheck
+# Flutter static analysis
+cd srcs/app && flutter analyze
 ```
 
 ---
@@ -133,21 +141,15 @@ cd srcs/frontend && npm run typecheck
 bazel test //srcs/billing/... //srcs/domain/... //srcs/orchestration/... //srcs/integrations/...
 ```
 
-### Frontend Unit Tests (vitest)
+### Flutter App Tests
 
 ```bash
-bazel test //srcs/frontend:frontend_unit_test
+bazel test //srcs/app/lib/...
+bazel test //srcs/app:app_desktop_e2e_test
+bazel test //srcs/app:app_web_e2e_test
 ```
 
-### Frontend Playwright E2E Tests
-
-The Bazel target `//srcs/frontend:frontend_e2e_test` starts the backend and frontend dev servers automatically then runs all `tests/*.spec.ts` files.
-
-```bash
-bazel test //srcs/frontend:frontend_e2e_test
-```
-
-> Screenshots are written to `srcs/frontend/tests/screenshots/` during the test run.
+The Bazel target `//srcs/app:app_web_e2e_test` starts the backend and Flutter web app automatically, then runs Playwright against the served build artifacts.
 
 ### Kind End-to-End Test
 
@@ -181,10 +183,11 @@ docker compose -f deploy/docker-compose.yml up --build
 Services:
 | Service | Port | URL |
 |---------|------|-----|
-| Backend | 8080 | http://localhost:8080 |
-| Frontend | 8081 | http://localhost:8081 |
+| Server | 8080 | http://localhost:8080 (API + optional UI) |
 | Redis | 6379 | redis://localhost:6379 |
 | PostgreSQL | 5432 | postgres://localhost:5432/ohc |
+| Chatwoot | 3002 | http://localhost:3002 |
+| Plane | 3003 / 8000 | http://localhost:3003 / http://localhost:8000 |
 
 ### 2 — Seed demo data
 
@@ -196,7 +199,7 @@ curl -s -X POST http://localhost:8080/api/dev/seed \
 
 ### 3 — Open the dashboard
 
-Navigate to [http://localhost:8081](http://localhost:8081).
+Navigate to [http://localhost:8080](http://localhost:8080).
 
 ### 4 — Stop
 
@@ -214,33 +217,34 @@ docker compose -f deploy/docker-compose.yml down -v
 
 ## Environment Variables
 
-### Backend (`srcs/cmd/ohc`)
+### Backend (`srcs/server`)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP listen port |
 | `DATABASE_URL` | *(empty)* | PostgreSQL DSN; falls back to in-memory store when unset |
 | `REDIS_ADDR` | *(empty)* | Redis address e.g. `redis:6379`; pub-sub disabled when unset |
+| `OHC_MULTITENANT` | `false` | Enables org-aware multi-tenant routing for shared-service deployments |
+| `OHC_HEADLESS` | `false` | Disables static UI serving so the backend runs as an API-only service |
+| `OHC_SERVE_UI` | `true` | Optional override for static UI serving |
 | `GEMINI_API_KEY` | *(empty)* | Google Gemini API key for AI model calls |
 | `LOG_LEVEL` | `info` | Structured log level (`debug`/`info`/`warn`/`error`) |
 
-### Frontend server (`srcs/frontend/server`)
+### Frontend assets
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FRONTEND_ADDR` | `:8081` | HTTP listen address |
-| `BACKEND_URL` | `http://localhost:8080` | Upstream backend for `/api/*` proxy |
-| `FRONTEND_STATIC_DIR` | `./dist` | Path to built React static files |
+| `FRONTEND_STATIC_DIR` | `srcs/app/build/web` | Path to compiled Flutter artifacts |
 
 ---
 
 ## Adding a New API Endpoint
 
-1. Add the handler function in `srcs/dashboard/server.go`
-2. Register the route in `Server.ServeHTTP` / the route table in the same file
-3. Add a unit test in `srcs/dashboard/server_test.go`
+1. Add the handler function in `srcs/server/dashboard/server.go` or the relevant handler file in `srcs/server/dashboard/`
+2. Register the route in `srcs/server/dashboard/server.go`
+3. Add a unit test in `srcs/server/dashboard/server_test.go`
 4. Update the proto if a new message type is needed (`srcs/proto/`)
-5. Run `bazel test //srcs/dashboard/...`
+5. Run `bazel test //srcs/server/...`
 
 ---
 
@@ -248,8 +252,8 @@ docker compose -f deploy/docker-compose.yml down -v
 
 1. Define the role constant in `srcs/orchestration/service.go`
 2. Add any role-specific behaviour to `Hub.HandleMessage`
-3. Update the default `Catalog` in `srcs/billing/tracker.go` if the role uses a different model
-4. Add the role to the Skill Pack defaults in `srcs/dashboard/server.go`
+3. Update the default `Catalog` in `srcs/server/billing/tracker.go` if the role uses a different model
+4. Add the role to the Skill Pack defaults in `srcs/server/dashboard/server.go`
 
 ---
 
@@ -296,7 +300,7 @@ Check Docker is running and has enough resources (≥ 4 GB RAM, 2 CPUs).
 
 Install Playwright browsers:
 ```bash
-cd srcs/frontend && npx playwright install --with-deps chromium
+npx playwright install --with-deps chromium
 ```
 
-The Bazel `frontend_e2e_test` target handles this automatically.
+The Bazel `app_web_e2e_test` target handles this automatically.

@@ -84,7 +84,7 @@ func (s *Server) handleMarketplace(w http.ResponseWriter, _ *http.Request) {
 // Has no side effects.
 func (s *Server) handleAnalytics(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
-	agents := s.hub.Agents()
+	agents := s.orgAgentsLocked()
 	org := s.org
 	summary := s.tracker.Summary(org.ID)
 	pendingApprovals := 0
@@ -114,7 +114,7 @@ func (s *Server) handleAnalytics(w http.ResponseWriter, _ *http.Request) {
 		ratio = float64(totalAgents) / float64(totalHumans)
 	}
 
-	meetings := s.hub.Meetings()
+	meetings := s.orgMeetingsLocked()
 	totalMsgs := 0
 	auditedMsgs := 0
 	agentSet := map[string]bool{}

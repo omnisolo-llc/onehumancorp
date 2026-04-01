@@ -13,11 +13,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 // TenantFactory is a function that creates a new Server (http.Handler) for
@@ -115,15 +116,10 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	claims := auth.ClaimsFromContext(req.Context())
 
 	if claims != nil && claims.OrganizationID != "" {
-		// Authenticated request with a known org — route to tenant.
+		// Authenticated request with an org — lazily provision a tenant if needed.
 		h := r.handler(claims.OrganizationID)
 		if h == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			_ = json.NewEncoder(w).Encode(map[string]string{
-				"error": "organisation not found: " + claims.OrganizationID,
-			})
-			return
+			h = r.Provision(defaultTenantOrganization(claims.OrganizationID))
 		}
 		h.ServeHTTP(w, req)
 		return
@@ -153,6 +149,10 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	http.Error(w, `{"error":"no tenants registered"}`, http.StatusServiceUnavailable)
+}
+
+func defaultTenantOrganization(orgID string) domain.Organization {
+	return domain.NewSoftwareCompany(orgID, orgID, "Human CEO", time.Now().UTC())
 }
 
 // ProvisionOrg is a convenience function that provisions a tenant from an
@@ -245,17 +245,27 @@ func (r *TenantRegistry) HandleOrgList(w http.ResponseWriter, req *http.Request)
 //
 // Usage:
 //
-//	handler := dashboard.NewMultiTenantServer(authStore, nil)
-//	registry := handler.(*dashboard.TenantRegistry)
+//	registry, handler := dashboard.NewMultiTenantServerWithRegistry(authStore, nil)
 //	registry.ProvisionOrg("org-1", "Acme Corp", "acme.com")
 //	http.ListenAndServe(":8080", handler)
+//
 // Accepts parameters: authStore *auth.Store, factory TenantFactory (No Constraints).
 // Returns http.Handler.
 // Produces no errors.
 // Has no side effects.
 func NewMultiTenantServer(authStore *auth.Store, factory TenantFactory) http.Handler {
-	registry := NewTenantRegistry(authStore, factory)
+	_, handler := NewMultiTenantServerWithRegistry(authStore, factory)
+	return handler
+}
 
+// NewMultiTenantServerWithRegistry returns both the registry and the composed
+// handler so callers can seed bootstrap tenants before serving traffic.
+func NewMultiTenantServerWithRegistry(authStore *auth.Store, factory TenantFactory) (*TenantRegistry, http.Handler) {
+	registry := NewTenantRegistry(authStore, factory)
+	return registry, buildMultiTenantHandler(authStore, registry)
+}
+
+func buildMultiTenantHandler(authStore *auth.Store, registry *TenantRegistry) http.Handler {
 	mux := http.NewServeMux()
 
 	// Admin-only org management endpoints.

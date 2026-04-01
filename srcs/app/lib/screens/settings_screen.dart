@@ -46,6 +46,25 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 _SectionHeader(title: 'Communication'),
+                Card(
+                  child: ListTile(
+                    leading: Icon(
+                      settings.standaloneMode
+                          ? Icons.laptop_windows
+                          : Icons.cloud_queue,
+                    ),
+                    title: Text(
+                      settings.standaloneMode
+                          ? 'Desktop Standalone Mode'
+                          : 'Remote Client Mode',
+                    ),
+                    subtitle: Text(
+                      settings.standaloneMode
+                          ? 'This device manages a local backend and lightweight local services.'
+                          : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                    ),
+                  ),
+                ),
                 ListTile(
                   leading: const Icon(Icons.link),
                   title: const Text('Backend URL'),
@@ -62,7 +81,9 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   secondary: const Icon(Icons.computer),
                   title: const Text('Standalone Mode'),
-                  subtitle: const Text('App manages local backend lifecycle'),
+                  subtitle: const Text(
+                    'Run a local desktop backend. Disable this to use the app as a remote client.',
+                  ),
                   value: settings.standaloneMode,
                   onChanged:
                       (value) => ref

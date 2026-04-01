@@ -2,10 +2,17 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "scheduler",
-    srcs = ["scheduler.go"],
+    srcs = [
+        "postgres_scheduler.go",
+        "repository.go",
+        "scheduler.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/scheduler",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_google_uuid//:uuid"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@com_github_jackc_pgx_v5//pgxpool",
+    ],
 )
 
 go_test(

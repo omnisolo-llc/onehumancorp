@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -19,7 +19,7 @@ import (
 func (s *Server) handleMeetings(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	writeJSON(w, s.hub.Meetings())
+	writeJSON(w, s.orgMeetingsLocked())
 }
 
 // Handles sending a message.
@@ -48,12 +48,25 @@ func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 		OccurredAt: time.Now().UTC(),
 	}
 
+	if exists, belongs := s.agentOrgStatus(message.FromAgent); exists && !belongs {
+		http.Error(w, "sender agent does not belong to this organization", http.StatusForbidden)
+		return
+	}
+	if exists, belongs := s.agentOrgStatus(message.ToAgent); exists && !belongs {
+		http.Error(w, "recipient agent does not belong to this organization", http.StatusForbidden)
+		return
+	}
+	if exists, belongs := s.meetingOrgStatus(message.MeetingID); exists && !belongs {
+		http.Error(w, "meeting does not belong to this organization", http.StatusForbidden)
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Check for concurrent approval locks
 	if message.Type == "SpecApproved" || message.Type == "direction" {
-		for _, m := range s.hub.Meetings() {
+		for _, m := range s.orgMeetingsLocked() {
 			if m.ID == message.MeetingID {
 				// Find the most recent ApprovalNeeded from the target agent to the sender
 				var lastApprovalNeededIndex int = -1

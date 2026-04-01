@@ -322,7 +322,7 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.RLock()
 	orgID := s.org.ID
-	agents := s.hub.Agents()
+	agents := s.orgAgentsLocked()
 	s.mu.RUnlock()
 
 	var currentCount int

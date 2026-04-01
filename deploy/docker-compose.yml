@@ -26,8 +26,8 @@ services:
     ports:
       - "18789:18789"
 
-  backend:
-    image: onehumancorp/mono-backend:bazel
+  server:
+    image: onehumancorp/server:latest
     environment:
       REDIS_ADDR: redis:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
@@ -39,6 +39,8 @@ services:
       # Multi-tenant mode is disabled by default in single-docker deployment.
       # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
+      # Set to "true" for API-only / remote-client deployments.
+      OHC_HEADLESS: ${OHC_HEADLESS:-false}
       # Rust core sidecar address.
       OHC_CORE_URL: http://ohc-core:18789
     depends_on:
@@ -52,16 +54,6 @@ services:
         condition: service_started
     ports:
       - "8080:8080"
-
-  frontend:
-    image: onehumancorp/mono-frontend:bazel
-    environment:
-      BACKEND_URL: http://backend:8080
-      FRONTEND_STATIC_DIR: /
-    depends_on:
-      - backend
-    ports:
-      - "8081:8081"
 
   redis:
     image: redis:7-alpine

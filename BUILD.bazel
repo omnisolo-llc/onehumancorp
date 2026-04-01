@@ -40,6 +40,44 @@ sh_binary(
     tags = ["manual"],
 )
 
+# Unified Development target (Backend + Flutter Web)
+# This is a pure-Bazel orchestrator that launches both components concurrently.
+genrule(
+    name = "gen_dev_sh",
+    outs = ["dev_generated.sh"],
+    cmd = """
+cat << 'EOF' > $@
+#!/usr/bin/env bash
+# Pure-Bazel development orchestrator
+set -e
+trap 'kill $$(jobs -p)' EXIT
+
+# Start backend (API Server)
+echo "--- Starting Go Backend (8080) ---"
+./srcs/server/ohc &
+
+# Give the backend a moment to bind its port
+sleep 1
+
+# Start Flutter Web Client
+echo "--- Starting Flutter Web Client (8081) ---"
+cd srcs/app
+# We use flutter run -d chrome for the best developer experience (hot restart).
+flutter run -d chrome --web-port 8081
+EOF
+""",
+)
+
+sh_binary(
+    name = "dev",
+    srcs = [":gen_dev_sh"],
+    data = [
+        "//srcs/server:ohc",
+        "//srcs/app:srcs",
+    ],
+    tags = ["manual"],
+)
+
 # Alias to start the local developer environment quickly.
 alias(
     name = "up",

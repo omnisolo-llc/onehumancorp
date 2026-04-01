@@ -3,11 +3,14 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -123,6 +126,7 @@ type Store struct {
 	byOIDC  map[string]*User     // OIDC subject → User
 	revoked map[string]time.Time // JTI → expiry (for token revocation)
 	secret  []byte               // HS256 signing secret
+	repo    UserRepository
 	oidcCfg OIDCConfig
 }
 
@@ -132,6 +136,15 @@ type Store struct {
 // Produces no errors.
 // Has no side effects.
 func NewStore() *Store {
+	return newStore(nil)
+}
+
+// NewStoreWithRepository creates a Store backed by the provided repository.
+func NewStoreWithRepository(repo UserRepository) *Store {
+	return newStore(repo)
+}
+
+func newStore(repo UserRepository) *Store {
 	s := &Store{
 		users:   make(map[string]*User),
 		roles:   make(map[string]*Role),
@@ -139,6 +152,7 @@ func NewStore() *Store {
 		byEmail: make(map[string]*User),
 		byOIDC:  make(map[string]*User),
 		revoked: make(map[string]time.Time),
+		repo:    repo,
 	}
 
 	// JWT secret
@@ -167,12 +181,22 @@ func NewStore() *Store {
 		}
 	}
 
-	// Seed default admin user
+	s.seedDefaultAdmin(now)
+
+	return s
+}
+
+func (s *Store) seedDefaultAdmin(now time.Time) {
 	adminUser := envOr("ADMIN_USERNAME", "admin")
 	adminPass := envOr("ADMIN_PASSWORD", "admin")
 	adminEmail := envOr("ADMIN_EMAIL", "admin@localhost")
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("failed to hash default admin password", "error", err)
+		return
+	}
+
 	admin := &User{
 		ID:           generateID(),
 		Username:     adminUser,
@@ -183,11 +207,27 @@ func NewStore() *Store {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
+
+	if s.repo != nil {
+		ctx := context.Background()
+		existing, err := s.repo.GetByUsername(ctx, adminUser)
+		switch {
+		case err == nil && existing != nil:
+			return
+		case err != nil && !errors.Is(err, ErrUserNotFound):
+			slog.Warn("failed to check default admin in repository", "error", err)
+			return
+		}
+
+		if err := s.repo.CreateUser(ctx, admin); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+			slog.Warn("failed to seed default admin in repository", "error", err)
+		}
+		return
+	}
+
 	s.users[admin.ID] = admin
 	s.byName[adminUser] = admin
 	s.byEmail[adminEmail] = admin
-
-	return s
 }
 
 // CreateUser creates a new user with the given credentials and roles.
@@ -202,6 +242,30 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 	if len(password) < 6 {
 		return nil, errors.New("password must be at least 6 characters")
 	}
+
+	if s.repo != nil {
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("hash password: %w", err)
+		}
+
+		now := time.Now().UTC()
+		u := &User{
+			ID:           generateID(),
+			Username:     username,
+			Email:        email,
+			PasswordHash: string(hash),
+			Roles:        append([]string(nil), roles...),
+			Active:       true,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		if err := s.repo.CreateUser(context.Background(), u); err != nil {
+			return nil, normalizeRepositoryWriteError(err)
+		}
+		return u, nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -240,6 +304,20 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *Store) Authenticate(username, password string) (*User, error) {
+	if s.repo != nil {
+		u, err := s.repo.GetByUsername(context.Background(), username)
+		if err != nil {
+			return nil, errors.New("invalid credentials")
+		}
+		if !u.Active {
+			return nil, errors.New("account disabled")
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+			return nil, errors.New("invalid credentials")
+		}
+		return u, nil
+	}
+
 	s.mu.RLock()
 	u, ok := s.byName[username]
 	s.mu.RUnlock()
@@ -261,6 +339,14 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 // Produces no errors.
 // Has no side effects.
 func (s *Store) GetUser(id string) (*User, bool) {
+	if s.repo != nil {
+		u, err := s.repo.GetByID(context.Background(), id)
+		if err != nil {
+			return nil, false
+		}
+		return u, true
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	u, ok := s.users[id]
@@ -273,6 +359,15 @@ func (s *Store) GetUser(id string) (*User, bool) {
 // Produces no errors.
 // Has no side effects.
 func (s *Store) ListUsers() []*User {
+	if s.repo != nil {
+		users, err := s.repo.ListUsers(context.Background())
+		if err != nil {
+			slog.Error("failed to list users from repository", "error", err)
+			return nil
+		}
+		return users
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := make([]*User, 0, len(s.users))
@@ -288,6 +383,31 @@ func (s *Store) ListUsers() []*User {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
+	if s.repo != nil {
+		ctx := context.Background()
+		u, err := s.repo.GetByID(ctx, id)
+		if err != nil {
+			if errors.Is(err, ErrUserNotFound) {
+				return nil, errors.New("user not found")
+			}
+			return nil, err
+		}
+		if emailPtr != nil {
+			u.Email = *emailPtr
+		}
+		if roles != nil {
+			u.Roles = append([]string(nil), roles...)
+		}
+		if activePtr != nil {
+			u.Active = *activePtr
+		}
+		u.UpdatedAt = time.Now().UTC()
+		if err := s.repo.UpdateUser(ctx, u); err != nil {
+			return nil, normalizeRepositoryWriteError(err)
+		}
+		return u, nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -319,6 +439,17 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *Store) DeleteUser(id string) error {
+	if s.repo != nil {
+		ctx := context.Background()
+		if _, err := s.repo.GetByID(ctx, id); err != nil {
+			if errors.Is(err, ErrUserNotFound) {
+				return errors.New("user not found")
+			}
+			return err
+		}
+		return s.repo.DeleteUser(ctx, id)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	u, ok := s.users[id]
@@ -379,6 +510,13 @@ func (s *Store) CreateRole(name string, permissions []string) (*Role, error) {
 // Produces no errors.
 // Has no side effects.
 func (s *Store) RevokeToken(jti string, exp time.Time) {
+	if s.repo != nil {
+		if err := s.repo.RevokeToken(context.Background(), jti, exp); err != nil {
+			slog.Error("failed to revoke token in repository", "jti", jti, "error", err)
+		}
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.revoked[jti] = exp
@@ -397,6 +535,15 @@ func (s *Store) RevokeToken(jti string, exp time.Time) {
 // Produces no errors.
 // Has no side effects.
 func (s *Store) IsRevoked(jti string) bool {
+	if s.repo != nil {
+		revoked, err := s.repo.IsRevoked(context.Background(), jti)
+		if err != nil {
+			slog.Error("failed to check token revocation in repository", "jti", jti, "error", err)
+			return false
+		}
+		return revoked
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	_, ok := s.revoked[jti]
@@ -423,6 +570,10 @@ func (s *Store) OIDCCfg() OIDCConfig { return s.oidcCfg }
 // Produces no errors.
 // Has no side effects.
 func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User {
+	if s.repo != nil {
+		return s.getOrCreateOIDCUserInRepository(sub, email, preferredUsername)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -466,6 +617,84 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User 
 	}
 	s.byOIDC[sub] = u
 	return u
+}
+
+func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername string) *User {
+	ctx := context.Background()
+
+	if u, err := s.repo.GetByOIDCSubject(ctx, sub); err == nil {
+		return u
+	} else if !errors.Is(err, ErrUserNotFound) {
+		slog.Warn("failed to look up OIDC user by subject", "subject", sub, "error", err)
+	}
+
+	if email != "" {
+		if u, err := s.repo.GetByEmail(ctx, email); err == nil {
+			u.OIDCSubject = sub
+			u.UpdatedAt = time.Now().UTC()
+			if err := s.repo.UpdateUser(ctx, u); err != nil {
+				slog.Warn("failed to attach OIDC subject to existing user", "subject", sub, "error", err)
+			}
+			return u
+		} else if !errors.Is(err, ErrUserNotFound) {
+			slog.Warn("failed to look up OIDC user by email", "email", email, "error", err)
+		}
+	}
+
+	uname := preferredUsername
+	if uname == "" {
+		uname = email
+	}
+
+	now := time.Now().UTC()
+	u := &User{
+		ID:          generateID(),
+		Username:    uname,
+		Email:       email,
+		Roles:       []string{RoleViewer},
+		Active:      true,
+		OIDCSubject: sub,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	for attempts := 0; attempts < 2; attempts++ {
+		if u.Username != "" {
+			if existing, err := s.repo.GetByUsername(ctx, u.Username); err == nil && existing != nil {
+				u.Username = u.Username + "_" + hex.EncodeToString(randomBytes(3))
+			} else if err != nil && !errors.Is(err, ErrUserNotFound) {
+				slog.Warn("failed to check OIDC username collision", "username", u.Username, "error", err)
+			}
+		}
+
+		if err := s.repo.CreateUser(ctx, u); err == nil {
+			return u
+		} else if normalizeRepositoryWriteError(err).Error() == "username already taken" {
+			u.Username = u.Username + "_" + hex.EncodeToString(randomBytes(3))
+			continue
+		} else {
+			slog.Warn("failed to create OIDC user in repository", "subject", sub, "error", err)
+			break
+		}
+	}
+
+	return u
+}
+
+func normalizeRepositoryWriteError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "username") && strings.Contains(msg, "duplicate"):
+		return errors.New("username already taken")
+	case strings.Contains(msg, "email") && strings.Contains(msg, "duplicate"):
+		return errors.New("email already registered")
+	default:
+		return err
+	}
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

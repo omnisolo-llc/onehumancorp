@@ -1,51 +1,62 @@
 # One Human Corp
 
 ## Identity
-One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) that empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents natively on Kubernetes.
+One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
 
 ## Architecture
 
-The platform ships in two modes:
+The platform supports four operating modes:
 
-| Mode | Description |
-|------|-------------|
-| **Single-docker** | One container for everything.  The `ohc-core` Rust library handles all performance-critical logic (settings, agent scheduling, meeting rooms, chat integration). |
-| **Cloud-native (k8s)** | Kubernetes deployment with full multi-tenant support.  A single server instance handles thousands of companies; each user sees only their own company's data. |
+| Mode | Local footprint | Remote footprint | Notes |
+|------|-----------------|------------------|-------|
+| **Cloud-native shared service** | Flutter mobile, desktop, or web client | Go API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
+| **Headless cloud API** | Flutter mobile or desktop client | API-only Go server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
+| **Desktop standalone** | Flutter desktop shell plus local Go backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
+| **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
 
 ```mermaid
 graph TD;
-    MobileApp[Flutter App\nAndroid / iOS] --> API[Go Dashboard Server];
-    DesktopApp[Desktop App\nmacOS / Windows\nTauri + Flutter] --> API;
-    WebApp[Web Frontend\nReact / TypeScript] --> API;
-    API --> Core[Rust Core\nohc-core];
-    API --> K8s[Kubernetes Cluster];
-    K8s --> Agents[AI Agents];
-    Core --> DB[(SQLite / PostgreSQL)];
-    Core --> Redis[(Redis)];
-    K8s --> MCP[Model Context Protocol];
+    MobileClient[Flutter Client\nAndroid / iOS] --> API[Go Server / API];
+    DesktopClient[Flutter Desktop App\nStandalone or Remote] --> API;
+    WebClient[Flutter Web] --> API;
+    API --> Orchestration[Orchestration Hub];
+    API --> Auth[JWT / OIDC Auth];
+    Orchestration --> Agents[AI Agents];
+    API --> Postgres[(Postgres)];
+    API --> SQLite[(Local SQLite SIPDB)];
+    API --> Integrations[Public Integrations\nGoogle Chat / Issue Trackers / MCP];
 ```
 
-### Source layout (`srcs/`)
+### Source layout
 
 | Directory | Language | Purpose |
 |-----------|----------|---------|
-| `srcs/core/` | **Rust** | Core library — settings, agent lifecycle, scheduler, meeting rooms, chat integration |
-| `srcs/app/` | **Flutter/Dart** | Cross-platform app (iOS, Android, macOS, Windows, Linux, Web) |
-| `srcs/desktop/` | **Tauri (Rust + React)** | Native desktop app (macOS, Windows) |
-| `srcs/frontend/` | **TypeScript/React** | Web dashboard |
-| `srcs/dashboard/` | **Go** | REST API server with multi-tenant `TenantRegistry` |
-| `srcs/auth/` | **Go** | JWT, OIDC, RBAC with `organization_id` scoping |
-| `srcs/orchestration/` | **Go** | Agent hub, meeting rooms |
-| `srcs/agents/` | **Go** | AI provider registry |
-| `srcs/domain/` | **Go** | Business models (Organisation, Blueprint, B2B) |
+| `srcs/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
+| `srcs/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
+| `srcs/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
 | `srcs/proto/` | **Protobuf** | gRPC service definitions |
+| `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
+| `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
+
+### Remote clients and standalone mode
+
+The Flutter app already supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
+
+Headless server deployments keep the API, auth, health probes, and metrics online while skipping static UI serving. That is the intended mode for mobile clients and desktop clients that should connect to cloud-hosted services instead of running a local backend.
 
 ### Multi-tenancy
 
 In cloud-native mode (`OHC_MULTITENANT=true`) the `TenantRegistry` in
-`srcs/dashboard/tenant.go` routes every authenticated request to the correct
-per-organisation `Server` instance.  Each organisation's data (agents,
-meetings, messages, approvals, …) is fully isolated.
+`srcs/server/dashboard/tenant.go` lazily provisions an organisation-scoped
+`Server` per `organization_id` and routes authenticated requests to the correct
+tenant handler. Dashboard snapshots, meetings, agent operations, approvals,
+handoffs, and other server-local state are isolated per tenant handler, and the
+HTTP layer filters org-visible data when shared persistence is used.
+
+Shared-database persistence hardening is still ongoing, so the repo should not
+yet claim perfect end-to-end schema-level tenant isolation for every future
+query path. The runtime now supports the correct routing model and org-scoped
+API surface for shared-service deployments.
 
 New organisations are provisioned via:
 ```
@@ -66,22 +77,28 @@ docker compose up
 Services:
 | Service | Port | Description |
 |---------|------|-------------|
-| `ohc-core` | 18789 | Rust core micro-service |
-| `backend` | 8080 | Go dashboard API |
-| `frontend` | 8081 | React web dashboard |
+| `server` | 8080 | Go API server, auth endpoints, and optional embedded UI |
 | `postgres` | 5432 | PostgreSQL |
 | `redis` | 6379 | Redis |
 | `chatwoot` | 3002 | Chat platform |
 | `prometheus` | 9090 | Metrics |
 | `grafana` | 3000 | Dashboards |
+| `plane-web` | 3003 | Plane frontend |
+| `plane-api` | 8000 | Plane backend |
 
 When the backend starts with an empty workforce, it now bootstraps an **internal default agent** backed by the built-in provider so a single-container deployment has an immediately available agent runtime.
+
+For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 
 ### Bazel (full build + test)
 
 ```bash
+# Build & Test the full system
 bazelisk build //...
 bazelisk test //...
+
+# Quick Local Dev (starts Backend + Flutter Web)
+bazelisk run //:dev
 ```
 
 ### Flutter app
@@ -92,12 +109,10 @@ flutter pub get
 flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
 ```
 
-### Rust core
+### Server binary
 
 ```bash
-cd srcs/core
-cargo build --release
-cargo test
+bazelisk run //srcs/server:server
 ```
 
 ## Configuration
@@ -107,10 +122,16 @@ cargo test
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
+| `DATABASE_URL` | PostgreSQL DSN. When unset, the server falls back to in-memory repositories and local SQLite-backed SIPDB support |
 | `OHC_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
+| `OHC_HEADLESS` | Set `true` for API-only deployments that should not serve the web UI |
+| `OHC_SERVE_UI` | Optional override to force UI serving on or off |
 | `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
-| `MONO_FRONTEND_DIST` | Path to compiled frontend dist |
+| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets (e.g. `srcs/app/build/web`) |
+| `OHC_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
+| `OHC_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
+| `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
 | `OHC_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
@@ -122,5 +143,5 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 - **Build all modules:** `bazelisk build //...`
 - **Run all tests:** `bazelisk test //...`
 - **Format Go code:** `gofmt -w ./...`
-- **Format frontend:** `cd srcs/frontend && npx prettier --write .`
-- **Lint Rust:** `cd srcs/core && cargo clippy`
+- **Format frontend:** `cd srcs/app && flutter format .`
+- **Analyze Flutter app:** `cd srcs/app && flutter analyze`

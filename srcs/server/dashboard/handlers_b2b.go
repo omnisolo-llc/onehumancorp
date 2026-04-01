@@ -46,6 +46,10 @@ func (s *Server) handleApprovalRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agentId and action are required", http.StatusBadRequest)
 		return
 	}
+	if exists, belongs := s.agentOrgStatus(req.AgentID); exists && !belongs {
+		http.Error(w, "agent does not belong to this organization", http.StatusForbidden)
+		return
+	}
 
 	now := time.Now().UTC()
 	approval := ApprovalRequest{
@@ -156,6 +160,10 @@ func (s *Server) handleHandoffs(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.FromAgentID == "" || req.Intent == "" {
 			http.Error(w, "fromAgentId and intent are required", http.StatusBadRequest)
+			return
+		}
+		if exists, belongs := s.agentOrgStatus(req.FromAgentID); exists && !belongs {
+			http.Error(w, "agent does not belong to this organization", http.StatusForbidden)
 			return
 		}
 		now := time.Now().UTC()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -79,18 +80,33 @@ func NewTask(orgID, agentID, name string, schedule Schedule, payload json.RawMes
 // Scheduler manages the lifecycle of Tasks.
 type Scheduler struct {
 	mu    sync.RWMutex
+	repo  TaskRepository
 	tasks map[string]Task
 }
 
 // NewScheduler creates a new in-memory scheduler.
 func NewScheduler() *Scheduler {
+	return newScheduler(nil)
+}
+
+// NewSchedulerWithRepository creates a scheduler backed by the provided repository.
+func NewSchedulerWithRepository(repo TaskRepository) *Scheduler {
+	return newScheduler(repo)
+}
+
+func newScheduler(repo TaskRepository) *Scheduler {
 	return &Scheduler{
+		repo:  repo,
 		tasks: make(map[string]Task),
 	}
 }
 
 // Create adds a new task to the scheduler.
 func (s *Scheduler) Create(task Task) error {
+	if s.repo != nil {
+		return s.repo.Create(context.Background(), task)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.tasks[task.ID]; ok {
@@ -102,6 +118,10 @@ func (s *Scheduler) Create(task Task) error {
 
 // Cancel marks a task as cancelled.
 func (s *Scheduler) Cancel(id string) error {
+	if s.repo != nil {
+		return s.repo.Cancel(context.Background(), id)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	task, ok := s.tasks[id]
@@ -115,6 +135,15 @@ func (s *Scheduler) Cancel(id string) error {
 
 // ListForOrg returns all tasks associated with an organization.
 func (s *Scheduler) ListForOrg(orgID string) []Task {
+	if s.repo != nil {
+		tasks, err := s.repo.ListForOrg(context.Background(), orgID)
+		if err != nil {
+			slog.Error("failed to list tasks from repository", "organization_id", orgID, "error", err)
+			return nil
+		}
+		return tasks
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var result []Task
@@ -128,6 +157,15 @@ func (s *Scheduler) ListForOrg(orgID string) []Task {
 
 // PollDue returns all tasks that are ready to run.
 func (s *Scheduler) PollDue() []Task {
+	if s.repo != nil {
+		tasks, err := s.repo.PollDue(context.Background())
+		if err != nil {
+			slog.Error("failed to poll due tasks from repository", "error", err)
+			return nil
+		}
+		return tasks
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	now := time.Now().UTC()
@@ -142,6 +180,21 @@ func (s *Scheduler) PollDue() []Task {
 
 // MarkRunning marks a task as running and updates its last run time.
 func (s *Scheduler) MarkRunning(id string) (Task, error) {
+	if s.repo != nil {
+		ctx := context.Background()
+		task, err := s.repo.Get(ctx, id)
+		if err != nil {
+			return Task{}, err
+		}
+		if err := s.repo.UpdateStatus(ctx, id, TaskStatusRunning, false); err != nil {
+			return Task{}, err
+		}
+		now := time.Now().UTC()
+		task.Status = TaskStatusRunning
+		task.LastRunAt = &now
+		return task, nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	task, ok := s.tasks[id]
@@ -157,6 +210,18 @@ func (s *Scheduler) MarkRunning(id string) (Task, error) {
 
 // MarkDone marks a task as succeeded or failed, and reschedules if it's an interval task.
 func (s *Scheduler) MarkDone(id string, success bool) error {
+	if s.repo != nil {
+		ctx := context.Background()
+		task, err := s.repo.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+		if success {
+			return s.repo.UpdateStatus(ctx, id, TaskStatusSucceeded, task.Schedule.Type == ScheduleInterval)
+		}
+		return s.repo.UpdateStatus(ctx, id, TaskStatusFailed, false)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	task, ok := s.tasks[id]
