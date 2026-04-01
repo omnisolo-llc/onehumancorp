@@ -247,6 +247,14 @@ func run(now time.Time, listen listenFunc) error {
 
 	var handler http.Handler
 	if multiTenant {
+		// Initialize CentrifugeNode once globally to avoid redundant initializations in multi-tenant mode
+		var globalCentrifugeNode *orchestration.CentrifugeNode
+		if cnNode, err := orchestration.NewCentrifugeNode(); err == nil {
+			globalCentrifugeNode = cnNode
+		} else {
+			slog.Warn("global centrifuge node init failed; real-time WebSocket disabled", "error", err)
+		}
+
 		factory := func(org domain.Organization) http.Handler {
 			tenantHub, tenantTracker := newHubAndTracker(pool)
 			tenantSettings := settings.NewStore()
@@ -254,6 +262,9 @@ func run(now time.Time, listen listenFunc) error {
 			tenantHub.SetSettingsStore(tenantSettings)
 			if sipdb != nil {
 				tenantHub.SetSIPDB(sipdb)
+			}
+			if globalCentrifugeNode != nil {
+				tenantHub.SetCentrifugeNode(globalCentrifugeNode)
 			}
 			return dashboard.NewServer(org, tenantHub, tenantTracker, authStore)
 		}
