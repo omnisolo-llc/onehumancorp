@@ -2,8 +2,8 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "db",
-    embedsrcs = glob(["migrations/*.sql"]),
     srcs = ["postgres.go"],
+    embedsrcs = glob(["migrations/*.sql"]),
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
