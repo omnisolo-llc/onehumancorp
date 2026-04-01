@@ -19,8 +19,20 @@ class SettingsScreen extends ConsumerWidget {
       body: clientSettingsAsync.when(
         loading:
             () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Connecting to remote endpoint...',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
         error:

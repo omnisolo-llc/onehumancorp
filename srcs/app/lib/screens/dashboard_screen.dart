@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/observability_widget.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -28,8 +29,20 @@ class DashboardScreen extends ConsumerWidget {
       body: snapshot.when(
         loading:
             () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Syncing swarm intelligence...',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
         error:
@@ -104,6 +117,10 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 32),
+        _SectionTitle('Observability'),
+        const SizedBox(height: 16),
+        const ObservabilityWidget(),
         const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),

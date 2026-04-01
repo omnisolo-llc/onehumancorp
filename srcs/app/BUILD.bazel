@@ -23,7 +23,7 @@ filegroup(
     name = "srcs",
     srcs = glob(
         [
-            "assets/**",
+            "assets/logo.png",
             "android/**",
             "BUILD.bazel",
             "e2e/**",

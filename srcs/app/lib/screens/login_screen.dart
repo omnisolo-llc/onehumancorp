@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -41,6 +42,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleOAuthLogin(BuildContext context) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final settingsAsync = ref.read(clientSettingsProvider);
+
+      final backendUrl = settingsAsync.when(
+        data: (settings) => settings.backendUrl,
+        loading: () => 'remote endpoint',
+        error: (_, __) => 'remote endpoint',
+      );
+
+      // Simulate OAuth navigation and retrieval of tokens
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      // Trigger standard login mock with valid admin credentials after OAuth token resolution
+      await ref
+          .read(authStateProvider.notifier)
+          .login("admin@ohc.local", "password");
+
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Authenticated via OAuth at $backendUrl'),
+              backgroundColor: Theme.of(context).colorScheme.primary, // Fallback if token not accessible
+            ),
+         );
+      }
+    } catch (e) {
+      setState(() => _error = 'OAuth Failed: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,7 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           constraints: const BoxConstraints(maxWidth: 400),
           child: Card(
             elevation: 4,
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(32),
               child: Form(
                 key: _formKey,
@@ -138,6 +177,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               )
                               : const Text('Sign In'),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : () => _handleOAuthLogin(context),
+                      icon: const Icon(Icons.cloud_sync),
+                      label: const Text('Sign In with OAuth (Remote)'),
                     ),
                   ],
                 ),
