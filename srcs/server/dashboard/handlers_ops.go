@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -419,4 +420,49 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientWins := r.Header.Get("X-Conflict-Resolution") == "client-wins"
+
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 5<<20)) // 5MB limit
+	if err != nil {
+		http.Error(w, "failed to read payload", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		ID      string      `json:"id"`
+		Payload json.RawMessage `json:"payload"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if req.ID == "" {
+		http.Error(w, "missing mission ID", http.StatusBadRequest)
+		return
+	}
+
+	payloadBytes, err := json.Marshal(req.Payload)
+	if err != nil {
+		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
+		return
+	}
+
+	if s.hub.SIPDB() != nil {
+		err = s.hub.SIPDB().SyncMission(r.Context(), req.ID, string(payloadBytes), clientWins)
+		if err != nil {
+			http.Error(w, "failed to sync mission: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
 }

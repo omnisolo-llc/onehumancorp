@@ -23,10 +23,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 *sql.DB
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              *sql.DB
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -281,6 +281,7 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 			return fmt.Errorf("failed to create sync request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
@@ -636,6 +637,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		return 0, fmt.Errorf("failed to create sync request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -700,11 +702,13 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		payloadWithID := fmt.Sprintf("{\"id\":%q,\"payload\":%s}", m.id, m.payload)
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadWithID))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
@@ -722,4 +726,27 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	}
 
 	return syncedCount, nil
+}
+
+// SyncMission Upserts a single mission into agent_missions table
+func (s *SIPDB) SyncMission(ctx context.Context, id string, payload string, clientWins bool) error {
+	return withRetry(ctx, func() error {
+		if clientWins {
+			_, err := s.db.ExecContext(ctx,
+				`INSERT INTO agent_missions (id, status, payload, created_at)
+				VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)
+				ON CONFLICT(id) DO UPDATE SET
+				payload = excluded.payload,
+				status = excluded.status`,
+				id, payload)
+			return err
+		}
+
+		_, err := s.db.ExecContext(ctx,
+			`INSERT INTO agent_missions (id, status, payload, created_at)
+			VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)
+			ON CONFLICT(id) DO NOTHING`,
+			id, payload)
+		return err
+	})
 }

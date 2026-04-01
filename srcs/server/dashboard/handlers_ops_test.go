@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"strings"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,4 +39,26 @@ func TestHandleScaleStreamOpsCoverage(t *testing.T) {
 			t.Errorf("expected 200, got %d", w.Code)
 		}
 	})
+}
+
+func TestHandleSyncMissions(t *testing.T) {
+	_, server, token := newTestServer(t)
+
+	// Valid payload
+	payload := `{"id": "m-123", "payload": {"task": "do something"}}`
+	req, _ := http.NewRequest("POST", server.URL+"/api/missions/sync", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("X-Conflict-Resolution", "client-wins")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
 }
