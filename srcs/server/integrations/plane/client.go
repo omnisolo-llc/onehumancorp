@@ -10,10 +10,13 @@ package plane
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 )
@@ -24,6 +27,53 @@ import (
 // Produces no errors.
 // Has no side effects.
 const DefaultBaseURL = "http://plane-api:8000"
+
+// CircuitBreaker state
+type CircuitBreaker struct {
+	mu           sync.Mutex
+	failures     int
+	lastFailure  time.Time
+	maxFailures  int
+	resetTimeout time.Duration
+}
+
+func (cb *CircuitBreaker) Allow() bool {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	if cb.failures >= cb.maxFailures {
+		if time.Since(cb.lastFailure) > cb.resetTimeout {
+			cb.failures = 0
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (cb *CircuitBreaker) RecordSuccess() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures = 0
+}
+
+func (cb *CircuitBreaker) RecordFailure() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures++
+	cb.lastFailure = time.Now()
+}
+
+var globalPlaneCircuitBreaker *CircuitBreaker
+var globalPlaneCircuitBreakerOnce sync.Once
+
+func init() {
+	globalPlaneCircuitBreakerOnce.Do(func() {
+		globalPlaneCircuitBreaker = &CircuitBreaker{
+			maxFailures:  3,
+			resetTimeout: 30 * time.Second,
+		}
+	})
+}
 
 // Client interacts with the Plane REST API.
 // Accepts no parameters.
@@ -36,6 +86,7 @@ type Client struct {
 	Workspace  string
 	Project    string
 	httpClient *http.Client
+	cb         *CircuitBreaker
 }
 
 // NewClientFromEnv creates a Client using environment variables.
@@ -54,6 +105,7 @@ func NewClientFromEnv() *Client {
 		Workspace:  os.Getenv("PLANE_WORKSPACE"),
 		Project:    os.Getenv("PLANE_PROJECT"),
 		httpClient: integrations.InitSafeHTTPClient(),
+		cb:         globalPlaneCircuitBreaker,
 	}
 }
 
@@ -142,11 +194,22 @@ func (c *Client) addHeaders(req *http.Request) {
 }
 
 func (c *Client) do(req *http.Request, dest interface{}) error {
+	if !c.cb.Allow() {
+		return errors.New("plane API circuit breaker is open")
+	}
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		c.cb.RecordFailure()
 		return err
 	}
 	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
+
+	if resp.StatusCode >= 500 {
+		c.cb.RecordFailure()
+	} else {
+		c.cb.RecordSuccess()
+	}
 
 	if resp.StatusCode >= 400 {
 		b, _ := io.ReadAll(resp.Body)
@@ -159,4 +222,10 @@ func (c *Client) do(req *http.Request, dest interface{}) error {
 		}
 	}
 	return nil
+}
+
+func ResetGlobalPlaneCircuitBreakerForTest() {
+	if globalPlaneCircuitBreaker != nil {
+		globalPlaneCircuitBreaker.RecordSuccess()
+	}
 }
