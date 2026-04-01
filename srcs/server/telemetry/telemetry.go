@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
 	"time"
 
@@ -46,6 +47,12 @@ func redactPII(input string) string {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitTelemetry() (func(), error) {
+	if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
+		// Enforce user data privacy and local sovereignty in Standalone Mode.
+		// Exporter is strictly opt-in and disabled by default.
+		return func() {}, nil
+	}
+
 	exporter, err := otelprom.New(otelprom.WithRegisterer(prometheus.DefaultRegisterer))
 	if err != nil {
 		return nil, err
