@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-// PgUserRepository implements UserRepository backed by PostgreSQL.
+// PgUserRepository implements UserRepository backed by PostgreSQL or SQLite via db.DatabaseProvider.
 type PgUserRepository struct {
-	pool *pgxpool.Pool
+	pool db.DatabaseProvider
 }
 
-// NewPgUserRepository creates a Postgres-backed user repository.
-func NewPgUserRepository(pool *pgxpool.Pool) *PgUserRepository {
+// NewPgUserRepository creates a DatabaseProvider-backed user repository.
+func NewPgUserRepository(pool db.DatabaseProvider) *PgUserRepository {
 	return &PgUserRepository{pool: pool}
 }
 
@@ -99,13 +99,15 @@ func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time
 		return fmt.Errorf("pg: revoke token: %w", err)
 	}
 	// GC expired entries.
-	_, _ = r.pool.Exec(ctx, "DELETE FROM revoked_tokens WHERE expires_at < NOW()")
+	now := time.Now()
+	_, _ = r.pool.Exec(ctx, "DELETE FROM revoked_tokens WHERE expires_at < $1", now)
 	return nil
 }
 
 func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, error) {
 	var count int
-	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= NOW()", jti).Scan(&count)
+	now := time.Now()
+	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2", jti, now).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("pg: check revoked: %w", err)
 	}

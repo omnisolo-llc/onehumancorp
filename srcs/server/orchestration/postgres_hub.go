@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-// PgHubRepository implements HubRepository backed by PostgreSQL.
+// PgHubRepository implements HubRepository backed by PostgreSQL or SQLite via db.DatabaseProvider.
 type PgHubRepository struct {
-	pool *pgxpool.Pool
+	pool db.DatabaseProvider
 }
 
-// NewPgHubRepository creates a Postgres-backed hub repository.
-func NewPgHubRepository(pool *pgxpool.Pool) *PgHubRepository {
+// NewPgHubRepository creates a DatabaseProvider-backed hub repository.
+func NewPgHubRepository(pool db.DatabaseProvider) *PgHubRepository {
 	return &PgHubRepository{pool: pool}
 }
 
@@ -112,9 +112,20 @@ func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg M
 // PopMessages atomically retrieves and removes all pending messages.
 // Uses DELETE ... RETURNING for consume-once semantics.
 func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Message, error) {
-	rows, err := r.pool.Query(ctx, `
-		DELETE FROM agent_inbox WHERE agent_id = $1
-		RETURNING message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`, agentID)
+	var rows db.Rows
+	var err error
+
+	if r.pool.IsSQLite() {
+		// SQLite RETURNING clause is supported from version 3.35.0, which is commonly available now.
+		rows, err = r.pool.Query(ctx, `
+			DELETE FROM agent_inbox WHERE agent_id = $1
+			RETURNING message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`, agentID)
+	} else {
+		rows, err = r.pool.Query(ctx, `
+			DELETE FROM agent_inbox WHERE agent_id = $1
+			RETURNING message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`, agentID)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("pg: pop messages: %w", err)
 	}

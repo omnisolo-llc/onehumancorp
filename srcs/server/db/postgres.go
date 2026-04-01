@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,14 +19,14 @@ var (
 	migrationsFS embed.FS
 )
 
-// Pool wraps a pgxpool.Pool with migration support.
-type Pool struct {
-	*pgxpool.Pool
+// PostgresProvider implements DatabaseProvider for PostgreSQL.
+type PostgresProvider struct {
+	pool *pgxpool.Pool
 }
 
 // New creates a new Postgres connection pool from DATABASE_URL.
 // Returns nil if DATABASE_URL is not set (enabling zero-dep local mode).
-func New(ctx context.Context) (*Pool, error) {
+func New(ctx context.Context) (*PostgresProvider, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		return nil, nil // no Postgres configured — use in-memory fallback
@@ -42,14 +43,112 @@ func New(ctx context.Context) (*Pool, error) {
 	}
 
 	slog.Info("db: connected to postgres", "dsn", redactDSN(dsn))
-	return &Pool{Pool: pool}, nil
+	return &PostgresProvider{pool: pool}, nil
+}
+
+// Exec executes a query without returning any rows.
+func (p *PostgresProvider) Exec(ctx context.Context, query string, args ...any) (int64, error) {
+	cmdTag, err := p.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return cmdTag.RowsAffected(), nil
+}
+
+// Query executes a query that returns rows.
+func (p *PostgresProvider) Query(ctx context.Context, query string, args ...any) (Rows, error) {
+	rows, err := p.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return &pgxRows{rows: rows}, nil
+}
+
+// QueryRow executes a query that is expected to return at most one row.
+func (p *PostgresProvider) QueryRow(ctx context.Context, query string, args ...any) Row {
+	return p.pool.QueryRow(ctx, query, args...)
+}
+
+// Begin starts a transaction.
+func (p *PostgresProvider) Begin(ctx context.Context) (Tx, error) {
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &pgxTx{tx: tx}, nil
+}
+
+// Close closes the connection pool.
+func (p *PostgresProvider) Close() {
+	if p.pool != nil {
+		p.pool.Close()
+	}
+}
+
+// IsSQLite returns false for PostgresProvider.
+func (p *PostgresProvider) IsSQLite() bool {
+	return false
+}
+
+// pgxRows wraps pgx.Rows to satisfy db.Rows interface.
+type pgxRows struct {
+	rows pgx.Rows
+}
+
+func (r *pgxRows) Next() bool {
+	return r.rows.Next()
+}
+
+func (r *pgxRows) Scan(dest ...any) error {
+	return r.rows.Scan(dest...)
+}
+
+func (r *pgxRows) Close() {
+	r.rows.Close()
+}
+
+func (r *pgxRows) Err() error {
+	return r.rows.Err()
+}
+
+// pgxTx wraps pgx.Tx to satisfy db.Tx interface.
+type pgxTx struct {
+	tx pgx.Tx
+}
+
+func (t *pgxTx) Exec(ctx context.Context, query string, args ...any) (int64, error) {
+	cmdTag, err := t.tx.Exec(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return cmdTag.RowsAffected(), nil
+}
+
+func (t *pgxTx) Query(ctx context.Context, query string, args ...any) (Rows, error) {
+	rows, err := t.tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return &pgxRows{rows: rows}, nil
+}
+
+func (t *pgxTx) QueryRow(ctx context.Context, query string, args ...any) Row {
+	return t.tx.QueryRow(ctx, query, args...)
+}
+
+func (t *pgxTx) Commit(ctx context.Context) error {
+	return t.tx.Commit(ctx)
+}
+
+func (t *pgxTx) Rollback(ctx context.Context) error {
+	return t.tx.Rollback(ctx)
 }
 
 // RunMigrations executes all embedded SQL migrations, sorted
 // lexicographically.  Each migration is run inside a transaction.
 // A simple `schema_migrations` table tracks which files have already been
 // applied.
-func (p *Pool) RunMigrations(ctx context.Context) error {
+func (p *PostgresProvider) RunMigrations(ctx context.Context) error {
 	// Ensure tracking table exists.
 	if _, err := p.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (

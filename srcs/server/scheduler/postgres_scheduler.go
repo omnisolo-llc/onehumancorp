@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-// PgTaskRepository implements TaskRepository backed by PostgreSQL.
+// PgTaskRepository implements TaskRepository backed by PostgreSQL or SQLite via db.DatabaseProvider.
 // It uses SELECT ... FOR UPDATE SKIP LOCKED to ensure that concurrent
 // replicas never execute the same task twice.
 type PgTaskRepository struct {
-	pool *pgxpool.Pool
+	pool db.DatabaseProvider
 }
 
-// NewPgTaskRepository creates a Postgres-backed task repository.
-func NewPgTaskRepository(pool *pgxpool.Pool) *PgTaskRepository {
+// NewPgTaskRepository creates a DatabaseProvider-backed task repository.
+func NewPgTaskRepository(pool db.DatabaseProvider) *PgTaskRepository {
 	return &PgTaskRepository{pool: pool}
 }
 
@@ -94,11 +94,23 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	rows, err := tx.Query(ctx, `
+	var query string
+	if r.pool.IsSQLite() {
+		// SQLite does not support FOR UPDATE SKIP LOCKED.
+		// However, it handles concurrency using database locks.
+		query = `
+		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
+		FROM scheduled_tasks
+		WHERE status = 'pending' AND next_run_at <= CURRENT_TIMESTAMP`
+	} else {
+		query = `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks
 		WHERE status = 'pending' AND next_run_at <= NOW()
-		FOR UPDATE SKIP LOCKED`)
+		FOR UPDATE SKIP LOCKED`
+	}
+
+	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("pg: poll due: %w", err)
 	}
@@ -136,11 +148,19 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 
 func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status TaskStatus, reschedule bool) error {
 	if reschedule {
-		_, err := r.pool.Exec(ctx, `
-			UPDATE scheduled_tasks
-			SET status = 'pending', next_run_at = NOW() + (interval_s * INTERVAL '1 second')
-			WHERE id = $1`, id)
-		return err
+		if r.pool.IsSQLite() {
+			_, err := r.pool.Exec(ctx, `
+				UPDATE scheduled_tasks
+				SET status = 'pending', next_run_at = datetime(CURRENT_TIMESTAMP, '+' || interval_s || ' seconds')
+				WHERE id = $1`, id)
+			return err
+		} else {
+			_, err := r.pool.Exec(ctx, `
+				UPDATE scheduled_tasks
+				SET status = 'pending', next_run_at = NOW() + (interval_s * INTERVAL '1 second')
+				WHERE id = $1`, id)
+			return err
+		}
 	}
 	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = $2 WHERE id = $1", id, string(status))
 	return err
