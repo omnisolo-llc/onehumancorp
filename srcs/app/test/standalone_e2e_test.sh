@@ -69,7 +69,9 @@ EOF
 chmod 0755 "${fake_flutter}"
 
 export HOME="${TMPDIR}/home"
-export PATH="${fake_bin_dir}:${PATH}"
+# Override the flutter binary used by the desktop launcher so the fake flutter
+# is called instead of the hermetic SDK binary baked into the launcher script.
+export FLUTTER_BIN_OVERRIDE="${fake_flutter}"
 
 "${desktop_launcher}"
 
