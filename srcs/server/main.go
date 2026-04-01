@@ -110,9 +110,15 @@ var (
 // Has side effects: Sets the default logger.
 func init() {
 	// Initialize structured JSON logging
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	opts := &slog.HandlerOptions{
 		Level: slog.LevelInfo,
-	}))
+	}
+	var handler slog.Handler = slog.NewJSONHandler(os.Stdout, opts)
+	// Provide unified logging across Cloud and Local standalone modes
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+	logger := slog.New(handler)
 	slog.SetDefault(logger)
 }
 
