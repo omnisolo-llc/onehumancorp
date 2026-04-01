@@ -151,6 +151,13 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 
 ## Developer Workflow
 
+### Setup and Mode Switching
+We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets:
+
+- **Initial Setup:** `./deploy/scripts/ohc-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)
+- **Mode Switching:** `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]` (Configures environment variables for the current terminal session)
+
+### Build and Test
 - **Build all modules:** `bazelisk build //...`
 - **Run all tests:** `bazelisk test //...`
 - **Run the Go backend:** `bazelisk run //srcs/server:ohc`
