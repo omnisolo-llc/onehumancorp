@@ -11,6 +11,11 @@ version: "3.9"
 services:
   # ─── Rust Core (settings · agent scheduler · meeting rooms · chat) ────────
   ohc-core:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 50M
     build:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
@@ -27,6 +32,11 @@ services:
       - "18789:18789"
 
   server:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 100M
     image: onehumancorp/server:latest
     environment:
       REDIS_ADDR: redis:6379
