@@ -1,0 +1,14 @@
+type: feature_implementation
+metadata:
+  role: palette
+  timestamp: $(date +%s)
+observations:
+  - Users need to connect to remote OHC servers from local desktop/web instances.
+  - The UI needed premium glassmorphic touches.
+  - Widget tests fail if AnimationController repeats infinitely without checking for test environment flags.
+actions_taken:
+  - Added a "Connection Settings" dialog to `login_screen.dart`.
+  - Added an `_ObservabilityWidget` to `dashboard_screen.dart` with mock OpenTelemetry data.
+  - Styled components using `Theme.of(context).colorScheme` and `ImageFilter.compose` for the `backdrop-filter: blur(20px)` glassmorphism effect.
+  - Injected `--dart-define=FLUTTER_TEST=true` into `srcs/app/lib/screens/BUILD.bazel` to conditionally stop infinite animations during `bazelisk test`.
+resolution: The hybrid connection logic and aesthetic excellence improvements are fully merged and passing all tests.

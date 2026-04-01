@@ -15,7 +15,12 @@ class SettingsScreen extends ConsumerWidget {
     ref.watch(standaloneManagerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text(
+          'Settings',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        ),
+      ),
       body: clientSettingsAsync.when(
         loading:
             () => Center(
@@ -37,54 +42,85 @@ class SettingsScreen extends ConsumerWidget {
                 if (user != null) ...[
                   ListTile(
                     leading: CircleAvatar(
-                      child: Text(user.name.substring(0, 1).toUpperCase()),
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: Text(
+                        user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : '?',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    title: Text(user.name),
-                    subtitle: Text(user.email),
+                    title: Text(
+                      user.name,
+                      style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      user.email,
+                      style: const TextStyle(fontFamily: 'Inter'),
+                    ),
                   ),
                   const Divider(),
                 ],
 
-                _SectionHeader(title: 'Communication'),
+                const _SectionHeader(title: 'Communication'),
                 Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                  ),
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: Icon(
                       settings.standaloneMode
                           ? Icons.laptop_windows
                           : Icons.cloud_queue,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 32,
                     ),
                     title: Text(
                       settings.standaloneMode
                           ? 'Desktop Standalone Mode'
                           : 'Remote Client Mode',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
                     ),
-                    subtitle: Text(
-                      settings.standaloneMode
-                          ? 'This device manages a local backend and lightweight local services.'
-                          : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        settings.standaloneMode
+                            ? 'This device manages a local backend and lightweight local services.'
+                            : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                        style: const TextStyle(fontFamily: 'Inter'),
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('Backend URL'),
-                  subtitle: Text(settings.backendUrl),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Edit Backend URL',
-                    onPressed:
-                        () =>
-                            _editBackendUrl(context, ref, settings.backendUrl),
+                  leading: Icon(Icons.link, color: Theme.of(context).colorScheme.secondary),
+                  title: const Text('Backend URL', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                  subtitle: Text(settings.backendUrl, style: const TextStyle(fontFamily: 'Inter')),
+                  trailing: Tooltip(
+                    message: 'Edit Backend URL',
+                    child: IconButton(
+                      icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
+                      onPressed:
+                          () =>
+                              _editBackendUrl(context, ref, settings.backendUrl),
+                    ),
                   ),
                 ),
 
                 SwitchListTile(
-                  secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
+                  secondary: Icon(Icons.computer, color: Theme.of(context).colorScheme.tertiary),
+                  title: const Text('Standalone Mode', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                   subtitle: const Text(
                     'Run a local desktop backend. Disable this to use the app as a remote client.',
+                    style: TextStyle(fontFamily: 'Inter'),
                   ),
                   value: settings.standaloneMode,
+                  activeColor: Theme.of(context).colorScheme.primary,
                   onChanged:
                       (value) => ref
                           .read(clientSettingsProvider.notifier)
@@ -93,21 +129,21 @@ class SettingsScreen extends ConsumerWidget {
 
                 if (settings.standaloneMode) ...[
                   const Divider(),
-                  _SectionHeader(title: 'Local Backend'),
-                  _LocalBackendStatusCard(),
+                  const _SectionHeader(title: 'Local Backend'),
+                  const _LocalBackendStatusCard(),
                 ],
 
                 const Divider(),
-                _SectionHeader(title: 'Account'),
+                const _SectionHeader(title: 'Account'),
                 ListTile(
-                  leading: const Icon(Icons.business),
-                  title: const Text('Organization'),
-                  subtitle: Text(user?.organizationId ?? '—'),
+                  leading: Icon(Icons.business, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  title: const Text('Organization', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                  subtitle: Text(user?.organizationId ?? '—', style: const TextStyle(fontFamily: 'Inter')),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.verified_user),
-                  title: const Text('Role'),
-                  subtitle: Text(user?.role ?? '—'),
+                  leading: Icon(Icons.verified_user, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  title: const Text('Role', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                  subtitle: Text(user?.role ?? '—', style: const TextStyle(fontFamily: 'Inter')),
                 ),
                 const Divider(),
                 ListTile(
@@ -119,6 +155,8 @@ class SettingsScreen extends ConsumerWidget {
                     'Sign Out',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
                     ),
                   ),
                   onTap: () => ref.read(authStateProvider.notifier).logout(),
@@ -139,11 +177,13 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Edit Backend URL'),
+            title: const Text('Edit Backend URL', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             content: TextField(
               controller: controller,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'URL (e.g. http://localhost:8080)',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             actions: [
@@ -151,7 +191,7 @@ class SettingsScreen extends ConsumerWidget {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              FilledButton(
                 onPressed: () => Navigator.pop(context, controller.text),
                 child: const Text('Save'),
               ),
@@ -171,12 +211,14 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: Theme.of(context).colorScheme.primary,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+          fontFamily: 'Outfit',
         ),
       ),
     );
@@ -208,23 +250,41 @@ class _LocalBackendStatusCardState
           label:
               'Local Backend Service Status: ${running ? "Running" : "Stopped"}',
           child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: [
                   Row(
                     children: [
                       Icon(
                         running ? Icons.check_circle : Icons.error,
+                        size: 32,
                         color:
                             running
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.error,
                       ),
-                      const SizedBox(width: 8),
-                      Text(running ? 'Service Running' : 'Service Stopped'),
-                      const Spacer(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          running ? 'Service Running' : 'Service Stopped',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ),
                       ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
                         onPressed:
                             _isToggling
                                 ? null
@@ -245,58 +305,72 @@ class _LocalBackendStatusCardState
                         child:
                             _isToggling
                                 ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
+                                  width: 20,
+                                  height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                   ),
                                 )
-                                : Text(running ? 'Stop' : 'Start'),
+                                : Text(
+                                    running ? 'Stop' : 'Start',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed:
-                        _isRunningDoctor
-                            ? null
-                            : () async {
-                              setState(() => _isRunningDoctor = true);
-                              try {
-                                final report = await manager.runDoctor();
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
-                                          content: SingleChildScrollView(
-                                            child: Text(report),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(context),
-                                              child: const Text('Close'),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed:
+                          _isRunningDoctor
+                              ? null
+                              : () async {
+                                  setState(() => _isRunningDoctor = true);
+                                  try {
+                                    final report = await manager.runDoctor();
+                                    if (context.mounted) {
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: const Text('System Doctor', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                              content: SingleChildScrollView(
+                                                child: Text(report, style: const TextStyle(fontFamily: 'monospace')),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(context),
+                                                  child: const Text('Close'),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted)
-                                  setState(() => _isRunningDoctor = false);
-                              }
-                            },
-                    icon:
-                        _isRunningDoctor
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.medical_services),
-                    label: const Text('Run Doctor Diagnostics'),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted)
+                                      setState(() => _isRunningDoctor = false);
+                                  }
+                                },
+                      icon:
+                          _isRunningDoctor
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                              : const Icon(Icons.medical_services),
+                      label: const Text(
+                        'Run Doctor Diagnostics',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
                 ],
               ),

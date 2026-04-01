@@ -79,6 +79,8 @@ SCREEN_TESTS = glob(["**/*_test.dart"])
         srcs = [file],
         embed = _SCREEN_TEST_EMBEDS.get(file, _DEFAULT_SCREEN_TEST_EMBED),
         test_files = [file],
+        # Add dart defines for test environments, specifically for animations
+        args = ["--dart-define=FLUTTER_TEST=true"],
         workspace_pubspec = "//:pubspec.yaml",
     )
     for file in SCREEN_TESTS
