@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -47,6 +48,16 @@ func TestStandaloneFallback(t *testing.T) {
 		t.Errorf("Expected fallback to SQLite provider in standalone mode")
 	}
 
-	// Clean up swarm.db
-	os.RemoveAll(".agent-task")
+	// Hardening Validation: Verify strictly local file permissions (0600 for files)
+	info, err := os.Stat(filepath.Join(".agent-task", "swarm.db"))
+	if err == nil {
+		if info.Mode().Perm() != 0600 {
+			t.Errorf("Expected strict 0600 file permission for standalone SQLite DB, got %v", info.Mode().Perm())
+		}
+	} else {
+		t.Errorf("Could not verify file permissions: %v", err)
+	}
+
+	// Clean up swarm.db (Do not delete entire directory, as per constraints)
+	os.Remove(filepath.Join(".agent-task", "swarm.db"))
 }

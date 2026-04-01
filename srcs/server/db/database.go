@@ -64,6 +64,19 @@ func New(ctx context.Context) (*DB, error) {
 				sqliteDSN += "&"
 			}
 			sqliteDSN += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=foreign_keys(1)"
+
+			if key := os.Getenv("SQLITE_ENCRYPTION_KEY"); key != "" {
+				sqliteDSN += "&_pragma=key(" + key + ")"
+			}
+
+			// Hardening: Local DB permissions should be secure (0600)
+			if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+				if f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600); err == nil {
+					f.Close()
+				}
+			} else if err == nil {
+				os.Chmod(dbPath, 0600)
+			}
 		}
 
 		db, err := sql.Open("sqlite", sqliteDSN)

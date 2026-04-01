@@ -252,6 +252,16 @@ func run(now time.Time, listen listenFunc) error {
 		}
 		dbPath = filepath.Join(openclawDir, "ohc.db")
 	}
+
+	// Hardening: Local DB permissions should be secure (0600)
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		if f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600); err == nil {
+			f.Close()
+		}
+	} else if err == nil {
+		os.Chmod(dbPath, 0600)
+	}
+
 	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)

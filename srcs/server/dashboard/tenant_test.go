@@ -157,6 +157,57 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 	}
 }
 
+func TestTenantRegistry_TenantIsolation(t *testing.T) {
+	// A strictly enforced tenant isolation validation test to ensure no cross-contamination
+	reg := newTestRegistry()
+
+	ctxOrg1 := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{
+		Subject:        "user-1",
+		OrganizationID: "org-1",
+	})
+
+	reqOrg1 := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil).WithContext(ctxOrg1)
+	rrOrg1 := httptest.NewRecorder()
+	reg.ServeHTTP(rrOrg1, reqOrg1)
+
+	ctxOrg2 := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{
+		Subject:        "user-2",
+		OrganizationID: "org-2",
+	})
+	reqOrg2 := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil).WithContext(ctxOrg2)
+	rrOrg2 := httptest.NewRecorder()
+	reg.ServeHTTP(rrOrg2, reqOrg2)
+
+	h1 := reg.handler("org-1")
+	h2 := reg.handler("org-2")
+
+	if h1 == nil || h2 == nil {
+		t.Fatal("Both tenants should be provisioned")
+	}
+
+	// Since NewServer returns a specific http.Handler wrapping mux etc, it's safer to rely on the fact that
+	// different requests made with different context get different snapshots.
+	rrOrg1Snapshot := httptest.NewRecorder()
+	reqOrg1Snapshot := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil).WithContext(ctxOrg1)
+	reqOrg1Snapshot.Header.Set("Authorization", "Bearer "+adminToken(t)) // We need some valid token for dashboard endpoint if needed, or we just rely on claimsCtx
+
+	// Ensure isolated contexts via handlers.
+	h1.ServeHTTP(rrOrg1Snapshot, reqOrg1Snapshot)
+
+	rrOrg2Snapshot := httptest.NewRecorder()
+	reqOrg2Snapshot := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil).WithContext(ctxOrg2)
+	reqOrg2Snapshot.Header.Set("Authorization", "Bearer "+adminToken(t))
+	h2.ServeHTTP(rrOrg2Snapshot, reqOrg2Snapshot)
+
+	// They shouldn't share the same organization IDs in the snapshots
+	if strings.Contains(rrOrg1Snapshot.Body.String(), "org-2") {
+		t.Fatal("CRITICAL SECURITY VULNERABILITY: Tenant 1 dashboard exposed Tenant 2 data")
+	}
+	if strings.Contains(rrOrg2Snapshot.Body.String(), "org-1") {
+		t.Fatal("CRITICAL SECURITY VULNERABILITY: Tenant 2 dashboard exposed Tenant 1 data")
+	}
+}
+
 func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 	// Test that unauthenticated requests hit a fresh public handler, not a random tenant
 	reg := newTestRegistry()
