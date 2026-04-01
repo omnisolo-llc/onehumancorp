@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -59,17 +60,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Image.asset(
                       'assets/logo.png',
-                      height: 100,
+                      height: 50,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return Icon(
                           Icons.person,
-                          size: 80,
+                          size: 50,
                           color: Theme.of(context).colorScheme.primary,
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     const Text(
                       'One Human Corp',
                       textAlign: TextAlign.center,
@@ -84,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
@@ -93,11 +94,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.email_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      validator:
-                          (v) =>
-                              (v == null || !v.contains('@'))
-                                  ? 'Enter a valid email'
-                                  : null,
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Enter a valid email'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -108,11 +107,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.lock_outline),
                         border: OutlineInputBorder(),
                       ),
-                      validator:
-                          (v) =>
-                              (v == null || v.isEmpty)
-                                  ? 'Enter your password'
-                                  : null,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Enter your password'
+                          : null,
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
@@ -128,16 +125,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _loading ? null : _submit,
-                      child:
-                          _loading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Text('Sign In'),
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Sign In'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton.icon(
+                      icon: const Icon(Icons.settings),
+                      label: const Text('Configure Remote Connection'),
+                      onPressed: () {
+                        // Normally this would navigate to a pre-login settings screen
+                        // For now we'll just show the backend URL dialog
+                        _editBackendUrl(context, ref);
+                      },
                     ),
                   ],
                 ),
@@ -147,5 +151,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _editBackendUrl(BuildContext context, WidgetRef ref) async {
+    final settings = ref.read(clientSettingsProvider).valueOrNull;
+    if (settings == null) return;
+
+    final controller = TextEditingController(text: settings.backendUrl);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Backend URL'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'URL (e.g. http://localhost:8080)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backend URL updated. Please try signing in again.'),
+          ),
+        );
+      }
+    }
   }
 }

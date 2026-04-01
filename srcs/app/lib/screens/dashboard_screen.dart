@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/observability_widget.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
+  ref,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -26,19 +29,17 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-        error:
-            (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            'Error: $e',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
         data: (data) => _DashboardContent(data: data, ref: ref),
       ),
     );
@@ -71,47 +72,14 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        _SectionTitle('Overview'),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            _StatCard(
-              label: 'Active Agents',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            _StatCard(
-              label: 'Dashboard Updates',
-              value: data.statuses.length.toString(),
-              icon: Icons.pending_actions,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            _StatCard(
-              label: 'Open Meetings',
-              value: data.meetings.length.toString(),
-              icon: Icons.video_call,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
-            _StatCard(
-              label: 'Total Org Members',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
-              color: Theme.of(context).colorScheme.primaryContainer,
-              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
+        ObservabilityWidget(data: data),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -119,11 +87,7 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: roleList.map((role) {
             final count = data.agents.where((a) => a.role == role).length;
-            return _RoleScaleCard(
-              role: role,
-              count: count,
-              ref: ref,
-            );
+            return _RoleScaleCard(role: role, count: count, ref: ref);
           }).toList(),
         ),
       ],
@@ -177,10 +141,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = widget.role
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
     return Semantics(
       label: 'Scale $formattedRole role',
@@ -191,10 +159,26 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(<double>[
-                1.213, -0.213, -0.072, 0, 0,
-                -0.213, 1.213, -0.072, 0, 0,
-                -0.213, -0.213, 1.213, 0, 0,
-                0, 0, 0, 1, 0,
+                1.213,
+                -0.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                1.213,
+                -0.072,
+                0,
+                0,
+                -0.213,
+                -0.213,
+                1.213,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
               ]),
               inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             ),
@@ -202,10 +186,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
               decoration: BoxDecoration(
                 color: colors.surfaceContainerHighest.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.outlineVariant.withOpacity(0.5)),
+                border: Border.all(
+                  color: colors.outlineVariant.withOpacity(0.5),
+                ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
                 child: Row(
                   children: [
                     Expanded(
