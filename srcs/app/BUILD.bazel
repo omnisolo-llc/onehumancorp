@@ -17,6 +17,17 @@ exports_files([
     "test/standalone_e2e_test.sh",
 ])
 
+# ── App assets (logo, images, etc.) ──────────────────────────────────────────
+# Exposed as a data dependency so flutter_library targets that reference this
+# app's pubspec.yaml (and therefore its declared assets) can include the asset
+# files in their prepared test workspace.
+
+filegroup(
+    name = "app_assets",
+    srcs = glob(["assets/**"]),
+    visibility = ["//srcs/app:__subpackages__"],
+)
+
 # ── Source filegroup (non-flutter uses, e.g. layout checks) ──────────────────
 
 filegroup(
