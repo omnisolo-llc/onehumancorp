@@ -99,8 +99,7 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 		FROM scheduled_tasks
 		WHERE status = 'pending' AND next_run_at <= CURRENT_TIMESTAMP`
 
-	_, isSqlite := r.pool.(*db.SqliteProvider)
-	if !isSqlite {
+	if !r.pool.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"
 	}
 
@@ -145,8 +144,7 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 
 func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status TaskStatus, reschedule bool) error {
 	if reschedule {
-		_, isSqlite := r.pool.(*db.SqliteProvider)
-		if isSqlite {
+		if r.pool.IsSQLite() {
 			_, err := r.pool.Exec(ctx, `
 				UPDATE scheduled_tasks
 				SET status = 'pending', next_run_at = datetime(CURRENT_TIMESTAMP, '+' || interval_s || ' seconds')
