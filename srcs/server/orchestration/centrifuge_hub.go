@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -53,6 +54,36 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	node, err := createNode(cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// Type assert to verify we have a real centrifuge.Node to configure
+	if realNode, ok := node.(*centrifuge.Node); ok {
+		redisURL := os.Getenv("REDIS_URL")
+		if redisURL != "" {
+			shard, err := centrifuge.NewRedisShard(realNode, centrifuge.RedisShardConfig{Address: redisURL})
+			if err != nil {
+				return nil, err
+			}
+			broker, err := centrifuge.NewRedisBroker(realNode, centrifuge.RedisBrokerConfig{Shards: []*centrifuge.RedisShard{shard}})
+			if err != nil {
+				return nil, err
+			}
+			realNode.SetBroker(broker)
+
+			presenceManager, err := centrifuge.NewRedisPresenceManager(realNode, centrifuge.RedisPresenceManagerConfig{Shards: []*centrifuge.RedisShard{shard}})
+			if err != nil {
+				return nil, err
+			}
+			realNode.SetPresenceManager(presenceManager)
+			slog.Info("centrifuge: configured with Redis broker", "redis_url", redisURL)
+		} else {
+			broker, _ := centrifuge.NewMemoryBroker(realNode, centrifuge.MemoryBrokerConfig{})
+			realNode.SetBroker(broker)
+
+			presenceManager, _ := centrifuge.NewMemoryPresenceManager(realNode, centrifuge.MemoryPresenceManagerConfig{})
+			realNode.SetPresenceManager(presenceManager)
+			slog.Info("centrifuge: REDIS_URL not set, falling back to local MemoryBroker")
+		}
 	}
 
 	node.OnConnecting(func(ctx context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {
