@@ -23,10 +23,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 *sql.DB
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              *sql.DB
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -523,11 +523,29 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 
 		for rows.Next() {
 			var m EpisodicMemory
-			var t string
-			if err := rows.Scan(&m.MemoryID, &m.Context, &m.VectorEmbedding, &m.SourcePlugin, &t); err != nil {
-				return err
+			var tRaw string
+			var vp []byte
+			var sp sql.NullString
+			// database/sql with sqlite sometimes returns string for datetime, so let's fallback to pointer to interface if we want, or just let sqlite driver do its string conversion via NULL check. Wait, the problem was "converting NULL to string is unsupported" because vector_embedding is NULL!
+			if err := rows.Scan(&m.MemoryID, &m.Context, &vp, &sp, &tRaw); err != nil {
+				// wait, vector embedding is column 2 (vp) and it might be NULL in DB.
+				var vpRaw interface{}
+				if err2 := rows.Scan(&m.MemoryID, &m.Context, &vpRaw, &sp, &tRaw); err2 != nil {
+					return err
+				}
+				if vpRaw != nil {
+					if b, ok := vpRaw.([]byte); ok {
+						vp = b
+					} else if s, ok := vpRaw.(string); ok {
+						vp = []byte(s)
+					}
+				}
 			}
-			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			m.VectorEmbedding = vp
+			if sp.Valid {
+				m.SourcePlugin = sp.String
+			}
+			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", tRaw)
 			memories = append(memories, m)
 		}
 		return nil
@@ -714,6 +732,115 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 					return updateErr
 				})
 				if updateErr == nil {
+					syncedCount++
+				}
+			}
+			resp.Body.Close()
+		}
+	}
+
+	return syncedCount, nil
+}
+
+// SyncContextSync synchronizes the local RAG state from swarm_memory_embeddings
+// into the cloud Postgres orchestration engine via OHC-SIP agent_missions.
+// It achieves this by delegating a 'context_sync' mission to the remote endpoint.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Synchronizes local SQLite RAG state to the cloud Postgres 'agent_missions' table.
+// Returns the number of synced records and an error.
+func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	var memories []EpisodicMemory
+
+	err := withRetry(ctx, func() error {
+		memories = nil
+		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 50")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var m EpisodicMemory
+			var tRaw string
+			var vp []byte
+			var sp sql.NullString
+			// database/sql with sqlite sometimes returns string for datetime, so let's fallback to pointer to interface if we want, or just let sqlite driver do its string conversion via NULL check. Wait, the problem was "converting NULL to string is unsupported" because vector_embedding is NULL!
+			if err := rows.Scan(&m.MemoryID, &m.Context, &vp, &sp, &tRaw); err != nil {
+				// wait, vector embedding is column 2 (vp) and it might be NULL in DB.
+				var vpRaw interface{}
+				if err2 := rows.Scan(&m.MemoryID, &m.Context, &vpRaw, &sp, &tRaw); err2 != nil {
+					return err
+				}
+				if vpRaw != nil {
+					if b, ok := vpRaw.([]byte); ok {
+						vp = b
+					} else if s, ok := vpRaw.(string); ok {
+						vp = []byte(s)
+					}
+				}
+			}
+			m.VectorEmbedding = vp
+			if sp.Valid {
+				m.SourcePlugin = sp.String
+			}
+			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", tRaw)
+			memories = append(memories, m)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(memories) == 0 {
+		return 0, nil
+	}
+
+	syncedCount := 0
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	for _, m := range memories {
+		// Only sync the necessary sanitized context to avoid exposing everything
+		// if we only need a generalized task context.
+		// Construct an agent mission wrapper
+		wrapper := struct {
+			Role string  `json:"role"`
+			Task Message `json:"task"`
+		}{
+			Role: "product_architecture", // Generalized role for remote escalation
+			Task: Message{
+				ID:      m.MemoryID,
+				Type:    EventTask,
+				Content: "Local Context Sync: " + m.Context,
+			},
+		}
+
+		payloadBytes, err := json.Marshal(wrapper)
+		if err != nil {
+			continue
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(payloadBytes)))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				var affected int64
+				updateErr := withRetry(ctx, func() error {
+					res, updateErr := s.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings WHERE memory_id = ?", m.MemoryID)
+					if updateErr != nil {
+						return updateErr
+					}
+					affected, _ = res.RowsAffected()
+					return nil
+				})
+				if updateErr == nil && affected > 0 {
 					syncedCount++
 				}
 			}

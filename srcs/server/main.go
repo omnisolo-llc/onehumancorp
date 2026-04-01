@@ -304,6 +304,14 @@ func run(now time.Time, listen listenFunc) error {
 							} else if syncedCount > 0 {
 								slog.Info("Successfully synced standalone missions to cloud", "count", syncedCount)
 							}
+
+							// Hybrid MCP RAG Context Sync
+							ctxSyncedCount, err := sipdb.SyncContextSync(ctx, missionsEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync hybrid context to cloud", "error", err)
+							} else if ctxSyncedCount > 0 {
+								slog.Info("Successfully synced hybrid context to cloud", "count", ctxSyncedCount)
+							}
 						}
 					}
 				}()

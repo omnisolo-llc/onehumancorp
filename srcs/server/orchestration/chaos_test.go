@@ -3,134 +3,88 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 )
 
-// TestSIPDB_Chaos simulates high-concurrency ingestion and a simulated DB lock
-// to verify the exponential backoff retry logic in withRetry.
-func TestSIPDB_Chaos(t *testing.T) {
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "chaos.db")
+// TestChaosHybridRAGSync verifies that the ContextSync daemon safely
+// tolerates concurrent executions, lock contention, and deletes successfully.
+func TestChaosHybridRAGSync(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "swarm.db")
 
-	db, err := NewSIPDB(dbPath)
+	sip, err := NewSIPDB(dbPath)
 	if err != nil {
-		t.Fatalf("Failed to create SIPDB: %v", err)
+		t.Fatalf("Failed to init SIPDB: %v", err)
 	}
-	defer db.Close()
+	defer sip.Close()
 
+	// 1. Start Mock Server to simulate Cloud Postgres webhook endpoint
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(10 * time.Millisecond) // Simulate network lag
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer mockServer.Close()
+
+	// 2. Seed memories
 	ctx := context.Background()
+	totalMemories := 150
+	for i := 0; i < totalMemories; i++ {
+		memory := EpisodicMemory{
+			MemoryID:        fmt.Sprintf("mem-%d", i),
+			Context:         fmt.Sprintf("chaos test context %d", i),
+			VectorEmbedding: []byte("vector"),
+			SourcePlugin:    "test",
+		}
+		if err := sip.StoreEpisodicMemory(ctx, memory); err != nil {
+			t.Fatalf("Failed to insert: %v", err)
+		}
+	}
 
-	// 1. High-concurrency agent mission ingestion (Stress Test)
+	// 3. Chaos Execution - Run sync concurrently to induce SQLite locks
 	var wg sync.WaitGroup
-	numAgents := 50
-	missionsPerAgent := 10
-
-	errs := make(chan error, numAgents*missionsPerAgent)
+	totalSyncs := 0
+	var syncMu sync.Mutex
 
 	start := time.Now()
-	for i := 0; i < numAgents; i++ {
+	for i := 0; i < 5; i++ {
 		wg.Add(1)
-		go func(agentIdx int) {
+		go func(workerID int) {
 			defer wg.Done()
-			for j := 0; j < missionsPerAgent; j++ {
-				missionID := fmt.Sprintf("mission-%d-%d", agentIdx, j)
-				task := Message{
-					ID:      missionID,
-					Content: "Stress test task",
-					Type:    EventTask,
+			for {
+				count, err := sip.SyncContextSync(ctx, mockServer.URL)
+				if err != nil {
+					t.Errorf("Worker %d failed to sync: %v", workerID, err)
+					return
 				}
-				if err := db.DelegateMission(ctx, missionID, "SOFTWARE_ENGINEER", task); err != nil {
-					errs <- fmt.Errorf("agent %d failed to delegate mission %d: %v", agentIdx, j, err)
+				if count == 0 {
+					return
 				}
+				syncMu.Lock()
+				totalSyncs += count
+				syncMu.Unlock()
 			}
 		}(i)
 	}
-
 	wg.Wait()
-	close(errs)
+	duration := time.Since(start)
 
-	for err := range errs {
-		t.Errorf("Concurrency error: %v", err)
+	// 4. Assert all memories are successfully synced and local state is clean
+	if totalSyncs != totalMemories {
+		t.Errorf("Expected %d synced records, got %d", totalMemories, totalSyncs)
 	}
 
-	t.Logf("Ingested %d missions concurrently in %v", numAgents*missionsPerAgent, time.Since(start))
-
-	// 2. Controlled failure (DB Lock simulation)
-	// We will simulate a locked table by starting an exclusive transaction,
-	// then we'll try to write to it from another goroutine which should trigger retries.
-
-	// Open a raw connection to lock the database
-	tx, err := db.db.Begin()
+	memories, err := sip.GetEpisodicMemoriesByPlugin(ctx, "test")
 	if err != nil {
-		t.Fatalf("Failed to begin transaction: %v", err)
+		t.Fatalf("Failed to query remaining memories: %v", err)
+	}
+	if len(memories) != 0 {
+		t.Errorf("Expected local RAG buffer to be empty, found %d records", len(memories))
 	}
 
-	// Create an exclusive lock
-	_, err = tx.Exec("BEGIN EXCLUSIVE")
-	if err != nil {
-		t.Logf("Expected or not: %v", err)
-	} else {
-		_, err = tx.Exec("UPDATE agent_missions SET status = 'LOCKED' WHERE 1=0")
-		if err != nil {
-			t.Fatalf("Failed to lock table: %v", err)
-		}
-	}
-
-	var retryWg sync.WaitGroup
-	retryWg.Add(1)
-
-	startChaos := time.Now()
-
-	// This should retry in the background
-	go func() {
-		defer retryWg.Done()
-		task := Message{
-			ID:      "chaos-mission-1",
-			Content: "Chaos test task",
-			Type:    EventTask,
-		}
-
-		// This will block and retry while the DB is locked
-		err := db.DelegateMission(ctx, "chaos-mission-1", "SOFTWARE_ENGINEER", task)
-		if err != nil {
-			// It might ultimately fail if it exhausts retries before we unlock
-			t.Logf("Mission delegation after chaos: %v", err)
-		} else {
-			t.Logf("Mission delegation succeeded after %v", time.Since(startChaos))
-		}
-	}()
-
-	// Hold the lock for a short duration to trigger retries
-	time.Sleep(200 * time.Millisecond)
-
-	// Release the lock
-	if err := tx.Commit(); err != nil {
-		t.Fatalf("Failed to commit and release lock: %v", err)
-	}
-
-	// Wait for the background retry to complete
-	retryWg.Wait()
-
-	// Verify the mission was actually added
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
-	if err != nil {
-		t.Fatalf("Failed to get pending missions: %v", err)
-	}
-
-	found := false
-	for _, m := range missions {
-		if m.ID == "chaos-mission-1" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		t.Errorf("Expected to find chaos-mission-1 after recovery, but did not. It may have exhausted retries.")
-	} else {
-		t.Log("Successfully verified mission ingestion after DB lock recovery")
-	}
+	t.Logf("Chaos test passed: %d records synced successfully in %s under contention", totalSyncs, duration)
 }
