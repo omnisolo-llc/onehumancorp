@@ -9,7 +9,7 @@ sh_binary(
 
 sh_test(
     name = "calculate_semver_test",
+    size = "small",
     srcs = ["calculate_semver_test.sh"],
     data = [":calculate_semver"],
-    size = "small",
 )

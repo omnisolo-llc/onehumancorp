@@ -1,6 +1,7 @@
-package orchestration
+package taskworker
 
 import (
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -138,7 +139,7 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 			defer tt.envTeardown()
 
 			client := plane.NewClientFromEnv()
-			hub := NewHub()
+			hub := orchestration.NewHub()
 			worker := NewTaskWorker(client, hub)
 
 			// Doesn't return anything or error, just covering branches
@@ -149,7 +150,7 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 
 func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
 	// Simple test to exercise the context cancellation branch
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(nil, hub)
 	worker.pollInterval = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
@@ -177,7 +178,7 @@ func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 	}()
 
 	client := plane.NewClientFromEnv()
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(client, hub)
 	worker.pollInterval = 10 * time.Millisecond
 
@@ -196,7 +197,7 @@ func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
 	os.Unsetenv("PLANE_API_KEY")
 
 	client := plane.NewClientFromEnv()
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
@@ -208,7 +209,7 @@ func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
 	os.Unsetenv("PLANE_API_KEY")
 
 	client := plane.NewClientFromEnv()
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }

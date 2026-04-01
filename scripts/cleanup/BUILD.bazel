@@ -6,13 +6,13 @@ go_library(
     importpath = "github.com/onehumancorp/mono/scripts/cleanup",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/orchestration",
         "@in_gopkg_yaml_v3//:yaml_v3",
-        "//srcs/orchestration:orchestration",
     ],
 )
 
 go_test(
     name = "cleanup_test",
     srcs = ["prune_test.go"],
-    embed = [":cleanup_lib"],
+    embed = [":cleanup"],
 )

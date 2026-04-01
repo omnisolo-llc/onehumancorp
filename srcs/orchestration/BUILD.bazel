@@ -5,7 +5,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
-        "agent_task_worker.go",
         "auth_interceptor.go",
         "centrifuge_hub.go",
         "delegation.go",
@@ -16,7 +15,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
-        "//srcs/server/integrations/plane",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
@@ -38,7 +36,6 @@ go_test(
         "benchmark_test.go",
         "centrifuge_hub_test.go",
         "chaos_test.go",
-        "agent_task_worker_test.go",
         "delegation_test.go",
         "eventlog_test.go",
         "minimax_client_test.go",

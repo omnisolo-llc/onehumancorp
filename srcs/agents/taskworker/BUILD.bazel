@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "taskworker",
+    srcs = ["worker.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/agents/taskworker",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/orchestration",
+        "//srcs/server/integrations/plane",
+    ],
+)
+
+go_test(
+    name = "taskworker_test",
+    srcs = ["worker_test.go"],
+    embed = [":taskworker"],
+    deps = [
+        "//srcs/orchestration",
+        "//srcs/server/integrations/plane",
+    ],
+)

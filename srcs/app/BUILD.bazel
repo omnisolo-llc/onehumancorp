@@ -157,6 +157,7 @@ flutter_test(
 
 flutter_app(
     name = "app",
+    srcs = ["lib/main.dart"],
     apk = glob(
         ["android/**"],
         allow_empty = True,
@@ -175,7 +176,6 @@ flutter_app(
         allow_empty = True,
     ),
     visibility = ["//visibility:public"],
-    srcs = ["lib/main.dart"],
     web = glob(
         ["web/**"],
         allow_empty = True,
@@ -198,8 +198,8 @@ sh_test(
         "e2e/playwright.config.ts",
         "e2e/web.spec.ts",
         ":app",
-        "//srcs/server:server",
         "//:node_modules/@playwright/test",
+        "//srcs/server",
     ],
     tags = [
         "manual",

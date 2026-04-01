@@ -67,9 +67,9 @@ oci_push(
 pkg_tar(
     name = "agent_pkg",
     srcs = [
-        "//srcs/server/ironclaw",
-        "//srcs/server:ohc",
         "//srcs/agents/mcp:github",
+        "//srcs/server:ohc",
+        "//srcs/server/ironclaw",
     ],
     package_dir = "/usr/local/bin",
 )

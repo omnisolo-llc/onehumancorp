@@ -1062,6 +1062,12 @@ func NewHubServiceServer(hub *Hub) *HubServiceServer {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) RegisterAgent(ctx context.Context, req *pb.RegisterAgentRequest) (*pb.RegisterAgentResponse, error) {
+	if req == nil || req.GetAgent() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request or agent cannot be nil")
+	}
+	if req.GetAgent().GetId() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "agent ID cannot be empty")
+	}
 	agentReq := req.GetAgent()
 	agent := Agent{
 		ID:             agentReq.GetId(),
@@ -1081,6 +1087,9 @@ func (s *HubServiceServer) RegisterAgent(ctx context.Context, req *pb.RegisterAg
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) OpenMeeting(ctx context.Context, req *pb.OpenMeetingRequest) (*pb.MeetingRoom, error) {
+	if req == nil || req.GetMeetingId() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "request or meeting ID cannot be nil/empty")
+	}
 	meeting := s.hub.OpenMeetingWithAgenda(req.GetMeetingId(), req.GetAgenda(), req.GetParticipants())
 	return pb.MeetingRoom_builder{
 		Id:           proto.String(meeting.ID),
@@ -1095,6 +1104,9 @@ func (s *HubServiceServer) OpenMeeting(ctx context.Context, req *pb.OpenMeetingR
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRequest) (*pb.PublishMessageResponse, error) {
+	if req == nil || req.GetMessage() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request or message cannot be nil")
+	}
 	msgReq := req.GetMessage()
 	msg := Message{
 		ID:         msgReq.GetId(),
@@ -1117,6 +1129,12 @@ func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRe
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) DelegateTask(ctx context.Context, req *pb.DelegateTaskRequest) (*pb.DelegateTaskResponse, error) {
+	if req == nil || req.GetTask() == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request or task cannot be nil")
+	}
+	if req.GetFromAgentId() == "" || req.GetToAgentId() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "from_agent_id and to_agent_id cannot be empty")
+	}
 	msgReq := req.GetTask()
 	msg := Message{
 		ID:         msgReq.GetId(),
@@ -1142,6 +1160,9 @@ func (s *HubServiceServer) DelegateTask(ctx context.Context, req *pb.DelegateTas
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream pb.HubService_StreamMessagesServer) error {
+	if req == nil || req.GetAgentId() == "" {
+		return status.Errorf(codes.InvalidArgument, "request or agent ID cannot be nil/empty")
+	}
 	agentID := req.GetAgentId()
 
 	// 1. Subscribe for new real-time messages to eliminate polling latency.
@@ -1194,6 +1215,9 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*pb.ReasonResponse, error) {
+	if req == nil || req.GetPrompt() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "request or prompt cannot be nil/empty")
+	}
 	client := NewMinimaxClient(s.hub.MinimaxAPIKey())
 	content, err := client.Reason(ctx, req.GetPrompt())
 	if err != nil {

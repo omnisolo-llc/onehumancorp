@@ -1,6 +1,7 @@
-package orchestration
+package taskworker
 
 import (
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -14,12 +15,12 @@ import (
 // and randomly assigns an idle agent to them by injecting the task into their context.
 type TaskWorker struct {
 	planeClient *plane.Client
-	hub         *Hub
+	hub         *orchestration.Hub
 	pollInterval time.Duration
 }
 
 // NewTaskWorker creates a new TaskWorker.
-func NewTaskWorker(pc *plane.Client, hub *Hub) *TaskWorker {
+func NewTaskWorker(pc *plane.Client, hub *orchestration.Hub) *TaskWorker {
 	return &TaskWorker{
 		planeClient: pc,
 		hub:         hub,
@@ -75,7 +76,7 @@ func (tw *TaskWorker) pollAndAssign() {
 	if tw.hub != nil {
 		agents := tw.hub.Agents()
 		for _, a := range agents {
-			if a.Status == StatusActive || a.Status == StatusWaitingForTools {
+			if a.Status == orchestration.StatusActive || a.Status == orchestration.StatusWaitingForTools {
 				// Encode the issue payload securely as JSON to prevent prompt injection.
 				// The agent's framework is responsible for parsing this data blob
 				// rather than blindly executing unstructured text.
@@ -85,7 +86,7 @@ func (tw *TaskWorker) pollAndAssign() {
 					"directive":  "Please resolve the attached issue descriptor.",
 				})
 
-				msg := Message{
+				msg := orchestration.Message{
 					ID:         "task-" + issue.ID,
 					FromAgent:  "SYSTEM",
 					ToAgent:    a.ID,

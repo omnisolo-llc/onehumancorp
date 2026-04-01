@@ -4,13 +4,13 @@ go_test(
     name = "frontend_backend_test",
     srcs = ["frontend_backend_test.go"],
     deps = [
+        "//srcs/orchestration",
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/dashboard",
         "//srcs/server/domain",
         "//srcs/server/frontend/server",
         "//srcs/server/integrations",
-        "//srcs/orchestration",
     ],
 )
 
@@ -23,6 +23,7 @@ go_test(
         "minimax_e2e_test.go",
     ],
     deps = [
+        "//srcs/orchestration",
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/dashboard",
@@ -30,6 +31,5 @@ go_test(
         "//srcs/server/frontend/server",
         "//srcs/server/integrations",
         "//srcs/server/integrations/chatwoot",
-        "//srcs/orchestration",
     ],
 )
