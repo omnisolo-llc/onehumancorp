@@ -14,10 +14,7 @@ final wizardStatusProvider = FutureProvider.autoDispose<WizardStatus>((
 ) async {
   final user = ref.watch(authStateProvider).valueOrNull;
   if (user == null) return WizardStatus.empty();
-  final baseUrl = const String.fromEnvironment(
-    'BACKEND_URL',
-    defaultValue: 'http://localhost:18789',
-  );
+  final baseUrl = ref.watch(backendUrlProvider);
   final resp = await http.get(
     Uri.parse('$baseUrl/api/wizard/status'),
     headers: {'Authorization': 'Bearer ${user.token}'},
@@ -110,10 +107,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
       _error = null;
     });
 
-    final baseUrl = const String.fromEnvironment(
-      'BACKEND_URL',
-      defaultValue: 'http://localhost:18789',
-    );
+    final baseUrl = ref.read(backendUrlProvider);
 
     final body = <String, dynamic>{
       'listen_addr': _listenAddrCtrl.text.trim(),

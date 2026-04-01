@@ -37,6 +37,7 @@ import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,12 @@ const _fakeUser = AuthUser(
 );
 
 // ── Fake LocalManagerService ───────────────────────────────────────────────
+
+class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
+  _FakeClientSettingsNotifier(super.ref) {
+    state = const AsyncData(ClientSettings(backendUrl: 'http://test', standaloneMode: false));
+  }
+}
 
 class _FakeLocalManagerService extends LocalManagerService {
   bool _running = false;
@@ -236,9 +243,14 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
           ],
         ),
       );
+      await tester.pumpAndSettle();
+
+      // Scroll down to see Sign Out
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
       await tester.pumpAndSettle();
 
       expect(find.text('Sign Out'), findsOneWidget);
@@ -255,6 +267,7 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
           ],
         ),
       );

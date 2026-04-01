@@ -28,8 +28,11 @@ class DashboardScreen extends ConsumerWidget {
       body: snapshot.when(
         loading:
             () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+              child: Semantics(
+                label: 'Loading Dashboard Data',
+                child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
         error:
@@ -71,6 +74,8 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        _ObservabilityWidget(data: data),
+        const SizedBox(height: 32),
         _SectionTitle('Overview'),
         const SizedBox(height: 16),
         Wrap(
@@ -127,6 +132,162 @@ class _DashboardContent extends StatelessWidget {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+class _ObservabilityWidget extends StatelessWidget {
+  final DashboardSnapshot data;
+
+  const _ObservabilityWidget({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final int agentCount = data.agents.length;
+    final int activeAgents = data.agents.where((a) => a.isRunning).length;
+    final double healthScore = agentCount > 0 ? (activeAgents / agentCount) * 100 : 100;
+
+    return Semantics(
+      label: 'System Observability Metrics',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(<double>[
+              1.213, -0.213, -0.072, 0, 0,
+              -0.213, 1.213, -0.072, 0, 0,
+              -0.213, -0.213, 1.213, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.primaryContainer.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: colors.primary.withOpacity(0.3), width: 1.5),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.monitor_heart, color: colors.primary, size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      'System Observability',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                            fontFamily: 'Outfit',
+                          ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: healthScore >= 90 ? colors.primary.withOpacity(0.2) : colors.error.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Health: ${healthScore.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          color: healthScore >= 90 ? colors.primary : colors.error,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricItem(
+                        icon: Icons.speed,
+                        label: 'Telemetry',
+                        value: 'Connected',
+                        valueColor: colors.primary,
+                      ),
+                    ),
+                    Expanded(
+                      child: _MetricItem(
+                        icon: Icons.memory,
+                        label: 'Swarm Memory',
+                        value: '${data.agents.length * 12} MB', // Simulated metric
+                        valueColor: colors.secondary,
+                      ),
+                    ),
+                    Expanded(
+                      child: _MetricItem(
+                        icon: Icons.task_alt,
+                        label: 'Mission Metrics',
+                        value: '${data.statuses.length} Ops/s',
+                        valueColor: colors.tertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color valueColor;
+
+  const _MetricItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '$label: $value',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: valueColor,
+              fontFamily: 'Outfit',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

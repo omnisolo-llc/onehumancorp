@@ -43,33 +43,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final backendUrl = ref.watch(backendUrlProvider);
+
     return Scaffold(
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Image.asset(
-                      'assets/logo.png',
-                      height: 100,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          Icons.person,
-                          size: 80,
-                          color: Theme.of(context).colorScheme.primary,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 0,
+                        child: Image.asset(
+                          'assets/logo.png',
+                          height: 100,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person,
+                              size: 80,
+                              color: Theme.of(context).colorScheme.primary,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                     const Text(
                       'One Human Corp',
                       textAlign: TextAlign.center,
@@ -114,6 +120,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ? 'Enter your password'
                                   : null,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Connecting to: $backendUrl',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Text(
@@ -126,20 +141,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _loading ? null : _submit,
-                      child:
-                          _loading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Text('Sign In'),
+                    Semantics(
+                      label: 'Sign In Button',
+                      button: true,
+                      child: Tooltip(
+                        message: 'Authenticate with the OHC server',
+                        child: FilledButton(
+                          onPressed: _loading ? null : _submit,
+                          child:
+                              _loading
+                                  ? Semantics(
+                                      label: 'Connecting to server',
+                                      child: const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                  : const Text('Sign In', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                        ),
+                      ),
                     ),
-                  ],
+                    const SizedBox(height: 24),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('OR', style: TextStyle(color: Colors.grey)),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Semantics(
+                      label: 'Sign In with Google Button',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading ? null : () {}, // Placeholder for OAuth
+                        icon: const Icon(Icons.login),
+                        label: const Text('Sign in with Google', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Semantics(
+                      label: 'Sign In with GitHub Button',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading ? null : () {}, // Placeholder for OAuth
+                        icon: const Icon(Icons.code),
+                        label: const Text('Sign in with GitHub', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    ],
+                  ),
                 ),
               ),
             ),
