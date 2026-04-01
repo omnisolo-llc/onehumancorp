@@ -981,14 +981,14 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected 2 metrics, got %d, err: %v", count, err)
 	}
 
-	var reqBody []byte
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reqBody, _ = io.ReadAll(r.Body)
+	var reqBodyMetrics []byte
+	tsMetrics := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqBodyMetrics, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
 	}))
-	defer ts.Close()
+	defer tsMetrics.Close()
 
-	syncedCount, err := db.SyncBufferedMetrics(ctx, ts.URL)
+	syncedCount, err := db.SyncBufferedMetrics(ctx, tsMetrics.URL)
 	if err != nil {
 		t.Fatalf("SyncBufferedMetrics failed: %v", err)
 	}
@@ -996,13 +996,65 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected 2 synced records, got %d", syncedCount)
 	}
 
-	expectedBody := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
-	if string(reqBody) != expectedBody {
-		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
+	expectedBodyMetrics := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
+	if string(reqBodyMetrics) != expectedBodyMetrics {
+		t.Fatalf("Expected payload %s, got %s", expectedBodyMetrics, string(reqBodyMetrics))
 	}
 
 	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSIPDB_SyncMissions(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_missions.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-1', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task1\"}')")
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-2', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task2\"}')")
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	var payloads []string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		payloads = append(payloads, string(body))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if syncedCount != 2 {
+		t.Fatalf("Expected 2 synced records, got %d", syncedCount)
+	}
+
+	if len(payloads) != 2 {
+		t.Fatalf("Expected 2 HTTP requests, got %d", len(payloads))
+	}
+	if payloads[0] != `{"role":"ROLE","task":"task1"}` {
+		t.Fatalf("Expected payload %s, got %s", `{"role":"ROLE","task":"task1"}`, payloads[0])
+	}
+	if payloads[1] != `{"role":"ROLE","task":"task2"}` {
+		t.Fatalf("Expected payload %s, got %s", `{"role":"ROLE","task":"task2"}`, payloads[1])
+	}
+
+	var count int
+	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'SYNCED'").Scan(&count)
+	if err != nil || count != 2 {
+		t.Fatalf("Expected 2 SYNCED missions, got %d, err: %v", count, err)
 	}
 }

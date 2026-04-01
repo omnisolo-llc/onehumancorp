@@ -14,7 +14,15 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	_ "modernc.org/sqlite"
+)
+
+var (
+	sipMeter                = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	syncMissionsCount, _    = sipMeter.Int64Counter("sipdb.sync_missions.count", metric.WithDescription("Number of missions synced to the cloud"))
+	syncMissionsDuration, _ = sipMeter.Float64Histogram("sipdb.sync_missions.duration", metric.WithDescription("Duration of SyncMissions execution in seconds"), metric.WithUnit("s"))
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -664,6 +672,13 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Has side effects: Posts pending missions to a remote endpoint and updates local status to SYNCED.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, error) {
+	start := time.Now()
+	defer func() {
+		if syncMissionsDuration != nil {
+			syncMissionsDuration.Record(ctx, time.Since(start).Seconds())
+		}
+	}()
+
 	var missions []struct {
 		id      string
 		payload string
@@ -721,5 +736,8 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 	}
 
+	if syncMissionsCount != nil && syncedCount > 0 {
+		syncMissionsCount.Add(ctx, int64(syncedCount))
+	}
 	return syncedCount, nil
 }
