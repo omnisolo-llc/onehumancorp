@@ -99,7 +99,7 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
               style: TextStyle(
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
           ],

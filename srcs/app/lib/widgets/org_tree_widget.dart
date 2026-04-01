@@ -111,7 +111,7 @@ class _OrgMemberRow extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: colors.primary.withOpacity(0.1),
+                            color: colors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -130,7 +130,7 @@ class _OrgMemberRow extends StatelessWidget {
                     member.role.replaceAll('_', ' '),
                     style: TextStyle(
                       fontSize: 12,
-                      color: colors.onSurfaceVariant.withOpacity(0.7),
+                      color: colors.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                 ],

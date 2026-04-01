@@ -78,7 +78,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             style: TextStyle(
               color: Theme.of(
                 context,
-              ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 16),
@@ -109,7 +109,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                           Icon(
                             Icons.construction,
                             size: 48,
-                            color: colors.onSurfaceVariant.withOpacity(0.3),
+                            color: colors.onSurfaceVariant.withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
                           const Text('No MCP tools active'),
@@ -213,7 +213,7 @@ class _IntegrationCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(icon, color: color, size: 24),
@@ -225,7 +225,7 @@ class _IntegrationCard extends StatelessWidget {
                         fontSize: 10,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                     ),
                   ],

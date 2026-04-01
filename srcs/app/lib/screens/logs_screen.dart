@@ -117,7 +117,7 @@ class _LogLine extends StatelessWidget {
     if (lower.contains('warn')) return Theme.of(context).colorScheme.tertiary;
     if (lower.contains('info')) return Theme.of(context).colorScheme.secondary;
     if (lower.contains('debug'))
-      return Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5);
+      return Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
     return Theme.of(context).colorScheme.onSurfaceVariant;
   }
 
@@ -135,7 +135,7 @@ class _LogLine extends StatelessWidget {
               style: TextStyle(
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 fontFamily: 'monospace',
                 fontSize: 12,
               ),

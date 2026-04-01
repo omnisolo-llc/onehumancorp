@@ -139,7 +139,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: colors.primary.withOpacity(0.1),
+                          color: colors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

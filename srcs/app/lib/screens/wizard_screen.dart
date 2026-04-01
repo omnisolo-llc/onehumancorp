@@ -399,8 +399,8 @@ class _StatusBanner extends StatelessWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: color.withOpacity(0.03),
-              border: Border.all(color: color.withOpacity(0.08)),
+              color: color.withValues(alpha: 0.03),
+              border: Border.all(color: color.withValues(alpha: 0.08)),
               borderRadius: BorderRadius.circular(12),
             ),
             child: child,

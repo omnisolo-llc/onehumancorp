@@ -37,6 +37,8 @@ import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
+import 'package:ohc_app/models/settings.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
@@ -45,6 +47,12 @@ class MockHttpClient extends Mock implements http.Client {}
 class FakeUri extends Fake implements Uri {}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
+
+class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
+  _FakeClientSettingsNotifier(Ref ref) : super(ref) {
+    state = const AsyncData(ClientSettings(backendUrl: 'http://localhost', standaloneMode: false));
+  }
+}
 
 /// Build a minimal [ProviderScope] wrapping [child] with optional overrides.
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
@@ -236,15 +244,28 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
           ],
         ),
       );
+      // Wait for Settings API to resolve if needed
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign Out'), findsOneWidget);
+      // Find the logout button
+      final signOutFinder = find.text('Sign Out', skipOffstage: false);
+
+      // Because we scroll to the bottom, sometimes the element isn't visible yet
+      await tester.dragUntilVisible(
+          signOutFinder,
+          find.byType(ListView),
+          const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+
+      expect(signOutFinder, findsOneWidget);
 
       // Tapping Sign Out triggers logout (state change to null)
-      await tester.tap(find.text('Sign Out'));
+      await tester.tap(signOutFinder);
       await tester.pumpAndSettle();
       // After logout the screen re-renders with no user info
     });
@@ -255,6 +276,7 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
           ],
         ),
       );

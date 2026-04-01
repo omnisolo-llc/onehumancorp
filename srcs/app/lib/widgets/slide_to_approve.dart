@@ -68,9 +68,9 @@ class _SlideToApproveState extends State<SlideToApprove> {
           height: 56,
           width: _maxDrag + _thumbWidth,
           decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withOpacity(0.3),
+            color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: colors.outlineVariant.withOpacity(0.2)),
+            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.2)),
           ),
           child: Stack(
             children: [
@@ -90,7 +90,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                             Text(
                               'Authorizing...',
                               style: TextStyle(
-                                color: colors.primary.withOpacity(0.7),
+                                color: colors.primary.withValues(alpha: 0.7),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -99,7 +99,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                         : Text(
                           'Slide to Approve',
                           style: TextStyle(
-                            color: colors.onSurfaceVariant.withOpacity(0.5),
+                            color: colors.onSurfaceVariant.withValues(alpha: 0.5),
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.5,
                           ),
@@ -114,7 +114,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                 child: Container(
                   width: _position + (_thumbWidth / 2),
                   decoration: BoxDecoration(
-                    color: colors.primary.withOpacity(0.1),
+                    color: colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
@@ -146,7 +146,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: colors.shadow.withOpacity(0.1),
+                            color: colors.shadow.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -179,7 +179,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
           child: TextButton(
             onPressed: widget.disabled ? null : widget.onReject,
             style: TextButton.styleFrom(
-              backgroundColor: colors.errorContainer.withOpacity(0.5),
+              backgroundColor: colors.errorContainer.withValues(alpha: 0.5),
               foregroundColor: colors.error,
               side: BorderSide(color: colors.errorContainer),
               padding: const EdgeInsets.symmetric(vertical: 12),

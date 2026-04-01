@@ -89,7 +89,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                     style: TextStyle(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 32),

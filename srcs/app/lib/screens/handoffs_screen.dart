@@ -136,7 +136,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Icon(
                     Icons.check_circle_outline,
                     size: 64,
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -146,7 +146,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Text(
                     'Your agents are operating autonomously.',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -226,7 +226,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                               child: Icon(
                                 Icons.image_outlined,
                                 size: 48,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                               ),
                             ),
                           ),

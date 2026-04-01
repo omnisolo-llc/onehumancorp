@@ -164,7 +164,7 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: colors.secondaryContainer.withOpacity(0.3),
+                              color: colors.secondaryContainer.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -257,9 +257,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         status.toUpperCase(),
