@@ -31,9 +31,25 @@ cd mono
 ```
 
 ### 2. Configure Environment
-Create a `.env` file in the root directory (see [Environment Variables](#environment-variables)).
 
-### 3. Local Development with Docker Compose
+We provide a specialized setup script that automatically checks prerequisites, writes a default `.env` file, and validates both **Cloud** and **Standalone** build targets before appending to the local memory log (`.agent-task/memory/`).
+
+```bash
+./deploy/scripts/ohc-setup.sh
+```
+
+### 3. Mode Switching CLI
+The backend uses environment variables to dictate its operating mode. To quickly switch between `cloud`, `standalone`, and `headless` configurations in your shell, source the mode-switcher script:
+
+```bash
+source deploy/scripts/ohc-mode.sh standalone
+# Configured for Standalone Desktop Mode.
+
+source deploy/scripts/ohc-mode.sh cloud
+# Configured for Cloud-Native Multi-Tenant Mode.
+```
+
+### 4. Local Development with Docker Compose
 ```bash
 docker compose -f deploy/docker-compose.yml up --build
 ```
