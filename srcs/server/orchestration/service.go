@@ -339,7 +339,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.
 func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		slog.Error("failed to open event log file", "filename", filename, "error", err)
 		return
