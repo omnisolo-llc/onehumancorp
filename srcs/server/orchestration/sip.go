@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	_ "modernc.org/sqlite"
 )
 
@@ -657,6 +658,84 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	return len(records), err
 }
 
+// SyncContextSync synchronizes local SQLite Hybrid MCP RAG state to the cloud orchestration engine.
+// After successful synchronization, local records are immediately deleted to prevent infinite sync loops.
+//
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns the number of synced records and an error.
+func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	var memories []struct {
+		memoryID string
+		context  string
+	}
+
+	err := withRetry(ctx, func() error {
+		memories = nil
+		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var memoryID, context string
+			if err := rows.Scan(&memoryID, &context); err != nil {
+				return err
+			}
+			memories = append(memories, struct {
+				memoryID string
+				context  string
+			}{memoryID, context})
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(memories) == 0 {
+		return 0, nil
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	syncedCount := 0
+	for _, m := range memories {
+		// Strictly sanitize all data to prevent sensitive data leakage by utilizing the public RedactPII function.
+		sanitizedContext := telemetry.RedactPII(m.context)
+
+		payloadMap := map[string]interface{}{
+			"memory_id": m.memoryID,
+			"context":   sanitizedContext,
+		}
+		payloadBytes, err := json.Marshal(payloadMap)
+		if err != nil {
+			continue
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(payloadBytes)))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				deleteErr := withRetry(ctx, func() error {
+					_, deleteErr := s.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings WHERE memory_id = ?", m.memoryID)
+					return deleteErr
+				})
+				if deleteErr == nil {
+					syncedCount++
+				}
+			}
+			resp.Body.Close()
+		}
+	}
+
+	return syncedCount, nil
+}
+
 // SyncMissions aggregates and syncs pending missions with the OHC-SIP Cloud DB.
 // Accepts parameters: ctx context.Context, remoteEndpoint string.
 // Returns error.
@@ -700,15 +779,34 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		// Explicitly parse the payload and delete the sensitive `rag_context` key to maintain strict tenant isolation and local data privacy.
+		var payloadStr = m.payload
+
+		// Safely decode to ensure we only manipulate JSON objects (to avoid corrupting arrays or primitives)
+		var raw interface{}
+		if err := json.Unmarshal([]byte(m.payload), &raw); err == nil {
+			if payloadMap, ok := raw.(map[string]interface{}); ok {
+				if _, hasKey := payloadMap["rag_context"]; hasKey {
+					delete(payloadMap, "rag_context")
+					if modifiedPayload, err := json.Marshal(payloadMap); err == nil {
+						payloadStr = string(modifiedPayload)
+					}
+				}
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadStr))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		// Include the header to enforce robust conflict resolution prioritizing the local client.
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// Treat HTTP 409 Conflict responses as successful synchronizations to prioritize the local SQLite client's state over the cloud state.
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
