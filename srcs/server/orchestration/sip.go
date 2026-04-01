@@ -331,6 +331,17 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
+// SyncMissionFromClient forcefully UPSERTs a mission directly from a client.
+func (s *SIPDB) SyncMissionFromClient(ctx context.Context, missionID string, payload string) error {
+	return withRetry(ctx, func() error {
+		_, err := s.db.ExecContext(ctx,
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET status = 'PENDING', payload = excluded.payload, created_at = CURRENT_TIMESTAMP",
+			missionID, payload,
+		)
+		return err
+	})
+}
+
 // DelegateMission delegates specialized tasks via the agent_missions table.
 // Accepts parameters: s *SIPDB (No Constraints).
 // Returns DelegateMission(ctx context.Context, missionID, role string, task Message) error.
@@ -700,15 +711,31 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		// Parse payload to redact sensitive context
+		var payloadObj map[string]interface{}
+		sanitizedPayloadStr := m.payload
+		if err := json.Unmarshal([]byte(m.payload), &payloadObj); err == nil {
+			if _, ok := payloadObj["rag_context"]; ok {
+				delete(payloadObj, "rag_context")
+			}
+			redactedObj := redactInterfacePII(payloadObj)
+			if redactedBytes, err := json.Marshal(redactedObj); err == nil {
+				sanitizedPayloadStr = string(redactedBytes)
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(sanitizedPayloadStr))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		// Prioritize local client's state over the cloud state
+		req.Header.Set("X-Conflict-Resolution", "client-wins")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// Treat HTTP 409 Conflict as successful sync
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr

@@ -230,6 +230,20 @@ func (r *SqliteHubRepository) AppendTranscript(ctx context.Context, meetingID st
 	return nil
 }
 
+func (r *SqliteHubRepository) SyncMissionFromClient(ctx context.Context, missionID string, payload string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO agent_missions (id, status, payload, created_at)
+		VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)
+		ON CONFLICT (id) DO UPDATE SET
+			status='PENDING', payload=EXCLUDED.payload, created_at=CURRENT_TIMESTAMP`,
+		missionID, payload,
+	)
+	if err != nil {
+		return fmt.Errorf("sqlite: sync mission: %w", err)
+	}
+	return nil
+}
+
 func (r *SqliteHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, error) {
 	rows, err := r.pool.Query(ctx, "SELECT id, agenda, participants FROM meeting_rooms ORDER BY id")
 	if err != nil {

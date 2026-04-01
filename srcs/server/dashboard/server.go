@@ -541,6 +541,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
+	mux.HandleFunc("/api/missions/sync", server.handleSyncMissionsEndpoint)
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
 	mux.HandleFunc("/api/clusters/", server.handleClusterStatus)
@@ -550,6 +551,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/pipelines", server.handlePipelines)
 	mux.HandleFunc("/api/pipelines/promote", server.handlePipelinePromote)
 	mux.HandleFunc("/api/pipelines/status", server.handlePipelineStatus)
+	// PowerSync dynamic sync rules endpoint
+	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -609,6 +612,28 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		"status":     "healthy",
 		"mode":       mode,
 		"sync_ready": true,
+	}
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// JourneyApps bucket_data schema for PowerSync
+	resp := map[string]interface{}{
+		"bucket_data": map[string]interface{}{
+			"global": map[string]interface{}{
+				"data": map[string]interface{}{
+					"agent_missions":          "SELECT * FROM agent_missions WHERE json_extract(payload, '$.organizationId') = token.jwt_ext_organization_id",
+					"agent_status":            "SELECT * FROM agent_status",
+					"capability_plugins":      "SELECT * FROM capability_plugins",
+					"swarm_memory":            "SELECT * FROM swarm_memory",
+					"swarm_memory_embeddings": "SELECT * FROM swarm_memory_embeddings",
+					"agents":                  "SELECT * FROM agents WHERE organization_id = token.jwt_ext_organization_id",
+					"meeting_rooms":           "SELECT * FROM meeting_rooms",
+					"meeting_transcripts":     "SELECT * FROM meeting_transcripts",
+				},
+			},
+		},
 	}
 	_ = json.NewEncoder(w).Encode(resp)
 }

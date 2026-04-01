@@ -43,4 +43,9 @@ type HubRepository interface {
 	AppendTranscript(ctx context.Context, meetingID string, msg Message) error
 	// ListMeetings returns all meeting rooms.
 	ListMeetings(ctx context.Context) ([]MeetingRoom, error)
+
+	// --- Hybrid Sync ---
+
+	// SyncMissionFromClient forcefully UPSERTs an agent mission directly from a client.
+	SyncMissionFromClient(ctx context.Context, missionID string, payload string) error
 }

@@ -666,6 +666,11 @@ func (h *Hub) Scheduler() *scheduler.Scheduler {
 	return h.scheduler
 }
 
+// Repository returns the underlying HubRepository, if configured.
+func (h *Hub) Repository() HubRepository {
+	return h.repo
+}
+
 // SettingsStore returns the Hub's settings store.
 func (h *Hub) SettingsStore() *settings.Store {
 	return h.settingsStore

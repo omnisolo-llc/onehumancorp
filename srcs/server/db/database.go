@@ -202,6 +202,24 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 		slog.Info("db: applied migration", "file", f)
 	}
 
+	if !p.Provider.IsSQLite() {
+		// PostgreSQL specific setup for PowerSync
+		// Make sure wal_level is logical
+		var walLevel string
+		err = p.QueryRow(ctx, "SHOW wal_level").Scan(&walLevel)
+		if err == nil && walLevel == "logical" {
+			// Create publication for PowerSync
+			_, err = p.Exec(ctx, "CREATE PUBLICATION IF NOT EXISTS powersync FOR ALL TABLES")
+			if err != nil {
+				slog.Warn("db: failed to create powersync publication", "error", err)
+			} else {
+				slog.Info("db: created powersync publication")
+			}
+		} else {
+			slog.Warn("db: wal_level is not logical, powersync will not work correctly", "wal_level", walLevel)
+		}
+	}
+
 	return nil
 }
 

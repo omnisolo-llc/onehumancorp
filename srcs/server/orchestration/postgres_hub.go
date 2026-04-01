@@ -334,6 +334,23 @@ func (r *PgHubRepository) AppendTranscript(ctx context.Context, meetingID string
 	})
 }
 
+func (r *PgHubRepository) SyncMissionFromClient(ctx context.Context, missionID string, payload string) error {
+	return pgWithRetry(ctx, func() error {
+		// Postgres specific UPSERT clause ON CONFLICT ... DO UPDATE SET ...
+		_, err := r.pool.Exec(ctx, `
+			INSERT INTO agent_missions (id, status, payload, created_at)
+			VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO UPDATE SET
+				status='PENDING', payload=EXCLUDED.payload, created_at=CURRENT_TIMESTAMP`,
+			missionID, payload,
+		)
+		if err != nil {
+			return fmt.Errorf("pg: sync mission: %w", err)
+		}
+		return nil
+	})
+}
+
 func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, error) {
 	var rooms []MeetingRoom
 	err := pgWithRetry(ctx, func() error {

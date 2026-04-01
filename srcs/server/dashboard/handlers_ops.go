@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
@@ -419,4 +421,81 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleSyncMissionsEndpoint(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	taskBytes, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "failed to re-encode payload", http.StatusInternalServerError)
+		return
+	}
+
+	id, ok := payload["id"].(string)
+	if !ok || id == "" {
+		// Try to extract ID from task payload if wrapped
+		if wrapper, ok := payload["task"].(map[string]interface{}); ok {
+			id, _ = wrapper["id"].(string)
+		}
+	}
+	if id == "" {
+		id = fmt.Sprintf("sync-%d", time.Now().UnixNano())
+	}
+
+	clientWins := r.Header.Get("X-Conflict-Resolution") == "client-wins"
+
+	// Note: s.hub.SIPDB() may be nil in Cloud Mode since SIPDB is mainly for SQLite.
+	// Therefore, we must implement a generic cloud persistence fallback for hybrid syncing
+	// directly into the Postgres repository. Wait, `agent_missions` is an OHC-SIP table,
+	// so for PostgreSQL it would be created by the `005_sip.sql` migration.
+	// We need to execute the insert statement directly using the db.Provider if available.
+	if s.hub.SIPDB() != nil {
+		// Provide an explicit DB connection to handle UPSERT correctly for SQLite.
+		// Expose a method to directly insert/update a mission from sync
+		err := s.hub.SIPDB().SyncMissionFromClient(r.Context(), id, string(taskBytes))
+		if err != nil {
+			slog.Warn("Failed to sync mission from client", "error", err)
+			if clientWins {
+				// To prioritize local client, return HTTP 409 Conflict
+				http.Error(w, "conflict syncing mission: "+err.Error(), http.StatusConflict)
+				return
+			}
+			http.Error(w, "failed to sync mission", http.StatusInternalServerError)
+			return
+		}
+	} else if s.hub.Repository() != nil {
+		// Fallback for Cloud Mode using Postgres directly.
+		repo := s.hub.Repository()
+		// Check if it is the Postgres Hub Repository and has access to the DB.
+		// We can use a type assertion to access the Postgres DB pool if needed,
+		// but since `repo` is an interface, it's safer to add `SyncMissionFromClient`
+		// to the HubRepository interface, OR we can execute a generic query if we have
+		// db pool access. Wait, `HubRepository` is strictly defined. We should add
+		// `SyncMissionFromClient` to it.
+		// For now, let's assume we can cast it to PgHubRepository to access `pool`.
+		if pgRepo, ok := repo.(*orchestration.PgHubRepository); ok {
+			err := pgRepo.SyncMissionFromClient(r.Context(), id, string(taskBytes))
+			if err != nil {
+				slog.Warn("Failed to sync mission from client to Postgres", "error", err)
+				if clientWins {
+					http.Error(w, "conflict syncing mission: "+err.Error(), http.StatusConflict)
+					return
+				}
+				http.Error(w, "failed to sync mission", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
 }
