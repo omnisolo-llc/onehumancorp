@@ -1,4 +1,4 @@
-package orchestration
+package agents
 
 import (
 	"context"
@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
+	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 func TestTaskWorker_pollAndAssign(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	tests := []struct {
 		name           string
 		setupMock      func() *httptest.Server
@@ -138,7 +140,7 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 			defer tt.envTeardown()
 
 			client := plane.NewClientFromEnv()
-			hub := NewHub()
+			hub := orchestration.NewHub()
 			worker := NewTaskWorker(client, hub)
 
 			// Doesn't return anything or error, just covering branches
@@ -148,8 +150,9 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 }
 
 func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	// Simple test to exercise the context cancellation branch
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(nil, hub)
 	worker.pollInterval = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
@@ -161,6 +164,7 @@ func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
 }
 
 func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	mockSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"results": []interface{}{}})
@@ -177,7 +181,7 @@ func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 	}()
 
 	client := plane.NewClientFromEnv()
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(client, hub)
 	worker.pollInterval = 10 * time.Millisecond
 
@@ -192,23 +196,25 @@ func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 }
 
 func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	os.Unsetenv("PLANE_URL")
 	os.Unsetenv("PLANE_API_KEY")
 
 	client := plane.NewClientFromEnv()
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
 
 
 func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	// Directly call to guarantee execution
 	os.Unsetenv("PLANE_URL")
 	os.Unsetenv("PLANE_API_KEY")
 
 	client := plane.NewClientFromEnv()
-	hub := NewHub()
+	hub := orchestration.NewHub()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
