@@ -1,0 +1,15 @@
+type: mission
+target_queue: product_architecture
+title: "Implement PowerSync for OHC Hybrid Architecture"
+description: >
+  Integrate PowerSync into the OHC monolithic platform to enable seamless
+  local-to-cloud synchronisation. The goal is to bridge the Cloud-Native Postgres
+  and the Standalone Desktop SQLite SIPDB.
+
+  **Requirements:**
+  1. Add the PowerSync Go backend service to the Kubernetes manifests or Docker Compose stack.
+  2. Implement PowerSync sync rules in the Go server to enforce strict Tenant isolation.
+  3. Integrate the PowerSync Flutter SDK into `srcs/app/` to sync local SQLite dynamically based on the current mode.
+
+  Ensure metrics are emitted via OpenTelemetry and any UI updates reflect the Premium aesthetic.
+priority: high
