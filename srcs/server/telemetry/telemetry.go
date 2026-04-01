@@ -33,7 +33,8 @@ var (
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
 
-func redactPII(input string) string {
+// RedactPII removes personally identifiable information from strings.
+func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
@@ -329,7 +330,7 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"role", role,
 		"api", api,
 		"event_type", eventType,
-		"content", redactPII(content),
+		"content", RedactPII(content),
 	)
 }
 

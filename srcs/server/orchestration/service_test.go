@@ -12,6 +12,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -1423,12 +1424,12 @@ func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 }
 
 func TestPublish_PII_Redaction_In_Telemetry(t *testing.T) {
-	// Simple test verifying redactPII output since LogAgentExecution runs async
-	// without easy hooks, we rely on the internal redactPII mapping.
-	// But let's at least test that redactPII is correctly stripping data
+	// Simple test verifying telemetry.RedactPII output since LogAgentExecution runs async
+	// without easy hooks, we rely on the internal telemetry.RedactPII mapping.
+	// But let's at least test that telemetry.RedactPII is correctly stripping data
 	// from common string payloads.
 	rawContent := "Here is my info: john.doe@example.com and 555-123-4567 and SSN 123-45-6789"
-	redacted := redactPII(rawContent)
+	redacted := telemetry.RedactPII(rawContent)
 	if redacted != "Here is my info: [REDACTED_EMAIL] and [REDACTED_PHONE] and SSN [REDACTED_SSN]" {
 		t.Fatalf("Expected full PII redaction, got: %s", redacted)
 	}

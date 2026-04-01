@@ -14,8 +14,37 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	_ "modernc.org/sqlite"
 )
+
+var (
+	MissionsSyncedCounter     metric.Int64Counter
+	MissionsSyncErrorsCounter metric.Int64Counter
+)
+
+func init() {
+	meter := otel.Meter("github.com/onehumancorp/mono/orchestration")
+
+	var err error
+	MissionsSyncedCounter, err = meter.Int64Counter(
+		"sip.missions.synced",
+		metric.WithDescription("Total number of successful missions synced"),
+	)
+	if err != nil {
+		slog.Warn("Failed to initialize MissionsSyncedCounter", "error", err)
+	}
+
+	MissionsSyncErrorsCounter, err = meter.Int64Counter(
+		"sip.missions.sync_errors",
+		metric.WithDescription("Total number of errors when syncing missions"),
+	)
+	if err != nil {
+		slog.Warn("Failed to initialize MissionsSyncErrorsCounter", "error", err)
+	}
+}
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
 // Accepts no parameters.
@@ -700,11 +729,28 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		// Parse payload to sanitize sensitive RAG context
+		var payloadMap map[string]interface{}
+		sanitizedPayload := m.payload
+		if err := json.Unmarshal([]byte(m.payload), &payloadMap); err == nil {
+			if ragCtx, ok := payloadMap["rag_context"].(string); ok {
+				payloadMap["rag_context"] = telemetry.RedactPII(ragCtx)
+			}
+			if sanitizedBytes, err := json.Marshal(payloadMap); err == nil {
+				sanitizedPayload = string(sanitizedBytes)
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(sanitizedPayload))
 		if err != nil {
+			if MissionsSyncErrorsCounter != nil {
+				MissionsSyncErrorsCounter.Add(ctx, 1, metric.WithAttributes())
+			}
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		// X-OHC-Conflict-Resolution header to enforce robust conflict resolution
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
@@ -715,9 +761,32 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 				})
 				if updateErr == nil {
 					syncedCount++
+					if MissionsSyncedCounter != nil {
+						MissionsSyncedCounter.Add(ctx, 1, metric.WithAttributes())
+					}
+				}
+			} else if resp.StatusCode == http.StatusConflict {
+				// HTTP 409 Conflict responses count as successful synchronizations to prioritize local state
+				updateErr := withRetry(ctx, func() error {
+					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
+					return updateErr
+				})
+				if updateErr == nil {
+					syncedCount++
+					if MissionsSyncedCounter != nil {
+						MissionsSyncedCounter.Add(ctx, 1)
+					}
+				}
+			} else {
+				if MissionsSyncErrorsCounter != nil {
+					MissionsSyncErrorsCounter.Add(ctx, 1)
 				}
 			}
 			resp.Body.Close()
+		} else {
+			if MissionsSyncErrorsCounter != nil {
+				MissionsSyncErrorsCounter.Add(ctx, 1)
+			}
 		}
 	}
 
