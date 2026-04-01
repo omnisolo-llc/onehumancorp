@@ -116,6 +116,12 @@ func initializeTables(db *sql.DB) error {
 			source_plugin TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE IF NOT EXISTS local_metrics_buffer (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			metric_type TEXT NOT NULL,
+			payload TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);`,
 	}
 
 	for _, q := range queries {
@@ -537,4 +543,110 @@ func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
 	s.cachedGrounding = ""
 	s.groundingOnce = &sync.Once{}
+}
+
+// BufferMetric inserts a telemetry metric into the local metric buffer.
+// Accepts parameters: ctx context.Context, metricType string, payload string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Inserts a record into the local_metrics_buffer table.
+func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
+	return withRetry(ctx, func() error {
+		_, err := s.db.ExecContext(ctx,
+			"INSERT INTO local_metrics_buffer (metric_type, payload, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+			metricType, payload,
+		)
+		return err
+	})
+}
+
+// SyncBufferedMetrics aggregates and syncs buffered telemetry metrics with the OHC-SIP Cloud DB.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from local_metrics_buffer.
+// Returns the number of synced records and an error.
+func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) (int, error) {
+	var records []struct {
+		id         int64
+		metricType string
+		payload    string
+	}
+
+	err := withRetry(ctx, func() error {
+		records = nil
+		rows, err := s.db.QueryContext(ctx, "SELECT id, metric_type, payload FROM local_metrics_buffer ORDER BY id ASC LIMIT 500")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id int64
+			var metricType string
+			var payload string
+			if err := rows.Scan(&id, &metricType, &payload); err != nil {
+				return err
+			}
+			records = append(records, struct {
+				id         int64
+				metricType string
+				payload    string
+			}{id, metricType, payload})
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(records) == 0 {
+		return 0, nil // nothing to sync
+	}
+
+	// Prepare payload for batch sync
+	var payloadBuilder strings.Builder
+	payloadBuilder.WriteString("[")
+	var idsToDelete []string
+	for i, rec := range records {
+		if i > 0 {
+			payloadBuilder.WriteString(",")
+		}
+		// Inject metric_type into payload
+		var obj map[string]interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
+			obj["metric_type"] = rec.metricType
+			b, _ := json.Marshal(obj)
+			payloadBuilder.Write(b)
+		} else {
+			payloadBuilder.WriteString(rec.payload)
+		}
+		idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
+	}
+	payloadBuilder.WriteString("]")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadBuilder.String()))
+	if err != nil {
+		return 0, fmt.Errorf("failed to create sync request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("failed to sync metrics: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+	}
+
+	// Delete successfully synced records
+	err = withRetry(ctx, func() error {
+		idList := strings.Join(idsToDelete, ",")
+		_, err := s.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM local_metrics_buffer WHERE id IN (%s)", idList))
+		return err
+	})
+	return len(records), err
 }

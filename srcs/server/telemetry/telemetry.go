@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -39,8 +40,6 @@ func redactPII(input string) string {
 }
 
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
-//
-//
 //
 // Accepts no parameters.
 // Returns (func(), error).
@@ -141,7 +140,6 @@ func InitWithMeter(m mockableMeter) error {
 //
 //   - next: http.Handler; The next HTTP handler in the request pipeline.
 //
-//
 // Accepts parameters: next http.Handler (No Constraints).
 // Returns http.Handler.
 // Produces no errors.
@@ -179,7 +177,6 @@ var Verbosity = 1 // Default level
 
 // MetricsHandler provides an HTTP handler that exposes the collected Prometheus metrics.
 //
-//
 // Accepts no parameters.
 // Returns http.Handler.
 // Produces no errors.
@@ -197,7 +194,6 @@ func MetricsHandler() http.Handler {
 //   - tokenType: string; The type of tokens (e.g., prompt or completion).
 //   - count: int64; The number of tokens consumed.
 //
-//
 // Accepts parameters: ctx context.Context, agentID, role, model, tokenType string, count int64 (No Constraints).
 // Returns nothing.
 // Produces no errors.
@@ -212,6 +208,17 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		attribute.String("model", model),
 		attribute.String("type", tokenType),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"agent_id": agentID,
+			"role":     role,
+			"model":    model,
+			"type":     tokenType,
+			"count":    count,
+		})
+		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -220,7 +227,6 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 //   - agentID: string; The identifier of the agent making the call.
 //   - role: string; The role of the agent.
 //   - api: string; The name or route of the invoked API/tool.
-//
 //
 // Accepts parameters: ctx context.Context, agentID, role, api string (No Constraints).
 // Returns nothing.
@@ -235,13 +241,21 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		attribute.String("role", role),
 		attribute.String("api", api),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"agent_id": agentID,
+			"role":     role,
+			"api":      api,
+		})
+		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
+	}
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.
 //
 //   - ctx: context.Context; The context of the active trace or request.
 //   - interactionType: string; The category of interaction (e.g., approval, handoff).
-//
 //
 // Accepts parameters: ctx context.Context, interactionType string (No Constraints).
 // Returns nothing.
@@ -254,13 +268,19 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 	humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("type", interactionType),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"type": interactionType,
+		})
+		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
+	}
 }
 
 // RecordMeetingEvent increments the global counter for collaborative meeting room actions.
 //
 //   - ctx: context.Context; The context of the active trace or request.
 //   - eventType: string; The nature of the meeting event (e.g., start, message, end).
-//
 //
 // Accepts parameters: ctx context.Context, eventType string (No Constraints).
 // Returns nothing.
@@ -273,6 +293,13 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 	meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("type", eventType),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"type": eventType,
+		})
+		_ = BufferMetricFunc(ctx, "meeting_event", string(payloadBytes))
+	}
 }
 
 // LogAgentExecution provides structured JSON logging for agent execution traces.
@@ -283,7 +310,6 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 //   - api: string; The API or tool being executed.
 //   - eventType: string; The specific type of the event (e.g. task, status).
 //   - content: string; The content or message payload associated with the execution.
-//
 //
 // Accepts parameters: ctx context.Context, agentID, role, api, eventType, content string (No Constraints).
 // Returns nothing.
@@ -299,3 +325,6 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"content", redactPII(content),
 	)
 }
+
+// Global buffer function pointer to inject dependency without circular imports.
+var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
