@@ -97,8 +97,21 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading handoffs from remote API...',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                ],
               ),
             );
           }
@@ -116,11 +129,19 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Failed to load handoffs',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Outfit'),
                   ),
+                  Text(
+                    'Ensure your endpoint is reachable if in remote mode.',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   TextButton(
                     onPressed: _refresh,
-                    child: const Text('Try Again'),
+                    child: const Text('Try Again', style: TextStyle(fontFamily: 'Inter')),
                   ),
                 ],
               ),

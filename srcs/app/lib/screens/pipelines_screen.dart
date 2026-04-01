@@ -73,14 +73,39 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading pipelines...',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             );
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Failed to fetch pipelines. Check connection if using remote mode.\nError: ${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            );
           }
 
           final pipelines = snapshot.data ?? [];

@@ -28,15 +28,32 @@ class DashboardScreen extends ConsumerWidget {
       body: snapshot.when(
         loading:
             () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Gathering intelligence...',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
         error:
             (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Failed to fetch intelligence. If using a remote API, verify your connection.\nError: $e',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
+                ),
               ),
             ),
         data: (data) => _DashboardContent(data: data, ref: ref),
@@ -153,7 +170,15 @@ class _ObservabilityWidget extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(<double>[
+              1.168, -0.153, -0.015, 0, 0,
+              -0.046, 1.061, -0.015, 0, 0,
+              -0.046, -0.152, 1.198, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
           child: Container(
             decoration: BoxDecoration(
               color: colors.surfaceContainerHighest.withOpacity(0.3),

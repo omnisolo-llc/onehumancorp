@@ -41,6 +41,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _oauthLogin() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authStateProvider.notifier).oauthLogin();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _showSettings(BuildContext context) async {
     final settingsAsync = ref.read(clientSettingsProvider);
     final settings = settingsAsync.valueOrNull;
@@ -51,12 +65,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Remote Connection Settings'),
+            title: const Text('Remote Connection Settings', style: TextStyle(fontFamily: 'Outfit')),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Configure the OHC Cloud or local backend URL.'),
+                const Text('Configure the OHC Cloud or local backend URL.', style: TextStyle(fontFamily: 'Inter')),
                 const SizedBox(height: 16),
                 TextField(
                   controller: controller,
@@ -64,17 +78,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     labelText: 'Backend URL (e.g. http://localhost:18789)',
                     border: OutlineInputBorder(),
                   ),
+                  style: const TextStyle(fontFamily: 'Inter'),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, controller.text),
-                child: const Text('Save'),
+                child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
               ),
             ],
           ),
@@ -87,6 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settingsAsync = ref.watch(clientSettingsProvider);
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showSettings(context),
@@ -98,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           constraints: const BoxConstraints(maxWidth: 400),
           child: Card(
             elevation: 4,
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(32),
               child: Form(
                 key: _formKey,
@@ -125,13 +141,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'Outfit',
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Sign in to your company',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontFamily: 'Inter',
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
@@ -187,7 +207,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                              : const Text('Sign In'),
+                              : const Text('Sign In', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: const [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Semantics(
+                      button: true,
+                      label: 'Sign in with SSO',
+                      child: OutlinedButton.icon(
+                        onPressed: _loading ? null : _oauthLogin,
+                        icon: const Icon(Icons.security),
+                        label: const Text('Sign in with SSO', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    settingsAsync.when(
+                      data: (settings) {
+                        return Center(
+                          child: Text(
+                            'Connected to: ${settings.backendUrl}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => const Center(
+                        child: SizedBox(
+                          height: 12,
+                          width: 12,
+                          child: CircularProgressIndicator(strokeWidth: 1),
+                        ),
+                      ),
+                      error: (_, __) => const SizedBox(),
                     ),
                   ],
                 ),

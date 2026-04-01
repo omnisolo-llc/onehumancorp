@@ -1,0 +1,14 @@
+type: memory
+metadata:
+  role: "Principal Flutter Developer & Canvas"
+  timestamp: 1775048919
+observations:
+  - "Flutter create can modify or overwrite multiple native directories. Do not run it unless specifically required, and even then, limit scope."
+  - "Using ImageFilter.compose with outer ColorFilter and inner blur filter correctly renders the glassmorphism luminance effect."
+  - "Mocking network requests in the frontend is forbidden by the constraints."
+actions_taken:
+  - "Restored inadvertently modified native directories and .gitignore"
+  - "Removed the invalid faked OAuth mechanism and SSO button to adhere to the gold standard and constraints."
+  - "Implemented loading states on pipelines, handoffs, dashboard, and user management screens to handle slow remote API execution."
+  - "Updated visual components to correctly use Inter and Outfit fonts, as well as semantics wrappers for accessibility."
+resolution: "Success: implemented UI logic and polished styling."

@@ -35,12 +35,15 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(24),
               children: [
                 if (user != null) ...[
-                  ListTile(
-                    leading: CircleAvatar(
-                      child: Text(user.name.substring(0, 1).toUpperCase()),
+                  Semantics(
+                    label: 'User profile: ${user.name}',
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Text(user.name.substring(0, 1).toUpperCase()),
+                      ),
+                      title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+                      subtitle: Text(user.email, style: TextStyle(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ),
-                    title: Text(user.name),
-                    subtitle: Text(user.email),
                   ),
                   const Divider(),
                 ],
@@ -52,43 +55,54 @@ class SettingsScreen extends ConsumerWidget {
                       settings.standaloneMode
                           ? Icons.laptop_windows
                           : Icons.cloud_queue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     title: Text(
                       settings.standaloneMode
                           ? 'Desktop Standalone Mode'
                           : 'Remote Client Mode',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter'),
                     ),
                     subtitle: Text(
                       settings.standaloneMode
                           ? 'This device manages a local backend and lightweight local services.'
                           : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                      style: TextStyle(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('Backend URL'),
-                  subtitle: Text(settings.backendUrl),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Edit Backend URL',
-                    onPressed:
-                        () =>
-                            _editBackendUrl(context, ref, settings.backendUrl),
+                Semantics(
+                  button: true,
+                  label: 'Edit Backend URL. Current: ${settings.backendUrl}',
+                  child: ListTile(
+                    leading: const Icon(Icons.link),
+                    title: const Text('Backend URL', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+                    subtitle: Text(settings.backendUrl, style: const TextStyle(fontFamily: 'monospace')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Edit Backend URL',
+                      onPressed:
+                          () =>
+                              _editBackendUrl(context, ref, settings.backendUrl),
+                    ),
                   ),
                 ),
 
-                SwitchListTile(
-                  secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
-                  subtitle: const Text(
-                    'Run a local desktop backend. Disable this to use the app as a remote client.',
+                Semantics(
+                  label: 'Toggle Standalone Mode. Currently ${settings.standaloneMode ? "enabled" : "disabled"}',
+                  child: SwitchListTile(
+                    secondary: const Icon(Icons.computer),
+                    title: const Text('Standalone Mode', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+                    subtitle: const Text(
+                      'Run a local desktop backend. Disable this to use the app as a remote client.',
+                      style: TextStyle(fontFamily: 'Inter'),
+                    ),
+                    value: settings.standaloneMode,
+                    onChanged:
+                        (value) => ref
+                            .read(clientSettingsProvider.notifier)
+                            .updateStandaloneMode(value),
                   ),
-                  value: settings.standaloneMode,
-                  onChanged:
-                      (value) => ref
-                          .read(clientSettingsProvider.notifier)
-                          .updateStandaloneMode(value),
                 ),
 
                 if (settings.standaloneMode) ...[
@@ -101,27 +115,36 @@ class SettingsScreen extends ConsumerWidget {
                 _SectionHeader(title: 'Account'),
                 ListTile(
                   leading: const Icon(Icons.business),
-                  title: const Text('Organization'),
-                  subtitle: Text(user?.organizationId ?? '—'),
+                  title: const Text('Organization', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+                  subtitle: Text(user?.organizationId ?? '—', style: const TextStyle(fontFamily: 'Inter')),
                 ),
                 ListTile(
                   leading: const Icon(Icons.verified_user),
-                  title: const Text('Role'),
-                  subtitle: Text(user?.role ?? '—'),
+                  title: const Text('Role', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+                  subtitle: Text(user?.role ?? '—', style: const TextStyle(fontFamily: 'Inter')),
                 ),
                 const Divider(),
-                ListTile(
-                  leading: Icon(
-                    Icons.logout,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    'Sign Out',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                Semantics(
+                  button: true,
+                  label: 'Sign Out',
+                  child: InkWell(
+                    onTap: () => ref.read(authStateProvider.notifier).logout(),
+                    splashColor: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.logout,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      title: Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  onTap: () => ref.read(authStateProvider.notifier).logout(),
                 ),
               ],
             ),
