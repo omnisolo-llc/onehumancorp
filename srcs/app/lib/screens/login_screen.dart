@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:ui';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -41,19 +43,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _editBackendUrl(
+    BuildContext context,
+    String current,
+  ) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Backend URL'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'URL (e.g. http://localhost:8080)',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, controller.text),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+    if (result != null && result.isNotEmpty) {
+      ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentBackendUrl = ref.watch(clientSettingsProvider).valueOrNull?.backendUrl ?? 'http://localhost:18789';
+
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Form(
-                key: _formKey,
-                child: Column(
+      body: Stack(
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Stack(
+                children: [
+                  Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -114,37 +155,128 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ? 'Enter your password'
                                   : null,
                     ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 13,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _loading ? null : _submit,
-                      child:
-                          _loading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                            if (_error != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                _error!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: 13,
                                 ),
-                              )
-                              : const Text('Sign In'),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            FilledButton(
+                              onPressed: _loading ? null : _submit,
+                              child:
+                                  _loading
+                                      ? SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Theme.of(context).colorScheme.onPrimary,
+                                          ),
+                                        )
+                                      : const Text('Sign In'),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: _loading ? null : () {
+                                // OAuth flow for Thin Client Mode
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('OAuth login initiated...')),
+                                );
+                              },
+                              icon: const Icon(Icons.login),
+                              label: const Text('Sign In with OAuth'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
+                  if (_loading)
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: BackdropFilter(
+                          filter: ImageFilter.compose(
+                            outer: ColorFilter.matrix(<double>[
+                              1.168, -0.153, -0.015, 0, 0,
+                              -0.046, 1.061, -0.015, 0, 0,
+                              -0.046, -0.152, 1.198, 0, 0,
+                              0, 0, 0, 1, 0,
+                            ]),
+                            inner: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                          ),
+                          child: Container(
+                            color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 24,
+            right: 24,
+            child: Semantics(
+              label: 'Configure remote connection',
+              button: true,
+              child: Tooltip(
+                message: 'Configure Remote Connection',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: BackdropFilter(
+                    filter: ImageFilter.compose(
+                      outer: ColorFilter.matrix(<double>[
+                        1.168, -0.153, -0.015, 0, 0,
+                        -0.046, 1.061, -0.015, 0, 0,
+                        -0.046, -0.152, 1.198, 0, 0,
+                        0, 0, 0, 1, 0,
+                      ]),
+                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    ),
+                    child: Material(
+                      color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+                      child: InkWell(
+                        onTap: () => _editBackendUrl(context, currentBackendUrl),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.settings_ethernet,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Remote Connection',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
