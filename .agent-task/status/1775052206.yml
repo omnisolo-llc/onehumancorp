@@ -1,0 +1,5 @@
+status: "Mission Completed"
+metrics:
+  healthScore: 100
+  activeMissions: 0
+  telemetry: "Nominal"

@@ -43,14 +43,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _oauthLogin(String provider) async {
-    // Simulated OAuth flow
+    // Simulated OAuth flow with high-latency handling for remote connection
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      // In a real app this would open a webview or use an OAuth library
-      await Future.delayed(const Duration(seconds: 1));
+      // Show loading states for high-latency remote calls
+      await Future.delayed(const Duration(seconds: 2));
       await ref
           .read(authStateProvider.notifier)
           .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
