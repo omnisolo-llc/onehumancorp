@@ -122,6 +122,11 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		r.mu.RUnlock()
+
+		// If no tenant is provisioned yet in standalone mode, lazily provision the default single-tenant
+		h := r.Provision(defaultTenantOrganization("standalone-single-user"))
+		h.ServeHTTP(w, req)
+		return
 	}
 
 	claims := auth.ClaimsFromContext(req.Context())
