@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-final _dashboardProvider = FutureProvider<DashboardSnapshot>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -16,7 +16,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final snapshot = ref.watch(_dashboardProvider);
+    final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
@@ -39,7 +39,7 @@ class DashboardScreen extends ConsumerWidget {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-        data: (data) => _DashboardContent(data: data),
+        data: (data) => _DashboardContent(data: data, ref: ref),
       ),
     );
   }
@@ -47,10 +47,27 @@ class DashboardScreen extends ConsumerWidget {
 
 class _DashboardContent extends StatelessWidget {
   final DashboardSnapshot data;
-  const _DashboardContent({required this.data});
+  final WidgetRef ref;
+
+  const _DashboardContent({super.key, required this.data, required this.ref});
 
   @override
   Widget build(BuildContext context) {
+    // Collect all unique roles
+    final Set<String> allRoles = {};
+    for (final member in data.organization.members) {
+      if (member.role.isNotEmpty && !member.isHuman) {
+        allRoles.add(member.role);
+      }
+    }
+    for (final agent in data.agents) {
+      if (agent.role.isNotEmpty) {
+        allRoles.add(agent.role);
+      }
+    }
+
+    final roleList = allRoles.toList()..sort();
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -87,7 +104,192 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 32),
+        _SectionTitle('Company Structure'),
+        const SizedBox(height: 8),
+        Text(
+          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: roleList.map((role) {
+            final count = data.agents.where((a) => a.role == role).length;
+            return _RoleScaleCard(
+              role: role,
+              count: count,
+              ref: ref,
+            );
+          }).toList(),
+        ),
       ],
+    );
+  }
+}
+
+class _RoleScaleCard extends StatefulWidget {
+  final String role;
+  final int count;
+  final WidgetRef ref;
+
+  const _RoleScaleCard({
+    required this.role,
+    required this.count,
+    required this.ref,
+  });
+
+  @override
+  State<_RoleScaleCard> createState() => _RoleScaleCardState();
+}
+
+class _RoleScaleCardState extends State<_RoleScaleCard> {
+  bool _isScaling = false;
+
+  Future<void> _scaleTo(int newCount) async {
+    if (_isScaling || newCount < 0) return;
+    setState(() => _isScaling = true);
+    try {
+      final api = widget.ref.read(apiServiceProvider);
+      if (api != null) {
+        await api.scaleAgents(widget.role, newCount);
+        widget.ref.invalidate(dashboardProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to scale ${widget.role}: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isScaling = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+
+    return Semantics(
+      label: 'Scale $formattedRole role',
+      child: SizedBox(
+        width: 300,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(<double>[
+                1.213, -0.213, -0.072, 0, 0,
+                -0.213, 1.213, -0.072, 0, 0,
+                -0.213, -0.213, 1.213, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.outlineVariant.withOpacity(0.5)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            formattedRole,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Semantics(
+                          button: true,
+                          label: 'Decrease $formattedRole count',
+                          child: IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            color: colors.primary,
+                            onPressed: widget.count > 0 && !_isScaling
+                                ? () => _scaleTo(widget.count - 1)
+                                : null,
+                            tooltip: 'Fire Agent',
+                          ),
+                        ),
+                        SizedBox(
+                          width: 24,
+                          child: Center(
+                            child: _isScaling
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colors.primary,
+                                    ),
+                                  )
+                                : Text(
+                                    '${widget.count}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        Semantics(
+                          button: true,
+                          label: 'Increase $formattedRole count',
+                          child: IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            color: colors.primary,
+                            onPressed: !_isScaling
+                                ? () => _scaleTo(widget.count + 1)
+                                : null,
+                            tooltip: 'Hire Agent',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
