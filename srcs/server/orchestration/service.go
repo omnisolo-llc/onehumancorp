@@ -961,7 +961,7 @@ func (h *Hub) Publish(message Message) error {
 	// Structured logging for agent execution traces
 	// Filter out high-frequency "status" events to reduce signal noise.
 	if message.Type != EventStatus {
-		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
+		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, redactPII(message.Content))
 	}
 
 	// Forward to Centrifuge for real-time client delivery (non-blocking).
@@ -1041,7 +1041,7 @@ func (h *Hub) publishRepository(message Message) error {
 
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
 	if message.Type != EventStatus {
-		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, message.Content)
+		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, redactPII(message.Content))
 	}
 
 	if cn != nil {
