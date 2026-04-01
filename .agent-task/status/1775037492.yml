@@ -1,0 +1,11 @@
+type: status
+id: 1775037492279726411
+status: ok
+memory_type: observability
+timestamp: 2026-04-01T09:58:12Z
+health: ok
+observations:
+  - Hybrid Onboarding friction has been resolved.
+  - Created deploy/ohc_hybrid_cli.sh for Cloud, Standalone, and Headless modes.
+  - Fixed runfiles resolution issue in deploy/deploy_dev.sh.
+  - Updated documentation to reflect the changes.
