@@ -61,7 +61,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     //   'assets/logo.svg',
                     //   height: 100,
                     // ),
-                    const Icon(Icons.person, size: 80, color: Colors.indigo),
+                    Icon(
+                      Icons.person,
+                      size: 80,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(height: 24),
                     const Text(
                       'One Human Corp',

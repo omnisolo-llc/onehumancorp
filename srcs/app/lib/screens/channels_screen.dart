@@ -218,7 +218,13 @@ class _EmptyChannels extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+          ),
           const SizedBox(height: 16),
           Text(
             'No channels yet',
@@ -283,8 +289,8 @@ class _ChannelCard extends StatelessWidget {
               label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
               backgroundColor:
                   channel.enabled
-                      ? Colors.green.shade100
-                      : Colors.grey.shade200,
+                      ? Theme.of(context).colorScheme.secondaryContainer
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
             ),
           ],
         ),
