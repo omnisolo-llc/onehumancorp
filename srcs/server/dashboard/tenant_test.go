@@ -157,6 +157,31 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 	}
 }
 
+func TestTenantRegistry_ServeHTTP_StandaloneBypass(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+	reg := newTestRegistry()
+
+	// In standalone mode, the first registered tenant should handle the request
+	// regardless of the JWT claims or lack thereof.
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	rr := httptest.NewRecorder()
+	reg.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("standalone bypass /healthz: want 200, got %d", rr.Code)
+	}
+
+	// Make an unauthenticated request to a protected endpoint.
+	// Since standalone mode bypasses routing by JWT but the tenant's auth middleware
+	// still runs, it should return 401 Unauthorized because the request lacks a token,
+	// but it should be handled by the tenant router rather than failing at the registry level.
+	reqProtected := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	rrProtected := httptest.NewRecorder()
+	reg.ServeHTTP(rrProtected, reqProtected)
+	if rrProtected.Code != http.StatusUnauthorized {
+		t.Fatalf("standalone bypass protected endpoint: want 401, got %d", rrProtected.Code)
+	}
+}
+
 func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 	// Test that unauthenticated requests hit a fresh public handler, not a random tenant
 	reg := newTestRegistry()

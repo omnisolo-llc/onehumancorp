@@ -22,3 +22,11 @@ go_library(
         "@org_modernc_sqlite//:sqlite",
     ],
 )
+
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "db_test",
+    srcs = ["database_integration_test.go"],
+    embed = [":db"],
+)
