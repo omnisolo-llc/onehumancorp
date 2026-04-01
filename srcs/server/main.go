@@ -232,6 +232,12 @@ func run(now time.Time, listen listenFunc) error {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
+					// Audit missions that are stuck due to network partitions
+					if err := sipdb.AuditStaleMissions(ctx, 1*time.Hour); err != nil {
+						slog.Error("failed to audit stale agent missions", "error", err)
+					} else {
+						slog.Info("successfully audited stale agent missions")
+					}
 					// Prune missions older than 7 days or marked COMPLETED
 					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
 						slog.Error("failed to prune stale agent missions", "error", err)

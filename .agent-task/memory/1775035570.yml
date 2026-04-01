@@ -1,0 +1,13 @@
+type: memory
+metadata:
+  role: "Principal Interoperability Engineer & Link (L7)"
+  timestamp: 1775035570
+observations:
+  - "agent_missions schema required a source_mode field to track origin environments (cloud vs standalone)."
+  - "Network partitions between local and cloud left orphaned tasks stuck in PENDING state indefinitely."
+actions_taken:
+  - "Modified DelegateMission in sip.go to read OHC_SOURCE_MODE and inject it into agent_missions as source_mode."
+  - "Added AuditStaleMissions to sip.go to actively scan for and fail PENDING standalone tasks that are stale."
+  - "Integrated AuditStaleMissions into the main server loop alongside PruneStaleMissions."
+  - "Wrote comprehensive tests in sip_test.go ensuring priority, cloud vs standalone scoping, and correct status updates."
+resolution: "The OHC-SIP architecture is now robustly mapped for hybrid execution, with resilient local-to-cloud synchronization and degradation logic for offline partitions."

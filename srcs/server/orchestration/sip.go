@@ -91,6 +91,7 @@ func initializeTables(db *sql.DB) error {
 			id TEXT PRIMARY KEY,
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
+			source_mode TEXT DEFAULT 'cloud',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
@@ -152,6 +153,19 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 			"INSERT INTO swarm_memory (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
 			key, value,
 		)
+		return err
+	})
+}
+
+// AuditStaleMissions identifies pending missions that may have been abandoned due to network partitions between Local and Cloud, and marks them as FAILED.
+// Accepts parameters: ctx context.Context, ageThreshold time.Duration.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Updates records in the agent_missions table.
+func (s *SIPDB) AuditStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
+	return withRetry(ctx, func() error {
+		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
+		_, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND source_mode = 'standalone' AND created_at < ?", thresholdTime)
 		return err
 	})
 }
@@ -264,6 +278,12 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		}
 	}
 
+	// Read source_mode from environment to determine if it's standalone mode
+	sourceMode := os.Getenv("OHC_SOURCE_MODE")
+	if sourceMode == "" {
+		sourceMode = "cloud"
+	}
+
 	wrapper := map[string]interface{}{
 		"role": role,
 		"task": task,
@@ -271,8 +291,8 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	taskBytes, _ := json.Marshal(wrapper)
 	return withRetry(ctx, func() error {
 		_, err := s.db.ExecContext(ctx,
-			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
-			missionID, string(taskBytes),
+			"INSERT INTO agent_missions (id, status, payload, source_mode, created_at) VALUES (?, 'PENDING', ?, ?, CURRENT_TIMESTAMP)",
+			missionID, string(taskBytes), sourceMode,
 		)
 		return err
 	})

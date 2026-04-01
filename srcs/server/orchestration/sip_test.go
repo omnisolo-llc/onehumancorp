@@ -249,6 +249,80 @@ func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
 	}
 }
 
+func TestSIPDB_AuditStaleMissions(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// 1. Pending and standalone and old (should be marked FAILED)
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, source_mode, created_at) VALUES ('1', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', 'standalone', datetime('now', '-2 hours'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Pending and standalone but new (should NOT be marked FAILED)
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, source_mode, created_at) VALUES ('2', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', 'standalone', datetime('now'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 3. Pending and cloud and old (should NOT be marked FAILED)
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload, source_mode, created_at) VALUES ('3', 'PENDING', '{\"role\":\"ROLE\",\"task\":\"task\"}', 'cloud', datetime('now', '-2 hours'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Audit missions older than 1 hour
+	err = db.AuditStaleMissions(ctx, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to audit stale missions: %v", err)
+	}
+
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = '1'").Scan(&status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "FAILED" {
+		t.Fatalf("Expected mission 1 to be FAILED, got %s", status)
+	}
+
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = '2'").Scan(&status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "PENDING" {
+		t.Fatalf("Expected mission 2 to remain PENDING, got %s", status)
+	}
+
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = '3'").Scan(&status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "PENDING" {
+		t.Fatalf("Expected mission 3 to remain PENDING, got %s", status)
+	}
+}
+
+func TestSIPDB_AuditStaleMissions_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	err = db.AuditStaleMissions(context.Background(), 24*time.Hour)
+	if err == nil {
+		t.Fatal("Expected error when auditing on closed DB")
+	}
+}
+
 func TestSIPDB_CompleteMission_ExecErrorAgain(t *testing.T) {
 	// Let's create a test that calls CompleteMission on a closed DB
 	dbPath := filepath.Join(t.TempDir(), "test.db")
