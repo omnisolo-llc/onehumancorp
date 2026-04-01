@@ -168,6 +168,19 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 	})
 }
 
+// UpdateMissionRaw updates a mission dynamically based on raw query.
+func (s *SIPDB) UpdateMissionRaw(ctx context.Context, query string, args ...any) (int64, error) {
+	var rows int64
+	err := withRetry(ctx, func() error {
+		res, err := s.db.ExecContext(ctx, query, args...)
+		if err == nil {
+			rows, _ = res.RowsAffected()
+		}
+		return err
+	})
+	return rows, err
+}
+
 // GetPendingMissions proactively seeks tasks assigned to the role.
 // Accepts parameters: s *SIPDB (No Constraints).
 // Returns GetPendingMissions(ctx context.Context, role string) ([]Message, error).
@@ -700,15 +713,27 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+
+		var parsed map[string]interface{}
+		var payloadToSync string
+		if err := json.Unmarshal([]byte(m.payload), &parsed); err == nil {
+			delete(parsed, "rag_context")
+			sanitized, _ := json.Marshal(parsed)
+			payloadToSync = string(sanitized)
+		} else {
+			payloadToSync = m.payload
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadToSync))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr

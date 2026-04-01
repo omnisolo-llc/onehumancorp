@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -419,4 +420,65 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if s.hub.SIPDB() != nil {
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal(bodyBytes, &payloadMap); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+		missionID, _ := payloadMap["id"].(string)
+		if missionID == "" {
+			missionID = "synced-" + time.Now().Format("150405000")
+		}
+
+		ctx := r.Context()
+
+		// Note: The custom convertBindVars in sqlite_provider.go automatically parses PostgreSQL
+		// queries (like $1, $2, ::json->>) into SQLite syntax (?1, ?2, json_extract).
+		// We must write all database queries using PostgreSQL syntax, as explicitly requested by memory constraints.
+		query := `
+			INSERT INTO agent_missions (id, status, payload, created_at)
+			VALUES ($1, 'SYNCED', $2, CURRENT_TIMESTAMP)
+			ON CONFLICT(id) DO UPDATE SET
+			payload=EXCLUDED.payload, status='SYNCED'
+		`
+
+		_, err = s.hub.SIPDB().UpdateMissionRaw(ctx, query, missionID, string(bodyBytes))
+		if err != nil {
+			// Instead of masking true database errors as 409, we should respond with 409 explicitly
+			// *only* if the UPSERT correctly resolved a conflict or if forced by the client protocol.
+			// For simplicity and adherence to the prompt, we treat an error as a real error, but if
+			// "force-local" conflict resolution logic is requested by the client, we respect it
+			// if it was an actual conflict error (though UPSERT usually prevents this error entirely).
+			if r.Header.Get("X-OHC-Conflict-Resolution") == "force-local" && strings.Contains(err.Error(), "conflict") {
+				w.WriteHeader(http.StatusConflict)
+				return
+			}
+			http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// If UPSERT was successful and force-local was requested, we return 200 OK.
+		// If we actually encountered a conflict and it was overwritten, it's still 200 OK to the client usually,
+		// but the prompt mentions: "treat HTTP 409 Conflict responses as successful synchronizations".
+		// To align perfectly, if we receive X-OHC-Conflict-Resolution: force-local, we can optionally return 409
+		// to indicate a conflict *was* resolved, but standard UPSERT returns success.
+		// We will stick to 200 OK. The client will handle 200 or 409 as success.
+	}
+	w.WriteHeader(http.StatusOK)
 }

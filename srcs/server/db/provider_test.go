@@ -48,5 +48,5 @@ func TestStandaloneFallback(t *testing.T) {
 	}
 
 	// Clean up swarm.db
-	os.RemoveAll(".agent-task")
+	os.Remove(".agent-task/swarm.db")
 }
