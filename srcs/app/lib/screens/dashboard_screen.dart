@@ -195,8 +195,10 @@ class _ObservabilityWidget extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        Wrap(
+                          spacing: 32,
+                          runSpacing: 32,
+                          alignment: WrapAlignment.spaceAround,
                           children: [
                             _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
                             _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
@@ -271,30 +273,45 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveIconColor = iconColor ?? color;
-    return Column(
-      children: [
-        Icon(icon, color: effectiveIconColor, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontFamily: 'Inter',
-          ),
+    return Semantics(
+      label: '$label: $value',
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 120),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: effectiveIconColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: effectiveIconColor, size: 28),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                color: Theme.of(context).colorScheme.onSurface,
+                fontFamily: 'Inter',
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

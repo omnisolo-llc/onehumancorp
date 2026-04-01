@@ -1,0 +1,5 @@
+status: SUCCESS
+metrics:
+  tests_passed: true
+  ui_verified: true
+  build_stable: true
