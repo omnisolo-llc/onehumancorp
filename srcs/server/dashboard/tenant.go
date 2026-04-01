@@ -12,6 +12,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -113,6 +114,18 @@ func (r *TenantRegistry) handler(orgID string) http.Handler {
 // Produces no errors.
 // Has no side effects.
 func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+	if isStandalone {
+		// Memory guideline: When OHC_STANDALONE=true is set, the TenantRegistry
+		// bypasses strict multi-tenant JWT routing and directly serves the single locally provisioned tenant.
+		h := r.handler("standalone")
+		if h == nil {
+			h = r.Provision(defaultTenantOrganization("standalone"))
+		}
+		h.ServeHTTP(w, req)
+		return
+	}
+
 	claims := auth.ClaimsFromContext(req.Context())
 
 	if claims != nil && claims.OrganizationID != "" {

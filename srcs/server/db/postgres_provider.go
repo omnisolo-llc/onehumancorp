@@ -54,6 +54,10 @@ func (p *PgProvider) Begin(ctx context.Context) (Tx, error) {
 	return &PgTx{tx: tx}, nil
 }
 
+func (p *PgProvider) IsSQLite() bool {
+	return false
+}
+
 func (p *PgProvider) Close() {
 	p.pool.Close()
 }

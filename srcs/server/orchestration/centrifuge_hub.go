@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/centrifugal/centrifuge"
 )
@@ -50,6 +51,15 @@ var createNode = func(cfg centrifuge.Config) (Node, error) {
 //   - "agent:" prefix    – client may only subscribe to its own agent channel
 func NewCentrifugeNode() (*CentrifugeNode, error) {
 	cfg := centrifuge.Config{}
+
+	// Memory guideline: fall back to Centrifuge local memory broker if REDIS_URL is unset in Standalone Mode
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+	redisURL := os.Getenv("REDIS_URL")
+	if isStandalone && redisURL == "" {
+		slog.Info("Standalone Mode: REDIS_URL is unset, falling back to local memory broker for Centrifuge")
+		// centrifuge.Config{} without explicit Redis configuration defaults to the Memory Engine
+	}
+
 	node, err := createNode(cfg)
 	if err != nil {
 		return nil, err

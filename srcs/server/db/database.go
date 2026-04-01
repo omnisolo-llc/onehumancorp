@@ -32,18 +32,22 @@ type DB struct {
 // Otherwise it assumes PostgreSQL.
 func New(ctx context.Context) (*DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+
+	if (dsn == "" && isStandalone) || strings.HasPrefix(dsn, "sqlite://") {
 		var dbPath string
 		if dsn == "" {
-			homeDir, err := os.UserHomeDir()
+			// Memory guideline: fall back to SQLite (.agent-task/swarm.db) if DATABASE_URL is unset and OHC_STANDALONE=true
+			// Also ensure target directory is explicitly created
+			workDir, err := os.Getwd()
 			if err != nil {
-				return nil, fmt.Errorf("db: find home dir: %w", err)
+				return nil, fmt.Errorf("db: get working directory: %w", err)
 			}
-			openclawDir := filepath.Join(homeDir, ".openclaw")
-			if err := os.MkdirAll(openclawDir, 0755); err != nil {
-				return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
+			targetDir := filepath.Join(workDir, ".agent-task")
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				return nil, fmt.Errorf("db: create .agent-task dir: %w", err)
 			}
-			dbPath = filepath.Join(openclawDir, "ohc_state.db")
+			dbPath = filepath.Join(targetDir, "swarm.db")
 		} else {
 			dbPath = strings.TrimPrefix(dsn, "sqlite://")
 		}
