@@ -4,9 +4,10 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
-	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func seededScenario(name string, now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
