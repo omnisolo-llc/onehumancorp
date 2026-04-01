@@ -721,7 +721,7 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 			}
 		}
 
-		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
 		return meeting
 	}
 
@@ -736,7 +736,7 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 		h.agents[participant] = agent
 	}
 
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meeting
 }
 
@@ -764,7 +764,7 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 			}
 		}
 
-		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
 		return meeting
 	}
 
@@ -779,7 +779,7 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 		h.agents[participant] = agent
 	}
 
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meeting
 }
 
@@ -1195,7 +1195,7 @@ func (h *Hub) Meeting(id string) (MeetingRoom, bool) {
 			slog.Error("failed to load meeting from repository", "meeting_id", id, "error", err)
 			return MeetingRoom{}, false
 		}
-		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
 		return meeting, ok
 	}
 
@@ -1203,7 +1203,7 @@ func (h *Hub) Meeting(id string) (MeetingRoom, bool) {
 	defer h.mu.RUnlock()
 
 	meeting, ok := h.meetings[id]
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meeting, ok
 }
 
@@ -1220,7 +1220,7 @@ func (h *Hub) Meetings() []MeetingRoom {
 			slog.Error("failed to list meetings from repository", "error", err)
 			return nil
 		}
-		telemetry.RecordMeetingEvent(context.Background(), "opened")
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
 		return meetings
 	}
 
@@ -1232,7 +1232,7 @@ func (h *Hub) Meetings() []MeetingRoom {
 		meetings = append(meetings, meeting)
 	}
 
-	telemetry.RecordMeetingEvent(context.Background(), "opened")
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
 	return meetings
 }
 
