@@ -152,7 +152,7 @@ start_daemon() {
     HOME="${HOME}" \
     PORT="${port}" \
     GRPC_PORT="${GRPC_PORT:-0}" \
-    nohup "${SERVER_BIN}" >>"${LOG_FILE}" 2>&1 &
+    nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
 
@@ -175,7 +175,10 @@ stop_daemon() {
   local attempt
   pid="$(cat "${PID_FILE}")"
 
+  # Kill the process tree (the wrapper and its children) to prevent runaway processes
+  pkill -P "${pid}" 2>/dev/null || true
   kill "${pid}" 2>/dev/null || true
+
   for attempt in $(seq 1 20); do
     if ! kill -0 "${pid}" 2>/dev/null; then
       rm -f "${PID_FILE}"
@@ -185,6 +188,7 @@ stop_daemon() {
     sleep 0.25
   done
 
+  pkill -9 -P "${pid}" 2>/dev/null || true
   kill -9 "${pid}" 2>/dev/null || true
   rm -f "${PID_FILE}"
   echo "ohc stopped"

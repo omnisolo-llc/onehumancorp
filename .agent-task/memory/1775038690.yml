@@ -1,0 +1,13 @@
+type: memory
+metadata:
+  role: "Principal Systems Engineer & Cleaner (L7)"
+  timestamp: 1775038690
+observations:
+  - "The 'fast-and-loose' zero-allocation parsing in auth_interceptor.go traded safety for speed and contained boundary escape vulnerabilities."
+  - "The local desktop wrapper standalone_ohc.sh appended to its log indefinitely, creating bloated files, and left orphan processes hanging."
+actions_taken:
+  - "Replaced zero-allocation parsing in auth_interceptor.go with strings.Split-based strict segment parsing."
+  - "Changed >> to > for LOG_FILE in standalone_ohc.sh to prevent runaway tmp logs."
+  - "Added pkill -P command to correctly shut down wrapper child processes."
+  - "Pruned obsolete mission YAML files from .agent-task/missions/."
+resolution: "Cleaned up and hardened the codebase for Hybrid Mode, leaving Zero WIP. Tests passed successfully."
