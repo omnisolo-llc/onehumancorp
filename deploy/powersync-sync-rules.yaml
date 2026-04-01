@@ -1,0 +1,5 @@
+bucket_data:
+  global:
+    data:
+      - SELECT * FROM agents
+      - SELECT * FROM agent_inbox

@@ -156,6 +156,23 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		_, isSqlite := p.Provider.(*SqliteProvider)
 		if isSqlite {
+			// Skip Postgres-only migrations, like PowerSync publication creation
+			if strings.Contains(sqlStr, "CREATE PUBLICATION powersync FOR ALL TABLES;") {
+				slog.Info("db: skipping postgres-specific migration on sqlite", "file", f)
+
+				// Just record it so we don't try it again
+				tx, err := p.Begin(ctx)
+				if err == nil {
+					_, err2 := tx.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES (?)", f)
+					if err2 == nil {
+						_ = tx.Commit(ctx)
+					} else {
+						_ = tx.Rollback(ctx)
+					}
+				}
+				continue
+			}
+
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
 			// Bigserial -> INTEGER PRIMARY KEY AUTOINCREMENT
 			// TIMESTAMPTZ -> DATETIME

@@ -559,6 +559,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/users/", server.authHandlers.HandleUser)
 	// Role management
 	mux.HandleFunc("/api/roles", server.authHandlers.HandleRoles)
+
+	// PowerSync auth and JWKS endpoint
+	mux.HandleFunc("/api/powersync/token", server.authHandlers.HandlePowerSyncToken)
+	mux.HandleFunc("/.well-known/jwks.json", server.authHandlers.HandleJWKS)
+
 	// Health / readiness probes
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -1,16 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/router.dart';
+import 'package:ohc_app/services/powersync_service.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: OhcApp()));
 }
 
-class OhcApp extends ConsumerWidget {
+class OhcApp extends ConsumerStatefulWidget {
   const OhcApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OhcApp> createState() => _OhcAppState();
+}
+
+class _OhcAppState extends ConsumerState<OhcApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize PowerSync db on startup
+    ref.read(powerSyncServiceProvider).db;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'One Human Corp',
