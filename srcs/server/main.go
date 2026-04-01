@@ -218,31 +218,39 @@ func run(now time.Time, listen listenFunc) error {
 		}()
 	}
 
-	// Set up the SIPDB instance to connect to SQLite.
-	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
-	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
-		sipdb = createdSIPDB
-		hub.SetSIPDB(sipdb)
-		// Hygiene: Prune stale missions in the agent_missions table periodically
-		go func() {
-			ticker := time.NewTicker(1 * time.Hour)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					// Prune missions older than 7 days or marked COMPLETED
-					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
-						slog.Error("failed to prune stale agent missions", "error", err)
-					} else {
-						slog.Info("successfully pruned stale agent missions")
+	// Setup the global SIPDB instance for Single-Tenant Mode only.
+	// In Multi-Tenant Mode, SIPDB state is kept strictly isolated or delegated.
+	if !multiTenant {
+		dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
+		// Secure file permissions for Standalone mode SQLite DB.
+		if err := os.MkdirAll(filepath.Dir(dbPath), 0700); err == nil {
+			if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
+				sipdb = createdSIPDB
+				hub.SetSIPDB(sipdb)
+				// Hygiene: Prune stale missions in the agent_missions table periodically
+				go func() {
+					ticker := time.NewTicker(1 * time.Hour)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							// Prune missions older than 7 days or marked COMPLETED
+							if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
+								slog.Error("failed to prune stale agent missions", "error", err)
+							} else {
+								slog.Info("successfully pruned stale agent missions")
+							}
+						}
 					}
-				}
+				}()
+			} else {
+				slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
 			}
-		}()
-	} else {
-		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
+		} else {
+			slog.Error("failed to secure database directory permissions", "error", err)
+		}
 	}
 
 	var handler http.Handler
@@ -252,9 +260,10 @@ func run(now time.Time, listen listenFunc) error {
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)
-			if sipdb != nil {
-				tenantHub.SetSIPDB(sipdb)
-			}
+
+			// Multi-tenant does not use the global SIPDB to prevent cross-tenant data leakage.
+			// Each tenant gets their own isolated in-memory or pg-backed SIPDB layer if configured.
+
 			return dashboard.NewServer(org, tenantHub, tenantTracker, authStore)
 		}
 

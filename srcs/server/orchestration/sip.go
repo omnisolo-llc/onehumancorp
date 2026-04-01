@@ -63,6 +63,11 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 
 	dsn := dbPath
 	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+		// Ensure file permissions are secure before opening
+		if err := os.MkdirAll(filepath.Dir(dbPath), 0700); err != nil {
+			return nil, err
+		}
+
 		if !strings.Contains(dsn, "?") {
 			dsn += "?"
 		} else {
@@ -75,6 +80,10 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 
 	if err := initializeTables(db); err != nil {
 		return nil, err
+	}
+
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+		os.Chmod(dbPath, 0600)
 	}
 
 	return &SIPDB{db: db, groundingOnce: &sync.Once{}}, nil

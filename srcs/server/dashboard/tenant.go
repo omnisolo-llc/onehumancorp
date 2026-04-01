@@ -12,6 +12,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -134,21 +135,40 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Unauthenticated request — fall back to the first registered tenant so
-	// that public routes (login, healthz, readyz, metrics, /api/auth/login)
-	// are served correctly before the caller has a token.
-	r.mu.RLock()
-	var fallback http.Handler
-	for _, h := range r.tenants {
-		fallback = h
-		break
-	}
-	r.mu.RUnlock()
-	if fallback != nil {
-		fallback.ServeHTTP(w, req)
+	// Unauthenticated request — strictly only allow known public routes
+	// to fall back to the first registered tenant to prevent tenant leakage.
+	// If the route is not public, return 401 Unauthorized.
+	if isPublicRoute(req.URL.Path) {
+		r.mu.RLock()
+		var fallback http.Handler
+		for _, h := range r.tenants {
+			fallback = h
+			break
+		}
+		r.mu.RUnlock()
+		if fallback != nil {
+			fallback.ServeHTTP(w, req)
+			return
+		}
+		http.Error(w, `{"error":"no tenants registered"}`, http.StatusServiceUnavailable)
 		return
 	}
-	http.Error(w, `{"error":"no tenants registered"}`, http.StatusServiceUnavailable)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
+}
+
+func isPublicRoute(path string) bool {
+	switch path {
+	case "/api/auth/login", "/healthz", "/readyz", "/metrics", "/":
+		return true
+	}
+	// Also allow static assets for the UI
+	if len(path) > 1 && !strings.HasPrefix(path, "/api/") {
+		return true
+	}
+	return false
 }
 
 func defaultTenantOrganization(orgID string) domain.Organization {
