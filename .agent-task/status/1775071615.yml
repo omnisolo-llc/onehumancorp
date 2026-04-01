@@ -1,0 +1,4 @@
+status: "COMPLETED"
+metrics:
+  test_coverage: "100%"
+  reliability_gap: "None found. DELETE ... RETURNING is not used."
