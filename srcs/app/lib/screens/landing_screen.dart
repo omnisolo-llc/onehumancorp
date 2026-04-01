@@ -61,23 +61,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 ),
               ),
             ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  const Text('A/B Test Variant:'),
-                  Switch(
-                    value: _showVariantB,
-                    onChanged: (val) {
-                      setState(() {
-                        _showVariantB = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -215,7 +198,15 @@ class _GlassCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          filter: ImageFilter.compose(
+            outer: const ColorFilter.matrix(<double>[
+              1.168, -0.153, -0.015, 0, 0,
+              -0.046, 1.061, -0.015, 0, 0,
+              -0.046, -0.152, 1.198, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(

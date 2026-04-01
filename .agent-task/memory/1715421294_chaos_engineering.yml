@@ -1,0 +1,6 @@
+type: memory
+title: "Hybrid Database Chaos Engineering Guidelines"
+insights:
+  - "Postgres transaction retries (pgWithRetry) function identically to SQLite's withRetry, correctly handling serialization/deadlock strings ('database is locked', '40001')."
+  - "Flutter Web requires ImageFilter.compose with matrix multipliers over simple BackdropFilters to render True Glassmorphism accurately across Chromium browsers."
+  - "Always test standalone vs cloud endpoints explicitly using mock interfaces rather than strictly hardcoding driver logic checks (e.g., db.IsSQLite() is preferred over string matching)."
