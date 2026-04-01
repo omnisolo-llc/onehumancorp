@@ -126,7 +126,6 @@ class _AgentCard extends StatelessWidget {
             : colorScheme.onSurfaceVariant;
 
     return Semantics(
-      excludeSemantics: true,
       label:
           'Agent ${agent.name}, Role: ${agent.role}, Status: ${agent.status}',
       button: true,
