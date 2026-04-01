@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -100,6 +100,10 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.Params) == 0 {
 		req.Params = []byte("{}")
+	}
+	if exists, belongs := s.agentOrgStatus(req.AgentID); exists && !belongs {
+		http.Error(w, "agent does not belong to this organization", http.StatusForbidden)
+		return
 	}
 
 	if err := interop.ValidateSPIFFEID(req.SPIFFEID); err != nil {

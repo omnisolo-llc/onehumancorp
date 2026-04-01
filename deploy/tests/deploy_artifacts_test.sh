@@ -20,25 +20,23 @@ done
 
 # Verify OCI bazel rules are present (Dockerfiles replaced by rules_oci).
 grep -q "oci_image" "$build_file"
-grep -q "backend_image" "$build_file"
+grep -q "server_image" "$build_file"
 grep -q "default_agent_image" "$build_file"
-grep -q "frontend_image" "$build_file"
 grep -q "distroless" "$build_file"
 grep -q "internal-default-agent:bazel" "$build_file"
 
-# Verify docker-compose uses the Bazel OCI image tags.
-grep -q "backend:" "$compose_file"
-grep -q "frontend:" "$compose_file"
-grep -q "BACKEND_URL" "$compose_file"
-grep -q "mono-backend:bazel" "$compose_file"
-grep -q "mono-frontend:bazel" "$compose_file"
+# Verify docker-compose uses the consolidated server image.
+grep -q "server:" "$compose_file"
+grep -q "onehumancorp/server:latest" "$compose_file"
+! grep -q "onehumancorp/ui" "$compose_file"
+! grep -q "^  ui:" "$compose_file"
 
 grep -q "backend" "$values_file"
-grep -q "frontend" "$values_file"
 grep -q "redis" "$values_file"
 
 grep -q "Deployment" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
-grep -q "Deployment" "${root}/deploy/helm/ohc/templates/frontend-deployment.yaml"
+test ! -e "${root}/deploy/helm/ohc/templates/frontend-deployment.yaml"
+test ! -e "${root}/deploy/helm/ohc/templates/frontend-service.yaml"
 
 # Verify health probes are wired in the backend deployment template.
 grep -q "livenessProbe" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"

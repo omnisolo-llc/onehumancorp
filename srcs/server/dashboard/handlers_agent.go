@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/agents"
 )
 
 // Handles hiring a new agent.
@@ -94,6 +94,10 @@ func (s *Server) handleFireAgent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agentId is required", http.StatusBadRequest)
 		return
 	}
+	if exists, belongs := s.agentOrgStatus(req.AgentID); exists && !belongs {
+		http.Error(w, "agent does not belong to this organization", http.StatusForbidden)
+		return
+	}
 
 	s.mu.Lock()
 	s.hub.FireAgent(req.AgentID)
@@ -123,6 +127,18 @@ func (s *Server) handleDelegateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.FromAgentID == "" || req.ToAgentID == "" || req.Content == "" {
 		http.Error(w, "fromAgentId, toAgentId, and content are required", http.StatusBadRequest)
+		return
+	}
+	if exists, belongs := s.agentOrgStatus(req.FromAgentID); exists && !belongs {
+		http.Error(w, "sender agent does not belong to this organization", http.StatusForbidden)
+		return
+	}
+	if exists, belongs := s.agentOrgStatus(req.ToAgentID); exists && !belongs {
+		http.Error(w, "recipient agent does not belong to this organization", http.StatusForbidden)
+		return
+	}
+	if exists, belongs := s.meetingOrgStatus(req.MeetingID); exists && !belongs {
+		http.Error(w, "meeting does not belong to this organization", http.StatusForbidden)
 		return
 	}
 
@@ -203,7 +219,7 @@ func (s *Server) handleAgentProviderAuth(w http.ResponseWriter, r *http.Request)
 // Has no side effects.
 func (s *Server) handleIdentities(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
-	agents := s.hub.Agents()
+	agents := s.orgAgentsLocked()
 	org := s.org
 	s.mu.RUnlock()
 
@@ -314,8 +330,8 @@ func (s *Server) handleSnapshotCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
-	meetings := s.hub.Meetings()
-	agents := s.hub.Agents()
+	meetings := s.orgMeetingsLocked()
+	agents := s.orgAgentsLocked()
 	msgCount := 0
 	for _, m := range meetings {
 		msgCount += len(m.Transcript)

@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 // loginForTest returns a JWT token for the default admin user by calling the login endpoint.
@@ -156,6 +156,27 @@ func TestNewServerDoesNotBootstrapInternalDefaultAgentWhenAgentsExist(t *testing
 	}
 }
 
+func TestNewServerHeadlessDisablesFrontendRoutes(t *testing.T) {
+	t.Setenv("OHC_HEADLESS", "true")
+
+	org := domain.NewSoftwareCompany("org-headless", "Headless Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+
+	server := httptest.NewServer(NewServer(org, hub, tracker))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/")
+	if err != nil {
+		t.Fatalf("GET / returned error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 when headless mode is enabled, got %d", resp.StatusCode)
+	}
+}
+
 func TestServerServesAPIs(t *testing.T) {
 	_, server, token := newTestServer(t)
 	client := authedClient(token)
@@ -196,6 +217,36 @@ func TestHandleDashboardReturnsSnapshot(t *testing.T) {
 	}
 	if payload["costs"] == nil {
 		t.Fatalf("expected costs in snapshot payload")
+	}
+}
+
+func TestHandleDashboardFiltersOtherOrganizationState(t *testing.T) {
+	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
+	hub.RegisterAgent(orchestration.Agent{ID: "other-1", Name: "Other", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-2"})
+	hub.OpenMeeting("kickoff", []string{"pm-1"})
+	hub.OpenMeeting("other-room", []string{"other-1"})
+
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry()}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	app.handleDashboard(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 from dashboard, got %d", rec.Code)
+	}
+
+	var snap dashboardSnapshot
+	if err := json.NewDecoder(rec.Body).Decode(&snap); err != nil {
+		t.Fatalf("decode dashboard snapshot: %v", err)
+	}
+	if len(snap.Agents) != 1 || snap.Agents[0].ID != "pm-1" {
+		t.Fatalf("expected only org-1 agents in snapshot, got %+v", snap.Agents)
+	}
+	if len(snap.Meetings) != 1 || snap.Meetings[0].ID != "kickoff" {
+		t.Fatalf("expected only org-1 meetings in snapshot, got %+v", snap.Meetings)
 	}
 }
 
@@ -637,6 +688,25 @@ func TestHandleFireAgentRejectsMissingAgentID(t *testing.T) {
 	app.handleFireAgent(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for missing agentId, got %d", rec.Code)
+	}
+}
+
+func TestHandleFireAgentRejectsCrossOrganizationAgent(t *testing.T) {
+	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	hub.RegisterAgent(orchestration.Agent{ID: "foreign-1", Name: "Foreign", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-2"})
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry()}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/agents/fire", bytes.NewBufferString(`{"agentId":"foreign-1"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	app.handleFireAgent(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for cross-organization agent, got %d", rec.Code)
+	}
+	if _, ok := hub.Agent("foreign-1"); !ok {
+		t.Fatalf("expected foreign agent to remain after forbidden fire request")
 	}
 }
 

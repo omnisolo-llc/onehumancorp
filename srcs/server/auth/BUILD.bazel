@@ -7,11 +7,14 @@ go_library(
         "jwt.go",
         "middleware.go",
         "oidc.go",
+        "postgres_store.go",
+        "repository.go",
         "store.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/auth",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_jackc_pgx_v5//pgxpool",
         "@org_golang_x_crypto//bcrypt",
     ],
 )
