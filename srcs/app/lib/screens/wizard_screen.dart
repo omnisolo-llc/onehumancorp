@@ -145,9 +145,9 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         ref.invalidate(wizardStatusProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Configuration saved successfully!'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: const Text('Configuration saved successfully!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
         }
@@ -173,9 +173,12 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
             data:
                 (s) =>
                     s.configured
-                        ? const Padding(
-                          padding: EdgeInsets.only(right: 16),
-                          child: Icon(Icons.check_circle, color: Colors.green),
+                        ? Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         )
                         : const SizedBox.shrink(),
             orElse: () => const SizedBox.shrink(),
@@ -219,7 +222,10 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
             const SizedBox(height: 16),
 
@@ -288,23 +294,28 @@ class _StepIndicator extends StatelessWidget {
                   radius: 16,
                   backgroundColor:
                       done
-                          ? Colors.green
-                          : active
                           ? Theme.of(context).colorScheme.primary
+                          : active
+                          ? Theme.of(context).colorScheme.secondary
                           : Theme.of(
                             context,
                           ).colorScheme.surfaceContainerHighest,
                   child:
                       done
-                          ? const Icon(
+                          ? Icon(
                             Icons.check,
                             size: 16,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           )
                           : Text(
                             '${i + 1}',
                             style: TextStyle(
-                              color: active ? Colors.white : null,
+                              color:
+                                  active
+                                      ? Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondary
+                                      : null,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -355,14 +366,17 @@ class _StatusBanner extends StatelessWidget {
       return Semantics(
         label: 'Platform is fully configured',
         child: buildGlassCard(
-          color: Colors.green,
-          child: const ListTile(
-            leading: Icon(Icons.check_circle, color: Colors.green),
-            title: Text(
+          color: Theme.of(context).colorScheme.primary,
+          child: ListTile(
+            leading: Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text(
               'Platform is fully configured',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text('All wizard steps have been completed.'),
+            subtitle: const Text('All wizard steps have been completed.'),
           ),
         ),
       );
@@ -374,9 +388,12 @@ class _StatusBanner extends StatelessWidget {
     return Semantics(
       label: 'Configuration incomplete. Remaining: ${missing.join(', ')}',
       child: buildGlassCard(
-        color: Colors.orange,
+        color: Theme.of(context).colorScheme.error,
         child: ListTile(
-          leading: const Icon(Icons.warning_amber, color: Colors.orange),
+          leading: Icon(
+            Icons.warning_amber,
+            color: Theme.of(context).colorScheme.error,
+          ),
           title: const Text(
             'Configuration incomplete',
             style: TextStyle(fontWeight: FontWeight.bold),
