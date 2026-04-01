@@ -81,7 +81,7 @@ class ApiService {
 
   Future<void> scaleAgents(String role, int count) async {
     final res = await _client.post(
-      Uri.parse('$baseUrl/api/scale'),
+      Uri.parse('$baseUrl/api/v1/scale'),
       headers: _headers,
       body: jsonEncode({'role': role, 'count': count}),
     );
