@@ -1,0 +1,3 @@
+type: mission
+target: Standalone Mode Telemetry Aggregator
+description: Implement a localized metric buffer for Standalone Mode that aggregates agent telemetry and syncs with the OHC-SIP Cloud DB when an active connection is established. This will ensure holistic Swarm Intelligence observability without violating local-first operational capabilities.
