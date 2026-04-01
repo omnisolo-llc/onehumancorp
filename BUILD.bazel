@@ -1,6 +1,5 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 npm_link_all_packages(name = "node_modules")
@@ -72,8 +71,8 @@ sh_binary(
     name = "dev",
     srcs = [":gen_dev_sh"],
     data = [
-        "//srcs/server:ohc",
         "//srcs/app:srcs",
+        "//srcs/server:ohc",
     ],
     tags = ["manual"],
 )
@@ -116,17 +115,4 @@ alias(
 alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
-)
-
-go_library(
-    name = "mono_lib",
-    srcs = ["patch.go"],
-    importpath = "github.com/onehumancorp/mono",
-    visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "mono",
-    embed = [":mono_lib"],
-    visibility = ["//visibility:public"],
 )
