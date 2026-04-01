@@ -58,7 +58,13 @@ class _EmptyProviders extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.psychology, size: 64, color: Colors.grey),
+          Icon(
+            Icons.psychology,
+            size: 64,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+          ),
           const SizedBox(height: 16),
           Text(
             'No AI providers configured',
@@ -113,7 +119,10 @@ class _ProviderCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.psychology, color: Colors.indigo),
+                Icon(
+                  Icons.psychology,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   provider.name,
@@ -126,7 +135,8 @@ class _ProviderCard extends StatelessWidget {
                 if (provider.isOfficial)
                   Chip(
                     label: const Text('Official'),
-                    backgroundColor: Colors.indigo.shade100,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                   ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),

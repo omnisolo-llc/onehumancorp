@@ -84,9 +84,13 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Provision additional specialized agents to handle peak demand or complex sub-tasks.',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -151,10 +155,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                           const Divider(height: 32),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.info_outline,
                                 size: 16,
-                                color: Colors.blue,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
                               const Text(
@@ -185,12 +189,13 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                       onPressed: _isProvisioning ? null : _handleScale,
                       icon:
                           _isProvisioning
-                              ? const SizedBox(
+                              ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
                                 ),
                               )
                               : const Icon(Icons.rocket_launch),
@@ -254,9 +259,9 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                               fontSize: 12,
                               color:
                                   isError
-                                      ? Colors.red
+                                      ? Theme.of(context).colorScheme.error
                                       : isSuccess
-                                      ? Colors.green
+                                      ? Theme.of(context).colorScheme.secondary
                                       : colors.onSurfaceVariant,
                             ),
                           ),
@@ -295,8 +300,8 @@ class _SectionHeader extends StatelessWidget {
           child: Center(
             child: Text(
               '$number',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
