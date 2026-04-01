@@ -1,0 +1,4 @@
+context: "Implemented Hybrid UX Improvements"
+knowledge:
+  - "OHC Glassmorphism token uses ImageFilter.compose with outer ColorFilter.matrix and inner ImageFilter.blur(20.0, 20.0)."
+  - "Remote APIs handle variable-latency with graceful degradation in Thin Client mode."
