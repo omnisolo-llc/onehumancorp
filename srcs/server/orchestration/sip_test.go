@@ -2,8 +2,11 @@ package orchestration
 
 import (
 	"context"
-	"path/filepath"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -567,6 +570,85 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	_ = db.PruneStaleMissions(ctx, 0)
 }
 
+func TestSIPDB_BurstMission(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_burst_mission.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Create a mission
+	msg := Message{
+		ID:         "msg-burst-1",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-burst",
+		Type:       EventTask,
+		Content:    "High intensity task",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-burst-1", "BURST_ENGINEER", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	// Test 1: Burst without endpoint
+	err = db.BurstMission(ctx, "mission-burst-1", "")
+	if err != nil {
+		t.Fatalf("BurstMission without endpoint failed: %v", err)
+	}
+
+	// Verify status updated to BURSTING
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "BURSTING" {
+		t.Fatalf("Expected status BURSTING, got %s", status)
+	}
+
+	// Test 2: Burst with mock remote endpoint
+	var receivedPayload string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		receivedPayload = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	err = db.DelegateMission(ctx, "mission-burst-2", "BURST_ENGINEER_2", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	err = db.BurstMission(ctx, "mission-burst-2", ts.URL)
+	if err != nil {
+		t.Fatalf("BurstMission with endpoint failed: %v", err)
+	}
+
+	// Verify status updated to BURSTING
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'mission-burst-2'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query status: %v", err)
+	}
+	if status != "BURSTING" {
+		t.Fatalf("Expected status BURSTING, got %s", status)
+	}
+
+	// Verify payload received by mock server
+	if receivedPayload == "" {
+		t.Fatalf("Mock server did not receive payload")
+	}
+
+	// Test 3: Burst mission not found
+	err = db.BurstMission(ctx, "mission-burst-nonexistent", "")
+	if err == nil {
+		t.Fatalf("Expected error for non-existent mission, got nil")
+	}
+}
 
 func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission.db")

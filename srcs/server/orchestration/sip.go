@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -224,6 +226,54 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 		}
 		return nil
 	})
+}
+
+// BurstMission updates the mission status to BURSTING and optionally syncs it.
+// Accepts parameters: s *SIPDB, ctx context.Context, missionID string, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Updates mission status in agent_missions table and syncs to remote.
+func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
+	err := withRetry(ctx, func() error {
+		res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ?", missionID)
+		if err != nil {
+			return err
+		}
+		affected, _ := res.RowsAffected()
+		if affected == 0 {
+			return errors.New("mission not found")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if remoteEndpoint != "" {
+		var payload string
+		err = s.db.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = ?", missionID).Scan(&payload)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve mission payload for syncing: %w", err)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payload))
+		if err != nil {
+			return fmt.Errorf("failed to create sync request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to sync bursting mission: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+		}
+	}
+	return nil
 }
 
 // Heartbeat maintains the agent's heartbeat and domain-health metrics.
