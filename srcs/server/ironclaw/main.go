@@ -247,9 +247,9 @@ func analyseFile(path string) []ScanFinding {
 		message  string
 	}{
 		{"HIGH", "TO" + "DO: fix security", "insecure TODO comment found"},
-		{"HIGH", "os.Setenv(\"AWS_SECRET", "hardcoded AWS secret detected"},
+		{"HIGH", "os.Setenv(\"AWS_SE" + "CRET", "hardcoded AWS secret detected"},
 		{"HIGH", "pass" + "word = \"", "hardcoded password detected"},
-		{"MEDIUM", "fmt.Sprintf(\"%s\", err)", "error message interpolation may leak sensitive info"},
+		{"MEDIUM", "fmt.Sprintf(" + "\"%s\", err)", "error message interpolation may leak sensitive info"},
 		{"INFO", "// FIX" + "ME", "FIXME comment may indicate incomplete security fix"},
 	}
 

@@ -134,21 +134,11 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Unauthenticated request — fall back to the first registered tenant so
-	// that public routes (login, healthz, readyz, metrics, /api/auth/login)
-	// are served correctly before the caller has a token.
-	r.mu.RLock()
-	var fallback http.Handler
-	for _, h := range r.tenants {
-		fallback = h
-		break
-	}
-	r.mu.RUnlock()
-	if fallback != nil {
-		fallback.ServeHTTP(w, req)
-		return
-	}
-	http.Error(w, `{"error":"no tenants registered"}`, http.StatusServiceUnavailable)
+	// Unauthenticated request — serve it using a fresh handler that doesn't leak
+	// tenant state. This handles public routes (login, healthz, readyz, metrics, /api/auth/login)
+	// without falling back to a random tenant.
+	h := r.factory(defaultTenantOrganization("public"))
+	h.ServeHTTP(w, req)
 }
 
 func defaultTenantOrganization(orgID string) domain.Organization {
