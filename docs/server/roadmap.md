@@ -1,6 +1,17 @@
 # Server Roadmap\n\n## Phase 1\n- [x] Cross-Cluster Handoff UI\n- Dynamic Org Scaling
 
 ## Phase 2: AI Agent Framework Evolution (Top 50 Feature Mandate)
+- [x] Internal default agent bootstrap for empty Docker/Bazel deployments
+- [x] Bazel OCI target for the internal default agent runtime (`//deploy:default_agent_image`)
+- [ ] Persistent session memory / resume UX
+- [ ] Interactive slash-command palette for review/diff/cost/config/memory flows
+- [ ] Explicit tool-permission profiles for shell/file/network/MCP actions
+- [ ] IDE / desktop / mobile bridge handoff
+- [ ] Plugin loader and reusable skill execution runtime
+- [ ] Explorer-style MCP server for source navigation
+- [ ] Git worktree isolation helpers
+- [ ] Voice input / output and richer terminal modes
+- [ ] Proactive triggers and remote automation hooks
 - **Agent Memory (Short/Long-Term)**: Native K8s stateful sets with Redis/Pinecone backing
 - **Dynamic Tool Discovery**: SPIFFE/SPIRE secured dynamic RPC endpoints
 - **Multimodal Input/Output Support**: Token-efficient multi-stream handling

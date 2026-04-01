@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -25,8 +26,8 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
-	mu                    sync.RWMutex
-	org                   domain.Organization
+	mu  sync.RWMutex
+	org domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub
@@ -412,6 +413,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
 		rateLimitStates:       make(map[string]*RateLimitState),
 	}
+	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
 	initialSettings := hub.SettingsStore().Get()
 	server.settings = initialSettings
@@ -553,6 +555,58 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
 	return telemetry.Middleware(auth.Middleware(store)(mux))
+}
+
+func (s *Server) bootstrapInternalDefaultAgent() {
+	if s == nil || s.hub == nil || len(s.hub.Agents()) != 0 {
+		return
+	}
+
+	role := os.Getenv("OHC_DEFAULT_AGENT_ROLE")
+	if role == "" {
+		role = s.defaultInternalAgentRole()
+	}
+	if role == "" {
+		return
+	}
+
+	name := os.Getenv("OHC_DEFAULT_AGENT_NAME")
+	if name == "" {
+		name = "Internal Default Agent"
+	}
+
+	region := os.Getenv("OHC_DEFAULT_AGENT_REGION")
+	if region == "" {
+		region = "docker"
+	}
+
+	s.hub.RegisterAgent(orchestration.Agent{
+		ID:             s.org.ID + "-agent-internal-default",
+		Name:           name,
+		Role:           role,
+		OrganizationID: s.org.ID,
+		Status:         orchestration.StatusIdle,
+		ProviderType:   string(agents.ProviderTypeBuiltin),
+		Region:         region,
+	})
+}
+
+func (s *Server) defaultInternalAgentRole() string {
+	for _, preferred := range []string{"CEO", "PRODUCT_MANAGER", "SOFTWARE_ENGINEER"} {
+		if _, ok := s.roleProfileCache[preferred]; ok {
+			return preferred
+		}
+	}
+
+	roles := make([]string, 0, len(s.roleProfileCache))
+	for role := range s.roleProfileCache {
+		roles = append(roles, role)
+	}
+	sort.Strings(roles)
+	if len(roles) == 0 {
+		return ""
+	}
+	return roles[0]
 }
 
 const indexHTML = `<!doctype html>
