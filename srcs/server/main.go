@@ -63,7 +63,7 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
+func newHubAndTracker(pool *db.Pool, sipdb *orchestration.SIPDB) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
 		return orchestration.NewHubWithRepository(
 				orchestration.NewPgHubRepository(pool.Pool),
@@ -72,6 +72,13 @@ func newHubAndTracker(pool *db.Pool) (*orchestration.Hub, *billing.Tracker) {
 				billing.DefaultCatalog,
 				billing.NewPgUsageRepository(pool.Pool, billing.DefaultCatalog),
 			)
+	}
+
+	if sipdb != nil && sipdb.DB() != nil {
+		return orchestration.NewHubWithRepository(
+				orchestration.NewSqliteHubRepository(sipdb.DB()),
+				nil, // scheduler not backed by sqlite currently unless we implement it
+			), billing.NewTracker(billing.DefaultCatalog)
 	}
 
 	return orchestration.NewHub(), billing.NewTracker(billing.DefaultCatalog)
@@ -200,7 +207,15 @@ func run(now time.Time, listen listenFunc) error {
 		sipdb     *orchestration.SIPDB
 	)
 
-	hub, tracker = newHubAndTracker(pool)
+	// Set up the SIPDB instance to connect to SQLite first if applicable.
+	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
+	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
+		sipdb = createdSIPDB
+	} else {
+		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
+	}
+
+	hub, tracker = newHubAndTracker(pool, sipdb)
 	if pool != nil {
 		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Pool))
 	} else {
@@ -218,10 +233,7 @@ func run(now time.Time, listen listenFunc) error {
 		}()
 	}
 
-	// Set up the SIPDB instance to connect to SQLite.
-	dbPath := filepath.Join(os.Getenv("HOME"), ".openclaw", "ohc.db")
-	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
-		sipdb = createdSIPDB
+	if sipdb != nil {
 		hub.SetSIPDB(sipdb)
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
@@ -241,14 +253,12 @@ func run(now time.Time, listen listenFunc) error {
 				}
 			}
 		}()
-	} else {
-		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
 	}
 
 	var handler http.Handler
 	if multiTenant {
 		factory := func(org domain.Organization) http.Handler {
-			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantHub, tenantTracker := newHubAndTracker(pool, sipdb)
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)

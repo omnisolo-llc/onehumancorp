@@ -35,7 +35,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-
 gazelle(
     name = "gazelle-update-repos",
     args = [
@@ -130,14 +129,12 @@ EOF
 """,
 )
 
-
-
 sh_binary(
     name = "desktop",
     srcs = [":gen_desktop_sh"],
     data = [
-        "//srcs/server:ohc",
         "//srcs/app:srcs",
+        "//srcs/server:ohc",
     ] + select({
         ":linux": ["//srcs/app:app.linux"],
         ":macos": ["//srcs/app:app.macos"],
@@ -147,13 +144,11 @@ sh_binary(
     tags = ["manual"],
 )
 
-
 # Alias to start the standalone desktop environment quickly.
 alias(
     name = "up-desktop",
     actual = ":desktop",
 )
-
 
 # Alias to start the local developer environment quickly.
 alias(

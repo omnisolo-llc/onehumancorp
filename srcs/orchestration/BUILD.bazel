@@ -12,6 +12,7 @@ go_library(
         "repository.go",
         "service.go",
         "sip.go",
+        "sqlite_hub.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/orchestration",
     visibility = ["//visibility:public"],
@@ -48,6 +49,7 @@ go_test(
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
+        "sqlite_hub_test.go",
     ],
     embed = [":orchestration"],
     deps = [
@@ -61,5 +63,6 @@ go_test(
         "@org_golang_google_grpc//peer",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )
