@@ -9,19 +9,22 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-// PgTaskRepository implements TaskRepository backed by PostgreSQL.
+// PgTaskRepository implements TaskRepository backed by PostgreSQL and SQLite.
 // It uses SELECT ... FOR UPDATE SKIP LOCKED to ensure that concurrent
-// replicas never execute the same task twice.
+// replicas never execute the same task twice on Postgres.
 type PgTaskRepository struct {
 	pool db.Provider
 }
 
-// NewPgTaskRepository creates a Postgres-backed task repository.
+// NewPgTaskRepository creates a Database-backed task repository.
 func NewPgTaskRepository(pool db.Provider) *PgTaskRepository {
 	return &PgTaskRepository{pool: pool}
 }
 
 func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
+	ctx, span := db.Tracer().Start(ctx, "PgTaskRepository.Create")
+	defer span.End()
+
 	payload, _ := json.Marshal(task.Payload)
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO scheduled_tasks (id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, next_run_at)
@@ -31,12 +34,15 @@ func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
 		string(task.Status), string(payload), task.CreatedAt, task.NextRunAt,
 	)
 	if err != nil {
-		return fmt.Errorf("pg: create task: %w", err)
+		return fmt.Errorf("db: create task: %w", err)
 	}
 	return nil
 }
 
 func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgTaskRepository.Get")
+	defer span.End()
+
 	task := Task{}
 	var schedType, status string
 	var payload string
@@ -48,7 +54,7 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 		&status, &payload, &task.CreatedAt, &task.LastRunAt, &task.NextRunAt,
 	)
 	if err != nil {
-		return Task{}, fmt.Errorf("pg: get task: %w", err)
+		return Task{}, fmt.Errorf("db: get task: %w", err)
 	}
 	task.Schedule.Type = ScheduleType(schedType)
 	task.Status = TaskStatus(status)
@@ -57,11 +63,14 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 }
 
 func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgTaskRepository.ListForOrg")
+	defer span.End()
+
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks WHERE organization_id = $1 ORDER BY created_at`, orgID)
 	if err != nil {
-		return nil, fmt.Errorf("pg: list tasks: %w", err)
+		return nil, fmt.Errorf("db: list tasks: %w", err)
 	}
 	defer rows.Close()
 
@@ -75,7 +84,7 @@ func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task
 			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
 			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
 		); err != nil {
-			return nil, fmt.Errorf("pg: scan task: %w", err)
+			return nil, fmt.Errorf("db: scan task: %w", err)
 		}
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
@@ -88,9 +97,12 @@ func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task
 // PollDue uses SELECT ... FOR UPDATE SKIP LOCKED to claim due tasks
 // atomically.  This prevents duplicate execution across replicas.
 func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgTaskRepository.PollDue")
+	defer span.End()
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("pg: begin poll tx: %w", err)
+		return nil, fmt.Errorf("db: begin poll tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -106,7 +118,7 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("pg: poll due: %w", err)
+		return nil, fmt.Errorf("db: poll due: %w", err)
 	}
 
 	var tasks []Task
@@ -121,7 +133,7 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
 		); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("pg: scan due task: %w", err)
+			return nil, fmt.Errorf("db: scan due task: %w", err)
 		}
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
@@ -133,17 +145,20 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 	for _, t := range tasks {
 		// Mark as running within this transaction.
 		if _, err := tx.Exec(ctx, "UPDATE scheduled_tasks SET status='running', last_run_at=$2 WHERE id=$1", t.ID, now); err != nil {
-			return nil, fmt.Errorf("pg: mark running: %w", err)
+			return nil, fmt.Errorf("db: mark running: %w", err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("pg: commit poll: %w", err)
+		return nil, fmt.Errorf("db: commit poll: %w", err)
 	}
 	return tasks, nil
 }
 
 func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status TaskStatus, reschedule bool) error {
+	ctx, span := db.Tracer().Start(ctx, "PgTaskRepository.UpdateStatus")
+	defer span.End()
+
 	if reschedule {
 		_, isSqlite := r.pool.(*db.SqliteProvider)
 		if isSqlite {
@@ -165,6 +180,9 @@ func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status T
 }
 
 func (r *PgTaskRepository) Cancel(ctx context.Context, id string) error {
+	ctx, span := db.Tracer().Start(ctx, "PgTaskRepository.Cancel")
+	defer span.End()
+
 	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1", id)
 	return err
 }

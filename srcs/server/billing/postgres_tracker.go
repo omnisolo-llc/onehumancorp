@@ -7,13 +7,13 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-// PgUsageRepository implements UsageRepository backed by PostgreSQL.
+// PgUsageRepository implements UsageRepository backed by PostgreSQL and SQLite.
 type PgUsageRepository struct {
 	pool    db.Provider
 	catalog map[string]Price
 }
 
-// NewPgUsageRepository creates a Postgres-backed usage repository.
+// NewPgUsageRepository creates a Database-backed usage repository.
 func NewPgUsageRepository(pool db.Provider, catalog map[string]Price) *PgUsageRepository {
 	copied := make(map[string]Price, len(catalog))
 	for model, price := range catalog {
@@ -23,6 +23,9 @@ func NewPgUsageRepository(pool db.Provider, catalog map[string]Price) *PgUsageRe
 }
 
 func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUsageRepository.Track")
+	defer span.End()
+
 	price, ok := r.catalog[usage.Model]
 	if !ok {
 		return Usage{}, fmt.Errorf("unknown model pricing: %s", usage.Model)
@@ -39,12 +42,15 @@ func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, erro
 		usage.PromptTokens, usage.CompletionTokens, usage.CostUSD, usage.OccurredAt,
 	)
 	if err != nil {
-		return Usage{}, fmt.Errorf("pg: track usage: %w", err)
+		return Usage{}, fmt.Errorf("db: track usage: %w", err)
 	}
 	return usage, nil
 }
 
 func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) (Summary, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUsageRepository.Summary")
+	defer span.End()
+
 	rows, err := r.pool.Query(ctx, `
 		SELECT agent_id,
 		       COALESCE(SUM(cost_usd), 0),
@@ -54,7 +60,7 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		GROUP BY agent_id
 		ORDER BY agent_id`, organizationID)
 	if err != nil {
-		return Summary{}, fmt.Errorf("pg: billing summary: %w", err)
+		return Summary{}, fmt.Errorf("db: billing summary: %w", err)
 	}
 	defer rows.Close()
 
@@ -65,7 +71,7 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 	for rows.Next() {
 		var a AgentSummary
 		if err := rows.Scan(&a.AgentID, &a.CostUSD, &a.TokenUsed); err != nil {
-			return Summary{}, fmt.Errorf("pg: scan agent summary: %w", err)
+			return Summary{}, fmt.Errorf("db: scan agent summary: %w", err)
 		}
 		totalCost += a.CostUSD
 		totalTokens += a.TokenUsed

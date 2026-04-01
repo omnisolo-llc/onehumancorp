@@ -7,10 +7,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	meter            = otel.Meter("github.com/onehumancorp/mono/srcs/server/db")
+	tracer           = otel.Tracer("github.com/onehumancorp/mono/srcs/server/db")
 	queryDuration, _ = meter.Float64Histogram(
 		"db.client.operation.duration",
 		metric.WithDescription("Duration of database operations"),
@@ -31,6 +33,11 @@ func trackQuery(ctx context.Context, operation string, err error, duration time.
 		queryErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
 	}
 	queryDuration.Record(ctx, duration.Seconds(), metric.WithAttributes(attrs...))
+}
+
+// Tracer returns the OpenTelemetry tracer for database operations.
+func Tracer() trace.Tracer {
+	return tracer
 }
 
 // Provider abstracts the database connection pool.

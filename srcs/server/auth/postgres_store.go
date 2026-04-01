@@ -10,17 +10,20 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-// PgUserRepository implements UserRepository backed by PostgreSQL.
+// PgUserRepository implements UserRepository backed by PostgreSQL and SQLite.
 type PgUserRepository struct {
 	pool db.Provider
 }
 
-// NewPgUserRepository creates a Postgres-backed user repository.
+// NewPgUserRepository creates a Database-backed user repository.
 func NewPgUserRepository(pool db.Provider) *PgUserRepository {
 	return &PgUserRepository{pool: pool}
 }
 
 func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.CreateUser")
+	defer span.End()
+
 	rolesJSON, _ := json.Marshal(user.Roles)
 	_, isSqlite := r.pool.(*db.SqliteProvider)
 	var rolesArg any = user.Roles
@@ -37,31 +40,42 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 		user.CreatedAt, user.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("pg: create user: %w", err)
+		return fmt.Errorf("db: create user: %w", err)
 	}
 	return nil
 }
 
 func (r *PgUserRepository) GetByID(ctx context.Context, id string) (*User, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.GetByID")
+	defer span.End()
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1", id)
 }
 
 func (r *PgUserRepository) GetByUsername(ctx context.Context, username string) (*User, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.GetByUsername")
+	defer span.End()
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", username)
 }
 
 func (r *PgUserRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.GetByEmail")
+	defer span.End()
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1", email)
 }
 
 func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string) (*User, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.GetByOIDCSubject")
+	defer span.End()
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1", sub)
 }
 
 func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.ListUsers")
+	defer span.End()
+
 	rows, err := r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
 	if err != nil {
-		return nil, fmt.Errorf("pg: list users: %w", err)
+		return nil, fmt.Errorf("db: list users: %w", err)
 	}
 	defer rows.Close()
 
@@ -72,12 +86,12 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 		if isSqlite {
 			var rolesJSON string
 			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
-				return nil, fmt.Errorf("pg: scan user: %w", err)
+				return nil, fmt.Errorf("db: scan user: %w", err)
 			}
 			_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
 		} else {
 			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
-				return nil, fmt.Errorf("pg: scan user: %w", err)
+				return nil, fmt.Errorf("db: scan user: %w", err)
 			}
 		}
 		users = append(users, u)
@@ -86,6 +100,9 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 }
 
 func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.UpdateUser")
+	defer span.End()
+
 	rolesJSON, _ := json.Marshal(user.Roles)
 	_, isSqlite := r.pool.(*db.SqliteProvider)
 	var rolesArg any = user.Roles
@@ -102,25 +119,31 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		nilIfEmpty(user.OIDCSubject), user.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("pg: update user: %w", err)
+		return fmt.Errorf("db: update user: %w", err)
 	}
 	return nil
 }
 
 func (r *PgUserRepository) DeleteUser(ctx context.Context, id string) error {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.DeleteUser")
+	defer span.End()
+
 	_, err := r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err != nil {
-		return fmt.Errorf("pg: delete user: %w", err)
+		return fmt.Errorf("db: delete user: %w", err)
 	}
 	return nil
 }
 
 func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time.Time) error {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.RevokeToken")
+	defer span.End()
+
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
 		ON CONFLICT (jti) DO NOTHING`, jti, exp)
 	if err != nil {
-		return fmt.Errorf("pg: revoke token: %w", err)
+		return fmt.Errorf("db: revoke token: %w", err)
 	}
 	// GC expired entries.
 	_, _ = r.pool.Exec(ctx, "DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
@@ -128,10 +151,13 @@ func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time
 }
 
 func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, error) {
+	ctx, span := db.Tracer().Start(ctx, "PgUserRepository.IsRevoked")
+	defer span.End()
+
 	var count int
 	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP", jti).Scan(&count)
 	if err != nil {
-		return false, fmt.Errorf("pg: check revoked: %w", err)
+		return false, fmt.Errorf("db: check revoked: %w", err)
 	}
 	return count > 0, nil
 }
@@ -153,7 +179,7 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 			if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "sql: no rows in result set") {
 				return nil, ErrUserNotFound
 			}
-			return nil, fmt.Errorf("pg: scan user: %w", err)
+			return nil, fmt.Errorf("db: scan user: %w", err)
 		}
 		_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
 		return u, nil
@@ -168,7 +194,7 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, ErrUserNotFound
 		}
-		return nil, fmt.Errorf("pg: scan user: %w", err)
+		return nil, fmt.Errorf("db: scan user: %w", err)
 	}
 	return u, nil
 }

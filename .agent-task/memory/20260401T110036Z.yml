@@ -1,0 +1,12 @@
+type: memory
+metadata:
+  role: "SOFTWARE_ENGINEER"
+  timestamp: "20260401T110036Z"
+observations:
+  - "Discovered that OHC repositories relied strictly on postgres-specific operations (e.g. JSON extraction, ARRAY types, DELETE ... RETURNING)."
+  - "Added isSqlite branches to cleanly translate arrays into JSON fields for modernc.org/sqlite consumption natively avoiding external migrations dependencies."
+actions_taken:
+  - "Replaced static SQL postgres functions with fallback behaviors."
+  - "Refactored db providers and repositories to use 'db.Tracer()' open telemetry implementation."
+  - "Verified tests across //srcs/server/db/..."
+resolution: "All database features function efficiently on SQLite Standalone desktop modes with zero data leakage inside multi-tenant."
