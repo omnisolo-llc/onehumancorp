@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	_ "modernc.org/sqlite"
 )
 
@@ -700,20 +701,124 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+		var payloadObj map[string]interface{}
+		var finalPayload string
+		if err := json.Unmarshal([]byte(m.payload), &payloadObj); err == nil {
+			delete(payloadObj, "rag_context")
+			b, _ := json.Marshal(payloadObj)
+			finalPayload = telemetry.RedactPII(string(b))
+		} else {
+			finalPayload = telemetry.RedactPII(m.payload)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(finalPayload))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
+					syncedCount++
+				}
+			}
+			resp.Body.Close()
+		}
+	}
+
+	return syncedCount, nil
+}
+
+// SyncContextSync synchronizes the local Hybrid MCP RAG state (swarm_memory_embeddings) to the cloud Postgres 'agent_missions' table.
+// It deletes successfully synchronized records locally to avoid infinite sync loops.
+// Accepts parameters: ctx context.Context, remoteEndpoint string.
+// Returns the number of synced records and an error.
+// Produces errors: Explicit error handling.
+// Has side effects: Posts local state to remote and deletes successfully synced records.
+func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	var memories []struct {
+		id      string
+		payload string
+	}
+
+	err := withRetry(ctx, func() error {
+		memories = nil
+		// Fetch up to 100 memories at a time
+		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var m EpisodicMemory
+			var t string
+			if err := rows.Scan(&m.MemoryID, &m.Context, &m.VectorEmbedding, &m.SourcePlugin, &t); err != nil {
+				return err
+			}
+			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
+
+			// We build a mission-like payload to sync into the cloud Postgres `agent_missions` table.
+			wrapper := struct {
+				Role string      `json:"role"`
+				Task interface{} `json:"task"`
+			}{
+				Role: "hybrid_rag_sync",
+				Task: m,
+			}
+			taskBytes, _ := json.Marshal(wrapper)
+			memories = append(memories, struct {
+				id      string
+				payload string
+			}{m.MemoryID, string(taskBytes)})
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	if len(memories) == 0 {
+		return 0, nil
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	syncedCount := 0
+	for _, m := range memories {
+		// Clean and redact
+		var payloadObj map[string]interface{}
+		var finalPayload string
+		if err := json.Unmarshal([]byte(m.payload), &payloadObj); err == nil {
+			delete(payloadObj, "rag_context")
+			b, _ := json.Marshal(payloadObj)
+			finalPayload = telemetry.RedactPII(string(b))
+		} else {
+			finalPayload = telemetry.RedactPII(m.payload)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(finalPayload))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+		resp, err := client.Do(req)
+		if err == nil {
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
+				// Success, delete local record
+				deleteErr := withRetry(ctx, func() error {
+					_, deleteErr := s.db.ExecContext(ctx, "DELETE FROM swarm_memory_embeddings WHERE memory_id = ?", m.id)
+					return deleteErr
+				})
+				if deleteErr == nil {
 					syncedCount++
 				}
 			}
