@@ -202,7 +202,11 @@ func run(now time.Time, listen listenFunc) error {
 		if err := pool.RunMigrations(ctx); err != nil {
 			return err
 		}
-		slog.Info("using Postgres-backed repositories")
+		if pool.IsSQLite() {
+			slog.Info("using SQLite-backed repositories")
+		} else {
+			slog.Info("using Postgres-backed repositories")
+		}
 	} else {
 		slog.Info("DATABASE_URL not set, using in-memory repositories")
 	}

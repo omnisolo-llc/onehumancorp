@@ -1,0 +1,2 @@
+type: "memory"
+context: "Audited existing database queries. Implemented automated fallback to SQLite if DATABASE_URL is unset and OHC_STANDALONE=true. Ensured TenantRegistry bypasses multi-tenant routing for standalone mode. Wrote integration tests for both database backends using convertBindVars logic."

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,6 +25,10 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 // and dynamically strips natively unsupported clauses like `FOR UPDATE SKIP LOCKED`.
 func convertBindVars(query string) string {
 	query = strings.ReplaceAll(query, "FOR UPDATE SKIP LOCKED", "")
+
+	// Maps json paths (e.g. col::json->>'key' to json_extract(col, '$.key'))
+	re := regexp.MustCompile(`([a-zA-Z0-9_]+)::json->>'([a-zA-Z0-9_]+)'`)
+	query = re.ReplaceAllString(query, "json_extract($1, '$$.$2')")
 
 	var result strings.Builder
 	result.Grow(len(query))
@@ -99,6 +104,10 @@ func (p *SqliteProvider) Begin(ctx context.Context) (Tx, error) {
 
 func (p *SqliteProvider) Close() {
 	p.db.Close()
+}
+
+func (p *SqliteProvider) IsSQLite() bool {
+	return true
 }
 
 // SqliteRows implements Rows using sql.Rows.
