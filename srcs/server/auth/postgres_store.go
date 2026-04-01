@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -20,11 +21,18 @@ func NewPgUserRepository(pool db.Provider) *PgUserRepository {
 }
 
 func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
+	rolesJSON, _ := json.Marshal(user.Roles)
+	_, isSqlite := r.pool.(*db.SqliteProvider)
+	var rolesArg any = user.Roles
+	if isSqlite {
+		rolesArg = string(rolesJSON)
+	}
+
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		user.ID, user.Username, user.Email, user.PasswordHash,
-		user.Roles, user.Active, user.OrganizationID,
+		rolesArg, user.Active, user.OrganizationID,
 		nilIfEmpty(user.OIDCSubject),
 		user.CreatedAt, user.UpdatedAt,
 	)
@@ -58,10 +66,19 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 	defer rows.Close()
 
 	var users []*User
+	_, isSqlite := r.pool.(*db.SqliteProvider)
 	for rows.Next() {
 		u := &User{}
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("pg: scan user: %w", err)
+		if isSqlite {
+			var rolesJSON string
+			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
+				return nil, fmt.Errorf("pg: scan user: %w", err)
+			}
+			_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
+		} else {
+			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
+				return nil, fmt.Errorf("pg: scan user: %w", err)
+			}
 		}
 		users = append(users, u)
 	}
@@ -69,12 +86,19 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 }
 
 func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
+	rolesJSON, _ := json.Marshal(user.Roles)
+	_, isSqlite := r.pool.(*db.SqliteProvider)
+	var rolesArg any = user.Roles
+	if isSqlite {
+		rolesArg = string(rolesJSON)
+	}
+
 	_, err := r.pool.Exec(ctx, `
 		UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 		organization_id=$7, oidc_subject=$8, updated_at=$9
 		WHERE id=$1`,
 		user.ID, user.Username, user.Email, user.PasswordHash,
-		user.Roles, user.Active, user.OrganizationID,
+		rolesArg, user.Active, user.OrganizationID,
 		nilIfEmpty(user.OIDCSubject), user.UpdatedAt,
 	)
 	if err != nil {
@@ -116,6 +140,25 @@ func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, err
 
 func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...any) (*User, error) {
 	u := &User{}
+	_, isSqlite := r.pool.(*db.SqliteProvider)
+
+	if isSqlite {
+		var rolesJSON string
+		err := r.pool.QueryRow(ctx, query, args...).Scan(
+			&u.ID, &u.Username, &u.Email, &u.PasswordHash,
+			&rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject,
+			&u.CreatedAt, &u.UpdatedAt,
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "sql: no rows in result set") {
+				return nil, ErrUserNotFound
+			}
+			return nil, fmt.Errorf("pg: scan user: %w", err)
+		}
+		_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
+		return u, nil
+	}
+
 	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&u.ID, &u.Username, &u.Email, &u.PasswordHash,
 		&u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject,
