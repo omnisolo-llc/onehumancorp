@@ -101,8 +101,15 @@ sh_binary(
 # This launches the Flutter app in native mode, which then manages its own backend.
 genrule(
     name = "gen_desktop_sh",
+    srcs = [
+        "@flutter_sdk//:flutter_binary_unix",
+        "@flutter_sdk//:flutter_binary_windows",
+    ],
     outs = ["desktop_generated.sh"],
     cmd = """
+FLUTTER_UNIX="$(rootpath @flutter_sdk//:flutter_binary_unix)"
+FLUTTER_WIN="$(rootpath @flutter_sdk//:flutter_binary_windows)"
+
 cat << 'EOF' > $@
 #!/usr/bin/env bash
 # Standalone Desktop App orchestrator
@@ -128,9 +135,19 @@ fi
 
 # Enable Standalone Mode via dart-define so the app knows to start its backend.
 echo "--- Starting OHC Desktop App (Standalone Mode, Platform: $$PLATFORM) ---"
+
+# Use the hermetic Flutter SDK from the runfiles
+if [[ "$$PLATFORM" == "windows" ]]; then
+  FLUTTER_BIN="REPLACE_ME_WIN"
+else
+  FLUTTER_BIN="REPLACE_ME_UNIX"
+fi
+
 cd srcs/app
-flutter run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
+../../$$FLUTTER_BIN run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
 EOF
+sed -i "s|REPLACE_ME_UNIX|$$FLUTTER_UNIX|g" $@
+sed -i "s|REPLACE_ME_WIN|$$FLUTTER_WIN|g" $@
 """,
 )
 
@@ -143,6 +160,7 @@ sh_binary(
         "//srcs/server:ohc",
         "//srcs/server:standalone_ohc_exec",
         "//srcs/app:srcs",
+        "@flutter_sdk//:flutter_sdk",
     ],
     tags = ["manual"],
 )
