@@ -223,7 +223,7 @@ class _EmptyChannels extends StatelessWidget {
             size: 64,
             color: Theme.of(
               context,
-            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
           const SizedBox(height: 16),
           Text(
