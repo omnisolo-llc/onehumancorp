@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1004,5 +1005,53 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSyncMissions_HybridMCP_RAG(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "sip_test_rag.db")
+	db, err := NewSIPDB("sqlite://" + dbPath)
+	if err != nil {
+		t.Fatalf("Failed to initialize SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	payload := `{"role": "researcher", "task": "analyze", "rag_context": "highly sensitive dataset"}`
+	_, err = db.db.ExecContext(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ('m-rag', 'PENDING', ?)", payload)
+	if err != nil {
+		t.Fatalf("Failed to insert mission: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var reqPayload map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&reqPayload)
+
+		if _, exists := reqPayload["rag_context"]; exists {
+			t.Errorf("Sync payload should not contain rag_context, got %v", reqPayload)
+		}
+		if reqPayload["role"] != "researcher" {
+			t.Errorf("Expected role researcher, got %v", reqPayload["role"])
+		}
+
+		w.WriteHeader(http.StatusConflict) // Conflict resolution test
+	}))
+	defer server.Close()
+
+	synced, err := db.SyncMissions(ctx, server.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if synced != 1 {
+		t.Errorf("Expected 1 mission synced, got %d", synced)
+	}
+
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = 'm-rag'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to retrieve mission status: %v", err)
+	}
+	if status != "SYNCED" {
+		t.Errorf("Expected mission status SYNCED (conflict resolved), got %s", status)
 	}
 }

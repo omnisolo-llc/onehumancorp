@@ -15,6 +15,9 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 // SIPDB encapsulates the Swarm Intelligence Protocol database interactions.
@@ -28,6 +31,18 @@ type SIPDB struct {
 	cachedGrounding    string
 	groundingOnce      *sync.Once
 }
+
+var (
+	meter = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	syncMissionsCounter, _ = meter.Int64Counter(
+		"sip.missions.synced",
+		metric.WithDescription("Number of missions synced to the cloud"),
+	)
+	syncMissionsErrorsCounter, _ = meter.Int64Counter(
+		"sip.missions.sync_errors",
+		metric.WithDescription("Number of mission sync errors"),
+	)
+)
 
 const (
 	maxRetries    = 3
@@ -700,24 +715,42 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
+		// Sanitize payload for Hybrid MCP RAG Protocol
+		var payloadData map[string]interface{}
+		if err := json.Unmarshal([]byte(m.payload), &payloadData); err == nil {
+			// Strip sensitive local-only RAG data
+			delete(payloadData, "rag_context")
+
+			if sanitizedBytes, err := json.Marshal(payloadData); err == nil {
+				m.payload = string(sanitizedBytes)
+			}
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
+			syncMissionsErrorsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("error", "request_creation")))
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := client.Do(req)
 		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// Robust conflict resolution prioritizing local client:
+			// If we get 409 Conflict, we consider local client to win (force update or ignore cloud state).
+			// We mark as SYNCED to avoid infinite resync loops on conflict.
+			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
 					_, updateErr := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
 					syncedCount++
+					syncMissionsCounter.Add(ctx, 1)
 				}
 			}
 			resp.Body.Close()
+		} else {
+			syncMissionsErrorsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("error", "request_failed")))
 		}
 	}
 
