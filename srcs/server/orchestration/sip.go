@@ -177,13 +177,15 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 				return err
 			}
 
-			var payloadMap map[string]interface{}
 			var msg Message
-			if err := json.Unmarshal([]byte(taskStr), &payloadMap); err == nil {
-				if taskRaw, ok := payloadMap["task"]; ok {
-					taskBytes, _ := json.Marshal(taskRaw)
-					if err := json.Unmarshal(taskBytes, &msg); err != nil {
-						msg = Message{ID: id, Content: string(taskBytes), Type: EventTask}
+			var wrapper struct {
+				Task *json.RawMessage `json:"task"`
+			}
+
+			if err := json.Unmarshal([]byte(taskStr), &wrapper); err == nil {
+				if wrapper.Task != nil {
+					if err := json.Unmarshal(*wrapper.Task, &msg); err != nil {
+						msg = Message{ID: id, Content: string(*wrapper.Task), Type: EventTask}
 					}
 				} else {
 					if err := json.Unmarshal([]byte(taskStr), &msg); err != nil {
@@ -192,13 +194,11 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 				}
 			} else {
 				// fallback raw
-					msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				msg = Message{ID: id, Content: taskStr, Type: EventTask}
 			}
 
-			if true {
-				if msg.ID == "" {
-					msg.ID = id
-				}
+			if msg.ID == "" {
+				msg.ID = id
 			}
 			missions = append(missions, msg)
 		}
@@ -264,9 +264,12 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		}
 	}
 
-	wrapper := map[string]interface{}{
-		"role": role,
-		"task": task,
+	wrapper := struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}{
+		Role: role,
+		Task: task,
 	}
 	taskBytes, _ := json.Marshal(wrapper)
 	return withRetry(ctx, func() error {
