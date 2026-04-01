@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
-	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 // sharedAuthStore is used by all tenants in tests so that a single token
@@ -74,16 +74,19 @@ func TestTenantRegistry_RoutesByOrg(t *testing.T) {
 	}
 }
 
-func TestTenantRegistry_UnknownOrgReturns404(t *testing.T) {
-	reg := newTestRegistry()
+func TestTenantRegistry_UnknownOrgIsLazyProvisioned(t *testing.T) {
+	reg := NewTenantRegistry(sharedAuthStore, nil)
 	tok := adminToken(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil).WithContext(claimsCtx("org-unknown"))
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil).WithContext(claimsCtx("org-unknown"))
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rr := httptest.NewRecorder()
 	reg.ServeHTTP(rr, req)
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("unknown org: want 404, got %d", rr.Code)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unknown org should be provisioned on demand: want 200, got %d", rr.Code)
+	}
+	if h := reg.handler("org-unknown"); h == nil {
+		t.Fatal("expected org-unknown to be registered after first authenticated request")
 	}
 }
 
@@ -153,7 +156,6 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 		t.Fatalf("authenticated but no org: want 403, got %d (body=%s)", rr.Code, rr.Body.String())
 	}
 }
-
 
 func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 	// Test the fallback to first registered tenant for unauthenticated requests

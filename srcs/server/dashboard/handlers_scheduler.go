@@ -8,10 +8,10 @@ import (
 )
 
 type schedulerCreateRequest struct {
-	AgentID   string               `json:"agentId"`
-	Name      string               `json:"name"`
-	Schedule  scheduler.Schedule  `json:"schedule"`
-	Payload   json.RawMessage      `json:"payload"`
+	AgentID  string             `json:"agentId"`
+	Name     string             `json:"name"`
+	Schedule scheduler.Schedule `json:"schedule"`
+	Payload  json.RawMessage    `json:"payload"`
 }
 
 // handleSchedulerTasks handles listing and creating scheduled tasks.
@@ -28,6 +28,10 @@ func (s *Server) handleSchedulerTasks(w http.ResponseWriter, r *http.Request) {
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&req); err != nil {
 			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if exists, belongs := s.agentOrgStatus(req.AgentID); exists && !belongs {
+			http.Error(w, "agent does not belong to this organization", http.StatusForbidden)
 			return
 		}
 

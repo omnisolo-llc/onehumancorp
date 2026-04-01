@@ -989,7 +989,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "4+tp/h+78uQkXMfTnPIvdbOcaqvnYlXWH5QFyM7CV3w=",
-        "usagesDigest": "/BHZ2Ivw2N0o/Zs2VwFnQyRUazfqLlO0Mz7t4+lnBxE=",
+        "usagesDigest": "Q6TzLGK173Gupeq8S5pphlSnnIMPXtP0UD6EIrnzHqg=",
         "recordedInputs": [
           "REPO_MAPPING:aspect_bazel_lib+,bazel_tools bazel_tools",
           "REPO_MAPPING:bazel_features+,bazel_tools bazel_tools",
@@ -1026,6 +1026,35 @@
                 "@@platforms//cpu:x86_64": "@distroless_static_linux_amd64"
               },
               "bzlmod_repository": "distroless_static",
+              "reproducible": true
+            }
+          },
+          "nginx_alpine_linux_amd64": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_pull",
+            "attributes": {
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "library/nginx",
+              "identifier": "alpine",
+              "platform": "linux/amd64",
+              "target_name": "nginx_alpine_linux_amd64",
+              "bazel_tags": []
+            }
+          },
+          "nginx_alpine": {
+            "repoRuleId": "@@rules_oci+//oci/private:pull.bzl%oci_alias",
+            "attributes": {
+              "target_name": "nginx_alpine",
+              "www_authenticate_challenges": {},
+              "scheme": "https",
+              "registry": "index.docker.io",
+              "repository": "library/nginx",
+              "identifier": "alpine",
+              "platforms": {
+                "@@platforms//cpu:x86_64": "@nginx_alpine_linux_amd64"
+              },
+              "bzlmod_repository": "nginx_alpine",
               "reproducible": true
             }
           },
@@ -1146,7 +1175,9 @@
         "moduleExtensionMetadata": {
           "explicitRootModuleDirectDeps": [
             "distroless_static",
-            "distroless_static_linux_amd64"
+            "distroless_static_linux_amd64",
+            "nginx_alpine",
+            "nginx_alpine_linux_amd64"
           ],
           "explicitRootModuleDirectDevDeps": [],
           "useAllRepos": "NO",
@@ -1187,7 +1218,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "c0Y72gOv8Ehi73JLl8CkpgsjVc4duyrTdnfBig0vRL0=",
+        "usagesDigest": "b0IHv/aoAxXczkfS8p6YFOG+5YkG1JtZo2L4X/nULKk=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {
