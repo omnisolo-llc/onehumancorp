@@ -12,9 +12,26 @@ import (
 
 // mockPgProvider implements db.Provider for testing pgWithRetry
 type mockPgProvider struct {
-	db.Provider
 	attempts int
 	mu       sync.Mutex
+}
+
+func (m *mockPgProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
+	return nil, nil
+}
+
+func (m *mockPgProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
+	return nil
+}
+
+func (m *mockPgProvider) Begin(ctx context.Context) (db.Tx, error) {
+	return nil, nil
+}
+
+func (m *mockPgProvider) Close() {}
+
+func (m *mockPgProvider) IsSQLite() bool {
+	return false
 }
 
 func (m *mockPgProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
