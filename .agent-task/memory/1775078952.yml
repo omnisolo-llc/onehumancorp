@@ -1,0 +1,4 @@
+memory:
+  - "Applied OHC premium design tokens: ImageFilter.compose with matrix for luminance-preserving saturation and blur."
+  - "Removed A/B test variant toggle from landing screen to ensure visual excellence."
+  - "Verified Flutter Web locally using Playwright with a wait_for_timeout since standard wait_for_function logic isn't compatible with CanvasKit rendering."
