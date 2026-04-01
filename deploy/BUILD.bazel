@@ -90,6 +90,22 @@ oci_load(
     visibility = ["//visibility:public"],
 )
 
+oci_image(
+    name = "default_agent_image",
+    base = "@distroless_static",
+    # Internal default agent runtime: same Bazel-built server image, configured
+    # to bootstrap the builtin provider when no external workforce exists.
+    entrypoint = ["/usr/local/bin/ohc"],
+    tars = [":agent_pkg"],
+)
+
+oci_load(
+    name = "default_agent_load",
+    image = ":default_agent_image",
+    repo_tags = ["onehumancorp/internal-default-agent:bazel"],
+    visibility = ["//visibility:public"],
+)
+
 oci_push(
     name = "agent_push_ghcr",
     image = ":agent_image",
