@@ -42,7 +42,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
                 child: const Text('Delete'),
               ),
             ],
@@ -56,7 +58,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
           );
         }
       }
@@ -115,7 +120,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     style: TextStyle(
                       color:
                           user.isAdmin
-                              ? Colors.white
+                              ? colors.onPrimary
                               : colors.onSecondaryContainer,
                     ),
                   ),
@@ -162,7 +167,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   button: true,
                   label: 'Delete user',
                   child: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: Icon(Icons.delete_outline, color: colors.error),
                     tooltip: 'Delete user',
                     onPressed: () => _handleDeleteUser(user.id),
                   ),
