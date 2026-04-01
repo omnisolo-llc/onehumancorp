@@ -1,6 +1,7 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 npm_link_all_packages(name = "node_modules")
 
@@ -108,8 +109,11 @@ cat << 'EOF' > $@
 set -e
 
 # Support for the app to manage its own backend lifecycle.
-# The ohc binary must be in the PATH.
-export PATH=$$PWD/srcs/server:$$PATH
+# Expose the standalone wrapper as `ohc` so the app can start/stop/doctor the backend.
+OHC_BIN_DIR="$$(mktemp -d)"
+trap 'rm -rf "$$OHC_BIN_DIR"' EXIT
+ln -sf "$$PWD/srcs/server/standalone_ohc_exec" "$$OHC_BIN_DIR/ohc"
+export PATH="$$OHC_BIN_DIR:$$PATH"
 
 # Detect platform if not explicitly provided
 PLATFORM="auto"
@@ -137,56 +141,42 @@ sh_binary(
     srcs = [":gen_desktop_sh"],
     data = [
         "//srcs/server:ohc",
+        "//srcs/server:standalone_ohc_exec",
         "//srcs/app:srcs",
-    ] + select({
-        ":linux": ["//srcs/app:app.linux"],
-        ":macos": ["//srcs/app:app.macos"],
-        ":windows": ["//srcs/app:app.windows"],
-        "//conditions:default": [],
-    }),
+    ],
     tags = ["manual"],
 )
 
-
-# Alias to start the standalone desktop environment quickly.
-alias(
-    name = "up-desktop",
-    actual = ":desktop",
+sh_test(
+    name = "standalone_e2e_test",
+    srcs = ["//srcs/app:test/standalone_e2e_test.sh"],
+    data = [":desktop"],
 )
 
-
-# Alias to start the local developer environment quickly.
-alias(
-    name = "up",
-    actual = ":deploy_dev",
+sh_test(
+    name = "app_deb_structure_test",
+    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
+    args = ["deb"],
+    data = ["//srcs/app:app_deb.deb"],
 )
 
-# Alias to start the primary Flutter Web Gateway
-alias(
-    name = "start-web",
-    actual = "//srcs/app:start",
-    visibility = ["//visibility:public"],
+sh_test(
+    name = "app_rpm_structure_test",
+    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
+    args = ["rpm"],
+    data = [
+        "//srcs/app:app_rpm.rpm",
+        "//srcs/app:app_runtime_tar.tar",
+    ],
+    tags = ["manual"],
 )
 
-# Alias to start the Flutter app (Web)
-alias(
-    name = "start-app",
-    actual = "//srcs/app:start",
-    visibility = ["//visibility:public"],
-)
-
-# Alias to start the backend (Go)
-alias(
-    name = "start-backend",
-    actual = "//srcs/server:ohc",
-    visibility = ["//visibility:public"],
-)
-
-# Alias to run tests
-alias(
-    name = "e2e",
-    actual = "//deploy:kind_e2e_test",
-    visibility = ["//visibility:public"],
+test_suite(
+    name = "desktop_packaging_tests",
+    tests = [
+        ":standalone_e2e_test",
+        ":app_deb_structure_test",
+    ],
 )
 
 # Alias to run hello-world agent easily

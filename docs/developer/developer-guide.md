@@ -117,8 +117,17 @@ bazel test //... --config=verbose
 # Re-run tests even if cached
 bazel test //... --cache_test_results=no
 
-# Launch the local development environment (Backend + Flutter Web)
-bazelisk run //:dev
+# Launch the local development environment (run these in separate terminals)
+bazelisk run //srcs/server:ohc
+bazelisk run //srcs/app:start
+
+# Launch standalone desktop mode
+bazelisk run //:desktop
+
+# Build Linux package artifacts
+bazelisk build //srcs/app:app_deb
+# Requires rpmbuild on the host
+bazelisk build //srcs/app:app_rpm
 ```
 
 ### Lint / Type-check

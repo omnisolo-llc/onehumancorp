@@ -13,6 +13,14 @@ bazel_dep(name = "rules_python", version = "1.9.0")
 bazel_dep(name = "rules_shell", version = "0.7.1")
 bazel_dep(name = "rules_android", version = "0.7.1")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
+
+rules_pkg_rpm = use_extension(
+    "@rules_pkg//toolchains/rpm:rpmbuild_configure.bzl",
+    "find_system_rpmbuild_bzlmod",
+)
+use_repo(rules_pkg_rpm, "rules_pkg_rpmbuild")
+
+register_toolchains("@rules_pkg_rpmbuild//:all")
 bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
