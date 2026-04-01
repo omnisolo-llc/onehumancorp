@@ -1,0 +1,8 @@
+type: status
+id: bolt-telemetry-async
+status: ok
+memory_type: observability
+timestamp: "2026-04-01T09:35:00Z"
+observations:
+  - Validated that synchronous telemetry calls in critical RWMutex paths were causing measurable latency.
+  - Asynchronized `telemetry.RecordMeetingEvent` inside `srcs/server/orchestration/service.go`.
