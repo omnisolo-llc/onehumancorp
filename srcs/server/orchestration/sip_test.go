@@ -955,3 +955,54 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 		t.Fatalf("expected \"some string\", got %q", missions2[0].Content)
 	}
 }
+
+func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_metrics.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	err = db.BufferMetric(ctx, "token_usage", `{"agent_id":"a1","role":"r1","count":10}`)
+	if err != nil {
+		t.Fatalf("BufferMetric failed: %v", err)
+	}
+	err = db.BufferMetric(ctx, "agent_api_call", `{"agent_id":"a2","api":"fetch"}`)
+	if err != nil {
+		t.Fatalf("BufferMetric failed: %v", err)
+	}
+
+	var count int
+	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
+	if err != nil || count != 2 {
+		t.Fatalf("Expected 2 metrics, got %d, err: %v", count, err)
+	}
+
+	var reqBody []byte
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncBufferedMetrics(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncBufferedMetrics failed: %v", err)
+	}
+	if syncedCount != 2 {
+		t.Fatalf("Expected 2 synced records, got %d", syncedCount)
+	}
+
+	expectedBody := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
+	if string(reqBody) != expectedBody {
+		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
+	}
+
+	err = db.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
+	if err != nil || count != 0 {
+		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}

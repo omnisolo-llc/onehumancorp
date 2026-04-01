@@ -249,6 +249,40 @@ func run(now time.Time, listen listenFunc) error {
 	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
+
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			telemetry.BufferMetricFunc = sipdb.BufferMetric
+
+			// Background sync for standalone metrics to cloud
+			cloudEndpoint := os.Getenv("OHC_CLOUD_METRICS_ENDPOINT")
+			if cloudEndpoint != "" {
+				go func() {
+					ticker := time.NewTicker(5 * time.Minute)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							for {
+								syncedCount, err := sipdb.SyncBufferedMetrics(ctx, cloudEndpoint)
+								if err != nil {
+									slog.Warn("Failed to sync standalone metrics", "error", err)
+									break
+								}
+								if syncedCount > 0 {
+									slog.Info("Successfully synced standalone metrics to cloud", "count", syncedCount)
+								}
+								if syncedCount < 500 {
+									break // No more batches
+								}
+							}
+						}
+					}
+				}()
+			}
+		}
+
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
 			ticker := time.NewTicker(1 * time.Hour)
