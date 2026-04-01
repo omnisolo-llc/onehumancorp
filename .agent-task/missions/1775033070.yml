@@ -1,0 +1,6 @@
+id: m-burst-1
+status: PENDING
+role: product_architecture
+task: "Implement Elastic Swarm Bursting for OHC Hybrid Architecture"
+context: "Reference docs/research/hybrid-agentic-os-audit.md. The SIPDB must be extended to support a 'BURSTING' state and synchronize payloads to remote endpoints when local compute is saturated."
+created_at: "2026-04-01T08:44:30Z"
