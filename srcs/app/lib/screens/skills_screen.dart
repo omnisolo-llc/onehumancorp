@@ -136,14 +136,14 @@ class _SkillCardState extends State<_SkillCard> {
     _enabled = widget.skill.enabled;
   }
 
-  Color _categoryColor() {
+  Color _categoryColor(BuildContext context) {
     switch (widget.skill.category) {
       case 'builtin':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'official':
-        return Colors.green;
+        return Theme.of(context).colorScheme.secondary;
       default:
-        return Colors.orange;
+        return Theme.of(context).colorScheme.tertiary;
     }
   }
 
@@ -205,8 +205,8 @@ class _SkillCardState extends State<_SkillCard> {
               children: [
                 Chip(
                   label: Text(s.category),
-                  backgroundColor: _categoryColor().withAlpha(40),
-                  labelStyle: TextStyle(color: _categoryColor()),
+                  backgroundColor: _categoryColor(context).withAlpha(40),
+                  labelStyle: TextStyle(color: _categoryColor(context)),
                   visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(width: 8),

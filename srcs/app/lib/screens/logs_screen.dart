@@ -110,14 +110,15 @@ class _LogLine extends StatelessWidget {
 
   const _LogLine({required this.line, required this.index});
 
-  Color _color() {
+  Color _color(BuildContext context) {
     final lower = line.toLowerCase();
     if (lower.contains('error') || lower.contains('fatal'))
-      return Colors.red.shade300;
-    if (lower.contains('warn')) return Colors.orange.shade300;
-    if (lower.contains('info')) return Colors.green.shade300;
-    if (lower.contains('debug')) return Colors.grey.shade400;
-    return Colors.grey.shade200;
+      return Theme.of(context).colorScheme.error;
+    if (lower.contains('warn')) return Theme.of(context).colorScheme.tertiary;
+    if (lower.contains('info')) return Theme.of(context).colorScheme.secondary;
+    if (lower.contains('debug'))
+      return Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5);
+    return Theme.of(context).colorScheme.onSurfaceVariant;
   }
 
   @override
@@ -132,7 +133,9 @@ class _LogLine extends StatelessWidget {
             child: Text(
               '${index + 1}',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withOpacity(0.6),
                 fontFamily: 'monospace',
                 fontSize: 12,
               ),
@@ -142,7 +145,7 @@ class _LogLine extends StatelessWidget {
             child: SelectableText(
               line,
               style: TextStyle(
-                color: _color(),
+                color: _color(context),
                 fontFamily: 'monospace',
                 fontSize: 12,
               ),

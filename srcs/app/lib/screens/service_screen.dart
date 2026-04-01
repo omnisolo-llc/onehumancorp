@@ -82,7 +82,10 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
           children: [
             Icon(
               _isRunning ? Icons.check_circle : Icons.error_outline,
-              color: _isRunning ? Colors.green : Colors.orange,
+              color:
+                  _isRunning
+                      ? Theme.of(context).colorScheme.secondary
+                      : Theme.of(context).colorScheme.tertiary,
               size: 64,
             ),
             const SizedBox(height: 16),
@@ -91,9 +94,13 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Default Port: 18789',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+              ),
             ),
           ],
         ),
@@ -118,8 +125,12 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
                   : Icon(_isRunning ? Icons.stop : Icons.play_arrow),
           label: Text(_isRunning ? 'Stop Service' : 'Start Service'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _isRunning ? Colors.red.shade50 : null,
-            foregroundColor: _isRunning ? Colors.red : null,
+            backgroundColor:
+                _isRunning
+                    ? Theme.of(context).colorScheme.errorContainer
+                    : null,
+            foregroundColor:
+                _isRunning ? Theme.of(context).colorScheme.error : null,
           ),
         ),
         OutlinedButton.icon(
@@ -148,13 +159,13 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
           ),
           child: SelectableText(
             _doctorOutput,
-            style: const TextStyle(
-              color: Colors.greenAccent,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontFamily: 'monospace',
               fontSize: 12,
             ),

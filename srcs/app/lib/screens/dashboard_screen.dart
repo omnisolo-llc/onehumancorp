@@ -161,9 +161,13 @@ class _StatCard extends StatelessWidget {
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.03),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.08),
+                ),
               ),
               child: Material(
                 color: Colors.transparent,
