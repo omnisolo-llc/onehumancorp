@@ -1,4 +1,4 @@
-import 'package:powersync_flutter/powersync_flutter.dart';
+import 'package:powersync/powersync.dart';
 import 'package:sqlite_async/sqlite_async.dart';
 
 final powerSync = PowerSyncDatabase(

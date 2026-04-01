@@ -12,7 +12,7 @@
     },
     {
       "name": "ohc_app",
-      "version": "0.1.3+1",
+      "version": "0.1.4+1",
       "dependencies": [
         "centrifuge",
         "cupertino_icons",
@@ -21,7 +21,9 @@
         "go_router",
         "http",
         "intl",
+        "powersync",
         "shared_preferences",
+        "sqlite_async",
         "uuid",
         "web_socket_channel"
       ],
@@ -63,6 +65,19 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "sqlite_async",
+      "version": "0.8.3",
+      "dependencies": [
+        "async",
+        "collection",
+        "meta",
+        "mutex",
+        "sqlite3",
+        "sqlite3_web",
+        "web"
       ]
     },
     {
@@ -254,6 +269,33 @@
       "dependencies": []
     },
     {
+      "name": "web",
+      "version": "0.5.1",
+      "dependencies": []
+    },
+    {
+      "name": "sqlite3_web",
+      "version": "0.1.2-wip",
+      "dependencies": [
+        "sqlite3",
+        "stream_channel",
+        "web"
+      ]
+    },
+    {
+      "name": "mutex",
+      "version": "3.1.0",
+      "dependencies": []
+    },
+    {
+      "name": "async",
+      "version": "2.13.1",
+      "dependencies": [
+        "collection",
+        "meta"
+      ]
+    },
+    {
       "name": "fixnum",
       "version": "1.1.1",
       "dependencies": []
@@ -329,19 +371,6 @@
       "dependencies": [
         "collection",
         "fixnum",
-        "meta"
-      ]
-    },
-    {
-      "name": "web",
-      "version": "0.5.1",
-      "dependencies": []
-    },
-    {
-      "name": "async",
-      "version": "2.13.1",
-      "dependencies": [
-        "collection",
         "meta"
       ]
     },
@@ -451,6 +480,11 @@
       ]
     },
     {
+      "name": "ffi",
+      "version": "2.2.0",
+      "dependencies": []
+    },
+    {
       "name": "typed_data",
       "version": "1.4.0",
       "dependencies": [
@@ -508,11 +542,6 @@
       "dependencies": []
     },
     {
-      "name": "ffi",
-      "version": "2.2.0",
-      "dependencies": []
-    },
-    {
       "name": "platform",
       "version": "3.1.6",
       "dependencies": []
@@ -523,6 +552,125 @@
       "dependencies": [
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "sqlite3",
+      "version": "2.4.5",
+      "dependencies": [
+        "collection",
+        "ffi",
+        "meta",
+        "path",
+        "web"
+      ]
+    },
+    {
+      "name": "sqlite3_flutter_libs",
+      "version": "0.5.42",
+      "dependencies": [
+        "flutter"
+      ]
+    },
+    {
+      "name": "pubspec_parse",
+      "version": "1.5.0",
+      "dependencies": [
+        "checked_yaml",
+        "collection",
+        "json_annotation",
+        "pub_semver",
+        "yaml"
+      ]
+    },
+    {
+      "name": "pub_semver",
+      "version": "2.2.0",
+      "dependencies": [
+        "collection"
+      ]
+    },
+    {
+      "name": "args",
+      "version": "2.7.0",
+      "dependencies": []
+    },
+    {
+      "name": "json_annotation",
+      "version": "4.11.0",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "checked_yaml",
+      "version": "2.0.4",
+      "dependencies": [
+        "json_annotation",
+        "source_span",
+        "yaml"
+      ]
+    },
+    {
+      "name": "yaml",
+      "version": "3.1.3",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner"
+      ]
+    },
+    {
+      "name": "powersync",
+      "version": "1.8.5",
+      "dependencies": [
+        "args",
+        "async",
+        "collection",
+        "fetch_client",
+        "flutter",
+        "http",
+        "logging",
+        "meta",
+        "powersync_flutter_libs",
+        "pub_semver",
+        "pubspec_parse",
+        "sqlite3",
+        "sqlite3_flutter_libs",
+        "sqlite_async",
+        "universal_io",
+        "uuid"
+      ]
+    },
+    {
+      "name": "fetch_client",
+      "version": "1.2.0",
+      "dependencies": [
+        "fetch_api",
+        "http"
+      ]
+    },
+    {
+      "name": "fetch_api",
+      "version": "2.3.1",
+      "dependencies": [
+        "web"
+      ]
+    },
+    {
+      "name": "universal_io",
+      "version": "2.3.1",
+      "dependencies": [
+        "collection",
+        "meta",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "powersync_flutter_libs",
+      "version": "0.4.15+1",
+      "dependencies": [
+        "flutter"
       ]
     }
   ],
