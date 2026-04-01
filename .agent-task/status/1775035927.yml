@@ -1,0 +1,5 @@
+type: status
+id: fault-triage
+status: healthy
+memory_type: observability
+timestamp: 1775035927
