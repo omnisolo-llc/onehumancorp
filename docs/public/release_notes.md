@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC Mono - Release Notes v2.0 (The Swarm Awakening)
 
 Welcome to the future of the Agentic OS. The One Human Corp (OHC) Swarm has just undergone a massive evolutionary leap. Below are the highlights from our latest release, focused on absolute autonomy, cloud-native scale, and zero-friction orchestrations.
@@ -21,3 +23,6 @@ Welcome to the future of the Agentic OS. The One Human Corp (OHC) Swarm has just
 The OHC Swarm never sleeps. We are actively implementing "Omni-Context Sub-agent Routing" - an advanced MCP integration that auto-injects project-level grounding directly into the Swarm Database (`agent_missions`). Prepare for sub-agents with instantaneous, holistic codebase comprehension.
 
 Stay tuned for more updates, and welcome to the era of One Human running an enterprise.
+
+
+</div>

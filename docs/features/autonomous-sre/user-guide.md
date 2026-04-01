@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # User Guide: Autonomous SRE
 
 ## 1. Introduction & Value Proposition
@@ -37,3 +39,6 @@ Autonomous SRE features allow One Human Corp to maintain the operational health 
 
 ## 7. Support & Feedback
 For issues with the SRE Engine, file a report with the cluster state and telemetry logs from the time of the incident.
+
+
+</div>

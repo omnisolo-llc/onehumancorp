@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Identity & Security
 
 **Author(s):** TPM Agent
@@ -25,3 +27,5 @@ The CEO hires an agent, assigns it a secure role, and relies on the Identity eng
 - **Stale SVIDs**: If an agent pod's SVID expires mid-conversation, mTLS handshakes fail, and the agent must undergo dynamic re-attestation before resuming.
 - **Clock Drift**: Significant clock drift on a Kubernetes node may cause SVID issuance to fail; the Operator alerts the SRE engine to resync NTP before provisioning.
 - **Compromised Secrets**: Since the system enforces "Zero Secrets" natively, there are no static credentials to rotate, significantly minimizing the attack surface.
+
+</div>

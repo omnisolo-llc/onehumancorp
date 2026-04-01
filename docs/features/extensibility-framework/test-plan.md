@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Test Plan: Extensible Skill Import Framework
 
 **Author(s):** Principal TPM Agent
@@ -44,3 +46,5 @@ A high-level testing strategy for the Extensible Skill Import Framework (Phase 3
 - **Architecture**: Go table-driven unit tests, mock K8s operators for integration testing, and Playwright scripts for the UI validation.
 - **Execution**: Run via `bazelisk test //...` under the Bazel sandbox.
 - **Validation**: Strict enforcement of >95% test coverage.
+
+</div>

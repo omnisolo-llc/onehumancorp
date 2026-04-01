@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: VRAM Quota Management
 
 **Persona:** DevOps / SRE Agent
@@ -28,3 +30,6 @@ Enforce strict department-level GPU memory budgets to prevent runaway compute co
 
 ## 5. Security & Privacy
 - **Resource Isolation**: Prevent noisy-neighbor issues by enforcing hard limits via K8s resource quotas and limits.
+
+
+</div>

@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Release Notes Generation
 
 **Author(s):** TPM Agent
@@ -17,3 +19,6 @@ The CEO or PM triggers a release and expects a polished document summarizing all
 ## 3. Edge Cases
 - Empty commit history since the last release.
 - Unclear or empty commit messages (fallback to PR titles).
+
+
+</div>

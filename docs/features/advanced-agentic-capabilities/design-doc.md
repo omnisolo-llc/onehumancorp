@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Design Doc: Advanced Agentic Capabilities
 
 **Author(s):** TPM Agent
@@ -66,3 +68,6 @@ Orchestrators struggle to seamlessly hand off critical tasks to human operators 
 - **Handoff Generation**: When an agent encounters an ambiguous state, a predefined high-risk operation, or a cyclic hallucination, it pauses its execution graph.
 - **Visual Ground Truth**: The system captures and bundles the agent's recent context, intent, and visual state (e.g., screenshots, UI diffs) into a structured Handoff package.
 - **Approval Gating**: Human managers review the package in the CEO Dashboard and provide cryptographically signed approval tokens to resume or abort the execution thread.
+
+
+</div>

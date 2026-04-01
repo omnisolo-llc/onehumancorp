@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # CUJ: Automated SDLC Journey
 
 **Author(s):** TPM Agent
@@ -34,3 +36,5 @@ A high-level view of how the human CEO interacts with the Automated SDLC feature
 ## 6. Security & Privacy
 - All transcripts within Virtual Meeting Rooms are encrypted at rest.
 - The pipeline utilizes short-lived, least-privilege tokens for CI jobs to prevent unauthorized code modifications.
+
+</div>
