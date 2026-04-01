@@ -418,8 +418,8 @@ func TestHandleDevSeedResetsServerState(t *testing.T) {
 	if len(payload.Meetings) != 1 || payload.Meetings[0].ID != "launch-readiness" {
 		t.Fatalf("unexpected meetings after seed: %+v", payload.Meetings)
 	}
-	if len(payload.Agents) != 6 {
-		t.Fatalf("expected 6 seeded agents, got %d", len(payload.Agents))
+	if len(payload.Agents) != 7 {
+		t.Fatalf("expected 7 seeded agents, got %d", len(payload.Agents))
 	}
 }
 
