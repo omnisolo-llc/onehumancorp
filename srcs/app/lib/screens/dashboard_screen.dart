@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/widgets/observability_widget.dart';
 import 'package:ohc_app/services/api_service.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -107,7 +108,7 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 32),
         _SectionTitle('System Observability'),
         const SizedBox(height: 16),
-        _ObservabilityWidget(data: data),
+        ObservabilityWidget(isConnected: data.agents.where((a) => a.isRunning).isNotEmpty || data.agents.isEmpty, activeMissions: data.statuses.length, latencyMs: 12, cpuUsage: data.agents.where((a) => a.isRunning).length / (data.agents.isNotEmpty ? data.agents.length : 1), memoryUsage: 0.45),
         const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
@@ -130,183 +131,6 @@ class _DashboardContent extends StatelessWidget {
               ref: ref,
             );
           }).toList(),
-        ),
-      ],
-    );
-  }
-}
-
-class _ObservabilityWidget extends StatelessWidget {
-  final DashboardSnapshot data;
-
-  const _ObservabilityWidget({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    final activeMissions = data.statuses.length; // Approximate from statuses
-    final totalAgents = data.agents.length;
-    final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
-
-    return Semantics(
-      label: 'System Observability Panel',
-      child: Tooltip(
-        message: 'View System Health & Metrics',
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    // Tap interaction for delight
-                  },
-                  borderRadius: BorderRadius.circular(24),
-                  splashColor: colors.primary.withValues(alpha: 0.1),
-                  highlightColor: colors.primary.withValues(alpha: 0.05),
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: colors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.monitor_heart, color: colors.primary, size: 28),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              'Full-Spectrum Telemetry',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: colors.onSurface,
-                                fontFamily: 'Outfit',
-                              ),
-                            ),
-                            const Spacer(),
-                            _StatusBadge(healthy: healthScore >= 80),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final bool healthy;
-  const _StatusBadge({required this.healthy});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final color = healthy ? Colors.green : colors.error;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            healthy ? 'System Nominal' : 'Degraded',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontFamily: 'Inter',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final IconData icon;
-  final Color? iconColor;
-
-  const _Metric({required this.label, required this.value, required this.color, required this.icon, this.iconColor});
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ?? color;
-    return Column(
-      children: [
-        Icon(icon, color: effectiveIconColor, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontFamily: 'Inter',
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
         ),
       ],
     );
