@@ -2,8 +2,12 @@ package orchestration
 
 import (
 	"context"
-	"path/filepath"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -826,6 +830,76 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 
 	if missions5[0].Content != "Fifth instruction" {
 		t.Fatalf("expected unmodified instruction, got %q", missions5[0].Content)
+	}
+}
+
+func TestSIPDB_BurstMission_Success(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to initialize SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Seed pending mission
+	missionID := "burst-123"
+	role := "TEST_ROLE"
+	task := Message{ID: missionID, Content: "some task"}
+	err = db.DelegateMission(ctx, missionID, role, task)
+	if err != nil {
+		t.Fatalf("failed to delegate mission: %v", err)
+	}
+
+	var payloadReceived string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		payloadReceived = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	err = db.BurstMission(ctx, missionID, server.URL)
+	if err != nil {
+		t.Fatalf("BurstMission failed: %v", err)
+	}
+
+	// Verify payload was received
+	var received struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}
+	if err := json.Unmarshal([]byte(payloadReceived), &received); err != nil {
+		t.Fatalf("failed to unmarshal received payload: %v", err)
+	}
+	if received.Role != role || received.Task.ID != task.ID {
+		t.Errorf("received payload does not match expected")
+	}
+
+	// Verify status in DB
+	var status string
+	err = db.db.QueryRowContext(ctx, "SELECT status FROM agent_missions WHERE id = ?", missionID).Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query status: %v", err)
+	}
+	if status != "BURSTING" {
+		t.Errorf("expected status BURSTING, got %s", status)
+	}
+}
+
+func TestSIPDB_BurstMission_NotFound(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to initialize SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	err = db.BurstMission(ctx, "nonexistent", "http://localhost")
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }
 

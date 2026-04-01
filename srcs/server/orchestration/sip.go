@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -239,6 +241,52 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 		)
 		return err
 	})
+}
+
+// BurstMission safely hands off an intensive agent mission to a remote Headless Cloud API endpoint.
+// Accepts parameters: ctx context.Context, missionID, remoteEndpoint string.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Updates status to 'BURSTING' and sends HTTP POST to remote endpoint.
+func (s *SIPDB) BurstMission(ctx context.Context, missionID, remoteEndpoint string) error {
+	var payload string
+	err := withRetry(ctx, func() error {
+		return s.db.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = ?", missionID).Scan(&payload)
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("mission not found")
+		}
+		return err
+	}
+
+	res, err := s.db.ExecContext(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ? AND status = 'PENDING'", missionID)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return errors.New("mission not in PENDING state or failed to transition to BURSTING")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, remoteEndpoint, strings.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 // DelegateMission delegates specialized tasks via the agent_missions table.
