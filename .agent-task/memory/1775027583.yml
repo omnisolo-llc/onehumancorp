@@ -1,0 +1,14 @@
+type: memory
+metadata:
+  role: Principal Cloud Cost Optimizer (L7)
+  timestamp: 1775027583
+observations:
+  - Token cost for gpt-4o and claude-3.5-sonnet is high (~$0.04/mission).
+  - Infrastructure allocations in K8s (backend, chatwoot, plane) were overallocated for idle periods.
+  - Standalone mode docker-compose lacked resource constraints, risking local hardware starvation.
+actions_taken:
+  - Created a Token ROI Audit & Cost Blueprinting Report in docs/research/cost_blueprinting_report.md
+  - Rightsized CPU and memory requests/limits in deploy/helm/ohc/values.yaml
+  - Added deploy.resources.limits to deploy/docker-compose.yml
+resolution:
+  - Optimizations applied successfully.

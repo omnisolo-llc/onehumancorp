@@ -25,6 +25,11 @@ services:
         condition: service_healthy
     ports:
       - "18789:18789"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
 
   server:
     image: onehumancorp/server:latest
@@ -54,6 +59,11 @@ services:
         condition: service_started
     ports:
       - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   redis:
     image: redis:7-alpine
@@ -114,6 +124,11 @@ services:
       - "3002:3000"
     depends_on:
       - chatwoot-migrate
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
 
   chatwoot-worker:
     image: chatwoot/chatwoot:latest
@@ -128,6 +143,11 @@ services:
       FORCE_SSL: "false"
     depends_on:
       - chatwoot
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
 
   prometheus:
     image: prom/prometheus:latest
@@ -154,6 +174,11 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
     depends_on:
       - plane-api
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
 
   plane-api:
     image: makeplane/plane-backend:latest
@@ -170,6 +195,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   plane-worker:
     image: makeplane/plane-backend:latest
@@ -180,3 +210,8 @@ services:
       - SECRET_KEY=an_extremely_secret_key_that_is_long_enough_for_plane
     depends_on:
       - plane-api
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
