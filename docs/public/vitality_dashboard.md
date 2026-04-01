@@ -14,7 +14,7 @@ This dashboard reflects the real-time operational metrics and health status of t
 ---
 
 ### 🚀 **Recent Architectural Evolution**
-- **Go Modularization:** Successfully refactored monolithic Go structs in `srcs/server/orchestration` into a separate `srcs/server/agents` Bazel package, enabling advanced MCP integration and structural decoupling.
+- **Go Modularization:** Successfully refactored monolithic Go structs in `srcs/orchestration` into a separate `srcs/agents` Bazel package, enabling advanced MCP integration and structural decoupling.
 - **Circuit Breaker Active:** Per-client atomic Circuit Breakers deployed to internal internal APIs (`MinimaxClient`), ending cascading timeouts on RPC calls.
 - **Lock Contention Handled:** Task-execution engine optimized in `Hub.Publish` using slice aggregation inside the `sync.RWMutex` lock for high-throughput asynchronous channel sending.
 

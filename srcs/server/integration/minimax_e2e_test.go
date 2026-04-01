@@ -18,10 +18,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/orchestration"
+)
+
+import (
 	"net/http"
 	"net/http/httptest"
-
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 // minimaxAPIKey returns the Minimax API key from the environment, or an empty

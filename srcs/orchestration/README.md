@@ -15,7 +15,7 @@ package main
 import (
 	"fmt"
 	"time"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 func main() {
@@ -46,8 +46,8 @@ func main() {
 ## Developer Workflow
 This module is built and tested using Bazel.
 
-- **Build**: `bazelisk build //srcs/server/orchestration`
-- **Test**: `bazelisk test //srcs/server/orchestration/...`
+- **Build**: `bazelisk build //srcs/orchestration`
+- **Test**: `bazelisk test //srcs/orchestration/...`
 
 ## Configuration
 No environment configuration is required. State is held entirely in memory in this implementation.

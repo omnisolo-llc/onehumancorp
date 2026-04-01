@@ -1,7 +1,6 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 npm_link_all_packages(name = "node_modules")
 
@@ -103,26 +102,16 @@ sh_binary(
 # This launches the Flutter app in native mode, which then manages its own backend.
 genrule(
     name = "gen_desktop_sh",
-    srcs = [
-        "@flutter_sdk//:flutter_binary_unix",
-        "@flutter_sdk//:flutter_binary_windows",
-    ],
     outs = ["desktop_generated.sh"],
     cmd = """
-FLUTTER_UNIX="$(rootpath @flutter_sdk//:flutter_binary_unix)"
-FLUTTER_WIN="$(rootpath @flutter_sdk//:flutter_binary_windows)"
-
 cat << 'EOF' > $@
 #!/usr/bin/env bash
 # Standalone Desktop App orchestrator
 set -e
 
 # Support for the app to manage its own backend lifecycle.
-# Expose the standalone wrapper as `ohc` so the app can start/stop/doctor the backend.
-OHC_BIN_DIR="$$(mktemp -d)"
-trap 'rm -rf "$$OHC_BIN_DIR"' EXIT
-ln -sf "$$PWD/srcs/server/standalone_ohc_exec" "$$OHC_BIN_DIR/ohc"
-export PATH="$$OHC_BIN_DIR:$$PATH"
+# The ohc binary must be in the PATH.
+export PATH=$$PWD/srcs/server:$$PATH
 
 # Detect platform if not explicitly provided
 PLATFORM="auto"
@@ -137,24 +126,9 @@ fi
 
 # Enable Standalone Mode via dart-define so the app knows to start its backend.
 echo "--- Starting OHC Desktop App (Standalone Mode, Platform: $$PLATFORM) ---"
-
-# Resolve the Flutter binary to use.
-# FLUTTER_BIN_OVERRIDE may be set by tests (or tooling) to point to a
-# custom/fake Flutter executable.  When not set, the hermetic SDK binary that
-# was baked into this launcher at build time is used.
-if [[ -n "$${FLUTTER_BIN_OVERRIDE:-}" ]]; then
-  FLUTTER_CMD="$${FLUTTER_BIN_OVERRIDE}"
-elif [[ "$$PLATFORM" == "windows" ]]; then
-  FLUTTER_CMD="../../REPLACE_ME_WIN"
-else
-  FLUTTER_CMD="../../REPLACE_ME_UNIX"
-fi
-
 cd srcs/app
-"$${FLUTTER_CMD}" run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
+flutter run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
 EOF
-sed -i "s|REPLACE_ME_UNIX|$$FLUTTER_UNIX|g" $@
-sed -i "s|REPLACE_ME_WIN|$$FLUTTER_WIN|g" $@
 """,
 )
 
@@ -165,44 +139,56 @@ sh_binary(
     srcs = [":gen_desktop_sh"],
     data = [
         "//srcs/server:ohc",
-        "//srcs/server:standalone_ohc_exec",
         "//srcs/app:srcs",
-        "//:pubspec.yaml",
-        "@flutter_sdk//:flutter_sdk",
-    ],
+    ] + select({
+        ":linux": ["//srcs/app:app.linux"],
+        ":macos": ["//srcs/app:app.macos"],
+        ":windows": ["//srcs/app:app.windows"],
+        "//conditions:default": [],
+    }),
     tags = ["manual"],
 )
 
-sh_test(
-    name = "standalone_e2e_test",
-    srcs = ["//srcs/app:test/standalone_e2e_test.sh"],
-    data = [":desktop"],
+
+# Alias to start the standalone desktop environment quickly.
+alias(
+    name = "up-desktop",
+    actual = ":desktop",
 )
 
-sh_test(
-    name = "app_deb_structure_test",
-    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
-    args = ["deb"],
-    data = ["//srcs/app:app_deb.deb"],
+
+# Alias to start the local developer environment quickly.
+alias(
+    name = "up",
+    actual = ":deploy_dev",
 )
 
-sh_test(
-    name = "app_rpm_structure_test",
-    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
-    args = ["rpm"],
-    data = [
-        "//srcs/app:app_rpm.rpm",
-        "//srcs/app:app_runtime_tar.tar",
-    ],
-    tags = ["manual"],
+# Alias to start the primary Flutter Web Gateway
+alias(
+    name = "start-web",
+    actual = "//srcs/app:start",
+    visibility = ["//visibility:public"],
 )
 
-test_suite(
-    name = "desktop_packaging_tests",
-    tests = [
-        ":standalone_e2e_test",
-        ":app_deb_structure_test",
-    ],
+# Alias to start the Flutter app (Web)
+alias(
+    name = "start-app",
+    actual = "//srcs/app:start",
+    visibility = ["//visibility:public"],
+)
+
+# Alias to start the backend (Go)
+alias(
+    name = "start-backend",
+    actual = "//srcs/server:ohc",
+    visibility = ["//visibility:public"],
+)
+
+# Alias to run tests
+alias(
+    name = "e2e",
+    actual = "//deploy:kind_e2e_test",
+    visibility = ["//visibility:public"],
 )
 
 # Alias to run hello-world agent easily

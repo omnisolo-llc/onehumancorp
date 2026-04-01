@@ -33,9 +33,7 @@ graph TD;
 |-----------|----------|---------|
 | `srcs/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
 | `srcs/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
-| `srcs/server/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
-| `srcs/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
-| `srcs/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
+| `srcs/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
 | `srcs/proto/` | **Protobuf** | gRPC service definitions |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
@@ -99,17 +97,8 @@ For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 bazelisk build //...
 bazelisk test //...
 
-# Quick Local Dev (run these in separate terminals)
-bazelisk run //srcs/server:ohc
-bazelisk run //srcs/app:start
-
-# Standalone desktop source launcher
-bazelisk run //:desktop
-
-# Linux desktop/runtime packages
-bazelisk build //srcs/app:app_deb
-# Requires rpmbuild on the host
-bazelisk build //srcs/app:app_rpm
+# Quick Local Dev (starts Backend + Flutter Web)
+bazelisk run //:dev
 ```
 
 ### Flutter app
@@ -123,7 +112,7 @@ flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
 ### Server binary
 
 ```bash
-bazelisk run //srcs/server:ohc
+bazelisk run //srcs/server:server
 ```
 
 ## Configuration
@@ -153,11 +142,6 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 
 - **Build all modules:** `bazelisk build //...`
 - **Run all tests:** `bazelisk test //...`
-- **Run the Go backend:** `bazelisk run //srcs/server:ohc`
-- **Serve the Bazel-built Flutter web app:** `bazelisk run //srcs/app:start`
-- **Launch standalone desktop mode:** `bazelisk run //:desktop`
-- **Build Linux package artifacts:** `bazelisk build //srcs/app:app_deb` and `bazelisk build //srcs/app:app_rpm` (`app_rpm` requires `rpmbuild` on the host)
-- **Use mobile platform profiles:** `--config=android` and `--config=ios`
 - **Format Go code:** `gofmt -w ./...`
 - **Format frontend:** `cd srcs/app && flutter format .`
 - **Analyze Flutter app:** `cd srcs/app && flutter analyze`

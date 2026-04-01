@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/orchestration"
 )
 
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)

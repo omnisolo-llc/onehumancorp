@@ -1,32 +1,11 @@
 load("@rules_flutter//flutter:defs.bzl", "flutter_app", "flutter_library", "flutter_test")
-load("@rules_pkg//pkg:deb.bzl", "pkg_deb")
-load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_filegroup", "pkg_files", "pkg_mklink", "strip_prefix")
-load("@rules_pkg//pkg:rpm.bzl", "pkg_rpm")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-
-APP_PACKAGE_NAME = "ohc-desktop"
-APP_PACKAGE_VERSION = "0.1.2"
 
 exports_files([
     "pubspec.yaml",
     "pub_deps.json",
-    "standalone_linux_launcher.sh",
-    "test/linux_package_structure_test.sh",
-    "test/standalone_e2e_test.sh",
 ])
-
-# ── App assets (logo, images, etc.) ──────────────────────────────────────────
-# Exposed as a data dependency so flutter_library targets that reference this
-# app's pubspec.yaml (and therefore its declared assets) can include the asset
-# files in their prepared test workspace.
-
-filegroup(
-    name = "app_assets",
-    srcs = glob(["assets/**"]),
-    visibility = ["//srcs/app:__subpackages__"],
-)
 
 # ── Source filegroup (non-flutter uses, e.g. layout checks) ──────────────────
 
@@ -34,21 +13,14 @@ filegroup(
     name = "srcs",
     srcs = glob(
         [
-            "assets/**",
-            "android/**",
             "BUILD.bazel",
             "e2e/**",
-            "ios/**",
             "lib/*.dart",
-            "linux/**",
-            "macos/**",
             "test/**",
             "web/**",
-            "windows/**",
             "pubspec.yaml",
             "pubspec.lock",
             "pub_deps.json",
-            "standalone_linux_launcher.sh",
         ],
         allow_empty = True,
     ) + [
@@ -78,6 +50,7 @@ flutter_library(
 flutter_library(
     name = "main_lib",
     srcs = ["lib/main.dart"],
+    data = glob(["assets/**"]),
     pubspec = "pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
@@ -93,6 +66,7 @@ flutter_library(
 flutter_library(
     name = "app_lib",
     srcs = ["lib/main.dart"],
+    data = glob(["assets/**"]),
     pubspec = "pubspec.yaml",
     visibility = ["//srcs/app:__subpackages__"],
     workspace_pubspec = "//:pubspec.yaml",
@@ -127,6 +101,7 @@ flutter_library(
 flutter_library(
     name = "app_for_tests",
     srcs = [],
+    data = glob(["assets/**"]),
     pubspec = "pubspec.yaml",
     visibility = ["//srcs/app:__subpackages__"],
     workspace_pubspec = "//:pubspec.yaml",
@@ -252,87 +227,5 @@ sh_binary(
         ":app",
         "//:node_modules/@playwright/test",
     ],
-    visibility = ["//visibility:public"],
-)
-
-pkg_files(
-    name = "app_workspace_files",
-    srcs = [":srcs"],
-    prefix = "opt/ohc-desktop/srcs/app",
-    strip_prefix = strip_prefix.from_root("srcs/app"),
-)
-
-pkg_files(
-    name = "app_workspace_pubspec",
-    srcs = ["//:pubspec.yaml"],
-    renames = {"//:pubspec.yaml": "opt/ohc-desktop/pubspec.yaml"},
-)
-
-pkg_files(
-    name = "linux_runtime_binaries",
-    srcs = [
-        "//srcs/server:ohc",
-        "//srcs/server:standalone_ohc_exec",
-        "standalone_linux_launcher.sh",
-    ],
-    attributes = pkg_attributes(mode = "0755"),
-    renames = {
-        "//srcs/server:ohc": "opt/ohc-desktop/libexec/ohc-server",
-        "//srcs/server:standalone_ohc_exec": "opt/ohc-desktop/libexec/ohc",
-        "//srcs/app:standalone_linux_launcher.sh": "opt/ohc-desktop/libexec/ohc-desktop",
-    },
-)
-
-pkg_mklink(
-    name = "linux_runtime_ohc_link",
-    link_name = "usr/bin/ohc",
-    target = "/opt/ohc-desktop/libexec/ohc",
-)
-
-pkg_mklink(
-    name = "linux_runtime_launcher_link",
-    link_name = "usr/bin/ohc-desktop",
-    target = "/opt/ohc-desktop/libexec/ohc-desktop",
-)
-
-pkg_filegroup(
-    name = "linux_runtime_payload",
-    srcs = [
-        ":app_workspace_files",
-        ":app_workspace_pubspec",
-        ":linux_runtime_binaries",
-        ":linux_runtime_ohc_link",
-        ":linux_runtime_launcher_link",
-    ],
-)
-
-pkg_tar(
-    name = "app_runtime_tar",
-    srcs = [":linux_runtime_payload"],
-    visibility = ["//visibility:public"],
-)
-
-pkg_deb(
-    name = "app_deb",
-    architecture = "amd64",
-    data = ":app_runtime_tar",
-    description = "OHC standalone desktop runtime package with Bazel-managed app sources and backend wrapper.",
-    maintainer = "One Human Corp",
-    package = APP_PACKAGE_NAME,
-    version = APP_PACKAGE_VERSION,
-    visibility = ["//visibility:public"],
-)
-
-pkg_rpm(
-    name = "app_rpm",
-    architecture = "x86_64",
-    description = "OHC standalone desktop runtime package with Bazel-managed app sources and backend wrapper.",
-    license = "Apache-2.0",
-    package_name = APP_PACKAGE_NAME,
-    release = "1",
-    srcs = [":linux_runtime_payload"],
-    summary = "OHC standalone desktop runtime",
-    tags = ["manual"],
-    version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )

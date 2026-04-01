@@ -118,7 +118,5 @@ build:local --spawn_strategy=local
 
 # Platform specific configs
 build:linux --platforms=@platforms//os:linux
-build:android --platforms=@platforms//os:android
-build:ios --platforms=@platforms//os:ios
 build:macos --platforms=@platforms//os:macos
 build:windows --platforms=@platforms//os:windows
