@@ -1,0 +1,18 @@
+actions:
+  - name: "Test all targets"
+    triggers:
+      push:
+        branches:
+          - "main" # <-- replace "main" with your main branch name
+      pull_request:
+        branches:
+          - "*"
+    steps:
+      - run: |
+          bazelisk test //... \
+            --test_output=errors \
+            --test_summary=terse \
+            --test_timeout=300,600,900,1800 \
+            --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
