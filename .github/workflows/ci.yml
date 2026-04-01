@@ -29,7 +29,7 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ hashFiles('**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'WORKSPACE', 'MODULE.bazel', '.bazelrc') }}
-          repository-cache: false
+          repository-cache: true
 
       - name: Test
         env:
