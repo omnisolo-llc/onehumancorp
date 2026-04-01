@@ -75,6 +75,8 @@ Services:
 | `prometheus` | 9090 | Metrics |
 | `grafana` | 3000 | Dashboards |
 
+When the backend starts with an empty workforce, it now bootstraps an **internal default agent** backed by the built-in provider so a single-container deployment has an immediately available agent runtime.
+
 ### Bazel (full build + test)
 
 ```bash
@@ -109,6 +111,9 @@ cargo test
 | `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
 | `MONO_FRONTEND_DIST` | Path to compiled frontend dist |
+| `OHC_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
+| `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
+| `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
 
 Kubernetes secrets are used to inject credentials at runtime without committing them to source.
 
@@ -119,4 +124,3 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 - **Format Go code:** `gofmt -w ./...`
 - **Format frontend:** `cd srcs/frontend && npx prettier --write .`
 - **Lint Rust:** `cd srcs/core && cargo clippy`
-

@@ -159,6 +159,26 @@ This strategic push will directly tackle the top 5 urgent capability gaps with a
 
 For the full detailed breakdown of the 50 features, see our mapped research artifact: `docs/research/framework_ingestion_20260320.json`.
 
+#### Claude Code parity backlog from the public `nirholas/claude-code` release
+
+The newly public Claude Code repository surfaced several first-class product features that OHC still lacks or only covers partially today. These are tracked here as explicit roadmap items for the internal default agent:
+
+- **Persistent session memory and `/resume`-style recovery UX**: preserve operator context across interrupted terminal sessions.
+- **Interactive command palette / slash-command UX**: expose review, diff, cost, config, memory, and task workflows as first-class agent commands instead of only API endpoints.
+- **Tool-permission profiles**: add explicit approval modes for shell, file, network, and MCP actions beyond the current server-side validation gates.
+- **IDE / desktop / mobile bridge handoff**: provide first-class bridge flows between terminal, editor, and remote device sessions.
+- **Plugin loader + reusable skill execution runtime**: move beyond static built-ins toward installable third-party plugins and reusable skills.
+- **Source-exploration MCP server**: ship an explorer-style MCP endpoint for browsing OHC internals from another MCP client.
+- **Git worktree isolation and richer git workflow helpers**: add dedicated worktree-safe execution paths for complex code tasks.
+- **Voice input/output and richer terminal interaction modes**: voice, vim-style controls, and configurable keybinding layers remain open.
+- **Proactive triggers and remote automation hooks**: cron-like and externally triggered autonomous agent execution should graduate from roadmap concepts into productized flows.
+
+#### Implemented now: internal default agent baseline
+
+- **Internal default agent bootstrap**: when OHC starts with an empty workforce, the dashboard server now auto-registers a built-in internal default agent.
+- **Docker/Bazel runtime target**: the internal default agent now has an explicit Bazel-managed OCI image target (`//deploy:default_agent_image`) for containerized execution.
+- **Configurable default-agent identity**: the bootstrapped agent can be named and role/region-tuned with `OHC_DEFAULT_AGENT_*` environment variables.
+
 ---
 
 ## One Human Corp: Cloud-Native Hybrid Architecture as Code
