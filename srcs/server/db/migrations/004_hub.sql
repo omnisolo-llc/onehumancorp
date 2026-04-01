@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_inbox_agent ON agent_inbox (agent_id);
 CREATE TABLE IF NOT EXISTS meeting_rooms (
     id           TEXT PRIMARY KEY,
     agenda       TEXT NOT NULL DEFAULT '',
-    participants TEXT[] NOT NULL DEFAULT '{}'
+    participants TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS meeting_transcripts (

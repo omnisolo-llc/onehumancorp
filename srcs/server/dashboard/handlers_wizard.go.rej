@@ -1,0 +1,9 @@
+--- srcs/server/dashboard/handlers_wizard.go
++++ srcs/server/dashboard/handlers_wizard.go
+@@ -83,5 +83,4 @@
+	if req.PostgresURL != "" {
+		cfg.PostgresURL = req.PostgresURL
+	}
+-	}
+-		cfg.CentrifugeURL = req.CentrifugeURL
++	if req.CentrifugeURL != "" {

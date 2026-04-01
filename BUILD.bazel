@@ -1,5 +1,6 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -35,7 +36,6 @@ config_setting(
     constraint_values = ["@platforms//os:windows"],
     visibility = ["//visibility:public"],
 )
-
 
 gazelle(
     name = "gazelle-update-repos",
@@ -151,17 +151,15 @@ sed -i "s|REPLACE_ME_WIN|$$FLUTTER_WIN|g" $@
 """,
 )
 
-
-
 sh_binary(
     name = "desktop",
     srcs = [":gen_desktop_sh"],
     data = [
+        "//:pubspec.yaml",
+        "//srcs/app:srcs",
         "//srcs/server:ohc",
         "//srcs/server:standalone_ohc_exec",
-        "//srcs/app:srcs",
-        "//:pubspec.yaml",
-        "@flutter_sdk//:flutter_sdk",
+        "@flutter_sdk",
     ],
     tags = ["manual"],
 )
@@ -193,8 +191,8 @@ sh_test(
 test_suite(
     name = "desktop_packaging_tests",
     tests = [
-        ":standalone_e2e_test",
         ":app_deb_structure_test",
+        ":standalone_e2e_test",
     ],
 )
 
@@ -202,4 +200,18 @@ test_suite(
 alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
+)
+
+go_library(
+    name = "mono_lib",
+    srcs = ["test_sqlite.go"],
+    importpath = "github.com/onehumancorp/mono",
+    visibility = ["//visibility:private"],
+    deps = ["@org_modernc_sqlite//:sqlite"],
+)
+
+go_binary(
+    name = "mono",
+    embed = [":mono_lib"],
+    visibility = ["//visibility:public"],
 )

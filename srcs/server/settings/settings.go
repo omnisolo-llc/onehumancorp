@@ -22,7 +22,6 @@ type AppSettings struct {
 	ListenAddr    string            `json:"listen_addr"`
 	DBPath        string            `json:"db_path,omitempty"`
 	PostgresURL   string            `json:"postgres_url,omitempty"`
-	RedisURL      string            `json:"redis_url,omitempty"`
 	CentrifugeURL string            `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string            `json:"minimax_api_key,omitempty"`
 	AiProviders   []AiProvider      `json:"ai_providers"`

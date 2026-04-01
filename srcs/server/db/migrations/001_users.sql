@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     username        TEXT UNIQUE NOT NULL,
     email           TEXT UNIQUE NOT NULL,
     password_hash   TEXT NOT NULL DEFAULT '',
-    roles           TEXT[] NOT NULL DEFAULT '{}',
+    roles           TEXT NOT NULL DEFAULT '[]',
     active          BOOLEAN NOT NULL DEFAULT TRUE,
     organization_id TEXT NOT NULL DEFAULT '',
     oidc_subject    TEXT UNIQUE DEFAULT NULL,
@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_users_oidc ON users (oidc_subject) WHERE oidc_sub
 CREATE TABLE IF NOT EXISTS roles (
     id          TEXT PRIMARY KEY,
     name        TEXT UNIQUE NOT NULL,
-    permissions TEXT[] NOT NULL DEFAULT '{}',
+    permissions     TEXT NOT NULL DEFAULT '[]',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

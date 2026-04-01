@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // PgUsageRepository implements UsageRepository backed by PostgreSQL.
 type PgUsageRepository struct {
-	pool    *pgxpool.Pool
+	pool    db.Provider
 	catalog map[string]Price
 }
 
 // NewPgUsageRepository creates a Postgres-backed usage repository.
-func NewPgUsageRepository(pool *pgxpool.Pool, catalog map[string]Price) *PgUsageRepository {
+func NewPgUsageRepository(pool db.Provider, catalog map[string]Price) *PgUsageRepository {
 	copied := make(map[string]Price, len(catalog))
 	for model, price := range catalog {
 		copied[model] = price
@@ -32,7 +32,7 @@ func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, erro
 		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD
 	usage.OccurredAt = usage.OccurredAt.UTC()
 
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.pool.ExecContext(ctx, `
 		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cost_usd, occurred_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		usage.AgentID, usage.AgentRole, usage.OrganizationID, usage.Model,
@@ -45,7 +45,7 @@ func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, erro
 }
 
 func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) (Summary, error) {
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.pool.QueryContext(ctx, `
 		SELECT agent_id,
 		       COALESCE(SUM(cost_usd), 0),
 		       COALESCE(SUM(prompt_tokens + completion_tokens), 0)

@@ -81,9 +81,8 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	if req.PostgresURL != "" {
 		cfg.PostgresURL = req.PostgresURL
 	}
-	if req.CentrifugeURL != "" {
+	}
 		cfg.CentrifugeURL = req.CentrifugeURL
-
 	}
 	if req.MinimaxAPIKey != "" {
 		cfg.MinimaxAPIKey = req.MinimaxAPIKey

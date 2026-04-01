@@ -167,7 +167,6 @@ func (r *PgHubRepository) CreateMeeting(ctx context.Context, room MeetingRoom) e
 
 func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoom, bool, error) {
 	var room MeetingRoom
-	var partsStr string
 	err := r.pool.QueryRowContext(ctx, "SELECT id, agenda, participants FROM meeting_rooms WHERE id = $1", id).Scan(
 		&room.ID, &room.Agenda, &partsStr,
 	)
@@ -177,7 +176,6 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 		}
 		return MeetingRoom{}, false, fmt.Errorf("pg: get meeting: %w", err)
 	}
-	_ = json.Unmarshal([]byte(partsStr), &room.Participants)
 
 	// Load transcript.
 	rows, err := r.pool.QueryContext(ctx, `
@@ -221,11 +219,9 @@ func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, erro
 	var rooms []MeetingRoom
 	for rows.Next() {
 		var room MeetingRoom
-		var partsStr string
 		if err := rows.Scan(&room.ID, &room.Agenda, &partsStr); err != nil {
 			return nil, fmt.Errorf("pg: scan meeting: %w", err)
 		}
-		_ = json.Unmarshal([]byte(partsStr), &room.Participants)
 		rooms = append(rooms, room)
 	}
 	return rooms, nil
