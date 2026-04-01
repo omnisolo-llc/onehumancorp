@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 // sharedAuthStore is used by all tenants in tests so that a single token

@@ -13,7 +13,7 @@ go_library(
         "service.go",
         "sip.go",
     ],
-    importpath = "github.com/onehumancorp/mono/srcs/orchestration",
+    importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",

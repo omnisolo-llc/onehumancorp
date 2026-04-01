@@ -57,14 +57,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // SvgPicture.asset(
-                    //   'assets/logo.svg',
-                    //   height: 100,
-                    // ),
-                    Icon(
-                      Icons.person,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.primary,
+                    Image.asset(
+                      'assets/logo.png',
+                      height: 100,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          Icons.person,
+                          size: 80,
+                          color: Theme.of(context).colorScheme.primary,
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     const Text(

@@ -16,10 +16,10 @@ import (
     "net/http"
     "time"
 
-    "github.com/onehumancorp/mono/srcs/billing"
-    "github.com/onehumancorp/mono/srcs/dashboard"
-    "github.com/onehumancorp/mono/srcs/domain"
-    "github.com/onehumancorp/mono/srcs/orchestration"
+    "github.com/onehumancorp/mono/srcs/server/billing"
+    "github.com/onehumancorp/mono/srcs/server/dashboard"
+    "github.com/onehumancorp/mono/srcs/server/domain"
+    "github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func main() {
@@ -37,8 +37,8 @@ func main() {
 ## Developer Workflow
 This module is built and tested using Bazel.
 
-- **Build**: `bazelisk build //srcs/dashboard`
-- **Test**: `bazelisk test //srcs/dashboard/...`
+- **Build**: `bazelisk build //srcs/server/dashboard`
+- **Test**: `bazelisk test //srcs/server/dashboard/...`
 
 ## Configuration
 - `MONO_FRONTEND_DIST`: (Optional) Setting this environment variable directs the HTTP handler to serve statically built frontend files from the provided path instead of returning a generic fallback UI.

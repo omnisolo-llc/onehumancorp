@@ -140,8 +140,7 @@ mkdir -p \
   "${output_root}/ios" \
   "${output_root}/windows" \
   "${output_root}/android" \
-  "${output_root}/linux" \
-  "${output_root}/andriod"
+  "${output_root}/linux"
 
 python3 -m http.server "${port}" --directory "${web_artifacts}" >/dev/null 2>&1 &
 server_pid=$!
@@ -170,9 +169,5 @@ mkdir -p "${capture_work_dir}"
 cp "${capture_script}" "${capture_work_dir}/capture_screenshots.mjs"
 ln -sf "${node_modules_dir}" "${capture_work_dir}/node_modules"
 "${node_bin}" "${capture_work_dir}/capture_screenshots.mjs"
-
-if [[ -f "${output_root}/android/login.png" ]]; then
-  cp "${output_root}/android/login.png" "${output_root}/andriod/login.png"
-fi
 
 echo "Screenshots written to ${output_root}"

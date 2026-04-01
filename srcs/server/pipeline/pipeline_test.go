@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func TestParseSpecApproved(t *testing.T) {

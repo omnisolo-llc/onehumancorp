@@ -64,10 +64,16 @@ mono/
 │   └── roadmap.md           Strategic technical roadmap
 └── srcs/
   ├── app/                 Flutter client for mobile, desktop, and web
-  ├── server/              Go backend services and runtime entrypoint
-  ├── orchestration/       Agent hub and meeting rooms
-  ├── domain/              Domain model (Org / Dept / Role)
-  └── proto/               Protobuf definitions
+  ├── proto/               Protobuf definitions
+  └── server/              Go backend services and runtime entrypoint
+      ├── agents/          Agent provider registry, workers, and MCP bundles
+      ├── billing/         Usage tracking and model cost accounting
+      ├── checkpointer/    LangGraph checkpoint persistence
+      ├── dashboard/       HTTP handlers and UI-serving gateway
+      ├── domain/          Domain model (Org / Dept / Role)
+      ├── integrations/    External service integrations
+      ├── orchestration/   Agent hub and meeting rooms
+      └── tools/           Tooling dependency shims
 ```
 
 ---
@@ -94,7 +100,7 @@ bazel build //srcs/app:app
 bazel test //...
 
 # Run all Go unit tests
-bazel test //srcs/server/... //srcs/orchestration/...
+bazel test //srcs/server/...
 
 # Run Flutter widget and service tests
 bazel test //srcs/app/lib/...
@@ -117,8 +123,17 @@ bazel test //... --config=verbose
 # Re-run tests even if cached
 bazel test //... --cache_test_results=no
 
-# Launch the local development environment (Backend + Flutter Web)
-bazelisk run //:dev
+# Launch the local development environment (run these in separate terminals)
+bazelisk run //srcs/server:ohc
+bazelisk run //srcs/app:start
+
+# Launch standalone desktop mode
+bazelisk run //:desktop
+
+# Build Linux package artifacts
+bazelisk build //srcs/app:app_deb
+# Requires rpmbuild on the host
+bazelisk build //srcs/app:app_rpm
 ```
 
 ### Lint / Type-check
@@ -138,7 +153,7 @@ cd srcs/app && flutter analyze
 ### Go Unit Tests
 
 ```bash
-bazel test //srcs/billing/... //srcs/domain/... //srcs/orchestration/... //srcs/integrations/...
+bazel test //srcs/server/...
 ```
 
 ### Flutter App Tests
@@ -250,7 +265,7 @@ docker compose -f deploy/docker-compose.yml down -v
 
 ## Adding a New Agent Role
 
-1. Define the role constant in `srcs/orchestration/service.go`
+1. Define the role constant in `srcs/server/orchestration/service.go`
 2. Add any role-specific behaviour to `Hub.HandleMessage`
 3. Update the default `Catalog` in `srcs/server/billing/tracker.go` if the role uses a different model
 4. Add the role to the Skill Pack defaults in `srcs/server/dashboard/server.go`
