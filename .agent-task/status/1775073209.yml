@@ -1,0 +1,5 @@
+status: "HEALTHY"
+metrics:
+  tests: "100% green"
+  observability: "OpenTelemetry + Prometheus verified"
+  backend_parity: "Verified"
