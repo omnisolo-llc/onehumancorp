@@ -1,0 +1,5 @@
+type: status
+id: "agent-001"
+status: "idle"
+memory_type: "observability_heartbeat"
+timestamp: 1775019677
