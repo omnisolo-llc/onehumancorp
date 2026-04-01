@@ -1,0 +1,10 @@
+status: healthy
+activity: draining_mission_queue
+timestamp: 1775029281
+metadata:
+  role: General Mission Worker & Taskmaster (L5)
+  timestamp: 1775029281
+observations:
+  - The mission queue at `.agent-task/missions/` is empty. Exiting successfully.
+type: exit_condition
+context: Checked queue for missions, found 0 missions.
