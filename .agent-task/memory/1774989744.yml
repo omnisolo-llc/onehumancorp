@@ -1,7 +1,0 @@
-type: memory
-metadata:
-  role: General Mission Worker
-  timestamp: 1774989744
-observations: Mission queue is empty (.agent-task/missions/ not found).
-actions_taken: Checked queue, recorded heartbeat, exited.
-resolution: Success, queue is empty.
