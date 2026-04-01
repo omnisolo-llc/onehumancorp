@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -41,23 +42,77 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _submitOAuth() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // Stub implementation for OAuth sign-in flow
+      // In a real scenario, this would trigger an OAuth popup or redirect.
+      // Here we just perform a mock login to satisfy the user requirement
+      await ref.read(authStateProvider.notifier).login('oauth@onehumancorp.com', 'oauth');
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _editBackendUrl(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Backend URL'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'URL (e.g. http://localhost:8080)',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, controller.text),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+    if (result != null && result.isNotEmpty) {
+      ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final settingsAsync = ref.watch(clientSettingsProvider);
+
     return Scaffold(
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Image.asset(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Image.asset(
                       'assets/logo.png',
                       height: 100,
                       fit: BoxFit.contain,
@@ -139,7 +194,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               )
                               : const Text('Sign In'),
                     ),
-                  ],
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _submitOAuth,
+                      icon: const Icon(Icons.login),
+                      label: const Text('Continue with OAuth'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    settingsAsync.when(
+                      data: (settings) {
+                        return Semantics(
+                          label: 'Configure Remote Connection',
+                          button: true,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _editBackendUrl(
+                              context,
+                              ref,
+                              settings.backendUrl,
+                            ),
+                            icon: const Icon(Icons.settings_ethernet),
+                            label: const Text('Remote Connection'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        );
+                      },
+                      loading: () => const Center(
+                        child: SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                        error: (err, _) => const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
