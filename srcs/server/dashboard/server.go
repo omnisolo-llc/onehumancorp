@@ -19,6 +19,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/powersync"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -481,6 +482,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/org", server.handleOrg)
 	mux.HandleFunc("/api/meetings", server.handleMeetings)
 	mux.HandleFunc("/api/costs", server.handleCosts)
+
+	// PowerSync API Routes
+	mux.HandleFunc("/api/powersync/token", powersync.PowerSyncTokenHandler())
+	mux.HandleFunc("/.well-known/jwks.json", powersync.JWKSHandler())
 	mux.HandleFunc("/api/messages", server.handleSendMessage)
 	mux.HandleFunc("/api/agents/hire", server.handleHireAgent)
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)

@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "powersync",
+    srcs = ["powersync.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/powersync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+        "@com_github_golang_jwt_jwt_v5//:jwt",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "powersync_test",
+    srcs = ["powersync_test.go"],
+    embed = [":powersync"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)

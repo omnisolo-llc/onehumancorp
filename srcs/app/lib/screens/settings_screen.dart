@@ -148,10 +148,14 @@ class SettingsScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
                   child: Column(
@@ -192,17 +196,24 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
+                            onPressed:
+                                () => Navigator.pop(context, controller.text),
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
+                            child: const Text(
+                              'Save',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                           ),
                         ],
                       ),

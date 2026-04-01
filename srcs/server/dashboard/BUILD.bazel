@@ -26,6 +26,7 @@ go_library(
         "//srcs/server/integrations",
         "//srcs/server/interop",
         "//srcs/server/orchestration",
+        "//srcs/server/powersync",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
