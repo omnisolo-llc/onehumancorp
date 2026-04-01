@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS local_metrics_buffer (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metric_type TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

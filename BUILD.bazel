@@ -1,5 +1,6 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -50,8 +51,8 @@ sh_binary(
     name = "deploy_dev",
     srcs = ["//deploy:deploy_dev.sh"],
     data = [
-        "//deploy:server_load",
         "//deploy:docker-compose.yml",
+        "//deploy:server_load",
         "//deploy:setup_k8s.sh",
     ],
     tags = ["manual"],

@@ -177,6 +177,10 @@ func run(now time.Time, listen listenFunc) error {
 	if err != nil {
 		return err
 	}
+
+	if pool != nil && pool.Provider != nil {
+		telemetry.StartBufferedMetricsSync(ctx, pool.Provider)
+	}
 	if pool != nil {
 		defer pool.Close()
 		if err := pool.RunMigrations(ctx); err != nil {

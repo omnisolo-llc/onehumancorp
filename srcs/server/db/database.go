@@ -146,7 +146,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 		sqlStr := string(sqlBytes)
 
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
-		_, isSqlite := p.Provider.(*SqliteProvider)
+		isSqlite := p.Provider.IsSQLite()
 		if isSqlite {
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
 			// Bigserial -> INTEGER PRIMARY KEY AUTOINCREMENT

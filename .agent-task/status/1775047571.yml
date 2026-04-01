@@ -1,0 +1,7 @@
+type: status
+mission_id: 1775036361
+status: success
+message: Implemented a localized metric buffer for Standalone Mode.
+metrics:
+  - telemetry locally buffered in SQLite when offline
+  - metrics synchronized to cloud correctly using StartBufferedMetricsSync

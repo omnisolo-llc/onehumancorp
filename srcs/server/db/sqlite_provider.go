@@ -60,6 +60,10 @@ func (p *SqliteProvider) Close() {
 	p.db.Close()
 }
 
+func (p *SqliteProvider) IsSQLite() bool {
+	return true
+}
+
 // SqliteRows implements Rows using sql.Rows.
 type SqliteRows struct {
 	rows *sql.Rows

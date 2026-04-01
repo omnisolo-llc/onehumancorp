@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -203,15 +204,25 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
-	if tokenUsageCounter == nil {
-		return
+	if tokenUsageCounter != nil {
+		tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("role", role),
+			attribute.String("model", model),
+			attribute.String("type", tokenType),
+		))
 	}
-	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("role", role),
-		attribute.String("model", model),
-		attribute.String("type", tokenType),
-	))
+
+	if BufferMetricFunc != nil {
+		payload, _ := json.Marshal(map[string]any{
+			"agent_id": agentID,
+			"role":     role,
+			"model":    model,
+			"type":     tokenType,
+			"count":    count,
+		})
+		BufferMetricFunc("token_usage", string(payload))
+	}
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -227,14 +238,22 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 // Produces no errors.
 // Has no side effects.
 func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
-	if agentApiCallsCounter == nil {
-		return
+	if agentApiCallsCounter != nil {
+		agentApiCallsCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("role", role),
+			attribute.String("api", api),
+		))
 	}
-	agentApiCallsCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("role", role),
-		attribute.String("api", api),
-	))
+
+	if BufferMetricFunc != nil {
+		payload, _ := json.Marshal(map[string]any{
+			"agent_id": agentID,
+			"role":     role,
+			"api":      api,
+		})
+		BufferMetricFunc("agent_api_call", string(payload))
+	}
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.
@@ -248,12 +267,18 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 // Produces no errors.
 // Has no side effects.
 func RecordHumanInteraction(ctx context.Context, interactionType string) {
-	if humanInteractionsCounter == nil {
-		return
+	if humanInteractionsCounter != nil {
+		humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("type", interactionType),
+		))
 	}
-	humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("type", interactionType),
-	))
+
+	if BufferMetricFunc != nil {
+		payload, _ := json.Marshal(map[string]any{
+			"type": interactionType,
+		})
+		BufferMetricFunc("human_interaction", string(payload))
+	}
 }
 
 // RecordMeetingEvent increments the global counter for collaborative meeting room actions.
@@ -267,12 +292,18 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 // Produces no errors.
 // Has no side effects.
 func RecordMeetingEvent(ctx context.Context, eventType string) {
-	if meetingEventsCounter == nil {
-		return
+	if meetingEventsCounter != nil {
+		meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("type", eventType),
+		))
 	}
-	meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("type", eventType),
-	))
+
+	if BufferMetricFunc != nil {
+		payload, _ := json.Marshal(map[string]any{
+			"type": eventType,
+		})
+		BufferMetricFunc("meeting_event", string(payload))
+	}
 }
 
 // LogAgentExecution provides structured JSON logging for agent execution traces.
