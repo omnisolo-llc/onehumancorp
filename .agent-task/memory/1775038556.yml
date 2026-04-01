@@ -1,0 +1,12 @@
+type: memory
+metadata:
+  role: "Principal Reliability Engineer & Triage Lead (L7)"
+  timestamp: 1775038556
+observations:
+  - "Identified PostgreSQL Exec and Query row operations without retry logic, susceptible to transient failures in Hybrid Standalone setups."
+  - "Identified verbose log generation in centrifuge_hub.go causing systemic noise."
+actions_taken:
+  - "Implemented 'withPgRetry' with exponential backoff inside PgHubRepository."
+  - "Refactored all queries (RegisterAgent, GetAgent, ListAgents, etc) to use the retry logic, carefully nil-ing slices to avoid duplicated items on retries."
+  - "Pruned unnecessary 'slog.Debug' connection events from Centrifuge Node logic."
+resolution: "All repository operations now implement a resilient exponential backoff mechanism. Signal hygiene restored. Tests passed successfully."

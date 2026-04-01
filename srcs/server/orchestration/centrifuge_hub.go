@@ -65,8 +65,6 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	})
 
 	node.OnConnect(func(client *centrifuge.Client) {
-		slog.Debug("[centrifuge] client connected", "userID", client.UserID(), "id", client.ID())
-
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
 			cb(centrifuge.SubscribeReply{}, nil)
 		})
@@ -76,7 +74,6 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 		})
 
 		client.OnDisconnect(func(e centrifuge.DisconnectEvent) {
-			slog.Debug("[centrifuge] client disconnected", "userID", client.UserID(), "reason", e.Reason)
 		})
 	})
 
@@ -110,9 +107,7 @@ func (cn *CentrifugeNode) PublishMeetingMessage(meetingID string, msg Message) {
 		slog.Error("[centrifuge] marshal meeting message", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish meeting message", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // PublishChatMessage fans a chat message out to all subscribers of the
@@ -124,9 +119,7 @@ func (cn *CentrifugeNode) PublishChatMessage(roomID string, msg Message) {
 		slog.Error("[centrifuge] marshal chat message", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish chat message", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // PublishAgentNotification sends a lightweight inbox-notification to a specific
@@ -138,9 +131,7 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 		slog.Error("[centrifuge] marshal agent notification", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish agent notification", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // Close shuts down the Centrifuge node gracefully.
