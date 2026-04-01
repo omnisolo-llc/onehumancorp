@@ -235,12 +235,17 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) CreateUser(username, email, password string, roles []string) (*User, error) {
+func (s *Store) CreateUser(username, email, password string, roles []string, opts ...string) (*User, error) {
 	if username == "" {
 		return nil, errors.New("username is required")
 	}
 	if len(password) < 6 {
 		return nil, errors.New("password must be at least 6 characters")
+	}
+
+	orgID := ""
+	if len(opts) > 0 {
+		orgID = opts[0]
 	}
 
 	if s.repo != nil {
@@ -251,14 +256,15 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 
 		now := time.Now().UTC()
 		u := &User{
-			ID:           generateID(),
-			Username:     username,
-			Email:        email,
-			PasswordHash: string(hash),
-			Roles:        append([]string(nil), roles...),
-			Active:       true,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			ID:             generateID(),
+			Username:       username,
+			Email:          email,
+			PasswordHash:   string(hash),
+			Roles:          append([]string(nil), roles...),
+			OrganizationID: orgID,
+			Active:         true,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		}
 		if err := s.repo.CreateUser(context.Background(), u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
@@ -283,14 +289,15 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:           generateID(),
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hash),
-		Roles:        append([]string(nil), roles...),
-		Active:       true,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+			ID:             generateID(),
+			Username:       username,
+			Email:          email,
+			PasswordHash:   string(hash),
+			Roles:          append([]string(nil), roles...),
+			OrganizationID: orgID,
+			Active:         true,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
 	s.byName[username] = u

@@ -11,15 +11,16 @@ import (
 type PgUsageRepository struct {
 	pool    db.Provider
 	catalog map[string]Price
+	orgID   string
 }
 
 // NewPgUsageRepository creates a Postgres-backed usage repository.
-func NewPgUsageRepository(pool db.Provider, catalog map[string]Price) *PgUsageRepository {
+func NewPgUsageRepository(pool db.Provider, catalog map[string]Price, orgID string) *PgUsageRepository {
 	copied := make(map[string]Price, len(catalog))
 	for model, price := range catalog {
 		copied[model] = price
 	}
-	return &PgUsageRepository{pool: pool, catalog: copied}
+	return &PgUsageRepository{pool: pool, catalog: copied, orgID: orgID}
 }
 
 func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, error) {

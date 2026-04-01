@@ -63,7 +63,7 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
+func newHubAndTracker(pool *db.DB, orgID string) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
 		var hubRepo orchestration.HubRepository
 		var taskRepo scheduler.TaskRepository
@@ -74,9 +74,9 @@ func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 			taskRepo = scheduler.NewSqliteTaskRepository(pool.Provider)
 			usageRepo = billing.NewSqliteUsageRepository(pool.Provider, billing.DefaultCatalog)
 		} else {
-			hubRepo = orchestration.NewPgHubRepository(pool.Provider)
-			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
-			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
+			hubRepo = orchestration.NewPgHubRepository(pool.Provider, orgID)
+			taskRepo = scheduler.NewPgTaskRepository(pool.Provider, orgID)
+			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog, orgID)
 		}
 
 		return orchestration.NewHubWithRepository(
@@ -220,7 +220,7 @@ func run(now time.Time, listen listenFunc) error {
 		sipdb     *orchestration.SIPDB
 	)
 
-	hub, tracker = newHubAndTracker(pool)
+	hub, tracker = newHubAndTracker(pool, "")
 	if pool != nil {
 		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Provider))
 	} else {
@@ -343,7 +343,7 @@ func run(now time.Time, listen listenFunc) error {
 		}
 
 		factory := func(org domain.Organization) http.Handler {
-			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantHub, tenantTracker := newHubAndTracker(pool, org.ID)
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)

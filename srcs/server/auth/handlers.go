@@ -174,7 +174,7 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 		if len(req.Roles) == 0 {
 			req.Roles = []string{RoleViewer}
 		}
-		user, err := h.store.CreateUser(req.Username, req.Email, req.Password, req.Roles)
+			user, err := h.store.CreateUser(req.Username, req.Email, req.Password, req.Roles, claims.OrganizationID)
 		if err != nil {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return

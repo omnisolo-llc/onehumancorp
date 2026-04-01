@@ -64,6 +64,16 @@ func New(ctx context.Context) (*DB, error) {
 				sqliteDSN += "&"
 			}
 			sqliteDSN += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=foreign_keys(1)"
+
+			// Hardening: Ensure file is created with 0600 permissions
+			if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+				f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600)
+				if err == nil {
+					f.Close()
+				}
+			} else {
+				os.Chmod(dbPath, 0600)
+			}
 		}
 
 		db, err := sql.Open("sqlite", sqliteDSN)

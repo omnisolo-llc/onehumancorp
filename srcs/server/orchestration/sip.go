@@ -75,6 +75,15 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 			dsn += "&"
 		}
 		dsn += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_txlock=immediate"
+
+		// Hardening: Ensure file is created with 0600 permissions
+		if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+			if f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_RDWR, 0600); err == nil {
+				f.Close()
+			}
+		} else {
+			os.Chmod(dbPath, 0600)
+		}
 	}
 	db, _ := sql.Open("sqlite", dsn)
 	db.SetMaxOpenConns(1)

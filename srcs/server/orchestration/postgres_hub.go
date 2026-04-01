@@ -12,7 +12,8 @@ import (
 
 // PgHubRepository implements HubRepository backed by PostgreSQL.
 type PgHubRepository struct {
-	pool db.Provider
+	pool  db.Provider
+	orgID string
 }
 
 // pgWithRetry wraps a database operation with exponential backoff for transient errors
@@ -62,12 +63,15 @@ func pgWithRetry(ctx context.Context, op func() error) error {
 }
 
 // NewPgHubRepository creates a Postgres-backed hub repository.
-func NewPgHubRepository(pool db.Provider) *PgHubRepository {
-	return &PgHubRepository{pool: pool}
+func NewPgHubRepository(pool db.Provider, orgID string) *PgHubRepository {
+	return &PgHubRepository{pool: pool, orgID: orgID}
 }
 
 func (r *PgHubRepository) RegisterAgent(ctx context.Context, agent Agent) error {
 	return pgWithRetry(ctx, func() error {
+		if r.orgID != "" {
+			agent.OrganizationID = r.orgID
+		}
 		_, err := r.pool.Exec(ctx, `
 			INSERT INTO agents (id, name, role, organization_id, status, provider_type, region)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -91,9 +95,17 @@ func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool,
 	var isNotFound bool
 
 	err := pgWithRetry(ctx, func() error {
-		queryErr = r.pool.QueryRow(ctx, `
-			SELECT id, name, role, organization_id, status, provider_type, region
-			FROM agents WHERE id = $1`, id).Scan(
+		var query string
+		var args []any
+		if r.orgID != "" {
+			query = `SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE id = $1 AND organization_id = $2`
+			args = []any{id, r.orgID}
+		} else {
+			query = `SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE id = $1`
+			args = []any{id}
+		}
+
+		queryErr = r.pool.QueryRow(ctx, query, args...).Scan(
 			&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region,
 		)
 		if queryErr != nil {
@@ -121,9 +133,18 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 	var agents []Agent
 	err := pgWithRetry(ctx, func() error {
 		agents = nil // Reset on retry
-		rows, err := r.pool.Query(ctx, `
-			SELECT id, name, role, organization_id, status, provider_type, region
-			FROM agents ORDER BY id`)
+
+		var query string
+		var args []any
+		if r.orgID != "" {
+			query = `SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE organization_id = $1 ORDER BY id`
+			args = []any{r.orgID}
+		} else {
+			query = `SELECT id, name, role, organization_id, status, provider_type, region FROM agents ORDER BY id`
+			args = []any{}
+		}
+
+		rows, err := r.pool.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("pg: list agents: %w", err)
 		}
@@ -146,7 +167,12 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 
 func (r *PgHubRepository) UpdateAgentStatus(ctx context.Context, id string, status Status) error {
 	return pgWithRetry(ctx, func() error {
-		_, err := r.pool.Exec(ctx, "UPDATE agents SET status = $2 WHERE id = $1", id, string(status))
+		var err error
+		if r.orgID != "" {
+			_, err = r.pool.Exec(ctx, "UPDATE agents SET status = $2 WHERE id = $1 AND organization_id = $3", id, string(status), r.orgID)
+		} else {
+			_, err = r.pool.Exec(ctx, "UPDATE agents SET status = $2 WHERE id = $1", id, string(status))
+		}
 		if err != nil {
 			return fmt.Errorf("pg: update agent status: %w", err)
 		}
@@ -162,11 +188,35 @@ func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
 		}
 		defer func() { _ = tx.Rollback(ctx) }()
 
-		if _, err := tx.Exec(ctx, "DELETE FROM agent_inbox WHERE agent_id = $1", id); err != nil {
-			return fmt.Errorf("pg: clear inbox: %w", err)
+		var deleteInboxErr, deleteAgentErr error
+		if r.orgID != "" {
+			// Ensure agent belongs to org before deleting inbox
+			var checkOrg string
+			err := tx.QueryRow(ctx, "SELECT organization_id FROM agents WHERE id = $1", id).Scan(&checkOrg)
+			if err != nil {
+				if err.Error() == "no rows in result set" {
+					return nil // Agent doesn't exist, treat as already deleted
+				}
+				return fmt.Errorf("pg: check agent org: %w", err)
+			}
+			if checkOrg != r.orgID {
+				return fmt.Errorf("pg: unauthorized delete agent")
+			}
 		}
-		if _, err := tx.Exec(ctx, "DELETE FROM agents WHERE id = $1", id); err != nil {
-			return fmt.Errorf("pg: delete agent: %w", err)
+
+		_, deleteInboxErr = tx.Exec(ctx, "DELETE FROM agent_inbox WHERE agent_id = $1", id)
+		if deleteInboxErr != nil {
+			return fmt.Errorf("pg: clear inbox: %w", deleteInboxErr)
+		}
+
+		if r.orgID != "" {
+			_, deleteAgentErr = tx.Exec(ctx, "DELETE FROM agents WHERE id = $1 AND organization_id = $2", id, r.orgID)
+		} else {
+			_, deleteAgentErr = tx.Exec(ctx, "DELETE FROM agents WHERE id = $1", id)
+		}
+
+		if deleteAgentErr != nil {
+			return fmt.Errorf("pg: delete agent: %w", deleteAgentErr)
 		}
 		return tx.Commit(ctx)
 	})
@@ -198,6 +248,21 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 			return fmt.Errorf("pg: begin pop: %w", err)
 		}
 		defer func() { _ = tx.Rollback(ctx) }()
+
+		// Ensure agent belongs to org if scoping applies.
+		if r.orgID != "" {
+			var checkOrg string
+			err := tx.QueryRow(ctx, "SELECT organization_id FROM agents WHERE id = $1", agentID).Scan(&checkOrg)
+			if err != nil {
+				if err.Error() == "no rows in result set" {
+					return nil // Agent doesn't exist, return empty inbox safely
+				}
+				return fmt.Errorf("pg: check agent org for pop: %w", err)
+			}
+			if checkOrg != r.orgID {
+				return fmt.Errorf("pg: check agent org for pop: unauthorized")
+			}
+		}
 
 		rows, err := tx.Query(ctx, `
 			SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at
@@ -236,6 +301,20 @@ func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]M
 	var msgs []Message
 	err := pgWithRetry(ctx, func() error {
 		msgs = nil // Reset on retry
+		if r.orgID != "" {
+			var checkOrg string
+			err := r.pool.QueryRow(ctx, "SELECT organization_id FROM agents WHERE id = $1", agentID).Scan(&checkOrg)
+			if err != nil {
+				if err.Error() == "no rows in result set" {
+					return nil // Agent doesn't exist, return empty inbox safely
+				}
+				return fmt.Errorf("pg: check agent org for peek: %w", err)
+			}
+			if checkOrg != r.orgID {
+				return fmt.Errorf("pg: check agent org for peek: unauthorized")
+			}
+		}
+
 		rows, err := r.pool.Query(ctx, `
 			SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at
 			FROM agent_inbox WHERE agent_id = $1 ORDER BY seq`, agentID)

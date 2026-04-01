@@ -13,12 +13,13 @@ import (
 // It uses SELECT ... FOR UPDATE SKIP LOCKED to ensure that concurrent
 // replicas never execute the same task twice.
 type PgTaskRepository struct {
-	pool db.Provider
+	pool  db.Provider
+	orgID string
 }
 
 // NewPgTaskRepository creates a Postgres-backed task repository.
-func NewPgTaskRepository(pool db.Provider) *PgTaskRepository {
-	return &PgTaskRepository{pool: pool}
+func NewPgTaskRepository(pool db.Provider, orgID string) *PgTaskRepository {
+	return &PgTaskRepository{pool: pool, orgID: orgID}
 }
 
 func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
@@ -40,9 +41,16 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 	task := Task{}
 	var schedType, status string
 	var payload string
-	err := r.pool.QueryRow(ctx, `
-		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
-		FROM scheduled_tasks WHERE id = $1`, id).Scan(
+	var query string
+	var args []any
+	if r.orgID != "" {
+		query = `SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at FROM scheduled_tasks WHERE id = $1 AND organization_id = $2`
+		args = []any{id, r.orgID}
+	} else {
+		query = `SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at FROM scheduled_tasks WHERE id = $1`
+		args = []any{id}
+	}
+	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&task.ID, &task.OrganizationID, &task.AgentID, &task.Name,
 		&schedType, &task.Schedule.At, &task.Schedule.IntervalS, &task.Schedule.Expression,
 		&status, &payload, &task.CreatedAt, &task.LastRunAt, &task.NextRunAt,
@@ -163,6 +171,10 @@ func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status T
 }
 
 func (r *PgTaskRepository) Cancel(ctx context.Context, id string) error {
+	if r.orgID != "" {
+		_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1 AND organization_id = $2", id, r.orgID)
+		return err
+	}
 	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1", id)
 	return err
 }

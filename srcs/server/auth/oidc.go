@@ -331,11 +331,12 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 		RealmAccess       struct {
 			Roles []string `json:"roles"`
 		} `json:"realm_access"`
-		Iss string      `json:"iss"`
-		Aud interface{} `json:"aud"`
-		Iat int64       `json:"iat"`
-		Exp int64       `json:"exp"`
-		Jti string      `json:"jti"`
+		OrganizationID string      `json:"organization_id"`
+		Iss            string      `json:"iss"`
+		Aud            interface{} `json:"aud"`
+		Iat            int64       `json:"iat"`
+		Exp            int64       `json:"exp"`
+		Jti            string      `json:"jti"`
 	}
 	if err := json.Unmarshal(payBytes, &raw); err != nil {
 		return nil, fmt.Errorf("parse OIDC claims: %w", err)
@@ -375,12 +376,13 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 	}
 
 	return &Claims{
-		Subject:  raw.Sub,
-		Username: raw.PreferredUsername,
-		Email:    raw.Email,
-		Roles:    roles,
-		IssuedAt: raw.Iat,
-		Expires:  raw.Exp,
-		TokenID:  raw.Jti,
+			Subject:        raw.Sub,
+			Username:       raw.PreferredUsername,
+			Email:          raw.Email,
+			Roles:          roles,
+			OrganizationID: raw.OrganizationID,
+			IssuedAt:       raw.Iat,
+			Expires:        raw.Exp,
+			TokenID:        raw.Jti,
 	}, nil
 }
