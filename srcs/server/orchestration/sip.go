@@ -52,8 +52,45 @@ const (
 	retryInterval = 100 * time.Millisecond
 )
 
+var (
+	standaloneThrottle     = make(chan struct{}, 1) // Throttle to 1 concurrent write in standalone mode
+	standaloneThrottleOnce sync.Once
+)
+
+// getThrottle conditionally acquires the semaphore if in standalone mode
+func acquireThrottle(ctx context.Context) error {
+	standaloneThrottleOnce.Do(func() {
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			// already initialized to 1
+		} else {
+			// If not standalone, make channel large enough or just ignore
+		}
+	})
+
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		select {
+		case standaloneThrottle <- struct{}{}:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+func releaseThrottle() {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		<-standaloneThrottle
+	}
+}
+
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withRetry(ctx context.Context, op func() error) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
+
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = op()
@@ -358,6 +395,19 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
+	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+
+	if !isMultiTenant && isSQLite && isStandalone {
+		select {
+		case throttleSemaphore <- struct{}{}:
+			defer func() { <-throttleSemaphore }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	upsertQuery := `
 		INSERT INTO agent_missions (id, status, payload, created_at)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -387,7 +437,9 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
 	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
-	if !isMultiTenant && isSQLite {
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+
+	if !isMultiTenant && isSQLite && isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()

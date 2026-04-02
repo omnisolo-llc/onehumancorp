@@ -37,5 +37,4 @@ Before any tool is accepted into the `dynamicMCPTools` slice, the `spiffeId` mus
 - **File-based Configuration Watcher**: Monitoring `MCP_BUNDLE_DIR` for YAML changes. Rejected because it requires shared filesystem access across K8s pods, which breaks the API-first loosely-coupled design.
 - **Database Persistence**: Storing tools in a PostgreSQL registry. Rejected for this phase to reduce initial complexity, though this will likely be needed for multi-cluster federation later.
 
-
 </div>

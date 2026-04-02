@@ -27,5 +27,4 @@ Validate the end-to-end functionality of dynamic sub-agent spawning, ensuring co
 - Coverage MUST exceed 95% for `srcs/server/orchestration/delegation.go` and the associated `ohc-operator` reconciliation loops.
 - Avoid using arbitrary `time.Sleep()` for asynchronous checks; strictly use deterministic polling loops.
 
-
 </div>

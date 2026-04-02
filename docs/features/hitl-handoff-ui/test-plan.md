@@ -48,5 +48,4 @@ A high-level summary of the testing strategy for the Human-in-the-Loop (HITL) Ha
 - **Mocks**: No client-side mocks. Database seeders will represent the `HoldingCompany` and pre-existing agent states.
 - **Validation**: Strict enforcement of >95% test coverage.
 
-
 </div>

@@ -28,5 +28,4 @@ resources:
 - Integrate closely with Kubernetes `ResourceQuotas` and `LimitRanges` for native enforcement.
 - Maintain Zero-Lock stack compatibility.
 
-
 </div>

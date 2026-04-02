@@ -36,5 +36,4 @@ When cross-departmental agents must agree on a budget allocation, they enter a r
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

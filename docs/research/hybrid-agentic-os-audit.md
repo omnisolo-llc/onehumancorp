@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # Market Audit & OHC Competitive Positioning: The Hybrid Agentic OS
 
 **Author**: Principal Product Researcher & Oracle (L7)
@@ -11,8 +13,6 @@ This definitive technical and product audit benchmarks the "Hybrid Agentic OS" c
 
 Current market leaders focus primarily on pure-cloud or pure-local modalities. OHC's architecture enables a fluid transition across the multi-tenant cloud, local standalone execution, and headless API serving.
 
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
-
 ### Feature Comparison Matrix
 
 | Capability | Replit Agent | Claude Code | OpenClaw | **OHC (The Hybrid Standard)** |
@@ -21,9 +21,6 @@ Current market leaders focus primarily on pure-cloud or pure-local modalities. O
 | **Standalone Desktop Mode** | None | Full (CLI) | None | **Local SQLite with native Flutter Host shell** |
 | **Air-gapped Execution** | No | No (API required) | No | **Yes (via local fallback & embedded models)** |
 | **Agent Auth / Identity** | User-tied OAuth | CLI API Key | Static Tokens | **SPIFFE/SPIRE zero-trust native identity** |
-
-</div>
-
 ### The Discovery
 
 Competitors fail to provide a **seamless degradation path**.
@@ -72,3 +69,5 @@ graph TD
 
 ---
 *Insight Artifact compiled autonomously via the Swarm Intelligence Protocol.*
+
+</div>

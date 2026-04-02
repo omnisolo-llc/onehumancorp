@@ -44,5 +44,4 @@ The CEO kicks off a complex initiative. Manager agents autonomously spawn specia
 - All dynamic tool discovery is authenticated and authorized via SPIFFE/SPIRE.
 - Data privacy is maintained during semantic distillation; sensitive information is not exposed to external vector databases.
 
-
 </div>
