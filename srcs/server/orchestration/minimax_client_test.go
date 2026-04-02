@@ -80,3 +80,59 @@ func TestMinimaxClientReasonEmptyResponse(t *testing.T) {
 		t.Fatalf("expected error on empty choices")
 	}
 }
+
+func TestMinimaxClientGenerateEmbeddingSuccess(t *testing.T) {
+	// Reset global circuit breaker state before testing
+	ResetCircuitBreakerForTest()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer valid-key" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		resp := map[string]interface{}{
+			"vectors": [][]float32{
+				{0.1, 0.2, 0.3},
+			},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	originalURL := MinimaxEmbeddingAPIURL
+	MinimaxEmbeddingAPIURL = ts.URL
+	defer func() { MinimaxEmbeddingAPIURL = originalURL }()
+
+	client := NewMinimaxClient("valid-key")
+	res, err := client.GenerateEmbedding(context.Background(), "test embedding")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res) != 3 {
+		t.Fatalf("expected 3 floats, got %d", len(res))
+	}
+	if res[0] != 0.1 || res[1] != 0.2 || res[2] != 0.3 {
+		t.Fatalf("expected [0.1, 0.2, 0.3], got %v", res)
+	}
+}
+
+func TestMinimaxClientGenerateEmbeddingFailure(t *testing.T) {
+	// Reset global circuit breaker state before testing
+	ResetCircuitBreakerForTest()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal error"))
+	}))
+	defer ts.Close()
+
+	originalURL := MinimaxEmbeddingAPIURL
+	MinimaxEmbeddingAPIURL = ts.URL
+	defer func() { MinimaxEmbeddingAPIURL = originalURL }()
+
+	client := NewMinimaxClient("valid-key")
+	_, err := client.GenerateEmbedding(context.Background(), "test")
+	if err == nil {
+		t.Fatalf("expected error on 500 response")
+	}
+}
