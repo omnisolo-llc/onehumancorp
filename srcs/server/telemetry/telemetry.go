@@ -354,3 +354,11 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 		))
 	}
 }
+
+// CalculateBurnRate computes the moving average of the token burn rate.
+func CalculateBurnRate(history []int64) float64 {
+	if len(history) <= 1 {
+		return 0
+	}
+	return float64(history[len(history)-1]-history[0]) / float64(len(history)-1)
+}

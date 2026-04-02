@@ -291,7 +291,7 @@ func run(now time.Time, listen listenFunc) error {
 
 						if len(h) > 1 {
 							// Calculate moving average burn rate (tokens per minute)
-							rate := float64(h[len(h)-1] - h[0]) / float64(len(h)-1)
+							rate := telemetry.CalculateBurnRate(h)
 							telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 						}
 					}
