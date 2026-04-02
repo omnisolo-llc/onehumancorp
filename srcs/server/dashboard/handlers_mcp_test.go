@@ -230,6 +230,70 @@ func TestHandleMCPRegister_Dynamic(t *testing.T) {
 	})
 }
 
+func TestHandleContextSync(t *testing.T) {
+	hub := orchestration.NewHub()
+	// Create an in-memory SIPDB
+	sipdb, err := orchestration.NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sipdb: %v", err)
+	}
+	hub.SetSIPDB(sipdb)
+
+	srv := &Server{
+		org: domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now()),
+		hub: hub,
+	}
+
+	t.Run("invalid method", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/context/sync", nil)
+		w := httptest.NewRecorder()
+		srv.handleContextSync(w, req)
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected 405, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid payload", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/context/sync", strings.NewReader(`{invalid}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleContextSync(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("successful sync with PII redaction", func(t *testing.T) {
+		payload := `{"memory_id": "test-mem-1", "context": {"user_email": "alice@example.com", "nested": ["some text", "bob@example.com"]}, "source_plugin": "test-plugin"}`
+		req := httptest.NewRequest("POST", "/api/context/sync", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleContextSync(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		// Verify it was stored correctly and PII redacted
+		memories, err := sipdb.GetEpisodicMemoriesByPlugin(req.Context(), "test-plugin")
+		if err != nil {
+			t.Fatalf("GetEpisodicMemoriesByPlugin failed: %v", err)
+		}
+		if len(memories) != 1 {
+			t.Fatalf("expected 1 memory stored, got %d", len(memories))
+		}
+		if memories[0].MemoryID != "test-mem-1" {
+			t.Errorf("expected MemoryID test-mem-1, got %s", memories[0].MemoryID)
+		}
+
+		if !strings.Contains(memories[0].Context, "[REDACTED_EMAIL]") {
+			t.Errorf("expected context to contain [REDACTED_EMAIL], got %s", memories[0].Context)
+		}
+		if strings.Contains(memories[0].Context, "alice@example.com") || strings.Contains(memories[0].Context, "bob@example.com") {
+			t.Errorf("expected context to NOT contain original emails, got %s", memories[0].Context)
+		}
+	})
+}
+
 func TestHandleMCPTools(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
