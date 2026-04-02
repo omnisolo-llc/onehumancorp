@@ -15,6 +15,7 @@ go_library(
         "service.go",
         "sip.go",
         "sqlite_hub.go",
+        "tasks.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -57,6 +58,7 @@ go_test(
         "sip_mesh_test.go",
         "sip_test.go",
         "throttle_test.go",
+        "tasks_test.go",
     ],
     embed = [":orchestration"],
     deps = [

@@ -875,6 +875,18 @@ func (h *Hub) FireAgent(id string) {
 // Returns Publish(message Message) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
+// PublishTask fans out a shared task over the Swarm mesh.
+func (h *Hub) PublishTask(task *SharedTask) error {
+	h.mu.RLock()
+	cn := h.centrifugeNode
+	h.mu.RUnlock()
+
+	if cn != nil {
+		cn.PublishTask(task)
+	}
+	return nil
+}
+
 func (h *Hub) Publish(message Message) error {
 	if h.repo != nil {
 		return h.publishRepository(message)

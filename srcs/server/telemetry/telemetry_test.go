@@ -210,6 +210,7 @@ func TestTelemetryMetricErrors(t *testing.T) {
 	originalAgentApiCallsCounter := agentApiCallsCounter
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
+	originalTasksCompletedCounter := tasksCompletedCounter
 
 	defer func() {
 		requestCounter = originalRequestCounter
@@ -218,6 +219,7 @@ func TestTelemetryMetricErrors(t *testing.T) {
 		agentApiCallsCounter = originalAgentApiCallsCounter
 		humanInteractionsCounter = originalHumanInteractionsCounter
 		meetingEventsCounter = originalMeetingEventsCounter
+		tasksCompletedCounter = originalTasksCompletedCounter
 	}()
 
 	// Directly call the InitWithMeter function to test coverage
@@ -347,6 +349,10 @@ func TestRecordFunctions(t *testing.T) {
 		RecordMeetingEvent(ctx, "start")
 	})
 
+	t.Run("RecordTaskCompleted", func(t *testing.T) {
+		RecordTaskCompleted(ctx, "agent-1", "task-1")
+	})
+
 	t.Run("RecordTokenBurnRate", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
 	})
@@ -357,12 +363,14 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	originalAgentApiCallsCounter := agentApiCallsCounter
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
+	originalTasksCompletedCounter := tasksCompletedCounter
 	originalTokenBurnRateGauge := tokenBurnRateGauge
 
 	tokenUsageCounter = nil
 	agentApiCallsCounter = nil
 	humanInteractionsCounter = nil
 	meetingEventsCounter = nil
+	tasksCompletedCounter = nil
 	tokenBurnRateGauge = nil
 
 	defer func() {
@@ -370,6 +378,7 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		agentApiCallsCounter = originalAgentApiCallsCounter
 		humanInteractionsCounter = originalHumanInteractionsCounter
 		meetingEventsCounter = originalMeetingEventsCounter
+		tasksCompletedCounter = originalTasksCompletedCounter
 		tokenBurnRateGauge = originalTokenBurnRateGauge
 	}()
 
@@ -414,6 +423,10 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordMeetingEvent Uninitialized", func(t *testing.T) {
 		RecordMeetingEvent(ctx, "start")
+	})
+
+	t.Run("RecordTaskCompleted Uninitialized", func(t *testing.T) {
+		RecordTaskCompleted(ctx, "agent-1", "task-1")
 	})
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {

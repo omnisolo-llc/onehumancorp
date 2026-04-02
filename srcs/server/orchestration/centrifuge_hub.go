@@ -132,6 +132,19 @@ func (cn *CentrifugeNode) Handler() http.Handler {
 	})
 }
 
+// PublishTask fans a task out to all subscribers of the "mesh:tasks" channel.
+func (cn *CentrifugeNode) PublishTask(task *SharedTask) {
+	channel := "mesh:tasks"
+	data, err := json.Marshal(task)
+	if err != nil {
+		slog.Error("[centrifuge] marshal task message", "error", err)
+		return
+	}
+	if _, err := cn.node.Publish(channel, data); err != nil {
+		slog.Debug("[centrifuge] publish task message", "channel", channel, "error", err)
+	}
+}
+
 // PublishMeetingMessage fans a transcript entry out to all subscribers of the
 // "meeting:<meetingID>" Centrifuge channel.
 func (cn *CentrifugeNode) PublishMeetingMessage(meetingID string, msg Message) {

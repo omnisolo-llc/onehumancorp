@@ -59,3 +59,19 @@ func TestStartTokenBurnForecasterWithTicker(t *testing.T) {
 		t.Fatalf("Expected tracker to be called at least twice, got %d", calls)
 	}
 }
+
+func TestHubPublishTask(t *testing.T) {
+	hub := NewHub()
+
+	task := &SharedTask{
+		ID:        "task-1",
+		MissionID: "mission-1",
+		Title:     "Test Task",
+	}
+
+	// Should not panic when centrifuge node is nil
+	err := hub.PublishTask(task)
+	if err != nil {
+		t.Fatalf("PublishTask returned error when centrifuge node was nil: %v", err)
+	}
+}

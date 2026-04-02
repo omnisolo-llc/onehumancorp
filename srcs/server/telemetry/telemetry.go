@@ -29,6 +29,7 @@ var (
 	agentApiErrorsCounter    metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	tasksCompletedCounter    metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -150,6 +151,14 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	tasksCompletedCounter, err = m.Int64Counter(
+		"ohc_swarm_tasks_completed",
+		metric.WithDescription("Total Swarm tasks completed by agents"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -356,6 +365,34 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 			"type": eventType,
 		})
 		_ = BufferMetricFunc(ctx, "meeting_event", string(payloadBytes))
+	}
+}
+
+// RecordTaskCompleted increments the global counter for Swarm tasks completed.
+//
+//   - ctx: context.Context; The context of the active trace or request.
+//   - agentID: string; The identifier of the agent who completed the task.
+//   - taskID: string; The identifier of the task.
+//
+// Accepts parameters: ctx context.Context, agentID, taskID string (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordTaskCompleted(ctx context.Context, agentID, taskID string) {
+	if tasksCompletedCounter == nil {
+		return
+	}
+	tasksCompletedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("task_id", taskID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"agent_id": agentID,
+			"task_id":  taskID,
+		})
+		_ = BufferMetricFunc(ctx, "task_completed", string(payloadBytes))
 	}
 }
 
