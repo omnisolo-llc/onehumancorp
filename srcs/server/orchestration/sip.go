@@ -52,8 +52,45 @@ const (
 	retryInterval = 100 * time.Millisecond
 )
 
+var (
+	standaloneThrottle     = make(chan struct{}, 1) // Throttle to 1 concurrent write in standalone mode
+	standaloneThrottleOnce sync.Once
+)
+
+// getThrottle conditionally acquires the semaphore if in standalone mode
+func acquireThrottle(ctx context.Context) error {
+	standaloneThrottleOnce.Do(func() {
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			// already initialized to 1
+		} else {
+			// If not standalone, make channel large enough or just ignore
+		}
+	})
+
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		select {
+		case standaloneThrottle <- struct{}{}:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+func releaseThrottle() {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		<-standaloneThrottle
+	}
+}
+
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withRetry(ctx context.Context, op func() error) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
+
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = op()
