@@ -174,6 +174,11 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// TIMESTAMPTZ -> DATETIME
 			// JSONB -> TEXT
 			// BYTEA -> BLOB
+			// UUID DEFAULT gen_random_uuid() -> TEXT
+			// VECTOR(dim) -> TEXT
+			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
+			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
+			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
