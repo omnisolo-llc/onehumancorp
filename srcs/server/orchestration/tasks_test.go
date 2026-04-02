@@ -16,7 +16,7 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
 			title TEXT NOT NULL,
@@ -72,7 +72,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	ctx := context.Background()
 
 	// Claim when empty
-	task, err := tm.ClaimTask(ctx, "agent-1")
+	task, err := tm.ClaimTask(ctx, "non-existent-task-id", "agent-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -81,13 +81,13 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Create task
-	_, err = tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	createdTask, err := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Claim task
-	claimedTask, err := tm.ClaimTask(ctx, "agent-1")
+	claimedTask, err := tm.ClaimTask(ctx, createdTask.ID, "agent-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -102,7 +102,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Claim another (should be empty)
-	task3, err := tm.ClaimTask(ctx, "agent-2")
+	task3, err := tm.ClaimTask(ctx, "another-non-existent-id", "agent-2")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -120,7 +120,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 
 	ctx := context.Background()
 	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
-	claimedTask, _ := tm.ClaimTask(ctx, "agent-1")
+	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
 	if claimedTask.ID != task.ID {
 		t.Fatalf("claimed task id mismatch")

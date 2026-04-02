@@ -55,6 +55,9 @@ func TestInitTelemetry(t *testing.T) {
 	if meetingEventsCounter == nil {
 		t.Error("expected meetingEventsCounter to be initialized")
 	}
+	if swarmTasksCompletedCounter == nil {
+		t.Error("expected swarmTasksCompletedCounter to be initialized")
+	}
 
 	cleanup() // Clean up resources
 }
@@ -210,6 +213,7 @@ func TestTelemetryMetricErrors(t *testing.T) {
 	originalAgentApiCallsCounter := agentApiCallsCounter
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
+	originalSwarmTasksCompletedCounter := swarmTasksCompletedCounter
 
 	defer func() {
 		requestCounter = originalRequestCounter
@@ -218,6 +222,7 @@ func TestTelemetryMetricErrors(t *testing.T) {
 		agentApiCallsCounter = originalAgentApiCallsCounter
 		humanInteractionsCounter = originalHumanInteractionsCounter
 		meetingEventsCounter = originalMeetingEventsCounter
+		swarmTasksCompletedCounter = originalSwarmTasksCompletedCounter
 	}()
 
 	// Directly call the InitWithMeter function to test coverage
@@ -349,6 +354,10 @@ func TestRecordFunctions(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
+		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
 }
 

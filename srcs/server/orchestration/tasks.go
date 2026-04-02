@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 // SharedTask represents a shared task distributed across agents.
@@ -25,12 +27,26 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db db.Provider
+	db          db.Provider
+	redisClient rueidis.Client
 }
 
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider) *TaskManager {
-	return &TaskManager{db: provider}
+	tm := &TaskManager{db: provider}
+
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		redisURL := os.Getenv("REDIS_URL")
+		if redisURL != "" {
+			c, err := rueidis.NewClient(rueidis.ClientOption{
+				InitAddress: []string{redisURL},
+			})
+			if err == nil {
+				tm.redisClient = c
+			}
+		}
+	}
+	return tm
 }
 
 // CreateTask creates a new shared task.
@@ -49,7 +65,7 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 		// Wait, if we rely on TEXT, we should generate an ID in go
 		id := generateID() // Helper func
 		query = `
-			INSERT INTO shared_tasks (id, mission_id, title, description, priority, status, created_at, updated_at)
+			INSERT INTO swarm_tasks (id, mission_id, title, description, priority, status, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
 		`
@@ -58,7 +74,7 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 		)
 	} else {
 		query = `
-			INSERT INTO shared_tasks (mission_id, title, description, priority)
+			INSERT INTO swarm_tasks (mission_id, title, description, priority)
 			VALUES ($1, $2, $3, $4)
 			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
 		`
@@ -74,10 +90,24 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 	return &task, nil
 }
 
-// ClaimTask attempts to claim a PENDING task for the given agentID.
+// ClaimTask attempts to claim a specific PENDING task for the given agentID.
 // It uses row-level locking (FOR UPDATE) in Postgres, and relies on SQLite's lock mechanism
 // to prevent race conditions.
-func (tm *TaskManager) ClaimTask(ctx context.Context, agentID string) (*SharedTask, error) {
+// In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
+func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*SharedTask, error) {
+	if tm.redisClient != nil {
+		// Acquire Redis-backed distributed lock with 30s TTL
+		lockKey := "lock:task:" + taskID
+		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
+		err := tm.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return nil, nil // Lock could not be acquired (task is locked)
+			}
+			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
+		}
+	}
+
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -91,25 +121,25 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, agentID string) (*SharedTa
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
 			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
-			FROM shared_tasks
-			WHERE status = 'PENDING'
+			FROM swarm_tasks
+			WHERE id = $1 AND status = 'PENDING'
 			ORDER BY priority ASC, created_at ASC
 			LIMIT 1
 		`
-		errQuery = tx.QueryRow(ctx, query).Scan(
+		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
 			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
 			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
-			FROM shared_tasks
-			WHERE status = 'PENDING'
+			FROM swarm_tasks
+			WHERE id = $1 AND status = 'PENDING'
 			ORDER BY priority ASC, created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
-		errQuery = tx.QueryRow(ctx, query).Scan(
+		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
 			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
@@ -123,7 +153,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, agentID string) (*SharedTa
 
 	// Update task status to IN_PROGRESS
 	updateQuery := `
-		UPDATE shared_tasks
+		UPDATE swarm_tasks
 		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND status = 'PENDING'
 	`
@@ -149,7 +179,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, agentID string) (*SharedTa
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	query := `
-		UPDATE shared_tasks
+		UPDATE swarm_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
 	`
