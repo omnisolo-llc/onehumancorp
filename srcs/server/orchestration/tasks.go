@@ -21,7 +21,7 @@ type SharedTask struct {
 	Title           string
 	Description     string
 	AssignedAgentID string
-	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED
+	Status          string // PENDING, READY, IN_PROGRESS, COMPLETED, BLOCKED, FAILED
 	Priority        string
 	Payload         string
 	LockedUntil     sql.NullTime
@@ -29,11 +29,18 @@ type SharedTask struct {
 	UpdatedAt       time.Time
 }
 
+// TaskDependency represents a dependency relationship between two tasks.
+type TaskDependency struct {
+	TaskID           string
+	DependsOnTaskID  string
+}
+
 // TaskManager manages the shared tasks list
 type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
+	minimax     MinimaxClient
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -57,6 +64,11 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 // SetHub injects the CentrifugeNode dependency into the TaskManager.
 func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 	tm.hub = hub
+}
+
+// SetMinimax injects the Minimax client dependency into the TaskManager.
+func (tm *TaskManager) SetMinimax(client MinimaxClient) {
+	tm.minimax = client
 }
 
 // CreateTask creates a new shared task.
