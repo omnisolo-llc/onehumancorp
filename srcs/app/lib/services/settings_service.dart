@@ -51,27 +51,30 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
     _load();
   }
 
+  Future<ClientSettings> loadFuture() async {
+    final prefs = await _ref.read(_prefsProvider.future);
+    final json = prefs.getString(_key);
+    if (json == null) {
+      const envUrl = String.fromEnvironment(
+        'BACKEND_URL',
+        defaultValue: 'http://localhost:18789',
+      );
+      const envStandalone = bool.fromEnvironment(
+        'OHC_STANDALONE',
+        defaultValue: false,
+      );
+      return ClientSettings(
+        backendUrl: envUrl,
+        standaloneMode: envStandalone,
+      );
+    }
+    return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
+  }
+
   Future<void> _load() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final prefs = await _ref.watch(_prefsProvider.future);
-      final json = prefs.getString(_key);
-      if (json == null) {
-        // Check environment variable if web/desktop supports it via string.fromEnvironment
-        const envUrl = String.fromEnvironment(
-          'BACKEND_URL',
-          defaultValue: 'http://localhost:18789',
-        );
-        const envStandalone = bool.fromEnvironment(
-          'OHC_STANDALONE',
-          defaultValue: false,
-        );
-        return ClientSettings(
-          backendUrl: envUrl,
-          standaloneMode: envStandalone,
-        );
-      }
-      return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
+      return await loadFuture();
     });
   }
 

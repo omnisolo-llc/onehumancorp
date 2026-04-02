@@ -21,6 +21,7 @@ import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
+import 'package:ohc_app/screens/observability/observability_dashboard.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -120,6 +121,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/agents/hire',
             builder: (context, state) => const AgentHireWizardScreen(),
           ),
+          GoRoute(
+            path: '/observability',
+            builder: (context, state) => const ObservabilityDashboard(roomId: 'global'),
+          ),
         ],
       ),
     ],
@@ -155,6 +160,7 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
+        _NavItem(icon: Icons.visibility, label: 'Observability', path: '/observability'),
         _NavItem(
           icon: Icons.transfer_within_a_station,
           label: 'Handoffs',

@@ -22,7 +22,7 @@ class PowerSyncService {
   }
 
   Future<void> _init() async {
-    final settings = await _ref.read(clientSettingsProvider.future);
+    final settings = await _ref.read(clientSettingsProvider.notifier).loadFuture();
 
     // Initialize PowerSync for Cloud Mode multi-tenant isolation,
     // or hybrid scenarios as determined by settings.
@@ -76,7 +76,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings.serverUrl;
+    final backendUrl = settings.backendUrl;
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
@@ -103,8 +103,9 @@ class _BackendConnector extends PowerSyncBackendConnector {
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
-    final token = ref.read(authServiceProvider).getToken();
-    if (token == null) {
+    final authState = ref.read(authStateProvider);
+    final token = authState.valueOrNull?.token;
+    if (token == null || token.isEmpty) {
       return null;
     }
 
