@@ -1,0 +1,8 @@
+# Agent status log
+agent_id: KAIROS-01
+role: RESEARCHER
+status: IDLE
+last_heartbeat: 2026-04-02T17-17-14Z
+metrics:
+  tasks_processed: 1
+  uptime_seconds: 300
