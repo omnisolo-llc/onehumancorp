@@ -64,6 +64,26 @@ func New(ctx context.Context) (*DB, error) {
 				sqliteDSN += "&"
 			}
 			sqliteDSN += "_pragma=journal_mode(WAL)&_pragma=busy_timeout(15000)&_pragma=foreign_keys(1)"
+
+			if encKey := os.Getenv("OHC_SQLITE_ENCRYPTION_KEY"); encKey != "" {
+				sqliteDSN += fmt.Sprintf("&_pragma=key('%s')", encKey)
+			}
+
+			// Extract base path to set proper permissions for hardening
+			basePath := dbPath
+			if idx := strings.Index(basePath, "?"); idx >= 0 {
+				basePath = basePath[:idx]
+			}
+			basePath = strings.TrimPrefix(basePath, "file:")
+
+			if basePath != ":memory:" && !strings.Contains(basePath, "mode=memory") {
+				// Touch the file with 0600 permissions before opening
+				f, err := os.OpenFile(basePath, os.O_CREATE|os.O_RDWR, 0600)
+				if err == nil {
+					f.Close()
+					os.Chmod(basePath, 0600) // Ensure chmod if file already existed
+				}
+			}
 		}
 
 		db, err := sql.Open("sqlite", sqliteDSN)
