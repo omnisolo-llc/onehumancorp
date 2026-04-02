@@ -835,40 +835,28 @@ func (h *Hub) Publish(message Message) error {
 		return h.publishRepository(message)
 	}
 
-	h.mu.RLock()
+	h.mu.Lock()
 	sender, senderOk := h.agents[message.FromAgent]
 	if !senderOk {
-		h.mu.RUnlock()
+		h.mu.Unlock()
 		return errors.New("sender agent is not registered")
 	}
+
 	if message.ToAgent != "" {
 		if _, ok := h.agents[message.ToAgent]; !ok {
-			h.mu.RUnlock()
+			h.mu.Unlock()
 			return errors.New("recipient agent is not registered")
 		}
 	}
 
-	var totalSubs int
-	if message.ToAgent != "" {
-		totalSubs += len(h.subs[message.ToAgent])
-	}
 	if message.MeetingID != "" {
-		if meeting, ok := h.meetings[message.MeetingID]; ok {
-			for _, participant := range meeting.Participants {
-				totalSubs += len(h.subs[participant])
-			}
-		} else {
-			h.mu.RUnlock()
+		if _, ok := h.meetings[message.MeetingID]; !ok {
+			h.mu.Unlock()
 			return errors.New("meeting room is not registered")
 		}
 	}
-	h.mu.RUnlock()
 
-	h.mu.Lock()
 	var subsToNotify []chan struct{}
-	if totalSubs > 0 {
-		subsToNotify = make([]chan struct{}, 0, totalSubs)
-	}
 
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
@@ -878,8 +866,7 @@ func (h *Hub) Publish(message Message) error {
 
 		h.inbox[message.ToAgent] = append(inbox, message)
 
-		subs := h.subs[message.ToAgent]
-		if len(subs) > 0 {
+		if subs, ok := h.subs[message.ToAgent]; ok && len(subs) > 0 {
 			subsToNotify = append(subsToNotify, subs...)
 		}
 	}
@@ -897,31 +884,35 @@ func (h *Hub) Publish(message Message) error {
 		meeting.Transcript = append(meeting.Transcript, message)
 
 		// ⚡ BOLT: [Aggressive AI Context Summarization] - Randomized Selection from Top 5
-		// Reduces token burn by summarizing transcripts when they exceed a threshold (e.g. 15 msgs)
 		if len(meeting.Transcript) > 10 && h.minimaxAPIKey != "" {
 			minimaxKey := h.minimaxAPIKey
-			go func(mID string, transcript []Message) {
+			// Copy transcript for async processing to avoid retaining the backing array long-term
+			// We only need the FromAgent and Content.
+			type transcriptLine struct {
+				Agent   string `json:"agent"`
+				Content string `json:"content"`
+			}
+			var lines []transcriptLine
+			for _, msg := range meeting.Transcript {
+				lines = append(lines, transcriptLine{Agent: msg.FromAgent, Content: msg.Content}) // Redact in goroutine
+			}
+
+			go func(mID string, tLines []transcriptLine) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				client := NewMinimaxClient(minimaxKey)
 
-				// Encode the transcript safely as JSON to prevent prompt injection.
-				type transcriptLine struct {
-					Agent   string `json:"agent"`
-					Content string `json:"content"`
+				// Redact PII in the goroutine to save main thread CPU
+				for i, line := range tLines {
+					tLines[i].Content = redactPII(line.Content)
 				}
-				var lines []transcriptLine
-				for _, msg := range transcript {
-					lines = append(lines, transcriptLine{Agent: msg.FromAgent, Content: redactPII(msg.Content)})
-				}
-				jsonPayload, _ := json.Marshal(lines)
+				jsonPayload, _ := json.Marshal(tLines)
 				prompt := "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n" + string(jsonPayload)
 
 				summary, err := client.Reason(ctx, prompt)
 				if err == nil && summary != "" {
 					h.mu.Lock()
 					if mtg, ok := h.meetings[mID]; ok {
-						// Keep only the summary and the last 3 messages
 						newTranscript := []Message{
 							{
 								ID:         "summary-" + time.Now().UTC().Format("20060102150405"),
@@ -933,7 +924,6 @@ func (h *Hub) Publish(message Message) error {
 								OccurredAt: time.Now().UTC(),
 							},
 						}
-						// Append last 3
 						if len(mtg.Transcript) > 3 {
 							newTranscript = append(newTranscript, mtg.Transcript[len(mtg.Transcript)-3:]...)
 						} else {
@@ -946,27 +936,27 @@ func (h *Hub) Publish(message Message) error {
 				} else {
 					slog.Warn("context summarization failed", "meeting_id", mID, "error", err)
 				}
-			}(message.MeetingID, append([]Message(nil), meeting.Transcript...))
+			}(message.MeetingID, lines)
 		}
 
 		h.meetings[message.MeetingID] = meeting
 		sender.Status = StatusInMeeting
 
 		for _, participant := range meeting.Participants {
-			subs := h.subs[participant]
-			if len(subs) > 0 {
+			if subs, ok := h.subs[participant]; ok && len(subs) > 0 {
 				subsToNotify = append(subsToNotify, subs...)
 			}
 		}
 	} else {
 		sender.Status = StatusActive
 	}
+
 	h.agents[message.FromAgent] = sender
 	centrifugeNode := h.centrifugeNode
 
-	// Release the lock BEFORE network telemetry or iterating channels
 	h.mu.Unlock()
 
+	// Optimize notification to channels.
 	for _, sub := range subsToNotify {
 		select {
 		case sub <- struct{}{}:
@@ -974,25 +964,24 @@ func (h *Hub) Publish(message Message) error {
 		}
 	}
 
-	// ⚡ BOLT: [Asynchronous telemetry recording to reduce critical path latency] - Randomized Selection from Top 5
-	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
+	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
+	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
+	go func(sID, sRole, mType, mContent string) {
+		telemetry.RecordAgentApiCall(context.Background(), sID, sRole, "publish")
+		if mType != EventStatus {
+			telemetry.LogAgentExecution(context.Background(), sID, sRole, "publish", mType, redactPII(mContent))
+		}
+	}(sender.ID, sender.Role, message.Type, message.Content)
 
-	// Structured logging for agent execution traces
-	// Filter out high-frequency "status" events to reduce signal noise.
-	if message.Type != EventStatus {
-		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, redactPII(message.Content))
-	}
-
-	// Forward to Centrifuge for real-time client delivery (non-blocking).
-	if cn := centrifugeNode; cn != nil {
-		go func() {
-			if message.MeetingID != "" {
-				cn.PublishMeetingMessage(message.MeetingID, message)
+	if centrifugeNode != nil {
+		go func(m Message, cn *CentrifugeNode) {
+			if m.MeetingID != "" {
+				cn.PublishMeetingMessage(m.MeetingID, m)
 			}
-			if message.ToAgent != "" {
-				cn.PublishAgentNotification(message.ToAgent, message)
+			if m.ToAgent != "" {
+				cn.PublishAgentNotification(m.ToAgent, m)
 			}
-		}()
+		}(message, centrifugeNode)
 	}
 
 	return nil
