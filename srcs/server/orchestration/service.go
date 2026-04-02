@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"bufio"
+	"sync/atomic"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -317,6 +318,10 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+
+	// Token Burn Rate Forecast Fields
+	stopForecaster func()
+	orgTokenUsages sync.Map
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -353,7 +358,68 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	h.stopForecaster = cancel
+	go h.tokenBurnRateForecaster(ctx)
+
 	return h
+}
+
+// Stop halts background tasks including the token burn rate forecaster.
+func (h *Hub) Stop() {
+	if h.stopForecaster != nil {
+		h.stopForecaster()
+	}
+}
+
+// tokenBurnRateForecaster computes and publishes the moving average of token usage.
+func (h *Hub) tokenBurnRateForecaster(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	// Keep track of previous total usages per org
+	prevUsages := make(map[string]int64)
+
+	// Moving average state
+	// E.g. EMA alpha = 0.3
+	alpha := 0.3
+	emaRates := make(map[string]float64)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.orgTokenUsages.Range(func(key, value interface{}) bool {
+				orgID := key.(string)
+				usagePtr := value.(*atomic.Int64)
+				currentUsage := usagePtr.Load()
+
+				prev := prevUsages[orgID]
+				delta := currentUsage - prev
+				prevUsages[orgID] = currentUsage
+
+				rate := float64(delta)
+
+				if _, ok := emaRates[orgID]; !ok {
+					emaRates[orgID] = rate
+				} else {
+					emaRates[orgID] = alpha*rate + (1-alpha)*emaRates[orgID]
+				}
+
+				telemetry.RecordTokenBurnRate(ctx, orgID, emaRates[orgID])
+
+				return true
+			})
+		}
+	}
+}
+
+// IncrementTokenUsage is used to record token usage to calculate the burn rate per tenant.
+func (h *Hub) IncrementTokenUsage(orgID string, count int64) {
+	val, _ := h.orgTokenUsages.LoadOrStore(orgID, &atomic.Int64{})
+	val.(*atomic.Int64).Add(count)
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.

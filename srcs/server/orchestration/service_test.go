@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"sync/atomic"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -1432,4 +1433,27 @@ func TestPublish_PII_Redaction_In_Telemetry(t *testing.T) {
 	if redacted != "Here is my info: [REDACTED_EMAIL] and [REDACTED_PHONE] and SSN [REDACTED_SSN]" {
 		t.Fatalf("Expected full PII redaction, got: %s", redacted)
 	}
+}
+
+func TestHub_TokenBurnRateForecaster(t *testing.T) {
+	hub := NewHub()
+
+	// Increment usage multiple times
+	hub.IncrementTokenUsage("org-1", 100)
+	hub.IncrementTokenUsage("org-1", 200)
+
+	// Because of background goroutine, we could wait a bit, but it updates every minute.
+	// Since we can't easily advance time in the test without changing the ticker,
+	// we just test IncrementTokenUsage functionality and proper startup/shutdown.
+
+	val, ok := hub.orgTokenUsages.Load("org-1")
+	if !ok {
+		t.Fatalf("expected org-1 in orgTokenUsages")
+	}
+
+	if val.(*atomic.Int64).Load() != 300 {
+		t.Fatalf("expected 300, got %d", val.(*atomic.Int64).Load())
+	}
+
+	hub.Stop()
 }
