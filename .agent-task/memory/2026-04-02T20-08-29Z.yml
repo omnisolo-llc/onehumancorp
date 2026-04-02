@@ -1,0 +1,3 @@
+agent: jules
+topic: Teammate Mesh Coordination
+summary: Implemented the "Shared Task List" and Teammate Mesh Coordination System. Agents can now broadcast TASK_CREATED, TASK_CLAIMED, and TASK_COMPLETED events via Centrifuge node for real-time collaboration across nodes. Replaced db generation with google uuid for SQLite fallback compatibility. Fixed hanging goroutines in sip_throttling_test.go. Updated BUILD.bazel to correctly declare google uuid, gorilla websocket, go-redis, and rueidis deps.

@@ -1,6 +1,7 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -213,4 +214,35 @@ test_suite(
 alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
+)
+
+go_library(
+    name = "mono_lib",
+    srcs = [
+        "fix_hub_test_runner.go",
+        "patch_build.go",
+        "patch_centrifuge2.go",
+        "patch_hub_test_runner.go",
+        "patch_mesh_test_runner.go",
+        "patch_tasks_test_runner.go",
+        "patch_telemetry.go",
+        "patch_telemetry_test_runner.go",
+        "test_db.go",
+        "test_db2.go",
+    ],
+    importpath = "github.com/onehumancorp/mono",
+    visibility = ["//visibility:private"],
+    deps = ["//srcs/server/db"],
+)
+
+go_binary(
+    name = "mono",
+    embed = [":mono_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "mono_test",
+    srcs = ["patch_telemetry_test.go"],
+    embed = [":mono_lib"],
 )

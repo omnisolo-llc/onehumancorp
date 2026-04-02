@@ -1,18 +1,30 @@
 package orchestration
 
+
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
-	"time"
+
+	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
+
+func setupTestProvider(t *testing.T) db.Provider {
+	sqliteDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite memory db: %v", err)
+	}
+	return db.NewSqliteProvider(sqliteDB)
+}
 
 func setupTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
-	prov := db.NewTestProvider(t)
+	prov := setupTestProvider(t)
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
@@ -21,6 +33,7 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 			mission_id TEXT NOT NULL,
 			title TEXT NOT NULL,
 			description TEXT,
+			payload TEXT NOT NULL DEFAULT '{}',
 			assigned_agent_id TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			priority TEXT NOT NULL DEFAULT 'P2',
@@ -32,7 +45,7 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
-	tm := NewTaskManager(prov)
+	tm := NewTaskManager(prov, nil)
 
 	return tm, func() {
 		prov.Close()

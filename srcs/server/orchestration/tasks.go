@@ -10,6 +10,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/rueidis"
+	"github.com/google/uuid"
 )
 
 // SharedTask represents a shared task distributed across agents.
@@ -29,11 +30,12 @@ type SharedTask struct {
 type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
+	meshNode    *CentrifugeNode
 }
 
 // NewTaskManager creates a new TaskManager.
-func NewTaskManager(provider db.Provider) *TaskManager {
-	tm := &TaskManager{db: provider}
+func NewTaskManager(provider db.Provider, meshNode *CentrifugeNode) *TaskManager {
+	tm := &TaskManager{db: provider, meshNode: meshNode}
 
 	if os.Getenv("OHC_MULTITENANT") == "true" {
 		redisURL := os.Getenv("REDIS_URL")
@@ -55,36 +57,34 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 		priority = "P2"
 	}
 
-	var task SharedTask
-	var query string
-	var err error
-
-	if tm.db.IsSQLite() {
-		// SQLite might not support RETURNING for all columns gracefully depending on version,
-		// but since we override UUID PRIMARY KEY DEFAULT gen_random_uuid() to TEXT, we need to generate UUID or rely on it.
-		// Wait, if we rely on TEXT, we should generate an ID in go
-		id := generateID() // Helper func
-		query = `
-			INSERT INTO swarm_tasks (id, mission_id, title, description, priority, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
-		`
-		err = tm.db.QueryRow(ctx, query, id, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
-		)
-	} else {
-		query = `
-			INSERT INTO swarm_tasks (mission_id, title, description, priority)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
-		`
-		err = tm.db.QueryRow(ctx, query, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
-		)
+	id := generateID()
+	now := time.Now()
+	task := SharedTask{
+		ID:          id,
+		MissionID:   missionID,
+		Title:       title,
+		Description: description,
+		Status:      "PENDING",
+		Priority:    priority,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
+	query := `
+		INSERT INTO swarm_tasks (id, mission_id, title, description, priority, status, payload, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, '{}', $7, $8)
+	`
+
+	_, err := tm.db.Exec(ctx, query, id, missionID, title, description, priority, task.Status, task.CreatedAt, task.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
+	}
+
+	if tm.meshNode != nil {
+		tm.meshNode.PublishTaskBroadcast(EventTaskBroadcast{
+			Type: "TASK_CREATED",
+			Task: task,
+		})
 	}
 
 	return &task, nil
@@ -98,7 +98,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	if tm.redisClient != nil {
 		// Acquire Redis-backed distributed lock with 30s TTL
 		lockKey := "lock:task:" + taskID
-		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
+		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Px(30000).Build()
 		err := tm.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
@@ -173,6 +173,14 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	task.Status = "IN_PROGRESS"
 	task.AssignedAgentID = agentID
+
+	if tm.meshNode != nil {
+		tm.meshNode.PublishTaskBroadcast(EventTaskBroadcast{
+			Type: "TASK_CLAIMED",
+			Task: task,
+		})
+	}
+
 	return &task, nil
 }
 
@@ -192,10 +200,17 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		return errors.New("task not found or not assigned to agent")
 	}
 
+	if tm.meshNode != nil {
+		tm.meshNode.PublishTaskBroadcast(EventTaskBroadcast{
+			Type: "TASK_COMPLETED",
+			Task: SharedTask{ID: taskID, AssignedAgentID: agentID, Status: "COMPLETED"},
+		})
+	}
+
 	return nil
 }
 
 // generateID generates a pseudo-uuid for SQLite compatibility.
 func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	return uuid.New().String()
 }
