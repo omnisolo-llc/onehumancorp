@@ -31,5 +31,4 @@ Integrate multimodal capabilities allowing agents to natively parse and reason o
 ## 5. Security & Privacy
 - **PII Scrubbing**: Ensure screenshots of UI do not contain sensitive PII before sending to external multimodal LLM endpoints.
 
-
 </div>

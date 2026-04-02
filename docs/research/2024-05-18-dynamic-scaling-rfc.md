@@ -45,5 +45,4 @@ sequenceDiagram
     Dashboard UI-->>CEO: Real-time UI Update (Progress Bar Complete)
 ```
 
-
 </div>

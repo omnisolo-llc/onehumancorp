@@ -23,5 +23,4 @@ During the end-to-end customer journey testing, we identified critical UX fricti
 ![Wizard Done](screenshots/2026-03-30/06_wizard_done.png)
 ![Agent Deployed](screenshots/2026-03-30/07_agent_deployed.png)
 
-
 </div>

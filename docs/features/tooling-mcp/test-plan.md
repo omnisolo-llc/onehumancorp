@@ -62,5 +62,4 @@ A high-level summary of the testing strategy for the Tooling & MCP Gateway featu
 | DTR-02 | Agent Binding | Request tool bind with valid SVID | Tool successfully bound | Pending |
 | DTR-03 | Agent Reject | Request bind with invalid SVID | Bind rejected securely | Pending |
 
-
 </div>

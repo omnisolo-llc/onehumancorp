@@ -36,5 +36,4 @@ When an agent needs to review a recording of a user session to debug a frontend 
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

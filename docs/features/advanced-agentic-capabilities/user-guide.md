@@ -50,5 +50,4 @@ The Advanced Agentic Capabilities feature set represents a paradigm shift in how
 ## 7. Support & Feedback
 If you encounter persistent issues, please file a bug report via the CEO Dashboard's "Support" tab or directly in the One Human Corp issue tracker, including the relevant `thread_id` and checkpoint logs.
 
-
 </div>
