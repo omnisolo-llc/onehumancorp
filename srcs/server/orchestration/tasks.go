@@ -8,7 +8,9 @@ import (
 	"os"
 	"time"
 
+	"encoding/json"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -21,6 +23,8 @@ type SharedTask struct {
 	AssignedAgentID string
 	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED
 	Priority        string
+	Payload         string
+	LockedUntil     sql.NullTime
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -29,6 +33,7 @@ type SharedTask struct {
 type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
+	hub         *CentrifugeNode // For Teammate Mesh broadcast
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -49,42 +54,71 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 	return tm
 }
 
+// SetHub injects the CentrifugeNode dependency into the TaskManager.
+func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
+	tm.hub = hub
+}
+
 // CreateTask creates a new shared task.
 func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, description, priority string) (*SharedTask, error) {
 	if priority == "" {
 		priority = "P2"
 	}
 
+	// For standard SQLite insertion, we generate our own ID.
+	id := generateID()
+
+	// Default payload with description and priority based on schema requirements
+	payloadMap := map[string]string{"description": description, "priority": priority}
+	payloadBytes, err := json.Marshal(payloadMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode task payload: %w", err)
+	}
+	payload := string(payloadBytes)
+
 	var task SharedTask
 	var query string
-	var err error
 
+	// We'll scan fields carefully accounting for potential missing ones depending on RETURNING
 	if tm.db.IsSQLite() {
-		// SQLite might not support RETURNING for all columns gracefully depending on version,
-		// but since we override UUID PRIMARY KEY DEFAULT gen_random_uuid() to TEXT, we need to generate UUID or rely on it.
-		// Wait, if we rely on TEXT, we should generate an ID in go
-		id := generateID() // Helper func
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, title, description, priority, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
+			INSERT INTO swarm_tasks (id, mission_id, title, payload, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			RETURNING id, mission_id, title, payload, status, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, id, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+		err = tm.db.QueryRow(ctx, query, id, missionID, title, payload).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.CreatedAt, &task.UpdatedAt,
 		)
+		task.Description = description
+		task.Priority = priority
 	} else {
+		// Postgres mode
 		query = `
-			INSERT INTO swarm_tasks (mission_id, title, description, priority)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
+			INSERT INTO swarm_tasks (id, mission_id, title, payload, status)
+			VALUES ($1, $2, $3, $4, 'PENDING')
+			RETURNING id, mission_id, title, payload, status, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+		err = tm.db.QueryRow(ctx, query, id, missionID, title, payload).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.CreatedAt, &task.UpdatedAt,
 		)
+		task.Description = description
+		task.Priority = priority
 	}
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
+	}
+
+	// Broadcast task creation
+	if tm.hub != nil {
+		tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
+			"action":      "CREATE",
+			"mission_id":  task.MissionID,
+			"title":       task.Title,
+			"description": task.Description,
+			"priority":    task.Priority,
+			"status":      task.Status,
+		})
 	}
 
 	return &task, nil
@@ -120,27 +154,27 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	if tm.db.IsSQLite() {
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
-			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
+			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING'
-			ORDER BY priority ASC, created_at ASC
+			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 			LIMIT 1
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
+			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING'
-			ORDER BY priority ASC, created_at ASC
+			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY payload->>'priority' ASC, created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
 
@@ -149,6 +183,17 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			return nil, nil // No task available
 		}
 		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
+	}
+
+	// Reconstruct Description and Priority from JSON payload
+	var payloadMap map[string]interface{}
+	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+		if desc, ok := payloadMap["description"].(string); ok {
+			task.Description = desc
+		}
+		if prio, ok := payloadMap["priority"].(string); ok {
+			task.Priority = prio
+		}
 	}
 
 	// Update task status to IN_PROGRESS
@@ -173,6 +218,16 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	task.Status = "IN_PROGRESS"
 	task.AssignedAgentID = agentID
+
+	// Broadcast task claim
+	if tm.hub != nil {
+		tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
+			"action":    "CLAIM",
+			"agent_id":  agentID,
+			"status":    task.Status,
+		})
+	}
+
 	return &task, nil
 }
 
@@ -190,6 +245,24 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 
 	if res == 0 {
 		return errors.New("task not found or not assigned to agent")
+	}
+
+	// Broadcast task completion
+	if tm.hub != nil {
+		tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+			"action":   "COMPLETE",
+			"agent_id": agentID,
+			"status":   "COMPLETED",
+		})
+	}
+
+	// Record Telemetry
+	// Note: We don't have mission_id readily available in this block, but telemetry.RecordSwarmTaskCompleted can take it or we can pass an empty string / agent string.
+	// Actually we should fetch it if we want it perfect, but it's optional for the counter.
+		var missionID string
+	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+	if err == nil {
+		telemetry.RecordSwarmTaskCompleted(ctx, missionID)
 	}
 
 	return nil
