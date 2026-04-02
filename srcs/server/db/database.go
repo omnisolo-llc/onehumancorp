@@ -174,6 +174,11 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read', 'write']", "'[\"read\", \"write\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read']", "'[\"read\"]'")
+
+			// Remove CREATE PUBLICATION for SQLite
+			if strings.HasPrefix(f, "007_powersync") {
+				sqlStr = "CREATE TABLE IF NOT EXISTS _powersync_publication_marker (id INTEGER PRIMARY KEY);"
+			}
 		}
 
 		tx, err := p.Begin(ctx)

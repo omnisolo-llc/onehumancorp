@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:path_provider/path_provider.dart';
@@ -22,14 +21,34 @@ class PowerSyncService {
   }
 
   Future<void> _init() async {
-    final settings = await _ref.read(clientSettingsProvider.future);
+    // Wait for settings to load properly
+    // Since StateNotifier doesn't expose a future directly we can listen to it.
+    // A more robust way to wait for initialization is to use the shared preferences future.
+    // However, we can use the provider directly if we subscribe or wait until it's not loading.
+
+    // In this specific architecture, settings are usually loaded very quickly via SharedPreferences.
+    // For initializing async services like PowerSync, it's safer to wait for the value if it's loading.
+    // Given the constraints of the current provider setup (StateNotifierProvider<_, AsyncValue>),
+    // we can use a Completer if we wanted to listen, or simply read the prefs directly since it's an init method.
+
+    // A simpler and more direct approach is to just await the SharedPreferences to ensure they're loaded,
+    // then read the state again, or just let the provider do its thing and only proceed if data is available.
+    // Since PowerSync initialization happens once, we will ensure we get the data.
+
+    var settingsState = _ref.read(clientSettingsProvider);
+    while (settingsState.isLoading) {
+        await Future.delayed(const Duration(milliseconds: 10));
+        settingsState = _ref.read(clientSettingsProvider);
+    }
+
+    final settings = settingsState.valueOrNull;
 
     // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
+    if (settings == null || !settings.standaloneMode) {
       return;
     }
 
-    final schema = Schema((<Table>[
+    const schema = Schema([
       Table('agents', [
         Column.text('name'),
         Column.text('role'),
@@ -70,7 +89,7 @@ class PowerSyncService {
         Column.text('status'),
         Column.text('last_heartbeat'),
       ]),
-    ]));
+    ]);
 
     final dir = await getApplicationSupportDirectory();
     final path = p.join(dir.path, 'powersync.db');
@@ -78,7 +97,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings.serverUrl;
+    final backendUrl = settings.backendUrl;
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
@@ -105,14 +124,14 @@ class _BackendConnector extends PowerSyncBackendConnector {
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
-    final token = ref.read(authServiceProvider).getToken();
-    if (token == null) {
+    final authUser = ref.read(authStateProvider).valueOrNull;
+    if (authUser == null) {
       return null;
     }
 
     return PowerSyncCredentials(
       endpoint: backendUrl,
-      token: token,
+      token: authUser.token,
     );
   }
 
