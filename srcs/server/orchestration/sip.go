@@ -764,6 +764,27 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Produces errors: Explicit error handling.
 // Has side effects: Posts local RAG context to a remote endpoint, deletes local records on success.
 // Returns the number of synced records and an error.
+
+// recursivelyRedactPII walks a generic structure and applies RedactPII to strings.
+func recursivelyRedactPII(val interface{}) interface{} {
+	switch v := val.(type) {
+	case string:
+		return telemetry.RedactPII(v)
+	case map[string]interface{}:
+		for key, val := range v {
+			v[key] = recursivelyRedactPII(val)
+		}
+		return v
+	case []interface{}:
+		for i, val := range v {
+			v[i] = recursivelyRedactPII(val)
+		}
+		return v
+	default:
+		return v
+	}
+}
+
 func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
 	var records []struct {
 		id      string
@@ -806,19 +827,28 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	var idsToDelete []string
 
 	for _, rec := range records {
-		// Sanitize sensitive data by explicitly deleting `rag_context` key
-		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
-			delete(payloadData, "rag_context")
-		} else {
-			// If not JSON, we assume it's raw text but the memory states
-			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
-			// Let's create a generic JSON payload
-			payloadData = map[string]interface{}{
-				"context": rec.payload,
-			}
+		var genericPayload interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &genericPayload); err != nil {
+			slog.Warn("Failed to unmarshal RAG context payload for sanitization, skipping sync to prevent leakage", "memory_id", rec.id)
+			continue
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
+
+		payloadData, ok := genericPayload.(map[string]interface{})
+		if !ok {
+			slog.Warn("RAG context payload is not a JSON object, skipping sync to prevent leakage", "memory_id", rec.id)
+			continue
+		}
+
+		delete(payloadData, "rag_context")
+
+		// Redact PII deeply
+		payloadData = recursivelyRedactPII(payloadData).(map[string]interface{})
+
+		sanitizedPayload, err := json.Marshal(payloadData)
+		if err != nil {
+			slog.Warn("Failed to marshal sanitized RAG context payload, skipping sync", "memory_id", rec.id)
+			continue
+		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {
@@ -900,38 +930,43 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	syncedCount := 0
 	for _, m := range missions {
 		// Parse payload to redact and sanitize
-		var payloadData map[string]interface{}
-			if err := json.Unmarshal([]byte(m.payload), &payloadData); err != nil {
-				slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-				}
-				continue
+		var genericPayload interface{}
+		if err := json.Unmarshal([]byte(m.payload), &genericPayload); err != nil {
+			slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
 			}
-
-			// Add ID to payload for synchronization endpoint
-			payloadData["id"] = m.id
-
-			// Delete sensitive RAG context
-			delete(payloadData, "rag_context")
-
-			// Redact PII from string fields
-			for k, v := range payloadData {
-				if strVal, ok := v.(string); ok {
-					payloadData[k] = telemetry.RedactPII(strVal)
-			}
-			}
-
-			// Re-marshal sanitized payload
-			sanitizedBytes, err := json.Marshal(payloadData)
-			if err != nil {
-				slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-			}
-				continue
+			continue
 		}
-			m.payload = string(sanitizedBytes)
+
+		payloadData, ok := genericPayload.(map[string]interface{})
+		if !ok {
+			slog.Warn("Mission payload is not a JSON object, skipping sync to prevent leakage", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			continue
+		}
+
+		// Add ID to payload for synchronization endpoint
+		payloadData["id"] = m.id
+
+		// Delete sensitive RAG context
+		delete(payloadData, "rag_context")
+
+		// Redact PII deeply
+		payloadData = recursivelyRedactPII(payloadData).(map[string]interface{})
+
+		// Re-marshal sanitized payload
+		sanitizedBytes, err := json.Marshal(payloadData)
+		if err != nil {
+			slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			continue
+		}
+		m.payload = string(sanitizedBytes)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
