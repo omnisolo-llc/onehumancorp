@@ -325,7 +325,7 @@ func run(now time.Time, listen listenFunc) error {
 									break
 								}
 								if syncedCount > 0 {
-									slog.Info("Successfully synced standalone metrics to cloud", "count", syncedCount)
+								slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
 								}
 								if syncedCount < 500 {
 									break // No more batches
@@ -350,7 +350,7 @@ func run(now time.Time, listen listenFunc) error {
 							if err != nil {
 								slog.Warn("Failed to sync standalone missions", "error", err)
 							} else if syncedCount > 0 {
-								slog.Info("Successfully synced standalone missions to cloud", "count", syncedCount)
+								slog.Debug("Successfully synced standalone missions to cloud", "count", syncedCount)
 							}
 						}
 					}
@@ -372,7 +372,7 @@ func run(now time.Time, listen listenFunc) error {
 							if err != nil {
 								slog.Warn("Failed to sync standalone RAG context", "error", err)
 							} else if syncedCount > 0 {
-								slog.Info("Successfully synced standalone RAG context to cloud", "count", syncedCount)
+								slog.Debug("Successfully synced standalone RAG context to cloud", "count", syncedCount)
 							}
 						}
 					}
@@ -393,7 +393,7 @@ func run(now time.Time, listen listenFunc) error {
 					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
 						slog.Error("failed to prune stale agent missions", "error", err)
 					} else {
-						slog.Info("successfully pruned stale agent missions")
+						slog.Debug("successfully pruned stale agent missions")
 					}
 				}
 			}
