@@ -1,0 +1,55 @@
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+_GOOGLE_PROTOBUF_DART_BUILD = "\n".join([
+    'package(default_visibility = ["//visibility:public"])',
+    "",
+    "filegroup(",
+    '    name = "protoc_plugin_srcs",',
+    '    srcs = glob(["**"]),',
+    ")",
+    "",
+    "# We use the host's dart (provided by @flutter_sdk//:dart) to compile this.",
+    "# Note: In a full hermetic build, you'd use a dart_binary rule, but since we are",
+    "# bootstrapped by rules_flutter, we use an action or genrule.",
+    "genrule(",
+    '    name = "protoc_plugin_bin",',
+    "    srcs = [",
+    '        ":protoc_plugin_srcs",',
+    '        "bin/protoc_plugin.dart",',
+    '        "@pub_collection//:collection_files",',
+    '        "@pub_fixnum//:fixnum_files",',
+    '        "@pub_meta//:meta_files",',
+    '        "@pub_path//:path_files",',
+    '        "@pub_protobuf_v5//:protobuf_files",',
+    "    ],",
+    '    outs = ["protoc-gen-dart"],',
+    '    cmd = "export HOME=/tmp && " +',
+    '          "SRC_REPO=external/+proto_deps_extension+google_protobuf_dart && " +',
+    '          "WORK_REPO=google_protobuf_dart.work && " +',
+    '          "rm -rf $$WORK_REPO && cp -LR $$SRC_REPO $$WORK_REPO && chmod -R u+w $$WORK_REPO && " +',
+    '          "mkdir -p $$WORK_REPO/.dart_tool && " +',
+    '          "printf \'String format(String source) => source;\\n\' > $$WORK_REPO/lib/src/formatter.dart && " +',
+    '          "echo \'{\\"configVersion\\": 2,\\"packages\\": [" +',
+    '          "{\\"name\\": \\"protoc_plugin\\", \\"rootUri\\": \\"../\\", \\"packageUri\\": \\"lib/\\", \\"languageVersion\\": \\"3.7\\"}," +',
+    '          "{\\"name\\": \\"collection\\", \\"rootUri\\": \\"../../external/rules_flutter++pub+pub_collection\\", \\"packageUri\\": \\"lib/\\", \\"languageVersion\\": \\"3.7\\"}," +',
+    '          "{\\"name\\": \\"fixnum\\", \\"rootUri\\": \\"../../external/rules_flutter++pub+pub_fixnum\\", \\"packageUri\\": \\"lib/\\", \\"languageVersion\\": \\"3.7\\"}," +',
+    '          "{\\"name\\": \\"meta\\", \\"rootUri\\": \\"../../external/rules_flutter++pub+pub_meta\\", \\"packageUri\\": \\"lib/\\", \\"languageVersion\\": \\"3.7\\"}," +',
+    '          "{\\"name\\": \\"path\\", \\"rootUri\\": \\"../../external/rules_flutter++pub+pub_path\\", \\"packageUri\\": \\"lib/\\", \\"languageVersion\\": \\"3.7\\"}," +',
+    '          "{\\"name\\": \\"protobuf\\", \\"rootUri\\": \\"../../external/rules_flutter++pub+pub_protobuf_v5\\", \\"packageUri\\": \\"lib/\\", \\"languageVersion\\": \\"3.7\\"}" +',
+    '          "]}\' > $$WORK_REPO/.dart_tool/package_config.json && " +',
+    '          "$(location @flutter_sdk//:dart) compile exe $$WORK_REPO/bin/protoc_plugin.dart -o $@",',
+    "    executable = True,",
+    '    tools = ["@flutter_sdk//:dart"],',
+    ")",
+])
+
+def proto_deps():
+    # Hermetic Dart Protobuf Plugin
+    # Source: https://github.com/google/protobuf.dart
+    http_archive(
+        name = "google_protobuf_dart",
+        sha256 = "e83ae3109872f66d495437e98519c5ddc2e8369cb6aa393768ba50daf0bffa41",
+        strip_prefix = "protobuf.dart-protoc_plugin-v23.0.0/protoc_plugin",
+        urls = ["https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v23.0.0.tar.gz"],
+        build_file_content = _GOOGLE_PROTOBUF_DART_BUILD,
+    )
