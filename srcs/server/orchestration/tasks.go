@@ -352,12 +352,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
 		}
 
-		rowsAffected, err := res.RowsAffected()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get rows affected for task %s: %w", task.ID, err)
-		}
-
-		if rowsAffected > 0 {
+		if res > 0 {
 			task.Status = "IN_PROGRESS"
 			task.AssignedAgentID = agentID
 			claimedTasks = append(claimedTasks, task)
