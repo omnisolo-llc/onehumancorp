@@ -37,7 +37,8 @@ graph TD;
 ```
 
 ## Quick Links
-- [API Playbook](public/API_PLAYBOOK.md)
+- [API Playbook](api/playbook.md)
+- [Help Portal](walkthroughs/help_portal.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)
 
