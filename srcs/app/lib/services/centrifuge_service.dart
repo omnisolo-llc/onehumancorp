@@ -61,7 +61,7 @@ class CentrifugeService {
 
   centrifuge.Client? _client;
   final Map<String, centrifuge.Subscription> _subscriptions = {};
-  final Map<String, StreamController<CentrifugeMessage>> _controllers = {};
+  final Map<String, StreamController<dynamic>> _controllers = {};
 
   /// Optional factory used to create the centrifuge [Client]. When omitted the
   /// default [centrifuge.createClient] function is used. Inject a custom
@@ -88,12 +88,16 @@ class CentrifugeService {
   ///
   /// The Centrifuge channel name is `chat:<roomId>`.
   Stream<CentrifugeMessage> subscribe(String roomId) {
-    final channel = 'chat:$roomId';
+    return subscribeRaw('chat:$roomId').map((data) => CentrifugeMessage.fromJson(data as Map<String, dynamic>));
+  }
+
+  /// Subscribe to any generic channel and return a stream of raw JSON messages.
+  Stream<dynamic> subscribeRaw(String channel) {
     if (_controllers.containsKey(channel)) {
       return _controllers[channel]!.stream;
     }
 
-    final controller = StreamController<CentrifugeMessage>.broadcast();
+    final controller = StreamController<dynamic>.broadcast();
     _controllers[channel] = controller;
 
     final sub = _client!.newSubscription(channel);
@@ -101,7 +105,7 @@ class CentrifugeService {
       try {
         final json =
             jsonDecode(utf8.decode(event.data)) as Map<String, dynamic>;
-        controller.add(CentrifugeMessage.fromJson(json));
+        controller.add(json);
       } catch (e) {
         debugPrint('[CentrifugeService] Failed to parse message: $e');
       }
