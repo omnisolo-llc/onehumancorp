@@ -617,6 +617,13 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	// We create sync rules that enforce that a user only syncs data belonging to their organization
 	orgID := claims.OrganizationID
 
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+	meetingRoomsQuery := "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1"
+	if isStandalone {
+		// SQLite does not support ANY(array). We use json_each since SQLite provider falls back arrays to JSON arrays.
+		meetingRoomsQuery = "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON EXISTS (SELECT 1 FROM json_each(mr.participants) WHERE value = a.id) WHERE a.organization_id = $1"
+	}
+
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
@@ -626,7 +633,7 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "meeting_rooms",
-				"query": "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1",
+				"query": meetingRoomsQuery,
 				"parameters": []interface{}{orgID},
 			},
 			{
