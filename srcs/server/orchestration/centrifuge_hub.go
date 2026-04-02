@@ -224,3 +224,22 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
 }
+
+// PublishUltraPlanBroadcast fans out an UltraPlan update to all subscribers of the
+// "mesh:ultraplan:<planID>" Centrifuge channel.
+func (cn *CentrifugeNode) PublishUltraPlanBroadcast(planID string, payload map[string]interface{}) {
+	channel := "mesh:ultraplan:" + planID
+	msg := map[string]interface{}{
+		"type":    "ULTRAPLAN_BROADCAST",
+		"plan_id": planID,
+		"payload": payload,
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		slog.Error("[centrifuge] marshal ultraplan broadcast", "error", err)
+		return
+	}
+	if _, err := cn.node.Publish(channel, data); err != nil {
+		slog.Debug("[centrifuge] publish ultraplan broadcast", "channel", channel, "error", err)
+	}
+}

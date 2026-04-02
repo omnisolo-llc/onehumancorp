@@ -2,65 +2,62 @@ package orchestration
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUltraPlanManager(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	ctx := context.Background()
 
-	prov := db.NewTestProvider(t)
-	defer prov.Close()
+	dbWrapper, err := db.New(ctx)
+	require.NoError(t, err)
+	defer dbWrapper.Close()
 
-	// Ensure the table exists in memory DB for the test (test provider only creates some)
-	_, _ = prov.Exec(context.Background(), `
+	_, err = dbWrapper.Provider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
-			status TEXT NOT NULL DEFAULT 'DELIBERATING',
-			state_machine TEXT DEFAULT '{}',
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);
+			status TEXT NOT NULL,
+			state_machine TEXT,
+			created_at DATETIME,
+			updated_at DATETIME
+		)
 	`)
+	require.NoError(t, err)
 
-	upm := NewUltraPlanManager(prov, nil, nil)
-	ctx := context.Background()
+	manager := NewUltraPlanManager(dbWrapper.Provider, nil, nil)
 
-	// Create
-	plan, err := upm.CreatePlan(ctx, "m-123")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if plan == nil {
-		t.Fatal("expected plan, got nil")
-	}
-	if plan.MissionID != "m-123" {
-		t.Errorf("expected m-123, got %s", plan.MissionID)
-	}
-	if plan.Status != "DELIBERATING" {
-		t.Errorf("expected DELIBERATING, got %s", plan.Status)
-	}
+	// Test CreatePlan
+	plan, err := manager.CreatePlan(ctx, "mission-123")
+	require.NoError(t, err)
+	assert.NotEmpty(t, plan.ID)
+	assert.Equal(t, "mission-123", plan.MissionID)
+	assert.Equal(t, PlanStatusDeliberating, plan.Status)
 
-	// Update
-	newState := map[string]interface{}{
-		"step": "research",
-	}
-	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", newState)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
+	// Test GetPlan
+	fetchedPlan, err := manager.GetPlan(ctx, plan.ID)
+	require.NoError(t, err)
+	require.NotNil(t, fetchedPlan)
+	assert.Equal(t, plan.ID, fetchedPlan.ID)
 
-	// Verify update
-	var status, smStr string
-	err = prov.QueryRow(ctx, "SELECT status, state_machine FROM swarm_ultra_plans WHERE id = $1", plan.ID).Scan(&status, &smStr)
-	if err != nil {
-		t.Fatalf("expected no error reading db, got %v", err)
-	}
-	if status != "EXECUTING" {
-		t.Errorf("expected EXECUTING, got %s", status)
-	}
+	// Test TransitionPlan
+	err = manager.TransitionPlan(ctx, plan.ID, PlanStatusExecuting)
+	require.NoError(t, err)
+
+	fetchedPlan, err = manager.GetPlan(ctx, plan.ID)
+	require.NoError(t, err)
+	assert.Equal(t, PlanStatusExecuting, fetchedPlan.Status)
+
+	// Test UpdateStateMachine
+	state := map[string]interface{}{"step": float64(1)}
+	err = manager.UpdateStateMachine(ctx, plan.ID, state)
+	require.NoError(t, err)
+
+	fetchedPlan, err = manager.GetPlan(ctx, plan.ID)
+	require.NoError(t, err)
+	assert.Equal(t, float64(1), fetchedPlan.StateMachine["step"])
 }
