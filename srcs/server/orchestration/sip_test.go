@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1004,5 +1005,43 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSIPDB_DelegateMission_StandaloneConcurrency(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	dbPath := filepath.Join(t.TempDir(), "test_standalone_concurrency.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	msg := Message{ID: "m1", Content: "Concurrent build feature", Type: EventTask}
+
+	// Run many concurrent writes
+	errs := make(chan error, 50)
+	for i := 0; i < 50; i++ {
+		go func(id int) {
+			missionID := "mission-" + fmt.Sprintf("%d", id)
+			errs <- db.DelegateMission(ctx, missionID, "SOFTWARE_ENGINEER", msg)
+		}(i)
+	}
+
+	for i := 0; i < 50; i++ {
+		if err := <-errs; err != nil {
+			t.Errorf("DelegateMission returned error: %v", err)
+		}
+	}
+
+	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	if err != nil {
+		t.Fatalf("GetPendingMissions failed: %v", err)
+	}
+	if len(missions) != 50 {
+		t.Fatalf("Expected 50 missions, got %d", len(missions))
 	}
 }

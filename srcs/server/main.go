@@ -79,16 +79,22 @@ func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
 		}
 
-		return orchestration.NewHubWithRepository(
+		hub := orchestration.NewHubWithRepository(
 				hubRepo,
 				taskRepo,
-			), billing.NewTrackerWithRepository(
+			)
+		tracker := billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
 				usageRepo,
 			)
+		billing.SetTrackerTokenCallback(hub.RecordTokenUsageToHub)
+		return hub, tracker
 	}
 
-	return orchestration.NewHub(), billing.NewTracker(billing.DefaultCatalog)
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	billing.SetTrackerTokenCallback(hub.RecordTokenUsageToHub)
+	return hub, tracker
 }
 
 func bootstrapTenantOrganization(now time.Time) domain.Organization {

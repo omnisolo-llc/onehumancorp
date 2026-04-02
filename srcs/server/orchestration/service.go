@@ -270,8 +270,8 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
-		isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-		if !isMultiTenant {
+		isStandalone := envBoolDefault("OHC_STANDALONE", false)
+		if isStandalone {
 			// In standalone mode, synchronously delegate to prevent connection contention
 			// caused by thousands of unbounded goroutines hitting the SIPDB.
 			_ = h.sipDB.DelegateMission(context.Background(), task.ID, toAgent.Role, task)
@@ -317,6 +317,13 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	tokenRateMu    sync.Mutex
+	tokenHistory   map[string][]tokenRecord
+}
+
+type tokenRecord struct {
+	timestamp time.Time
+	tokens    int64
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -351,9 +358,66 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		repo:          repo,
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
+		tokenHistory:  make(map[string][]tokenRecord),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+	go h.tokenBurnRateWorker(context.Background())
 	return h
+}
+
+// RecordTokenUsageToHub records tokens for calculating burn rate forecasting.
+func (h *Hub) RecordTokenUsageToHub(orgID string, tokens int64) {
+	if orgID == "" {
+		orgID = "default"
+	}
+	h.tokenRateMu.Lock()
+	defer h.tokenRateMu.Unlock()
+	h.tokenHistory[orgID] = append(h.tokenHistory[orgID], tokenRecord{
+		timestamp: time.Now(),
+		tokens:    tokens,
+	})
+}
+
+// tokenBurnRateWorker calculates moving average burn rate and emits predictive cost alerts.
+func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.calculateTokenBurnRates(ctx)
+		}
+	}
+}
+
+func (h *Hub) calculateTokenBurnRates(ctx context.Context) {
+	h.tokenRateMu.Lock()
+	defer h.tokenRateMu.Unlock()
+
+	now := time.Now()
+	// Forecast window: calculate burn rate based on the last 5 minutes.
+	windowDuration := 5 * time.Minute
+
+	for orgID, records := range h.tokenHistory {
+		var validRecords []tokenRecord
+		var totalTokens int64
+
+		for _, rec := range records {
+			if now.Sub(rec.timestamp) <= windowDuration {
+				validRecords = append(validRecords, rec)
+				totalTokens += rec.tokens
+			}
+		}
+
+		h.tokenHistory[orgID] = validRecords
+
+		// Burn rate per minute
+		burnRatePerMinute := float64(totalTokens) / 5.0
+		telemetry.RecordTokenBurnRate(ctx, orgID, burnRatePerMinute)
+	}
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.

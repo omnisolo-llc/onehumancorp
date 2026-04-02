@@ -185,6 +185,10 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 
 		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "prompt", tracked.PromptTokens)
 		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "completion", tracked.CompletionTokens)
+
+		if trackerTokenCallback != nil {
+			trackerTokenCallback(tracked.OrganizationID, tracked.PromptTokens+tracked.CompletionTokens)
+		}
 		return tracked, nil
 	}
 
@@ -205,7 +209,18 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "prompt", usage.PromptTokens)
 	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "completion", usage.CompletionTokens)
 
+	if trackerTokenCallback != nil {
+		trackerTokenCallback(usage.OrganizationID, usage.PromptTokens+usage.CompletionTokens)
+	}
+
 	return usage, nil
+}
+
+var trackerTokenCallback func(orgID string, tokens int64)
+
+// SetTrackerTokenCallback allows injecting a callback to report tokens directly to the Hub.
+func SetTrackerTokenCallback(cb func(orgID string, tokens int64)) {
+	trackerTokenCallback = cb
 }
 
 // Summary collates all recorded usage events to compute aggregate costs for an organisation.
