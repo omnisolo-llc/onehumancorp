@@ -2,10 +2,16 @@ package orchestration
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -21,6 +27,75 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "modernc.org/sqlite"
 )
+
+var (
+	sipCryptoBlock cipher.Block
+	sipCryptoOnce  sync.Once
+)
+
+// getCipherBlock lazily initializes the AES block cipher.
+func getCipherBlock() (cipher.Block, error) {
+	var err error
+	sipCryptoOnce.Do(func() {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			secret = "ohc-default-standalone-key-v1"
+		}
+		hash := sha256.Sum256([]byte(secret))
+		sipCryptoBlock, err = aes.NewCipher(hash[:])
+	})
+	return sipCryptoBlock, err
+}
+
+// encryptPayload securely encrypts plaintext using AES-GCM.
+func encryptPayload(plaintext string) (string, error) {
+	if plaintext == "" {
+		return "", nil
+	}
+	block, err := getCipherBlock()
+	if err != nil {
+		return "", err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	ciphertext := aesGCM.Seal(nonce, nonce, []byte(plaintext), nil)
+	return "enc:" + base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+// decryptPayload securely decrypts AES-GCM ciphertext.
+func decryptPayload(ciphertext string) (string, error) {
+	if !strings.HasPrefix(ciphertext, "enc:") {
+		return ciphertext, nil // Already plaintext (backward compatible)
+	}
+	data, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(ciphertext, "enc:"))
+	if err != nil {
+		return "", fmt.Errorf("failed to decode base64 ciphertext: %w", err)
+	}
+	block, err := getCipherBlock()
+	if err != nil {
+		return "", err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	nonceSize := aesGCM.NonceSize()
+	if len(data) < nonceSize {
+		return "", errors.New("ciphertext too short")
+	}
+	nonce, cipherBytes := data[:nonceSize], data[nonceSize:]
+	plaintext, err := aesGCM.Open(nil, nonce, cipherBytes, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt payload: %w", err)
+	}
+	return string(plaintext), nil
+}
 
 var (
 	sipMeter        = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
@@ -132,6 +207,17 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			return nil, err
 		}
+
+		actualPath := strings.Split(dbPath, "?")[0]
+		actualPath = strings.TrimPrefix(actualPath, "file:")
+		// Touch file with strict permissions before database creation
+		f, err := os.OpenFile(actualPath, os.O_CREATE|os.O_RDWR, 0600)
+		if err == nil {
+			f.Close()
+		} else {
+			slog.Warn("sipdb: failed to pre-create sqlite database with strict permissions", "path", actualPath, "error", err)
+		}
+
 		if !strings.Contains(dsn, "?") {
 			dsn += "?"
 		} else {
@@ -141,6 +227,17 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 	}
 	sqlDB, _ := sql.Open("sqlite", dsn)
 	sqlDB.SetMaxOpenConns(1)
+
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+		if err := sqlDB.Ping(); err == nil {
+			actualPath := strings.Split(dbPath, "?")[0]
+			actualPath = strings.TrimPrefix(actualPath, "file:")
+			// Enforce permissions on WAL and SHM files
+			_ = os.Chmod(actualPath, 0600)
+			_ = os.Chmod(actualPath+"-wal", 0600)
+			_ = os.Chmod(actualPath+"-shm", 0600)
+		}
+	}
 
 	provider := db.NewSqliteProvider(sqlDB)
 	return NewSIPDBWithProvider(provider)
@@ -215,7 +312,17 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 		}
 		return err
 	})
-	return value, err
+	if err != nil {
+		return "", err
+	}
+	if s.db.IsSQLite() && value != "" {
+		decrypted, err := decryptPayload(value)
+		if err != nil {
+			return "", err
+		}
+		value = decrypted
+	}
+	return value, nil
 }
 
 // UpdateMemory updates the global state.
@@ -224,6 +331,13 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
+	if s.db.IsSQLite() && value != "" {
+		encrypted, err := encryptPayload(value)
+		if err != nil {
+			return err
+		}
+		value = encrypted
+	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO swarm_memory (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
@@ -243,13 +357,19 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	err := withRetry(ctx, func() error {
 		missions = nil
 
-		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
+		var query string
+		var args []interface{}
 
 		if s.db.IsSQLite() {
-			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'"
+			// In standalone mode with encrypted payloads, we must fetch all PENDING missions,
+			// decrypt them in memory, and filter by role.
+			query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING'"
+		} else {
+			query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
+			args = append(args, role)
 		}
 
-		rows, err := s.db.Query(ctx, query, role)
+		rows, err := s.db.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
@@ -261,12 +381,26 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 				return err
 			}
 
+			if s.db.IsSQLite() {
+				decrypted, err := decryptPayload(taskStr)
+				if err != nil {
+					// Corrupt or maliciously modified mission, skip to prevent crashing agent loop
+					slog.Warn("failed to decrypt mission payload", "id", id, "error", err)
+					continue
+				}
+				taskStr = decrypted
+			}
+
 			var msg Message
 			var wrapper struct {
+				Role string           `json:"role"`
 				Task *json.RawMessage `json:"task"`
 			}
 
 			if err := json.Unmarshal([]byte(taskStr), &wrapper); err == nil {
+				if s.db.IsSQLite() && wrapper.Role != role {
+					continue // filter skipped roles for standalone mode
+				}
 				if wrapper.Task != nil {
 					if err := json.Unmarshal(*wrapper.Task, &msg); err != nil {
 						msg = Message{ID: id, Content: string(*wrapper.Task), Type: EventTask}
@@ -279,6 +413,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 			} else {
 				// fallback raw
 				msg = Message{ID: id, Content: taskStr, Type: EventTask}
+				if s.db.IsSQLite() {
+					// We cannot determine role if JSON unmarshalling fails.
+					// We could skip, but fallback behavior pushes it to the agent.
+					// Since we can't reliably map to 'role', let's drop it from the standalone poll to prevent spamming wrong agents.
+					slog.Warn("skipping raw mission in standalone polling due to unknown role", "id", id)
+					continue
+				}
 			}
 
 			if msg.ID == "" {
@@ -336,6 +477,14 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 		err = s.db.QueryRow(ctx, "SELECT payload FROM agent_missions WHERE id = ?", missionID).Scan(&payload)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve mission payload for syncing: %w", err)
+		}
+
+		if s.db.IsSQLite() && payload != "" {
+			decrypted, err := decryptPayload(payload)
+			if err != nil {
+				return fmt.Errorf("failed to decrypt mission payload for syncing: %w", err)
+			}
+			payload = decrypted
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payload))
@@ -408,6 +557,14 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		}
 	}
 
+	if s.db.IsSQLite() && payload != "" {
+		encrypted, err := encryptPayload(payload)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt upsert payload: %w", err)
+		}
+		payload = encrypted
+	}
+
 	upsertQuery := `
 		INSERT INTO agent_missions (id, status, payload, created_at)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -473,10 +630,20 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		Task: task,
 	}
 	taskBytes, _ := json.Marshal(wrapper)
+	payloadStr := string(taskBytes)
+
+	if s.db.IsSQLite() {
+		encrypted, err := encryptPayload(payloadStr)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt delegate payload: %w", err)
+		}
+		payloadStr = encrypted
+	}
+
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
-			missionID, string(taskBytes),
+			missionID, payloadStr,
 		)
 		return err
 	})
@@ -586,6 +753,13 @@ type EpisodicMemory struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the swarm_memory_embeddings table.
 func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) error {
+	if s.db.IsSQLite() && memory.Context != "" {
+		encrypted, err := encryptPayload(memory.Context)
+		if err != nil {
+			return err
+		}
+		memory.Context = encrypted
+	}
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at)
@@ -626,6 +800,14 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 			var t string
 			if err := rows.Scan(&m.MemoryID, &m.Context, &m.VectorEmbedding, &m.SourcePlugin, &t); err != nil {
 				return err
+			}
+			if s.db.IsSQLite() && m.Context != "" {
+				decrypted, err := decryptPayload(m.Context)
+				if err != nil {
+					slog.Warn("Failed to decrypt episodic memory payload", "memory_id", m.MemoryID, "error", err)
+					continue
+				}
+				m.Context = decrypted
 			}
 			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
 			memories = append(memories, m)
@@ -786,6 +968,14 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 			if err := rows.Scan(&id, &payload); err != nil {
 				return err
 			}
+			if s.db.IsSQLite() && payload != "" {
+				decrypted, err := decryptPayload(payload)
+				if err != nil {
+					slog.Warn("Failed to decrypt sync context payload", "id", id, "error", err)
+					continue
+				}
+				payload = decrypted
+			}
 			records = append(records, struct {
 				id      string
 				payload string
@@ -880,6 +1070,14 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 			var id, payload string
 			if err := rows.Scan(&id, &payload); err != nil {
 				return err
+			}
+			if s.db.IsSQLite() && payload != "" {
+				decrypted, err := decryptPayload(payload)
+				if err != nil {
+					slog.Warn("Failed to decrypt mission payload, skipping sync", "mission_id", id, "error", err)
+					continue
+				}
+				payload = decrypted
 			}
 			missions = append(missions, struct {
 				id      string

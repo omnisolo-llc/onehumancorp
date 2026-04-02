@@ -58,6 +58,16 @@ func New(ctx context.Context) (*DB, error) {
 
 		sqliteDSN := dbPath
 		if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+			// Pre-create file with strict permissions
+			actualPath := strings.Split(dbPath, "?")[0]
+			actualPath = strings.TrimPrefix(actualPath, "file:")
+			f, err := os.OpenFile(actualPath, os.O_CREATE|os.O_RDWR, 0600)
+			if err == nil {
+				f.Close()
+			} else {
+				slog.Warn("db: failed to pre-create sqlite database with strict permissions", "path", actualPath, "error", err)
+			}
+
 			if !strings.Contains(sqliteDSN, "?") {
 				sqliteDSN += "?"
 			} else {
@@ -75,6 +85,15 @@ func New(ctx context.Context) (*DB, error) {
 		if err := db.PingContext(ctx); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("db: ping sqlite: %w", err)
+		}
+
+		if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+			// Enforce permissions on actual file and side-car files after creation
+			actualPath := strings.Split(dbPath, "?")[0]
+			actualPath = strings.TrimPrefix(actualPath, "file:")
+			_ = os.Chmod(actualPath, 0600)
+			_ = os.Chmod(actualPath+"-wal", 0600)
+			_ = os.Chmod(actualPath+"-shm", 0600)
 		}
 
 		slog.Info("db: connected to sqlite", "path", dbPath)
