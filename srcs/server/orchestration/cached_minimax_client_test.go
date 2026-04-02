@@ -11,12 +11,17 @@ import (
 
 // mockMinimax is a mock client for testing.
 type mockMinimax struct {
-	calls int
-	err   error
+	calls       int
+	reasonCalls int
+	err         error
 }
 
 func (m *mockMinimax) Reason(ctx context.Context, prompt string) (string, error) {
-	return "mock response", nil
+	m.reasonCalls++
+	if m.err != nil {
+		return "", m.err
+	}
+	return "mock response for " + prompt, nil
 }
 
 func (m *mockMinimax) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
@@ -44,6 +49,17 @@ func setupDB(t *testing.T) db.Provider {
 	`)
 	if err != nil {
 		t.Fatalf("failed to create embedding_cache table: %v", err)
+	}
+
+	_, err = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS llm_reason_cache (
+			prompt_hash TEXT PRIMARY KEY,
+			response TEXT NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create llm_reason_cache table: %v", err)
 	}
 	return prov
 }
@@ -102,5 +118,62 @@ func TestCachedMinimaxClient_GenerateEmbedding(t *testing.T) {
 	}
 	if mockClient.calls != 3 {
 		t.Fatalf("expected 3 calls to mock client, got %d", mockClient.calls)
+	}
+}
+
+func TestCachedMinimaxClient_Reason(t *testing.T) {
+	ctx := context.Background()
+	prov := setupDB(t)
+	defer prov.Close()
+
+	mockClient := &mockMinimax{}
+
+	// Create cached client with DB but no Redis
+	var redisClient rueidis.Client
+	cachedClient := NewCachedMinimaxClient(mockClient, prov, redisClient)
+
+	prompt := "what is the meaning of life?"
+
+	// 1. First call should hit the mock client and cache the result
+	resp1, err := cachedClient.Reason(ctx, prompt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp1 != "mock response for what is the meaning of life?" {
+		t.Fatalf("unexpected response: %s", resp1)
+	}
+	if mockClient.reasonCalls != 1 {
+		t.Fatalf("expected 1 call to mock client, got %d", mockClient.reasonCalls)
+	}
+
+	// 2. Second call with same prompt should hit the DB cache, not the mock client
+	resp2, err := cachedClient.Reason(ctx, prompt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp2 != resp1 {
+		t.Fatalf("expected response %s, got %s", resp1, resp2)
+	}
+	if mockClient.reasonCalls != 1 {
+		t.Fatalf("expected 1 call to mock client, got %d", mockClient.reasonCalls)
+	}
+
+	// 3. Call with different prompt should hit the mock client
+	_, err = cachedClient.Reason(ctx, "what is 2+2?")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mockClient.reasonCalls != 2 {
+		t.Fatalf("expected 2 calls to mock client, got %d", mockClient.reasonCalls)
+	}
+
+	// 4. Test error propagation
+	mockClient.err = errors.New("API error")
+	_, err = cachedClient.Reason(ctx, "error prompt")
+	if err == nil || err.Error() != "API error" {
+		t.Fatalf("expected 'API error', got %v", err)
+	}
+	if mockClient.reasonCalls != 3 {
+		t.Fatalf("expected 3 calls to mock client, got %d", mockClient.reasonCalls)
 	}
 }
