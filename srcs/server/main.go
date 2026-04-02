@@ -102,16 +102,6 @@ func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 	}
 	return hub, billing.NewTracker(billing.DefaultCatalog)
 }
-				hubRepo,
-				taskRepo,
-			), billing.NewTrackerWithRepository(
-				billing.DefaultCatalog,
-				usageRepo,
-			)
-	}
-
-	return orchestration.NewHub(), billing.NewTracker(billing.DefaultCatalog)
-}
 
 func bootstrapTenantOrganization(now time.Time) domain.Organization {
 	org := domain.NewSoftwareCompany(
