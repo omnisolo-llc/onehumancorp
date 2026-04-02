@@ -1508,6 +1508,9 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
 var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
 
+// MinimaxEmbeddingAPIURL is the endpoint for Minimax embeddings.
+var MinimaxEmbeddingAPIURL = "https://api.minimax.io/v1/embeddings"
+
 // CircuitBreaker state
 type CircuitBreaker struct {
 	mu           sync.Mutex
@@ -1560,6 +1563,12 @@ type minimaxClientImpl struct {
 
 var globalCircuitBreaker *CircuitBreaker
 var globalCircuitBreakerOnce sync.Once
+
+// ResetCircuitBreakerForTest resets the global circuit breaker instance for testing.
+func ResetCircuitBreakerForTest() {
+	globalCircuitBreaker = nil
+	globalCircuitBreakerOnce = sync.Once{}
+}
 
 // NewMinimaxClient functionality.
 // Accepts parameters: apiKey string (No Constraints).
@@ -1710,6 +1719,72 @@ func CheckDocumentationGate(content string) error {
 }
 
 func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
-	// Dummy embedding for now to satisfy interface, since the real Minimax API call isn't implemented in this file.
-	return make([]float32, 1536), nil
+	if !c.cb.Allow() {
+		return nil, errors.New("circuit breaker is open")
+	}
+
+	if c.APIKey == "" {
+		c.cb.RecordFailure()
+		return nil, errors.New("minimax API key is not configured")
+	}
+
+	url := MinimaxEmbeddingAPIURL
+
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	escapedText, _ := json.Marshal(text)
+	buf.WriteString(`{"model":"embo-01","texts":[`)
+	buf.Write(escapedText)
+	buf.WriteString(`]}`)
+
+	payloadBytes := buf.Bytes()
+	var lastErr error
+
+	for i := 0; i < 3; i++ {
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+		resp, err := sharedHTTPClient.Do(req)
+		if err != nil {
+			c.cb.RecordFailure()
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			c.cb.RecordFailure()
+			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
+			resp.Body.Close()
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// Success path
+		c.cb.RecordSuccess()
+		var result struct {
+			Vectors [][]float32 `json:"vectors"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		resp.Body.Close()
+
+		if len(result.Vectors) == 0 {
+			return nil, errors.New("empty response from minimax")
+		}
+
+		return result.Vectors[0], nil
+	}
+
+	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
