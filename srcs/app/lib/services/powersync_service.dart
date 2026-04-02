@@ -24,10 +24,7 @@ class PowerSyncService {
   Future<void> _init() async {
     final settings = await _ref.read(clientSettingsProvider.future);
 
-    // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
-      return;
-    }
+    // Initialize PowerSync to bridge local SQLite to cloud.
 
     final schema = Schema((<Table>[
       Table('agents', [

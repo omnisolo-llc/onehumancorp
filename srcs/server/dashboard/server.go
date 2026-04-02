@@ -614,20 +614,24 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// We create sync rules that enforce that a user only syncs data belonging to their organization
-	orgID := claims.OrganizationID
+	_ = claims.OrganizationID // token is available via powersync's custom context variable
 
+	// We create sync rules that enforce that a user only syncs data belonging to their organization.
+	// For PowerSync dynamic sync rules, we enforce strict multi-tenant isolation by applying WHERE
+	// clauses matched to the user's JWT claims (token.jwt_ext_organization_id).
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
 				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
-				"parameters": []interface{}{orgID},
+				"query": "SELECT * FROM agents WHERE organization_id = token.jwt_ext_organization_id",
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				// Meeting rooms don't directly have an org ID in our current schema.
+				// To enforce strict multi-tenant isolation, we only sync meeting rooms
+				// where one of the participant agents belongs to the current organization.
+				// We filter safely using an EXISTS subquery matching the agent's organization.
+				"query": "SELECT mr.* FROM meeting_rooms mr WHERE EXISTS (SELECT 1 FROM agents a WHERE a.organization_id = token.jwt_ext_organization_id AND a.id = ANY(mr.participants))",
 			},
 			{
 				"table": "agent_missions",

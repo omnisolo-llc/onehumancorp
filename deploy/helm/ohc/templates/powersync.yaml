@@ -1,0 +1,62 @@
+{{- if .Values.powersync.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+    app.kubernetes.io/component: powersync
+spec:
+  replicas: {{ .Values.powersync.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ohc.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: powersync
+  template:
+    metadata:
+      labels:
+        {{- include "ohc.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: powersync
+    spec:
+      containers:
+        - name: powersync
+          image: "{{ .Values.powersync.image }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PS_DATA_SOURCE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "ohc.fullname" . }}-backend"
+                  key: databaseUrl
+                  optional: true
+            - name: PS_PORT
+              value: "8080"
+            - name: PS_JWKS_URL
+              value: "http://{{ include "ohc.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/auth/jwks"
+            - name: PS_SYNC_RULES_URL
+              value: "http://{{ include "ohc.fullname" . }}-backend:{{ .Values.backend.service.port }}/api/sync_rules"
+          resources:
+            {{- toYaml .Values.powersync.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+    app.kubernetes.io/component: powersync
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.powersync.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "ohc.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: powersync
+{{- end }}
