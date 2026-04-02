@@ -101,7 +101,6 @@ plane:
       memory: "256Mi"
 
 
-backend:
   resourceQuota:
     enabled: true
     requests:
@@ -110,6 +109,8 @@ backend:
     limits:
       cpu: "2"
       memory: "2Gi"
+  networkPolicy:
+    enabled: true
 
 # PowerSync - synchronization engine
 powersync:
