@@ -346,6 +346,10 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordMeetingEvent", func(t *testing.T) {
 		RecordMeetingEvent(ctx, "start")
 	})
+
+	t.Run("RecordTokenBurnRate", func(t *testing.T) {
+		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -353,17 +357,20 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	originalAgentApiCallsCounter := agentApiCallsCounter
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
+	originalTokenBurnRateGauge := tokenBurnRateGauge
 
 	tokenUsageCounter = nil
 	agentApiCallsCounter = nil
 	humanInteractionsCounter = nil
 	meetingEventsCounter = nil
+	tokenBurnRateGauge = nil
 
 	defer func() {
 		tokenUsageCounter = originalTokenUsageCounter
 		agentApiCallsCounter = originalAgentApiCallsCounter
 		humanInteractionsCounter = originalHumanInteractionsCounter
 		meetingEventsCounter = originalMeetingEventsCounter
+		tokenBurnRateGauge = originalTokenBurnRateGauge
 	}()
 
 	ctx := context.Background()
@@ -407,6 +414,10 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordMeetingEvent Uninitialized", func(t *testing.T) {
 		RecordMeetingEvent(ctx, "start")
+	})
+
+	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
+		RecordTokenBurnRate(ctx, "acme-org", 123.45)
 	})
 }
 
