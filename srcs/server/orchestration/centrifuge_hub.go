@@ -178,11 +178,32 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
 	channel := "mesh:tasks"
+
+	// Ensure we map payload correctly to the required UI keys:
+	// 'agent_id', 'action', 'status', and 'task_id'
 	msg := map[string]interface{}{
 		"type":    "TASK_BROADCAST",
 		"task_id": taskID,
-		"payload": payload,
 	}
+
+	if agentID, ok := payload["agent_id"]; ok {
+		msg["agent_id"] = agentID
+	} else {
+		msg["agent_id"] = ""
+	}
+
+	if action, ok := payload["action"]; ok {
+		msg["action"] = action
+	} else {
+		msg["action"] = ""
+	}
+
+	if status, ok := payload["status"]; ok {
+		msg["status"] = status
+	} else {
+		msg["status"] = ""
+	}
+
 	data, err := json.Marshal(msg)
 	if err != nil {
 		slog.Error("[centrifuge] marshal task broadcast", "error", err)
