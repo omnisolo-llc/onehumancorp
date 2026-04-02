@@ -104,6 +104,11 @@ plane:
       cpu: "250m"
       memory: "256Mi"
 
+powersync:
+  enabled: true
+  image: journeyapps/powersync-service:latest
+  replicas: 1
+
 
 backend:
   resourceQuota:

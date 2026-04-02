@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-powersync
+spec:
+  replicas: {{ .Values.powersync.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-powersync
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-powersync
+    spec:
+      containers:
+        - name: powersync
+          image: {{ .Values.powersync.image | default "journeyapps/powersync-service:latest" }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PS_PORT
+              value: "8080"
+            - name: PS_SYNC_RULES_URL
+              value: "http://{{ .Release.Name }}-backend:{{ .Values.backend.service.port }}/api/sync_rules"
+            {{- if .Values.cnpg.enabled }}
+            - name: PS_DATA_SOURCE_URI
+              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw:5432/{{ .Values.cnpg.database }}?sslmode=require"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cnpg.clusterName }}-app
+                  key: password
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-powersync
+spec:
+  selector:
+    app: {{ .Release.Name }}-powersync
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

@@ -613,20 +613,14 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We create sync rules that enforce that a user only syncs data belonging to their organization
-	orgID := claims.OrganizationID
-
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
 				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
-				"parameters": []interface{}{orgID},
+				"query": "SELECT * FROM agents WHERE organization_id = token_parameters.jwt_ext_organization_id",
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
 				"query": "SELECT * FROM meeting_rooms",
 			},
 			{

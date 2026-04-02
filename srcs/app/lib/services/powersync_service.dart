@@ -22,12 +22,16 @@ class PowerSyncService {
   }
 
   Future<void> _init() async {
-    final settings = await _ref.read(clientSettingsProvider.future);
-
-    // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
+    // Only initialize PowerSync if we are in an environment that supports it (e.g. not web)
+    // and if standalone mode is enabled or hybrid sync is explicitly required.
+    // Web does not support sqlite3_flutter_libs directly.
+    bool isWeb = const bool.fromEnvironment('dart.library.js_util');
+    if (isWeb) {
       return;
     }
+
+    // Await the settings to ensure it is loaded.
+    final settings = await _ref.read(clientSettingsProvider.notifier).stream.firstWhere((s) => s.hasValue);
 
     final schema = Schema((<Table>[
       Table('agents', [
@@ -78,7 +82,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings.serverUrl;
+    final backendUrl = settings.value!.backendUrl;
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
@@ -105,14 +109,14 @@ class _BackendConnector extends PowerSyncBackendConnector {
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
-    final token = ref.read(authServiceProvider).getToken();
-    if (token == null) {
+    final authUser = ref.read(authStateProvider).valueOrNull;
+    if (authUser == null || authUser.token.isEmpty) {
       return null;
     }
 
     return PowerSyncCredentials(
       endpoint: backendUrl,
-      token: token,
+      token: authUser.token,
     );
   }
 
