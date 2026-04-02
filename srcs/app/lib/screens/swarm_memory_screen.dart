@@ -95,7 +95,7 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
     }
 
     return StreamBuilder<CentrifugeMessage>(
-      stream: centrifuge.subscribe('mesh'), // listening to 'chat:mesh'
+      stream: centrifuge.subscribe('mesh:tasks'), // listening to 'mesh:tasks'
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           final msg = snapshot.data!;

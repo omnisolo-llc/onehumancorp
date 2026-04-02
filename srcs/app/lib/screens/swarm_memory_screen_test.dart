@@ -27,7 +27,7 @@ void main() {
     });
 
     testWidgets('renders basic UI structure', (tester) async {
-      when(() => mockCentrifugeService.subscribe('mesh'))
+      when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
       when(() => mockPowerSyncDatabase.watch(any()))
@@ -52,7 +52,7 @@ void main() {
     });
 
     testWidgets('shows loading state for durable memory when db is null', (tester) async {
-      when(() => mockCentrifugeService.subscribe('mesh'))
+      when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
       when(() => mockPowerSyncService.db).thenReturn(null);
@@ -73,7 +73,7 @@ void main() {
     });
 
     testWidgets('shows empty state for durable memory', (tester) async {
-      when(() => mockCentrifugeService.subscribe('mesh'))
+      when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
       when(() => mockPowerSyncDatabase.watch(any()))
