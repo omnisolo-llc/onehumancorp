@@ -20,5 +20,4 @@ Validate the correct serialization, persistence, and deserialization of complex 
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the `pg-checkpointer` package.
 
-
 </div>

@@ -50,5 +50,4 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 - **Mocks**: External framework agent executions are thoroughly mocked using the existing test harness.
 - **Validation**: Strict enforcement of >95% test coverage.
 
-
 </div>

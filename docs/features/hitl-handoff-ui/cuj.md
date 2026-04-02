@@ -32,5 +32,4 @@ When an AI agent reaches an ambiguous decision point or requires a high-risk act
 - **Handoff Timeout**: If a handoff is not actioned within a specific period (e.g., 2 hours), the UI flags it as "Expired" and the agent falls back to a safe default action or escalates.
 - **Context Size Limit**: If the agent's LangGraph state is excessively large, it is summarized before being sent to the UI to maintain performance and prevent browser memory issues.
 
-
 </div>

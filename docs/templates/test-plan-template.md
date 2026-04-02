@@ -41,5 +41,4 @@ A high-level summary of the testing strategy for [Feature Name], ensuring it mee
 ## 6. Environment & Prerequisites
 - Details on the setup required to run these tests.
 
-
 </div>

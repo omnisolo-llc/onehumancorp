@@ -21,5 +21,4 @@ Welcome to the newest release of the OHC Swarm OS! This update dramatically enha
 - Telemetry modules are fully fleshed out with OpenTelemetry metrics for deep observability.
 - Checkpointer logic improved with resilient state upserts.
 
-
 </div>

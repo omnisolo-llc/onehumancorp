@@ -36,5 +36,4 @@ When an agent passes slightly malformed JSON parameters to a tool (e.g., passing
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

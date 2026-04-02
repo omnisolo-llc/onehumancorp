@@ -66,6 +66,9 @@ graph TD
         BE --> MCP[MCP Gateway]
         MCP --> Tools[Git, Jira, Slack, AWS, etc.]
     end
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Hub,Billing,DesktopShell,MCP,LocalDB,Tools,Desktop,Web,LocalBE,Mobile,LocalHub,Approval,DB,Redis,BE premium;
 ```
 
 ### 3.1 Operating Modes
@@ -257,7 +260,9 @@ graph TD
         K8s --> MCP
         K8s --> Agent1
     end
-```
 
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class PluginB,Agent1,UI,MCP,Tokens,PluginA,DB,K8s premium;
+```
 
 </div>

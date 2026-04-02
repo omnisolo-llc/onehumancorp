@@ -48,5 +48,4 @@ All CUJs are verified via automated Playwright tests and Kind e2e smoke tests.
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
 
-
 </div>

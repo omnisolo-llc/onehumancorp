@@ -36,5 +36,4 @@ When an agent completes a high-priority sub-task, it publishes a structured comp
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>
