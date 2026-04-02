@@ -28,6 +28,7 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	swarmTasksCompletedCounter metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -141,6 +142,14 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	swarmTasksCompletedCounter, err = m.Int64Counter(
+		"ohc_swarm_tasks_completed",
+		metric.WithDescription("Total completed swarm tasks"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -351,6 +360,16 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 	if tokenBurnRateGauge != nil {
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
+		))
+	}
+}
+
+// RecordSwarmTaskCompleted increments the counter for completed swarm tasks.
+func RecordSwarmTaskCompleted(ctx context.Context, taskID, missionID string) {
+	if swarmTasksCompletedCounter != nil {
+		swarmTasksCompletedCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("task_id", taskID),
+			attribute.String("mission_id", missionID),
 		))
 	}
 }

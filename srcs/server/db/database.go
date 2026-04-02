@@ -178,6 +178,9 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "vector(1536)", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "gen_random_uuid()", "(lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6))))")
 			// We need to remove the array syntax `TEXT[] NOT NULL DEFAULT '{}'`
 			// Because SQLite does not support arrays.
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage

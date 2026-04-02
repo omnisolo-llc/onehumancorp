@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "agent.go",
         "agent_task_worker.go",
+        "autodream.go",
         "provider.go",
         "registry.go",
     ],
