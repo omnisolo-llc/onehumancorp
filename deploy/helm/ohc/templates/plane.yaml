@@ -40,7 +40,11 @@ spec:
             - name: REDIS_URL
               value: "redis://{{ include "ohc.fullname" . }}-redis:6379/1"
             - name: SECRET_KEY
-              value: {{ .Values.plane.secretKey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ohc.fullname" . }}-plane-secret
+                  key: secretKey
+                  optional: true
             - name: WEB_URL
               value: "http://{{ include "ohc.fullname" . }}-plane-web"
           resources:
@@ -161,7 +165,11 @@ spec:
             - name: REDIS_URL
               value: "redis://{{ include "ohc.fullname" . }}-redis:6379/1"
             - name: SECRET_KEY
-              value: {{ .Values.plane.secretKey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ohc.fullname" . }}-plane-secret
+                  key: secretKey
+                  optional: true
           resources:
             {{- toYaml .Values.plane.resources | nindent 12 }}
       volumes:

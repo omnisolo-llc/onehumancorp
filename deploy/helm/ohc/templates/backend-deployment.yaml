@@ -73,6 +73,12 @@ spec:
             - name: OHC_CORE_URL
               value: "http://{{ .Release.Name }}-ohc-core:{{ .Values.ohcCore.service.port }}"
             {{- end }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-secret
+                  key: jwtSecret
+                  optional: true
           livenessProbe:
             httpGet:
               path: /healthz
