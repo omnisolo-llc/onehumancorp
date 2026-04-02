@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"sync"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -236,6 +237,13 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		})
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
 	}
+
+	recordTokenUsageCallbackMu.RLock()
+	cb := recordTokenUsageCallback
+	recordTokenUsageCallbackMu.RUnlock()
+	if cb != nil {
+		cb(ctx, agentID, role, model, tokenType, count)
+	}
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -353,4 +361,16 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 			attribute.String("organization_id", organizationID),
 		))
 	}
+}
+
+var (
+	recordTokenUsageCallbackMu sync.RWMutex
+	recordTokenUsageCallback   func(ctx context.Context, agentID, role, model, tokenType string, count int64)
+)
+
+// RegisterTokenUsageCallback safely registers a global callback.
+func RegisterTokenUsageCallback(cb func(ctx context.Context, agentID, role, model, tokenType string, count int64)) {
+	recordTokenUsageCallbackMu.Lock()
+	defer recordTokenUsageCallbackMu.Unlock()
+	recordTokenUsageCallback = cb
 }

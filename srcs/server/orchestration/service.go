@@ -313,7 +313,10 @@ type Hub struct {
 	tokenTrackers  map[string]struct{}
 	autoCorTrack   map[string]struct{}
 	eventLogChan   chan interface{}
+	tokenUsageMu   sync.Mutex
+	tokenUsage     map[string][]TokenUsageSample
 	repo           HubRepository
+	stopBurnRate   chan struct{}
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
@@ -348,12 +351,67 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		tokenTrackers: map[string]struct{}{},
 		autoCorTrack:  map[string]struct{}{},
 		eventLogChan:  make(chan interface{}, 100),
+		tokenUsage:    make(map[string][]TokenUsageSample),
 		repo:          repo,
+		stopBurnRate:  make(chan struct{}),
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+
+	// Safely register the callback using the new thread-safe method.
+	telemetry.RegisterTokenUsageCallback(func(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+		h.RecordTokenUsage(agentID, count)
+	})
+
+	go h.startTokenBurnRateEngine()
 	return h
+}
+
+type TokenUsageSample struct {
+	Count      int64
+	RecordedAt time.Time
+}
+
+func (h *Hub) startTokenBurnRateEngine() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-h.stopBurnRate:
+			return
+		case <-ticker.C:
+			h.calculateAndEmitTokenBurnRate(context.Background())
+		}
+	}
+}
+
+func (h *Hub) calculateAndEmitTokenBurnRate(ctx context.Context) {
+	h.tokenUsageMu.Lock()
+	defer h.tokenUsageMu.Unlock()
+
+	now := time.Now()
+	cutoff := now.Add(-5 * time.Minute)
+
+	for orgID, samples := range h.tokenUsage {
+		var validSamples []TokenUsageSample
+		var totalTokens int64
+
+		for _, s := range samples {
+			if s.RecordedAt.After(cutoff) {
+				validSamples = append(validSamples, s)
+				totalTokens += s.Count
+			}
+		}
+
+		h.tokenUsage[orgID] = validSamples
+
+		// Extrapolate usage: (total tokens in last 5 min / 5) * 60 = projected tokens per hour,
+		// but metric is "per minute per tenant", so we just do totalTokens / 5.0
+		burnRate := float64(totalTokens) / 5.0
+		telemetry.RecordTokenBurnRate(ctx, orgID, burnRate)
+	}
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.
@@ -1661,4 +1719,30 @@ func CheckDocumentationGate(content string) error {
 		}
 	}
 	return nil
+}
+
+// RecordTokenUsage records token usage for calculating burn rate.
+func (h *Hub) RecordTokenUsage(agentID string, count int64) {
+	agent, ok := h.Agent(agentID)
+	orgID := "default"
+	if ok && agent.OrganizationID != "" {
+		orgID = agent.OrganizationID
+	}
+
+	h.tokenUsageMu.Lock()
+	defer h.tokenUsageMu.Unlock()
+	h.tokenUsage[orgID] = append(h.tokenUsage[orgID], TokenUsageSample{
+		Count:      count,
+		RecordedAt: time.Now(),
+	})
+}
+
+// Close gracefully stops the Hub and its background workers.
+func (h *Hub) Close() {
+	h.tokenUsageMu.Lock()
+	defer h.tokenUsageMu.Unlock()
+	if h.stopBurnRate != nil {
+		close(h.stopBurnRate)
+		h.stopBurnRate = nil
+	}
 }
