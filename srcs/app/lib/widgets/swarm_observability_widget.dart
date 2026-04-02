@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/services/centrifuge_service.dart';
 
 // Simulate Teammate Mesh messages from Redis/WebSockets
 class MeshMessage {
@@ -14,36 +15,26 @@ class MeshMessage {
 }
 
 final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
-  final controller = StreamController<MeshMessage>();
-  final random = Random();
-  final agents = ['Bolt-L7', 'Palette-L7', 'Architect-L8', 'Nexus-L6'];
-  final actions = [
-    'Synced Postgres vector memory',
-    'Audited UI responsiveness',
-    'Scaled Redis pub/sub queue',
-    'Generated new visual tokens',
-    'Analyzed market telemetry',
-  ];
+  final centrifuge = ref.watch(centrifugeServiceProvider);
+  if (centrifuge == null) {
+    return const Stream.empty();
+  }
 
-  Timer? timer;
-  ref.onDispose(() {
-    timer?.cancel();
-    controller.close();
+  return centrifuge.subscribeRaw('mesh:tasks').map((data) {
+    final Map<String, dynamic> json = data as Map<String, dynamic>;
+    final payload = json['payload'] as Map<String, dynamic>? ?? {};
+
+    // Extract agent name and action from the payload
+    // Adjust logic based on actual payload structure from Hub.PublishTaskBroadcast
+    final agentName = payload['agent_id'] as String? ?? payload['agent_name'] as String? ?? 'System';
+    final action = payload['action'] as String? ?? payload['status'] as String? ?? 'Task Update';
+
+    return MeshMessage(
+      agentName,
+      action,
+      DateTime.now(),
+    );
   });
-
-  timer = Timer.periodic(const Duration(seconds: 2), (t) {
-    if (!controller.isClosed) {
-      controller.add(
-        MeshMessage(
-          agents[random.nextInt(agents.length)],
-          actions[random.nextInt(actions.length)],
-          DateTime.now(),
-        ),
-      );
-    }
-  });
-
-  return controller.stream;
 });
 
 class SwarmObservabilityWidget extends ConsumerStatefulWidget {
