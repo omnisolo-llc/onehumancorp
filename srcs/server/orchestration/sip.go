@@ -158,6 +158,13 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 		if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
 			os.Chmod(basePath, 0600)
 		}
+		// Also secure SQLite temporary files for WAL mode
+		if info, err := os.Stat(basePath + "-wal"); err == nil && !info.IsDir() {
+			os.Chmod(basePath+"-wal", 0600)
+		}
+		if info, err := os.Stat(basePath + "-shm"); err == nil && !info.IsDir() {
+			os.Chmod(basePath+"-shm", 0600)
+		}
 	}
 
 	provider := db.NewSqliteProvider(sqlDB)

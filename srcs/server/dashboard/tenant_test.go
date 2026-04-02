@@ -262,6 +262,31 @@ func TestTenantRegistry_HandleOrgRegister_NoAdminRole(t *testing.T) {
 	}
 }
 
+func TestTenantRegistry_HandleOrgRegister_TenantAdminForbidden(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	reg := NewTenantRegistry(sharedAuthStore, nil)
+	// Create context with claims WITH admin role, but a specific tenant OrganizationID
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{
+		Subject:        "tenant-admin",
+		OrganizationID: "org-1",
+		Roles:          []string{auth.RoleAdmin},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/orgs/register", strings.NewReader("{}")).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	reg.HandleOrgRegister(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for tenant admin, got %d", rr.Code)
+	}
+}
+
 func TestTenantRegistry_HandleOrgRegister_InvalidJSON(t *testing.T) {
 	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
 	originalStandalone := os.Getenv("OHC_STANDALONE")
@@ -355,6 +380,30 @@ func TestTenantRegistry_HandleOrgList_NoAdminRole(t *testing.T) {
 	reg.HandleOrgList(rr, req)
 	if rr.Code != http.StatusForbidden {
 		t.Errorf("expected 403 Forbidden, got %d", rr.Code)
+	}
+}
+
+func TestTenantRegistry_HandleOrgList_TenantAdminForbidden(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	reg := newTestRegistry()
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{
+		Subject:        "tenant-admin",
+		OrganizationID: "org-1",
+		Roles:          []string{auth.RoleAdmin},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/api/orgs", nil).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	reg.HandleOrgList(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for tenant admin, got %d", rr.Code)
 	}
 }
 
