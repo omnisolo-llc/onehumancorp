@@ -4,16 +4,20 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	dbWrapper, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db provider: %v", err)
+	}
+	prov := dbWrapper.Provider
 
-	_, err := prov.Exec(context.Background(), `
+	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
@@ -43,6 +47,10 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 }
 
 type mockMinimaxClient struct{}
+
+func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	return "", nil
+}
 
 func (m *mockMinimaxClient) ChatCompletion(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
 	return nil, nil
