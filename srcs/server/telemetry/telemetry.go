@@ -1,5 +1,6 @@
 package telemetry
 
+
 import (
 	"context"
 	"encoding/json"
@@ -7,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,6 +19,71 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
+
+type usageEvent struct {
+	timestamp time.Time
+	count     int64
+}
+
+var (
+	usageMu    sync.Mutex
+	tokenUsage map[string][]usageEvent = make(map[string][]usageEvent)
+)
+
+func recordUsageInternal(orgID string, count int64) {
+	if orgID == "" {
+		orgID = "unknown"
+	}
+	usageMu.Lock()
+	defer usageMu.Unlock()
+	tokenUsage[orgID] = append(tokenUsage[orgID], usageEvent{
+		timestamp: time.Now(),
+		count:     count,
+	})
+}
+
+func startTokenBurnRateForecaster(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	window := 1 * time.Minute // Calculate rate over the last minute
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now := time.Now()
+			usageMu.Lock()
+
+			for orgID, events := range tokenUsage {
+				var activeEvents []usageEvent
+				var sum int64 = 0
+				for _, ev := range events {
+					if now.Sub(ev.timestamp) <= window {
+						activeEvents = append(activeEvents, ev)
+						sum += ev.count
+					}
+				}
+				if len(activeEvents) == 0 {
+					delete(tokenUsage, orgID)
+				} else {
+					tokenUsage[orgID] = activeEvents
+				}
+
+				// Rate is tokens per minute
+				rate := float64(sum) / window.Minutes()
+				RecordTokenBurnRate(ctx, orgID, rate)
+			}
+
+			usageMu.Unlock()
+		}
+	}
+}
+
+// TokenUsageAgentOrgLookup allows mapping an agent ID to an organization ID for telemetry grouping
+var TokenUsageAgentOrgLookup func(agentID string) string
+
 
 var (
 	meter            metric.Meter
@@ -69,7 +136,11 @@ func InitTelemetry() (func(), error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	go startTokenBurnRateForecaster(ctx)
+
 	return func() {
+		cancel()
 		_ = provider.Shutdown(context.Background())
 	}, nil
 }
@@ -216,6 +287,12 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+	orgID := "unknown"
+	if TokenUsageAgentOrgLookup != nil {
+		orgID = TokenUsageAgentOrgLookup(agentID)
+	}
+	recordUsageInternal(orgID, count)
+
 	if tokenUsageCounter == nil {
 		return
 	}

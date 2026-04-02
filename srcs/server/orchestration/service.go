@@ -242,15 +242,9 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-context.Background().Done():
-			// Not cancellable since it doesn't take context
-		}
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		throttleSemaphore <- struct{}{}
+		defer func() { <-throttleSemaphore }()
 	}
 
 	if err := CheckDocumentationGate(task.Content); err != nil {
@@ -353,8 +347,29 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+
+	// Wire up telemetry lookup for token forecasting
+	telemetry.TokenUsageAgentOrgLookup = func(agentID string) string {
+		h.mu.RLock()
+		agent, ok := h.agents[agentID]
+		h.mu.RUnlock()
+		if ok {
+			return agent.OrganizationID
+		}
+		if h.repo != nil {
+			dbAgent, dbOk, _ := h.repo.GetAgent(context.Background(), agentID)
+			if dbOk {
+				return dbAgent.OrganizationID
+			}
+		}
+		return ""
+	}
+
 	return h
 }
+
+
+
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.
 func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
