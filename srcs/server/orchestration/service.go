@@ -381,7 +381,12 @@ func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]i
 		return
 	}
 	usages := h.GetTokenUsage(ctx)
+
+	// Track which orgs are active this tick
+	activeOrgs := make(map[string]bool)
+
 	for orgID, totalTokens := range usages {
+		activeOrgs[orgID] = true
 		if totalTokens > 0 {
 			hist := history[orgID]
 			hist = append(hist, totalTokens)
@@ -397,6 +402,15 @@ func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]i
 				rate := float64(hist[len(hist)-1] - hist[0]) / float64(len(hist)-1)
 				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 			}
+		} else {
+			delete(history, orgID)
+		}
+	}
+
+	// Clean up any orgs that were not in the usages map
+	for orgID := range history {
+		if !activeOrgs[orgID] {
+			delete(history, orgID)
 		}
 	}
 }
