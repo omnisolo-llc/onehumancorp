@@ -36,6 +36,11 @@ graph TD;
     class Hub,Backend,MCP,Agents,Frontend,Rooms,User,DB,K8s premium;
 ```
 
+## Quick Links
+- [API Playbook](public/API_PLAYBOOK.md)
+- [System Design](system-design.md)
+- [Roadmap](roadmap.md)
+
 ## Quick Start
 1. Ensure you have `bazelisk` and `npm` installed.
 2. Build the backend:
