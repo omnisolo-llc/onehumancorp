@@ -35,6 +35,11 @@ dependencies:
   path: ^1.9.1
   # flutter_svg: ^2.0.10 # Disabled for Bazel build compatibility
 
+  # Database Sync (PowerSync for Hybrid Architecture)
+  powersync: ^1.7.5
+  path_provider: ^2.1.3
+  sqlite3_flutter_libs: ^0.5.24
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

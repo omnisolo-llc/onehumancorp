@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/router.dart';
+import 'package:ohc_app/services/powersync_service.dart';
 
 void main() {
   runApp(const ProviderScope(child: OhcApp()));
@@ -11,6 +12,9 @@ class OhcApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch powersync to trigger initialization
+    ref.watch(powersyncProvider);
+
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'One Human Corp',
