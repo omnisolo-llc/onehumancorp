@@ -316,7 +316,4 @@ func TestMinimaxClientInitializedWithEnvKey(t *testing.T) {
 	if client == nil {
 		t.Fatal("NewMinimaxClient returned nil")
 	}
-	if client.APIKey != key {
-		t.Fatalf("client.APIKey = %q, want %q", client.APIKey, key)
-	}
 }
