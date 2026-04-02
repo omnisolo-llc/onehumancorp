@@ -1,5 +1,5 @@
 actions:
-  - name: "Test all targets"
+  - name: "bazel test //..."
     # resource_requests:
     #   cpu: 8
     #   memory: 32GB
@@ -13,7 +13,7 @@ actions:
           - "*"
     steps:
       - run: |
-          bazelisk test //... \
+          bazel test //... \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800
