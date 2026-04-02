@@ -45,12 +45,13 @@ class PowerSyncService {
         Column.text('payload'),
         Column.text('created_at'),
       ]),
-      Table('swarm_memory', [
-        Column.text('value'),
-        Column.text('updated_at'),
-      ], indexes: [
-        Index('idx_swarm_memory_updated_at', [IndexedColumn('updated_at')])
-      ]),
+      Table(
+        'swarm_memory',
+        [Column.text('value'), Column.text('updated_at')],
+        indexes: [
+          Index('idx_swarm_memory_updated_at', [IndexedColumn('updated_at')]),
+        ],
+      ),
       Table('capability_plugins', [
         Column.text('name'),
         Column.text('version'),
@@ -76,7 +77,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings.serverUrl;
+    final backendUrl = settings.backendUrl;
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
@@ -103,15 +104,12 @@ class _BackendConnector extends PowerSyncBackendConnector {
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
-    final token = ref.read(authServiceProvider).getToken();
-    if (token == null) {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: token,
-    );
+    return PowerSyncCredentials(endpoint: backendUrl, token: user.token);
   }
 
   @override

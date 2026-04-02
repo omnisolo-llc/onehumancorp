@@ -1,0 +1,14 @@
+---
+status: DONE
+title: "Fix Flutter Widget Tests & Powersync Provider Errors"
+problem_statement: "Fix compilation and async initialization errors related to settings and powersync in Flutter app."
+priority: P1
+estimated_scope: Small
+agent: Jules
+---
+Mission completed successfully.
+- Refactored `clientSettingsProvider` to an `AsyncNotifierProvider` to natively support `.future`.
+- Updated `powersync_service.dart` to await the correct `.future`.
+- Resolved `backendUrl` vs `serverUrl` field discrepancy in `ClientSettings`.
+- Resolved `AuthService` token extraction method (by correctly reading `authStateProvider`).
+- Verified zero WIP, tests 100% green.

@@ -37,42 +37,33 @@ final _prefsProvider = FutureProvider<SharedPreferences>(
 );
 
 final clientSettingsProvider =
-    StateNotifierProvider<ClientSettingsNotifier, AsyncValue<ClientSettings>>((
-      ref,
-    ) {
-      return ClientSettingsNotifier(ref);
+    AsyncNotifierProvider<ClientSettingsNotifier, ClientSettings>(() {
+      return ClientSettingsNotifier();
     });
 
-class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
-  final Ref _ref;
+class ClientSettingsNotifier extends AsyncNotifier<ClientSettings> {
   static const _key = 'client_settings';
 
-  ClientSettingsNotifier(this._ref) : super(const AsyncLoading()) {
-    _load();
-  }
-
-  Future<void> _load() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final prefs = await _ref.watch(_prefsProvider.future);
-      final json = prefs.getString(_key);
-      if (json == null) {
-        // Check environment variable if web/desktop supports it via string.fromEnvironment
-        const envUrl = String.fromEnvironment(
-          'BACKEND_URL',
-          defaultValue: 'http://localhost:18789',
-        );
-        const envStandalone = bool.fromEnvironment(
-          'OHC_STANDALONE',
-          defaultValue: false,
-        );
-        return ClientSettings(
-          backendUrl: envUrl,
-          standaloneMode: envStandalone,
-        );
-      }
-      return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
-    });
+  @override
+  Future<ClientSettings> build() async {
+    final prefs = await ref.watch(_prefsProvider.future);
+    final json = prefs.getString(_key);
+    if (json == null) {
+      // Check environment variable if web/desktop supports it via string.fromEnvironment
+      const envUrl = String.fromEnvironment(
+        'BACKEND_URL',
+        defaultValue: 'http://localhost:18789',
+      );
+      const envStandalone = bool.fromEnvironment(
+        'OHC_STANDALONE',
+        defaultValue: false,
+      );
+      return const ClientSettings(
+        backendUrl: envUrl,
+        standaloneMode: envStandalone,
+      );
+    }
+    return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
   }
 
   Future<void> updateBackendUrl(String url) async {
@@ -92,7 +83,7 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
   Future<void> _save() async {
     final current = state.valueOrNull;
     if (current == null) return;
-    final prefs = await _ref.read(_prefsProvider.future);
+    final prefs = await ref.read(_prefsProvider.future);
     await prefs.setString(_key, jsonEncode(current.toJson()));
   }
 }
