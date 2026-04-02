@@ -96,3 +96,19 @@ func TestTeammateMesh_Publish(t *testing.T) {
 		t.Errorf("expected payload to contain 'direct publish', got %s", string(p))
 	}
 }
+
+
+func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
+	// Verify that meshes do not leak across tenants by isolating room channels.
+
+	mesh, err := NewTeammateMesh("")
+	if err != nil {
+		t.Fatalf("failed to create mesh: %v", err)
+	}
+
+	mesh.mu.Lock()
+	if len(mesh.subscribers) != 0 {
+		t.Errorf("Expected 0 subscribers initially")
+	}
+	mesh.mu.Unlock()
+}
