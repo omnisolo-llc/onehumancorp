@@ -268,6 +268,120 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	return nil
 }
 
+// PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
+// It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
+// SQLite's concurrent writes lock for safe queue picking.
+func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int) ([]*SharedTask, error) {
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if tm.db.IsSQLite() {
+		query = `
+			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
+			FROM swarm_tasks
+			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			LIMIT $1
+		`
+	} else {
+		// PostgreSQL with SKIP LOCKED
+		query = `
+			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
+			FROM swarm_tasks
+			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY payload->>'priority' ASC, created_at ASC
+			LIMIT $1
+			FOR UPDATE SKIP LOCKED
+		`
+	}
+
+	rows, err := tx.Query(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	var taskIDs []string
+
+	for rows.Next() {
+		task := &SharedTask{}
+		if err := rows.Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan task: %w", err)
+		}
+
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+			if desc, ok := payloadMap["description"].(string); ok {
+				task.Description = desc
+			}
+			if prio, ok := payloadMap["priority"].(string); ok {
+				task.Priority = prio
+			}
+		}
+
+		tasks = append(tasks, task)
+		taskIDs = append(taskIDs, task.ID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	if len(tasks) == 0 {
+		return nil, nil // No tasks to claim
+	}
+
+	// Update status for all claimed tasks
+	var claimedTasks []*SharedTask
+
+	for _, task := range tasks {
+		res, err := tx.Exec(ctx, `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND status = 'PENDING'
+		`, agentID, task.ID)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
+		}
+
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get rows affected for task %s: %w", task.ID, err)
+		}
+
+		if rowsAffected > 0 {
+			task.Status = "IN_PROGRESS"
+			task.AssignedAgentID = agentID
+			claimedTasks = append(claimedTasks, task)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	for _, task := range claimedTasks {
+		// Broadcast task claim
+		if tm.hub != nil {
+			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
+				"action":    "CLAIM",
+				"agent_id":  agentID,
+				"status":    task.Status,
+			})
+		}
+	}
+
+	return claimedTasks, nil
+}
+
 // generateID generates a pseudo-uuid for SQLite compatibility.
 func generateID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
