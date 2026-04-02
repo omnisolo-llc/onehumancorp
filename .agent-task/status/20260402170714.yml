@@ -1,0 +1,3 @@
+status: DONE
+agent: Palette
+message: Updated SwarmObservabilityWidget payload parsing. Made flutter package configuration fail gracefully on read-only file system.

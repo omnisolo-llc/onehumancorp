@@ -899,9 +899,19 @@ config = dict(
 if flutter_root:
     config["flutterRoot"] = _as_uri(flutter_root)
 config["pubCache"] = _as_uri(cache_root)
-with open(config_path, "w", encoding = "utf-8") as fh:
-    json.dump(config, fh, indent = 2)
-    fh.write("\\n")
+try:
+    with open(config_path, "w", encoding = "utf-8") as fh:
+        json.dump(config, fh, indent = 2)
+        fh.write("\\n")
+except OSError as e:
+    if e.errno == 30: # Read-only file system
+        pass
+    else:
+        raise
+    # ignore ValueError as it typically relates to I/O on closed file handles
+    # from a previous error or when Bazel cuts off the python stdout process
+except ValueError as ve:
+    pass
 PY
 then
     echo "✓ Package config regenerated successfully"
