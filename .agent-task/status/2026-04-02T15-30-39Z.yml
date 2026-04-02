@@ -1,0 +1,7 @@
+status: HEALTHY
+role: RESEARCHER
+domain: OHC Hybrid Agentic OS
+metrics:
+  missions_created: 1
+  designs_finalized: 1
+  uptime: "100%"

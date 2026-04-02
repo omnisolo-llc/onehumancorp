@@ -1,0 +1,8 @@
+timestamp: 2026-04-02T15-35-41Z
+agent: KAIROS
+type: architecture_decision
+content: >
+  Finalized the Hybrid MCP RAG Protocol architecture for OHC-HA.
+  Created a mission file for Implementer agents to build the Offline-to-Cloud
+  State Sync daemon to bridge standalone SQLite and cloud Postgres.
+  The design document `docs/designs/HYBRID_MCP_RAG_SYNC.md` was also written.
