@@ -227,7 +227,7 @@ func initializeTables(provider db.Provider) error {
 func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 	var value string
 	err := withRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = ?", key).Scan(&value)
+		err := s.db.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = $1", key).Scan(&value)
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -244,7 +244,7 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO swarm_memory (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
+			"INSERT INTO swarm_memory (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
 			key, value,
 		)
 		return err
@@ -264,7 +264,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
 
 		if s.db.IsSQLite() {
-			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = ? AND status = 'PENDING'"
+			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING'"
 		}
 
 		rows, err := s.db.Query(ctx, query, role)
@@ -318,7 +318,7 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	var rowsAffected int64
 	err := withRetry(ctx, func() error {
 		var err error
-		rowsAffected, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = ?", missionID)
+		rowsAffected, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1", missionID)
 		return err
 	})
 	if err != nil {
@@ -339,7 +339,7 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 	var rowsAffected int64
 	err := withRetry(ctx, func() error {
 		var err error
-		rowsAffected, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = ?", missionID)
+		rowsAffected, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1", missionID)
 		return err
 	})
 	if err != nil {
@@ -351,7 +351,7 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 
 	if remoteEndpoint != "" {
 		var payload string
-		err = s.db.QueryRow(ctx, "SELECT payload FROM agent_missions WHERE id = ?", missionID).Scan(&payload)
+		err = s.db.QueryRow(ctx, "SELECT payload FROM agent_missions WHERE id = $1", missionID).Scan(&payload)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve mission payload for syncing: %w", err)
 		}
@@ -384,7 +384,7 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) error {
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP",
+			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP",
 			agentID, role, status,
 		)
 		return err
@@ -489,7 +489,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	taskBytes, _ := json.Marshal(wrapper)
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES (?, 'PENDING', ?, CURRENT_TIMESTAMP)",
+			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP)",
 			missionID, string(taskBytes),
 		)
 		return err
@@ -507,13 +507,13 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < ?", thresholdTime)
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < $1", thresholdTime)
 		if err != nil {
 			return err
 		}
 
 		// 2. Remove COMPLETED, or very old FAILED missions
-		_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR (status = 'FAILED' AND created_at < ?)", thresholdTime)
+		_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)", thresholdTime)
 		return err
 	})
 }
@@ -537,7 +537,7 @@ func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityP
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at)
-			 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+			 VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
 			 ON CONFLICT(plugin_id) DO UPDATE SET
 			 name=excluded.name, version=excluded.version,
 			 manifest_url=excluded.manifest_url, status=excluded.status,
@@ -563,7 +563,7 @@ func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]Capa
 		if status == "" {
 			rows, err = s.db.Query(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins")
 		} else {
-			rows, err = s.db.Query(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE status = ?", status)
+			rows, err = s.db.Query(ctx, "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE status = $1", status)
 		}
 
 		if err != nil {
@@ -603,7 +603,7 @@ func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) 
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at)
-			 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+			 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
 			 ON CONFLICT(memory_id) DO UPDATE SET
 			 context=excluded.context, vector_embedding=excluded.vector_embedding,
 			 source_plugin=excluded.source_plugin`,
@@ -627,7 +627,7 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 		if plugin == "" {
 			rows, err = s.db.Query(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings")
 		} else {
-			rows, err = s.db.Query(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE source_plugin = ?", plugin)
+			rows, err = s.db.Query(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE source_plugin = $1", plugin)
 		}
 
 		if err != nil {
@@ -674,7 +674,7 @@ func (s *SIPDB) SetContextRoot(path string) {
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
 	return withRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO local_metrics_buffer (metric_type, payload, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+			"INSERT INTO local_metrics_buffer (metric_type, payload, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
 			metricType, payload,
 		)
 		return err
@@ -981,7 +981,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		if err == nil {
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withRetry(ctx, func() error {
-					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = ?", m.id)
+					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
