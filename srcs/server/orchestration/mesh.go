@@ -12,6 +12,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 // MeshMessage represents a realtime message sent over the mesh.
@@ -28,8 +30,8 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// TeammateMesh manages real-time pub/sub for agents
-type TeammateMesh struct {
+// LegacyTeammateMesh manages real-time pub/sub for agents
+type LegacyTeammateMesh struct {
 	redisClient *redis.Client
 	isCloud     bool
 
@@ -38,11 +40,11 @@ type TeammateMesh struct {
 	subscribers map[string]map[*websocket.Conn]chan []byte
 }
 
-// NewTeammateMesh creates a new mesh instance.
-func NewTeammateMesh(redisURL string) (*TeammateMesh, error) {
+// NewLegacyTeammateMesh creates a new mesh instance.
+func NewLegacyTeammateMesh(redisURL string) (*LegacyTeammateMesh, error) {
 	isCloud := os.Getenv("OHC_MULTITENANT") == "true"
 
-	tm := &TeammateMesh{
+	tm := &LegacyTeammateMesh{
 		isCloud:     isCloud,
 		subscribers: make(map[string]map[*websocket.Conn]chan []byte),
 	}
@@ -62,7 +64,7 @@ func NewTeammateMesh(redisURL string) (*TeammateMesh, error) {
 }
 
 // HandleWebSocket handles incoming WS connections for a specific room.
-func (tm *TeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Request, roomID string) {
+func (tm *LegacyTeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Request, roomID string) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("mesh: upgrade error", "err", err)
@@ -135,7 +137,7 @@ func (tm *TeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Request, 
 }
 
 // Publish broadcasts a message to a room.
-func (tm *TeammateMesh) Publish(ctx context.Context, roomID, message string) error {
+func (tm *LegacyTeammateMesh) Publish(ctx context.Context, roomID, message string) error {
 	if tm.isCloud && tm.redisClient != nil {
 		return tm.redisClient.Publish(ctx, roomID, message).Err()
 	}
@@ -155,7 +157,7 @@ func (tm *TeammateMesh) Publish(ctx context.Context, roomID, message string) err
 	return nil
 }
 
-func (tm *TeammateMesh) subscribe(roomID string, conn *websocket.Conn, msgChan chan []byte) {
+func (tm *LegacyTeammateMesh) subscribe(roomID string, conn *websocket.Conn, msgChan chan []byte) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -165,7 +167,7 @@ func (tm *TeammateMesh) subscribe(roomID string, conn *websocket.Conn, msgChan c
 	tm.subscribers[roomID][conn] = msgChan
 }
 
-func (tm *TeammateMesh) unsubscribe(roomID string, conn *websocket.Conn) {
+func (tm *LegacyTeammateMesh) unsubscribe(roomID string, conn *websocket.Conn) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -179,4 +181,137 @@ func (tm *TeammateMesh) unsubscribe(roomID string, conn *websocket.Conn) {
 		}
 	}
 	_ = conn.Close()
+}
+
+type Task struct {
+	AgentID string `json:"agent_id"`
+	Action  string `json:"action"`
+	Status  string `json:"status"`
+	TaskID  string `json:"task_id"`
+}
+
+type TeammateMesh interface {
+	BroadcastTask(ctx context.Context, task Task) error
+	SubscribeTasks(ctx context.Context) (<-chan Task, error)
+}
+
+type RedisTeammateMesh struct {
+	client rueidis.Client
+}
+
+func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
+	opt, err := rueidis.ParseURL(redisURL)
+	if err != nil {
+		return nil, err
+	}
+	c, err := rueidis.NewClient(opt)
+	if err != nil {
+		return nil, err
+	}
+	return &RedisTeammateMesh{client: c}, nil
+}
+
+func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
+	data, err := json.Marshal(task)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel("mesh:tasks").Message(string(data)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	ch := make(chan Task)
+
+	// Implementation to consume from rueidis
+	// For rueidis, we typically use DedicatedClient for PubSub
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:tasks").Build(), func(msg rueidis.PubSubMessage) {
+			var t Task
+			if err := json.Unmarshal([]byte(msg.Message), &t); err == nil {
+				ch <- t
+			}
+		})
+		if err != nil {
+			slog.Error("RedisTeammateMesh.SubscribeTasks error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+type LocalTeammateMesh struct {
+	db        db.Provider
+	broadcast chan Task
+	mu        sync.RWMutex
+	subs      []chan Task
+}
+
+func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
+	lm := &LocalTeammateMesh{
+		db:        provider,
+		broadcast: make(chan Task, 100),
+	}
+	go lm.run()
+	return lm
+}
+
+func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
+	// Persist to shared_tasks
+	query := `
+		INSERT INTO shared_tasks (id, title, status, assigned_agent_id)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT(id) DO UPDATE SET
+			status = excluded.status,
+			assigned_agent_id = excluded.assigned_agent_id,
+			updated_at = CURRENT_TIMESTAMP
+	`
+	// Fallback to simpler upsert if needed, but since it's SQLite, ON CONFLICT works.
+	_, err := lm.db.Exec(ctx, query, task.TaskID, task.Action, task.Status, task.AgentID)
+	if err != nil {
+		return err
+	}
+
+	// Broadcast locally
+	select {
+	case lm.broadcast <- task:
+	default:
+	}
+	return nil
+}
+
+func (lm *LocalTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	ch := make(chan Task, 100)
+	lm.mu.Lock()
+	lm.subs = append(lm.subs, ch)
+	lm.mu.Unlock()
+
+	// Handle context cancellation
+	go func() {
+		<-ctx.Done()
+		lm.mu.Lock()
+		for i, sub := range lm.subs {
+			if sub == ch {
+				lm.subs = append(lm.subs[:i], lm.subs[i+1:]...)
+				close(ch)
+				break
+			}
+		}
+		lm.mu.Unlock()
+	}()
+
+	return ch, nil
+}
+
+func (lm *LocalTeammateMesh) run() {
+	for msg := range lm.broadcast {
+		lm.mu.RLock()
+		for _, ch := range lm.subs {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		lm.mu.RUnlock()
+	}
 }
