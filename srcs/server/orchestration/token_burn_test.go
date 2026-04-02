@@ -9,28 +9,15 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-type MockTokenTracker struct {
-	orgs    []string
-	summary map[string]TokenSummary
-}
-
-func (m *MockTokenTracker) ActiveOrganizations(ctx context.Context) []string {
-	return m.orgs
-}
-
-func (m *MockTokenTracker) Summary(orgID string) TokenSummary {
-	return m.summary[orgID]
-}
-
 type MockMeter struct{}
 func (m *MockMeter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) { return &mockCounter{}, nil }
 func (m *MockMeter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) { return nil, nil }
 func (m *MockMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) { return &mockGauge{}, nil }
 
-type mockCounter struct{}
+type mockCounter struct{ metric.Int64Counter }
 func (m *mockCounter) Add(ctx context.Context, incr int64, options ...metric.AddOption) {}
 
-type mockGauge struct{}
+type mockGauge struct{ metric.Float64Gauge }
 func (m *mockGauge) Record(ctx context.Context, value float64, options ...metric.RecordOption) {}
 
 func TestTokenBurnRateForecasting(t *testing.T) {
@@ -40,15 +27,16 @@ func TestTokenBurnRateForecasting(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tracker := &MockTokenTracker{
-		orgs: []string{"org1"},
-		summary: map[string]TokenSummary{
-			"org1": {TotalTokens: 100},
-		},
+	getActiveOrgs := func(ctx context.Context) []string {
+		return []string{"org1"}
+	}
+
+	getSummary := func(orgID string) int64 {
+		return 100
 	}
 
 	// Start fast ticker
-	go StartTokenBurnRateForecasting(ctx, tracker, 10*time.Millisecond)
+	go StartTokenBurnRateForecasting(ctx, getActiveOrgs, getSummary, 10*time.Millisecond)
 
 	time.Sleep(35 * time.Millisecond) // Give it enough time to tick a few times
 

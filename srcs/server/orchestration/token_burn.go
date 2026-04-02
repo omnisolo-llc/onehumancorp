@@ -7,19 +7,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
-// TokenTracker defines the interface for tracking token usage
-type TokenTracker interface {
-	ActiveOrganizations(ctx context.Context) []string
-	Summary(orgID string) TokenSummary
-}
-
-// TokenSummary contains the token usage summary for an organization
-type TokenSummary struct {
-	TotalTokens int64
-}
-
 // StartTokenBurnRateForecasting runs a background worker that calculates the token burn rate
-func StartTokenBurnRateForecasting(ctx context.Context, tracker TokenTracker, interval time.Duration) {
+func StartTokenBurnRateForecasting(ctx context.Context, getActiveOrganizations func(context.Context) []string, getSummary func(string) int64, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -32,12 +21,12 @@ func StartTokenBurnRateForecasting(ctx context.Context, tracker TokenTracker, in
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			orgIDs := tracker.ActiveOrganizations(ctx)
+			orgIDs := getActiveOrganizations(ctx)
 			for _, orgID := range orgIDs {
-				summary := tracker.Summary(orgID)
-				if summary.TotalTokens > 0 {
+				totalTokens := getSummary(orgID)
+				if totalTokens > 0 {
 					h := history[orgID]
-					h = append(h, summary.TotalTokens)
+					h = append(h, totalTokens)
 
 					// Keep only the last 5 data points for a 5-minute moving average
 					if len(h) > 5 {

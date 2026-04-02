@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
 )
 
@@ -49,7 +48,9 @@ func TestStandaloneSQLiteConcurrencyThrottling(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			err := sipdb.DelegateMission(ctx, "mission", "role", Message{})
-			assert.NoError(t, err)
+			if err != nil {
+				t.Errorf("DelegateMission failed: %v", err)
+			}
 		}(i)
 	}
 
@@ -57,6 +58,10 @@ func TestStandaloneSQLiteConcurrencyThrottling(t *testing.T) {
 	duration := time.Since(start)
 
 	// Ensure that the minimum expected serialized time is roughly met
-	assert.True(t, duration >= time.Duration(numTasks)*40*time.Millisecond, "Writes were not throttled, took %v", duration)
-	assert.Equal(t, int32(numTasks), atomic.LoadInt32(&mockProvider.execCount))
+	if duration < time.Duration(numTasks)*40*time.Millisecond {
+		t.Errorf("Writes were not throttled, took %v", duration)
+	}
+	if atomic.LoadInt32(&mockProvider.execCount) != int32(numTasks) {
+		t.Errorf("Expected %d writes, got %d", numTasks, mockProvider.execCount)
+	}
 }

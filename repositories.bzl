@@ -160,8 +160,8 @@ def go_repositories():
     go_repository(
         name = "com_github_google_pprof",
         importpath = "github.com/google/pprof",
-        sum = "h1:gbpYu9NMq8jhDVbvlGkMFWCjLFlqqEZjEmObmhUy6Vo=",
-        version = "v0.0.0-20240409012703-83162a5b38cd",
+        sum = "h1:ijClszYn+mADRFY17kjQEVQ1XRhq2/JR1M3sGqeJoxs=",
+        version = "v0.0.0-20250317173921-a4b03ec1a45e",
     )
     go_repository(
         name = "com_github_google_uuid",
@@ -514,8 +514,8 @@ def go_repositories():
     go_repository(
         name = "org_golang_x_exp",
         importpath = "golang.org/x/exp",
-        sum = "h1:nDVHiLt8aIbd/VzvPWN6kSOPE7+F/fNFDSXLVYkE/Iw=",
-        version = "v0.0.0-20250305212735-054e65f0b394",
+        sum = "h1:mgKeJMpvi0yx/sU5GsxQ7p6s2wtOnGAHZWCHUM4KGzY=",
+        version = "v0.0.0-20251023183803-a4bb9ffd2546",
     )
     go_repository(
         name = "org_golang_x_mod",
@@ -544,8 +544,8 @@ def go_repositories():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=",
-        version = "v0.41.0",
+        sum = "h1:omrd2nAlyT5ESRdCLYdm3+fMfNFE/+Rf4bDIQImRJeo=",
+        version = "v0.42.0",
     )
     go_repository(
         name = "org_golang_x_term",
@@ -582,18 +582,6 @@ def go_repositories():
         importpath = "modernc.org/ccgo/v4",
         sum = "h1:hjG66bI/kqIPX1b2yT6fr/jt+QedtP2fqojG2VrFuVw=",
         version = "v4.32.0",
-    )
-    go_repository(
-        name = "org_modernc_ebnf",
-        importpath = "modernc.org/ebnf",
-        sum = "h1:ilLq2kO1xGezeg75RyKffLsCLdamQHEmjv0CVq1QEQU=",
-        version = "v1.1.0",
-    )
-    go_repository(
-        name = "org_modernc_ebnfutil",
-        importpath = "modernc.org/ebnfutil",
-        sum = "h1:8AZ7iHDSIV6lrlgtexrIgmsey6wuSnB8s642ASDaTkc=",
-        version = "v1.1.0",
     )
     go_repository(
         name = "org_modernc_fileutil",
@@ -652,8 +640,8 @@ def go_repositories():
     go_repository(
         name = "org_modernc_sqlite",
         importpath = "modernc.org/sqlite",
-        sum = "h1:wnIcc4XIGoWVkM9qGKn2PARAmpXsQWGebuOVOBYZZVY=",
-        version = "v1.34.0",
+        sum = "h1:ElZyLop3Q2mHYk5IFPPXADejZrlHu7APbpB0sF78bq4=",
+        version = "v1.48.0",
     )
     go_repository(
         name = "org_modernc_strutil",

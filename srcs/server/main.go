@@ -263,7 +263,9 @@ func run(now time.Time, listen listenFunc) error {
 	}
 
 	// Run Token Burn Rate Forecasting Engine
-	go orchestration.StartTokenBurnRateForecasting(ctx, tracker, 1*time.Minute)
+	go orchestration.StartTokenBurnRateForecasting(ctx, tracker.ActiveOrganizations, func(orgID string) int64 {
+		return tracker.Summary(orgID).TotalTokens
+	}, 1*time.Minute)
 
 	if sipdbErr == nil {
 		sipdb = createdSIPDB
