@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/rueidis"
 )
@@ -16,11 +17,12 @@ import (
 type SharedTask struct {
 	ID              string
 	MissionID       string
+	ParentTaskID    *string
 	Title           string
 	Description     string
-	AssignedAgentID string
-	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED
-	Priority        string
+	AssignedAgentID *string
+	Status          string // PENDING, IN_PROGRESS, BLOCKED, COMPLETED, FAILED
+	Dependencies    *string // JSON
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -50,36 +52,34 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 }
 
 // CreateTask creates a new shared task.
-func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, description, priority string) (*SharedTask, error) {
-	if priority == "" {
-		priority = "P2"
-	}
-
+func (tm *TaskManager) CreateTask(ctx context.Context, missionID, parentTaskID *string, title, description string, dependencies *string) (*SharedTask, error) {
 	var task SharedTask
 	var query string
 	var err error
 
+	id := uuid.New().String() // Always generate UUID from go
+
 	if tm.db.IsSQLite() {
-		// SQLite might not support RETURNING for all columns gracefully depending on version,
-		// but since we override UUID PRIMARY KEY DEFAULT gen_random_uuid() to TEXT, we need to generate UUID or rely on it.
-		// Wait, if we rely on TEXT, we should generate an ID in go
-		id := generateID() // Helper func
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, title, description, priority, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
+			INSERT INTO agent_tasks (id, mission_id, parent_task_id, title, description, dependencies, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		`
-		err = tm.db.QueryRow(ctx, query, id, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
-		)
+		_, err = tm.db.Exec(ctx, query, id, missionID, parentTaskID, title, description, dependencies)
+
+		if err == nil {
+			querySelect := `SELECT id, mission_id, parent_task_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at FROM agent_tasks WHERE id = $1`
+			err = tm.db.QueryRow(ctx, querySelect, id).Scan(
+				&task.ID, &task.MissionID, &task.ParentTaskID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
+			)
+		}
 	} else {
 		query = `
-			INSERT INTO swarm_tasks (mission_id, title, description, priority)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
+			INSERT INTO agent_tasks (id, mission_id, parent_task_id, title, description, dependencies, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', NOW(), NOW())
+			RETURNING id, mission_id, parent_task_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+		err = tm.db.QueryRow(ctx, query, id, missionID, parentTaskID, title, description, dependencies).Scan(
+			&task.ID, &task.MissionID, &task.ParentTaskID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
 
@@ -91,14 +91,11 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 }
 
 // ClaimTask attempts to claim a specific PENDING task for the given agentID.
-// It uses row-level locking (FOR UPDATE) in Postgres, and relies on SQLite's lock mechanism
-// to prevent race conditions.
-// In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
 func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*SharedTask, error) {
 	if tm.redisClient != nil {
 		// Acquire Redis-backed distributed lock with 30s TTL
 		lockKey := "lock:task:" + taskID
-		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
+		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Px(30 * time.Second).Build()
 		err := tm.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
@@ -120,27 +117,25 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	if tm.db.IsSQLite() {
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
-			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
-			FROM swarm_tasks
+			SELECT id, mission_id, parent_task_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
+			FROM agent_tasks
 			WHERE id = $1 AND status = 'PENDING'
-			ORDER BY priority ASC, created_at ASC
 			LIMIT 1
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.ParentTaskID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
-			FROM swarm_tasks
+			SELECT id, mission_id, parent_task_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
+			FROM agent_tasks
 			WHERE id = $1 AND status = 'PENDING'
-			ORDER BY priority ASC, created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.ParentTaskID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
 
@@ -153,7 +148,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	// Update task status to IN_PROGRESS
 	updateQuery := `
-		UPDATE swarm_tasks
+		UPDATE agent_tasks
 		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND status = 'PENDING'
 	`
@@ -172,14 +167,14 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	task.Status = "IN_PROGRESS"
-	task.AssignedAgentID = agentID
+	task.AssignedAgentID = &agentID
 	return &task, nil
 }
 
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	query := `
-		UPDATE swarm_tasks
+		UPDATE agent_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
 	`
@@ -193,9 +188,4 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	return nil
-}
-
-// generateID generates a pseudo-uuid for SQLite compatibility.
-func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
