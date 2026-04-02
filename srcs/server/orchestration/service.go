@@ -242,16 +242,6 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-context.Background().Done():
-			// Not cancellable since it doesn't take context
-		}
-	}
 
 	if err := CheckDocumentationGate(task.Content); err != nil {
 		return err
@@ -317,6 +307,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	forecaster     *TokenForecaster
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -352,6 +343,10 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
+
+	h.forecaster = NewTokenForecaster(h)
+	h.forecaster.Start()
+
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
 }

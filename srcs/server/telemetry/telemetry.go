@@ -236,6 +236,10 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		})
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
 	}
+
+	if RecordTokenUsageCallback != nil {
+		RecordTokenUsageCallback(ctx, agentID, role, model, tokenType, count)
+	}
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -345,6 +349,8 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
+var RecordTokenUsageCallback func(ctx context.Context, agentID string, role string, model string, tokenType string, count int64)
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
