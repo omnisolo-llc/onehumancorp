@@ -202,6 +202,20 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 		slog.Info("db: applied migration", "file", f)
 	}
 
+	// Create PowerSync publication if not SQLite
+	if !p.Provider.IsSQLite() {
+		// First check if the publication already exists to avoid errors on multiple runs
+		var exists int
+		err := p.QueryRow(ctx, "SELECT count(*) FROM pg_publication WHERE pubname = 'powersync'").Scan(&exists)
+		if err == nil && exists == 0 {
+			if _, err := p.Exec(ctx, "CREATE PUBLICATION powersync FOR ALL TABLES"); err != nil {
+				slog.Warn("db: failed to create powersync publication (it might already exist)", "error", err)
+			} else {
+				slog.Info("db: created powersync publication for all tables")
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -607,31 +607,32 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims := auth.ClaimsFromContext(r.Context())
+	ctx := r.Context()
+	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil || claims.OrganizationID == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	// We create sync rules that enforce that a user only syncs data belonging to their organization
 	orgID := claims.OrganizationID
 
+	// PowerSync dynamic sync rules implementation enforcing multi-tenant isolation
+	// The sync rules format relies on token_parameters matching JWT claims like jwt_ext_organization_id
+	// or standard SQL WHERE clauses dynamically populated by PowerSync based on the JWT payload.
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
 				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
-				"parameters": []interface{}{orgID},
+				"query": "SELECT * FROM agents WHERE organization_id = token.jwt_ext_organization_id",
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				// We sync meeting rooms associated with agents in the organization
+				"query": "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = token.jwt_ext_organization_id",
 			},
 			{
 				"table": "agent_missions",
-				"query": "SELECT * FROM agent_missions",
+				"query": "SELECT * FROM agent_missions", // Global context for now, could be filtered by agent
 			},
 			{
 				"table": "swarm_memory",
@@ -651,6 +652,8 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	}
+
+	slog.InfoContext(ctx, "Serving PowerSync dynamic sync rules", "org_id", orgID)
 
 	writeJSON(w, syncRules)
 }
