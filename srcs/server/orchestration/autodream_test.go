@@ -10,6 +10,7 @@ import (
 )
 
 func TestAutoDreamPruneSessions(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://:memory:")
 	pool, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
@@ -54,6 +55,7 @@ func TestAutoDreamPruneSessions(t *testing.T) {
 }
 
 func TestAutoDreamTruthInjectionAndConflict(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://:memory:")
 	pool, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
