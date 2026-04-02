@@ -4,14 +4,14 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	prov, _ := db.New(context.Background())
 
 	_, err := prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
@@ -49,6 +49,9 @@ func (m *mockMinimaxClient) ChatCompletion(ctx context.Context, payload map[stri
 }
 func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	return make([]float32, 1536), nil
+}
+func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	return "test reason", nil
 }
 
 func TestAutoDreamEngine_Consolidate(t *testing.T) {
