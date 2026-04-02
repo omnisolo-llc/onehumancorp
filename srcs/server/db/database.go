@@ -77,6 +77,20 @@ func New(ctx context.Context) (*DB, error) {
 			return nil, fmt.Errorf("db: ping sqlite: %w", err)
 		}
 
+		// Hardening: SQLite 0600 file permissions
+		if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+			basePath := dbPath
+			if strings.HasPrefix(basePath, "file:") {
+				basePath = strings.TrimPrefix(basePath, "file:")
+			}
+			if idx := strings.Index(basePath, "?"); idx != -1 {
+				basePath = basePath[:idx]
+			}
+			if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
+				os.Chmod(basePath, 0600)
+			}
+		}
+
 		slog.Info("db: connected to sqlite", "path", dbPath)
 		return &DB{Provider: NewSqliteProvider(db)}, nil
 	}

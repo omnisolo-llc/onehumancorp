@@ -142,6 +142,24 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 	sqlDB, _ := sql.Open("sqlite", dsn)
 	sqlDB.SetMaxOpenConns(1)
 
+	// Ensure the base file is created with correct permissions if it's not in memory
+	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
+		// Ping to ensure file is actually created
+		_ = sqlDB.Ping()
+
+		basePath := dbPath
+		if strings.HasPrefix(basePath, "file:") {
+			basePath = strings.TrimPrefix(basePath, "file:")
+		}
+		if idx := strings.Index(basePath, "?"); idx != -1 {
+			basePath = basePath[:idx]
+		}
+
+		if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
+			os.Chmod(basePath, 0600)
+		}
+	}
+
 	provider := db.NewSqliteProvider(sqlDB)
 	return NewSIPDBWithProvider(provider)
 }
