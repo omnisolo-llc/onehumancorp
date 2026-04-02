@@ -24,10 +24,8 @@ class PowerSyncService {
   Future<void> _init() async {
     final settings = await _ref.read(clientSettingsProvider.future);
 
-    // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
-      return;
-    }
+    // Initialize PowerSync for Cloud Mode multi-tenant isolation,
+    // or hybrid scenarios as determined by settings.
 
     final schema = Schema((<Table>[
       Table('agents', [

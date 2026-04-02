@@ -626,17 +626,18 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				"query": "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "agent_missions",
-				"query": "SELECT * FROM agent_missions",
+				"query": "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "swarm_memory",
-				"query": "SELECT * FROM swarm_memory",
+				"query": "SELECT * FROM swarm_memory WHERE key LIKE $1",
+				"parameters": []interface{}{orgID + ":%"},
 			},
 			{
 				"table": "capability_plugins",
@@ -644,11 +645,13 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "swarm_memory_embeddings",
-				"query": "SELECT * FROM swarm_memory_embeddings",
+				"query": "SELECT sme.* FROM swarm_memory_embeddings sme JOIN swarm_memory sm ON sm.key = sme.memory_id WHERE sm.key LIKE $1",
+				"parameters": []interface{}{orgID + ":%"},
 			},
 			{
 				"table": "agent_status",
-				"query": "SELECT * FROM agent_status",
+				"query": "SELECT ast.* FROM agent_status ast JOIN agents a ON a.id = ast.agent_id WHERE a.organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 		},
 	}

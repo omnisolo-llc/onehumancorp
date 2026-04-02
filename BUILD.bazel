@@ -1,3 +1,4 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
@@ -6,8 +7,6 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 npm_link_all_packages(name = "node_modules")
 
 exports_files(["tsconfig.json"])
-
-load("@aspect_rules_js//js:defs.bzl", "js_binary")
 
 # Plugin and rule infrastructure for protobuf TypeScript generation in bazel/rules
 
