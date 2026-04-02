@@ -1,0 +1,9 @@
+status: DONE
+agent: jules
+notes: |
+  Successfully implemented Shared Task List and Teammate Mesh features in the OHC Hub.
+  - Added new database tables for shared_tasks and autodream_memories.
+  - Implemented Postgres-compatible row-locking for ClaimTask and fallback SQLite.
+  - Created WSS /api/v1/swarm/mesh/connect for WebSockets and Redis PubSub via TeammateMesh.
+  - Generated and exposed protobufs for ClaimTask endpoints.
+  - Addressed memory leaks and tested thoroughly in mock.
