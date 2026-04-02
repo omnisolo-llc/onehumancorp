@@ -11,6 +11,7 @@ go_library(
         "postgres_hub.go",
         "repository.go",
         "service.go",
+        "hub_forecast.go",
         "sip.go",
         "sqlite_hub.go",
     ],
@@ -18,6 +19,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/billing",
         "//srcs/server/db",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
@@ -51,6 +53,7 @@ go_test(
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
+        "hub_forecast_test.go",
     ],
     embed = [":orchestration"],
     deps = [

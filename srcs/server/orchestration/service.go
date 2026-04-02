@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/billing"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -317,6 +318,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	billingTracker *billing.Tracker
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -354,6 +356,14 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
+}
+
+// SetBillingTracker configures the billing tracker for the hub and starts the forecasting engine.
+func (h *Hub) SetBillingTracker(ctx context.Context, tracker *billing.Tracker) {
+	h.billingTracker = tracker
+	if h.billingTracker != nil {
+		go h.StartTokenBurnRateForecasting(ctx, h.billingTracker)
+	}
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.
