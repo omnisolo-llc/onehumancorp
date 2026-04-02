@@ -125,6 +125,11 @@ type Tracker struct {
 	catalog map[string]Price
 	repo    UsageRepository
 	shards  [numShards]*trackerShard
+
+	// For forecasting
+	lastTokenCounts sync.Map // map[string]int64 (orgID -> totalTokens)
+	ctx             context.Context
+	cancel          context.CancelFunc
 }
 
 func getShardIndex(orgID string) uint32 {
@@ -159,11 +164,62 @@ func newTracker(catalog map[string]Price, repo UsageRepository) *Tracker {
 		copied[model] = price
 	}
 
-	t := &Tracker{catalog: copied, repo: repo}
+	ctx, cancel := context.WithCancel(context.Background())
+	t := &Tracker{
+		catalog: copied,
+		repo:    repo,
+		ctx:     ctx,
+		cancel:  cancel,
+	}
 	for i := 0; i < numShards; i++ {
 		t.shards[i] = &trackerShard{}
 	}
+
+	go t.tokenBurnRateWorker()
+
 	return t
+}
+
+// Close gracefully stops any background workers associated with the Tracker.
+func (t *Tracker) Close() {
+	if t.cancel != nil {
+		t.cancel()
+	}
+}
+
+// tokenBurnRateWorker periodically calculates and records the moving average token burn rate per minute for each active organization.
+func (t *Tracker) tokenBurnRateWorker() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-t.ctx.Done():
+			return
+		case <-ticker.C:
+			t.recordTokenBurnRates()
+		}
+	}
+}
+
+func (t *Tracker) recordTokenBurnRates() {
+	orgs := t.ActiveOrganizations(t.ctx)
+	for _, orgID := range orgs {
+		summary := t.Summary(orgID)
+		currentTotal := summary.TotalTokens
+
+		var previousTotal int64
+		if val, ok := t.lastTokenCounts.Load(orgID); ok {
+			previousTotal = val.(int64)
+		}
+
+		if currentTotal >= previousTotal {
+			burnRate := float64(currentTotal - previousTotal)
+			telemetry.RecordTokenBurnRate(t.ctx, orgID, burnRate)
+		}
+
+		t.lastTokenCounts.Store(orgID, currentTotal)
+	}
 }
 
 // Track calculates the USD cost for a token consumption event and persists it in memory.
