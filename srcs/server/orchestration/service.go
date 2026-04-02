@@ -242,9 +242,9 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
+	if isStandalone && isSQLite {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
@@ -270,8 +270,8 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
-		isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-		if !isMultiTenant {
+		isStandalone := envBoolDefault("OHC_STANDALONE", false)
+		if isStandalone {
 			// In standalone mode, synchronously delegate to prevent connection contention
 			// caused by thousands of unbounded goroutines hitting the SIPDB.
 			_ = h.sipDB.DelegateMission(context.Background(), task.ID, toAgent.Role, task)
@@ -313,6 +313,7 @@ type Hub struct {
 	tokenTrackers  map[string]struct{}
 	autoCorTrack   map[string]struct{}
 	eventLogChan   chan interface{}
+	burnRateEngine *TokenBurnRateEngine
 	repo           HubRepository
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
@@ -341,16 +342,23 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 	}
 
 	h := &Hub{
-		agents:        map[string]Agent{},
-		inbox:         map[string][]Message{},
-		meetings:      map[string]MeetingRoom{},
-		subs:          map[string][]chan struct{}{},
-		tokenTrackers: map[string]struct{}{},
-		autoCorTrack:  map[string]struct{}{},
-		eventLogChan:  make(chan interface{}, 100),
-		repo:          repo,
-		scheduler:     sched,
-		settingsStore: settings.NewStore(),
+		agents:         map[string]Agent{},
+		inbox:          map[string][]Message{},
+		meetings:       map[string]MeetingRoom{},
+		subs:           map[string][]chan struct{}{},
+		tokenTrackers:  map[string]struct{}{},
+		autoCorTrack:   map[string]struct{}{},
+		eventLogChan:   make(chan interface{}, 100),
+		burnRateEngine: NewTokenBurnRateEngine(10*time.Minute, 1*time.Hour),
+		repo:           repo,
+		scheduler:      sched,
+		settingsStore:  settings.NewStore(),
+	}
+	h.burnRateEngine.Start()
+	telemetry.RecordTokenUsageCallback = func(organizationID string, count int64) {
+		if h.burnRateEngine != nil {
+			h.burnRateEngine.RecordUsage(organizationID, count)
+		}
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h

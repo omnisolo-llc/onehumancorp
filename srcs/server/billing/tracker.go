@@ -183,8 +183,8 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 			return Usage{}, err
 		}
 
-		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "prompt", tracked.PromptTokens)
-		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "completion", tracked.CompletionTokens)
+		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "prompt", tracked.PromptTokens, tracked.OrganizationID)
+		telemetry.RecordTokenUsage(context.Background(), tracked.AgentID, tracked.AgentRole, tracked.Model, "completion", tracked.CompletionTokens, tracked.OrganizationID)
 		return tracked, nil
 	}
 
@@ -202,8 +202,8 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	shard.usages = append(shard.usages, usage)
 	shard.mu.Unlock()
 
-	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "prompt", usage.PromptTokens)
-	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "completion", usage.CompletionTokens)
+	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "prompt", usage.PromptTokens, usage.OrganizationID)
+	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "completion", usage.CompletionTokens, usage.OrganizationID)
 
 	return usage, nil
 }

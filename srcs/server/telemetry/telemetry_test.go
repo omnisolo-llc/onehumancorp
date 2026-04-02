@@ -265,7 +265,7 @@ func TestRecordFunctions(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("RecordTokenUsage", func(t *testing.T) {
-		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
+		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100, "")
 	})
 
 	t.Run("RecordAgentApiCall", func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("RecordTokenUsage Uninitialized", func(t *testing.T) {
-		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
+		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100, "")
 	})
 
 	t.Run("RecordAgentApiCall Uninitialized", func(t *testing.T) {

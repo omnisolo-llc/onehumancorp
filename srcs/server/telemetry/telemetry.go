@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -24,6 +25,7 @@ var (
 	latencyHistogram metric.Float64Histogram
 
 	tokenUsageCounter        metric.Int64Counter
+	tokenBurnRateGauge       metric.Float64ObservableGauge
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
@@ -68,6 +70,8 @@ func InitTelemetry() (func(), error) {
 		return nil, err
 	}
 
+	registerTokenBurnRateCallback(meter)
+
 	return func() {
 		_ = provider.Shutdown(context.Background())
 	}, nil
@@ -110,6 +114,16 @@ func InitWithMeter(m mockableMeter) error {
 	)
 	if err != nil {
 		errs = append(errs, err)
+	}
+
+	if mm, ok := m.(metric.Meter); ok {
+		tokenBurnRateGauge, err = mm.Float64ObservableGauge(
+			"ohc_token_burn_rate_forecast",
+			metric.WithDescription("Forecasted token burn rate per tenant"),
+		)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	agentApiCallsCounter, err = m.Int64Counter(
@@ -205,7 +219,7 @@ func MetricsHandler() http.Handler {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
-func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64, organizationID string) {
 	if tokenUsageCounter == nil {
 		return
 	}
@@ -226,7 +240,13 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		})
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
 	}
+
+	if organizationID != "" {
+		RecordTokenUsageCallback(organizationID, count)
+	}
 }
+
+var RecordTokenUsageCallback = func(organizationID string, count int64) {}
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
 //
@@ -331,6 +351,38 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"event_type", eventType,
 		"content", RedactPII(content),
 	)
+}
+
+var (
+	burnRateMu       sync.RWMutex
+	forecastBurnRate map[string]float64
+)
+
+func init() {
+	forecastBurnRate = make(map[string]float64)
+}
+
+func UpdateTokenBurnRateForecast(tenantID string, forecast float64) {
+	burnRateMu.Lock()
+	defer burnRateMu.Unlock()
+	forecastBurnRate[tenantID] = forecast
+}
+
+func registerTokenBurnRateCallback(meter metric.Meter) {
+	if tokenBurnRateGauge == nil {
+		return
+	}
+	_, err := meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+		burnRateMu.RLock()
+		defer burnRateMu.RUnlock()
+		for tenantID, rate := range forecastBurnRate {
+			o.ObserveFloat64(tokenBurnRateGauge, rate, metric.WithAttributes(attribute.String("tenant_id", tenantID)))
+		}
+		return nil
+	}, tokenBurnRateGauge)
+	if err != nil {
+		slog.Warn("Failed to register token burn rate callback", "error", err)
+	}
 }
 
 // Global buffer function pointer to inject dependency without circular imports.
