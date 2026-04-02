@@ -6,6 +6,7 @@ go_library(
     name = "orchestration",
     srcs = [
         "auth_interceptor.go",
+        "burn_rate.go",
         "centrifuge_hub.go",
         "delegation.go",
         "postgres_hub.go",

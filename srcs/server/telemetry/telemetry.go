@@ -216,15 +216,18 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
-	if tokenUsageCounter == nil {
-		return
+	if tokenUsageCounter != nil {
+		tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("role", role),
+			attribute.String("model", model),
+			attribute.String("type", tokenType),
+		))
 	}
-	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("role", role),
-		attribute.String("model", model),
-		attribute.String("type", tokenType),
-	))
+
+	if RecordTokenUsageCallback != nil {
+		RecordTokenUsageCallback(ctx, agentID, role, model, tokenType, count)
+	}
 
 	if BufferMetricFunc != nil {
 		payloadBytes, _ := json.Marshal(map[string]interface{}{
@@ -345,6 +348,8 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
+var RecordTokenUsageCallback func(ctx context.Context, agentID, role, model, tokenType string, count int64)
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {

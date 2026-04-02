@@ -242,9 +242,9 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
+	if isStandalone && isSQLite {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
@@ -295,6 +295,15 @@ type MeetingRoom struct {
 	Agenda       string    `json:"agenda,omitempty"`
 	Participants []string  `json:"participants"`
 	Transcript   []Message `json:"transcript"`
+}
+
+func init() {
+	telemetry.RecordTokenUsageCallback = func(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+		// Just hardcode a "default" tenant or extract tenant if possible.
+		// Since we don't know the exact organization_id here easily, we fallback to a simple tracking strategy.
+		// In a real system, you might look up the agent's organization_id.
+		RecordUsage("default-org", float64(count))
+	}
 }
 
 // Hub acts as the central, thread-safe asynchronous message broker and state registry for all active agents and meeting rooms.
@@ -353,6 +362,9 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+
+	StartForecaster(context.Background())
+
 	return h
 }
 
