@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
@@ -350,4 +351,59 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			"message": "Tool invocation recorded. Connect the corresponding service integration to enable live execution.",
 		}, nil
 	}
+}
+
+// handleMissionsSync handles local-to-cloud mission synchronization via an UPSERT query
+func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleMissionsSync")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	idVal, ok := payload["id"]
+	var missionID string
+	if ok {
+		missionID = fmt.Sprintf("%v", idVal)
+	}
+
+	if missionID == "" {
+		http.Error(w, "missing mission id in payload", http.StatusBadRequest)
+		return
+	}
+
+	statusVal, ok := payload["status"]
+	var status string
+	if ok {
+		status = fmt.Sprintf("%v", statusVal)
+	} else {
+		status = "PENDING"
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "failed to re-marshal payload", http.StatusInternalServerError)
+		return
+	}
+
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+	err = s.hub.SIPDB().UpsertMission(ctx, missionID, status, string(payloadBytes), forceLocal)
+	if err != nil {
+		slog.Error("failed to upsert mission", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
 }

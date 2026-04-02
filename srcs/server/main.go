@@ -238,21 +238,31 @@ func run(now time.Time, listen listenFunc) error {
 		}()
 	}
 
-	// Set up the SIPDB instance to connect to SQLite.
-	var dbPath string
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		if err := os.MkdirAll(".agent-task", 0700); err != nil {
-			slog.Warn("failed to create .agent-task directory", "error", err)
-		}
-		dbPath = filepath.Join(".agent-task", "swarm.db")
+	// Set up the SIPDB instance to connect to Database via Provider.
+	// If we have a pool connection, use it for seamless SQLite / Postgres multi-target support.
+	var createdSIPDB *orchestration.SIPDB
+	var sipdbErr error
+
+	if pool != nil {
+		createdSIPDB, sipdbErr = orchestration.NewSIPDBWithProvider(pool.Provider)
 	} else {
-		openclawDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
-		if err := os.MkdirAll(openclawDir, 0700); err != nil {
-			slog.Warn("failed to create .openclaw directory", "error", err)
+		var dbPath string
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			if err := os.MkdirAll(".agent-task", 0700); err != nil {
+				slog.Warn("failed to create .agent-task directory", "error", err)
+			}
+			dbPath = filepath.Join(".agent-task", "swarm.db")
+		} else {
+			openclawDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
+			if err := os.MkdirAll(openclawDir, 0700); err != nil {
+				slog.Warn("failed to create .openclaw directory", "error", err)
+			}
+			dbPath = filepath.Join(openclawDir, "ohc.db")
 		}
-		dbPath = filepath.Join(openclawDir, "ohc.db")
+		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
 	}
-	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
+
+	if sipdbErr == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
 
@@ -329,7 +339,7 @@ func run(now time.Time, listen listenFunc) error {
 			}
 		}()
 	} else {
-		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
+			slog.Error("failed to initialize SIPDB", "error", sipdbErr)
 	}
 
 	var handler http.Handler
