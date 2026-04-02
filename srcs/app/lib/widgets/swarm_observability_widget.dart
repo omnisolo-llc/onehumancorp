@@ -106,13 +106,13 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                         child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Teammate Mesh Live Feed',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Outfit',
-                          color: Colors.white,
+                          color: colors.onSurface,
                         ),
                       ),
                       const Spacer(),
@@ -123,12 +123,23 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                   Expanded(
                     child: _messages.isEmpty
                         ? Center(
-                            child: Text(
-                              'Listening for swarm activity...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontFamily: 'Inter',
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.satellite_alt,
+                                  size: 48,
+                                  color: colors.onSurface.withValues(alpha: 0.2),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Listening for swarm activity...',
+                                  style: TextStyle(
+                                    color: colors.onSurface.withValues(alpha: 0.5),
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
                             ),
                           )
                         : ListView.builder(
@@ -247,6 +258,12 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
   Widget build(BuildContext context) {
     final timeStr =
         '${widget.message.timestamp.hour.toString().padLeft(2, '0')}:${widget.message.timestamp.minute.toString().padLeft(2, '0')}:${widget.message.timestamp.second.toString().padLeft(2, '0')}';
+
+    // Add visual delight for different agent roles or actions
+    final colors = Theme.of(context).colorScheme;
+    final bool isSystem = widget.message.agentName.toLowerCase().contains('system');
+    final Color itemColor = isSystem ? colors.tertiary : colors.primary;
+
     return SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
@@ -255,19 +272,34 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: itemColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            border: Border.all(color: itemColor.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: itemColor.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                timeStr,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.4),
-                  fontSize: 12,
-                  fontFamily: 'monospace',
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: itemColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  timeStr,
+                  style: TextStyle(
+                    color: itemColor.withValues(alpha: 0.8),
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -277,22 +309,28 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                   children: [
                     Text(
                       widget.message.agentName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: itemColor,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Outfit',
+                        fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       widget.message.action,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                         fontFamily: 'Inter',
                       ),
                     ),
                   ],
                 ),
+              ),
+              Icon(
+                isSystem ? Icons.memory : Icons.smart_toy,
+                color: itemColor.withValues(alpha: 0.5),
+                size: 20,
               ),
             ],
           ),

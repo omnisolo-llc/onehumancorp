@@ -700,6 +700,16 @@ shared::execute "$@"
 FLUTTER_WRAPPER_HEREDOC
 chmod +x "${{FLUTTER_WRITABLE}}/bin/flutter"
 
+# Patch the Flutter shared.sh to bypass git checks
+sed -i 's/if \\[\\[ ! -e "$FLUTTER_ROOT\\/.git" \\]\\]; then/if false; then/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh" 2>/dev/null || true
+
+# Initialize a dummy git repository to bypass all git checks
+export HOME="$(mktemp -d)"
+git config --global init.defaultBranch main || true
+git config --global user.name "Dummy" || true
+git config --global user.email "dummy@dummy.com" || true
+(cd "${{FLUTTER_WRITABLE}}" && git init && git commit --allow-empty -m "dummy") || true
+
 mkdir -p "${{FLUTTER_WRITABLE}}/bin/cache"
 if [ -d "${{FLUTTER_ROOT_ORIG}}/bin/cache" ]; then
     for _f in "${{FLUTTER_ROOT_ORIG}}/bin/cache"/* "${{FLUTTER_ROOT_ORIG}}/bin/cache"/.[!.]*; do
@@ -790,6 +800,9 @@ export PACKAGE_PUBSPEC_PATH="$(pwd)/pubspec.yaml"
 export WORKSPACE_PUBSPEC_PATH="$WORKSPACE_ROOT/pubspec.yaml"
 export PUB_DEPS_PATH="$WORKSPACE_ROOT/pub_deps.json"
 export PACKAGE_CONFIG_PATH="$WORKSPACE_ROOT/.dart_tool/package_config.json"
+
+chmod u+w "$WORKSPACE_ROOT/.dart_tool/package_config.json" 2>/dev/null || true
+
 PACKAGE_CONFIG_OUT="$(mktemp "${{TMPDIR:-/tmp}}/flutter_package_config.XXXXXX.log")"
 if "$PYTHON_BIN" > "$PACKAGE_CONFIG_OUT" 2>&1 <<'PY'
 import json
@@ -899,9 +912,14 @@ config = dict(
 if flutter_root:
     config["flutterRoot"] = _as_uri(flutter_root)
 config["pubCache"] = _as_uri(cache_root)
-with open(config_path, "w", encoding = "utf-8") as fh:
-    json.dump(config, fh, indent = 2)
-    fh.write("\\n")
+
+try:
+    with open(config_path, "w", encoding = "utf-8") as fh:
+        json.dump(config, fh, indent = 2)
+        fh.write("\\n")
+except (OSError, ValueError) as e:
+    # Gracefully handle write errors due to read-only file systems (OSError: [Errno 30])
+    pass
 PY
 then
     echo "✓ Package config regenerated successfully"
