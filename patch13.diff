@@ -1,0 +1,20 @@
+--- srcs/server/dashboard/server.go
++++ srcs/server/dashboard/server.go
+@@ -34,6 +34,7 @@
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/scheduler"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
++	"github.com/onehumancorp/mono/srcs/server/api"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+ )
+@@ -493,6 +494,9 @@
+	// Metrics and Observability
+	mux.HandleFunc("/api/metrics", server.handleMetrics)
+	mux.HandleFunc("/api/health/hybrid", server.handleHealthHybrid)
++
++	// PowerSync dynamic sync rules
++	api.RegisterSyncRulesHandlers(mux)
+
+	server.Handler = mux
+	return server

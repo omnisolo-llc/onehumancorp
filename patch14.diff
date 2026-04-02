@@ -1,0 +1,10 @@
+--- srcs/server/dashboard/BUILD.bazel
++++ srcs/server/dashboard/BUILD.bazel
+@@ -30,6 +30,7 @@
+         "//srcs/server/scheduler",
+         "//srcs/server/settings",
+         "//srcs/server/telemetry",
++        "//srcs/server/api",
+         "@io_opentelemetry_go_otel//:otel",
+     ],
+ )

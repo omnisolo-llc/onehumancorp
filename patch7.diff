@@ -1,0 +1,48 @@
+--- srcs/server/orchestration/service.go
++++ srcs/server/orchestration/service.go
+@@ -363,6 +363,46 @@
+	return h
+ }
+
++// startTokenBurnRateEngine calculates the token burn rate forecast periodically.
++func (h *Hub) startTokenBurnRateEngine(ctx context.Context) {
++	ticker := time.NewTicker(1 * time.Minute)
++	defer ticker.Stop()
++
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case <-ticker.C:
++			h.tokenUsageMu.Lock()
++			usageMap := make(map[string]int64)
++			for k, v := range h.tokenUsageWindow {
++				usageMap[k] = v
++				h.tokenUsageWindow[k] = 0 // Reset window
++			}
++			h.tokenUsageMu.Unlock()
++
++			// Extrapolate to tokens per minute (rate is usage over 1 min)
++			for orgID, usage := range usageMap {
++				burnRate := float64(usage)
++				telemetry.RecordTokenBurnRate(ctx, orgID, burnRate)
++			}
++			if len(usageMap) == 0 {
++				telemetry.RecordTokenBurnRate(ctx, "default", 0)
++			}
++		}
++	}
++}
++
++// RecordTokenUsageForForecast records token usage for the forecasting engine.
++func (h *Hub) RecordTokenUsageForForecast(orgID string, count int64) {
++	h.tokenUsageMu.Lock()
++	defer h.tokenUsageMu.Unlock()
++	if orgID == "" {
++		orgID = "default"
++	}
++	h.tokenUsageWindow[orgID] += count
++}
++
+ // eventLogWorker processes event logs and writes them sequentially to the specified file.
+ func (h *Hub) eventLogWorker(ctx context.Context, filename string) {

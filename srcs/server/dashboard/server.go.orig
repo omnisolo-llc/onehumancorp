@@ -18,7 +18,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 
-	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -492,7 +491,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/domains", server.handleDomains)
 	mux.HandleFunc("/api/mcp/tools", server.handleMCPTools)
 	mux.HandleFunc("/api/mcp/tools/register", server.handleMCPRegister)
-	api.RegisterSyncRulesHandlers(mux)
 	mux.HandleFunc("/api/mcp/tools/invoke", server.handleMCPInvoke)
 	mux.HandleFunc("/api/dev/seed", server.handleDevSeed)
 	mux.HandleFunc("/api/settings", server.handleSettings)
@@ -554,6 +552,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/pipelines/promote", server.handlePipelinePromote)
 	mux.HandleFunc("/api/pipelines/status", server.handlePipelineStatus)
 	// Phase 5 - PowerSync
+	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -620,8 +619,8 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
-				"table":      "agents",
-				"query":      "SELECT * FROM agents WHERE organization_id = $1",
+				"table": "agents",
+				"query": "SELECT * FROM agents WHERE organization_id = $1",
 				"parameters": []interface{}{orgID},
 			},
 			{

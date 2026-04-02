@@ -1,0 +1,12 @@
+--- srcs/server/orchestration/service.go
++++ srcs/server/orchestration/service.go
+@@ -359,6 +359,9 @@
+		tokenUsageWindow: make(map[string]int64),
+		settingsStore: settings.NewStore(),
+	}
++	telemetry.RecordTokenUsageCallback = func(orgID string, count int64) {
++		h.RecordTokenUsageForForecast(orgID, count)
++	}
+	go h.startTokenBurnRateEngine(context.Background())
+	go h.eventLogWorker(context.Background(), "events.jsonl")
+	return h

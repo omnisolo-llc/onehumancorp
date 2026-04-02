@@ -1,0 +1,54 @@
+--- srcs/server/orchestration/service.go
++++ srcs/server/orchestration/service.go
+@@ -352,8 +352,48 @@
+		repo:          repo,
+		scheduler:     sched,
+		settingsStore: settings.NewStore(),
++		tokenUsageWindow: make(map[string]int64),
+	}
+	go h.eventLogWorker(context.Background(), "events.jsonl")
++	go h.startTokenBurnRateEngine(context.Background())
+	return h
+ }
+
++// startTokenBurnRateEngine calculates the token burn rate forecast periodically.
++func (h *Hub) startTokenBurnRateEngine(ctx context.Context) {
++	ticker := time.NewTicker(1 * time.Minute)
++	defer ticker.Stop()
++
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case <-ticker.C:
++			h.tokenUsageMu.Lock()
++			usageMap := make(map[string]int64)
++			for k, v := range h.tokenUsageWindow {
++				usageMap[k] = v
++				h.tokenUsageWindow[k] = 0 // Reset window
++			}
++			h.tokenUsageMu.Unlock()
++
++			// Extrapolate to tokens per minute (rate is usage over 1 min)
++			for orgID, usage := range usageMap {
++				burnRate := float64(usage)
++				telemetry.RecordTokenBurnRate(ctx, orgID, burnRate)
++			}
++			if len(usageMap) == 0 {
++				telemetry.RecordTokenBurnRate(ctx, "default", 0)
++			}
++		}
++	}
++}
++
++// RecordTokenUsageForForecast records token usage for the forecasting engine.
++func (h *Hub) RecordTokenUsageForForecast(orgID string, count int64) {
++	h.tokenUsageMu.Lock()
++	defer h.tokenUsageMu.Unlock()
++	if orgID == "" {
++		orgID = "default"
++	}
++	h.tokenUsageWindow[orgID] += count
++}
++
+ // WithCentrifuge connects the Hub to the Centrifuge real-time service.

@@ -291,7 +291,7 @@ func run(now time.Time, listen listenFunc) error {
 
 						if len(h) > 1 {
 							// Calculate moving average burn rate (tokens per minute)
-							rate := float64(h[len(h)-1] - h[0]) / float64(len(h)-1)
+							rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
 							telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 						}
 					}
@@ -378,7 +378,7 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
-	}
+		}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
@@ -399,7 +399,7 @@ func run(now time.Time, listen listenFunc) error {
 			}
 		}()
 	} else {
-			slog.Error("failed to initialize SIPDB", "error", sipdbErr)
+		slog.Error("failed to initialize SIPDB", "error", sipdbErr)
 	}
 
 	var handler http.Handler

@@ -1,0 +1,18 @@
+--- srcs/server/dashboard/tenant.go
++++ srcs/server/dashboard/tenant.go
+@@ -19,6 +19,7 @@
+	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
++	"github.com/onehumancorp/mono/srcs/server/api"
+	"github.com/onehumancorp/mono/srcs/server/scheduler"
+	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+@@ -282,6 +283,7 @@
+	mux.HandleFunc("/api/agents/chatwoot_bridge", tr.chatwootBridgeHandler)
+	mux.HandleFunc("/api/reports/agents/usage", tr.agentUsageReportHandler)
+	mux.HandleFunc("/api/metrics", tr.metricsHandler)
++	api.RegisterSyncRulesHandlers(mux)
+
+	if isMultiTenant {
+		mux.HandleFunc("/api/orgs/register", tr.registerOrgHandler)

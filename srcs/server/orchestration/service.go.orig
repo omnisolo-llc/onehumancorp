@@ -345,20 +345,17 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 	}
 
 	h := &Hub{
-		agents:           map[string]Agent{},
-		inbox:            map[string][]Message{},
-		meetings:         map[string]MeetingRoom{},
-		subs:             map[string][]chan struct{}{},
-		tokenTrackers:    map[string]struct{}{},
-		autoCorTrack:     map[string]struct{}{},
-		eventLogChan:     make(chan interface{}, 100),
-		repo:             repo,
-		scheduler:        sched,
+		agents:        map[string]Agent{},
+		inbox:         map[string][]Message{},
+		meetings:      map[string]MeetingRoom{},
+		subs:          map[string][]chan struct{}{},
+		tokenTrackers: map[string]struct{}{},
+		autoCorTrack:  map[string]struct{}{},
+		eventLogChan:  make(chan interface{}, 100),
+		repo:          repo,
+		scheduler:     sched,
 		tokenUsageWindow: make(map[string]int64),
-		settingsStore:    settings.NewStore(),
-	}
-	telemetry.RecordTokenUsageCallback = func(orgID string, count int64) {
-		h.RecordTokenUsageForForecast(orgID, count)
+		settingsStore: settings.NewStore(),
 	}
 	go h.startTokenBurnRateEngine(context.Background())
 	go h.eventLogWorker(context.Background(), "events.jsonl")

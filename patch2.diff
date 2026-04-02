@@ -1,0 +1,56 @@
+--- srcs/server/orchestration/hub.go
++++ srcs/server/orchestration/hub.go
+@@ -35,6 +35,11 @@
+
+	mu             sync.RWMutex
+	minimaxAPIKey  string
++
++	// fields for token burn rate forecasting
++	tokenUsageWindow map[string]int64
++	tokenUsageMu     sync.Mutex
+ }
+
+ // NewHub initializes a new Orchestration Hub.
+@@ -48,8 +53,12 @@
+		topics:      make(map[string][]chan Message),
+		sipDB:       db,
+		scheduler:   scheduler.NewScheduler(),
++		tokenUsageWindow: make(map[string]int64),
+	}
+
++	// Start Token Burn Rate Engine
++	go h.startTokenBurnRateEngine(ctx)
++
+	// Auto-register initial agents
+	for id, _ := range h.agents {
+		go h.simulateActivity(ctx, id)
+@@ -62,6 +71,29 @@
+	return h
+ }
+
++// startTokenBurnRateEngine calculates the token burn rate forecast periodically.
++func (h *Hub) startTokenBurnRateEngine(ctx context.Context) {
++	ticker := time.NewTicker(1 * time.Minute)
++	defer ticker.Stop()
++
++	for {
++		select {
++		case <-ctx.Done():
++			return
++		case <-ticker.C:
++			h.tokenUsageMu.Lock()
++			usage := h.tokenUsageWindow["default"]
++			h.tokenUsageWindow["default"] = 0
++			h.tokenUsageMu.Unlock()
++
++			// Extrapolate to tokens per minute (rate is usage over 1 min)
++			burnRate := float64(usage)
++			// Update the metric
++			telemetry.RecordTokenBurnRate(ctx, "default", burnRate)
++		}
++	}
++}
++
+ // SetMinimaxAPIKey sets the Minimax API key.
+ func (h *Hub) SetMinimaxAPIKey(key string) {
+	h.mu.Lock()

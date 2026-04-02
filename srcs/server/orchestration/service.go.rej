@@ -1,0 +1,12 @@
+--- service.go
++++ service.go
+@@ -367,6 +367,9 @@
+		settingsStore: settings.NewStore(),
+		tokenUsageWindow: make(map[string]int64),
+	}
++	telemetry.RecordTokenUsageCallback = func(orgID string, count int64) {
++		h.RecordTokenUsageForForecast(orgID, count)
++	}
+	go h.eventLogWorker(context.Background(), "events.jsonl")
+	go h.startTokenBurnRateEngine(context.Background())
+	return h

@@ -29,7 +29,6 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
-        "//srcs/server/api",
         "@io_opentelemetry_go_otel//:otel",
     ],
 )

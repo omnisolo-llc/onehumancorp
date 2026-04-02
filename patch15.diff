@@ -1,0 +1,11 @@
+--- srcs/server/api/sync_rules.go
++++ srcs/server/api/sync_rules.go
+@@ -16,7 +16,7 @@
+	isMultiTenant := os.Getenv("OHC_MULTITENANT") == "true"
+
+	if isMultiTenant {
+-		orgID := auth.GetTenantID(r.Context())
++		orgID := auth.OrganizationIDFromContext(r.Context())
+		if orgID == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return

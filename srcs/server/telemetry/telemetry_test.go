@@ -75,8 +75,8 @@ func (m *mockRegisterer) Unregister(prometheus.Collector) bool {
 }
 
 // mockMeter implements metric.Meter
-type mockMeter struct{
-	failCounters bool
+type mockMeter struct {
+	failCounters   bool
 	failHistograms bool
 }
 

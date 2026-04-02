@@ -1,0 +1,13 @@
+--- srcs/server/telemetry/telemetry.go
++++ srcs/server/telemetry/telemetry.go
+@@ -232,6 +232,10 @@
+		})
+		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
++
++	if RecordTokenUsageCallback != nil {
++		RecordTokenUsageCallback("default", count)
++	}
+ }
+
+ // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.

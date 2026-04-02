@@ -1,0 +1,23 @@
+--- srcs/server/telemetry/telemetry.go
++++ srcs/server/telemetry/telemetry.go
+@@ -345,6 +345,9 @@
+ // Global buffer function pointer to inject dependency without circular imports.
+ var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
++// Global callback for token usage
++var RecordTokenUsageCallback func(orgID string, count int64)
++
+ // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
+ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
+	if tokenBurnRateGauge != nil {
+@@ -233,6 +236,10 @@
+		})
+		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
++
++	if RecordTokenUsageCallback != nil {
++		RecordTokenUsageCallback("default", count)
++	}
+ }
+
+ // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.

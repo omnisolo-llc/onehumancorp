@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	sipMeter        = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
-	sipTracer       = otel.Tracer("github.com/onehumancorp/mono/srcs/server/orchestration")
+	sipMeter          = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	sipTracer         = otel.Tracer("github.com/onehumancorp/mono/srcs/server/orchestration")
 	syncMissionsOk, _ = sipMeter.Int64Counter(
 		"sip.missions.synced",
 		metric.WithDescription("Number of successfully synced missions"),
@@ -41,10 +41,10 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 db.Provider
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              db.Provider
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -189,11 +189,11 @@ func initializeTables(provider db.Provider) error {
 	}
 
 	for _, q := range queries {
-			if !provider.IsSQLite() {
-				q = strings.ReplaceAll(q, "DATETIME", "TIMESTAMP")
-				q = strings.ReplaceAll(q, "BLOB", "BYTEA")
-				q = strings.ReplaceAll(q, "INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
-			}
+		if !provider.IsSQLite() {
+			q = strings.ReplaceAll(q, "DATETIME", "TIMESTAMP")
+			q = strings.ReplaceAll(q, "BLOB", "BYTEA")
+			q = strings.ReplaceAll(q, "INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+		}
 		if _, err := provider.Exec(context.Background(), q); err != nil {
 			return err
 		}
@@ -901,37 +901,37 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	for _, m := range missions {
 		// Parse payload to redact and sanitize
 		var payloadData map[string]interface{}
-			if err := json.Unmarshal([]byte(m.payload), &payloadData); err != nil {
-				slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-				}
-				continue
+		if err := json.Unmarshal([]byte(m.payload), &payloadData); err != nil {
+			slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
 			}
-
-			// Add ID to payload for synchronization endpoint
-			payloadData["id"] = m.id
-
-			// Delete sensitive RAG context
-			delete(payloadData, "rag_context")
-
-			// Redact PII from string fields
-			for k, v := range payloadData {
-				if strVal, ok := v.(string); ok {
-					payloadData[k] = telemetry.RedactPII(strVal)
-			}
-			}
-
-			// Re-marshal sanitized payload
-			sanitizedBytes, err := json.Marshal(payloadData)
-			if err != nil {
-				slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-			}
-				continue
+			continue
 		}
-			m.payload = string(sanitizedBytes)
+
+		// Add ID to payload for synchronization endpoint
+		payloadData["id"] = m.id
+
+		// Delete sensitive RAG context
+		delete(payloadData, "rag_context")
+
+		// Redact PII from string fields
+		for k, v := range payloadData {
+			if strVal, ok := v.(string); ok {
+				payloadData[k] = telemetry.RedactPII(strVal)
+			}
+		}
+
+		// Re-marshal sanitized payload
+		sanitizedBytes, err := json.Marshal(payloadData)
+		if err != nil {
+			slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			continue
+		}
+		m.payload = string(sanitizedBytes)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
