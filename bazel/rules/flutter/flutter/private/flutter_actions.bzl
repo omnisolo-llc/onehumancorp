@@ -431,6 +431,8 @@ for entry in data.get("packages", []):
         if not os.path.isdir(root_path):
             continue
         rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
+        if name == "ffi":
+            language_version = "2.12"
         pkg = dict()
         pkg["name"] = name
         pkg["rootUri"] = rel
@@ -675,7 +677,37 @@ for _f in "${{FLUTTER_ROOT_ORIG}}"/* "${{FLUTTER_ROOT_ORIG}}"/.[!.]*; do
     ln -sf "$_f" "${{FLUTTER_WRITABLE}}/$_n" 2>/dev/null || true
 done
 
-ln -sf "${{FLUTTER_ROOT_ORIG}}/bin/internal" "${{FLUTTER_WRITABLE}}/bin/internal" 2>/dev/null || true
+mkdir -p "${{FLUTTER_WRITABLE}}/bin/internal"
+for _f in "${{FLUTTER_ROOT_ORIG}}/bin/internal"/* "${{FLUTTER_ROOT_ORIG}}/bin/internal"/.[!.]*; do
+    _n="$(basename -- "$_f")" || continue
+    [ -e "$_f" ] || [ -L "$_f" ] || continue
+    if [ "$_n" = "shared.sh" ]; then
+        cp "$_f" "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+        chmod u+w "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+
+        # Bypass git checks in shared.sh
+        sed -i 's/if \\[\\[ ! -e "$FLUTTER_ROOT\\/.git" \\]\\];/if false;/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh" 2>/dev/null || true
+        sed -i 's/git rev-parse HEAD/echo bypassed/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh" 2>/dev/null || true
+
+        # Add no-op git script
+        cat << 'EOF' > "${{FLUTTER_WRITABLE}}/bin/git"
+#!/bin/bash
+if [[ "$*" == *"rev-parse HEAD"* ]]; then
+  echo "bypassed"
+elif [[ "$*" == *"describe --match"* ]]; then
+  echo "3.29.3"
+else
+  echo "bypassed"
+fi
+EOF
+        chmod +x "${{FLUTTER_WRITABLE}}/bin/git"
+        export PATH="${{FLUTTER_WRITABLE}}/bin:$PATH"
+
+        chmod u+x "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+    else
+        ln -sf "$_f" "${{FLUTTER_WRITABLE}}/bin/internal/$_n" 2>/dev/null || true
+    fi
+done
 
 for _f in "${{FLUTTER_ROOT_ORIG}}/bin"/* "${{FLUTTER_ROOT_ORIG}}/bin"/.[!.]*; do
     _n="$(basename -- "$_f")" || continue
@@ -790,6 +822,9 @@ export PACKAGE_PUBSPEC_PATH="$(pwd)/pubspec.yaml"
 export WORKSPACE_PUBSPEC_PATH="$WORKSPACE_ROOT/pubspec.yaml"
 export PUB_DEPS_PATH="$WORKSPACE_ROOT/pub_deps.json"
 export PACKAGE_CONFIG_PATH="$WORKSPACE_ROOT/.dart_tool/package_config.json"
+chmod u+w "$WORKSPACE_ROOT/.dart_tool" 2>/dev/null || true
+chmod u+w "$PACKAGE_CONFIG_PATH" 2>/dev/null || true
+rm -f "$PACKAGE_CONFIG_PATH" 2>/dev/null || true
 PACKAGE_CONFIG_OUT="$(mktemp "${{TMPDIR:-/tmp}}/flutter_package_config.XXXXXX.log")"
 if "$PYTHON_BIN" > "$PACKAGE_CONFIG_OUT" 2>&1 <<'PY'
 import json
