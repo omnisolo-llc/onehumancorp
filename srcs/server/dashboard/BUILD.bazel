@@ -7,7 +7,6 @@ go_library(
         "handlers_autodream_sync.go",
         "handlers_b2b.go",
         "handlers_chat.go",
-        "handlers_growth.go",
         "handlers_integration.go",
         "handlers_mcp.go",
         "handlers_ops.go",
@@ -39,7 +38,6 @@ go_test(
     name = "dashboard_test",
     srcs = [
         "handlers_b2b_extra_test.go",
-        "handlers_growth_test.go",
         "handlers_mcp_test.go",
         "handlers_ops_extra_test.go",
         "handlers_ops_test.go",
