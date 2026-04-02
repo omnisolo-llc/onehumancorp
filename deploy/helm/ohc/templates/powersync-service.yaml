@@ -1,0 +1,15 @@
+{{- if .Values.powersync.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-powersync
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.powersync.service.port | default 8081 }}
+      targetPort: {{ .Values.powersync.containerPort | default 8080 }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Release.Name }}-powersync
+{{- end }}
