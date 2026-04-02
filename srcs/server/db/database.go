@@ -176,6 +176,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// BYTEA -> BLOB
 			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
+			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
