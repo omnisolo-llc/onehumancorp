@@ -256,4 +256,3 @@ func TestCentrifugeNode_HandlerCheckOrigin(t *testing.T) {
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 }
-
