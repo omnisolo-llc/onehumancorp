@@ -42,7 +42,12 @@ func TestStartTokenBurnForecasterWithTicker(t *testing.T) {
 
 	// We start the forecaster with a very fast ticker to ensure it executes.
 	// Since it loops infinitely, we just run it in a goroutine.
-	go StartTokenBurnForecasterWithTicker(ctx, tracker, 10*time.Millisecond)
+	go StartTokenBurnForecasterWithTicker(
+		ctx,
+		func(c context.Context) []string { return tracker.ActiveOrganizations(c) },
+		func(orgID string) int64 { return tracker.Summary(orgID).TotalTokens },
+		10*time.Millisecond,
+	)
 
 	time.Sleep(100 * time.Millisecond)
 	cancel()
