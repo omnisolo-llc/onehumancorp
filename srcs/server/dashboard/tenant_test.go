@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -75,6 +76,15 @@ func TestTenantRegistry_RoutesByOrg(t *testing.T) {
 }
 
 func TestTenantRegistry_UnknownOrgIsLazyProvisioned(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := NewTenantRegistry(sharedAuthStore, nil)
 	tok := adminToken(t)
 
@@ -91,6 +101,15 @@ func TestTenantRegistry_UnknownOrgIsLazyProvisioned(t *testing.T) {
 }
 
 func TestTenantRegistry_TenantsAreIsolated(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := newTestRegistry()
 	tok := adminToken(t)
 
@@ -138,6 +157,15 @@ func TestTenantRegistry_HandleOrgRegister(t *testing.T) {
 }
 
 func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := newTestRegistry()
 	tok := adminToken(t)
 
@@ -158,6 +186,15 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 }
 
 func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	// Test that unauthenticated requests hit a fresh public handler, not a random tenant
 	reg := newTestRegistry()
 	// "/api/auth/login" is a valid public route, so we expect 405 Method Not Allowed or 400 Bad Request
@@ -182,6 +219,15 @@ func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 }
 
 func TestTenantRegistry_HandleOrgRegister_InvalidMethod(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := NewTenantRegistry(sharedAuthStore, nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/orgs/register", nil)
 	rr := httptest.NewRecorder()
@@ -192,6 +238,15 @@ func TestTenantRegistry_HandleOrgRegister_InvalidMethod(t *testing.T) {
 }
 
 func TestTenantRegistry_HandleOrgRegister_NoAdminRole(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := NewTenantRegistry(sharedAuthStore, nil)
 	// Create context with claims but NO admin role
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{
@@ -208,6 +263,15 @@ func TestTenantRegistry_HandleOrgRegister_NoAdminRole(t *testing.T) {
 }
 
 func TestTenantRegistry_HandleOrgRegister_InvalidJSON(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := NewTenantRegistry(sharedAuthStore, nil)
 	ctx := claimsCtx("sys") // has admin role
 	req := httptest.NewRequest(http.MethodPost, "/api/orgs/register", strings.NewReader("invalid-json")).WithContext(ctx)
@@ -219,6 +283,15 @@ func TestTenantRegistry_HandleOrgRegister_InvalidJSON(t *testing.T) {
 }
 
 func TestTenantRegistry_HandleOrgRegister_MissingFields(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := NewTenantRegistry(sharedAuthStore, nil)
 	ctx := claimsCtx("sys") // has admin role
 	req := httptest.NewRequest(http.MethodPost, "/api/orgs/register", strings.NewReader(`{"id": "test"}`)).WithContext(ctx)
@@ -237,6 +310,15 @@ func TestTenantRegistry_HandleOrgRegister_MissingFields(t *testing.T) {
 }
 
 func TestTenantRegistry_HandleOrgList(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := newTestRegistry()
 	ctx := claimsCtx("sys") // has admin role
 	req := httptest.NewRequest(http.MethodGet, "/api/orgs", nil).WithContext(ctx)
@@ -253,6 +335,15 @@ func TestTenantRegistry_HandleOrgList(t *testing.T) {
 }
 
 func TestTenantRegistry_HandleOrgList_NoAdminRole(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
 	reg := newTestRegistry()
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{
 		Subject:        "user-1",
