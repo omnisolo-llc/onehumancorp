@@ -96,8 +96,28 @@ message ReasonResponse {
   string content = 1;
 }
 
+message SharedTaskProto {
+  string id = 1;
+  string mission_id = 2;
+  string title = 3;
+  string description = 4;
+  string priority = 5;
+  string status = 6;
+  string assigned_agent_id = 7;
+}
+
+message ClaimTaskRequest {
+  string task_id = 1;
+  string agent_id = 2;
+}
+
+message ClaimTaskResponse {
+  SharedTaskProto task = 1;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
+  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
   rpc Publish(PublishMessageRequest) returns (PublishMessageResponse);
   rpc DelegateTask(DelegateTaskRequest) returns (DelegateTaskResponse);

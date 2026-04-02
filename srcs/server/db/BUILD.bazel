@@ -7,6 +7,7 @@ go_library(
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
+        "test_db.go",
     ],
     embedsrcs = glob(["migrations/*.sql"]),
     importpath = "github.com/onehumancorp/mono/srcs/server/db",

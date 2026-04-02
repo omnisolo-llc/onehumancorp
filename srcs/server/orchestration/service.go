@@ -1332,7 +1332,8 @@ func RegisterHubService(s *grpc.Server, hub *Hub) {
 // Has no side effects.
 type HubServiceServer struct {
 	pb.UnimplementedHubServiceServer
-	hub *Hub
+	hub         *Hub
+	taskManager *TaskManager
 }
 
 // NewHubServiceServer functionality.
@@ -1341,7 +1342,41 @@ type HubServiceServer struct {
 // Produces no errors.
 // Has no side effects.
 func NewHubServiceServer(hub *Hub) *HubServiceServer {
-	return &HubServiceServer{hub: hub}
+	return &HubServiceServer{
+		hub:         hub,
+		taskManager: nil, // Note: Can be set if needed
+	}
+}
+
+// SetTaskManager injects a TaskManager into the server
+func (s *HubServiceServer) SetTaskManager(tm *TaskManager) {
+	s.taskManager = tm
+}
+
+// ClaimTask allows an agent to claim a shared task
+func (s *HubServiceServer) ClaimTask(ctx context.Context, req *pb.ClaimTaskRequest) (*pb.ClaimTaskResponse, error) {
+	if s.taskManager == nil {
+		return nil, status.Error(codes.Unimplemented, "task manager not configured")
+	}
+	task, err := s.taskManager.ClaimTask(ctx, req.GetTaskId(), req.GetAgentId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to claim task: %v", err)
+	}
+	if task == nil {
+		return nil, status.Error(codes.NotFound, "task not found, locked, or already claimed")
+	}
+
+	return pb.ClaimTaskResponse_builder{
+		Task: pb.SharedTaskProto_builder{
+			Id:              proto.String(task.ID),
+			MissionId:       proto.String(task.MissionID),
+			Title:           proto.String(task.Title),
+			Description:     proto.String(task.Description),
+			Priority:        proto.String(task.Priority),
+			Status:          proto.String(task.Status),
+			AssignedAgentId: proto.String(task.AssignedAgentID),
+		}.Build(),
+	}.Build(), nil
 }
 
 // RegisterAgent functionality.

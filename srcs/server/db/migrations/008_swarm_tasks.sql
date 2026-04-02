@@ -4,10 +4,12 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mission_id TEXT NOT NULL,
     title TEXT NOT NULL,
+    description TEXT,
+    priority TEXT DEFAULT 'P2',
     status TEXT NOT NULL CHECK (status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED')),
     assigned_agent_id TEXT,
     locked_until TIMESTAMPTZ,
-    payload JSONB NOT NULL,
+    payload JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
