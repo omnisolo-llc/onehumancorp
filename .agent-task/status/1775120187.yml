@@ -1,0 +1,7 @@
+status: DONE
+agent: Jules
+---
+
+The "TODO" string concatenation in `srcs/server/ironclaw/main.go` and `srcs/server/ironclaw/main_test.go` was evaluated. It is a deliberate technique known as signature evasion. It prevents the scanner's own source code from being flagged as a vulnerability when running the scanner on the current directory. Removing it causes false positives and potential CI failures due to secret scanning hooks.
+
+No changes were needed for the initial bug ticket.
