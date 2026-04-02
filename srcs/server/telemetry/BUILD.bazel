@@ -2,7 +2,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "telemetry",
-    srcs = ["telemetry.go"],
+    srcs = ["autodream_sync_metrics.go",
+        "telemetry.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [
