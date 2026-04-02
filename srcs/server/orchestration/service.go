@@ -242,9 +242,8 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+	if isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
@@ -270,8 +269,8 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
-		isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-		if !isMultiTenant {
+		isStandalone := envBoolDefault("OHC_STANDALONE", false)
+		if isStandalone {
 			// In standalone mode, synchronously delegate to prevent connection contention
 			// caused by thousands of unbounded goroutines hitting the SIPDB.
 			_ = h.sipDB.DelegateMission(context.Background(), task.ID, toAgent.Role, task)
