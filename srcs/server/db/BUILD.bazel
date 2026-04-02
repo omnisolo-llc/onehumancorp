@@ -4,6 +4,7 @@ go_library(
     name = "db",
     srcs = [
         "database.go",
+        "flextime.go",
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
