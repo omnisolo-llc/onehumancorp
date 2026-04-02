@@ -317,6 +317,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	forecaster     *TokenBurnRateForecaster
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -351,7 +352,19 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		repo:          repo,
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
+		forecaster:    NewTokenBurnRateForecaster(5*time.Minute, 1*time.Minute),
 	}
+
+	telemetry.RecordTokenUsageCallback = func(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+		tenantID := "default"
+		// If we can extract the tenant ID from the context, we would use it here.
+		// For now, tracking everything under a simple global identifier, or
+		// assuming OHC_MULTITENANT mode is handled in context via interceptors.
+		h.forecaster.RecordUsage(tenantID, count)
+	}
+
+	h.forecaster.Start()
+
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
 }

@@ -346,6 +346,9 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
 
+// RecordTokenUsageCallback allows injecting a callback to capture token usage events for forecasting.
+var RecordTokenUsageCallback func(ctx context.Context, agentID, role, model, tokenType string, count int64)
+
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
 	if tokenBurnRateGauge != nil {

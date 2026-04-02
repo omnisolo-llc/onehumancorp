@@ -435,11 +435,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-
-	if !isMultiTenant && isSQLite && isStandalone {
+	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()

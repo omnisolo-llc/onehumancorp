@@ -8,6 +8,7 @@ go_library(
         "auth_interceptor.go",
         "centrifuge_hub.go",
         "delegation.go",
+        "forecast.go",
         "postgres_hub.go",
         "repository.go",
         "service.go",
