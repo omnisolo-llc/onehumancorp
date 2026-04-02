@@ -188,6 +188,33 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "expr": "ohc_token_burn_rate_forecast",
+          "legendFormat": "Forecast",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Token Burn Rate Forecast",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(rate(ohc_agent_api_calls_total[5m])) by (role, api)",
           "legendFormat": "{{role}} - {{api}}",
           "range": true,
