@@ -200,8 +200,8 @@ func (r *TenantRegistry) HandleOrgRegister(w http.ResponseWriter, req *http.Requ
 		return
 	}
 	claims := auth.ClaimsFromContext(req.Context())
-	if claims == nil || !claims.HasRole(auth.RoleAdmin) {
-		http.Error(w, `{"error":"admin role required"}`, http.StatusForbidden)
+	if claims == nil || !claims.HasRole(auth.RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
+		http.Error(w, `{"error":"system admin role required"}`, http.StatusForbidden)
 		return
 	}
 
@@ -230,8 +230,8 @@ func (r *TenantRegistry) HandleOrgRegister(w http.ResponseWriter, req *http.Requ
 // Has no side effects.
 func (r *TenantRegistry) HandleOrgList(w http.ResponseWriter, req *http.Request) {
 	claims := auth.ClaimsFromContext(req.Context())
-	if claims == nil || !claims.HasRole(auth.RoleAdmin) {
-		http.Error(w, `{"error":"admin role required"}`, http.StatusForbidden)
+	if claims == nil || !claims.HasRole(auth.RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
+		http.Error(w, `{"error":"system admin role required"}`, http.StatusForbidden)
 		return
 	}
 	r.mu.RLock()
