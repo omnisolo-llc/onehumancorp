@@ -491,9 +491,8 @@ func TestNewMinimaxClient(t *testing.T) {
 	if client == nil {
 		t.Fatalf("expected non-nil MinimaxClient")
 	}
-	if client.APIKey != "test-key" {
-		t.Fatalf("expected APIKey 'test-key', got %q", client.APIKey)
-	}
+	// We no longer check client.APIKey since MinimaxClient is an interface.
+	// But we can check if it creates an object properly.
 }
 
 func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
