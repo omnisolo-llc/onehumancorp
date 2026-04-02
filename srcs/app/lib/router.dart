@@ -21,6 +21,7 @@ import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
+import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -120,6 +121,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/agents/hire',
             builder: (context, state) => const AgentHireWizardScreen(),
           ),
+          GoRoute(
+            path: '/swarm-memory',
+            builder: (context, state) => const SwarmMemoryScreen(),
+          ),
         ],
       ),
     ],
@@ -153,6 +158,7 @@ class _Sidebar extends StatelessWidget {
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
+        _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(
