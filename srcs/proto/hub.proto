@@ -96,6 +96,29 @@ message ReasonResponse {
   string content = 1;
 }
 
+
+message SwarmTask {
+  string id = 1;
+  string mission_id = 2;
+  string title = 3;
+  string status = 4;
+  string assigned_agent_id = 5;
+  int64 locked_until_unix = 6;
+  string payload = 7;
+  int64 created_at_unix = 8;
+  int64 updated_at_unix = 9;
+}
+
+message ClaimTaskRequest {
+  string task_id = 1;
+  string agent_id = 2;
+}
+
+message ClaimTaskResponse {
+  bool success = 1;
+  SwarmTask task = 2;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -104,6 +127,8 @@ service HubService {
   rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
   rpc Reason(ReasonRequest) returns (ReasonResponse);
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
+  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
+
 }
 
 message WizardField {

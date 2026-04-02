@@ -29,6 +29,7 @@ var (
 	agentApiErrorsCounter    metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	swarmTasksCompletedCounter metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -155,11 +156,29 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	swarmTasksCompletedCounter, err = m.Int64Counter(
+		"ohc_swarm_tasks_completed",
+		metric.WithDescription("Total Swarm Tasks completed by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	if len(errs) > 0 {
 		return errs[0]
 	}
 
 	return nil
+}
+
+// RecordSwarmTaskCompleted increments the completed tasks counter.
+func RecordSwarmTaskCompleted(ctx context.Context, agentID, taskType string) {
+	if swarmTasksCompletedCounter != nil {
+		swarmTasksCompletedCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("task_type", taskType),
+		))
+	}
 }
 
 // Middleware injects telemetry instrumentation into an HTTP handler chain.
