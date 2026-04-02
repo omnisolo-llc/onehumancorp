@@ -312,13 +312,12 @@ func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
 
 	go func() {
 		for {
-			hub.mu.RLock()
+			hub.mu.Lock()
 			_, ok := hub.agents["sender-fail"]
-			hub.mu.RUnlock()
 			if !ok {
+				hub.mu.Unlock()
 				break
 			}
-			hub.mu.Lock()
 			delete(hub.agents, "sender-fail")
 			hub.mu.Unlock()
 		}

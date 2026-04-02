@@ -1036,17 +1036,18 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 				}
 
 				// Verify map entry is deleted (bounded memory growth)
-				hub.mu.RLock()
+				hub.mu.Lock()
 				_, exists := hub.tokenTrackers[tt.eventID]
-				hub.mu.RUnlock()
 				if exists {
 					t.Errorf("expected map entry %q to be deleted, but it still exists", tt.eventID)
 				}
+				delete(hub.tokenTrackers, tt.eventID)
+				hub.mu.Unlock()
 			}
 
 			// Clean up state manually for cases like Concurrent Execution where it returns error and doesn't run the defer logic inside the target func
 			hub.mu.Lock()
-			delete(hub.autoCorTrack, tt.eventID)
+			delete(hub.tokenTrackers, tt.eventID)
 			hub.mu.Unlock()
 		})
 	}
@@ -1121,12 +1122,12 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	}
 
 	// Verify memory leak fix (map deletion)
-	hub.mu.RLock()
+	hub.mu.Lock()
 	_, exists := hub.tokenTrackers[eventID]
-	hub.mu.RUnlock()
 	if exists {
 		t.Errorf("expected map entry %q to be deleted, but it still exists", eventID)
 	}
+	hub.mu.Unlock()
 }
 
 func TestHub_ToolParameterAutoCorrection(t *testing.T) {
@@ -1278,12 +1279,12 @@ func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 	}
 
 	// Verify memory leak fix (map deletion)
-	hub.mu.RLock()
+	hub.mu.Lock()
 	_, exists := hub.autoCorTrack[eventID]
-	hub.mu.RUnlock()
 	if exists {
 		t.Errorf("expected map entry %q to be deleted, but it still exists", eventID)
 	}
+	hub.mu.Unlock()
 }
 
 func TestSetSIPDB(t *testing.T) {

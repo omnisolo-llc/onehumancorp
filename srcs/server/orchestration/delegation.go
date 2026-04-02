@@ -68,14 +68,6 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		s.hub.LogEvent(subAgent)
 	}
 
-	// Ensure sender exists to avoid "sender agent is not registered" in Publish
-	s.hub.mu.RLock()
-	_, sysExists := s.hub.agents[req.GetFromAgentId()]
-	s.hub.mu.RUnlock()
-	if !sysExists {
-		return nil, status.Errorf(codes.PermissionDenied, "sender agent is not registered: %s", req.GetFromAgentId())
-	}
-
 	// 3. Execution (trigger via task message)
 	instruction := req.GetInstruction()
 	if strings.Contains(instruction, "SYSTEM:") || strings.Contains(instruction, "\n\n") {
@@ -95,9 +87,11 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		Content:    fmt.Sprintf("Execute Task: %s\nContext: %s", instruction, parentThreadID),
 		OccurredAt: time.Now().UTC(),
 	}
-
 	err := s.hub.Publish(msg)
 	if err != nil {
+		if strings.Contains(err.Error(), "sender agent is not registered") {
+			return nil, status.Errorf(codes.PermissionDenied, "sender agent is not registered: %s", req.GetFromAgentId())
+		}
 		return nil, status.Errorf(codes.Internal, "failed to publish task to sub-agent: %v", err)
 	}
 
