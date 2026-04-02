@@ -1213,7 +1213,8 @@ func (h *Hub) Inbox(agentID string) []Message {
 	}
 
 	// ⚡ BOLT: [O(1) Inbox draining instead of O(N) slice copy] - Randomized Selection from Top 5
-	h.inbox[agentID] = nil
+	// To prevent memory leak of map keys over time, delete the key entirely.
+	delete(h.inbox, agentID)
 	return inbox
 }
 
