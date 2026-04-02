@@ -21,6 +21,7 @@ rules_pkg_rpm = use_extension(
 use_repo(rules_pkg_rpm, "rules_pkg_rpmbuild")
 
 register_toolchains("@rules_pkg_rpmbuild//:all")
+
 bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
@@ -80,6 +81,7 @@ use_repo(
     "pub_platform",
     "pub_plugin_platform_interface",
     "pub_protobuf",
+    "pub_protobuf_v5",
     "pub_riverpod",
     "pub_shared_preferences",
     "pub_shared_preferences_android",
@@ -139,6 +141,9 @@ use_repo(go_deps, "com_github_centrifugal_centrifuge", "com_github_google_uuid",
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
+    bins = {
+        "ts-proto": ["protoc-gen-ts_proto=protoc-gen-ts_proto"],
+    },
     pnpm_lock = "//:pnpm-lock.yaml",
 )
 use_repo(npm, "npm")
@@ -166,3 +171,7 @@ oci.pull(
     tag = "alpine",
 )
 use_repo(oci, "distroless_static", "distroless_static_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
+
+# ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
+proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
+use_repo(proto_deps, "google_protobuf_dart")

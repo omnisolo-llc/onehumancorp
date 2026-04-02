@@ -7,6 +7,17 @@ npm_link_all_packages(name = "node_modules")
 
 exports_files(["tsconfig.json"])
 
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+
+# Plugin and rule infrastructure for protobuf TypeScript generation in bazel/rules
+
+# Fix for misplaced alias error with rules_nodejs
+filegroup(
+    name = "node_fixed",
+    srcs = ["@nodejs//:node"],
+    visibility = ["//visibility:public"],
+)
+
 # gazelle:prefix github.com/onehumancorp/mono
 exports_files([
     "go.mod",
