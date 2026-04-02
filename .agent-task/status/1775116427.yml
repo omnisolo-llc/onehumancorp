@@ -1,0 +1,8 @@
+id: "1775116427"
+timestamp: 1775116427
+component: "orchestration"
+status: "ACTIVE"
+health: "HEALTHY"
+metrics:
+  publish_latency_us: 191492
+  throughput_ops: 5444
