@@ -1,5 +1,9 @@
 actions:
   - name: "Test all targets"
+    resource_requests:
+      cpu: 8
+      memory: 32GB
+      disk: 100GB
     triggers:
       push:
         branches:
