@@ -335,6 +335,8 @@ func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository)
 }
 
 func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	InitBurnRateEngine()
+
 	sched := scheduler.NewScheduler()
 	if taskRepo != nil {
 		sched = scheduler.NewSchedulerWithRepository(taskRepo)

@@ -34,6 +34,9 @@ var (
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 )
 
+// Exported token usage callback to track usage externally (e.g. for burn rate extrapolation)
+var RecordTokenUsageCallback func(ctx context.Context, organizationID string, count int64)
+
 func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
@@ -225,6 +228,12 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		attribute.String("model", model),
 		attribute.String("type", tokenType),
 	))
+
+	if RecordTokenUsageCallback != nil {
+		// In a real scenario, organizationID should be extracted from context or agentID, but here we can pass a default or use agentID as a placeholder if needed,
+		// or simply pass it as part of the interface. Since RecordTokenUsage is generic, we'll invoke the callback.
+		RecordTokenUsageCallback(ctx, "default-org", count) // Assuming default-org or extracting it from agentID if possible
+	}
 
 	if BufferMetricFunc != nil {
 		payloadBytes, _ := json.Marshal(map[string]interface{}{

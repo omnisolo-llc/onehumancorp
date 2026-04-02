@@ -6,6 +6,7 @@ go_library(
     name = "orchestration",
     srcs = [
         "auth_interceptor.go",
+        "burn_rate_worker.go",
         "centrifuge_hub.go",
         "delegation.go",
         "postgres_hub.go",
@@ -41,6 +42,7 @@ go_test(
         "auth_interceptor_test.go",
         "benchmark_test.go",
         "centrifuge_hub_test.go",
+        "burn_rate_worker_test.go",
         "chaos_test.go",
         "delegation_test.go",
         "eventlog_test.go",
@@ -51,6 +53,7 @@ go_test(
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
+        "sip_throttling_test.go",
     ],
     embed = [":orchestration"],
     deps = [
