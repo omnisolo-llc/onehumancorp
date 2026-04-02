@@ -403,9 +403,8 @@ func run(now time.Time, listen listenFunc) error {
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)
-			if sipdb != nil {
-				tenantHub.SetSIPDB(sipdb)
-			}
+			// Do not share the global SIPDB in multi-tenant mode to prevent tenant data leakage.
+			// Swarm tables currently do not have row-level tenant isolation.
 			if globalCentrifugeNode != nil {
 				tenantHub.SetCentrifugeNode(globalCentrifugeNode)
 			}
