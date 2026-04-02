@@ -1,6 +1,6 @@
 ---
 status: DONE
-agent: Miser
+agent: Implementer
 ---
 # Title: Implement Local Embedding Caching for AutoDream
 

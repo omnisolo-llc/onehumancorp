@@ -2,30 +2,42 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
-	pool db.Provider
+	pool  db.Provider
+	redis rueidis.Client
 }
 
 // AutoDreamWorker options
 type AutoDreamWorkerOptions struct {
-	PruningInterval time.Duration
+	PruningInterval  time.Duration
 	ConflictInterval time.Duration
-	LLMClient MinimaxClient
+	LLMClient        MinimaxClient
 }
 
 // NewAutoDreamWorker creates a new AutoDream worker.
 func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
 	w := &AutoDreamWorker{pool: pool}
 	// Note: You can inject rueidis.Client and MinimaxClient into the struct if needed.
+	return w
+}
+
+// NewAutoDreamWorkerWithDependencies creates a new AutoDream worker with redis and LLM injected.
+func NewAutoDreamWorkerWithDependencies(pool db.Provider, redisClient rueidis.Client) *AutoDreamWorker {
+	w := &AutoDreamWorker{
+		pool:  pool,
+		redis: redisClient,
+	}
 	return w
 }
 
@@ -163,7 +175,8 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		resolvedContext := ""
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			baseClient := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(baseClient, w.pool, w.redis)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			response, err := client.Reason(ctxTimeout, prompt)
 			cancel()
@@ -206,7 +219,23 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 
 // InjectTruth inserts high-dimensional semantic memory directly into the store.
 // embedding expects a valid vector string representation like "[0.1, 0.2, 0.3]" for pgvector, or equivalent array.
+// If embedding is empty, it uses the cached LLM client to generate it.
 func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr string, embedding string) error {
+	if embedding == "" {
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			baseClient := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(baseClient, w.pool, w.redis)
+			vec, err := client.GenerateEmbedding(ctx, contextStr)
+			if err != nil {
+				slog.Warn("AutoDream: failed to generate embedding, continuing with empty", "err", err)
+			} else {
+				vecBytes, _ := json.Marshal(vec)
+				embedding = string(vecBytes)
+			}
+		}
+	}
+
 	query := "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES ($1, $2, $3::vector, NOW()) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
 	if w.pool.IsSQLite() {
 		query = "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
