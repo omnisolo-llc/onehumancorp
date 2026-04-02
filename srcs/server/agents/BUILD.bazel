@@ -19,6 +19,7 @@ go_library(
 go_test(
     name = "agents_test",
     srcs = [
+        "agent_task_worker_benchmark_test.go",
         "agent_task_worker_test.go",
         "agents_test.go",
         "coverage_test.go",

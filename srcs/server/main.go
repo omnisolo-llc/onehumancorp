@@ -21,6 +21,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/sync"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -274,6 +275,12 @@ func run(now time.Time, listen listenFunc) error {
 	if pool != nil {
 		autodream := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodream.Start(ctx)
+	}
+
+	// AutoDream Sync Engine
+	if pool != nil {
+		syncEngine := sync.NewAutoDreamSyncWorker(pool.Provider)
+		go syncEngine.Start(ctx)
 	}
 
 	// Run Token Burn Rate Forecasting Engine

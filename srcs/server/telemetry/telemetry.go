@@ -32,6 +32,8 @@ var (
 	swarmTasksCompletedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
+	syncCompletedCounter       metric.Int64Counter
+	syncFailedCounter          metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -178,6 +180,22 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncCompletedCounter, err = m.Int64Counter(
+		"sync_completed_count",
+		metric.WithDescription("Total number of AutoDream local-to-cloud syncs completed successfully"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncFailedCounter, err = m.Int64Counter(
+		"sync_failed_count",
+		metric.WithDescription("Total number of AutoDream local-to-cloud syncs failed"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -450,6 +468,22 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+}
+
+// RecordSyncCompleted increments the global counter for successful sync operations.
+func RecordSyncCompleted(ctx context.Context, count int64) {
+	if syncCompletedCounter == nil {
+		return
+	}
+	syncCompletedCounter.Add(ctx, count)
+}
+
+// RecordSyncFailed increments the global counter for failed sync operations.
+func RecordSyncFailed(ctx context.Context, count int64) {
+	if syncFailedCounter == nil {
+		return
+	}
+	syncFailedCounter.Add(ctx, count)
 }
 
 // RecordCacheMiss increments the global counter for LLM cache misses.
