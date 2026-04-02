@@ -70,7 +70,9 @@ class _SlideToApproveState extends State<SlideToApprove> {
           decoration: BoxDecoration(
             color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.2)),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.2),
+            ),
           ),
           child: Stack(
             children: [
@@ -99,7 +101,9 @@ class _SlideToApproveState extends State<SlideToApprove> {
                         : Text(
                           'Slide to Approve',
                           style: TextStyle(
-                            color: colors.onSurfaceVariant.withValues(alpha: 0.5),
+                            color: colors.onSurfaceVariant.withValues(
+                              alpha: 0.5,
+                            ),
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.5,
                           ),
