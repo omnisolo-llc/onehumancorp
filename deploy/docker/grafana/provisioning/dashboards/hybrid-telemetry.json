@@ -236,6 +236,27 @@
       ],
       "title": "Token Burn Rate Forecasting",
       "type": "timeseries"
+    },
+    {
+      "type": "timeseries",
+      "title": "Token Burn Rate Forecast",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "ohc_token_burn_rate_forecast",
+          "legendFormat": "{{organization_id}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",

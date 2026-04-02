@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -216,15 +217,14 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
-	if tokenUsageCounter == nil {
-		return
+	if tokenUsageCounter != nil {
+		tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("role", role),
+			attribute.String("model", model),
+			attribute.String("type", tokenType),
+		))
 	}
-	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("role", role),
-		attribute.String("model", model),
-		attribute.String("type", tokenType),
-	))
 
 	if BufferMetricFunc != nil {
 		payloadBytes, _ := json.Marshal(map[string]interface{}{
@@ -235,6 +235,12 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 			"count":    count,
 		})
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
+
+	recordTokenUsageMu.RLock()
+	defer recordTokenUsageMu.RUnlock()
+	for _, cb := range recordTokenUsageCallbacks {
+		cb(ctx, agentID, role, model, tokenType, count)
 	}
 }
 
@@ -345,6 +351,30 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
+// RecordTokenUsageCallback allows external packages to react to token usage events.
+var (
+	recordTokenUsageCallbacks = make(map[int]func(ctx context.Context, agentID, role, model, tokenType string, count int64))
+	recordTokenUsageMu        sync.RWMutex
+	recordTokenUsageNextID    int
+)
+
+// RegisterTokenUsageCallback registers a new callback for token usage events and returns a deregistration ID.
+func RegisterTokenUsageCallback(cb func(ctx context.Context, agentID, role, model, tokenType string, count int64)) int {
+	recordTokenUsageMu.Lock()
+	defer recordTokenUsageMu.Unlock()
+	id := recordTokenUsageNextID
+	recordTokenUsageNextID++
+	recordTokenUsageCallbacks[id] = cb
+	return id
+}
+
+// DeregisterTokenUsageCallback removes a registered callback by its ID.
+func DeregisterTokenUsageCallback(id int) {
+	recordTokenUsageMu.Lock()
+	defer recordTokenUsageMu.Unlock()
+	delete(recordTokenUsageCallbacks, id)
+}
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {

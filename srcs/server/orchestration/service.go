@@ -242,9 +242,8 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+	if isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
@@ -317,6 +316,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	forecaster     *TokenBurnForecaster
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -352,6 +352,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
+	h.forecaster = NewTokenBurnForecaster(h)
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
 }
@@ -406,6 +407,13 @@ func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
 				slog.Error("failed to flush event log buffer", "error", err)
 			}
 		}
+	}
+}
+
+// Close shuts down the Hub gracefully.
+func (h *Hub) Close() {
+	if h.forecaster != nil {
+		h.forecaster.Stop()
 	}
 }
 
