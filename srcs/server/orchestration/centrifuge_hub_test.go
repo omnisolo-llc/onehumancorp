@@ -187,6 +187,7 @@ func TestCentrifugeNodePublishErrorPaths(t *testing.T) {
 	cn.PublishMeetingMessage("meeting-1", msg)
 	cn.PublishChatMessage("room-1", msg)
 	cn.PublishAgentNotification("agent-1", msg)
+	cn.PublishTaskBroadcast(EventTaskBroadcast{Type: "TASK", TaskID: "1"})
 }
 
 func TestCentrifugeNodeHandlersCoverage(t *testing.T) {

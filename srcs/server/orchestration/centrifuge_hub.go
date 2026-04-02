@@ -10,6 +10,7 @@
 //	meeting:<meetingID>   – transcript updates for a meeting room
 //	chat:<roomID>         – direct real-time chat messages
 //	agent:<agentID>       – agent-specific inbox notifications
+//	mesh:tasks            – swarm tasks updates
 package orchestration
 
 import (
@@ -171,6 +172,28 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 	}
 	if _, err := cn.node.Publish(channel, data); err != nil {
 		slog.Debug("[centrifuge] publish agent notification", "channel", channel, "error", err)
+	}
+}
+
+// EventTaskBroadcast represents a broadcast for swarm task changes
+type EventTaskBroadcast struct {
+	Type        string `json:"type"`
+	TaskID      string `json:"task_id"`
+	Priority    string `json:"priority"`
+	Description string `json:"description"`
+}
+
+// PublishTaskBroadcast fans a task update out to all subscribers of the
+// "mesh:tasks" Centrifuge channel.
+func (cn *CentrifugeNode) PublishTaskBroadcast(broadcast EventTaskBroadcast) {
+	channel := "mesh:tasks"
+	data, err := json.Marshal(broadcast)
+	if err != nil {
+		slog.Error("[centrifuge] marshal task broadcast", "error", err)
+		return
+	}
+	if _, err := cn.node.Publish(channel, data); err != nil {
+		slog.Debug("[centrifuge] publish task broadcast", "channel", channel, "error", err)
 	}
 }
 

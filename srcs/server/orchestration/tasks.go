@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -29,6 +30,7 @@ type SharedTask struct {
 type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
+	centrifuge  *CentrifugeNode
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -87,7 +89,21 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
+	if tm.centrifuge != nil {
+		tm.centrifuge.PublishTaskBroadcast(EventTaskBroadcast{
+			Type:        "TASK_BROADCAST",
+			TaskID:      task.ID,
+			Priority:    task.Priority,
+			Description: task.Description,
+		})
+	}
+
 	return &task, nil
+}
+
+// SetCentrifugeNode sets the Centrifuge node for task broadcasts.
+func (tm *TaskManager) SetCentrifugeNode(cn *CentrifugeNode) {
+	tm.centrifuge = cn
 }
 
 // ClaimTask attempts to claim a specific PENDING task for the given agentID.
@@ -191,6 +207,8 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	if res == 0 {
 		return errors.New("task not found or not assigned to agent")
 	}
+
+	telemetry.RecordSwarmTaskCompleted(ctx, taskID)
 
 	return nil
 }
