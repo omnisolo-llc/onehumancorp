@@ -675,7 +675,12 @@ for _f in "${{FLUTTER_ROOT_ORIG}}"/* "${{FLUTTER_ROOT_ORIG}}"/.[!.]*; do
     ln -sf "$_f" "${{FLUTTER_WRITABLE}}/$_n" 2>/dev/null || true
 done
 
-ln -sf "${{FLUTTER_ROOT_ORIG}}/bin/internal" "${{FLUTTER_WRITABLE}}/bin/internal" 2>/dev/null || true
+mkdir -p "${{FLUTTER_WRITABLE}}/bin/internal"
+for _f in "${{FLUTTER_ROOT_ORIG}}/bin/internal"/* "${{FLUTTER_ROOT_ORIG}}/bin/internal"/.[!.]*; do
+    _n="$(basename -- "$_f")" || continue
+    [ -e "$_f" ] || [ -L "$_f" ] || continue
+    ln -sf "$_f" "${{FLUTTER_WRITABLE}}/bin/internal/$_n" 2>/dev/null || true
+done
 
 for _f in "${{FLUTTER_ROOT_ORIG}}/bin"/* "${{FLUTTER_ROOT_ORIG}}/bin"/.[!.]*; do
     _n="$(basename -- "$_f")" || continue
@@ -686,7 +691,6 @@ done
 
 cat > "${{FLUTTER_WRITABLE}}/bin/flutter" << 'FLUTTER_WRAPPER_HEREDOC'
 #!/usr/bin/env bash
-set -e
 unset CDPATH
 BIN_DIR="$(cd "$(dirname -- "$BASH_SOURCE")" && pwd -P)"
 PROG_NAME="$BIN_DIR/$(basename -- "$BASH_SOURCE")"
@@ -718,6 +722,23 @@ if [ -d "${{FLUTTER_ROOT_ORIG}}/bin/cache" ]; then
     done
 fi
 chmod u+w "${{FLUTTER_WRITABLE}}/bin/cache" 2>/dev/null || true
+
+# Stop flutter from trying to upgrade itself hermetically
+rm -rf "${{FLUTTER_WRITABLE}}/.git"
+rm -f "${{FLUTTER_WRITABLE}}/version"
+echo "3.29.0" > "${{FLUTTER_WRITABLE}}/version"
+
+rm -f "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+cp "${{FLUTTER_ROOT_ORIG}}/bin/internal/shared.sh" "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+chmod +w "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+# Bypass the .git check and upgrade
+sed -i 's/if \\[\\[ ! -e "$FLUTTER_ROOT\\/.git" \\]\\]; then/if false; then/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+sed -i 's/^[[:space:]]*upgrade_flutter[[:space:]]*$/# upgrade_flutter/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+
+rm -f "${{FLUTTER_WRITABLE}}/bin/internal/update_engine_version.sh" "${{FLUTTER_WRITABLE}}/bin/internal/update_dart_sdk.sh"
+echo "exit 0" > "${{FLUTTER_WRITABLE}}/bin/internal/update_engine_version.sh"
+echo "exit 0" > "${{FLUTTER_WRITABLE}}/bin/internal/update_dart_sdk.sh"
+chmod +x "${{FLUTTER_WRITABLE}}/bin/internal/update_engine_version.sh" "${{FLUTTER_WRITABLE}}/bin/internal/update_dart_sdk.sh"
 
 FLUTTER_ROOT="$FLUTTER_WRITABLE"
 FLUTTER_BIN_ABS="${{FLUTTER_WRITABLE}}/bin/flutter"
@@ -759,7 +780,12 @@ if [ -d "$DART_TOOL_DIR_ABS" ]; then
     chmod -R u+w .dart_tool 2>/dev/null || true
     rm -rf .dart_tool
     mkdir -p .dart_tool
-    cp -R "$DART_TOOL_DIR_ABS/." .dart_tool/
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -aL "$DART_TOOL_DIR_ABS/" .dart_tool/
+        else
+            cp -RL "$DART_TOOL_DIR_ABS/." .dart_tool/
+        fi
+
     chmod -R u+rwX .dart_tool
 fi
 
