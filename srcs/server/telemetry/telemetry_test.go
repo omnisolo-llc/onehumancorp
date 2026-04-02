@@ -138,8 +138,19 @@ func (m *mockMeter) Int64Histogram(name string, options ...metric.Int64Histogram
 	return nil, nil
 }
 
+type mockFloat64Gauge struct {
+	metric.Float64Gauge
+}
+
+func (m *mockFloat64Gauge) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
+	// mock record
+}
+
 func (m *mockMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
-	return nil, nil
+	if m.failHistograms {
+		return nil, fmt.Errorf("mock gauge error")
+	}
+	return &mockFloat64Gauge{}, nil
 }
 
 func (m *mockMeter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {

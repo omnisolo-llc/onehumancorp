@@ -395,6 +395,19 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
+	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+
+	if !isMultiTenant && isSQLite && isStandalone {
+		select {
+		case throttleSemaphore <- struct{}{}:
+			defer func() { <-throttleSemaphore }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	upsertQuery := `
 		INSERT INTO agent_missions (id, status, payload, created_at)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -424,7 +437,9 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
 	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
-	if !isMultiTenant && isSQLite {
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+
+	if !isMultiTenant && isSQLite && isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
