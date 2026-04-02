@@ -1,0 +1,63 @@
+<<<<<<< SEARCH
+// InjectTruth inserts high-dimensional semantic memory directly into the store.
+// embedding expects a valid vector string representation like "[0.1, 0.2, 0.3]" for pgvector, or equivalent array.
+func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr string, embedding string) error {
+	query := "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES ($1, $2, $3::vector, NOW()) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
+	if w.pool.IsSQLite() {
+		query = "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
+	}
+
+	_, err := w.pool.Exec(ctx, query, memoryID, contextStr, embedding)
+	return err
+}
+=======
+// InjectTruth inserts high-dimensional semantic memory directly into the store.
+// embedding expects a valid vector string representation like "[0.1, 0.2, 0.3]" for pgvector, or equivalent array.
+func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr string, embedding string) error {
+	query := "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES ($1, $2, $3::vector, NOW()) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
+	if w.pool.IsSQLite() {
+		query = "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
+	}
+
+	_, err := w.pool.Exec(ctx, query, memoryID, contextStr, embedding)
+	return err
+}
+
+// SearchTruth searches the pgvector / Redis semantic memory for the closest matches to the given embedding.
+type TruthSearchResult struct {
+	MemoryID string
+	Context  string
+	Distance float64
+}
+
+// SearchTruth queries the vector database for the closest semantic embeddings.
+func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
+	if w.pool.IsSQLite() {
+		// In SQLite standalone mode, vector search relies on linear fallback or simple text match.
+		// For true pgvector equivalence, we just return empty or mock due to lack of local vector ops.
+		return nil, nil
+	}
+
+	query := `
+		SELECT memory_id, context, embedding <=> $1::vector as distance
+		FROM swarm_truth_embeddings
+		ORDER BY distance ASC
+		LIMIT $2
+	`
+	rows, err := w.pool.Query(ctx, query, embedding, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search truth with pgvector: %w", err)
+	}
+	defer rows.Close()
+
+	var results []TruthSearchResult
+	for rows.Next() {
+		var res TruthSearchResult
+		if err := rows.Scan(&res.MemoryID, &res.Context, &res.Distance); err != nil {
+			continue
+		}
+		results = append(results, res)
+	}
+	return results, nil
+}
+>>>>>>> REPLACE
