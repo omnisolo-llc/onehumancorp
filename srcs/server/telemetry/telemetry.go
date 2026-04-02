@@ -26,6 +26,7 @@ var (
 	tokenUsageCounter        metric.Int64Counter
 	tokenBurnRateGauge       metric.Float64Gauge
 	agentApiCallsCounter     metric.Int64Counter
+	agentApiErrorsCounter    metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
 
@@ -125,6 +126,14 @@ func InitWithMeter(m mockableMeter) error {
 	agentApiCallsCounter, err = m.Int64Counter(
 		"ohc_agent_api_calls_total",
 		metric.WithDescription("Total API calls made by or for agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentApiErrorsCounter, err = m.Int64Counter(
+		"ohc_agent_api_errors_total",
+		metric.WithDescription("Total API errors made by or for agents"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -266,6 +275,37 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 			"api":      api,
 		})
 		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
+	}
+}
+
+// RecordAgentApiError increments the global counter for external tool or API invocations errors made by agents.
+//
+//   - ctx: context.Context; The context of the active trace or request.
+//   - agentID: string; The identifier of the agent making the call.
+//   - role: string; The role of the agent.
+//   - api: string; The name or route of the invoked API/tool.
+//
+// Accepts parameters: ctx context.Context, agentID, role, api string (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
+	if agentApiErrorsCounter == nil {
+		return
+	}
+	agentApiErrorsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("role", role),
+		attribute.String("api", api),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"agent_id": agentID,
+			"role":     role,
+			"api":      api,
+		})
+		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
 	}
 }
 
