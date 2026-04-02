@@ -318,6 +318,28 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
+
+			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
+			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
+			if contextEndpoint != "" {
+				go func() {
+					ticker := time.NewTicker(5 * time.Second)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							syncedCount, err := sipdb.SyncContextSync(ctx, contextEndpoint)
+							if err != nil {
+								slog.Warn("Failed to sync standalone RAG context", "error", err)
+							} else if syncedCount > 0 {
+								slog.Info("Successfully synced standalone RAG context to cloud", "count", syncedCount)
+							}
+						}
+					}
+				}()
+			}
 	}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
