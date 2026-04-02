@@ -819,3 +819,1138 @@ bazel-out/k8-opt-exec/bin/external/protobuf+/src/google/protobuf/_virtual_includ
 [428 / 429] Testing //srcs/server/orchestration:orchestration_test; 100s disk-cache, remote-cache, linux-sandbox
 [428 / 429] Testing //srcs/server/orchestration:orchestration_test; 160s disk-cache, remote-cache, linux-sandbox
 [428 / 429] Testing //srcs/server/orchestration:orchestration_test; 220s disk-cache, remote-cache, linux-sandbox
+[428 / 429] Testing //srcs/server/orchestration:orchestration_test; 280s disk-cache, remote-cache, linux-sandbox
+[428 / 429] Testing //srcs/server/orchestration:orchestration_test; 340s disk-cache, remote-cache, linux-sandbox
+[428 / 429] Testing //srcs/server/orchestration:orchestration_test; 400s disk-cache, remote-cache, linux-sandbox
+[428 / 429] Testing //srcs/server/orchestration:orchestration_test; 461s disk-cache, remote-cache, linux-sandbox
+[428 / 429] Testing //srcs/server/orchestration:orchestration_test; 521s disk-cache, remote-cache, linux-sandbox
+[428 / 429] Testing //srcs/server/orchestration:orchestration_test; 581s disk-cache, remote-cache, linux-sandbox
+
+TIMEOUT: //srcs/server/orchestration:orchestration_test (Summary)
+      /home/jules/.cache/bazel/_bazel_jules/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/testlogs/srcs/server/orchestration/orchestration_test/test.log
+INFO: From Testing //srcs/server/orchestration:orchestration_test:
+==================== Test output for //srcs/server/orchestration:orchestration_test:
+2026/04/02 17:00:39 INFO db: connected to sqlite path=:memory:
+2026/04/02 17:00:39 INFO db: applied migration file=001_users.sql
+2026/04/02 17:00:39 INFO db: applied migration file=002_billing.sql
+2026/04/02 17:00:39 INFO db: applied migration file=003_scheduler.sql
+2026/04/02 17:00:39 INFO db: applied migration file=004_hub.sql
+2026/04/02 17:00:39 INFO db: applied migration file=005_sip.sql
+2026/04/02 17:00:39 INFO db: applied migration file=006_hybrid_os_mission.sql
+2026/04/02 17:00:39 INFO db: applied migration file=007_autodream.sql
+2026/04/02 17:00:39 INFO db: applied migration file=007_teammate_mesh_and_autodream.sql
+2026/04/02 17:00:39 INFO db: applied migration file=008_swarm_tasks.sql
+2026/04/02 17:00:39 INFO AutoDream: pruned stale sessions count=1
+2026/04/02 17:00:39 INFO db: connected to sqlite path=:memory:
+2026/04/02 17:00:39 INFO db: applied migration file=001_users.sql
+2026/04/02 17:00:39 INFO db: applied migration file=002_billing.sql
+2026/04/02 17:00:39 INFO db: applied migration file=003_scheduler.sql
+2026/04/02 17:00:39 INFO db: applied migration file=004_hub.sql
+2026/04/02 17:00:39 INFO db: applied migration file=005_sip.sql
+2026/04/02 17:00:39 INFO db: applied migration file=006_hybrid_os_mission.sql
+2026/04/02 17:00:39 INFO db: applied migration file=007_autodream.sql
+2026/04/02 17:00:39 INFO db: applied migration file=007_teammate_mesh_and_autodream.sql
+2026/04/02 17:00:39 INFO db: applied migration file=008_swarm_tasks.sql
+2026/04/02 17:00:39 INFO centrifuge: REDIS_URL not set, falling back to local MemoryBroker
+2026/04/02 17:00:39 INFO agent execution trace component=telemetry agent_id=cn-pm role=PRODUCT_MANAGER api=publish event_type=task content="Hello from centrifuge test"
+2026/04/02 17:00:39 INFO agent execution trace component=telemetry agent_id=nil-pm role=PRODUCT_MANAGER api=publish event_type=task content="No centrifuge attached"
+2026/04/02 17:00:39 INFO centrifuge: REDIS_URL not set, falling back to local MemoryBroker
+2026/04/02 17:00:39 INFO agent execution trace component=telemetry agent_id=sender-1 role=PM api=publish event_type=TaskDelegation content="Execute Task: Verify real data integration\nContext: thread-int-1"
+2026/04/02 17:00:39 INFO agent execution trace component=telemetry agent_id=sender-1 role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement login component\nContext: thread-1"
+2026/04/02 17:00:40 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sys-agent-sip role=SYSTEM api=publish event_type=TaskDelegation content="Execute Task: do it\nContext: thread-sip"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 INFO agent execution trace component=telemetry agent_id=sender-fail role=PM api=publish event_type=TaskDelegation content="Execute Task: Implement component\nContext: thread-1"
+2026/04/02 17:00:40 WARN eventLogChan is full, dropping event
+2026/04/02 17:00:40 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:40 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \t"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x00"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x05"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \n"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x01"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x03"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x02"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x04"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \r"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \v"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x0e"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \f"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x0f"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \a"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x06"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \b"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement the feature"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement the feature"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="Hello Streaming"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="Hello Streaming"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x0f"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x06"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \a"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \b"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \t"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x00"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x01"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x02"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x03"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x04"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x05"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \x0e"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \n"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \r"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \f"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement feature \v"
+2026/04/02 17:00:43 WARN context summarization failed meeting_id=kickoff error="circuit breaker is open"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=del-sender role=ROUTER api=publish event_type="" content=""
+2026/04/02 17:00:43 INFO centrifuge: REDIS_URL not set, falling back to local MemoryBroker
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=del-sender role=ROUTER api=publish event_type="" content=""
+2026/04/02 17:00:43 ERROR failed to open event log file filename=/root/forbidden_path_test.jsonl error="open /root/forbidden_path_test.jsonl: read-only file system"
+2026/04/02 17:00:43 ERROR failed to marshal event log error="json: unsupported type: func()"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=a1 role=PM api=publish event_type=task content="Do it"
+2026/04/02 17:00:43 INFO agent execution trace component=telemetry agent_id=a1 role=PM api=publish event_type=task content="initial task"
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=a1 role=PM api=publish event_type=task content="new task"
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type=task content="Implement the feature"
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=delegate role=ROUTER api=publish event_type=task content="Implement feature"
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=a role=PM api=publish event_type=task content="do work"
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="Hello Streaming"
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content=trigger_send_error
+2026/04/02 17:00:44 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content=trigger_send_error
+2026/04/02 17:00:46 WARN context summarization failed meeting_id=kickoff error="Post \"http://127.0.0.1:38577\": dial tcp 127.0.0.1:38577: connect: connection refused"
+2026/04/02 17:00:46 WARN context summarization failed meeting_id=kickoff error="Post \"http://127.0.0.1:38577\": dial tcp 127.0.0.1:38577: connect: connection refused"
+2026/04/02 17:00:46 WARN context summarization failed meeting_id=kickoff error="Post \"http://127.0.0.1:38577\": dial tcp 127.0.0.1:38577: connect: connection refused"
+2026/04/02 17:00:46 WARN context summarization failed meeting_id=kickoff error="Post \"http://127.0.0.1:38577\": dial tcp 127.0.0.1:38577: connect: connection refused"
+2026/04/02 17:00:46 WARN context summarization failed meeting_id=kickoff error="Post \"http://127.0.0.1:38577\": dial tcp 127.0.0.1:38577: connect: connection refused"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=delegate role=ROUTER api=publish event_type=task content="Do work"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="fill channel"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content=fill
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="hit default case"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="fill meeting channel"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="hit meeting channel default"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="hit meeting default case"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content=Hello
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=sender role=R1 api=publish event_type=task content="hit meeting default case 2"
+2026/04/02 17:00:47 INFO agent execution trace component=telemetry agent_id=pm-1 role=PRODUCT_MANAGER api=publish event_type="" content="do work"
+2026/04/02 17:00:47 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:47 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:48 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:48 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:48 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:48 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:49 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:49 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:49 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:49 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:50 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:50 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:50 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:50 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:50 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:51 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:51 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:51 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:52 WARN sipdb: operation failed, retrying attempt=1 error="sql: Scan error on column index 0, name \"plugin_id\": converting NULL to string is unsupported"
+2026/04/02 17:00:52 WARN sipdb: operation failed, retrying attempt=2 error="sql: Scan error on column index 0, name \"plugin_id\": converting NULL to string is unsupported"
+2026/04/02 17:00:52 WARN sipdb: operation failed, retrying attempt=3 error="sql: Scan error on column index 0, name \"plugin_id\": converting NULL to string is unsupported"
+2026/04/02 17:00:52 WARN sipdb: operation failed, retrying attempt=1 error="sql: Scan error on column index 0, name \"memory_id\": converting NULL to string is unsupported"
+2026/04/02 17:00:52 WARN sipdb: operation failed, retrying attempt=2 error="sql: Scan error on column index 0, name \"memory_id\": converting NULL to string is unsupported"
+2026/04/02 17:00:53 WARN sipdb: operation failed, retrying attempt=3 error="sql: Scan error on column index 0, name \"memory_id\": converting NULL to string is unsupported"
+2026/04/02 17:00:53 WARN sipdb: operation failed, retrying attempt=1 error="sql: Scan error on column index 0, name \"id\": converting NULL to string is unsupported"
+2026/04/02 17:00:53 WARN sipdb: operation failed, retrying attempt=2 error="sql: Scan error on column index 0, name \"id\": converting NULL to string is unsupported"
+2026/04/02 17:00:53 WARN sipdb: operation failed, retrying attempt=3 error="sql: Scan error on column index 0, name \"id\": converting NULL to string is unsupported"
+2026/04/02 17:00:54 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:54 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:54 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:55 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:55 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:55 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:55 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:55 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:56 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:56 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:56 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:56 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:57 WARN sipdb: operation failed, retrying attempt=1 error="SQL logic error: no such table: agent_missions (1)"
+2026/04/02 17:00:57 WARN sipdb: operation failed, retrying attempt=2 error="SQL logic error: no such table: agent_missions (1)"
+2026/04/02 17:00:57 WARN sipdb: operation failed, retrying attempt=3 error="SQL logic error: no such table: agent_missions (1)"
+2026/04/02 17:00:57 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:58 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:58 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:58 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:58 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:58 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:00:59 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:00:59 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:00:59 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:00 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:00 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:00 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:00 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:00 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:01 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:01 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:01 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:01 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:02 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:02 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:02 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:03 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:03 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:03 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:03 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:03 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:04 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:04 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:04 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:04 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:05 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:05 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:05 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:05 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:05 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:06 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:06 WARN sipdb: operation failed, retrying attempt=1 error="sql: database is closed"
+2026/04/02 17:01:06 WARN sipdb: operation failed, retrying attempt=2 error="sql: database is closed"
+2026/04/02 17:01:06 WARN sipdb: operation failed, retrying attempt=3 error="sql: database is closed"
+2026/04/02 17:01:07 WARN sipdb: operation failed, retrying attempt=1 error="SQL logic error: no such column: payload (1)"
+2026/04/02 17:01:07 WARN sipdb: operation failed, retrying attempt=2 error="SQL logic error: no such column: payload (1)"
+2026/04/02 17:01:07 WARN sipdb: operation failed, retrying attempt=3 error="SQL logic error: no such column: payload (1)"
+2026/04/02 17:01:08 WARN sipdb: operation failed, retrying attempt=1 error="sql: Scan error on column index 0, name \"plugin_id\": converting NULL to string is unsupported"
+2026/04/02 17:01:08 WARN sipdb: operation failed, retrying attempt=2 error="sql: Scan error on column index 0, name \"plugin_id\": converting NULL to string is unsupported"
+2026/04/02 17:01:08 WARN sipdb: operation failed, retrying attempt=3 error="sql: Scan error on column index 0, name \"plugin_id\": converting NULL to string is unsupported"
+2026/04/02 17:01:08 WARN sipdb: operation failed, retrying attempt=1 error="sql: Scan error on column index 0, name \"memory_id\": converting NULL to string is unsupported"
+2026/04/02 17:01:08 WARN sipdb: operation failed, retrying attempt=2 error="sql: Scan error on column index 0, name \"memory_id\": converting NULL to string is unsupported"
+2026/04/02 17:01:09 WARN sipdb: operation failed, retrying attempt=3 error="sql: Scan error on column index 0, name \"memory_id\": converting NULL to string is unsupported"
+2026/04/02 17:01:09 WARN sipdb: operation failed, retrying attempt=1 error="sql: Scan error on column index 0, name \"id\": converting NULL to string is unsupported"
+2026/04/02 17:01:09 WARN sipdb: operation failed, retrying attempt=2 error="sql: Scan error on column index 0, name \"id\": converting NULL to string is unsupported"
+2026/04/02 17:01:09 WARN sipdb: operation failed, retrying attempt=3 error="sql: Scan error on column index 0, name \"id\": converting NULL to string is unsupported"
+-- Test timed out at 2026-04-02 17:23:15 UTC --
+panic: test timed out after 10m0s
+	running tests:
+		TestStandaloneThrottling (9m29s)
+
+goroutine 1388 [running]:
+testing.(*M).startAlarm.func1()
+	GOROOT/src/testing/testing.go:2802 +0x34b
+created by time.goFunc
+	GOROOT/src/time/sleep.go:215 +0x2d
+
+goroutine 1 [chan receive, 9 minutes]:
+testing.(*T).Run(0xed9dbeb4b48, {0x1a67c3b?, 0xed9dc05fa20?}, 0x1ac1ea0)
+	GOROOT/src/testing/testing.go:2109 +0x4e5
+testing.runTests.func1(0xed9dbeb4b48)
+	GOROOT/src/testing/testing.go:2585 +0x37
+testing.tRunner(0xed9dbeb4b48, 0xed9dc05fb48)
+	GOROOT/src/testing/testing.go:2036 +0xea
+testing.runTests({0x0, 0x0}, {0x0, 0x0}, 0xed9dbe84b70, {0x2a94560, 0xa6, 0xa6}, {0xc26bc6a3c8821acf, 0x8bb3184691, ...})
+	GOROOT/src/testing/testing.go:2583 +0x505
+testing.(*M).Run(0xed9dc10b2c0)
+	GOROOT/src/testing/testing.go:2443 +0x6ac
+main.main()
+	bazel-out/k8-fastbuild/bin/srcs/server/orchestration/orchestration_test_/testmain.go:472 +0x348
+
+goroutine 10 [syscall]:
+os/signal.signal_recv()
+	GOROOT/src/runtime/sigqueue.go:152 +0x98
+os/signal.loop()
+	GOROOT/src/os/signal/signal_unix.go:23 +0x13
+created by os/signal.Notify.func1.1 in goroutine 1
+	GOROOT/src/os/signal/signal.go:152 +0x1f
+
+goroutine 721 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc64e140, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 719
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 183 [select]:
+github.com/FZambia/eagle.(*Eagle).aggregate(0xed9dbfca090)
+	external/gazelle++go_deps+com_github_fzambia_eagle/eagle.go:215 +0x6f
+created by github.com/FZambia/eagle.New in goroutine 136
+	external/gazelle++go_deps+com_github_fzambia_eagle/eagle.go:71 +0x1ac
+
+goroutine 358 [select]:
+github.com/FZambia/eagle.(*Eagle).aggregate(0xed9dbfca3f0)
+	external/gazelle++go_deps+com_github_fzambia_eagle/eagle.go:215 +0x6f
+created by github.com/FZambia/eagle.New in goroutine 332
+	external/gazelle++go_deps+com_github_fzambia_eagle/eagle.go:71 +0x1ac
+
+goroutine 724 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e280, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 722
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1180 [select, 9 minutes]:
+database/sql.(*DB).connectionOpener(0xed9dc9460d0, {0x1ae2498, 0xed9dc5ed220})
+	GOROOT/src/database/sql/sql.go:1261 +0x89
+created by database/sql.OpenDB in goroutine 1179
+	GOROOT/src/database/sql/sql.go:841 +0x130
+
+goroutine 569 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf38a00, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 567
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1027 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e500, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1026
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1066 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54eb40, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1064
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 578 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf390e0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 576
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1039 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e6e0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1037
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 137 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10a000, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 136
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 138 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10a000, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 136
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1028 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e500, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1026
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1030 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e5a0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1029
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1136 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f01e0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1135
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 145 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf38780, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 144
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 568 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf38a00, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 567
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1058 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54ea00, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1056
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 697 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e140, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 696
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 703 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e1e0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 702
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 792 [select]:
+github.com/FZambia/eagle.(*Eagle).aggregate(0xed9dc866000)
+	external/gazelle++go_deps+com_github_fzambia_eagle/eagle.go:215 +0x6f
+created by github.com/FZambia/eagle.New in goroutine 733
+	external/gazelle++go_deps+com_github_fzambia_eagle/eagle.go:71 +0x1ac
+
+goroutine 1248 [select, 9 minutes]:
+database/sql.(*DB).connectionOpener(0xed9dc9bda00, {0x1ae2498, 0xed9dc9a3900})
+	GOROOT/src/database/sql/sql.go:1261 +0x89
+created by database/sql.OpenDB in goroutine 1247
+	GOROOT/src/database/sql/sql.go:841 +0x130
+
+goroutine 723 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e280, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 722
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 739 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10ab40, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 689
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1132 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f0140, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1130
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1042 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e780, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1040
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 644 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf394a0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 609
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 906 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc06c140, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 904
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1137 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f01e0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1135
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1023 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e460, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1022
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1208 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54f2c0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1206
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1044 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e820, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1043
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 782 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf395e0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 781
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1045 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e820, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1043
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 549 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10af00, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 548
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 643 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf394a0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 609
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1144 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f0280, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1142
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 590 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf39360, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 589
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1053 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e960, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1051
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 698 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e140, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 696
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 550 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10af00, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 548
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 585 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf39220, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 583
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 591 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf39360, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 589
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1126 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f0000, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1124
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 326 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf383c0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 324
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1247 [chan send, 9 minutes]:
+github.com/onehumancorp/mono/srcs/server/orchestration.TestStandaloneThrottling(0xed9dc9dc008)
+	srcs/server/orchestration/sip_throttling_test.go:25 +0x14e
+testing.tRunner(0xed9dc9dc008, 0x1ac1ea0)
+	GOROOT/src/testing/testing.go:2036 +0xea
+created by testing.(*T).Run in goroutine 1
+	GOROOT/src/testing/testing.go:2101 +0x4c5
+
+goroutine 1057 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54ea00, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1056
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 704 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e1e0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 702
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 325 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf383c0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 324
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1038 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e6e0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1037
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 694 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e000, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 692
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 740 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10ab40, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 689
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1065 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54eb40, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1064
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1096 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf399a0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1093
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 783 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf395e0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 781
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1131 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f0140, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1130
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 553 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10b040, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 551
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 734 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e3c0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 733
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 574 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf38fa0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 572
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 584 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf39220, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 583
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 577 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf390e0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 576
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1041 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e780, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1040
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 779 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf38500, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 777
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 562 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf38780, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 144
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 566 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf388c0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 564
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1143 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f0280, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1142
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1095 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf399a0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1093
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 975 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10b720, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 974
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 907 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc06c140, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 904
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 785 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf39860, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 784
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1113 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc06c640, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1110
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 991 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10ba40, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 989
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1090 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf39860, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 784
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 996 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10bae0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 995
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 997 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10bae0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 995
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 999 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10bb80, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 998
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1129 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f00a0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1127
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1003 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10bc20, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1001
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1005 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10bcc0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1004
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1006 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10bcc0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1004
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1008 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10bd60, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1007
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1009 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10bd60, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1007
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1002 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10bc20, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1001
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1012 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10be00, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1010
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1000 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10bb80, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 998
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1011 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10be00, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1010
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1018 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e320, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1016
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 913 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc06c500, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 911
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1035 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e640, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1033
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1017 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e320, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1016
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 735 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e3c0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 733
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1060 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54eaa0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1059
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1106 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc06c500, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 911
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 573 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf38fa0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 572
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 565 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf388c0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 564
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1024 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e460, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1022
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 693 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e000, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 692
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1061 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54eaa0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1059
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1052 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e960, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1051
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1048 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e8c0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1047
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1034 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54e640, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1033
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1203 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54f220, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1202
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1128 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f00a0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1127
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1201 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54f180, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1199
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1123 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dbf39d60, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1104
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1122 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf39d60, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1104
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1049 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e8c0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1047
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1075 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54ec80, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1074
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1073 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54ebe0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1071
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1072 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54ebe0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1071
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1078 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54ed20, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1077
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 990 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10ba40, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 989
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1125 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f0000, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1124
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 987 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10b9a0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 985
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 986 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10b9a0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 985
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1204 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54f220, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1202
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 778 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dbf38500, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 777
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1112 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc06c640, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1110
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1079 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54ed20, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1077
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1076 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54ec80, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1074
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1197 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54f0e0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1196
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1218 [select, 9 minutes]:
+database/sql.(*DB).connectionOpener(0xed9dc63a8f0, {0x1ae2498, 0xed9dc014a50})
+	GOROOT/src/database/sql/sql.go:1261 +0x89
+created by database/sql.OpenDB in goroutine 719
+	GOROOT/src/database/sql/sql.go:841 +0x130
+
+goroutine 720 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc64e140, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 719
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 982 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10b900, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 980
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 981 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10b900, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 980
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 979 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10b860, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 977
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 978 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc10b860, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 977
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 976 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc10b720, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 974
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1031 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54e5a0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1029
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1195 [select, 9 minutes]:
+database/sql.(*DB).connectionOpener(0xed9dc4ed6c0, {0x1ae2498, 0xed9dc7c0370})
+	GOROOT/src/database/sql/sql.go:1261 +0x89
+created by database/sql.OpenDB in goroutine 1192
+	GOROOT/src/database/sql/sql.go:841 +0x130
+
+goroutine 1198 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54f0e0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1196
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1193 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54f040, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1192
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1191 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54efa0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1189
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1190 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54efa0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1189
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1194 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54f040, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1192
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1088 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc54ee60, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1086
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1087 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc54ee60, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1086
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1158 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f0320, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1157
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1159 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f0320, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1157
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1164 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f03c0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1163
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1165 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f03c0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1163
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 1265 [select, 9 minutes]:
+database/sql.(*DB).connectionOpener(0xed9dc95ca90, {0x1ae2498, 0xed9dc5edd60})
+	GOROOT/src/database/sql/sql.go:1261 +0x89
+created by database/sql.OpenDB in goroutine 1264
+	GOROOT/src/database/sql/sql.go:841 +0x130
+
+goroutine 1171 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc5f0640, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1169
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 1172 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc5f0640, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 1169
+	srcs/server/orchestration/service.go:356 +0x4c9
+
+goroutine 717 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).eventLogWorker(0xed9dc64e0a0, {0x1ae22d8, 0x2abf220}, {0x1a59a44, 0xc})
+	srcs/server/orchestration/service.go:419 +0x2e5
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 716
+	srcs/server/orchestration/service.go:355 +0x471
+
+goroutine 718 [select]:
+github.com/onehumancorp/mono/srcs/server/orchestration.(*Hub).tokenBurnRateWorker(0xed9dc64e0a0, {0x1ae22d8, 0x2abf220})
+	srcs/server/orchestration/service.go:370 +0x16e
+created by github.com/onehumancorp/mono/srcs/server/orchestration.newHub in goroutine 716
+	srcs/server/orchestration/service.go:356 +0x4c9
+================================================================================
+INFO: Found 1 test target...
+[429 / 429] 1 / 1 tests, 1 failed; no actions running
+Target //srcs/server/orchestration:orchestration_test up-to-date:
+  bazel-bin/srcs/server/orchestration/orchestration_test_/orchestration_test
+INFO: Elapsed time: 1444.217s, Critical Path: 600.72s
+INFO: 411 processes: 4 action cache hit, 409 remote cache hit, 1 internal, 1 linux-sandbox.
+INFO: Build completed, 1 test FAILED, 411 total actions
+INFO:
+//srcs/server/orchestration:orchestration_test                          TIMEOUT in 1356.7s
+  /home/jules/.cache/bazel/_bazel_jules/8c069df52082beee3c95ca17836fb8e2/execroot/_main/bazel-out/k8-fastbuild/testlogs/srcs/server/orchestration/orchestration_test/test.log
+
+Executed 1 out of 1 test: 1 fails locally.
+INFO: Streaming build results to: https://onehumancorp.buildbuddy.io/invocation/7fdcdba8-95de-4364-96bb-633b61a82d9b
