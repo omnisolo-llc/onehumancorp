@@ -29,9 +29,69 @@ func NewCachedMinimaxClient(client MinimaxClient, db db.Provider, redisClient ru
 	}
 }
 
-// Reason calls the underlying Reason method without caching.
+// Reason caches calls to the underlying Reason method.
 func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
-	return c.client.Reason(ctx, prompt)
+	hashBytes := sha256.Sum256([]byte(prompt))
+	promptHash := hex.EncodeToString(hashBytes[:])
+
+	// 1. Try Redis cache
+	if c.redis != nil {
+		redisKey := "llm_reason:" + promptHash
+		cmd := c.redis.B().Get().Key(redisKey).Build()
+		val, err := c.redis.Do(ctx, cmd).ToString()
+		if err == nil && val != "" {
+			slog.Debug("CachedMinimaxClient: found reason response in Redis", "hash", promptHash)
+			return val, nil
+		}
+	}
+
+	// 2. Try DB cache
+	if c.db != nil {
+		var cachedResponse string
+		selectQuery := "SELECT response FROM llm_reason_cache WHERE prompt_hash = $1"
+		if c.db.IsSQLite() {
+			selectQuery = "SELECT response FROM llm_reason_cache WHERE prompt_hash = ?"
+		}
+		err := c.db.QueryRow(ctx, selectQuery, promptHash).Scan(&cachedResponse)
+		if err == nil && cachedResponse != "" {
+			slog.Debug("CachedMinimaxClient: found reason response in DB", "hash", promptHash)
+
+			// Optional: populate Redis if it was missing there
+			if c.redis != nil {
+				cmd := c.redis.B().Set().Key("llm_reason:" + promptHash).Value(cachedResponse).Ex(24 * time.Hour).Build()
+				_ = c.redis.Do(ctx, cmd)
+			}
+			return cachedResponse, nil
+		}
+	}
+
+	// 3. Cache miss: generate response
+	response, err := c.client.Reason(ctx, prompt)
+	if err != nil {
+		return "", err
+	}
+
+	// Save to Redis
+	if c.redis != nil {
+		cmd := c.redis.B().Set().Key("llm_reason:" + promptHash).Value(response).Ex(24 * time.Hour).Build()
+		if err := c.redis.Do(ctx, cmd).Error(); err != nil {
+			slog.Warn("CachedMinimaxClient: failed to save reason response to Redis", "err", err)
+		}
+	}
+
+	// Save to DB
+	if c.db != nil {
+		cacheQuery := "INSERT INTO llm_reason_cache (prompt_hash, response) VALUES ($1, $2) ON CONFLICT (prompt_hash) DO NOTHING"
+		if c.db.IsSQLite() {
+			cacheQuery = "INSERT INTO llm_reason_cache (prompt_hash, response) VALUES (?, ?) ON CONFLICT (prompt_hash) DO NOTHING"
+		}
+		_, cacheErr := c.db.Exec(ctx, cacheQuery, promptHash, response)
+		if cacheErr != nil {
+			slog.Warn("CachedMinimaxClient: failed to save reason response to DB cache", "err", cacheErr)
+		}
+	}
+
+	return response, nil
 }
 
 // GenerateEmbedding caches calls to the underlying GenerateEmbedding.
@@ -56,7 +116,11 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 	// 2. Try DB cache
 	if c.db != nil {
 		var cachedEmbeddingStr string
-		err := c.db.QueryRow(ctx, "SELECT embedding FROM embedding_cache WHERE content_hash = $1", contentHash).Scan(&cachedEmbeddingStr)
+		selectQuery := "SELECT embedding FROM embedding_cache WHERE content_hash = $1"
+		if c.db.IsSQLite() {
+			selectQuery = "SELECT embedding FROM embedding_cache WHERE content_hash = ?"
+		}
+		err := c.db.QueryRow(ctx, selectQuery, contentHash).Scan(&cachedEmbeddingStr)
 		if err == nil && cachedEmbeddingStr != "" {
 			var embedding []float32
 			if err := json.Unmarshal([]byte(cachedEmbeddingStr), &embedding); err == nil {
