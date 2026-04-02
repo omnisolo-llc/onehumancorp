@@ -1,0 +1,8 @@
+metadata:
+  role: "Principal Reliability Engineer & Triage Lead (L7)"
+  timestamp: 1775097684
+type: "memory"
+observations:
+  - "The codebase effectively avoids circular dependencies by using dependency injection such as BufferMetricFunc in the telemetry package, rather than relying on direct imports."
+  - "Health probes specifically designed for hybrid-mode switching and local-to-cloud mission synchronization exist at /api/health/hybrid."
+  - "The agent_missions queue's backlog is sanitized via PruneStaleMissions which periodically processes PENDING states."
