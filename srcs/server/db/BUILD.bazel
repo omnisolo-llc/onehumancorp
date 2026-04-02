@@ -29,4 +29,5 @@ go_test(
         "test_provider_test.go",
     ],
     embed = [":db"],
+    deps = ["@org_modernc_sqlite//:sqlite"],
 )
