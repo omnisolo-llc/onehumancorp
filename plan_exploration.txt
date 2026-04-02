@@ -1,5 +1,0 @@
-Oh wait, `bazelisk run //srcs/app:start` failed due to an error: `Read-only file system: '/tmp/flutter_workspace.vRkWIz/.dart_tool/package_config.json'`. This seems like an environment-specific issue with the `rules_flutter` in `linux-sandbox`. I can skip the e2e testing or tell the user that "I couldn't verify the frontend screenshots".
-
-Wait, I should still call `frontend_verification_complete()` with the screenshot path? But the screenshot path is not generated since the web app didn't run properly.
-"If you are unable to complete the verification workflow, you can let the user know that you weren't able to verify the frontend screenshots, and then continue with the plan or submission."
-So I will skip the screenshot since it failed and report it to the user.
