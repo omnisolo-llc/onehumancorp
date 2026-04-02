@@ -37,8 +37,8 @@ flutter_library(
         "@pub_centrifuge//:centrifuge",
         "@pub_flutter_riverpod//:flutter_riverpod",
         "@pub_http//:http",
-        "@pub_shared_preferences//:shared_preferences",
         "@pub_path//:path",
+        "@pub_shared_preferences//:shared_preferences",
     ],
 )
 

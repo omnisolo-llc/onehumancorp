@@ -24,6 +24,7 @@ var (
 	latencyHistogram metric.Float64Histogram
 
 	tokenUsageCounter        metric.Int64Counter
+	tokenBurnRateGauge       metric.Float64Gauge
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
@@ -78,6 +79,7 @@ func InitTelemetry() (func(), error) {
 type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
+	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 }
 
 // InitWithMeter functionality.
@@ -107,6 +109,14 @@ func InitWithMeter(m mockableMeter) error {
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	tokenBurnRateGauge, err = m.Float64Gauge(
+		"ohc_token_burn_rate_forecast",
+		metric.WithDescription("Predicted moving average of token burn rate per minute per tenant"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -335,3 +345,12 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
+// RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
+func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
+	if tokenBurnRateGauge != nil {
+		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+			attribute.String("organization_id", organizationID),
+		))
+	}
+}

@@ -56,6 +56,5 @@ go_test(
         "//srcs/server/orchestration",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
-        "@io_opentelemetry_go_otel//:otel",
     ],
 )
