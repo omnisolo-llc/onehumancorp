@@ -194,6 +194,8 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	EventApprovalNeeded = "ApprovalNeeded"
+	// EventTaskBroadcast provides domain-specific context for broadcasting a task to the Swarm Task List via the Teammate Mesh.
+	EventTaskBroadcast = "TaskBroadcast"
 )
 
 // Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
@@ -992,6 +994,10 @@ func (h *Hub) Publish(message Message) error {
 				subsToNotify = append(subsToNotify, subs...)
 			}
 		}
+	} else if message.Type == EventTaskBroadcast {
+		// Teammate Mesh broadcast
+		// Everyone subscribed to the mesh might get it, but here we just ensure the centrifuge node gets called later.
+		sender.Status = StatusActive
 	} else {
 		sender.Status = StatusActive
 	}
@@ -1025,6 +1031,9 @@ func (h *Hub) Publish(message Message) error {
 			}
 			if m.ToAgent != "" {
 				cn.PublishAgentNotification(m.ToAgent, m)
+			}
+			if m.Type == EventTaskBroadcast {
+				cn.PublishTaskBroadcast(m)
 			}
 		}(message, centrifugeNode)
 	}
@@ -1104,6 +1113,9 @@ func (h *Hub) publishRepository(message Message) error {
 			}
 			if message.ToAgent != "" {
 				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+			if message.Type == EventTaskBroadcast {
+				cn.PublishTaskBroadcast(message)
 			}
 		}()
 	}

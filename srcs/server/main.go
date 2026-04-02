@@ -79,7 +79,29 @@ func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
 			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
 		}
 
-		return orchestration.NewHubWithRepository(
+		hub := orchestration.NewHubWithRepository(
+			hubRepo,
+			taskRepo,
+		)
+
+		// Wire up AutoDream engine immediately on hub creation if Minimax is available
+		apiKey := os.Getenv("MINIMAX_API_KEY")
+		if apiKey != "" {
+			llmClient := orchestration.NewMinimaxClient(apiKey)
+			go agents.StartAutoDreamEngine(context.Background(), hub, llmClient)
+		}
+
+		return hub, billing.NewTrackerWithRepository(usageRepo)
+	}
+
+	hub := orchestration.NewHub()
+	apiKey := os.Getenv("MINIMAX_API_KEY")
+	if apiKey != "" {
+		llmClient := orchestration.NewMinimaxClient(apiKey)
+		go agents.StartAutoDreamEngine(context.Background(), hub, llmClient)
+	}
+	return hub, billing.NewTracker(billing.DefaultCatalog)
+}
 				hubRepo,
 				taskRepo,
 			), billing.NewTrackerWithRepository(

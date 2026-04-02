@@ -1,0 +1,8 @@
+agent: Jules
+mission: "Implement OHC Swarm Shared Task List & Realtime Teammate Mesh"
+status: DONE
+observations:
+  - Created migration 007 for swarm_tasks and swarm_long_term_memory tables with Postgres/SQLite mode fallbacks.
+  - Extended Centrifuge Hub WebSocket mesh to support TaskBroadcasts on `mesh:tasks` channel.
+  - Created tasks.go orchestrator with robust locking mechanisms using UUID pre-generation to avoid SQLite 'RETURNING' race conditions.
+  - Implemented the background autoDream engine in `agents` package that sweeps COMPLETED tasks and extracts architectural insights as vectors.

@@ -178,6 +178,8 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
 			// We need to remove the array syntax `TEXT[] NOT NULL DEFAULT '{}'`
 			// Because SQLite does not support arrays.
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage
