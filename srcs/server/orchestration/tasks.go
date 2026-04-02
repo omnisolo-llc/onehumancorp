@@ -32,13 +32,14 @@ type SharedTask struct {
 // TaskManager manages the shared tasks list
 type TaskManager struct {
 	db          db.Provider
-	redisClient rueidis.Client
+	lockManager *DistributedLockManager
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
 }
 
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider) *TaskManager {
 	tm := &TaskManager{db: provider}
+	var redisClient rueidis.Client
 
 	if os.Getenv("OHC_MULTITENANT") == "true" {
 		redisURL := os.Getenv("REDIS_URL")
@@ -47,10 +48,12 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 				InitAddress: []string{redisURL},
 			})
 			if err == nil {
-				tm.redisClient = c
+				redisClient = c
 			}
 		}
 	}
+
+	tm.lockManager = NewDistributedLockManager(provider, redisClient)
 	return tm
 }
 
@@ -129,17 +132,13 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 // to prevent race conditions.
 // In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
 func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*SharedTask, error) {
-	if tm.redisClient != nil {
-		// Acquire Redis-backed distributed lock with 30s TTL
-		lockKey := "lock:task:" + taskID
-		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
-		err := tm.redisClient.Do(ctx, cmd).Error()
-		if err != nil {
-			if rueidis.IsRedisNil(err) {
-				return nil, nil // Lock could not be acquired (task is locked)
-			}
-			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
-		}
+	lockKey := "lock:task:" + taskID
+	acquired, err := tm.lockManager.AcquireLock(ctx, lockKey, agentID, 30*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
+	}
+	if !acquired {
+		return nil, nil // Lock could not be acquired (task is locked)
 	}
 
 	tx, err := tm.db.Begin(ctx)
