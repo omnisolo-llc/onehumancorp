@@ -484,6 +484,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/messages", server.handleSendMessage)
 	mux.HandleFunc("/api/agents/hire", server.handleHireAgent)
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)
+
+	// Mesh endpoints
+	meshServer := orchestration.NewMeshServer()
+	mux.HandleFunc("/api/v1/mesh/rooms/", func(w http.ResponseWriter, r *http.Request) {
+		roomID := strings.TrimPrefix(r.URL.Path, "/api/v1/mesh/rooms/")
+		meshServer.HandleSubscribe(w, r, roomID)
+	})
 	mux.HandleFunc("/api/agents/delegate", server.handleDelegateTask)
 	// Agent provider management
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)
@@ -620,23 +627,23 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
-				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
+				"table":      "agents",
+				"query":      "SELECT * FROM agents WHERE organization_id = $1",
 				"parameters": []interface{}{orgID},
 			},
 			{
-				"table": "meeting_rooms",
-				"query": "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1",
+				"table":      "meeting_rooms",
+				"query":      "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1",
 				"parameters": []interface{}{orgID},
 			},
 			{
-				"table": "agent_missions",
-				"query": "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1",
+				"table":      "agent_missions",
+				"query":      "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1",
 				"parameters": []interface{}{orgID},
 			},
 			{
-				"table": "swarm_memory",
-				"query": "SELECT * FROM swarm_memory WHERE key LIKE $1",
+				"table":      "swarm_memory",
+				"query":      "SELECT * FROM swarm_memory WHERE key LIKE $1",
 				"parameters": []interface{}{orgID + ":%"},
 			},
 			{
@@ -644,13 +651,13 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 				"query": "SELECT * FROM capability_plugins",
 			},
 			{
-				"table": "swarm_memory_embeddings",
-				"query": "SELECT sme.* FROM swarm_memory_embeddings sme JOIN swarm_memory sm ON sm.key = sme.memory_id WHERE sm.key LIKE $1",
+				"table":      "swarm_memory_embeddings",
+				"query":      "SELECT sme.* FROM swarm_memory_embeddings sme JOIN swarm_memory sm ON sm.key = sme.memory_id WHERE sm.key LIKE $1",
 				"parameters": []interface{}{orgID + ":%"},
 			},
 			{
-				"table": "agent_status",
-				"query": "SELECT ast.* FROM agent_status ast JOIN agents a ON a.id = ast.agent_id WHERE a.organization_id = $1",
+				"table":      "agent_status",
+				"query":      "SELECT ast.* FROM agent_status ast JOIN agents a ON a.id = ast.agent_id WHERE a.organization_id = $1",
 				"parameters": []interface{}{orgID},
 			},
 		},

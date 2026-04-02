@@ -48,7 +48,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 			defer wg.Done()
 			<-startChan
 			// Execute
-			err := db.DelegateMission(context.Background(), "m" + string(rune(i)), "ROLE", msg)
+			err := db.DelegateMission(context.Background(), "m"+string(rune(i)), "ROLE", msg)
 			if err != nil {
 				errChan <- err
 			}

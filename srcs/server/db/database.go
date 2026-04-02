@@ -188,6 +188,10 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read', 'write']", "'[\"read\", \"write\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read']", "'[\"read\"]'")
+
+			// Handle pgvector specific commands for SQLite fallback
+			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
+			sqlStr = strings.ReplaceAll(sqlStr, "vector(1536)", "TEXT")
 		}
 
 		tx, err := p.Begin(ctx)

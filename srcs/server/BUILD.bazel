@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server",
     visibility = ["//visibility:private"],
     deps = [
+        "//srcs/server/agents",
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/dashboard",
@@ -33,3 +34,6 @@ genrule(
     cmd = "cp $< $@ && chmod 0755 $@",
     visibility = ["//visibility:public"],
 )
+
+# Note: We will probably need to update gazelle or manually add deps,
+# but running bazel test might fail first, let's just make sure gazelle is run

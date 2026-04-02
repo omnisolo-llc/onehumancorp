@@ -14,16 +14,16 @@ import (
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)
 // and randomly assigns an idle agent to them by injecting the task into their context.
 type TaskWorker struct {
-	planeClient *plane.Client
-	hub         *orchestration.Hub
+	planeClient  *plane.Client
+	hub          *orchestration.Hub
 	pollInterval time.Duration
 }
 
 // NewTaskWorker creates a new TaskWorker.
 func NewTaskWorker(pc *plane.Client, hub *orchestration.Hub) *TaskWorker {
 	return &TaskWorker{
-		planeClient: pc,
-		hub:         hub,
+		planeClient:  pc,
+		hub:          hub,
 		pollInterval: 30 * time.Second,
 	}
 }

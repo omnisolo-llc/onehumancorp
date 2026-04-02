@@ -420,5 +420,3 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
 }
-
-

@@ -16,10 +16,10 @@ import (
 func TestTaskWorker_pollAndAssign(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	tests := []struct {
-		name           string
-		setupMock      func() *httptest.Server
-		envSetup       func(url string)
-		envTeardown    func()
+		name        string
+		setupMock   func() *httptest.Server
+		envSetup    func(url string)
+		envTeardown func()
 	}{
 		{
 			name: "not enabled",
@@ -205,7 +205,6 @@ func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
-
 
 func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
