@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Simulate Teammate Mesh messages from Redis/WebSockets
+import 'package:ohc_app/services/centrifuge_service.dart';
+
+// Teammate Mesh messages from Redis/WebSockets
 class MeshMessage {
   final String agentName;
   final String action;
@@ -14,33 +15,29 @@ class MeshMessage {
 }
 
 final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
+  final centrifuge = ref.watch(centrifugeServiceProvider);
   final controller = StreamController<MeshMessage>();
-  final random = Random();
-  final agents = ['Bolt-L7', 'Palette-L7', 'Architect-L8', 'Nexus-L6'];
-  final actions = [
-    'Synced Postgres vector memory',
-    'Audited UI responsiveness',
-    'Scaled Redis pub/sub queue',
-    'Generated new visual tokens',
-    'Analyzed market telemetry',
-  ];
 
-  Timer? timer;
-  ref.onDispose(() {
-    timer?.cancel();
-    controller.close();
-  });
+  if (centrifuge == null) {
+    return const Stream.empty();
+  }
 
-  timer = Timer.periodic(const Duration(seconds: 2), (t) {
+  final sub = centrifuge.subscribe('mesh');
+  final subInfo = sub.listen((msg) {
     if (!controller.isClosed) {
       controller.add(
         MeshMessage(
-          agents[random.nextInt(agents.length)],
-          actions[random.nextInt(actions.length)],
-          DateTime.now(),
+          msg.authorName,
+          msg.body,
+          msg.sentAt,
         ),
       );
     }
+  });
+
+  ref.onDispose(() {
+    subInfo.cancel();
+    controller.close();
   });
 
   return controller.stream;
