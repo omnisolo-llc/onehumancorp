@@ -20,10 +20,10 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
 			title TEXT NOT NULL,
-			description TEXT,
-			assigned_agent_id TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			priority TEXT NOT NULL DEFAULT 'P2',
+			assigned_agent_id TEXT,
+			locked_until DATETIME,
+			payload TEXT NOT NULL DEFAULT '{}',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
