@@ -1,0 +1,17 @@
+{{- if .Values.powersync.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync
+  labels:
+    app.kubernetes.io/name: {{ include "ohc.fullname" . }}-powersync
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.powersync.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "ohc.fullname" . }}-powersync
+{{- end }}

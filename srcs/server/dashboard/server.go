@@ -613,41 +613,39 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We create sync rules that enforce that a user only syncs data belonging to their organization
-	orgID := claims.OrganizationID
+	// We create sync rules that enforce that a user only syncs data belonging to their organization.
+	// As per PowerSync documentation, we use `request.jwt.claims` to access token claims inside the query string.
 
+	// To conform to PowerSync dynamic sync rules where we enforce tenant isolation:
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
 				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
-				"parameters": []interface{}{orgID},
+				"query": "SELECT * FROM agents WHERE organization_id = token.jwt_ext_organization_id",
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				"query": "SELECT * FROM meeting_rooms WHERE id IN (SELECT meeting_id FROM meeting_participants WHERE participant_id IN (SELECT id FROM agents WHERE organization_id = token.jwt_ext_organization_id))",
 			},
 			{
 				"table": "agent_missions",
-				"query": "SELECT * FROM agent_missions",
+				"query": "SELECT * FROM agent_missions WHERE agent_id IN (SELECT id FROM agents WHERE organization_id = token.jwt_ext_organization_id)",
 			},
 			{
 				"table": "swarm_memory",
-				"query": "SELECT * FROM swarm_memory",
+				"query": "SELECT * FROM swarm_memory WHERE organization_id = token.jwt_ext_organization_id",
 			},
 			{
 				"table": "capability_plugins",
-				"query": "SELECT * FROM capability_plugins",
+				"query": "SELECT * FROM capability_plugins", // Public registry
 			},
 			{
 				"table": "swarm_memory_embeddings",
-				"query": "SELECT * FROM swarm_memory_embeddings",
+				"query": "SELECT * FROM swarm_memory_embeddings", // Global RAG (sanitized locally)
 			},
 			{
 				"table": "agent_status",
-				"query": "SELECT * FROM agent_status",
+				"query": "SELECT * FROM agent_status WHERE agent_id IN (SELECT id FROM agents WHERE organization_id = token.jwt_ext_organization_id)",
 			},
 		},
 	}

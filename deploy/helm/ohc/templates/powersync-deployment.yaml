@@ -1,0 +1,43 @@
+{{- if .Values.powersync.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync
+  labels:
+    app.kubernetes.io/name: {{ include "ohc.fullname" . }}-powersync
+spec:
+  replicas: {{ .Values.powersync.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ohc.fullname" . }}-powersync
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "ohc.fullname" . }}-powersync
+    spec:
+      containers:
+        - name: powersync
+          image: "{{ .Values.powersync.image }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PS_PORT
+              value: "8080"
+            {{- if .Values.cnpg.enabled }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cnpg.clusterName }}-app
+                  key: password
+            - name: PS_DATA_SOURCE_URI
+              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw:5432/{{ .Values.cnpg.database }}?sslmode=require"
+            {{- else }}
+            - name: PS_DATA_SOURCE_URI
+              value: "postgres://ohc:ohc@{{ include "ohc.fullname" . }}-postgres:5432/ohc?sslmode=disable"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.powersync.resources | nindent 12 }}
+{{- end }}

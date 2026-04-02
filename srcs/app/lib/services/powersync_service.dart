@@ -24,10 +24,10 @@ class PowerSyncService {
   Future<void> _init() async {
     final settings = await _ref.read(clientSettingsProvider.future);
 
-    // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
-      return;
-    }
+    // Initialize PowerSync regardless of mode for Hybrid architecture.
+    // In cloud mode, it syncs with the remote Postgres.
+    // In standalone mode, it bridges the local SQLite with the SIP.
+    // The requirement states: "sync local SQLite dynamically based on the current mode".
 
     final schema = Schema((<Table>[
       Table('agents', [
@@ -47,12 +47,13 @@ class PowerSyncService {
         Column.text('payload'),
         Column.text('created_at'),
       ]),
-      Table('swarm_memory', [
-        Column.text('value'),
-        Column.text('updated_at'),
-      ], indexes: [
-        Index('idx_swarm_memory_updated_at', [IndexedColumn('updated_at')])
-      ]),
+      Table(
+        'swarm_memory',
+        [Column.text('value'), Column.text('updated_at')],
+        indexes: [
+          Index('idx_swarm_memory_updated_at', [IndexedColumn('updated_at')]),
+        ],
+      ),
       Table('capability_plugins', [
         Column.text('name'),
         Column.text('version'),
@@ -110,10 +111,7 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: token,
-    );
+    return PowerSyncCredentials(endpoint: backendUrl, token: token);
   }
 
   @override
