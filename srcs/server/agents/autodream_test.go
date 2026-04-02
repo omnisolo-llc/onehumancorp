@@ -2,18 +2,23 @@ package agents
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open test sqlite db: %v", err)
+	}
+	prov := db.NewSqliteProvider(dbConn)
 
-	_, err := prov.Exec(context.Background(), `
+	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
@@ -49,6 +54,9 @@ func (m *mockMinimaxClient) ChatCompletion(ctx context.Context, payload map[stri
 }
 func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	return make([]float32, 1536), nil
+}
+func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	return "mock reason", nil
 }
 
 func TestAutoDreamEngine_Consolidate(t *testing.T) {
