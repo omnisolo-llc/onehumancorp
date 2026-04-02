@@ -89,6 +89,21 @@ multiTenant:
   # Maximum number of tenant organisations supported per replica.
   maxOrgs: 1000
 
+# PowerSync - Hybrid Sync Engine
+powersync:
+  enabled: true
+  image: journeyapps/powersync-service:latest
+  replicas: 1
+  service:
+    port: 8081
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
+
 # Plane - Open Source Issue Tracker
 plane:
   enabled: true

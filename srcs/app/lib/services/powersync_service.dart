@@ -29,7 +29,7 @@ class PowerSyncService {
       return;
     }
 
-    final schema = Schema((<Table>[
+    final schema = Schema(const <Table>[
       Table('agents', [
         Column.text('name'),
         Column.text('role'),
@@ -70,7 +70,7 @@ class PowerSyncService {
         Column.text('status'),
         Column.text('last_heartbeat'),
       ]),
-    ]));
+    ]);
 
     final dir = await getApplicationSupportDirectory();
     final path = p.join(dir.path, 'powersync.db');
@@ -78,7 +78,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings.serverUrl;
+    final backendUrl = settings.backendUrl;
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
@@ -105,14 +105,14 @@ class _BackendConnector extends PowerSyncBackendConnector {
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
-    final token = ref.read(authServiceProvider).getToken();
-    if (token == null) {
+    final authUser = ref.read(authStateProvider).value;
+    if (authUser == null) {
       return null;
     }
 
     return PowerSyncCredentials(
       endpoint: backendUrl,
-      token: token,
+      token: authUser.token,
     );
   }
 
