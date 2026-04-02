@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/agents"
 	"log/slog"
 	"net"
 	"net/http"
@@ -304,7 +305,7 @@ func run(now time.Time, listen listenFunc) error {
 									break
 								}
 								if syncedCount > 0 {
-								slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
+									slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
 								}
 								if syncedCount < 500 {
 									break // No more batches
@@ -357,7 +358,7 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
-	}
+		}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
@@ -378,7 +379,7 @@ func run(now time.Time, listen listenFunc) error {
 			}
 		}()
 	} else {
-			slog.Error("failed to initialize SIPDB", "error", sipdbErr)
+		slog.Error("failed to initialize SIPDB", "error", sipdbErr)
 	}
 
 	var handler http.Handler
@@ -421,6 +422,25 @@ func run(now time.Time, listen listenFunc) error {
 		handler = newDemoHandler(now, hub, tracker, authStore)
 		slog.Info("using single-tenant dashboard server", "headless", headless)
 	}
+
+	// Instantiate new background services
+	_ = orchestration.NewTaskManager(pool) // To be exposed via API in the future
+	meshManager := orchestration.NewMeshManager()
+
+	// Pass task manager to hub if needed, or just let them run. Since we have dashboard/API endpoints,
+	// we should expose the mesh endpoints. Let's wrap the handler.
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+	mux.HandleFunc("/api/v1/mesh/rooms/{room_id}", meshManager.SubscribeHandler)
+	mux.HandleFunc("/api/v1/mesh/rooms/{room_id}/messages", meshManager.PublishHandler)
+	handler = mux
+
+	apiKey := os.Getenv("MINIMAX_API_KEY")
+	if apiKey == "" {
+		apiKey = os.Getenv("OPENAI_API_KEY") // Fallback
+	}
+	autoDream := agents.NewAutoDreamEngine(pool, apiKey)
+	autoDream.Start(ctx)
 
 	// 4. Start Scheduler Background Task
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {
