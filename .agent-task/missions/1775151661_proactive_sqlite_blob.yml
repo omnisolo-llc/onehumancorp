@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Implementer
+---
+title: Proactive Improvement - SQLite Vector Parity and Sync Pointers
+description: >
+  1. Fix the `VECTOR(1536)` fallback to `BLOB` instead of `TEXT` in `database.go` for SQLite Standalone parity.
+  2. Fix `sync.Once` variable reassignments in `service.go` and `sip.go` to prevent 'assignment copies lock' vet warnings.
+priority: P2
+scope: Small

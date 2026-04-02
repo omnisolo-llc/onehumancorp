@@ -112,20 +112,15 @@ func (ae *AutoDreamEngine) consolidate(ctx context.Context) error {
 			embedding = make([]float32, 1536)
 		}
 
-		// Convert embedding to postgres pgvector format string or sqlite BLOB
-		if ae.db.IsSQLite() {
-			vectorStr = fmt.Sprintf("%v", embedding) // basic string repr as text fallback
-		} else {
-			// pgvector format '[0.1, 0.2, ...]'
-			vectorStr = formatVector(embedding)
-		}
-
 		// 3. Store in autodream_memories
 		insertQuery := `
 			INSERT INTO autodream_memories (content, embedding, source_mission_id)
 			VALUES ($1, $2, $3)
 		`
 		if ae.db.IsSQLite() {
+			// Convert embedding to JSON byte array for SQLite BLOB storage
+			vectorBytes := []byte(formatVector(embedding))
+
 			// Use generated uuid in db layer wrapper or just standard sqlite syntax without default uuid?
 			// The migration changed UUID DEFAULT gen_random_uuid() to TEXT PRIMARY KEY.
 			// We need to provide the ID for sqlite.
@@ -134,8 +129,10 @@ func (ae *AutoDreamEngine) consolidate(ctx context.Context) error {
 				VALUES (?, ?, ?, ?)
 			`
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = ae.db.Exec(ctx, insertQuery, id, content, vectorStr, missionID)
+			_, err = ae.db.Exec(ctx, insertQuery, id, content, vectorBytes, missionID)
 		} else {
+			// pgvector format '[0.1, 0.2, ...]'
+			vectorStr := formatVector(embedding)
 			_, err = ae.db.Exec(ctx, insertQuery, content, vectorStr, missionID)
 		}
 

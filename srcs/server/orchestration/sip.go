@@ -44,7 +44,7 @@ type SIPDB struct {
 	db              db.Provider
 	ContextRoot     string
 	cachedGrounding string
-	groundingOnce   *sync.Once
+	groundingOnce   sync.Once
 }
 
 const (
@@ -116,7 +116,7 @@ func NewSIPDBWithProvider(provider db.Provider) (*SIPDB, error) {
 	if err := initializeTables(provider); err != nil {
 		return nil, err
 	}
-	return &SIPDB{db: provider, groundingOnce: &sync.Once{}}, nil
+	return &SIPDB{db: provider}, nil
 }
 
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
@@ -659,11 +659,15 @@ func (s *SIPDB) Close() error {
 	return nil
 }
 
+func (s *SIPDB) resetGroundingOnce() {
+	s.groundingOnce = sync.Once{}
+}
+
 // SetContextRoot sets the context root for the SIPDB
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
 	s.cachedGrounding = ""
-	s.groundingOnce = &sync.Once{}
+	s.resetGroundingOnce()
 }
 
 // BufferMetric inserts a telemetry metric into the local metric buffer.

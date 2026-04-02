@@ -1563,12 +1563,16 @@ type minimaxClientImpl struct {
 }
 
 var globalCircuitBreaker *CircuitBreaker
-var globalCircuitBreakerOnce *sync.Once = &sync.Once{}
+var globalCircuitBreakerOnce sync.Once
+
+func resetGlobalCircuitBreakerOnce() {
+	globalCircuitBreakerOnce = sync.Once{}
+}
 
 // ResetCircuitBreakerForTest resets the global circuit breaker instance for testing.
 func ResetCircuitBreakerForTest() {
 	globalCircuitBreaker = nil
-	globalCircuitBreakerOnce = &sync.Once{}
+	resetGlobalCircuitBreakerOnce()
 }
 
 // NewMinimaxClient functionality.
