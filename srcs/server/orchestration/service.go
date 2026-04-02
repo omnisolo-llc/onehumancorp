@@ -1190,23 +1190,16 @@ func (h *Hub) Inbox(agentID string) []Message {
 		return inbox
 	}
 
-	h.mu.RLock()
-	inboxLen := len(h.inbox[agentID])
-	h.mu.RUnlock()
-
-	if inboxLen == 0 {
-		return nil
-	}
-
 	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	inbox := h.inbox[agentID]
 	if len(inbox) == 0 {
-		h.mu.Unlock()
 		return nil
 	}
+
 	// ⚡ BOLT: [O(1) Inbox draining instead of O(N) slice copy] - Randomized Selection from Top 5
 	h.inbox[agentID] = nil
-	h.mu.Unlock()
 	return inbox
 }
 
