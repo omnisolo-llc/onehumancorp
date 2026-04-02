@@ -1,0 +1,1 @@
+context: "The Teammate Mesh Cross-Mode Handoff abstraction (in `srcs/server/interop/handoff.go`) provides seamless broadcasting of `EventTaskBroadcast` events. It intelligently persists the task to the database (`shared_tasks`) and optionally fans it out via the `mesh:tasks` Redis Pub/Sub channel if running in Cloud Mode (using `rueidis`)."
