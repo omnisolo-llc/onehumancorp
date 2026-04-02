@@ -1,0 +1,4 @@
+observations:
+  - "Added Redis lock implementations for orchestration loops."
+  - "AutoDream memory pruner and vector collision resolution pipelines are complete."
+  - "Updated Postgres-to-SQLite migrations: mapped VECTOR(1536) to BLOB for compatibility."

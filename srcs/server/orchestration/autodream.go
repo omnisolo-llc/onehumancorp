@@ -4,20 +4,40 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
-	pool db.Provider
+	pool        db.Provider
+	redisClient rueidis.Client
 }
 
 // NewAutoDreamWorker creates a new AutoDream worker.
 func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
-	return &AutoDreamWorker{pool: pool}
+	w := &AutoDreamWorker{pool: pool}
+
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		redisURL := os.Getenv("REDIS_URL")
+		if redisURL != "" {
+			opts, err := rueidis.ParseURL(redisURL)
+			if err == nil {
+				c, err := rueidis.NewClient(opts)
+				if err == nil {
+					w.redisClient = c
+				} else {
+					slog.Error("AutoDream: failed to init redis client", "error", err)
+				}
+			} else {
+				slog.Error("AutoDream: failed to parse redis url", "error", err)
+			}
+		}
+	}
+	return w
 }
 
 // Start runs the AutoDream background pipelines.
@@ -43,8 +63,30 @@ func (w *AutoDreamWorker) runPruningPipeline(ctx context.Context) {
 	}
 }
 
+// acquireLock attempts to acquire a Redis distributed lock.
+// It returns true if lock is acquired or if running in Standalone (no redis).
+func (w *AutoDreamWorker) acquireLock(ctx context.Context, lockKey string, ttl time.Duration) bool {
+	if w.redisClient == nil {
+		return true // Proceed in standalone/sqlite mode
+	}
+
+	cmd := w.redisClient.B().Set().Key(lockKey).Value("locked").Nx().Px(ttl).Build()
+	err := w.redisClient.Do(ctx, cmd).Error()
+	if err != nil {
+		if !rueidis.IsRedisNil(err) {
+			slog.Error("AutoDream: failed to acquire distributed lock", "error", err, "key", lockKey)
+		}
+		return false
+	}
+	return true
+}
+
 // pruneStaleSessions deletes agent_session_data older than 24 hours.
 func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
+	if !w.acquireLock(ctx, "lock:autodream:prune", 5*time.Minute) {
+		return // Another worker is pruning
+	}
+
 	threshold := time.Now().Add(-24 * time.Hour).UTC()
 	var query string
 	if w.pool.IsSQLite() {
@@ -79,6 +121,10 @@ func (w *AutoDreamWorker) runConflictResolutionPipeline(ctx context.Context) {
 
 // resolveConflicts finds vector embeddings that are similar but have conflicting contexts.
 func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
+	if !w.acquireLock(ctx, "lock:autodream:conflict_resolution", 15*time.Minute) {
+		return // Another worker is resolving conflicts
+	}
+
 	if w.pool.IsSQLite() {
 		// Vector similarity search relies on pgvector extension, skipping complex join on SQLite local wrapper.
 		return
