@@ -40,12 +40,15 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 	task := Task{}
 	var schedType, status string
 	var payload string
+
+	var schedAt, createdAt, lastRunAt, nextRunAt db.FlexTime
+
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks WHERE id = $1`, id).Scan(
 		&task.ID, &task.OrganizationID, &task.AgentID, &task.Name,
-		&schedType, &task.Schedule.At, &task.Schedule.IntervalS, &task.Schedule.Expression,
-		&status, &payload, &task.CreatedAt, &task.LastRunAt, &task.NextRunAt,
+		&schedType, &schedAt, &task.Schedule.IntervalS, &task.Schedule.Expression,
+		&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
 	)
 	if err != nil {
 		return Task{}, fmt.Errorf("pg: get task: %w", err)
@@ -53,6 +56,12 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 	task.Schedule.Type = ScheduleType(schedType)
 	task.Status = TaskStatus(status)
 	task.Payload = json.RawMessage(payload)
+
+	if !schedAt.Time.IsZero() { task.Schedule.At = &schedAt.Time }
+	if !createdAt.Time.IsZero() { task.CreatedAt = createdAt.Time }
+	if !lastRunAt.Time.IsZero() { task.LastRunAt = &lastRunAt.Time }
+	if !nextRunAt.Time.IsZero() { task.NextRunAt = &nextRunAt.Time }
+
 	return task, nil
 }
 
@@ -70,16 +79,24 @@ func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task
 		var t Task
 		var schedType, status string
 		var payload string
+		var schedAt, createdAt, lastRunAt, nextRunAt db.FlexTime
+
 		if err := rows.Scan(
 			&t.ID, &t.OrganizationID, &t.AgentID, &t.Name,
-			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
-			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
+			&schedType, &schedAt, &t.Schedule.IntervalS, &t.Schedule.Expression,
+			&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
 		); err != nil {
 			return nil, fmt.Errorf("pg: scan task: %w", err)
 		}
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
+
+		if !schedAt.Time.IsZero() { t.Schedule.At = &schedAt.Time }
+		if !createdAt.Time.IsZero() { t.CreatedAt = createdAt.Time }
+		if !lastRunAt.Time.IsZero() { t.LastRunAt = &lastRunAt.Time }
+		if !nextRunAt.Time.IsZero() { t.NextRunAt = &nextRunAt.Time }
+
 		tasks = append(tasks, t)
 	}
 	return tasks, nil
@@ -109,15 +126,16 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 	}
 
 	var tasks []Task
-	now := time.Now().UTC()
 	for rows.Next() {
 		var t Task
 		var schedType, status string
 		var payload string
+		var schedAt, createdAt, lastRunAt, nextRunAt db.FlexTime
+
 		if err := rows.Scan(
 			&t.ID, &t.OrganizationID, &t.AgentID, &t.Name,
-			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
-			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
+			&schedType, &schedAt, &t.Schedule.IntervalS, &t.Schedule.Expression,
+			&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("pg: scan due task: %w", err)
@@ -125,10 +143,17 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
+
+		if !schedAt.Time.IsZero() { t.Schedule.At = &schedAt.Time }
+		if !createdAt.Time.IsZero() { t.CreatedAt = createdAt.Time }
+		if !lastRunAt.Time.IsZero() { t.LastRunAt = &lastRunAt.Time }
+		if !nextRunAt.Time.IsZero() { t.NextRunAt = &nextRunAt.Time }
+
 		tasks = append(tasks, t)
 	}
 	rows.Close()
 
+	now := time.Now().UTC()
 	for _, t := range tasks {
 		// Mark as running within this transaction.
 		if _, err := tx.Exec(ctx, "UPDATE scheduled_tasks SET status='running', last_run_at=$2 WHERE id=$1", t.ID, now); err != nil {
