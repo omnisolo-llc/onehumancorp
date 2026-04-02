@@ -111,6 +111,72 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 }
 
+func TestTaskManager_PollTasks(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	tm, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Poll when empty
+	tasks, err := tm.PollTasks(ctx, "agent-1", 5)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(tasks) != 0 {
+		t.Fatalf("expected empty tasks, got %d", len(tasks))
+	}
+
+	// Create a few tasks with different priorities
+	_, _ = tm.CreateTask(ctx, "mission-1", "Task 1", "Desc", "P2")
+	_, _ = tm.CreateTask(ctx, "mission-2", "Task 2", "Desc", "P1") // Should be polled first
+	_, _ = tm.CreateTask(ctx, "mission-3", "Task 3", "Desc", "P3")
+
+	// Poll tasks with limit 2
+	tasks, err = tm.PollTasks(ctx, "agent-1", 2)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Fatalf("expected 2 tasks, got %d", len(tasks))
+	}
+
+	// Verify priority ordering
+	if tasks[0].Priority != "P1" {
+		t.Errorf("expected P1 task first, got %s", tasks[0].Priority)
+	}
+	if tasks[1].Priority != "P2" {
+		t.Errorf("expected P2 task second, got %s", tasks[1].Priority)
+	}
+
+	// All should be marked IN_PROGRESS assigned to agent-1
+	for _, task := range tasks {
+		if task.Status != "IN_PROGRESS" {
+			t.Errorf("expected task status IN_PROGRESS, got %s", task.Status)
+		}
+		if task.AssignedAgentID != "agent-1" {
+			t.Errorf("expected assigned agent agent-1, got %s", task.AssignedAgentID)
+		}
+	}
+
+	// Poll remaining tasks
+	tasks2, err := tm.PollTasks(ctx, "agent-2", 5)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(tasks2) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks2))
+	}
+	if tasks2[0].Priority != "P3" {
+		t.Errorf("expected P3 task, got %s", tasks2[0].Priority)
+	}
+	if tasks2[0].AssignedAgentID != "agent-2" {
+		t.Errorf("expected assigned agent agent-2, got %s", tasks2[0].AssignedAgentID)
+	}
+}
+
 func TestTaskManager_CompleteTask(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
