@@ -72,4 +72,5 @@ Trust bundles are backed up to S3. In the event of a total SPIRE failure, the `H
 - **Database Unavailability:** Circuit breakers open, gracefully degrade to read-only mode if possible.
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
 
+
 </div>

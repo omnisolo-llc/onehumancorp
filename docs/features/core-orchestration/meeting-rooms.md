@@ -33,4 +33,5 @@ The "Whiteboard" or shared context window is a structured document that agents c
 - **Context Bloat**: Long-lived meeting rooms aggressively summarize early history; agents joining late only receive the summarized "Current State" and recent chat lines to prevent immediate context exhaustion.
 - **Spamming**: A malfunctioning agent spamming messages is detected by rate-limiters on the Hub, which forcefully "evicts" the agent and alerts the CEO for manual intervention.
 
+
 </div>

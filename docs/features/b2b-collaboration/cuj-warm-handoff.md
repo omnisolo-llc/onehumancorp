@@ -42,4 +42,5 @@ An agent encountered an ambiguous goal or a technical blocker it cannot resolve 
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
 
+
 </div>

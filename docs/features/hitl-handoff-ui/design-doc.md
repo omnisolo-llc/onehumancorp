@@ -27,4 +27,5 @@ The Human-in-the-Loop (HITL) Handoff UI provides a seamless "Warm Handoff" mecha
 - **State Strikethroughs**: If an agent's state becomes invalid while waiting for a handoff (e.g., underlying infrastructure changes), the handoff request is marked stale and the agent must re-evaluate.
 - **Cross-Cluster Handoffs**: Support routing handoff requests between federated clusters securely using B2B trust agreements.
 
+
 </div>

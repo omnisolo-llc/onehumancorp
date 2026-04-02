@@ -25,4 +25,5 @@ The system establishes Cross-Org Collaboration (B2B Agent Exchange) utilizing fe
 ## 4. Security & Privacy
 - **Federated Authentication Failures**: If the partner's SPIRE server is unreachable, the system fails closed and prevents any further B2B API access.
 
+
 </div>

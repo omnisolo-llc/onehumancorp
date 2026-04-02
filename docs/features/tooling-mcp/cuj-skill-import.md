@@ -42,4 +42,5 @@ The CEO wants to expand the company's capabilities by importing new skills, area
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
+
 </div>

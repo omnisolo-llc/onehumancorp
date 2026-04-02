@@ -21,4 +21,5 @@ Triggered automatically during the CI/CD pipeline when a new tag is pushed or ma
 - Stack: Go for orchestration, LLM via MCP for text generation.
 - Data Mocks: Must use real commit history during testing.
 
+
 </div>

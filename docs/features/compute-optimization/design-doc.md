@@ -30,4 +30,5 @@ Enterprise adoption is hindered by unpredictable LLM costs and runaway compute. 
 - **Forecasting Models**: Telemetry is gathered from individual Agent's LLM consumption. Extrapolations based on active workflow queues build real-time projections.
 - **Quota Throttling**: Runaway compute costs are halted seamlessly by gracefully queuing further actions when defined VRAM / Cost quotas approach their hard limits.
 
+
 </div>

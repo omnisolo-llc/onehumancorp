@@ -72,4 +72,5 @@
 * **Statefulness by Design:** Moving 'Agent Memory' to native K8s StatefulSets ensures durability without relying on ad-hoc sidecars, perfectly complementing LangGraph's cyclic flow control.
 * **Zero-Trust Collaboration:** By coupling SPIFFE/SPIRE endpoints to 'Dynamic Tool Discovery' and gRPC Hub routes for 'Multi-Agent Collaboration', OHC inherently prevents multi-tenant escalation exploits.
 
+
 </div>

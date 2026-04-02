@@ -26,4 +26,5 @@ When an AI agent is instantiated or encounters a novel task, it queries the unif
 ## 4. Security & Privacy
 - **Zero-Trust Binding**: Tools are strictly gated by SPIFFE SVIDs and RBAC policies, ensuring an agent cannot access tools outside its assigned domain.
 
+
 </div>

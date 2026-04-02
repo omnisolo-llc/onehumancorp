@@ -36,4 +36,5 @@ When an agent attempts to analyze a massive codebase or dataset, the system frag
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

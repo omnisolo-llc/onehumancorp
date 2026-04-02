@@ -31,4 +31,5 @@ Implement an asynchronous semantic distillation worker to summarize older checkp
 ## 5. Security & Privacy
 - **Tenant Isolation**: Embeddings must be strictly segregated by tenant ID using Row Level Security (RLS) in PostgreSQL.
 
+
 </div>

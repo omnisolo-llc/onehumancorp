@@ -42,4 +42,5 @@ The CEO logs into the One Human Corp platform. They expect a high-level view of 
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
+
 </div>

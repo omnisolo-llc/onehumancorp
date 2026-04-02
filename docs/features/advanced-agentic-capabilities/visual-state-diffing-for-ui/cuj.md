@@ -36,4 +36,5 @@ When a frontend agent submits a PR modifying the React UI, the QA agent utilizes
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

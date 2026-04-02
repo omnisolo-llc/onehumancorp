@@ -36,4 +36,5 @@ When an agent compares a textual PR description with an attached UI screenshot, 
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

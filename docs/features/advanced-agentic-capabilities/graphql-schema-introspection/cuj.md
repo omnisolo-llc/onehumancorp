@@ -36,4 +36,5 @@ When an agent encounters a novel GraphQL endpoint, it autonomously executes an i
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

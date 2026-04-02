@@ -38,4 +38,5 @@ The CEO spins up a hybrid agent swarm containing a native OHC Manager Agent, an 
 - All intra-swarm communications across adapters require cryptographically verified SPIRE identities.
 - Framework execution environments are containerized and strictly isolated to prevent lateral movement.
 
+
 </div>

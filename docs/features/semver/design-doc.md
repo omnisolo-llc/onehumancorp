@@ -16,4 +16,5 @@ Automates the calculation of the next Semantic Version (SemVer) based on the com
 ## 3. Implementation Details
 - Uses Go and standard git parsing libraries or direct git command execution in isolated runners.
 
+
 </div>

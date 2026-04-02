@@ -5,7 +5,7 @@
 <style>
   .glass-container {
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(15px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 24px;
@@ -18,7 +18,7 @@
 <div class="glass-container">
   <h2>Mission Brief: The OHC Delta</h2>
   <p>Based on comprehensive market audits of current Agentic OS architectures, the most critical vulnerability across all frameworks (OpenClaw, AutoGen, CrewAI) is <strong>"Agent Amnesia"</strong> and context window bloat. The One Human Corp (OHC) Swarm will capture market dominance by introducing our Unfair Advantage: <strong>Long-Term Episodic Memory backed by K8s CSI Snapshotting and LangGraph Checkpointers</strong>.</p>
-
+</div>
 
 ## Executive Summary
 
@@ -55,9 +55,6 @@ graph TD;
     G --> B;
     F --> H[K8s CSI Snapshot & Checkpointer];
     H -->|Persist Chunk| C;
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class C,A,H,D,F,G,B,E premium;
 ```
 
 ## Validation & Feasibility
@@ -72,5 +69,6 @@ To secure the OHC Competitive Edge, the following high-priority mission must be 
 **Target Output:** A fully operational K8s-backed state manager enabling sub-50ms context retrieval for autonomous agents.
 
 This capability must be hardened against standard OHC zero-trust and visual excellence mandates.
+
 
 </div>

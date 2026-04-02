@@ -36,4 +36,5 @@ When processing vast amounts of organizational documentation, the system automat
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

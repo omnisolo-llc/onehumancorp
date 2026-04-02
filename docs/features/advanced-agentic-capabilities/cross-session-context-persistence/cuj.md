@@ -36,4 +36,5 @@ When an agent interacts with a human user across multiple distinct chat sessions
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

@@ -36,4 +36,5 @@ When an architecture agent designs a new system component, it automatically gene
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

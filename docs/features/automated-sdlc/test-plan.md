@@ -63,4 +63,5 @@ A high-level summary of the testing strategy for the Automated Implementation Pi
 - **Flaky E2E Tests**: Staging environment provisioning can occasionally timeout due to K8s node exhaustion. The E2E suite incorporates an intelligent polling retry mechanism before failing the build.
 - **Dangling Preview Namespaces**: Test failures midway through a pipeline run might leave orphaned K8s namespaces. The test harness includes a strict `t.Cleanup()` function to reap temporary staging resources regardless of test outcome.
 
+
 </div>

@@ -36,4 +36,5 @@ When a human manager attempts to access the dashboard or manually approve a high
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

@@ -31,4 +31,5 @@ CREATE TABLE embeddings (
 - Optimize `pgvector` queries using HNSW (Hierarchical Navigable Small World) indexes for fast retrieval.
 - Maintain Zero-Lock stack compatibility.
 
+
 </div>

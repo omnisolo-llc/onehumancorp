@@ -35,4 +35,5 @@ type MCPSchema struct {
 - **Zero-Lock Paradigm:** The `MCPRegistryService` must support any standard OpenAPI v3 specification to ensure zero vendor lock-in and allow importing custom tools easily.
 - **Performance:** Caching of OpenAPI schemas in the `MCPRegistryService` must be implemented to ensure sub-50ms latency routing for tool discovery requests.
 
+
 </div>

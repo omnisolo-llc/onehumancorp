@@ -36,4 +36,5 @@ When a PM agent proposes a massive restructuring of the database, the SWE agent 
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

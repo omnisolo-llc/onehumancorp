@@ -36,4 +36,5 @@ When an agent searches for historical context, the system employs a two-pass hie
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

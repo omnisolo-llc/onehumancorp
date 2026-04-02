@@ -42,4 +42,5 @@ A sudden spike in 5xx errors occurs in the `billing-engine`. An SRE Agent detect
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
+
 </div>

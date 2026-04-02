@@ -36,4 +36,5 @@ To protect fragile external APIs from being overwhelmed by hyper-active agents, 
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

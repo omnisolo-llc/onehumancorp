@@ -50,4 +50,5 @@ The injection mechanism is read-only against the local workspace and occurs stri
 *   **Ad-Hoc File Reads:** Relying on agents to read `AGENTS.md` via MCP tools. *Rejected* due to latency and alignment drift.
 *   **Continuous Vector DB Sync:** Indexing project files into a vector store for semantic search. *Rejected* for primary grounding because it lacks deterministic enforcement. Omni-Context Routing guarantees the agent sees the exact rules.
 
+
 </div>

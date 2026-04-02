@@ -265,16 +265,16 @@ if [ ${{#DEP_CACHES[@]}} -gt 0 ]; then
             else
                 cp -RL "$DEP_CACHE/." "$PUB_CACHE_DIR_ABS/"
             fi
-            # Bazel marks output directories read-only (0555) after actions complete.
-            # Dependency caches are Bazel outputs, so rsync -a copies those read-only
-            # permissions into our new pub_cache.  Make everything writable so subsequent
-            # loop iterations (or the IS_PUB_PACKAGE block below) can succeed.
-            chmod -R u+w "$PUB_CACHE_DIR_ABS" 2>/dev/null || true
         fi
     done
 else
     echo "No dependency caches supplied"
 fi
+# Bazel marks output directories read-only (0555) after actions complete.
+# Dependency caches are Bazel outputs, so rsync -a copies those read-only
+# permissions into our new pub_cache.  Make everything writable so subsequent
+# mkdir/copy operations (e.g. the IS_PUB_PACKAGE block below) can succeed.
+chmod -R u+w "$PUB_CACHE_DIR_ABS" 2>/dev/null || true
 echo ""
 
 export PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"

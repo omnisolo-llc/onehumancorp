@@ -238,31 +238,21 @@ func run(now time.Time, listen listenFunc) error {
 		}()
 	}
 
-	// Set up the SIPDB instance to connect to Database via Provider.
-	// If we have a pool connection, use it for seamless SQLite / Postgres multi-target support.
-	var createdSIPDB *orchestration.SIPDB
-	var sipdbErr error
-
-	if pool != nil {
-		createdSIPDB, sipdbErr = orchestration.NewSIPDBWithProvider(pool.Provider)
-	} else {
-		var dbPath string
-		if os.Getenv("OHC_STANDALONE") == "true" {
-			if err := os.MkdirAll(".agent-task", 0700); err != nil {
-				slog.Warn("failed to create .agent-task directory", "error", err)
-			}
-			dbPath = filepath.Join(".agent-task", "swarm.db")
-		} else {
-			openclawDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
-			if err := os.MkdirAll(openclawDir, 0700); err != nil {
-				slog.Warn("failed to create .openclaw directory", "error", err)
-			}
-			dbPath = filepath.Join(openclawDir, "ohc.db")
+	// Set up the SIPDB instance to connect to SQLite.
+	var dbPath string
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		if err := os.MkdirAll(".agent-task", 0700); err != nil {
+			slog.Warn("failed to create .agent-task directory", "error", err)
 		}
-		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
+		dbPath = filepath.Join(".agent-task", "swarm.db")
+	} else {
+		openclawDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
+		if err := os.MkdirAll(openclawDir, 0700); err != nil {
+			slog.Warn("failed to create .openclaw directory", "error", err)
+		}
+		dbPath = filepath.Join(openclawDir, "ohc.db")
 	}
-
-	if sipdbErr == nil {
+	if createdSIPDB, err := orchestration.NewSIPDB(dbPath); err == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
 
@@ -318,28 +308,6 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
-
-			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
-			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
-			if contextEndpoint != "" {
-				go func() {
-					ticker := time.NewTicker(5 * time.Second)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ctx.Done():
-							return
-						case <-ticker.C:
-							syncedCount, err := sipdb.SyncContextSync(ctx, contextEndpoint)
-							if err != nil {
-								slog.Warn("Failed to sync standalone RAG context", "error", err)
-							} else if syncedCount > 0 {
-								slog.Info("Successfully synced standalone RAG context to cloud", "count", syncedCount)
-							}
-						}
-					}
-				}()
-			}
 	}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
@@ -361,7 +329,7 @@ func run(now time.Time, listen listenFunc) error {
 			}
 		}()
 	} else {
-			slog.Error("failed to initialize SIPDB", "error", sipdbErr)
+		slog.Error("failed to initialize SIPDB", "path", dbPath, "error", err)
 	}
 
 	var handler http.Handler

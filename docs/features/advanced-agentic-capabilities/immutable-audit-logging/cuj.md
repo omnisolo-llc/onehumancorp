@@ -36,4 +36,5 @@ For compliance and security auditing, every single action, tool invocation, and 
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

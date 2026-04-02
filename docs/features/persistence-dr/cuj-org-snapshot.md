@@ -43,4 +43,5 @@ A major reorganisation is planned, and the admin needs a "safe point" to return 
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
 
+
 </div>

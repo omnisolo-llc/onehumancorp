@@ -20,4 +20,5 @@ The CEO or PM triggers a release and expects a polished document summarizing all
 - Empty commit history since the last release.
 - Unclear or empty commit messages (fallback to PR titles).
 
+
 </div>

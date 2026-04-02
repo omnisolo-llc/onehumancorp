@@ -1,5 +1,3 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
-
 # Design Doc: OHC Hybrid Agentic OS & Thin Client Architecture
 
 **Author(s):** Antigravity, Principal Product Architect & Visionary (L7)
@@ -59,9 +57,6 @@ graph TD
     K8sAPI --> Postgres
     K8sAPI --> Redis
     K8sAPI --> Hub
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Hub,DesktopFat,LocalGo,MobileThin,LocalDB,Postgres,WebThin,DesktopThin,K8sAPI,Redis premium;
 ```
 
 ### 3.2 OHC-HA Degradation Model
@@ -114,5 +109,3 @@ All UIs, regardless of Standalone or Thin Client mode, strictly adhere to the OH
 
 - Hand off database abstraction and SQLite schema generation to the Forge (`backend_dev`) agent.
 - Ensure the Flutter UI perfectly maps these capabilities across target platforms.
-
-</div>

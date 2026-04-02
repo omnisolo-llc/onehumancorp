@@ -1,5 +1,3 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
-
 # OHC Hybrid Growth Strategy & Audit Report
 
 **Author**: Principal Growth Engineer & Strategist (L7)
@@ -73,5 +71,3 @@ To adhere to the **Visual Excellence Mandate**, our growth landing pages and das
 1. **Growth Hacking (A/B Test)**: A new Hybrid Landing Page will be deployed targeting the "Local-First" advantages.
 2. **Expansion**: The UI in `user_management_screen.dart` will be enhanced to emphasize the Cloud-bridge referral loop.
 3. **Validation**: All changes will be verified via Playwright/Bazel to ensure 100% green tests and zero regressions in the UI stability.
-
-</div>

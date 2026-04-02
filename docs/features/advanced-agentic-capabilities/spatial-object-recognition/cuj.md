@@ -31,4 +31,5 @@ Enhance multimodal agents with the ability to identify and interact with specifi
 ## 5. Security & Privacy
 - **Sandboxed Browsers**: Playwright instances executing clicks must be heavily sandboxed with no access to local network resources (SSRF prevention).
 
+
 </div>

@@ -20,4 +20,5 @@ Validate the end-to-end handoff lifecycle, including agent pausing, UI presentat
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the `HandoffService` and the React frontend components.
 
+
 </div>

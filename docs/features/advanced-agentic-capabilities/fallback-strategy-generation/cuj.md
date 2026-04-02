@@ -36,4 +36,5 @@ When a primary API endpoint goes offline, the agent autonomously generates and e
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

@@ -34,4 +34,5 @@ A human CEO provides a high-level goal (e.g., "Add a dark mode to the dashboard"
 - Data encryption during transit for MCP calls.
 - Audit trail entry format: `[timestamp] PM_INVESTIGATION_START`, `[timestamp] PRD_GENERATED`.
 
+
 </div>

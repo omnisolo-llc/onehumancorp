@@ -36,9 +36,6 @@ graph LR
     AgentUS -->|TaskDelegate| HubUS
     HubUS -->|Route| HubEU
     HubEU -->|Execute| AgentEU
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class HubEU,AgentUS,HubUS,AgentEU premium;
 ```
 
 ## 3. Data Model Extensions
@@ -76,5 +73,6 @@ type FederatedAgent struct {
 - **Network Partitions:** Fallback to cached state and retry logic for tool calls.
 - **Database Unavailability:** Circuit breakers open, gracefully degrade to read-only mode if possible.
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
+
 
 </div>

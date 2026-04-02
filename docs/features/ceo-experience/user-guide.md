@@ -208,4 +208,5 @@ A: Integrations are registered at server startup via the `integrations.Registry`
 - **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI virtualizes the transcript list to prevent DOM bloat and memory leaks in the browser.
 - **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the backend enforces a transactional lock; the second manager receives a "State Changed" conflict error.
 
+
 </div>

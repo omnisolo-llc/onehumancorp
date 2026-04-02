@@ -20,6 +20,7 @@ Validate the dynamic ingestion, registration, usage of external capability plugi
    - *Expected*: The system successfully pauses execution and triggers the Confidence Gating UI for the CEO's review and approval.
 5. **Aesthetic Compliance**:
    - *Action*: Run Playwright verification scripts against the updated OHC dashboard.
-   - *Expected*: Ensure UI elements for plugin management conform to the Glassmorphism tokens (`backdrop-filter: blur(20px)`, semi-transparent backgrounds, subtle borders) mandated in the `design-doc.md`.
+   - *Expected*: Ensure UI elements for plugin management conform to the Glassmorphism tokens (`backdrop-filter: blur(15px)`, semi-transparent backgrounds, subtle borders) mandated in the `design-doc.md`.
+
 
 </div>

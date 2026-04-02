@@ -44,4 +44,5 @@ This test plan covers the real-time React component responsible for replica coun
 - **Action:** Backend emits an SSE event `{"event": "AgentHired", "status": "Ready"}`.
 - **Expected Result:** The UI updates its real-time trace log and progress bar without requiring a manual page refresh.
 
+
 </div>

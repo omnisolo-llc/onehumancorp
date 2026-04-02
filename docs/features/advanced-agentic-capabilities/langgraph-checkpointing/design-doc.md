@@ -30,4 +30,5 @@ type Checkpoint struct {
 - Optimize PostgreSQL indexes on `thread_id`.
 - Maintain Zero-Lock stack compatibility.
 
+
 </div>

@@ -35,4 +35,5 @@ message SubTask {
 - **Garbage Collection:** Once a sub-agent completes its task and the Manager Agent acknowledges it, the temporary `TeamMember` CRD is deleted by the Hub to free compute resources.
 - **Security:** Sub-agents must not receive the full context of the epic, only the specific `instruction` provided, to prevent token waste and limit exposure.
 
+
 </div>

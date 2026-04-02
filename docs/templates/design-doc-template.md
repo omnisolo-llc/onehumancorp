@@ -20,8 +20,6 @@ A technical summary of the problem space, the proposed solution, and the overall
 ### 3.1 Architecture Diagram
 ```mermaid
 [Detailed Sequence or Component Diagram]
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
 ```
 
 ### 3.2 Data Model & Schema
@@ -59,5 +57,6 @@ A technical summary of the problem space, the proposed solution, and the overall
 ## 6. Implementation Plan
 - Step-by-step rollout (Phases).
 - Migration strategy for existing data.
+
 
 </div>

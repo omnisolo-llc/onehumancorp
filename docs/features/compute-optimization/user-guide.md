@@ -39,4 +39,5 @@ Compute Optimization ensures that One Human Corp's AI workforce is resource-effi
 ## 7. Support & Feedback
 For scheduling anomalies, review the Kubernetes event logs and pod descriptions before escalating the issue.
 
+
 </div>

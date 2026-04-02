@@ -31,4 +31,5 @@ Human managers can enable MFA via the settings dashboard for an extra layer of s
 - **Node Eviction**: If a K8s node is evicted and an agent pod moves, it must re-attest to SPIRE before continuing its tasks, momentarily pausing its workflow.
 - **External Collaboration**: B2B (Cross-Cluster) handoffs require Federated SPIRE setups; if the remote trust bundle is unavailable due to network issues, the system fails closed and prevents B2B API access.
 
+
 </div>

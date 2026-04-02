@@ -29,4 +29,5 @@
 - Ensure the Playwright MCP tool translates coordinates correctly regardless of viewport scaling or DPI settings.
 - Maintain Zero-Lock stack compatibility.
 
+
 </div>

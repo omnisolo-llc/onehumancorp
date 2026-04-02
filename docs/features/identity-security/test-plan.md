@@ -61,4 +61,5 @@ A high-level summary of the testing strategy for the Hybrid Identity Management 
 | B2B-01 | Federation Handshake | Initiate trust agreement | Handshake successful | Pending |
 | B2B-02 | Federation Revoked | Fail closed if trust is revoked | Agent communication halts | Pending |
 
+
 </div>

@@ -32,4 +32,5 @@ A developer or an automated pipeline registers a new external tool on the One Hu
 ## 5. Security & Privacy
 - The system employs `interop.ValidateSPIFFEID` which checks that `SPIFFE ID` formats and trust domains align strictly with allowed definitions.
 
+
 </div>

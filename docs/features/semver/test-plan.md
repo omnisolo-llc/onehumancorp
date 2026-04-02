@@ -14,4 +14,5 @@
 - Test reading the latest tag from a Git repository fixture.
 - Test calculating the correct next tag based on a series of commits.
 
+
 </div>

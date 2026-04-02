@@ -36,4 +36,5 @@ When an agent needs to perform an action but doesn't know the exact tool name, i
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
+
 </div>

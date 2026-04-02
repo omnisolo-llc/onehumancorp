@@ -31,4 +31,5 @@ Inter-agent collaboration is heavily restricted to single-organization silos. OH
 - **Real-Time Rooms**: Negotiation environments between B2B agents utilize validated mTLS.
 - **Zero Lock-In**: OHC agents can seamlessly verify inter-org SVIDs and securely perform tasks.
 
+
 </div>

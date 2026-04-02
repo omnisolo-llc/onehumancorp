@@ -43,4 +43,5 @@ Collaboration is happening in a virtual meeting room, and the human manager need
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
+
 </div>
