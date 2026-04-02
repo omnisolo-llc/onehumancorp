@@ -303,6 +303,8 @@ type MeetingRoom struct {
 // Produces no errors.
 // Has no side effects.
 type Hub struct {
+	ctx            context.Context
+	cancel         context.CancelFunc
 	mu             sync.RWMutex
 	agents         map[string]Agent
 	inbox          map[string][]Message
@@ -312,6 +314,7 @@ type Hub struct {
 	sipDB          *SIPDB
 	tokenTrackers  map[string]struct{}
 	autoCorTrack   map[string]struct{}
+	autoDreamTrack chan struct{}
 	eventLogChan   chan interface{}
 	repo           HubRepository
 	scheduler      *scheduler.Scheduler
@@ -335,6 +338,7 @@ func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository)
 }
 
 func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	ctx, cancel := context.WithCancel(context.Background())
 	sched := scheduler.NewScheduler()
 	if taskRepo != nil {
 		sched = scheduler.NewSchedulerWithRepository(taskRepo)
@@ -347,6 +351,8 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		subs:          map[string][]chan struct{}{},
 		tokenTrackers: map[string]struct{}{},
 		autoCorTrack:  map[string]struct{}{},
+		ctx:           ctx,
+		cancel:        cancel,
 		eventLogChan:  make(chan interface{}, 100),
 		repo:          repo,
 		scheduler:     sched,
@@ -577,6 +583,12 @@ func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byt
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) SetSIPDB(sipDB *SIPDB) {
+	if sipDB != nil && sipDB.db != nil {
+		if h.autoDreamTrack == nil {
+			h.autoDreamTrack = make(chan struct{})
+			go NewAutoDreamWorker(sipDB.db, time.Hour).Start(h.ctx)
+		}
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.sipDB = sipDB
