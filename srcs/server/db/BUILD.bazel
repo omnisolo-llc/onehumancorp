@@ -9,7 +9,20 @@ go_library(
         "provider.go",
         "sqlite_provider.go",
     ],
-    embedsrcs = glob(["migrations/*.sql"]),
+    embedsrcs = [
+        "migrations/001_users.sql",
+        "migrations/002_billing.sql",
+        "migrations/003_scheduler.sql",
+        "migrations/004_hub.sql",
+        "migrations/005_sip.sql",
+        "migrations/006_hybrid_os_mission.sql",
+        "migrations/007_autodream.sql",
+        "migrations/007_teammate_mesh_and_autodream.sql",
+        "migrations/008_embedding_cache.sql",
+        "migrations/008_swarm_tasks.sql",
+        "migrations/009_llm_reason_cache.sql",
+        "migrations/010_task_dependencies.sql",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
@@ -29,4 +42,5 @@ go_test(
         "test_provider_test.go",
     ],
     embed = [":db"],
+    deps = ["@org_modernc_sqlite//:sqlite"],
 )

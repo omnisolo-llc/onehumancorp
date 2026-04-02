@@ -21,12 +21,18 @@ type SharedTask struct {
 	Title           string
 	Description     string
 	AssignedAgentID string
-	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED
+	Status          string // PENDING, READY, IN_PROGRESS, COMPLETED, BLOCKED, FAILED
 	Priority        string
 	Payload         string
 	LockedUntil     sql.NullTime
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+// TaskDependency represents a dependency relationship between tasks.
+type TaskDependency struct {
+	TaskID         string
+	DependsOnTaskID string
 }
 
 // TaskManager manages the shared tasks list
@@ -352,10 +358,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
 		}
 
-		rowsAffected, err := res.RowsAffected()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get rows affected for task %s: %w", task.ID, err)
-		}
+		rowsAffected := res
 
 		if rowsAffected > 0 {
 			task.Status = "IN_PROGRESS"
