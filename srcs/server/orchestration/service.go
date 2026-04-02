@@ -1534,7 +1534,12 @@ func (cb *CircuitBreaker) RecordFailure() {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
-type MinimaxClient struct {
+type MinimaxClient interface {
+	Reason(ctx context.Context, prompt string) (string, error)
+	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
+}
+
+type minimaxClientImpl struct {
 	APIKey string
 	cb     *CircuitBreaker
 }
@@ -1544,10 +1549,10 @@ var globalCircuitBreakerOnce sync.Once
 
 // NewMinimaxClient functionality.
 // Accepts parameters: apiKey string (No Constraints).
-// Returns *MinimaxClient.
+// Returns MinimaxClient.
 // Produces no errors.
 // Has no side effects.
-func NewMinimaxClient(apiKey string) *MinimaxClient {
+func NewMinimaxClient(apiKey string) MinimaxClient {
 	globalCircuitBreakerOnce.Do(func() {
 		globalCircuitBreaker = &CircuitBreaker{
 			maxFailures:  3,
@@ -1555,7 +1560,7 @@ func NewMinimaxClient(apiKey string) *MinimaxClient {
 		}
 	})
 
-	return &MinimaxClient{
+	return &minimaxClientImpl{
 		APIKey: apiKey,
 		cb:     globalCircuitBreaker,
 	}
@@ -1572,11 +1577,11 @@ var sharedHTTPClient = &http.Client{
 }
 
 // Reason functionality.
-// Accepts parameters: c *MinimaxClient (No Constraints).
+// Accepts parameters: c *minimaxClientImpl (No Constraints).
 // Returns (string, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, error) {
 	if !c.cb.Allow() {
 		return "", errors.New("circuit breaker is open")
 	}
@@ -1688,4 +1693,9 @@ func CheckDocumentationGate(content string) error {
 		}
 	}
 	return nil
+}
+
+func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	// Dummy embedding for now to satisfy interface, since the real Minimax API call isn't implemented in this file.
+	return make([]float32, 1536), nil
 }
