@@ -221,6 +221,14 @@ func run(now time.Time, listen listenFunc) error {
 	)
 
 	hub, tracker = newHubAndTracker(pool)
+	hub.GetTokenUsage = func(ctx context.Context) map[string]int64 {
+		usage := make(map[string]int64)
+		for _, orgID := range tracker.ActiveOrganizations(ctx) {
+			usage[orgID] = tracker.Summary(orgID).TotalTokens
+		}
+		return usage
+	}
+
 	if pool != nil {
 		authStore = auth.NewStoreWithRepository(auth.NewPgUserRepository(pool.Provider))
 	} else {
@@ -414,6 +422,13 @@ func run(now time.Time, listen listenFunc) error {
 
 		factory := func(org domain.Organization) http.Handler {
 			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantHub.GetTokenUsage = func(ctx context.Context) map[string]int64 {
+				usage := make(map[string]int64)
+				for _, orgID := range tenantTracker.ActiveOrganizations(ctx) {
+					usage[orgID] = tenantTracker.Summary(orgID).TotalTokens
+				}
+				return usage
+			}
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)

@@ -311,6 +311,7 @@ type Hub struct {
 	subs           map[string][]chan struct{}
 	sipDB          *SIPDB
 	tokenTrackers  map[string]struct{}
+	GetTokenUsage  func(ctx context.Context) map[string]int64
 	autoCorTrack   map[string]struct{}
 	eventLogChan   chan interface{}
 	repo           HubRepository
@@ -353,7 +354,52 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+	go h.tokenBurnRateWorker(context.Background())
 	return h
+}
+
+// tokenBurnRateWorker calculates moving average token burn rate and emits forecasting metrics.
+func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	// Store history of usage for calculating moving average (e.g. over the last 5 minutes)
+	// Map of organizationID to a slice of totalTokens recorded each minute
+	history := make(map[string][]int64)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.calculateTokenBurnRate(ctx, history)
+		}
+	}
+}
+
+func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
+	if h.GetTokenUsage == nil {
+		return
+	}
+	usages := h.GetTokenUsage(ctx)
+	for orgID, totalTokens := range usages {
+		if totalTokens > 0 {
+			hist := history[orgID]
+			hist = append(hist, totalTokens)
+
+			// Keep only the last 5 data points for a 5-minute moving average
+			if len(hist) > 5 {
+				hist = hist[1:]
+			}
+			history[orgID] = hist
+
+			if len(hist) > 1 {
+				// Calculate moving average burn rate (tokens per minute)
+				rate := float64(hist[len(hist)-1] - hist[0]) / float64(len(hist)-1)
+				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
+			}
+		}
+	}
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.
