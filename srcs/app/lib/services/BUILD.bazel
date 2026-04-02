@@ -39,7 +39,6 @@ flutter_library(
         "@pub_http//:http",
         "@pub_path//:path",
         "@pub_shared_preferences//:shared_preferences",
-        "@pub_path//:path",
     ],
 )
 
