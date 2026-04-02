@@ -35,7 +35,7 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 	tm := NewTaskManager(prov)
 
 	return tm, func() {
-		prov.Close()
+		sqlDB.Close()
 	}
 }
 

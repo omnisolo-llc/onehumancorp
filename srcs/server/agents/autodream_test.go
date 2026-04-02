@@ -4,17 +4,22 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
+	"database/sql"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create memory db: %v", err)
+	}
+	prov := db.NewSqliteProvider(sqlDB)
 
-	_, err := prov.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+	_, err = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
 			title TEXT NOT NULL,
@@ -38,7 +43,7 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	}
 
 	return prov, func() {
-		prov.Close()
+		sqlDB.Close()
 	}
 }
 
