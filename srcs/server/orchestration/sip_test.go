@@ -2,11 +2,13 @@ package orchestration
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -829,6 +831,47 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected unmodified instruction, got %q", missions5[0].Content)
 	}
 }
+func TestSIPDB_DelegateMission_ConcurrencyLimit(t *testing.T) {
+	// Setup DB in standalone mode
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	dbPath := filepath.Join(t.TempDir(), "swarm.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, 100)
+
+	// Launch multiple concurrent DelegateMission calls to verify semaphore works without deadlock
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			msg := Message{
+				ID:      fmt.Sprintf("msg-%d", idx),
+				Content: fmt.Sprintf("content-%d", idx),
+				Type:    EventTask,
+			}
+			if err := db.DelegateMission(ctx, fmt.Sprintf("mission-%d", idx), "SOFTWARE_ENGINEER", msg); err != nil {
+				errCh <- err
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Errorf("Concurrent DelegateMission failed: %v", err)
+	}
+}
+
 func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission_missing.db")
 	db, err := NewSIPDB(dbPath)

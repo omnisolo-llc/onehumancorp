@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"time"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -202,6 +203,13 @@ func MetricsHandler() http.Handler {
 	return promhttp.Handler()
 }
 
+var globalTokenUsage int64
+
+// GetGlobalTokenUsage returns the raw count of tokens used.
+func GetGlobalTokenUsage() int64 {
+	return atomic.LoadInt64(&globalTokenUsage)
+}
+
 // RecordTokenUsage increments the global counter for LLM tokens consumed by the workforce.
 //
 //   - ctx: context.Context; The context of the active trace or request.
@@ -216,6 +224,7 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+	atomic.AddInt64(&globalTokenUsage, count)
 	if tokenUsageCounter == nil {
 		return
 	}

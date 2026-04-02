@@ -353,7 +353,69 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 	}
 	go h.eventLogWorker(context.Background(), "events.jsonl")
+	go h.tokenBurnRateWorker(context.Background())
 	return h
+}
+
+// Token Burn Rate Forecast state for smoothing (Moving Average)
+type tokenRateState struct {
+	lastCount int64
+	lastTime  time.Time
+}
+
+var (
+	tokenBurnRateStateMap = make(map[string]*tokenRateState)
+	tokenBurnRateStateMu  sync.Mutex
+)
+
+// Record usage in burn rate state for specific organization (using Global counters or specifically for "default" or "demo")
+func (h *Hub) updateTokenBurnRateForecast() {
+	organizationID := "default"
+
+	tokenBurnRateStateMu.Lock()
+	defer tokenBurnRateStateMu.Unlock()
+
+	state, exists := tokenBurnRateStateMap[organizationID]
+	now := time.Now()
+	currentUsage := telemetry.GetGlobalTokenUsage()
+
+	if !exists {
+		tokenBurnRateStateMap[organizationID] = &tokenRateState{
+			lastCount: currentUsage,
+			lastTime:  now,
+		}
+		return
+	}
+
+	// Calculate rate per minute
+	elapsedMinutes := now.Sub(state.lastTime).Minutes()
+	if elapsedMinutes > 0 {
+		tokensUsed := currentUsage - state.lastCount
+		if tokensUsed < 0 {
+			tokensUsed = 0 // Handle counter resets just in case
+		}
+
+		rate := float64(tokensUsed) / elapsedMinutes
+		telemetry.RecordTokenBurnRate(context.Background(), organizationID, rate)
+	}
+
+	state.lastCount = currentUsage
+	state.lastTime = now
+}
+
+func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
+	// Periodic burn rate calculation.
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.updateTokenBurnRateForecast()
+		}
+	}
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.

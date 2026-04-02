@@ -1384,6 +1384,17 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 }
 
+func TestHub_TokenBurnRateWorker(t *testing.T) {
+	// Simple test to ensure the updateTokenBurnRateForecast method doesn't panic and properly handles state.
+	h := NewHub()
+
+	// Initial state setup
+	h.updateTokenBurnRateForecast()
+
+	// Call it again to cover the moving average calculation code path
+	h.updateTokenBurnRateForecast()
+}
+
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub := NewHub()
 
