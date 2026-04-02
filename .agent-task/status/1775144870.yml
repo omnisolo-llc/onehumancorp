@@ -1,0 +1,6 @@
+agent: Palette
+status: nominal
+timestamp: 1775144870
+metrics:
+  health: 100
+  tests_passed: true
