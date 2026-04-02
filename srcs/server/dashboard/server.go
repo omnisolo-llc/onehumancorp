@@ -625,17 +625,18 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				"query": "SELECT * FROM meeting_rooms WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "agent_missions",
-				"query": "SELECT * FROM agent_missions",
+				"query": "SELECT * FROM agent_missions WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "swarm_memory",
-				"query": "SELECT * FROM swarm_memory",
+				"query": "SELECT * FROM swarm_memory WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "capability_plugins",
@@ -643,11 +644,13 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "swarm_memory_embeddings",
-				"query": "SELECT * FROM swarm_memory_embeddings",
+				"query": "SELECT * FROM swarm_memory_embeddings WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "agent_status",
-				"query": "SELECT * FROM agent_status",
+				"query": "SELECT * FROM agent_status WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 		},
 	}
