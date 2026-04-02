@@ -1,15 +1,5 @@
 {{- if .Values.chatwoot.enabled }}
 ---
-# Secret for Chatwoot credentials
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ .Release.Name }}-chatwoot-secret
-type: Opaque
-stringData:
-  secretKeyBase: {{ .Values.chatwoot.secretKeyBase | quote }}
-  adminPassword: {{ .Values.chatwoot.adminPassword | quote }}
----
 # Migration job – runs db:chatwoot_prepare on install/upgrade
 apiVersion: batch/v1
 kind: Job
@@ -50,6 +40,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-chatwoot-secret
                   key: secretKeyBase
+                  optional: true
             - name: DATABASE_URL
               value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres:5432/chatwoot?sslmode=disable"{{ end }}
             - name: REDIS_URL
@@ -117,6 +108,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-chatwoot-secret
                   key: secretKeyBase
+                  optional: true
             - name: DATABASE_URL
               value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres:5432/chatwoot?sslmode=disable"{{ end }}
             - name: REDIS_URL
@@ -198,6 +190,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-chatwoot-secret
                   key: secretKeyBase
+                  optional: true
             - name: DATABASE_URL
               value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres:5432/chatwoot?sslmode=disable"{{ end }}
             - name: REDIS_URL
