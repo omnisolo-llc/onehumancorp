@@ -45,6 +45,8 @@ type Server struct {
 	computeProfiles       []ComputeProfile
 	budgetAlerts          []BudgetAlert
 	pipelines             []Pipeline
+	experiments           []LandingPageExperiment
+	referrals             []Referral
 	authStore             *auth.Store
 	authHandlers          *auth.Handlers
 	settings              settings.AppSettings
@@ -435,6 +437,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		computeProfiles:       []ComputeProfile{},
 		budgetAlerts:          []BudgetAlert{},
 		pipelines:             []Pipeline{},
+		experiments:           []LandingPageExperiment{},
+		referrals:             []Referral{},
 		authStore:             store,
 		authHandlers:          auth.NewHandlers(store),
 		agentProviderRegistry: agents.DefaultRegistry(),

@@ -2,7 +2,6 @@ package agents
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"testing"
 
@@ -12,11 +11,12 @@ import (
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	dbConn, err := sql.Open("sqlite", ":memory:")
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	wrapper, err := db.New(context.Background())
 	if err != nil {
-		t.Fatalf("failed to open test sqlite db: %v", err)
+		t.Fatalf("failed to create db provider: %v", err)
 	}
-	prov := db.NewSqliteProvider(dbConn)
+	prov := wrapper.Provider
 
 	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
@@ -29,6 +29,11 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 			priority TEXT NOT NULL DEFAULT 'P2',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS embedding_cache (
+			content_hash TEXT PRIMARY KEY,
+			embedding BLOB NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE TABLE IF NOT EXISTS autodream_memories (
 			id TEXT PRIMARY KEY,

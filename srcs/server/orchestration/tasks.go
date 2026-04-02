@@ -352,10 +352,8 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
 		}
 
-		rowsAffected, err := res.RowsAffected()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get rows affected for task %s: %w", task.ID, err)
-		}
+		// res from pgx is of type pgconn.CommandTag or int64, our provider returns int64 directly
+		rowsAffected := res
 
 		if rowsAffected > 0 {
 			task.Status = "IN_PROGRESS"
