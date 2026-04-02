@@ -43,11 +43,11 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 	if os.Getenv("OHC_MULTITENANT") == "true" {
 		redisURL := os.Getenv("REDIS_URL")
 		if redisURL != "" {
-			c, err := rueidis.NewClient(rueidis.ClientOption{
-				InitAddress: []string{redisURL},
-			})
+			opts, err := rueidis.ParseURL(redisURL)
 			if err == nil {
-				tm.redisClient = c
+				if c, err := rueidis.NewClient(opts); err == nil {
+					tm.redisClient = c
+				}
 			}
 		}
 	}
@@ -132,7 +132,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	if tm.redisClient != nil {
 		// Acquire Redis-backed distributed lock with 30s TTL
 		lockKey := "lock:task:" + taskID
-		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
+		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Px(30 * time.Second).Build()
 		err := tm.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {

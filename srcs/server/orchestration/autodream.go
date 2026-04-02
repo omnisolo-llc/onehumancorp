@@ -8,11 +8,13 @@ import (
 	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
-	pool db.Provider
+	pool  db.Provider
+	redis rueidis.Client
 }
 
 // AutoDreamWorker options
@@ -25,7 +27,18 @@ type AutoDreamWorkerOptions struct {
 // NewAutoDreamWorker creates a new AutoDream worker.
 func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
 	w := &AutoDreamWorker{pool: pool}
-	// Note: You can inject rueidis.Client and MinimaxClient into the struct if needed.
+
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		redisURL := os.Getenv("REDIS_URL")
+		if redisURL != "" {
+			opts, err := rueidis.ParseURL(redisURL)
+			if err == nil {
+				if c, err := rueidis.NewClient(opts); err == nil {
+					w.redis = c
+				}
+			}
+		}
+	}
 	return w
 }
 
@@ -56,11 +69,22 @@ func (w *AutoDreamWorker) runPruningPipeline(ctx context.Context) {
 }
 
 func (w *AutoDreamWorker) pruneStaleSessionsWithDistributedLock(ctx context.Context) {
-    // Basic distributed lock using Postgres to emulate distributed worker queue without extra deps
-    // For cloud mode with redis, rueidis distributed lock should be used.
+	if w.redis != nil {
+		lockKey := "lock:autodream:prune"
+		// Ensure atomic assignment and expiration using Nx and Px
+		cmd := w.redis.B().Set().Key(lockKey).Value("locked").Nx().Px(50 * time.Second).Build()
+		err := w.redis.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				// Lock is already held by another instance
+				return
+			}
+			slog.Warn("AutoDream: failed to acquire distributed lock for pruning", "err", err)
+			return
+		}
+	}
 
-	// Create a dummy job table if it doesn't exist? No, let's just use the tasks lock concept or simply update the last_accessed directly.
-    w.pruneStaleSessions(ctx)
+	w.pruneStaleSessions(ctx)
 }
 
 // pruneStaleSessions deletes agent_session_data older than 24 hours.
@@ -102,6 +126,21 @@ func (w *AutoDreamWorker) runConflictResolutionPipeline(ctx context.Context) {
 
 // resolveConflicts finds vector embeddings that are similar but have conflicting contexts.
 func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
+	if w.redis != nil {
+		lockKey := "lock:autodream:conflict"
+		// Ensure atomic assignment and expiration using Nx and Px
+		cmd := w.redis.B().Set().Key(lockKey).Value("locked").Nx().Px(29 * time.Minute).Build()
+		err := w.redis.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				// Lock is already held by another instance
+				return
+			}
+			slog.Warn("AutoDream: failed to acquire distributed lock for conflict resolution", "err", err)
+			return
+		}
+	}
+
 	if w.pool.IsSQLite() {
 		// Vector similarity search relies on pgvector extension, skipping complex join on SQLite local wrapper.
 		return
