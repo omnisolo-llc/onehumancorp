@@ -33,5 +33,4 @@ message HandoffPackage {
 - Ensure the UI components properly utilize React state and suspense for real-time updates.
 - Maintain Zero-Lock stack compatibility.
 
-
 </div>

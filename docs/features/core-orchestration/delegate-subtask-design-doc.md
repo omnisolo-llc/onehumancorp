@@ -36,6 +36,7 @@ sequenceDiagram
         Hub (VRAM Check)->>SubAgent: Publish TaskDelegation Message
         Hub (VRAM Check)-->>Originator: DelegateTaskResponse(Success)
     end
+
 ```
 
 > **Developer Insight:**

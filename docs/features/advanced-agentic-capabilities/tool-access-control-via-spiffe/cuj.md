@@ -36,5 +36,4 @@ When an agent attempts to call a highly sensitive MCP tool, the system validates
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

@@ -5,7 +5,7 @@
 <style>
   .glass-container {
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(15px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 24px;
@@ -18,7 +18,7 @@
 <div class="glass-container">
   <h2>Mission Brief: The OHC Delta</h2>
   <p>Based on comprehensive market audits of current Agentic OS architectures, a highly critical vulnerability across all frameworks (e.g., OpenClaw, AutoGen, CrewAI) is the <strong>tight coupling of agents to hardcoded toolsets (OpenAPI schemas or Python functions)</strong>. Agents cannot autonomously discover new tools during runtime. The One Human Corp (OHC) Swarm will capture market dominance by introducing our next Unfair Advantage: <strong>Dynamic Tool Discovery (MCP) & Zero-Trust Synthesis</strong>.</p>
-</div>
+
 
 ## Executive Summary
 
@@ -57,6 +57,9 @@ graph TD;
     H --> C;
     C -->|Inject Schema + Cert into Context| A;
     A -->|Retry with New Tool| I[Successful Tool Execution];
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class C,A,H,D,I,F,G,B,E premium;
 ```
 
 ## Validation & Feasibility
@@ -77,6 +80,5 @@ This capability must be hardened against standard OHC zero-trust and visual exce
 As verified via browser automation (Playwright), the global intelligence market reveals a massive surge in demand for dynamic tool discovery:
 
 ![Market Trend Analysis: JIT Tool Discovery](mcp-market-trend-validation.png)
-
 
 </div>

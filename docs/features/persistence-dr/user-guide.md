@@ -34,5 +34,4 @@ If something goes wrong, navigate to the Snapshots log and click "Restore". Your
 - **Corrupted Snapshots**: Checksums are validated before restoration. If a CSI snapshot is corrupted, the system fails closed and aborts the restore to prevent partial org states.
 - **Storage Limits**: Automated snapshot pruning deletes older snapshots when cluster storage limits are reached, prioritizing explicitly labeled "keep" snapshots.
 
-
 </div>

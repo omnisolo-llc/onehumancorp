@@ -36,5 +36,4 @@ When a complex Epic is ingested, the Manager Agent analyzes the sub-tasks and dy
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

@@ -338,5 +338,4 @@ npx playwright install --with-deps chromium
 
 The Bazel `app_web_e2e_test` target handles this automatically.
 
-
 </div>
