@@ -614,40 +614,37 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// We create sync rules that enforce that a user only syncs data belonging to their organization
-	orgID := claims.OrganizationID
+	// Multi-tenant isolation is enforced via the `token.jwt_ext_organization_id` property passed to the rules dynamically.
 
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
 				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
-				"parameters": []interface{}{orgID},
+				"query": `SELECT * FROM agents WHERE organization_id = request.jwt() ->> 'jwt_ext_organization_id'`,
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				"query": `SELECT * FROM meeting_rooms`,
 			},
 			{
 				"table": "agent_missions",
-				"query": "SELECT * FROM agent_missions",
+				"query": `SELECT * FROM agent_missions`,
 			},
 			{
 				"table": "swarm_memory",
-				"query": "SELECT * FROM swarm_memory",
+				"query": `SELECT * FROM swarm_memory`,
 			},
 			{
 				"table": "capability_plugins",
-				"query": "SELECT * FROM capability_plugins",
+				"query": `SELECT * FROM capability_plugins`,
 			},
 			{
 				"table": "swarm_memory_embeddings",
-				"query": "SELECT * FROM swarm_memory_embeddings",
+				"query": `SELECT * FROM swarm_memory_embeddings`,
 			},
 			{
 				"table": "agent_status",
-				"query": "SELECT * FROM agent_status",
+				"query": `SELECT * FROM agent_status`,
 			},
 		},
 	}

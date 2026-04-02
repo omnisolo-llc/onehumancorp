@@ -104,6 +104,24 @@ plane:
       cpu: "250m"
       memory: "256Mi"
 
+# PowerSync
+powersync:
+  enabled: true
+  image: journeyapps/powersync-service:latest
+  replicas: 1
+  service:
+    port: 8080
+  # Avoid hardcoding secrets. In production, this should be set via Secrets.
+  # When cnpg.enabled=true, point to the CNPG cluster.
+  dataSourceUri: ""
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
+
 
 backend:
   resourceQuota:

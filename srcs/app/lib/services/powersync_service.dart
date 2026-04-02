@@ -24,10 +24,9 @@ class PowerSyncService {
   Future<void> _init() async {
     final settings = await _ref.read(clientSettingsProvider.future);
 
-    // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
-      return;
-    }
+    // Initialize PowerSync dynamically based on the current mode.
+    // In Standalone mode we don't connect to a remote backend.
+    // In Hybrid/Cloud mode we need it for offline-first capabilities.
 
     final schema = Schema((<Table>[
       Table('agents', [
@@ -78,14 +77,16 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings.serverUrl;
+    if (!settings.standaloneMode) {
+      final backendUrl = settings.serverUrl;
 
-    PowerSyncBackendConnector connector = _BackendConnector(
-      backendUrl: backendUrl,
-      ref: _ref,
-    );
+      PowerSyncBackendConnector connector = _BackendConnector(
+        backendUrl: backendUrl,
+        ref: _ref,
+      );
 
-    await _db!.connect(connector: connector);
+      await _db!.connect(connector: connector);
+    }
     _initialized = true;
   }
 
