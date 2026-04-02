@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	sipMeter        = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
-	sipTracer       = otel.Tracer("github.com/onehumancorp/mono/srcs/server/orchestration")
+	sipMeter          = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	sipTracer         = otel.Tracer("github.com/onehumancorp/mono/srcs/server/orchestration")
 	syncMissionsOk, _ = sipMeter.Int64Counter(
 		"sip.missions.synced",
 		metric.WithDescription("Number of successfully synced missions"),
@@ -41,10 +41,10 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db                 db.Provider
-	ContextRoot        string
-	cachedGrounding    string
-	groundingOnce      *sync.Once
+	db              db.Provider
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
 }
 
 const (
@@ -207,11 +207,11 @@ func initializeTables(provider db.Provider) error {
 	}
 
 	for _, q := range queries {
-			if !provider.IsSQLite() {
-				q = strings.ReplaceAll(q, "DATETIME", "TIMESTAMP")
-				q = strings.ReplaceAll(q, "BLOB", "BYTEA")
-				q = strings.ReplaceAll(q, "INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
-			}
+		if !provider.IsSQLite() {
+			q = strings.ReplaceAll(q, "DATETIME", "TIMESTAMP")
+			q = strings.ReplaceAll(q, "BLOB", "BYTEA")
+			q = strings.ReplaceAll(q, "INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+		}
 		if _, err := provider.Exec(context.Background(), q); err != nil {
 			return err
 		}
@@ -913,59 +913,59 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 
-		// Deep recursive redaction
-		var sanitizeRecursively func(data interface{}) interface{}
-		sanitizeRecursively = func(data interface{}) interface{} {
-			switch v := data.(type) {
-			case string:
-				return telemetry.RedactPII(v)
-			case map[string]interface{}:
-				for key, val := range v {
-					v[key] = sanitizeRecursively(val)
-				}
-				return v
-			case []interface{}:
-				for i, val := range v {
-					v[i] = sanitizeRecursively(val)
-				}
-				return v
-			default:
-				return v
+	// Deep recursive redaction
+	var sanitizeRecursively func(data interface{}) interface{}
+	sanitizeRecursively = func(data interface{}) interface{} {
+		switch v := data.(type) {
+		case string:
+			return telemetry.RedactPII(v)
+		case map[string]interface{}:
+			for key, val := range v {
+				v[key] = sanitizeRecursively(val)
 			}
+			return v
+		case []interface{}:
+			for i, val := range v {
+				v[i] = sanitizeRecursively(val)
+			}
+			return v
+		default:
+			return v
 		}
+	}
 
 	for _, m := range missions {
 		// Parse payload to redact and sanitize
-			var rawData interface{}
-			if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
-				slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
+		var rawData interface{}
+		if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
+			slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
 			}
-				continue
-			}
+			continue
+		}
 
-			if payloadData, ok := rawData.(map[string]interface{}); ok {
+		if payloadData, ok := rawData.(map[string]interface{}); ok {
 			// Delete sensitive RAG context
 			delete(payloadData, "rag_context")
 
-				// Add ID to payload for synchronization endpoint
-				payloadData["id"] = m.id
-			}
-
-			// Unconditionally apply redaction
-			rawData = sanitizeRecursively(rawData)
-
-			// Re-marshal sanitized payload
-			sanitizedBytes, err := json.Marshal(rawData)
-			if err != nil {
-				slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-			}
-				continue
+			// Add ID to payload for synchronization endpoint
+			payloadData["id"] = m.id
 		}
-			m.payload = string(sanitizedBytes)
+
+		// Unconditionally apply redaction
+		rawData = sanitizeRecursively(rawData)
+
+		// Re-marshal sanitized payload
+		sanitizedBytes, err := json.Marshal(rawData)
+		if err != nil {
+			slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			continue
+		}
+		m.payload = string(sanitizedBytes)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {

@@ -97,7 +97,6 @@ func TestTeammateMesh_Publish(t *testing.T) {
 	}
 }
 
-
 func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 	// Verify that meshes do not leak across tenants by isolating room channels.
 
