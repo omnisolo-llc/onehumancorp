@@ -375,7 +375,7 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 
 var (
 	// throttleSemaphore limits concurrent DelegateMission executions in SQLite standalone mode.
-	throttleSemaphore = make(chan struct{}, 2)
+	throttleSemaphore = make(chan struct{}, 1)
 )
 
 func envBoolDefault(key string, fallback bool) bool {
