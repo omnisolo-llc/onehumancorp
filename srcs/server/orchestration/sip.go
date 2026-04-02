@@ -883,32 +883,52 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
+
+		// Deep recursive redaction
+		var sanitizeRecursively func(data interface{}) interface{}
+		sanitizeRecursively = func(data interface{}) interface{} {
+			switch v := data.(type) {
+			case string:
+				return telemetry.RedactPII(v)
+			case map[string]interface{}:
+				for key, val := range v {
+					v[key] = sanitizeRecursively(val)
+				}
+				return v
+			case []interface{}:
+				for i, val := range v {
+					v[i] = sanitizeRecursively(val)
+				}
+				return v
+			default:
+				return v
+			}
+		}
+
 	for _, m := range missions {
 		// Parse payload to redact and sanitize
-		var payloadData map[string]interface{}
-			if err := json.Unmarshal([]byte(m.payload), &payloadData); err != nil {
+			var rawData interface{}
+			if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
 				slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
 				if syncMissionsErr != nil {
 					syncMissionsErr.Add(ctx, 1)
-				}
+			}
 				continue
 			}
 
-			// Add ID to payload for synchronization endpoint
-			payloadData["id"] = m.id
-
+			if payloadData, ok := rawData.(map[string]interface{}); ok {
 			// Delete sensitive RAG context
 			delete(payloadData, "rag_context")
 
-			// Redact PII from string fields
-			for k, v := range payloadData {
-				if strVal, ok := v.(string); ok {
-					payloadData[k] = telemetry.RedactPII(strVal)
-			}
+				// Add ID to payload for synchronization endpoint
+				payloadData["id"] = m.id
 			}
 
+			// Unconditionally apply redaction
+			rawData = sanitizeRecursively(rawData)
+
 			// Re-marshal sanitized payload
-			sanitizedBytes, err := json.Marshal(payloadData)
+			sanitizedBytes, err := json.Marshal(rawData)
 			if err != nil {
 				slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
 				if syncMissionsErr != nil {
