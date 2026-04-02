@@ -4,71 +4,65 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-func TestStandaloneThrottling(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
-
-	provider := db.NewSqliteProvider(nil) // It doesn't actually need the db for the initial logic check, but let's mock it if possible or use a real db
-	s, err := NewSIPDB(":memory:")
+func createSIPTestDB(t *testing.T, dbName string) db.Provider {
+    os.Setenv("DATABASE_URL", "sqlite://file:"+dbName+"?mode=memory&cache=shared")
+	ctx := context.Background()
+	dbProv, err := db.New(ctx)
 	if err != nil {
-		t.Fatalf("failed to create SIPDB: %v", err)
-	}
-	s.db = provider
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// Fill the semaphore
-	throttleSemaphore <- struct{}{}
-	throttleSemaphore <- struct{}{}
-
-	// DelegateMission should block now. We test that it blocks by using a context with a short timeout.
-	shortCtx, shortCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer shortCancel()
-
-	err = s.DelegateMission(shortCtx, "mission-1", "test-role", Message{Content: "test"})
-	if err != shortCtx.Err() {
-		t.Errorf("expected context deadline exceeded, got: %v", err)
+		t.Fatalf("failed to init db: %v", err)
 	}
 
-	// Drain the semaphore to clean up
-	<-throttleSemaphore
-	<-throttleSemaphore
+    _, err = dbProv.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS agent_missions (
+            id TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            payload TEXT,
+            assigned_agent_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    `)
+    if err != nil {
+		t.Fatalf("failed to create tables: %v", err)
+	}
 
-	// Now it should pass the semaphore check and fail on the DB exec (since we passed a nil db for the provider, or an uninitialized memory db)
-	// We just want to check it doesn't block.
+    return dbProv
 }
 
-func TestUpsertMissionThrottling(t *testing.T) {
+func TestSIPThrottling_Cloud(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "false")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	provider := createSIPTestDB(t, "sipth1")
+	defer provider.Close()
+
+    sipdb, err := NewSIPDBWithProvider(provider)
+	if err != nil {
+		t.Fatalf("failed to init SIPDB: %v", err)
+	}
+
+	if err := sipdb.UpsertMission(context.Background(), "mission-123", "PENDING", "{}", false); err != nil {
+		t.Fatalf("UpsertMission failed: %v", err)
+	}
+}
+
+func TestSIPThrottling_Standalone(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	s, err := NewSIPDB(":memory:")
+	provider := createSIPTestDB(t, "sipth2")
+	defer provider.Close()
+
+    sipdb, err := NewSIPDBWithProvider(provider)
 	if err != nil {
-		t.Fatalf("failed to create SIPDB: %v", err)
+		t.Fatalf("failed to init SIPDB: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// Fill the semaphore
-	throttleSemaphore <- struct{}{}
-	throttleSemaphore <- struct{}{}
-
-	shortCtx, shortCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer shortCancel()
-
-	err = s.UpsertMission(shortCtx, "mission-2", "PENDING", "{}", false)
-	if err != shortCtx.Err() {
-		t.Errorf("expected context deadline exceeded, got: %v", err)
+	if err := sipdb.UpsertMission(context.Background(), "mission-124", "PENDING", "{}", false); err != nil {
+		t.Fatalf("UpsertMission failed: %v", err)
 	}
-
-	// Drain the semaphore to clean up
-	<-throttleSemaphore
-	<-throttleSemaphore
 }

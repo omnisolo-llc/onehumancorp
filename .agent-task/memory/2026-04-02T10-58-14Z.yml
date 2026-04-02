@@ -1,0 +1,4 @@
+timestamp: "2026-04-02T10:58:14Z"
+agent: Scribe
+context: "AutoDream memory consolidation"
+insight: "When managing the Shared Task List, PostgreSQL supports `FOR UPDATE SKIP LOCKED` for concurrent workers picking from a queue without blocking each other. However, standard SQLite row locking via `database/sql` driver transactions natively does not support `SKIP LOCKED` natively across all standard configs, and requires careful fallback to simple `SELECT` and immediate `UPDATE` with `rowsAffected` checks in `OHC_STANDALONE` mode. Teammate Mesh implementations using in-memory WebSockets (`gorilla/websocket`) must use thread-safe mutex operations (`sync.RWMutex`) around the connection map when iterating connected clients for broadcasting."
