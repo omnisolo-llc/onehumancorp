@@ -90,6 +90,31 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 	}
 	defer db.Close()
 
+	// 1.5 Test file permissions on disk creation (Regression Test for Local Hardening)
+	tempDir := t.TempDir()
+	diskDBPath := filepath.Join(tempDir, "ohc_test.db")
+	diskDB, errDisk := NewSIPDB(diskDBPath)
+	if errDisk != nil {
+		t.Fatalf("Failed to create disk SIPDB: %v", errDisk)
+	}
+	defer diskDB.Close()
+
+	// Ensure DB created WAL/SHM by doing a write
+	errUpdate := diskDB.UpdateMemory(context.Background(), "test_perm", "test_val")
+	if errUpdate != nil {
+		t.Fatalf("Failed to write to disk SIPDB: %v", errUpdate)
+	}
+
+	filesToCheck := []string{diskDBPath, diskDBPath + "-wal", diskDBPath + "-shm"}
+	for _, f := range filesToCheck {
+		info, err := os.Stat(f)
+		if err == nil && !info.IsDir() {
+			if info.Mode().Perm() != 0600 {
+				t.Errorf("File %s does not have 0600 permissions, got %v", f, info.Mode().Perm())
+			}
+		}
+	}
+
 	// Insert invalid schema data manually to cause a row scan error.
 	// Since we can't easily break the type in sqlite (it's dynamically typed),
 	// this one is hard to hit purely through SQLite without mocking the DB connection.
