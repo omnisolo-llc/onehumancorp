@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/db"
+
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -110,4 +112,67 @@ func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 		t.Errorf("Expected 0 subscribers initially")
 	}
 	mesh.mu.Unlock()
+}
+
+func TestLocalTeammateMesh(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	// Use NewTestProvider or db.New to init db
+	ctx := context.Background()
+
+	provider := db.NewTestProvider(t)
+	defer provider.Close()
+
+	// Explicitly define the schema within the test initialization
+	_, err := provider.Exec(ctx, `
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	mesh := NewLocalTeammateMesh(provider)
+
+	sub, err := mesh.SubscribeTasks(ctx)
+	if err != nil {
+		t.Fatalf("failed to subscribe: %v", err)
+	}
+
+	task := Task{
+		AgentID: "agent-123",
+		Action:  "PICK_UP_TASK",
+		Status:  "IN_PROGRESS",
+		TaskID:  "task-456",
+	}
+
+	err = mesh.BroadcastTask(ctx, task)
+	if err != nil {
+		t.Fatalf("failed to broadcast: %v", err)
+	}
+
+	select {
+	case received := <-sub:
+		if received.TaskID != task.TaskID {
+			t.Errorf("expected task id %s, got %s", task.TaskID, received.TaskID)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for task broadcast")
+	}
+
+	// Verify persistence
+	var count int
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM shared_tasks WHERE id = $1", task.TaskID).Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 record in shared_tasks, got %d", count)
+	}
 }
