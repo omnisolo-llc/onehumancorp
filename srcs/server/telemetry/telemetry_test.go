@@ -367,12 +367,14 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
 	originalTokenBurnRateGauge := tokenBurnRateGauge
+	originalSwarmTasksCompletedCounter := swarmTasksCompletedCounter
 
 	tokenUsageCounter = nil
 	agentApiCallsCounter = nil
 	humanInteractionsCounter = nil
 	meetingEventsCounter = nil
 	tokenBurnRateGauge = nil
+	swarmTasksCompletedCounter = nil
 
 	defer func() {
 		tokenUsageCounter = originalTokenUsageCounter
@@ -380,6 +382,7 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		humanInteractionsCounter = originalHumanInteractionsCounter
 		meetingEventsCounter = originalMeetingEventsCounter
 		tokenBurnRateGauge = originalTokenBurnRateGauge
+		swarmTasksCompletedCounter = originalSwarmTasksCompletedCounter
 	}()
 
 	ctx := context.Background()
@@ -427,6 +430,10 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordSwarmTaskCompleted Uninitialized", func(t *testing.T) {
+		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
 }
 

@@ -20,7 +20,7 @@ func TestStandaloneThrottling(t *testing.T) {
 	}
 	s.db = provider
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	// Fill the semaphore
@@ -53,8 +53,8 @@ func TestUpsertMissionThrottling(t *testing.T) {
 		t.Fatalf("failed to create SIPDB: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	_, cancel2 := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel2()
 
 	// Fill the semaphore
 	throttleSemaphore <- struct{}{}
