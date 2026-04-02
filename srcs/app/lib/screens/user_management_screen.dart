@@ -31,24 +31,23 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Future<void> _handleDeleteUser(String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete User?'),
-            content: const Text('This action cannot be undone.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Delete User?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -113,15 +112,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               final user = users[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor:
-                      user.isAdmin ? colors.primary : colors.secondaryContainer,
+                  backgroundColor: user.isAdmin
+                      ? colors.primary
+                      : colors.secondaryContainer,
                   child: Text(
                     user.username[0].toUpperCase(),
                     style: TextStyle(
-                      color:
-                          user.isAdmin
-                              ? colors.onPrimary
-                              : colors.onSecondaryContainer,
+                      color: user.isAdmin
+                          ? colors.onPrimary
+                          : colors.onSecondaryContainer,
                     ),
                   ),
                 ),
@@ -184,7 +183,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   void _showAddUserDialog() {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.2), // Semi-transparent barrier for glass effect
+      barrierColor: Colors.black.withValues(
+        alpha: 0.2,
+      ), // Semi-transparent barrier for glass effect
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -199,10 +200,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             ]),
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
               ),
@@ -256,14 +261,18 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         onPressed: () {
                           final snackBar = SnackBar(
                             content: Text(
-                                'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                  fontFamily: 'Inter',
-                                ),
+                              'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
+                                fontFamily: 'Inter',
+                              ),
                             ),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                           );
                           ScaffoldMessenger.of(context).showSnackBar(snackBar);
                           Navigator.pop(context);

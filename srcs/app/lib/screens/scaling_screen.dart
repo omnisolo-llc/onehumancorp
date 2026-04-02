@@ -100,19 +100,16 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children:
-                        _roles.map((role) {
-                          final isSelected = _selectedRole == role;
-                          return ChoiceChip(
-                            label: Text(role.replaceAll('_', ' ')),
-                            selected: isSelected,
-                            onSelected:
-                                _isProvisioning
-                                    ? null
-                                    : (val) =>
-                                        setState(() => _selectedRole = role),
-                          );
-                        }).toList(),
+                    children: _roles.map((role) {
+                      final isSelected = _selectedRole == role;
+                      return ChoiceChip(
+                        label: Text(role.replaceAll('_', ' ')),
+                        selected: isSelected,
+                        onSelected: _isProvisioning
+                            ? null
+                            : (val) => setState(() => _selectedRole = role),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 48),
 
@@ -146,11 +143,9 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                             min: 1,
                             max: 10,
                             divisions: 9,
-                            onChanged:
-                                _isProvisioning
-                                    ? null
-                                    : (val) =>
-                                        setState(() => _targetCount = val),
+                            onChanged: _isProvisioning
+                                ? null
+                                : (val) => setState(() => _targetCount = val),
                           ),
                           const Divider(height: 32),
                           Row(
@@ -187,18 +182,16 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                     height: 56,
                     child: FilledButton.icon(
                       onPressed: _isProvisioning ? null : _handleScale,
-                      icon:
-                          _isProvisioning
-                              ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                ),
-                              )
-                              : const Icon(Icons.rocket_launch),
+                      icon: _isProvisioning
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            )
+                          : const Icon(Icons.rocket_launch),
                       label: Text(
                         _isProvisioning
                             ? 'Provisioning...'
@@ -257,12 +250,11 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                             style: TextStyle(
                               fontFamily: 'monospace',
                               fontSize: 12,
-                              color:
-                                  isError
-                                      ? Theme.of(context).colorScheme.error
-                                      : isSuccess
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : colors.onSurfaceVariant,
+                              color: isError
+                                  ? Theme.of(context).colorScheme.error
+                                  : isSuccess
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : colors.onSurfaceVariant,
                             ),
                           ),
                         );

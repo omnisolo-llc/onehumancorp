@@ -18,114 +18,107 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: clientSettingsAsync.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        error: (err, _) => Center(
+          child: Text(
+            'Error: $err',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+        data: (settings) => ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            if (user != null) ...[
+              ListTile(
+                leading: CircleAvatar(
+                  child: Text(user.name.substring(0, 1).toUpperCase()),
+                ),
+                title: Text(user.name),
+                subtitle: Text(user.email),
+              ),
+              const Divider(),
+            ],
+
+            const _SectionHeader(title: 'Communication'),
+            Card(
+              child: ListTile(
+                leading: Icon(
+                  settings.standaloneMode
+                      ? Icons.laptop_windows
+                      : Icons.cloud_queue,
+                ),
+                title: Text(
+                  settings.standaloneMode
+                      ? 'Desktop Standalone Mode'
+                      : 'Remote Client Mode',
+                ),
+                subtitle: Text(
+                  settings.standaloneMode
+                      ? 'This device manages a local backend and lightweight local services.'
+                      : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                ),
               ),
             ),
-        error:
-            (err, _) => Center(
-              child: Text(
-                'Error: $err',
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('Backend URL'),
+              subtitle: Text(settings.backendUrl),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Edit Backend URL',
+                onPressed: () =>
+                    _editBackendUrl(context, ref, settings.backendUrl),
+              ),
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.computer),
+              title: const Text('Standalone Mode'),
+              subtitle: const Text(
+                'Run a local desktop backend. Disable this to use the app as a remote client.',
+              ),
+              value: settings.standaloneMode,
+              onChanged: (value) => ref
+                  .read(clientSettingsProvider.notifier)
+                  .updateStandaloneMode(value),
+            ),
+
+            if (settings.standaloneMode) ...[
+              const Divider(),
+              const _SectionHeader(title: 'Local Backend'),
+              const _LocalBackendStatusCard(),
+            ],
+
+            const Divider(),
+            const _SectionHeader(title: 'Account'),
+            ListTile(
+              leading: const Icon(Icons.business),
+              title: const Text('Organization'),
+              subtitle: Text(user?.organizationId ?? '—'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.verified_user),
+              title: const Text('Role'),
+              subtitle: Text(user?.role ?? '—'),
+            ),
+            const Divider(),
+            ListTile(
+              leading: Icon(
+                Icons.logout,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Sign Out',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
+              onTap: () => ref.read(authStateProvider.notifier).logout(),
             ),
-        data:
-            (settings) => ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                if (user != null) ...[
-                  ListTile(
-                    leading: CircleAvatar(
-                      child: Text(user.name.substring(0, 1).toUpperCase()),
-                    ),
-                    title: Text(user.name),
-                    subtitle: Text(user.email),
-                  ),
-                  const Divider(),
-                ],
-
-                const _SectionHeader(title: 'Communication'),
-                Card(
-                  child: ListTile(
-                    leading: Icon(
-                      settings.standaloneMode
-                          ? Icons.laptop_windows
-                          : Icons.cloud_queue,
-                    ),
-                    title: Text(
-                      settings.standaloneMode
-                          ? 'Desktop Standalone Mode'
-                          : 'Remote Client Mode',
-                    ),
-                    subtitle: Text(
-                      settings.standaloneMode
-                          ? 'This device manages a local backend and lightweight local services.'
-                          : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
-                    ),
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('Backend URL'),
-                  subtitle: Text(settings.backendUrl),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Edit Backend URL',
-                    onPressed:
-                        () =>
-                            _editBackendUrl(context, ref, settings.backendUrl),
-                  ),
-                ),
-
-                SwitchListTile(
-                  secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
-                  subtitle: const Text(
-                    'Run a local desktop backend. Disable this to use the app as a remote client.',
-                  ),
-                  value: settings.standaloneMode,
-                  onChanged:
-                      (value) => ref
-                          .read(clientSettingsProvider.notifier)
-                          .updateStandaloneMode(value),
-                ),
-
-                if (settings.standaloneMode) ...[
-                  const Divider(),
-                  const _SectionHeader(title: 'Local Backend'),
-                  const _LocalBackendStatusCard(),
-                ],
-
-                const Divider(),
-                const _SectionHeader(title: 'Account'),
-                ListTile(
-                  leading: const Icon(Icons.business),
-                  title: const Text('Organization'),
-                  subtitle: Text(user?.organizationId ?? '—'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.verified_user),
-                  title: const Text('Role'),
-                  subtitle: Text(user?.role ?? '—'),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: Icon(
-                    Icons.logout,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    'Sign Out',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                  onTap: () => ref.read(authStateProvider.notifier).logout(),
-                ),
-              ],
-            ),
+          ],
+        ),
       ),
     );
   }
@@ -138,80 +131,90 @@ class SettingsScreen extends ConsumerWidget {
     final controller = TextEditingController(text: current);
     final result = await showDialog<String>(
       context: context,
-      builder:
-          (context) => Dialog(
-            backgroundColor: Colors.transparent,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edit Backend URL',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Outfit',
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 16),
+                  Text(
+                    'Configure the URL for the OHC Cloud or local backend.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'URL (e.g. http://localhost:8080)',
+                      prefixIcon: const Icon(Icons.link),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Text(
-                        'Edit Backend URL',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
-                          color: Theme.of(context).colorScheme.onSurface,
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(fontFamily: 'Inter'),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Configure the URL for the OHC Cloud or local backend.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      TextField(
-                        controller: controller,
-                        decoration: InputDecoration(
-                          labelText: 'URL (e.g. http://localhost:8080)',
-                          prefixIcon: const Icon(Icons.link),
-                          border: OutlineInputBorder(
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () =>
+                            Navigator.pop(context, controller.text),
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
-                            style: FilledButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
-                          ),
-                        ],
+                        child: const Text(
+                          'Save',
+                          style: TextStyle(fontFamily: 'Inter'),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
           ),
+        ),
+      ),
     );
     if (result != null && result.isNotEmpty) {
       ref.read(clientSettingsProvider.notifier).updateBackendUrl(result);
@@ -271,87 +274,80 @@ class _LocalBackendStatusCardState
                     children: [
                       Icon(
                         running ? Icons.check_circle : Icons.error,
-                        color:
-                            running
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.error,
+                        color: running
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.error,
                       ),
                       const SizedBox(width: 8),
                       Text(running ? 'Service Running' : 'Service Stopped'),
                       const Spacer(),
                       ElevatedButton(
-                        onPressed:
-                            _isToggling
-                                ? null
-                                : () async {
-                                  setState(() => _isToggling = true);
-                                  try {
-                                    if (running) {
-                                      await manager.stopService();
-                                    } else {
-                                      await manager.startService();
-                                    }
-                                  } finally {
-                                    if (mounted) {
-                                      setState(() => _isToggling = false);
-                                    }
+                        onPressed: _isToggling
+                            ? null
+                            : () async {
+                                setState(() => _isToggling = true);
+                                try {
+                                  if (running) {
+                                    await manager.stopService();
+                                  } else {
+                                    await manager.startService();
                                   }
-                                },
-                        child:
-                            _isToggling
-                                ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : Text(running ? 'Stop' : 'Start'),
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _isToggling = false);
+                                  }
+                                }
+                              },
+                        child: _isToggling
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(running ? 'Stop' : 'Start'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
-                    onPressed:
-                        _isRunningDoctor
-                            ? null
-                            : () async {
-                              setState(() => _isRunningDoctor = true);
-                              try {
-                                final report = await manager.runDoctor();
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
-                                          content: SingleChildScrollView(
-                                            child: Text(report),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(context),
-                                              child: const Text('Close'),
-                                            ),
-                                          ],
-                                        ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isRunningDoctor = false);
-                                }
+                    onPressed: _isRunningDoctor
+                        ? null
+                        : () async {
+                            setState(() => _isRunningDoctor = true);
+                            try {
+                              final report = await manager.runDoctor();
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('System Doctor'),
+                                    content: SingleChildScrollView(
+                                      child: Text(report),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Close'),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               }
-                            },
-                    icon:
-                        _isRunningDoctor
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.medical_services),
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isRunningDoctor = false);
+                              }
+                            }
+                          },
+                    icon: _isRunningDoctor
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.medical_services),
                     label: const Text('Run Doctor Diagnostics'),
                   ),
                 ],

@@ -70,40 +70,41 @@ class _SlideToApproveState extends State<SlideToApprove> {
           decoration: BoxDecoration(
             color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.2)),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.2),
+            ),
           ),
           child: Stack(
             children: [
               // Track Text
               Center(
-                child:
-                    widget.disabled && _position == _maxDrag
-                        ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Authorizing...',
-                              style: TextStyle(
-                                color: colors.primary.withValues(alpha: 0.7),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        )
-                        : Text(
-                          'Slide to Approve',
-                          style: TextStyle(
-                            color: colors.onSurfaceVariant.withValues(alpha: 0.5),
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.5,
+                child: widget.disabled && _position == _maxDrag
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Authorizing...',
+                            style: TextStyle(
+                              color: colors.primary.withValues(alpha: 0.7),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        'Slide to Approve',
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant.withValues(alpha: 0.5),
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
                         ),
+                      ),
               ),
 
               // Progress Fill
@@ -122,10 +123,9 @@ class _SlideToApproveState extends State<SlideToApprove> {
 
               // Thumb
               AnimatedPositioned(
-                duration:
-                    _isDragging
-                        ? Duration.zero
-                        : const Duration(milliseconds: 200),
+                duration: _isDragging
+                    ? Duration.zero
+                    : const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 left: _position + 4,
                 top: 4,
@@ -139,10 +139,9 @@ class _SlideToApproveState extends State<SlideToApprove> {
                     child: Container(
                       width: _thumbWidth,
                       decoration: BoxDecoration(
-                        color:
-                            widget.disabled && _position == _maxDrag
-                                ? colors.primaryContainer
-                                : colors.primary,
+                        color: widget.disabled && _position == _maxDrag
+                            ? colors.primaryContainer
+                            : colors.primary,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
@@ -153,18 +152,17 @@ class _SlideToApproveState extends State<SlideToApprove> {
                         ],
                       ),
                       child: Center(
-                        child:
-                            widget.disabled && _position == _maxDrag
-                                ? Icon(
-                                  Icons.check,
-                                  color: colors.onPrimaryContainer,
-                                  size: 24,
-                                )
-                                : Icon(
-                                  Icons.chevron_right,
-                                  color: colors.onPrimary,
-                                  size: 24,
-                                ),
+                        child: widget.disabled && _position == _maxDrag
+                            ? Icon(
+                                Icons.check,
+                                color: colors.onPrimaryContainer,
+                                size: 24,
+                              )
+                            : Icon(
+                                Icons.chevron_right,
+                                color: colors.onPrimary,
+                                size: 24,
+                              ),
                       ),
                     ),
                   ),

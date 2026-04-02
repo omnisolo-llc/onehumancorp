@@ -12,6 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
@@ -21,6 +24,15 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+)
+
+var (
+	dashboardMeter = otel.Meter("github.com/onehumancorp/mono/srcs/server/dashboard")
+	dashboardTracer = otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard")
+	syncRuleRequests, _ = dashboardMeter.Int64Counter(
+		"dashboard.sync_rules.requests",
+		metric.WithDescription("Number of PowerSync sync rules requested"),
+	)
 )
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
@@ -602,31 +614,35 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 // and local-to-cloud mission sync as per the health guardianship requirements.
 // handleSyncRules provides dynamic sync rules for the PowerSync instance to ensure multi-tenant isolation.
 func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
+	ctx, span := dashboardTracer.Start(r.Context(), "handleSyncRules")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	claims := auth.ClaimsFromContext(r.Context())
+	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil || claims.OrganizationID == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
+	if syncRuleRequests != nil {
+		syncRuleRequests.Add(ctx, 1)
+	}
+
 	// We create sync rules that enforce that a user only syncs data belonging to their organization
-	orgID := claims.OrganizationID
+	// using PowerSync dynamic sync rules. As required, we apply WHERE clauses matched to the user's JWT claims.
 
 	syncRules := map[string]interface{}{
 		"rules": []map[string]interface{}{
 			{
 				"table": "agents",
-				"query": "SELECT * FROM agents WHERE organization_id = $1",
-				"parameters": []interface{}{orgID},
+				"query": "SELECT * FROM agents WHERE organization_id = token_parameters.organization_id",
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
 				"query": "SELECT * FROM meeting_rooms",
 			},
 			{

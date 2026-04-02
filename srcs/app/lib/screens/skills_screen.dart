@@ -24,29 +24,24 @@ class SkillsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Skills & Plugins')),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (skills) {
-          final filtered =
-              category == 'all'
-                  ? skills
-                  : skills.where((s) => s.category == category).toList();
+          final filtered = category == 'all'
+              ? skills
+              : skills.where((s) => s.category == category).toList();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _CategoryBar(skills: skills),
               Expanded(
-                child:
-                    filtered.isEmpty
-                        ? const Center(
-                          child: Text('No skills in this category.'),
-                        )
-                        : _SkillList(skills: filtered, ref: ref),
+                child: filtered.isEmpty
+                    ? const Center(child: Text('No skills in this category.'))
+                    : _SkillList(skills: filtered, ref: ref),
               ),
             ],
           );
@@ -71,26 +66,20 @@ class _CategoryBar extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        children:
-            cats.map((c) {
-              final count =
-                  c == 'all'
-                      ? skills.length
-                      : skills.where((s) => s.category == c).length;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(
-                    '${c[0].toUpperCase()}${c.substring(1)} ($count)',
-                  ),
-                  selected: selected == c,
-                  onSelected:
-                      (_) =>
-                          ref.read(_selectedCategoryProvider.notifier).state =
-                              c,
-                ),
-              );
-            }).toList(),
+        children: cats.map((c) {
+          final count = c == 'all'
+              ? skills.length
+              : skills.where((s) => s.category == c).length;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text('${c[0].toUpperCase()}${c.substring(1)} ($count)'),
+              selected: selected == c,
+              onSelected: (_) =>
+                  ref.read(_selectedCategoryProvider.notifier).state = c,
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -231,14 +220,14 @@ class _SkillCardState extends State<_SkillCard> {
                 const SizedBox(width: 8),
                 _busy
                     ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : OutlinedButton(
-                      onPressed: _toggleInstall,
-                      child: Text(_installed ? 'Remove' : 'Install'),
-                    ),
+                        onPressed: _toggleInstall,
+                        child: Text(_installed ? 'Remove' : 'Install'),
+                      ),
               ],
             ),
             if (s.description.isNotEmpty) ...[

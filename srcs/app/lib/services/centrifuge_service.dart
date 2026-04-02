@@ -31,10 +31,9 @@ class CentrifugeMessage {
       authorId: json['author_id'] as String? ?? '',
       authorName: json['author_name'] as String? ?? 'Unknown',
       body: json['body'] as String? ?? '',
-      sentAt:
-          json['sent_at'] != null
-              ? DateTime.parse(json['sent_at'] as String)
-              : DateTime.now(),
+      sentAt: json['sent_at'] != null
+          ? DateTime.parse(json['sent_at'] as String)
+          : DateTime.now(),
     );
   }
 

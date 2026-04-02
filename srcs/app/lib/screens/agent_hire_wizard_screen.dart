@@ -152,10 +152,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     child: Tooltip(
                       message: 'Next step',
                       child: ElevatedButton(
-                        onPressed:
-                            (_step == 0 && _selectedRole.isEmpty)
-                                ? null
-                                : details.onStepContinue,
+                        onPressed: (_step == 0 && _selectedRole.isEmpty)
+                            ? null
+                            : details.onStepContinue,
                         child: const Text('Next'),
                       ),
                     ),
@@ -167,16 +166,15 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                       message: 'Deploy agent to orchestration hub',
                       child: ElevatedButton(
                         onPressed: _isDeploying ? null : _handleDeploy,
-                        child:
-                            _isDeploying
-                                ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : const Text('Deploy Agent'),
+                        child: _isDeploying
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Deploy Agent'),
                       ),
                     ),
                   ),
@@ -215,23 +213,19 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children:
-                      _roles.map((role) {
-                        final isSelected = _selectedRole == role;
-                        return ChoiceChip(
-                          label: Text(_formatRole(role)),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(
-                              () => _selectedRole = selected ? role : '',
-                            );
-                            if (selected && _nameController.text.isEmpty) {
-                              _nameController.text =
-                                  'Senior ${_formatRole(role)}';
-                            }
-                          },
-                        );
-                      }).toList(),
+                  children: _roles.map((role) {
+                    final isSelected = _selectedRole == role;
+                    return ChoiceChip(
+                      label: Text(_formatRole(role)),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() => _selectedRole = selected ? role : '');
+                        if (selected && _nameController.text.isEmpty) {
+                          _nameController.text = 'Senior ${_formatRole(role)}';
+                        }
+                      },
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -271,8 +265,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                       subtitle: Text(p.description),
                       value: p.type,
                       groupValue: _selectedProvider,
-                      onChanged:
-                          (val) => setState(() => _selectedProvider = val!),
+                      onChanged: (val) =>
+                          setState(() => _selectedProvider = val!),
                     ),
                   ),
               ],

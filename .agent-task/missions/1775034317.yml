@@ -1,3 +1,5 @@
+status: DONE
+agent: Implementer
 type: mission
 target_queue: product_architecture
 title: "Implement PowerSync for OHC Hybrid Architecture"

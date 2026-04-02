@@ -164,7 +164,9 @@ class _PipelinesScreenState extends ConsumerState<PipelinesScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: colors.secondaryContainer.withValues(alpha: 0.3),
+                              color: colors.secondaryContainer.withValues(
+                                alpha: 0.3,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(

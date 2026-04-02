@@ -32,24 +32,20 @@ class AgentsScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-        error:
-            (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-        data:
-            (agents) =>
-                agents.isEmpty
-                    ? _EmptyAgents(onHire: () => context.go('/agents/hire'))
-                    : _AgentList(agents: agents),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            'Error: $e',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+        data: (agents) => agents.isEmpty
+            ? _EmptyAgents(onHire: () => context.go('/agents/hire'))
+            : _AgentList(agents: agents),
       ),
     );
   }
@@ -110,20 +106,18 @@ class _AgentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isRunningColor =
-        agent.isRunning
-            ? colorScheme.primary
-            : colorScheme.surfaceContainerHighest;
-    final isRunningIconColor =
-        agent.isRunning ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
-    final chipBgColor =
-        agent.isRunning
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest;
-    final chipTextColor =
-        agent.isRunning
-            ? colorScheme.onPrimaryContainer
-            : colorScheme.onSurfaceVariant;
+    final isRunningColor = agent.isRunning
+        ? colorScheme.primary
+        : colorScheme.surfaceContainerHighest;
+    final isRunningIconColor = agent.isRunning
+        ? colorScheme.onPrimary
+        : colorScheme.onSurfaceVariant;
+    final chipBgColor = agent.isRunning
+        ? colorScheme.primaryContainer
+        : colorScheme.surfaceContainerHighest;
+    final chipTextColor = agent.isRunning
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
 
     return Semantics(
       label:

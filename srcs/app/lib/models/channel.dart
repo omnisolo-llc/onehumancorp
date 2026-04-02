@@ -28,10 +28,9 @@ class ChatChannel {
           (json['config'] as Map<String, dynamic>?)?.cast<String, String>() ??
           {},
       enabled: json['enabled'] as bool? ?? true,
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.parse(json['created_at'] as String)
-              : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 

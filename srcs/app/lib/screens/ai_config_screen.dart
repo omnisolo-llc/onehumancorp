@@ -32,17 +32,18 @@ class AiConfigScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data:
-            (providers) =>
-                providers.isEmpty
-                    ? _EmptyProviders(onAdd: () => _showAddDialog(context, ref))
-                    : _ProviderList(providers: providers, ref: ref),
+        data: (providers) => providers.isEmpty
+            ? _EmptyProviders(onAdd: () => _showAddDialog(context, ref))
+            : _ProviderList(providers: providers, ref: ref),
       ),
     );
   }
 
   void _showAddDialog(BuildContext context, WidgetRef ref) {
-    showDialog(context: context, builder: (_) => _ProviderDialog(ref: ref));
+    showDialog(
+      context: context,
+      builder: (_) => _ProviderDialog(ref: ref),
+    );
   }
 }
 
@@ -135,8 +136,9 @@ class _ProviderCard extends StatelessWidget {
                 if (provider.isOfficial)
                   Chip(
                     label: const Text('Official'),
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
                   ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
@@ -155,15 +157,14 @@ class _ProviderCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children:
-                    provider.models
-                        .map(
-                          (m) => Chip(
-                            label: Text(m),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        )
-                        .toList(),
+                children: provider.models
+                    .map(
+                      (m) => Chip(
+                        label: Text(m),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
+                    .toList(),
               ),
             ],
           ],
@@ -176,34 +177,33 @@ class _ProviderCard extends StatelessWidget {
     final ctrl = TextEditingController(text: provider.apiKey);
     showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text('API Key — ${provider.name}'),
-            content: TextField(
-              controller: ctrl,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'API Key',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.key),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  final api = ref.read(apiServiceProvider);
-                  await api?.saveAiProviderKey(provider.id, ctrl.text.trim());
-                  ref.invalidate(_providersProvider);
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: Text('API Key — ${provider.name}'),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'API Key',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.key),
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final api = ref.read(apiServiceProvider);
+              await api?.saveAiProviderKey(provider.id, ctrl.text.trim());
+              ref.invalidate(_providersProvider);
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -272,12 +272,11 @@ class _ProviderDialogState extends State<_ProviderDialog> {
     if (_nameCtrl.text.trim().isEmpty) return;
     setState(() => _loading = true);
     try {
-      final models =
-          _modelsCtrl.text
-              .split(',')
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toList();
+      final models = _modelsCtrl.text
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
       final api = widget.ref.read(apiServiceProvider);
       await api?.addAiProvider(
         name: _nameCtrl.text.trim(),
@@ -370,14 +369,13 @@ class _ProviderDialogState extends State<_ProviderDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Add'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
         ),
       ],
     );

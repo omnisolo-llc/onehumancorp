@@ -23,10 +23,9 @@ class Agent {
       role: json['role'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       organizationId: json['organization_id'] as String? ?? '',
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.parse(json['created_at'] as String)
-              : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 

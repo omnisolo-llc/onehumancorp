@@ -31,19 +31,18 @@ class MeetingsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data:
-            (rooms) =>
-                rooms.isEmpty
-                    ? _EmptyRooms(
-                      onCreate: () => _showCreateDialog(context, ref),
-                    )
-                    : _RoomList(rooms: rooms, ref: ref),
+        data: (rooms) => rooms.isEmpty
+            ? _EmptyRooms(onCreate: () => _showCreateDialog(context, ref))
+            : _RoomList(rooms: rooms, ref: ref),
       ),
     );
   }
 
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    showDialog(context: context, builder: (_) => _CreateRoomDialog(ref: ref));
+    showDialog(
+      context: context,
+      builder: (_) => _CreateRoomDialog(ref: ref),
+    );
   }
 }
 
@@ -151,45 +150,41 @@ class _RoomCardState extends State<_RoomCard> {
   void _showJoinInfo(BuildContext context, Map<String, dynamic> info) {
     showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Join Meeting'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (info['join_url'] != null) ...[
-                  const Text(
-                    'Join URL:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  SelectableText(info['join_url'] as String),
-                ],
-                if (info['token'] != null) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Token:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  SelectableText(
-                    info['token'] as String,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
+      builder: (_) => AlertDialog(
+        title: const Text('Join Meeting'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (info['join_url'] != null) ...[
+              const Text(
+                'Join URL:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(info['join_url'] as String),
+            ],
+            if (info['token'] != null) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Token:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(
+                info['token'] as String,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
               ),
             ],
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
           ),
+        ],
+      ),
     );
   }
 
@@ -260,14 +255,13 @@ class _RoomCardState extends State<_RoomCard> {
               ),
             ),
             FilledButton.icon(
-              icon:
-                  _joining
-                      ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.login, size: 18),
+              icon: _joining
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.login, size: 18),
               label: const Text('Join'),
               onPressed: _joining ? null : _join,
             ),
@@ -338,14 +332,13 @@ class _CreateRoomDialogState extends State<_CreateRoomDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Create'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Create'),
         ),
       ],
     );

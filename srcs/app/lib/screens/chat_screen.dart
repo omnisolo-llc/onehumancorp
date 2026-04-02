@@ -129,19 +129,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child:
-                messages.isEmpty
-                    ? const Center(child: Text('No messages yet. Say hello!'))
-                    : ListView.builder(
-                      controller: _scrollCtrl,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: messages.length,
-                      itemBuilder: (_, i) {
-                        final m = messages[i];
-                        final isMe = m.authorId == user?.id;
-                        return _MessageBubble(message: m, isMe: isMe);
-                      },
-                    ),
+            child: messages.isEmpty
+                ? const Center(child: Text('No messages yet. Say hello!'))
+                : ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (_, i) {
+                      final m = messages[i];
+                      final isMe = m.authorId == user?.id;
+                      return _MessageBubble(message: m, isMe: isMe);
+                    },
+                  ),
           ),
           _InputBar(controller: _ctrl, sending: _sending, onSend: _send),
         ],
@@ -195,8 +194,9 @@ class _MessageBubble extends StatelessWidget {
           ),
         ),
         child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             if (!isMe)
               Text(
@@ -246,14 +246,13 @@ class _InputBar extends StatelessWidget {
             label: 'Send chat message',
             child: IconButton.filled(
               tooltip: 'Send message',
-              icon:
-                  sending
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.send),
+              icon: sending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
               onPressed: sending ? null : onSend,
             ),
           ),

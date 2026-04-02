@@ -46,10 +46,9 @@ class HandoffPackage {
           json['visual_ground_truth'] as String? ??
           json['visualGroundTruth'] as String?,
       status: json['status'] as String? ?? 'pending',
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.parse(json['created_at'] as String)
-              : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 

@@ -39,12 +39,9 @@ class DashboardSnapshot {
               ?.map((e) => StatusBucket.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      updatedAt:
-          json['updatedAt'] != null || json['updated_at'] != null
-              ? DateTime.parse(
-                (json['updatedAt'] ?? json['updated_at']) as String,
-              )
-              : DateTime.now(),
+      updatedAt: json['updatedAt'] != null || json['updated_at'] != null
+          ? DateTime.parse((json['updatedAt'] ?? json['updated_at']) as String)
+          : DateTime.now(),
     );
   }
 }
@@ -117,8 +114,8 @@ class CostSummary {
 
   factory CostSummary.fromJson(Map<String, dynamic> json) {
     return CostSummary(
-      totalCostUSD:
-          (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0).toDouble(),
+      totalCostUSD: (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0)
+          .toDouble(),
       totalTokens: json['totalTokens'] ?? json['total_tokens'] ?? 0,
       agents:
           (json['agents'] as List<dynamic>?)
