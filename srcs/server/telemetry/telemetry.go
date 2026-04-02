@@ -33,6 +33,9 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 
+	SyncCompletedCount metric.Int64Counter
+	SyncFailedCount    metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -178,6 +181,22 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncCompletedCount, err = m.Int64Counter(
+		"sync_completed_count",
+		metric.WithDescription("Total successfully synced rows"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncFailedCount, err = m.Int64Counter(
+		"sync_failed_count",
+		metric.WithDescription("Total failed synced rows"),
 	)
 	if err != nil {
 		errs = append(errs, err)
