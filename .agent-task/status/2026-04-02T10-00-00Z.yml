@@ -1,0 +1,7 @@
+status: SUCCESS
+role: Sentinel
+vulnerability_fixed: true
+fixes:
+  - Local SQLite databases created via NewSIPDB now enforce `0600` permissions.
+  - Stopped sharing global SIPDB state across multiple tenants in `main.go` cloud mode.
+timestamp: 2026-04-02T10:00:00Z
