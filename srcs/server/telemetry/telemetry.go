@@ -23,13 +23,15 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 
-	tokenUsageCounter        metric.Int64Counter
-	tokenBurnRateGauge       metric.Float64Gauge
-	agentApiCallsCounter     metric.Int64Counter
-	agentApiErrorsCounter    metric.Int64Counter
-	humanInteractionsCounter metric.Int64Counter
-	meetingEventsCounter     metric.Int64Counter
+	tokenUsageCounter          metric.Int64Counter
+	tokenBurnRateGauge         metric.Float64Gauge
+	agentApiCallsCounter       metric.Int64Counter
+	agentApiErrorsCounter      metric.Int64Counter
+	humanInteractionsCounter   metric.Int64Counter
+	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
+	cacheHitsCounter           metric.Int64Counter
+	cacheMissesCounter         metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -160,6 +162,22 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTasksCompletedCounter, err = m.Int64Counter(
 		"ohc_swarm_tasks_completed",
 		metric.WithDescription("Total swarm tasks completed"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	cacheHitsCounter, err = m.Int64Counter(
+		"ohc_cache_hits_total",
+		metric.WithDescription("Total cache hits for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	cacheMissesCounter, err = m.Int64Counter(
+		"ohc_cache_misses_total",
+		metric.WithDescription("Total cache misses for LLM operations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -421,4 +439,26 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		})
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
+}
+
+// RecordCacheHit increments the global counter for LLM cache hits.
+func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
+	if cacheHitsCounter == nil {
+		return
+	}
+	cacheHitsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("cache_type", cacheType),
+	))
+}
+
+// RecordCacheMiss increments the global counter for LLM cache misses.
+func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
+	if cacheMissesCounter == nil {
+		return
+	}
+	cacheMissesCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("cache_type", cacheType),
+	))
 }
