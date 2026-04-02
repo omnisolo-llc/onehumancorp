@@ -27,38 +27,43 @@ func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if getActiveOrgs == nil || getTokens == nil {
-				continue
-			}
-			orgIDs := getActiveOrgs(ctx)
-			activeMap := make(map[string]bool)
-			for _, orgID := range orgIDs {
-				activeMap[orgID] = true
-				totalTokens := getTokens(orgID)
-				if totalTokens > 0 {
-					h := history[orgID]
-					h = append(h, totalTokens)
+			ProcessForecastTick(ctx, history, getActiveOrgs, getTokens)
+		}
+	}
+}
 
-					// Keep only the last 5 data points for a 5-tick moving average
-					if len(h) > 5 {
-						h = h[1:]
-					}
-					history[orgID] = h
+// ProcessForecastTick extracts the token burn forecaster loop body to ensure reliable test coverage.
+func ProcessForecastTick(ctx context.Context, history map[string][]int64, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
+	if getActiveOrgs == nil || getTokens == nil {
+		return
+	}
+	orgIDs := getActiveOrgs(ctx)
+	activeMap := make(map[string]bool)
+	for _, orgID := range orgIDs {
+		activeMap[orgID] = true
+		totalTokens := getTokens(orgID)
+		if totalTokens > 0 {
+			h := history[orgID]
+			h = append(h, totalTokens)
 
-					if len(h) > 1 {
-						// Calculate moving average burn rate (tokens per tick)
-						rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
-						telemetry.RecordTokenBurnRate(ctx, orgID, rate)
-					}
-				} else {
-					delete(history, orgID)
-				}
+			// Keep only the last 5 data points for a 5-tick moving average
+			if len(h) > 5 {
+				h = h[1:]
 			}
-			for orgID := range history {
-				if !activeMap[orgID] {
-					delete(history, orgID)
-				}
+			history[orgID] = h
+
+			if len(h) > 1 {
+				// Calculate moving average burn rate (tokens per tick)
+				rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
+				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 			}
+		} else {
+			delete(history, orgID)
+		}
+	}
+	for orgID := range history {
+		if !activeMap[orgID] {
+			delete(history, orgID)
 		}
 	}
 }
