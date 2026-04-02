@@ -57,6 +57,28 @@ var (
 	standaloneThrottleOnce sync.Once
 )
 
+// sanitizePayloadPII recursively applies telemetry.RedactPII to maps, slices, and strings.
+func sanitizePayloadPII(input interface{}) interface{} {
+	switch v := input.(type) {
+	case string:
+		return telemetry.RedactPII(v)
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for k, val := range v {
+			result[k] = sanitizePayloadPII(val)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, val := range v {
+			result[i] = sanitizePayloadPII(val)
+		}
+		return result
+	default:
+		return v
+	}
+}
+
 // getThrottle conditionally acquires the semaphore if in standalone mode
 func acquireThrottle(ctx context.Context) error {
 	standaloneThrottleOnce.Do(func() {
@@ -806,19 +828,24 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	var idsToDelete []string
 
 	for _, rec := range records {
-		// Sanitize sensitive data by explicitly deleting `rag_context` key
-		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
-			delete(payloadData, "rag_context")
-		} else {
-			// If not JSON, we assume it's raw text but the memory states
-			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
-			// Let's create a generic JSON payload
-			payloadData = map[string]interface{}{
-				"context": rec.payload,
-			}
+		// Safely decode the JSON payload into an interface{} to preserve primitives and arrays
+		var rawPayload interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &rawPayload); err != nil {
+			slog.Warn("Failed to unmarshal RAG context payload for sanitization, skipping sync to prevent leakage", "memory_id", rec.id)
+			continue
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
+
+		if payloadData, ok := rawPayload.(map[string]interface{}); ok {
+			delete(payloadData, "rag_context")
+		}
+
+		sanitizedRawPayload := sanitizePayloadPII(rawPayload)
+
+		sanitizedPayload, err := json.Marshal(sanitizedRawPayload)
+		if err != nil {
+			slog.Warn("Failed to marshal sanitized RAG context payload, skipping sync", "memory_id", rec.id)
+			continue
+		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {
@@ -899,39 +926,37 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	for _, m := range missions {
-		// Parse payload to redact and sanitize
-		var payloadData map[string]interface{}
-			if err := json.Unmarshal([]byte(m.payload), &payloadData); err != nil {
-				slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-				}
-				continue
+		// Parse payload to redact and sanitize safely preserving exact formatting
+		var rawPayload interface{}
+		if err := json.Unmarshal([]byte(m.payload), &rawPayload); err != nil {
+			slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
 			}
+			continue
+		}
 
+		if payloadData, ok := rawPayload.(map[string]interface{}); ok {
 			// Add ID to payload for synchronization endpoint
 			payloadData["id"] = m.id
 
 			// Delete sensitive RAG context
 			delete(payloadData, "rag_context")
-
-			// Redact PII from string fields
-			for k, v := range payloadData {
-				if strVal, ok := v.(string); ok {
-					payloadData[k] = telemetry.RedactPII(strVal)
-			}
-			}
-
-			// Re-marshal sanitized payload
-			sanitizedBytes, err := json.Marshal(payloadData)
-			if err != nil {
-				slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
-				if syncMissionsErr != nil {
-					syncMissionsErr.Add(ctx, 1)
-			}
-				continue
 		}
-			m.payload = string(sanitizedBytes)
+
+		// Redact PII deeply
+		sanitizedRawPayload := sanitizePayloadPII(rawPayload)
+
+		// Re-marshal sanitized payload
+		sanitizedBytes, err := json.Marshal(sanitizedRawPayload)
+		if err != nil {
+			slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			continue
+		}
+		m.payload = string(sanitizedBytes)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
