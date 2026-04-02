@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -379,6 +380,11 @@ func run(now time.Time, listen listenFunc) error {
 				}()
 			}
 	}
+
+		// AutoDream Worker: Start the background pipeline for memory pruning and vector embedding logic
+		autodreamWorker := agents.NewAutoDreamWorker(sipdb)
+		autodreamWorker.Start(ctx)
+		slog.Info("AutoDream background worker pipeline started successfully")
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {

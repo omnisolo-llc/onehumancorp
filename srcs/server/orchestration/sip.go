@@ -599,6 +599,25 @@ func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) 
 	})
 }
 
+// WithTx executes the given function within a transaction.
+func (s *SIPDB) WithTx(ctx context.Context, fn func(db.Tx) error) error {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	err = fn(tx)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
 // GetEpisodicMemoriesByPlugin retrieves memories matching a specific source plugin.
 // Accepts parameters: ctx context.Context, plugin string.
 // Returns []EpisodicMemory, error.

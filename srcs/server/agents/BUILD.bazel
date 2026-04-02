@@ -5,14 +5,17 @@ go_library(
     srcs = [
         "agent.go",
         "agent_task_worker.go",
+        "autodream.go",
         "provider.go",
         "registry.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
+        "@com_github_google_uuid//:uuid",
     ],
 )
 
@@ -26,6 +29,7 @@ go_test(
     ],
     embed = [":agents"],
     deps = [
+        "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
     ],

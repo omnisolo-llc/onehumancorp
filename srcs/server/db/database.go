@@ -164,6 +164,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "vector(1536)", "BLOB")
 			// We need to remove the array syntax `TEXT[] NOT NULL DEFAULT '{}'`
 			// Because SQLite does not support arrays.
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage
@@ -174,6 +175,12 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read', 'write']", "'[\"read\", \"write\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read']", "'[\"read\"]'")
+			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
+		} else {
+			// If Postgres, ensure we have pgvector if we see vector types
+			if strings.Contains(sqlStr, "vector") || strings.Contains(sqlStr, "VECTOR") {
+				sqlStr = "CREATE EXTENSION IF NOT EXISTS vector;\n" + sqlStr
+			}
 		}
 
 		tx, err := p.Begin(ctx)

@@ -15,6 +15,7 @@ go_library(
         "//srcs/server/orchestration",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
+        "//srcs/server/agents",
         "//srcs/server/telemetry",
         "@org_golang_google_grpc//:grpc",
     ],
