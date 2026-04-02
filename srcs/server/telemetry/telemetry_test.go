@@ -152,10 +152,11 @@ func (m *mockMeter) Int64Histogram(name string, options ...metric.Int64Histogram
 
 type mockFloat64Gauge struct {
 	metric.Float64Gauge
+	lastValue float64
 }
 
 func (m *mockFloat64Gauge) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
-	// mock record
+	m.lastValue = value
 }
 
 func (m *mockMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
@@ -369,6 +370,31 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenUsage Uninitialized", func(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
+	})
+
+	t.Run("RecordTokenBurnRate", func(t *testing.T) {
+		mockM := &mockMeter{}
+		err := InitWithMeter(mockM)
+		if err != nil {
+			t.Fatalf("InitWithMeter failed: %v", err)
+		}
+
+		RecordTokenBurnRate(ctx, "org-1", 15.5)
+
+		// Check the gauge value directly from the tokenBurnRateGauge since it was set by InitWithMeter
+		if g, ok := tokenBurnRateGauge.(*mockFloat64Gauge); ok {
+			if g.lastValue != 15.5 {
+				t.Errorf("expected 15.5, got %v", g.lastValue)
+			}
+		} else {
+			t.Errorf("gauge was not initialized properly as mock")
+		}
+	})
+
+	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
+		// Reset gauge
+		tokenBurnRateGauge = nil
+		RecordTokenBurnRate(ctx, "org-1", 15.5)
 	})
 
 	t.Run("RecordAgentApiCall Uninitialized", func(t *testing.T) {
