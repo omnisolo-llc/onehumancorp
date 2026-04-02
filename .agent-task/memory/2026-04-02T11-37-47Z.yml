@@ -1,0 +1,5 @@
+topic: autoDream & Teammate Mesh
+findings:
+  - Database schema changes require handling custom db.Provider interfaces for transactions (tx.Commit(ctx))
+  - WebSocket broadcasts must copy clients out of lock map before writing to avoid deadlocks.
+  - SQL migrations involving vectors must gracefully fall back for SQLite execution via database.go replacements.

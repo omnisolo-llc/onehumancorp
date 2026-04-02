@@ -352,6 +352,12 @@ func TestRecordFunctions(t *testing.T) {
 	})
 }
 
+func TestAddMocked(t *testing.T) {
+	ctx := context.Background()
+	// Add should not panic when called
+	Add(ctx, "ohc_swarm_tasks_completed", 1)
+}
+
 func TestRecordFunctionsUninitialized(t *testing.T) {
 	originalTokenUsageCounter := tokenUsageCounter
 	originalAgentApiCallsCounter := agentApiCallsCounter

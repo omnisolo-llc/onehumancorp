@@ -659,6 +659,11 @@ func (s *SIPDB) Close() error {
 	return nil
 }
 
+// DB returns the underlying db.Provider instance.
+func (s *SIPDB) DB() db.Provider {
+	return s.db
+}
+
 // SetContextRoot sets the context root for the SIPDB
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
