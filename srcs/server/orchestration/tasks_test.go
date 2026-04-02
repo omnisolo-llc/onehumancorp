@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
@@ -11,15 +12,10 @@ import (
 func setupTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
-	os.Setenv("DATABASE_URL", "sqlite://file:testdb_tasks?mode=memory&cache=shared")
-	pool, err := db.New(context.Background())
-	if err != nil {
-		t.Fatalf("failed to init db: %v", err)
-	}
-	prov := pool.Provider
+	prov := db.NewTestProvider(t)
 
 	// Create tables
-	_, err = prov.Exec(context.Background(), `
+	_, err := prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,

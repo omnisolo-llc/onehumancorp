@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -192,8 +191,6 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	if res == 0 {
 		return errors.New("task not found or not assigned to agent")
 	}
-
-	telemetry.RecordSwarmTaskCompleted(ctx, taskID)
 
 	return nil
 }
