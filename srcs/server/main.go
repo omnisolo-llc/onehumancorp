@@ -398,6 +398,11 @@ func run(now time.Time, listen listenFunc) error {
 				}
 			}
 		}()
+
+		// Start AutoDream System for Memory Consolidation
+		autodream := orchestration.NewAutoDreamSystem(sipdb)
+		autodream.Start(ctx)
+
 	} else {
 			slog.Error("failed to initialize SIPDB", "error", sipdbErr)
 	}

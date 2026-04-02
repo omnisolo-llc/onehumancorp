@@ -242,9 +242,9 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 	isSQLite := h.sipDB != nil && h.sipDB.db != nil
-	if !isMultiTenant && isSQLite {
+	if isStandalone && isSQLite {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
