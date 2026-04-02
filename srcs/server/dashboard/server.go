@@ -590,6 +590,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	}
 	if cnNode := hub.CentrifugeNode(); cnNode != nil {
 		mux.Handle("/connection/websocket", cnNode.Handler())
+		// Teammate Mesh alias for Swarm connectivity
+		mux.Handle("/api/v1/swarm/mesh/connect", cnNode.Handler())
 	}
 
 	// Config wizard API endpoints.

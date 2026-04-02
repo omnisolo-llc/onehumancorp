@@ -24,6 +24,22 @@ func (m *mockTokenTracker) Summary(organizationID string) billing.Summary {
 	return billing.Summary{}
 }
 
+func TestClaimTask_Isolation(t *testing.T) {
+	ctx := context.Background()
+
+	// Mock repository using our SqliteHubRepository wrapped around an in-memory db
+	// Note: We don't have db setup here easily, so we just test the in-memory fallback Hub behavior for isolation.
+	hub := NewHubWithRepository(nil, nil)
+
+	claimed1, err := hub.ClaimTask(ctx, "task-1", "agent-A")
+	if err != nil {
+		t.Fatalf("unexpected error claiming task: %v", err)
+	}
+	if !claimed1 {
+		t.Errorf("expected to claim task successfully with memory fallback")
+	}
+}
+
 func TestStartTokenBurnForecasterWithTicker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

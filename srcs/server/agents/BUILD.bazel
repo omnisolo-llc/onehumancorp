@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "agent.go",
         "agent_task_worker.go",
+        "autodream.go",
         "provider.go",
         "registry.go",
     ],
@@ -13,6 +14,7 @@ go_library(
     deps = [
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
+        "//srcs/server/db",
     ],
 )
 

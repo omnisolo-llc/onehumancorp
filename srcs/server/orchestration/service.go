@@ -1405,6 +1405,9 @@ func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRe
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) DelegateTask(ctx context.Context, req *pb.DelegateTaskRequest) (*pb.DelegateTaskResponse, error) {
+
+	// ClaimTask allows an agent to claim a task.
+
 	msgReq := req.GetTask()
 	msg := Message{
 		ID:         msgReq.GetId(),

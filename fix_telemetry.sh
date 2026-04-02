@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > srcs/server/telemetry/telemetry.go
 package telemetry
 
 import (
@@ -290,3 +291,5 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 		"content", RedactPII(content),
 	)
 }
+
+INNER_EOF

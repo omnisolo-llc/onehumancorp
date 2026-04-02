@@ -183,6 +183,8 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage
 			sqlStr = strings.ReplaceAll(sqlStr, "TEXT[] NOT NULL DEFAULT '{}'", "TEXT NOT NULL DEFAULT '[]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "NOW()", "CURRENT_TIMESTAMP")
+			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
+			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
 
 			// Replace specific Postgres Array insert syntax used in migrations
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")

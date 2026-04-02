@@ -7,6 +7,15 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
+// ClaimTask allows an agent to claim a shared task.
+func (h *Hub) ClaimTask(ctx context.Context, taskID, agentID string) (bool, error) {
+	if h.repo == nil {
+		// In-memory fallback (no persistence)
+		return true, nil
+	}
+	return h.repo.ClaimTask(ctx, taskID, agentID)
+}
+
 // StartTokenBurnForecaster starts a background worker that extrapolates token usage.
 func StartTokenBurnForecaster(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
 	// Expose ticker duration to allow overriding in tests.
