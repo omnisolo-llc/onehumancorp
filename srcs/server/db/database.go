@@ -197,6 +197,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// UUID DEFAULT gen_random_uuid() -> TEXT
 			// VECTOR(dim) -> TEXT
 			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
+			sqlStr = strings.ReplaceAll(sqlStr, " UUID ", " TEXT ")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
 			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
