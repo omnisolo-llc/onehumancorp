@@ -177,9 +177,16 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 // PublishTaskBroadcast fans out a task update to all subscribers of the
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	agentID, _ := payload["agent_id"].(string)
+	action, _ := payload["action"].(string)
+	status, _ := payload["status"].(string)
+
 	channel := "mesh:tasks"
 	msg := map[string]interface{}{
 		"type":    "TASK_BROADCAST",
+		"agent_id": agentID,
+		"action":   action,
+		"status":   status,
 		"task_id": taskID,
 		"payload": payload,
 	}
