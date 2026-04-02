@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -41,6 +42,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 		val, err := c.redis.Do(ctx, cmd).ToString()
 		if err == nil && val != "" {
 			slog.Debug("CachedMinimaxClient: found reason response in Redis", "hash", promptHash)
+			telemetry.RecordCacheHit(ctx, "reason", "redis")
 			return val, nil
 		}
 	}
@@ -55,6 +57,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 		err := c.db.QueryRow(ctx, selectQuery, promptHash).Scan(&cachedResponse)
 		if err == nil && cachedResponse != "" {
 			slog.Debug("CachedMinimaxClient: found reason response in DB", "hash", promptHash)
+			telemetry.RecordCacheHit(ctx, "reason", "db")
 
 			// Optional: populate Redis if it was missing there
 			if c.redis != nil {
@@ -66,6 +69,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 	}
 
 	// 3. Cache miss: generate response
+	telemetry.RecordCacheMiss(ctx, "reason", "all")
 	response, err := c.client.Reason(ctx, prompt)
 	if err != nil {
 		return "", err
@@ -108,6 +112,7 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 			var embedding []float32
 			if err := json.Unmarshal([]byte(val), &embedding); err == nil {
 				slog.Debug("CachedMinimaxClient: found embedding in Redis", "hash", contentHash)
+				telemetry.RecordCacheHit(ctx, "embedding", "redis")
 				return embedding, nil
 			}
 		}
@@ -125,6 +130,7 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 			var embedding []float32
 			if err := json.Unmarshal([]byte(cachedEmbeddingStr), &embedding); err == nil {
 				slog.Debug("CachedMinimaxClient: found embedding in DB", "hash", contentHash)
+				telemetry.RecordCacheHit(ctx, "embedding", "db")
 
 				// Optional: populate Redis if it was missing there
 				if c.redis != nil {
@@ -137,6 +143,7 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 	}
 
 	// 3. Cache miss: generate embedding
+	telemetry.RecordCacheMiss(ctx, "embedding", "all")
 	embedding, err := c.client.GenerateEmbedding(ctx, text)
 	if err != nil {
 		return nil, err
