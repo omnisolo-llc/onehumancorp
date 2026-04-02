@@ -31,7 +31,9 @@ func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(
 				continue
 			}
 			orgIDs := getActiveOrgs(ctx)
+			activeMap := make(map[string]bool)
 			for _, orgID := range orgIDs {
+				activeMap[orgID] = true
 				totalTokens := getTokens(orgID)
 				if totalTokens > 0 {
 					h := history[orgID]
@@ -48,6 +50,13 @@ func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(
 						rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
 						telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 					}
+				} else {
+					delete(history, orgID)
+				}
+			}
+			for orgID := range history {
+				if !activeMap[orgID] {
+					delete(history, orgID)
 				}
 			}
 		}
