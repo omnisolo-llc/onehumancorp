@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-powersync
+  labels:
+    app: {{ .Release.Name }}-powersync
+spec:
+  replicas: {{ .Values.powersync.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-powersync
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-powersync
+    spec:
+      containers:
+        - name: powersync
+          image: "{{ .Values.powersync.image }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PS_PORT
+              value: "{{ .Values.powersync.service.port }}"
+            {{- if .Values.cnpg.enabled }}
+            - name: PS_DATA_SOURCE_URI
+              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw:5432/{{ .Values.cnpg.database }}?sslmode=require"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cnpg.clusterName }}-app
+                  key: password
+            {{- else }}
+            - name: PS_DATA_SOURCE_URI
+              value: "postgres://ohc:ohc@{{ .Release.Name }}-postgresql:5432/ohc?sslmode=disable"
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.powersync.service.port }}
+          resources:
+            {{- toYaml .Values.powersync.resources | nindent 12 }}
