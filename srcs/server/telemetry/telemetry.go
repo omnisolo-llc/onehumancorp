@@ -202,6 +202,9 @@ func MetricsHandler() http.Handler {
 	return promhttp.Handler()
 }
 
+// RecordTokenUsageCallback allows injecting a custom hook for token usage.
+var RecordTokenUsageCallback func(ctx context.Context, agentID, role, model, tokenType string, count int64)
+
 // RecordTokenUsage increments the global counter for LLM tokens consumed by the workforce.
 //
 //   - ctx: context.Context; The context of the active trace or request.
@@ -235,6 +238,10 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 			"count":    count,
 		})
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
+
+	if RecordTokenUsageCallback != nil {
+		RecordTokenUsageCallback(ctx, agentID, role, model, tokenType, count)
 	}
 }
 

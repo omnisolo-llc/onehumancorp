@@ -317,6 +317,10 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+
+	// Track token usage per organization for burn rate forecasting
+	tokenUsageMu   sync.Mutex
+	orgTokenUsage  map[string]int64
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -351,9 +355,69 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		repo:          repo,
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
+		orgTokenUsage: map[string]int64{},
 	}
+
+	telemetry.RecordTokenUsageCallback = h.RecordTokenUsage
+
+	go h.burnRateForecastingWorker(context.Background())
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
+}
+
+// RecordTokenUsage tracks internal usage for burn rate forecasting.
+func (h *Hub) RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+	// Look up the agent to find its organization
+	h.mu.RLock()
+	agent, ok := h.agents[agentID]
+	h.mu.RUnlock()
+
+	orgID := "default"
+	if ok && agent.OrganizationID != "" {
+		orgID = agent.OrganizationID
+	}
+
+	h.tokenUsageMu.Lock()
+	h.orgTokenUsage[orgID] += count
+	h.tokenUsageMu.Unlock()
+}
+
+// burnRateForecastingWorker periodically calculates and records the token burn rate.
+func (h *Hub) burnRateForecastingWorker(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	// Track total token usage up to the last interval per organization
+	previousUsage := make(map[string]int64)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.tokenUsageMu.Lock()
+			currentUsage := make(map[string]int64)
+			for orgID, count := range h.orgTokenUsage {
+				currentUsage[orgID] = count
+			}
+			h.tokenUsageMu.Unlock()
+
+			for orgID, current := range currentUsage {
+				prev := previousUsage[orgID]
+
+				// Moving average calculation (tokens burned per minute)
+				burnRate := float64(current - prev)
+				if burnRate < 0 {
+					burnRate = 0
+				}
+
+				// Record to telemetry
+				telemetry.RecordTokenBurnRate(ctx, orgID, burnRate)
+
+				previousUsage[orgID] = current
+			}
+		}
+	}
 }
 
 // eventLogWorker processes event logs and writes them sequentially to the specified file.
