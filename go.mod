@@ -5,8 +5,11 @@ go 1.26
 require (
 	github.com/centrifugal/centrifuge v0.38.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/prometheus/client_golang v1.23.2
+	github.com/redis/go-redis/v9 v9.18.0
+	github.com/redis/rueidis v1.0.68
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.53.0
 	go.opentelemetry.io/otel/metric v1.42.0
@@ -24,6 +27,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/centrifugal/protocol v0.17.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
@@ -43,7 +47,6 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/quagmt/udecimal v1.9.0 // indirect
-	github.com/redis/rueidis v1.0.68 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/encoding v0.5.3 // indirect
@@ -52,6 +55,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/sdk v1.39.0 // indirect
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect

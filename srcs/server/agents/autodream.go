@@ -13,13 +13,13 @@ import (
 // AutoDreamEngine manages the background consolidation of memories.
 type AutoDreamEngine struct {
 	db        db.Provider
-	llmClient orchestration.MinimaxClient
+	llmClient *orchestration.MinimaxClient
 	ticker    *time.Ticker
 	quit      chan struct{}
 }
 
 // NewAutoDreamEngine initializes the autoDream engine.
-func NewAutoDreamEngine(db db.Provider, llmClient orchestration.MinimaxClient) *AutoDreamEngine {
+func NewAutoDreamEngine(db db.Provider, llmClient *orchestration.MinimaxClient) *AutoDreamEngine {
 	return &AutoDreamEngine{
 		db:        db,
 		llmClient: llmClient,

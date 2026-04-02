@@ -104,6 +104,17 @@ service HubService {
   rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
   rpc Reason(ReasonRequest) returns (ReasonResponse);
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
+  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
+}
+
+message ClaimTaskRequest {
+  string task_id = 1;
+  string agent_id = 2;
+}
+
+message ClaimTaskResponse {
+  bool success = 1;
+  string error = 2;
 }
 
 message WizardField {

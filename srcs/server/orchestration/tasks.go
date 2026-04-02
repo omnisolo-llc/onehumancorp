@@ -12,15 +12,98 @@ import (
 	"github.com/redis/rueidis"
 )
 
+// FlexTime handles scanning of timestamps from both PostgreSQL and SQLite.
+type FlexTime struct {
+	time.Time
+}
+
+// Scan implements the sql.Scanner interface.
+func (f *FlexTime) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	switch v := value.(type) {
+	case time.Time:
+		f.Time = v
+	case string:
+		parsed, err := time.Parse(time.RFC3339Nano, v)
+		if err != nil {
+			parsed, err = time.Parse("2006-01-02 15:04:05.999999-07", v)
+			if err != nil {
+				parsed, err = time.Parse("2006-01-02 15:04:05.999999", v)
+				if err != nil {
+					parsed, err = time.Parse("2006-01-02 15:04:05-07:00", v)
+					if err != nil {
+						parsed, err = time.Parse("2006-01-02 15:04:05", v)
+						if err != nil {
+							parsed, err = time.Parse(time.RFC3339, v)
+							if err != nil {
+								return fmt.Errorf("failed to parse timestamp string: %s", v)
+							}
+						}
+					}
+				}
+			}
+		}
+		f.Time = parsed
+	case []byte:
+		s := string(v)
+		parsed, err := time.Parse(time.RFC3339Nano, s)
+		if err != nil {
+			parsed, err = time.Parse("2006-01-02 15:04:05.999999-07", s)
+			if err != nil {
+				parsed, err = time.Parse("2006-01-02 15:04:05.999999", s)
+				if err != nil {
+					parsed, err = time.Parse("2006-01-02 15:04:05-07:00", s)
+					if err != nil {
+						parsed, err = time.Parse("2006-01-02 15:04:05", s)
+						if err != nil {
+							parsed, err = time.Parse(time.RFC3339, s)
+							if err != nil {
+								return fmt.Errorf("failed to parse timestamp string: %s", s)
+							}
+						}
+					}
+				}
+			}
+		}
+		f.Time = parsed
+	default:
+		return fmt.Errorf("unknown timestamp type: %T", value)
+	}
+	return nil
+}
+
+// NullFlexTime represents a time.Time that may be null.
+type NullFlexTime struct {
+	Time  time.Time
+	Valid bool
+}
+
+// Scan implements the sql.Scanner interface.
+func (n *NullFlexTime) Scan(value interface{}) error {
+	if value == nil {
+		n.Time, n.Valid = time.Time{}, false
+		return nil
+	}
+	n.Valid = true
+	var f FlexTime
+	err := f.Scan(value)
+	if err == nil {
+		n.Time = f.Time
+	}
+	return err
+}
+
 // SharedTask represents a shared task distributed across agents.
 type SharedTask struct {
 	ID              string
 	MissionID       string
 	Title           string
-	Description     string
-	AssignedAgentID string
 	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED
-	Priority        string
+	AssignedAgentID sql.NullString
+	LockedUntil     NullFlexTime
+	Payload         string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -50,42 +133,41 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 }
 
 // CreateTask creates a new shared task.
-func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, description, priority string) (*SharedTask, error) {
-	if priority == "" {
-		priority = "P2"
-	}
-
+func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, payload string) (*SharedTask, error) {
 	var task SharedTask
 	var query string
 	var err error
 
+	var createdAt FlexTime
+	var updatedAt FlexTime
+
 	if tm.db.IsSQLite() {
-		// SQLite might not support RETURNING for all columns gracefully depending on version,
-		// but since we override UUID PRIMARY KEY DEFAULT gen_random_uuid() to TEXT, we need to generate UUID or rely on it.
-		// Wait, if we rely on TEXT, we should generate an ID in go
 		id := generateID() // Helper func
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, title, description, priority, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
+			INSERT INTO swarm_tasks (id, mission_id, title, payload, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			RETURNING id, mission_id, title, status, assigned_agent_id, locked_until, payload, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, id, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+		err = tm.db.QueryRow(ctx, query, id, missionID, title, payload).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.AssignedAgentID, &task.LockedUntil, &task.Payload, &createdAt, &updatedAt,
 		)
 	} else {
 		query = `
-			INSERT INTO swarm_tasks (mission_id, title, description, priority)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, mission_id, title, description, priority, status, created_at, updated_at
+			INSERT INTO swarm_tasks (mission_id, title, payload, status)
+			VALUES ($1, $2, $3, 'PENDING')
+			RETURNING id, mission_id, title, status, assigned_agent_id, locked_until, payload, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, missionID, title, description, priority).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+		err = tm.db.QueryRow(ctx, query, missionID, title, payload).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.AssignedAgentID, &task.LockedUntil, &task.Payload, &createdAt, &updatedAt,
 		)
 	}
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
+
+	task.CreatedAt = createdAt.Time
+	task.UpdatedAt = updatedAt.Time
 
 	return &task, nil
 }
@@ -116,31 +198,33 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	var task SharedTask
 	var errQuery error
+	var createdAt FlexTime
+	var updatedAt FlexTime
 
 	if tm.db.IsSQLite() {
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
-			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
+			SELECT id, mission_id, title, status, assigned_agent_id, locked_until, payload, created_at, updated_at
 			FROM swarm_tasks
 			WHERE id = $1 AND status = 'PENDING'
-			ORDER BY priority ASC, created_at ASC
+			ORDER BY created_at ASC
 			LIMIT 1
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.AssignedAgentID, &task.LockedUntil, &task.Payload, &createdAt, &updatedAt,
 		)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			SELECT id, mission_id, title, description, priority, status, created_at, updated_at
+			SELECT id, mission_id, title, status, assigned_agent_id, locked_until, payload, created_at, updated_at
 			FROM swarm_tasks
 			WHERE id = $1 AND status = 'PENDING'
-			ORDER BY priority ASC, created_at ASC
+			ORDER BY created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Description, &task.Priority, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.AssignedAgentID, &task.LockedUntil, &task.Payload, &createdAt, &updatedAt,
 		)
 	}
 
@@ -150,6 +234,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		}
 		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
 	}
+	task.CreatedAt = createdAt.Time
+	task.UpdatedAt = updatedAt.Time
 
 	// Update task status to IN_PROGRESS
 	updateQuery := `
@@ -172,7 +258,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	task.Status = "IN_PROGRESS"
-	task.AssignedAgentID = agentID
+	task.AssignedAgentID = sql.NullString{String: agentID, Valid: true}
 	return &task, nil
 }
 

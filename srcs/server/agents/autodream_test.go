@@ -4,16 +4,19 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	prov, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
 
-	_, err := prov.Exec(context.Background(), `
+	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
@@ -42,15 +45,6 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	}
 }
 
-type mockMinimaxClient struct{}
-
-func (m *mockMinimaxClient) ChatCompletion(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
-	return nil, nil
-}
-func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
-	return make([]float32, 1536), nil
-}
-
 func TestAutoDreamEngine_Consolidate(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
@@ -69,7 +63,7 @@ func TestAutoDreamEngine_Consolidate(t *testing.T) {
 		t.Fatalf("insert failed: %v", err)
 	}
 
-	engine := NewAutoDreamEngine(prov, &mockMinimaxClient{})
+	engine := NewAutoDreamEngine(prov, orchestration.NewMinimaxClient("mock"))
 	err = engine.consolidate(ctx)
 	if err != nil {
 		t.Fatalf("consolidate failed: %v", err)

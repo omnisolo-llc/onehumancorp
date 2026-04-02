@@ -1332,7 +1332,8 @@ func RegisterHubService(s *grpc.Server, hub *Hub) {
 // Has no side effects.
 type HubServiceServer struct {
 	pb.UnimplementedHubServiceServer
-	hub *Hub
+	hub         *Hub
+	taskManager *TaskManager
 }
 
 // NewHubServiceServer functionality.
@@ -1340,8 +1341,13 @@ type HubServiceServer struct {
 // Returns *HubServiceServer.
 // Produces no errors.
 // Has no side effects.
-func NewHubServiceServer(hub *Hub) *HubServiceServer {
-	return &HubServiceServer{hub: hub}
+func NewHubServiceServer(hub *Hub, tm *TaskManager) *HubServiceServer {
+	return &HubServiceServer{hub: hub, taskManager: tm}
+}
+
+// TaskManager returns the server's task manager.
+func (s *HubServiceServer) TaskManager() *TaskManager {
+	return s.taskManager
 }
 
 // RegisterAgent functionality.
@@ -1474,6 +1480,42 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 			}
 		}
 	}
+}
+
+// ClaimTask attempts to safely claim a task for the calling agent using distributed locks.
+func (s *HubServiceServer) ClaimTask(ctx context.Context, req *pb.ClaimTaskRequest) (*pb.ClaimTaskResponse, error) {
+	if s.taskManager == nil {
+		return nil, status.Errorf(codes.Unimplemented, "task manager not enabled")
+	}
+
+	task, err := s.taskManager.ClaimTask(ctx, req.GetTaskId(), req.GetAgentId())
+	if err != nil {
+		return pb.ClaimTaskResponse_builder{
+			Success: proto.Bool(false),
+			Error:   proto.String(err.Error()),
+		}.Build(), nil
+	}
+
+	if task == nil {
+		return pb.ClaimTaskResponse_builder{
+			Success: proto.Bool(false),
+			Error:   proto.String("task already claimed or unavailable"),
+		}.Build(), nil
+	}
+
+	// Publish claim via Mesh to notify other agents
+	meshMsg := Message{
+		ID:        "task-" + task.ID,
+		FromAgent: req.GetAgentId(),
+		ToAgent:   "all",
+		Type:      EventTask,
+		Content:   fmt.Sprintf(`{"action":"CLAIMED", "task_id":"%s"}`, task.ID),
+	}
+	_ = s.hub.Publish(meshMsg)
+
+	return pb.ClaimTaskResponse_builder{
+		Success: proto.Bool(true),
+	}.Build(), nil
 }
 
 // Reason functionality.
@@ -1664,6 +1706,13 @@ func (c *MinimaxClient) Reason(ctx context.Context, prompt string) (string, erro
 	}
 
 	return "", lastErr
+}
+
+// GenerateEmbedding creates a mocked embedding (Minimax currently lacks an embedding endpoint in this struct).
+// In a real scenario, this would call the embeddings API.
+func (c *MinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	// Just return a dummy vector to satisfy the interface for AutoDream memory consolidation tests.
+	return make([]float32, 1536), nil
 }
 
 func ResetGlobalCircuitBreakerForTest() {

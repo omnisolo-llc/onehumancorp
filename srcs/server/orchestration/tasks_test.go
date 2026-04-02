@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
@@ -12,18 +11,21 @@ import (
 func setupTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
-	prov := db.NewTestProvider(t)
+	prov, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
 
 	// Create tables
-	_, err := prov.Exec(context.Background(), `
+	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
 			title TEXT NOT NULL,
-			description TEXT,
+			status TEXT NOT NULL CHECK (status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED')),
 			assigned_agent_id TEXT,
-			status TEXT NOT NULL DEFAULT 'PENDING',
-			priority TEXT NOT NULL DEFAULT 'P2',
+			locked_until DATETIME,
+			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
@@ -47,7 +49,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	task, err := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "mission-1", "Test Task", `{"desc": "Payload"}`)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -81,7 +83,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Create task
-	createdTask, err := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	createdTask, err := tm.CreateTask(ctx, "mission-1", "Test Task", `{"desc": "Payload"}`)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -97,8 +99,8 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	if claimedTask.Status != "IN_PROGRESS" {
 		t.Errorf("expected Status 'IN_PROGRESS', got %s", claimedTask.Status)
 	}
-	if claimedTask.AssignedAgentID != "agent-1" {
-		t.Errorf("expected AssignedAgentID 'agent-1', got %s", claimedTask.AssignedAgentID)
+	if claimedTask.AssignedAgentID.String != "agent-1" {
+		t.Errorf("expected AssignedAgentID 'agent-1', got %s", claimedTask.AssignedAgentID.String)
 	}
 
 	// Claim another (should be empty)
@@ -119,7 +121,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", `{"desc": "Payload"}`)
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
 	if claimedTask.ID != task.ID {

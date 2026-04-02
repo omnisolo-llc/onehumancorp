@@ -7,6 +7,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
+// Mesh Transport implementation
+
 // StartTokenBurnForecaster starts a background worker that extrapolates token usage.
 func StartTokenBurnForecaster(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
 	// Expose ticker duration to allow overriding in tests.

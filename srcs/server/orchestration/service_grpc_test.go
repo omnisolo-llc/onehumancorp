@@ -16,7 +16,7 @@ import (
 
 func TestRegisterAgentViaGRPC(t *testing.T) {
 	hub := NewHub()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	req := pb.RegisterAgentRequest_builder{
 		Agent: pb.Agent_builder{
@@ -49,7 +49,7 @@ func TestOpenMeetingViaGRPC(t *testing.T) {
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	req := pb.OpenMeetingRequest_builder{
 		MeetingId:    proto.String("m-1"),
@@ -78,7 +78,7 @@ func TestPublishViaGRPC(t *testing.T) {
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	req := pb.PublishMessageRequest_builder{
 		Message: pb.Message_builder{
@@ -126,7 +126,7 @@ func TestStreamMessagesViaGRPC(t *testing.T) {
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	// Publish an initial message
 	hub.Publish(Message{
@@ -188,7 +188,7 @@ func TestHubMinimaxAPIKey(t *testing.T) {
 
 func TestReasonViaMinimaxEmptyKey(t *testing.T) {
 	hub := NewHub()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	hub.SetMinimaxAPIKey("")
 	req := pb.ReasonRequest_builder{Prompt: proto.String("test prompt")}.Build()
@@ -200,7 +200,7 @@ func TestReasonViaMinimaxEmptyKey(t *testing.T) {
 
 func TestReasonViaMinimaxDummyKey(t *testing.T) {
 	hub := NewHub()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	hub.SetMinimaxAPIKey("dummy-key")
 	req := pb.ReasonRequest_builder{Prompt: proto.String("test prompt")}.Build()
@@ -218,7 +218,7 @@ func TestRegisterHubServiceCoverage(t *testing.T) {
 
 func TestPublishViaGRPCError(t *testing.T) {
 	hub := NewHub()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	req := pb.PublishMessageRequest_builder{
 		Message: pb.Message_builder{
@@ -239,7 +239,7 @@ func TestPublishViaGRPCError(t *testing.T) {
 
 func TestStreamMessagesViaGRPCCancellation(t *testing.T) {
 	hub := NewHub()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
