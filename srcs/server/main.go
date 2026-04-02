@@ -301,6 +301,10 @@ func run(now time.Time, listen listenFunc) error {
 	}()
 
 	if sipdbErr == nil {
+		// AutoDream worker pipeline
+		autodreamWorker := orchestration.NewAutoDreamWorker(sipdb)
+		go autodreamWorker.Start(ctx, 1*time.Hour)
+
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
 
