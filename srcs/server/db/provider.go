@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"os"
+	"testing"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -65,4 +67,16 @@ type Tx interface {
 	QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
+}
+
+// NewTestProvider creates an in-memory SQLite database provider for testing.
+func NewTestProvider(t *testing.T) Provider {
+	t.Helper()
+	os.Setenv("DATABASE_URL", "sqlite://file:testdb?mode=memory&cache=shared")
+	defer os.Unsetenv("DATABASE_URL")
+	prov, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create test provider: %v", err)
+	}
+	return prov.Provider
 }
