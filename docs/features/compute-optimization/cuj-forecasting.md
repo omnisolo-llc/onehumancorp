@@ -30,5 +30,4 @@ The CEO views the Token Burn-Rate Forecasting panel on the dashboard. They can o
 ## 5. Security & Privacy
 - **Access Control**: Only the CEO or specific finance roles can modify quota assignments.
 
-
 </div>

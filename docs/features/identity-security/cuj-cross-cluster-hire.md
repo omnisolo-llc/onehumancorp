@@ -42,5 +42,4 @@ The CEO of a US-based firm wants to launch a satellite team in Europe to handle 
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
-
 </div>

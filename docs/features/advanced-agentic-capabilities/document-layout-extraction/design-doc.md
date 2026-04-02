@@ -30,5 +30,4 @@ message DocumentLayoutExtractionEvent {
 - All K8s pods associated with this feature will enforce least privilege (e.g., `runAsNonRoot: true`, `readOnlyRootFilesystem: true`).
 - Implement bounded memory growth by explicitly deleting map entries upon successful execution.
 
-
 </div>

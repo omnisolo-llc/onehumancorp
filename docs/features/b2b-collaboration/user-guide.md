@@ -41,5 +41,4 @@ B2B Collaboration features in One Human Corp enable seamless interaction between
 ## 7. Support & Feedback
 For B2B connection issues, ensure both parties check their SPIFFE federation logs and Trust Agreement configurations before filing a support ticket.
 
-
 </div>
