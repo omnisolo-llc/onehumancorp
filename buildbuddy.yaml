@@ -1,9 +1,13 @@
 actions:
   - name: "Test all targets"
+    # resource_requests:
+    #   cpu: 8
+    #   memory: 32GB
+    #   disk: 100GB
     triggers:
       push:
         branches:
-          - "main" # <-- replace "main" with your main branch name
+          - "main"
       pull_request:
         branches:
           - "*"
@@ -12,7 +16,4 @@ actions:
           bazelisk test //... \
             --test_output=errors \
             --test_summary=terse \
-            --test_timeout=300,600,900,1800 \
-            --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+            --test_timeout=300,600,900,1800

@@ -723,7 +723,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		// Fetch local episodic memories that haven't been synced (or just all local RAG data).
 		// Note: The memory states the data is stored in swarm_memory_embeddings or similar
 		// We can fetch from swarm_memory_embeddings
-		rows, err := s.db.QueryContext(ctx, "SELECT memory_id, context FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
+		rows, err := s.db.Query(ctx, "SELECT memory_id, context FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
 		if err != nil {
 			return err
 		}
@@ -790,7 +790,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	if len(idsToDelete) > 0 {
 		err = withRetry(ctx, func() error {
 			idList := "'" + strings.Join(idsToDelete, "','") + "'"
-			_, err := s.db.ExecContext(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))
+			_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))
 			return err
 		})
 		if err != nil {
