@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/sync"
 	"log/slog"
 	"net"
 	"net/http"
@@ -291,6 +292,14 @@ func run(now time.Time, listen listenFunc) error {
 
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
+
+			// Setup AutoDreamSyncEngine
+			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
+			if syncCloudAPI != "" && pool != nil {
+				slog.Info("starting autodream sync engine", "endpoint", syncCloudAPI)
+				autodreamSyncEngine := sync.NewAutoDreamSyncEngine(pool, 1*time.Minute, syncCloudAPI)
+				autodreamSyncEngine.Start(ctx)
+			}
 
 			// Background sync for standalone metrics to cloud
 			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
