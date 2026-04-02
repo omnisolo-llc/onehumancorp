@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	import_sync "github.com/onehumancorp/mono/srcs/server/sync"
 	"log/slog"
 	"net"
 	"net/http"
@@ -244,6 +245,13 @@ func run(now time.Time, listen listenFunc) error {
 				slog.Error("chatwoot setup", "error", err)
 			}
 		}()
+	}
+
+	// Start AutoDream Sync Engine in Standalone Mode
+	if envBoolDefault("OHC_STANDALONE", false) && pool != nil {
+		slog.Info("Starting AutoDream Sync Engine for Local-to-Cloud Sync")
+		syncEngine := import_sync.NewAutoDreamSync(pool.Provider)
+		go syncEngine.Start(ctx)
 	}
 
 	// Set up the SIPDB instance to connect to Database via Provider.
