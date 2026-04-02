@@ -25,8 +25,8 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
     final payload = json['payload'] as Map<String, dynamic>? ?? {};
 
     // Extract agent name and action from the payload
-    // Adjust logic based on actual payload structure from Hub.PublishTaskBroadcast
-    final agentName = payload['agent_id'] as String? ?? payload['agent_name'] as String? ?? 'System';
+    // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
+    final agentName = payload['agent_id'] as String? ?? 'System';
     final action = payload['action'] as String? ?? payload['status'] as String? ?? 'Task Update';
 
     return MeshMessage(
@@ -86,7 +86,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
           child: Container(
             height: 350,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
+              color: const Color.fromRGBO(255, 255, 255, 0.03),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
@@ -222,18 +222,21 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
 
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _controller.forward();
   }
 
@@ -251,50 +254,59 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                timeStr,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.4),
-                  fontSize: 12,
-                  fontFamily: 'monospace',
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(255, 255, 255, 0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.message.agentName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Outfit',
+                      timeStr,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        fontSize: 12,
+                        fontFamily: 'monospace',
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.message.action,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontFamily: 'Inter',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.message.agentName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Outfit',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.message.action,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
