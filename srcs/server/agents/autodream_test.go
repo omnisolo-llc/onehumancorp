@@ -30,6 +30,11 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+			CREATE TABLE IF NOT EXISTS embedding_cache (
+				id TEXT PRIMARY KEY,
+				content_hash TEXT UNIQUE,
+				embedding BLOB
+			);
 		CREATE TABLE IF NOT EXISTS autodream_memories (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
