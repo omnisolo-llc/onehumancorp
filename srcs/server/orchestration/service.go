@@ -1662,3 +1662,40 @@ func CheckDocumentationGate(content string) error {
 	}
 	return nil
 }
+
+// StartTokenBurnRateForecasting calculates and emits moving average burn rate metrics.
+func (h *Hub) StartTokenBurnRateForecasting(ctx context.Context, getActiveOrgs func() []string, getTokens func(orgID string) int64) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	// Store history of usage for calculating moving average
+	history := make(map[string][]int64)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			orgIDs := getActiveOrgs()
+			for _, orgID := range orgIDs {
+				totalTokens := getTokens(orgID)
+				if totalTokens > 0 {
+					h := history[orgID]
+					h = append(h, totalTokens)
+
+					// Keep only the last 5 data points for a 5-minute moving average
+					if len(h) > 5 {
+						h = h[1:]
+					}
+					history[orgID] = h
+
+					if len(h) > 1 {
+						// Calculate moving average burn rate (tokens per minute)
+						rate := float64(h[len(h)-1] - h[0]) / float64(len(h)-1)
+						telemetry.RecordTokenBurnRate(ctx, orgID, rate)
+					}
+				}
+			}
+		}
+	}
+}

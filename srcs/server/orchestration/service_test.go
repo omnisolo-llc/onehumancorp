@@ -18,6 +18,31 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func TestHub_StartTokenBurnRateForecasting(t *testing.T) {
+	hub := NewHub()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	getActiveOrgs := func() []string {
+		return []string{"org1"}
+	}
+
+	tokens := []int64{100, 200, 300, 400, 500, 600, 700}
+	tokenIdx := 0
+	getTokens := func(orgID string) int64 {
+		if tokenIdx < len(tokens) {
+			val := tokens[tokenIdx]
+			tokenIdx++
+			return val
+		}
+		return tokens[len(tokens)-1]
+	}
+
+	go hub.StartTokenBurnRateForecasting(ctx, getActiveOrgs, getTokens)
+
+	time.Sleep(10 * time.Millisecond) // Let it start
+	cancel()                          // Stop the loop
+}
+
 func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
 	hub := NewHub()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
