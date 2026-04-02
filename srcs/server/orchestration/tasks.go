@@ -45,11 +45,12 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 	if os.Getenv("OHC_MULTITENANT") == "true" {
 		redisURL := os.Getenv("REDIS_URL")
 		if redisURL != "" {
-			c, err := rueidis.NewClient(rueidis.ClientOption{
-				InitAddress: []string{redisURL},
-			})
+			opts, err := rueidis.ParseURL(redisURL)
 			if err == nil {
-				tm.redisClient = c
+				c, err := rueidis.NewClient(opts)
+				if err == nil {
+					tm.redisClient = c
+				}
 			}
 		}
 	}

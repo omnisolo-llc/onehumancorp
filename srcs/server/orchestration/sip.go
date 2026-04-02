@@ -116,7 +116,7 @@ func NewSIPDBWithProvider(provider db.Provider) (*SIPDB, error) {
 	if err := initializeTables(provider); err != nil {
 		return nil, err
 	}
-	return &SIPDB{db: provider, groundingOnce: &sync.Once{}}, nil
+	return &SIPDB{db: provider, groundingOnce: new(sync.Once)}, nil
 }
 
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
@@ -670,7 +670,7 @@ func (s *SIPDB) Close() error {
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
 	s.cachedGrounding = ""
-	s.groundingOnce = &sync.Once{}
+	s.groundingOnce = new(sync.Once)
 }
 
 // BufferMetric inserts a telemetry metric into the local metric buffer.
