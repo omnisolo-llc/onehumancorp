@@ -21,6 +21,7 @@ import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
+import 'package:ohc_app/screens/swarm_mesh_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -120,6 +121,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/agents/hire',
             builder: (context, state) => const AgentHireWizardScreen(),
           ),
+          GoRoute(
+            path: '/swarm-mesh',
+            builder: (context, state) => const SwarmMeshScreen(),
+          ),
         ],
       ),
     ],
@@ -181,6 +186,11 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.chat_bubble_outline,
           label: 'Channels',
           path: '/channels',
+        ),
+        _NavItem(
+          icon: Icons.hub,
+          label: 'Swarm Mesh',
+          path: '/swarm-mesh',
         ),
         const Divider(),
         _NavItem(
