@@ -18,6 +18,8 @@ import (
 type SharedTask struct {
 	ID              string
 	MissionID       string
+	ParentPlanID    string
+	Dependencies    []string
 	Title           string
 	Description     string
 	AssignedAgentID string
@@ -61,6 +63,11 @@ func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 
 // CreateTask creates a new shared task.
 func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, description, priority string) (*SharedTask, error) {
+	return tm.CreateTaskWithPlan(ctx, missionID, "", nil, title, description, priority)
+}
+
+// CreateTaskWithPlan creates a new shared task linked to an UltraPlan and with DAG dependencies.
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, missionID, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
 	if priority == "" {
 		priority = "P2"
 	}
@@ -76,34 +83,48 @@ func (tm *TaskManager) CreateTask(ctx context.Context, missionID, title, descrip
 	}
 	payload := string(payloadBytes)
 
+	if dependencies == nil {
+		dependencies = []string{}
+	}
+	depsBytes, _ := json.Marshal(dependencies)
+	depsJSON := string(depsBytes)
+
+	var parentPlanIDPtr *string
+	if parentPlanID != "" {
+		parentPlanIDPtr = &parentPlanID
+	}
+
 	var task SharedTask
 	var query string
 
-	// We'll scan fields carefully accounting for potential missing ones depending on RETURNING
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, title, payload, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			RETURNING id, mission_id, title, payload, status, created_at, updated_at
+			INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			RETURNING id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, id, missionID, title, payload).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.CreatedAt, &task.UpdatedAt,
-		)
-		task.Description = description
-		task.Priority = priority
 	} else {
-		// Postgres mode
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, title, payload, status)
-			VALUES ($1, $2, $3, $4, 'PENDING')
-			RETURNING id, mission_id, title, payload, status, created_at, updated_at
+			INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, dependencies, title, payload, status)
+			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
+			RETURNING id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at
 		`
-		err = tm.db.QueryRow(ctx, query, id, missionID, title, payload).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.CreatedAt, &task.UpdatedAt,
-		)
-		task.Description = description
-		task.Priority = priority
 	}
+
+	var returnedParentPlanID sql.NullString
+	var returnedDependencies string
+
+	err = tm.db.QueryRow(ctx, query, id, missionID, parentPlanIDPtr, depsJSON, title, payload).Scan(
+		&task.ID, &task.MissionID, &returnedParentPlanID, &returnedDependencies, &task.Title, &task.Payload, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+	)
+
+	if returnedParentPlanID.Valid {
+		task.ParentPlanID = returnedParentPlanID.String
+	}
+	_ = json.Unmarshal([]byte(returnedDependencies), &task.Dependencies)
+
+	task.Description = description
+	task.Priority = priority
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
@@ -154,28 +175,40 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	if tm.db.IsSQLite() {
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
-			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
+			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 			LIMIT 1
 		`
+		var pID sql.NullString
+		var deps string
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &pID, &deps, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
+		if pID.Valid {
+			task.ParentPlanID = pID.String
+		}
+		_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
+			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY payload->>'priority' ASC, created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
+		var pID sql.NullString
+		var deps string
 		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &pID, &deps, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
+		if pID.Valid {
+			task.ParentPlanID = pID.String
+		}
+		_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 	}
 
 	if errQuery != nil {
@@ -222,9 +255,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	// Broadcast task claim
 	if tm.hub != nil {
 		tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
-			"action":    "CLAIM",
-			"agent_id":  agentID,
-			"status":    task.Status,
+			"action":   "CLAIM",
+			"agent_id": agentID,
+			"status":   task.Status,
 		})
 	}
 
@@ -259,7 +292,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	// Record Telemetry
 	// Note: We don't have mission_id readily available in this block, but telemetry.RecordSwarmTaskCompleted can take it or we can pass an empty string / agent string.
 	// Actually we should fetch it if we want it perfect, but it's optional for the counter.
-		var missionID string
+	var missionID string
 	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
 	if err == nil {
 		telemetry.RecordSwarmTaskCompleted(ctx, missionID)
@@ -281,7 +314,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
+			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
@@ -290,7 +323,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query = `
-			SELECT id, mission_id, title, payload, status, locked_until, created_at, updated_at
+			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY payload->>'priority' ASC, created_at ASC
@@ -310,11 +343,17 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for rows.Next() {
 		task := &SharedTask{}
+		var pID sql.NullString
+		var deps string
 		if err := rows.Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &pID, &deps, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
+		if pID.Valid {
+			task.ParentPlanID = pID.String
+		}
+		_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 
 		var payloadMap map[string]interface{}
 		if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
@@ -372,9 +411,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		// Broadcast task claim
 		if tm.hub != nil {
 			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
-				"action":    "CLAIM",
-				"agent_id":  agentID,
-				"status":    task.Status,
+				"action":   "CLAIM",
+				"agent_id": agentID,
+				"status":   task.Status,
 			})
 		}
 	}
