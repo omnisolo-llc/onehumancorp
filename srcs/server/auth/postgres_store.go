@@ -67,17 +67,21 @@ func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
 	var users []*User
 	for rows.Next() {
 		u := &User{}
+		var created, updated db.FlexTime
+
 		if r.pool.IsSQLite() {
 			var rolesJSON string
-			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject, &created, &updated); err != nil {
 				return nil, fmt.Errorf("pg: scan user: %w", err)
 			}
 			_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
 		} else {
-			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject, &created, &updated); err != nil {
 				return nil, fmt.Errorf("pg: scan user: %w", err)
 			}
 		}
+		u.CreatedAt = created.Time
+		u.UpdatedAt = updated.Time
 		users = append(users, u)
 	}
 	return users, nil
@@ -137,13 +141,14 @@ func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, err
 
 func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...any) (*User, error) {
 	u := &User{}
+	var created, updated db.FlexTime
 
 	if r.pool.IsSQLite() {
 		var rolesJSON string
 		err := r.pool.QueryRow(ctx, query, args...).Scan(
 			&u.ID, &u.Username, &u.Email, &u.PasswordHash,
 			&rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject,
-			&u.CreatedAt, &u.UpdatedAt,
+			&created, &updated,
 		)
 		if err != nil {
 			if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "sql: no rows in result set") {
@@ -152,13 +157,15 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 			return nil, fmt.Errorf("pg: scan user: %w", err)
 		}
 		_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
+		u.CreatedAt = created.Time
+		u.UpdatedAt = updated.Time
 		return u, nil
 	}
 
 	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&u.ID, &u.Username, &u.Email, &u.PasswordHash,
 		&u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject,
-		&u.CreatedAt, &u.UpdatedAt,
+		&created, &updated,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
@@ -166,6 +173,8 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 		}
 		return nil, fmt.Errorf("pg: scan user: %w", err)
 	}
+	u.CreatedAt = created.Time
+	u.UpdatedAt = updated.Time
 	return u, nil
 }
 
