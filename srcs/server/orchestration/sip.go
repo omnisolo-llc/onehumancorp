@@ -375,7 +375,7 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 
 var (
 	// throttleSemaphore limits concurrent DelegateMission executions in SQLite standalone mode.
-	throttleSemaphore = make(chan struct{}, 2)
+	throttleSemaphore = make(chan struct{}, 1)
 )
 
 func envBoolDefault(key string, fallback bool) bool {
@@ -395,11 +395,10 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
 	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 
-	if !isMultiTenant && isSQLite && isStandalone {
+	if isSQLite && isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
@@ -435,11 +434,10 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	isMultiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	isSQLite := s.db != nil // We know it's SQLite since this is SIPDB which only uses SQLite
 	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 
-	if !isMultiTenant && isSQLite && isStandalone {
+	if isSQLite && isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
 			defer func() { <-throttleSemaphore }()
