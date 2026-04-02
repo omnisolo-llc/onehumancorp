@@ -5,6 +5,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
+        "autodream.go",
         "auth_interceptor.go",
         "centrifuge_hub.go",
         "delegation.go",
@@ -38,6 +39,7 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
+        "autodream_test.go",
         "auth_interceptor_test.go",
         "benchmark_test.go",
         "centrifuge_hub_test.go",

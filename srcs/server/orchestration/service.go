@@ -317,6 +317,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	autoDream      *AutoDreamWorker
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
