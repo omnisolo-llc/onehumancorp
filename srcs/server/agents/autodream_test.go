@@ -4,14 +4,13 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	pool, _ := db.New(t)
 
 	_, err := prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
@@ -43,6 +42,10 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 }
 
 type mockMinimaxClient struct{}
+
+func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	return "mock", nil
+}
 
 func (m *mockMinimaxClient) ChatCompletion(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
 	return nil, nil
