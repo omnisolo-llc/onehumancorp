@@ -350,7 +350,7 @@ var BufferMetricFunc func(ctx context.Context, metricType string, payload string
 var RecordTokenUsageCallback func(ctx context.Context, agentID, role, model, tokenType string, count int64)
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
-func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
+var RecordTokenBurnRate = func(ctx context.Context, organizationID string, rate float64) {
 	if tokenBurnRateGauge != nil {
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
