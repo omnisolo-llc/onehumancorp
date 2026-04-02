@@ -595,6 +595,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Config wizard API endpoints.
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
+	mux.HandleFunc("/api/wizard/auto", server.handleWizardAutoConfigure)
 
 	return telemetry.Middleware(auth.Middleware(store)(mux))
 }

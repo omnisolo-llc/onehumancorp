@@ -3,9 +3,19 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/settings"
 )
+
+// wizardAutoConfigureResponse provides environment-aware recommended defaults
+// for the setup wizard, smoothing the onboarding experience.
+type wizardAutoConfigureResponse struct {
+	Mode          string `json:"mode"`
+	ListenAddr    string `json:"listen_addr"`
+	DBPath        string `json:"db_path"`
+	CentrifugeURL string `json:"centrifuge_url"`
+}
 
 // wizardStatusResponse describes the current setup state of the platform.
 type wizardStatusResponse struct {
@@ -109,6 +119,40 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 		Configured: steps.Server && steps.AiProvider && steps.Centrifuge,
 		Steps:      steps,
 	})
+}
+
+// handleWizardAutoConfigure returns recommended defaults for the setup wizard
+// based on the current detected deployment mode (Cloud vs Standalone).
+func (s *Server) handleWizardAutoConfigure(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mode := "standalone"
+	listenAddr := "127.0.0.1:18789"
+	dbPath := "ohc.db"
+	centrifugeURL := "ws://127.0.0.1:18789/connection/websocket"
+
+	if os.Getenv("OHC_MULTITENANT") == "true" || os.Getenv("OHC_SOURCE_MODE") == "cloud" {
+		mode = "cloud"
+		listenAddr = "0.0.0.0:8080"
+		dbPath = "" // Cloud uses Postgres, local SQLite path omitted
+		centrifugeURL = "ws://localhost:8080/connection/websocket"
+	} else if os.Getenv("OHC_HEADLESS") == "true" {
+		mode = "headless"
+		listenAddr = "0.0.0.0:8080"
+		dbPath = ""
+		centrifugeURL = "ws://localhost:8080/connection/websocket"
+	}
+
+	resp := wizardAutoConfigureResponse{
+		Mode:          mode,
+		ListenAddr:    listenAddr,
+		DBPath:        dbPath,
+		CentrifugeURL: centrifugeURL,
+	}
+	writeJSON(w, resp)
 }
 
 // hasEnabledProvider returns true if at least one AiProvider is enabled.

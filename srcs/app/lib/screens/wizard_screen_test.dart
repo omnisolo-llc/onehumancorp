@@ -75,11 +75,35 @@ void main() {
 
     testWidgets('default listen address is pre-populated', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: SetupWizardScreen())),
+        ProviderScope(
+          overrides: [
+            wizardAutoConfigProvider.overrideWith((ref) => Future.value({})),
+          ],
+          child: const MaterialApp(home: SetupWizardScreen()),
+        ),
       );
       await tester.pumpAndSettle();
 
       expect(find.widgetWithText(TextField, '0.0.0.0:18789'), findsOneWidget);
+    });
+
+    testWidgets('auto config sets fields correctly', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            wizardAutoConfigProvider.overrideWith((ref) => Future.value({
+              'mode': 'cloud',
+              'listen_addr': '0.0.0.0:8080',
+              'db_path': '',
+              'centrifuge_url': 'ws://localhost:8080/connection/websocket',
+            })),
+          ],
+          child: const MaterialApp(home: SetupWizardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextField, '0.0.0.0:8080'), findsOneWidget);
     });
   });
 

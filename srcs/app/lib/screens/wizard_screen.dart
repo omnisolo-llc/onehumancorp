@@ -8,6 +8,19 @@ import 'package:ohc_app/services/auth_service.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────
 
+/// Provider that fetches auto-configuration defaults from the backend.
+final wizardAutoConfigProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(authStateProvider).valueOrNull;
+  if (user == null) return {};
+  final baseUrl = ref.watch(backendUrlProvider);
+  final resp = await http.get(
+    Uri.parse('$baseUrl/api/wizard/auto'),
+    headers: {'Authorization': 'Bearer ${user.token}'},
+  );
+  if (resp.statusCode != 200) return {};
+  return jsonDecode(resp.body) as Map<String, dynamic>;
+});
+
 /// Provider that fetches the wizard status from the backend.
 final wizardStatusProvider = FutureProvider.autoDispose<WizardStatus>((
   ref,
@@ -74,6 +87,7 @@ class SetupWizardScreen extends ConsumerStatefulWidget {
 class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   int _step = 0;
   bool _saving = false;
+  bool _autoConfigured = false;
   String? _error;
 
   // Step 1 – Server
@@ -88,6 +102,42 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   final _centrifugeUrlCtrl = TextEditingController(
     text: 'ws://localhost:8000/connection/websocket',
   );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_autoConfigured) {
+      _fetchAutoConfig();
+    }
+  }
+
+  Future<void> _fetchAutoConfig() async {
+    final autoConfigAsync = ref.read(wizardAutoConfigProvider);
+    if (autoConfigAsync.hasValue) {
+      _applyAutoConfig(autoConfigAsync.value!);
+    } else {
+      final value = await ref.read(wizardAutoConfigProvider.future);
+      _applyAutoConfig(value);
+    }
+  }
+
+  void _applyAutoConfig(Map<String, dynamic> autoConfig) {
+    if (autoConfig.isEmpty) return;
+    if (mounted) {
+      setState(() {
+        if (autoConfig.containsKey('listen_addr') && autoConfig['listen_addr'].isNotEmpty) {
+          _listenAddrCtrl.text = autoConfig['listen_addr'];
+        }
+        if (autoConfig.containsKey('db_path')) {
+          _dbPathCtrl.text = autoConfig['db_path'];
+        }
+        if (autoConfig.containsKey('centrifuge_url') && autoConfig['centrifuge_url'].isNotEmpty) {
+          _centrifugeUrlCtrl.text = autoConfig['centrifuge_url'];
+        }
+        _autoConfigured = true;
+      });
+    }
+  }
 
   @override
   void dispose() {

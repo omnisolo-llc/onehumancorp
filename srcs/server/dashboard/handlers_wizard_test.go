@@ -22,9 +22,41 @@ func newWizardTestServer(t *testing.T) (*Server, *httptest.Server) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/wizard/status", s.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", s.handleWizardConfigure)
+	mux.HandleFunc("/api/wizard/auto", s.handleWizardAutoConfigure)
 	ts := httptest.NewServer(mux)
 	t.Cleanup(ts.Close)
 	return s, ts
+}
+
+func TestHandleWizardAutoConfigure(t *testing.T) {
+	_, ts := newWizardTestServer(t)
+
+	// Set env variable to trigger standalone logic (the default is standalone locally too)
+	t.Setenv("OHC_STANDALONE", "true")
+
+	resp, err := http.Get(ts.URL + "/api/wizard/auto")
+	if err != nil {
+		t.Fatalf("GET /api/wizard/auto: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	var result wizardAutoConfigureResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	if result.Mode != "standalone" {
+		t.Errorf("expected Mode = standalone, got %s", result.Mode)
+	}
+	if result.ListenAddr == "" {
+		t.Error("expected ListenAddr to not be empty")
+	}
+	if result.DBPath == "" {
+		t.Error("expected DBPath to not be empty")
+	}
 }
 
 func TestHandleWizardStatus_Default(t *testing.T) {
