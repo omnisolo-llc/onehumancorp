@@ -262,6 +262,12 @@ func run(now time.Time, listen listenFunc) error {
 		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
 	}
 
+	// AutoDream Worker
+	if pool != nil {
+		autodream := orchestration.NewAutoDreamWorker(pool.Provider)
+		autodream.Start(ctx)
+	}
+
 	// Run Token Burn Rate Forecasting Engine
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
