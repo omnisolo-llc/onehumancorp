@@ -116,3 +116,39 @@ func TestAutoDreamTruthInjectionAndConflict(t *testing.T) {
 		}
 	}
 }
+
+func TestAutoDreamConsolidateEpoch(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	ctx := context.Background()
+
+	err = worker.ConsolidateEpoch(ctx)
+	if err != nil {
+		t.Fatalf("ConsolidateEpoch failed: %v", err)
+	}
+
+	// Verify epoch record was created and updated
+	var count int
+	var status string
+	err = pool.QueryRow(ctx, "SELECT COUNT(*), MAX(status) FROM swarm_dream_epochs").Scan(&count, &status)
+	if err != nil {
+		t.Fatalf("failed to query epoch record: %v", err)
+	}
+
+	if count != 1 {
+		t.Errorf("expected 1 epoch record, got %d", count)
+	}
+	if status != "COMPLETED" {
+		t.Errorf("expected epoch status COMPLETED, got %s", status)
+	}
+}
