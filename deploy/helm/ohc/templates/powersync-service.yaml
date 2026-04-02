@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+    app.kubernetes.io/component: powersync
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.powersync.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "ohc.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: powersync

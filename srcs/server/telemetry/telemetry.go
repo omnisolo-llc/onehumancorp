@@ -28,6 +28,7 @@ var (
 	agentApiCallsCounter     metric.Int64Counter
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
+	syncRuleLatencyHistogram metric.Float64Histogram
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -141,6 +142,15 @@ func InitWithMeter(m mockableMeter) error {
 	meetingEventsCounter, err = m.Int64Counter(
 		"ohc_meeting_events_total",
 		metric.WithDescription("Total meeting room events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	syncRuleLatencyHistogram, err = m.Float64Histogram(
+		"ohc_sync_rule_latency",
+		metric.WithDescription("Latency of PowerSync dynamic sync rule generation"),
+		metric.WithUnit("ms"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -353,4 +363,21 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 			attribute.String("organization_id", organizationID),
 		))
 	}
+}
+
+// RecordSyncRuleLatency tracks the execution time for dynamic sync rules generation.
+func RecordSyncRuleLatency(ctx context.Context, component string, success bool, latencyMs int64) {
+	if syncRuleLatencyHistogram == nil {
+		return
+	}
+
+	status := "success"
+	if !success {
+		status = "error"
+	}
+
+	syncRuleLatencyHistogram.Record(ctx, float64(latencyMs), metric.WithAttributes(
+		attribute.String("component", component),
+		attribute.String("status", status),
+	))
 }

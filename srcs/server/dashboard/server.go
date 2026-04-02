@@ -602,14 +602,18 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 // and local-to-cloud mission sync as per the health guardianship requirements.
 // handleSyncRules provides dynamic sync rules for the PowerSync instance to ensure multi-tenant isolation.
 func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		telemetry.RecordSyncRuleLatency(r.Context(), "powersync", false, time.Since(start).Milliseconds())
 		return
 	}
 
 	claims := auth.ClaimsFromContext(r.Context())
 	if claims == nil || claims.OrganizationID == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		telemetry.RecordSyncRuleLatency(r.Context(), "powersync", false, time.Since(start).Milliseconds())
 		return
 	}
 
@@ -625,34 +629,39 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "meeting_rooms",
-				// Meeting rooms don't directly have org ID, we would need a more complex query in a real app,
-				// or we enforce it through participants. We sync everything for demo purposes if they are authenticated
-				"query": "SELECT * FROM meeting_rooms",
+				"query": "SELECT * FROM meeting_rooms WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "agent_missions",
-				"query": "SELECT * FROM agent_missions",
+				"query": "SELECT * FROM agent_missions WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "swarm_memory",
-				"query": "SELECT * FROM swarm_memory",
+				"query": "SELECT * FROM swarm_memory WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "capability_plugins",
-				"query": "SELECT * FROM capability_plugins",
+				"query": "SELECT * FROM capability_plugins WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "swarm_memory_embeddings",
-				"query": "SELECT * FROM swarm_memory_embeddings",
+				"query": "SELECT * FROM swarm_memory_embeddings WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table": "agent_status",
-				"query": "SELECT * FROM agent_status",
+				"query": "SELECT * FROM agent_status WHERE organization_id = $1",
+				"parameters": []interface{}{orgID},
 			},
 		},
 	}
 
 	writeJSON(w, syncRules)
+	telemetry.RecordSyncRuleLatency(r.Context(), "powersync", true, time.Since(start).Milliseconds())
 }
 
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {

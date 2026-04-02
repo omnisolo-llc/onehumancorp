@@ -24,10 +24,8 @@ class PowerSyncService {
   Future<void> _init() async {
     final settings = await _ref.read(clientSettingsProvider.future);
 
-    // Only initialize PowerSync in Standalone mode
-    if (!settings.standaloneMode) {
-      return;
-    }
+    // Initialize PowerSync dynamically based on the current mode.
+    // In hybrid setup, we want PowerSync to handle local SQLite sync.
 
     final schema = Schema((<Table>[
       Table('agents', [
