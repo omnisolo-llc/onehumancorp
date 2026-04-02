@@ -399,7 +399,7 @@ func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]i
 
 			if len(hist) > 1 {
 				// Calculate moving average burn rate (tokens per minute)
-				rate := float64(hist[len(hist)-1] - hist[0]) / float64(len(hist)-1)
+				rate := float64(hist[len(hist)-1]-hist[0]) / float64(len(hist)-1)
 				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 			}
 		} else {

@@ -31,14 +31,22 @@ func TestAutoDreamPruneSessions(t *testing.T) {
 
 	if pool.Provider.IsSQLite() {
 		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'c1', ?)", oldTime)
-		if err != nil { t.Fatalf("failed to insert: %v", err) }
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
 		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s2', 'a1', 'c2', ?)", newTime)
-		if err != nil { t.Fatalf("failed to insert: %v", err) }
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
 	} else {
 		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'c1', $1)", oldTime)
-		if err != nil { t.Fatalf("failed to insert: %v", err) }
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
 		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s2', 'a1', 'c2', $1)", newTime)
-		if err != nil { t.Fatalf("failed to insert: %v", err) }
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
 	}
 
 	worker.pruneStaleSessions(ctx)
