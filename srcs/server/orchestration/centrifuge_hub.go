@@ -174,6 +174,19 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 	}
 }
 
+// PublishTaskBroadcast sends a task update broadcast to the swarm mesh channel.
+func (cn *CentrifugeNode) PublishTaskBroadcast(msg Message) {
+	channel := "swarm:tasks:updates"
+	data, err := json.Marshal(msg)
+	if err != nil {
+		slog.Error("[centrifuge] marshal task broadcast", "error", err)
+		return
+	}
+	if _, err := cn.node.Publish(channel, data); err != nil {
+		slog.Debug("[centrifuge] publish task broadcast", "channel", channel, "error", err)
+	}
+}
+
 // Close shuts down the Centrifuge node gracefully.
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())

@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/rueidis"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -317,6 +319,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	redisClient    rueidis.Client
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -352,6 +355,17 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
+
+	isStandalone := envBoolDefault("OHC_STANDALONE", false)
+	if !isStandalone && os.Getenv("REDIS_URL") != "" {
+		client, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{os.Getenv("REDIS_URL")}})
+		if err == nil {
+			h.redisClient = client
+		} else {
+			slog.Warn("hub: failed to init redis client for distributed locking", "error", err)
+		}
+	}
+
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	go h.tokenBurnRateWorker(context.Background())
 	return h
@@ -1026,6 +1040,9 @@ func (h *Hub) Publish(message Message) error {
 			if m.ToAgent != "" {
 				cn.PublishAgentNotification(m.ToAgent, m)
 			}
+			if m.Type == "TASK_BROADCAST" {
+				cn.PublishTaskBroadcast(m)
+			}
 		}(message, centrifugeNode)
 	}
 
@@ -1104,6 +1121,9 @@ func (h *Hub) publishRepository(message Message) error {
 			}
 			if message.ToAgent != "" {
 				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+			if message.Type == "TASK_BROADCAST" {
+				cn.PublishTaskBroadcast(message)
 			}
 		}()
 	}
@@ -1488,6 +1508,15 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 		return nil, status.Errorf(codes.Internal, "minimax reasoning failed: %v", err)
 	}
 	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
+}
+
+// ClaimTask claims a task for an agent.
+func (s *HubServiceServer) ClaimTask(ctx context.Context, req *pb.ClaimTaskRequest) (*pb.ClaimTaskResponse, error) {
+	err := s.hub.ClaimTask(ctx, req.GetTaskId(), req.GetAgentId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "claim task failed: %v", err)
+	}
+	return pb.ClaimTaskResponse_builder{Success: proto.Bool(true)}.Build(), nil
 }
 
 // MinimaxAPIURL is the endpoint for Minimax reasoning.

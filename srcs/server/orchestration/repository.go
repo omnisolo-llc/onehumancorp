@@ -43,4 +43,13 @@ type HubRepository interface {
 	AppendTranscript(ctx context.Context, meetingID string, msg Message) error
 	// ListMeetings returns all meeting rooms.
 	ListMeetings(ctx context.Context) ([]MeetingRoom, error)
+
+	// --- Swarm tasks ---
+
+	// ClaimTask claims a swarm task for an agent.
+	ClaimTask(ctx context.Context, taskID, agentID string) error
+	// CompleteTask marks a swarm task as completed.
+	CompleteTask(ctx context.Context, taskID string) error
+	// CreateTask creates a new swarm task.
+	CreateTask(ctx context.Context, missionID, title string, payload map[string]interface{}) (string, error)
 }
