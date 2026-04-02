@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.6 (Cloud) / v0.1.6+1 (Standalone)
+- Scaling (Cloud): Integrated PowerSync Go backend service to enforce strict Tenant isolation.
+- Privacy/Offline (Standalone): Integrated PowerSync Flutter SDK for seamless local-to-cloud synchronization.
+
 ## v0.2.5 (Cloud) / v0.1.5+1 (Standalone)
 - Scaling (Cloud): Enhanced PostgreSQL multi-tenant synchronization and scaling via optimized pod concurrency configurations.
 - Privacy/Offline (Standalone): Improved SQLite fallback and offline state syncing for absolute local sovereignty without external database dependencies.
