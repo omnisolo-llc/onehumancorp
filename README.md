@@ -151,7 +151,15 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 
 ## Developer Workflow
 
-### Setup and Mode Switching
+### Day One Onboarding CLI (Recommended)
+To simplify setup and environment management, use the interactive wizard located at the root of the repository:
+
+```bash
+./ohc_hybrid_cli.sh
+```
+This tool provides a guided menu to run the initial setup, switch environment modes (Cloud, Standalone, Headless), execute builds, and start the app natively or via cloud services without needing to memorize individual scripts.
+
+### Setup and Mode Switching (Manual)
 We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets:
 
 - **Initial Setup:** `./deploy/scripts/ohc-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)

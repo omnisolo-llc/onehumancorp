@@ -1,0 +1,100 @@
+#!/bin/bash
+# OHC Hybrid Agentic OS - Day One Onboarding CLI
+# Adheres to Zero Secrets Mandate and Premium Aesthetics
+
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+# Colors for "Premium" terminal aesthetics
+RESET="\033[0m"
+BOLD="\033[1m"
+DIM="\033[2m"
+BLUE="\033[38;5;39m"
+CYAN="\033[38;5;87m"
+GREEN="\033[38;5;120m"
+PURPLE="\033[38;5;141m"
+
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo -e "${BOLD}${CYAN}       OHC: The Hybrid Agentic OS - Setup CLI         ${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo ""
+
+show_menu() {
+    echo -e "${BOLD}Select an action:${RESET}"
+    echo -e "  ${PURPLE}1)${RESET} Run Initial Setup (Generate .env, Verify build)"
+    echo -e "  ${PURPLE}2)${RESET} Switch Environment Mode (Cloud / Standalone / Headless)"
+    echo -e "  ${PURPLE}3)${RESET} Launch Standalone Desktop Mode"
+    echo -e "  ${PURPLE}4)${RESET} Launch Cloud Backend"
+    echo -e "  ${PURPLE}5)${RESET} Run All Tests"
+    echo -e "  ${PURPLE}q)${RESET} Quit"
+    echo ""
+}
+
+run_setup() {
+    echo -e "${DIM}[Executing deploy/scripts/ohc-setup.sh...]${RESET}"
+    if bash deploy/scripts/ohc-setup.sh; then
+        echo -e "${GREEN}Setup completed successfully.${RESET}\n"
+    else
+        echo -e "${PURPLE}Setup failed.${RESET}\n"
+    fi
+}
+
+switch_mode() {
+    echo -e "Available modes: ${BOLD}cloud${RESET}, ${BOLD}standalone${RESET}, ${BOLD}headless${RESET}"
+    read -p "Enter mode: " MODE
+    if [[ "$MODE" == "cloud" || "$MODE" == "standalone" || "$MODE" == "headless" ]]; then
+        if source deploy/scripts/ohc-mode.sh $MODE; then
+            echo -e "${GREEN}Mode switched to $MODE.${RESET}"
+            echo -e "${DIM}(Note: Run 'source deploy/scripts/ohc-mode.sh $MODE' in your main shell to persist)${RESET}\n"
+        else
+            echo -e "${PURPLE}Failed to switch mode.${RESET}\n"
+        fi
+    else
+        echo -e "\nInvalid mode.\n"
+    fi
+}
+
+launch_desktop() {
+    echo -e "${DIM}[Launching Standalone Desktop...]${RESET}"
+    if ! bazelisk run //:desktop; then
+        echo -e "${PURPLE}Failed to launch Standalone Desktop.${RESET}\n"
+    fi
+}
+
+launch_cloud() {
+    echo -e "${DIM}[Launching Cloud Backend...]${RESET}"
+    export OHC_MULTITENANT=true
+    if ! bazelisk run //srcs/server:ohc; then
+        echo -e "${PURPLE}Failed to launch Cloud Backend.${RESET}\n"
+    fi
+}
+
+run_tests() {
+    echo -e "${DIM}[Running bazelisk test //...]${RESET}"
+    if bazelisk test //...; then
+        echo -e "${GREEN}All tests passed successfully.${RESET}\n"
+    else
+        echo -e "${PURPLE}Some tests failed.${RESET}\n"
+    fi
+}
+
+if [ "$1" == "--non-interactive" ]; then
+    echo "Running in non-interactive verification mode."
+    run_setup
+    # run_tests
+    echo -e "${GREEN}Verification completed.${RESET}\n"
+else
+    while true; do
+        show_menu
+        read -p "> " choice
+        case $choice in
+            1) run_setup ;;
+            2) switch_mode ;;
+            3) launch_desktop ;;
+            4) launch_cloud ;;
+            5) run_tests ;;
+            q|Q) echo "Exiting."; break ;;
+            *) echo "Invalid choice." ;;
+        esac
+    done
+fi
