@@ -3,7 +3,6 @@ package orchestration
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/billing"
 )
@@ -24,9 +23,8 @@ func (m *mockTokenTracker) Summary(organizationID string) billing.Summary {
 	return billing.Summary{}
 }
 
-func TestStartTokenBurnForecasterWithTicker(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func TestProcessForecastTick(t *testing.T) {
+	ctx := context.Background()
 
 	calls := 0
 	tracker := &mockTokenTracker{
@@ -40,22 +38,17 @@ func TestStartTokenBurnForecasterWithTicker(t *testing.T) {
 		},
 	}
 
-	// We start the forecaster with a very fast ticker to ensure it executes.
-	// Since it loops infinitely, we just run it in a goroutine.
-	go StartTokenBurnForecasterWithTicker(
-		ctx,
-		func(c context.Context) []string { return tracker.ActiveOrganizations(c) },
-		func(orgID string) int64 { return tracker.Summary(orgID).TotalTokens },
-		10*time.Millisecond,
-	)
+	history := make(map[string][]int64)
 
-	time.Sleep(100 * time.Millisecond)
-	cancel()
+	// First tick
+	ProcessForecastTick(ctx, history, tracker.ActiveOrganizations, func(orgID string) int64 { return tracker.Summary(orgID).TotalTokens })
+	if calls != 1 {
+		t.Fatalf("Expected tracker to be called 1 time, got %d", calls)
+	}
 
-	// Wait a bit to ensure cancellation is processed
-	time.Sleep(50 * time.Millisecond)
-
-	if calls < 2 {
-		t.Fatalf("Expected tracker to be called at least twice, got %d", calls)
+	// Second tick
+	ProcessForecastTick(ctx, history, tracker.ActiveOrganizations, func(orgID string) int64 { return tracker.Summary(orgID).TotalTokens })
+	if calls != 2 {
+		t.Fatalf("Expected tracker to be called 2 times, got %d", calls)
 	}
 }
