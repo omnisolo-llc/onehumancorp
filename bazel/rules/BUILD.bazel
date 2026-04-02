@@ -1,3 +1,14 @@
-# Plugin and rule infrastructure for protobuf TypeScript generation
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
 
-exports_files(["protoc-gen-es.js"])
+exports_files([
+    "protoc-gen-es.js",
+    "ts_proto_wrapper.js",
+])
+
+# Hermetic ts-proto wrapper that correctly resolves dependencies in the sandbox
+js_binary(
+    name = "ts_proto_wrapper",
+    data = ["//:node_modules/ts-proto"],
+    entry_point = ":ts_proto_wrapper.js",
+    visibility = ["//visibility:public"],
+)
