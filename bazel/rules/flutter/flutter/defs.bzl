@@ -462,7 +462,10 @@ def _flutter_app_impl(ctx):
     manifest = ctx.actions.declare_file(ctx.label.name + "_app_overlay.manifest")
 
     overlay_entries = [
-        "{}|{}".format(compute_relative_to_package(ctx, f), f.path)
+        "{}|{}".format(
+            f.short_path if ctx.file.workspace_pubspec else compute_relative_to_package(ctx, f),
+            f.path,
+        )
         for f in ctx.files.srcs
     ]
 
@@ -637,6 +640,14 @@ def flutter_app(
         "windows": windows,
     }
 
+    platform_compatibility = {
+        "apk": ["@platforms//os:android"],
+        "ios": ["@platforms//os:ios"],
+        "macos": ["@platforms//os:macos"],
+        "linux": ["@platforms//os:linux"],
+        "windows": ["@platforms//os:windows"],
+    }
+
     common_srcs = _to_label_list(srcs)
 
     generated = []
@@ -660,6 +671,10 @@ def flutter_app(
             rule_args["tags"] = tags
         if testonly:
             rule_args["testonly"] = True
+
+        compatible_with = platform_compatibility.get(platform)
+        if compatible_with != None:
+            rule_args["target_compatible_with"] = compatible_with
 
         _flutter_app_rule(**rule_args)
         generated.append(target_name)
@@ -1036,6 +1051,7 @@ deps_path = os.environ["PUB_DEPS_PATH"]
 config_path = os.environ["PACKAGE_CONFIG_PATH"]
 cache_root = os.environ["PUB_CACHE"]
 workspace_root = os.getcwd()
+flutter_root = os.environ.get("FLUTTER_ROOT") or ""
 
 name = ""
 language_spec = ""
@@ -1094,6 +1110,20 @@ for entry in data.get("packages", []):
         packages.append(dict(
             name = pkg_name,
             rootUri = ".",
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
+    elif source == "sdk" and flutter_root:
+        if pkg_name == "sky_engine":
+            root_path = os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
+        else:
+            root_path = os.path.join(flutter_root, "packages", pkg_name)
+        if not os.path.isdir(root_path):
+            continue
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
+        packages.append(dict(
+            name = pkg_name,
+            rootUri = rel,
             packageUri = "lib/",
             languageVersion = language_version,
         ))
