@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sync",
+    srcs = ["autodream_sync.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/sync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promauto",
+    ],
+)
+
+go_test(
+    name = "sync_test",
+    srcs = ["autodream_sync_test.go"],
+    embed = [":sync"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

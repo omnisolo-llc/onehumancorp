@@ -1,0 +1,4 @@
+status: HEALTHY
+metrics:
+  sync_completed_count: 0
+  sync_failed_count: 0
