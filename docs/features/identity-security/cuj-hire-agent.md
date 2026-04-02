@@ -47,5 +47,4 @@ The CEO identifies a gap in the workforce (e.g., lack of security oversight) and
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
-
 </div>

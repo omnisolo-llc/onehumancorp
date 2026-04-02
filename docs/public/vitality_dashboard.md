@@ -36,5 +36,4 @@ This dashboard reflects the real-time operational metrics and health status of t
 
 *The Swarm never asks for permission. It proposes and executes.*
 
-
 </div>

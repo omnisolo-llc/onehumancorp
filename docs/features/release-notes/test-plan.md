@@ -17,5 +17,4 @@
 ## 3. E2E Tests
 - Trigger a full release notes generation flow and verify the output markdown file.
 
-
 </div>

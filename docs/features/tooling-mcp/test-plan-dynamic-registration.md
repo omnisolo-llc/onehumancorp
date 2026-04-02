@@ -37,5 +37,4 @@ A high-level summary of the testing strategy for the Dynamic Tool Registration v
 - **Execution**: Run via `bazelisk test //...` under the Bazel sandbox.
 - **Validation**: Strict enforcement of >95% test coverage.
 
-
 </div>

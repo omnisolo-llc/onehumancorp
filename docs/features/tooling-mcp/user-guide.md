@@ -34,5 +34,4 @@ You can build your own MCP server in any language. Just provide a manifest file 
 - **Rate Limits**: If an external API (like GitHub) rate-limits the tool, the MCP Gateway interprets the 429 response and issues a backoff command to the calling agent to prevent thrashing.
 - **Schema Drift**: If an external tool changes its payload schema, the MCP proxy's strict type-checking will reject invalid LLM-generated JSON, failing closed to prevent corrupt data entry.
 
-
 </div>

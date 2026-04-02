@@ -57,5 +57,4 @@ A high-level summary of the testing strategy for the Advanced Agentic Capabiliti
 | HITL-02 | Webhook | Validate Slack/Mattermost hook | Valid payload sent | Pending |
 | HITL-03 | Approval Gate | Verify cryptographically signed token | Task resumes only on valid token | Pending |
 
-
 </div>

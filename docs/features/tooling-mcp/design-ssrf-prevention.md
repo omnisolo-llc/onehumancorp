@@ -50,5 +50,4 @@ The `Connect()` method in `Registry` will be updated to call `validateURL()` on 
 - **Language:** Go 1.25.
 - **Dependencies:** Standard library `net` and `net/url`.
 
-
 </div>

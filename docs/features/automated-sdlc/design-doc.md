@@ -35,5 +35,4 @@ The system relies on Kubernetes CRDs and the Hub state.
 - **Read-Only File Systems (EROFS)**: During sandboxed `npm install` runs, default cache directories may fail. The pipeline dynamically sets `npm_config_cache` to a writable temporary directory.
 - **Infinite Test Loops**: A malformed test written by an agent could run indefinitely. The pipeline enforces a strict 10-minute timeout per test target before terminating the pod and flagging a failure.
 
-
 </div>

@@ -33,5 +33,4 @@ When an AI agent (e.g., SWE Agent) realizes it lacks a specific capability to co
 ## 5. Security & Privacy
 - **Dynamic Access Control**: Tool execution is strictly gated by SPIFFE/SPIRE. An agent can only bind to a tool if its `RoleProfile` is explicitly authorized to use it, preventing a compromised SWE Agent from executing Finance/Accounting tool calls.
 
-
 </div>

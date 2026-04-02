@@ -36,5 +36,4 @@ When an agent requires an API key for a specific tool, the system injects the se
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

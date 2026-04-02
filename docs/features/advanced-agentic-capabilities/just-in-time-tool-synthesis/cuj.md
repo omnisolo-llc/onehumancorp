@@ -36,5 +36,4 @@ When an agent encounters a novel problem with no existing tools, it writes, comp
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

@@ -36,5 +36,4 @@ When two agents output conflicting proposals for a codebase change, the system a
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

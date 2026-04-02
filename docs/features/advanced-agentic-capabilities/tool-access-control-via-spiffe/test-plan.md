@@ -26,5 +26,4 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 - Coverage MUST strictly exceed 95% for the corresponding Go packages.
 - Tests will utilize lightweight dependency injection for fatal exit paths (`os.Exit`).
 
-
 </div>

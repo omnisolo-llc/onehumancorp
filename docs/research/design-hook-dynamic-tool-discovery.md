@@ -35,5 +35,4 @@ We introduce a `DynamicToolDiscovery` node directly into our standard LangGraph 
 - Test the LangGraph recovery node using a simulated "Agent finds a bug in AWS, needs CloudWatch tool" scenario.
 - Finalize the integration between SPIRE and the MCP Gateway for short-lived tool certificates.
 
-
 </div>

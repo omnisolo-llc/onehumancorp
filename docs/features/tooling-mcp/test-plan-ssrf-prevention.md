@@ -41,5 +41,4 @@ This test plan details the testing strategy for the SSRF prevention feature in t
 - **Protocol Mismatch:** Testing malformed URL formats.
 - **Missing host:** Validation of URL parsing logic when host is missing.
 
-
 </div>

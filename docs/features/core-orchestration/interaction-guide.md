@@ -29,5 +29,4 @@ As CEO, you can drop into any meeting and provide direct guidance. Your input is
 - **Context Flooding**: Lengthy debates triggering LLM context-limit errors are mitigated by an AI summarizer shrinking early transcript context on the fly.
 - **Deadlocks**: If two agents infinitely loop in a disagreement (e.g., SWE vs. Security), the system detects a "timeout" deadlock and escalates a Warm Handoff to a human manager.
 
-
 </div>

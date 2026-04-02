@@ -36,5 +36,4 @@ This document outlines the state of AI agent framework interoperability within t
 ## Future Work
 - Optimize K8s operator for large-scale swarm scheduling.
 
-
 </div>

@@ -74,5 +74,4 @@ All A2A gRPC traffic is mandatorily encrypted via Mutual TLS (mTLS).
 - **Context Bloat**: Prolonged multi-agent debates may exceed standard LLM token limits; the Engine utilizes proactive, continuous summarization to cull old transcript history.
 - **Event Storms**: Misbehaving agents entering an infinite retry loop risk overwhelming Redis. The Operator enforces circuit breakers triggering a forced pod restart and Warm Handoff.
 
-
 </div>

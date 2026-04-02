@@ -42,5 +42,4 @@ The Admin needs to give the "Support Agent" access to Slack. They register a cus
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
-
 </div>

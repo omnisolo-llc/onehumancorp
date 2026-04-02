@@ -44,5 +44,4 @@ The CEO wants to add a new "Advanced Analytics" feature to their product but doe
 - **Rate Limit:** Agent backoffs using exponential retry.
 - **Loss of Context:** Supervisor agent reconstructs state from snapshot.
 
-
 </div>

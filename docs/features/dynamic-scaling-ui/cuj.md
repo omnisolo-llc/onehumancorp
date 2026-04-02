@@ -19,5 +19,4 @@ This document outlines the user journey for the Dynamic Scaling UI ("Hire/Fire")
 - The bottleneck is resolved as new agents begin processing tickets.
 - The CEO Dashboard accurately reflects the updated headcount and operational metrics.
 
-
 </div>

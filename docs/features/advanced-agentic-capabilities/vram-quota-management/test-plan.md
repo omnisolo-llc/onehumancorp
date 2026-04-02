@@ -20,5 +20,4 @@ Validate that hard resource limits are enforced, queuing logic works under press
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the `QuotaManager`.
 
-
 </div>

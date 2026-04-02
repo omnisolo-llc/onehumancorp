@@ -59,5 +59,4 @@ This Customer User Journey (CUJ) describes the interactions and expected outcome
 - **IPv6 and Alternate Representations:** The system correctly handles IPv6 loopback (`::1`) and non-standard IP representations (e.g., octal or hex formats, if applicable) by relying on standard Go `net` package parsing.
 - **Missing Protocol/Host:** The system rejects URLs missing a scheme or host entirely.
 
-
 </div>

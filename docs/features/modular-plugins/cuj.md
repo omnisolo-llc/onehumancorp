@@ -16,5 +16,4 @@ The CEO wants to dynamically extend the capabilities of their virtual workforce 
 5. **Dynamic Binding**: The backend dynamically registers the new capabilities with the MCP Gateway. The `capability_plugins` database table is updated with the active plugin state.
 6. **Execution**: The CEO immediately sees new role options or tool integrations available in the "Hire" menu or when assigning tasks, seamlessly expanding the agentic workforce's abilities.
 
-
 </div>

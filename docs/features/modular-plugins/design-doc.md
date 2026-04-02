@@ -53,7 +53,7 @@ To reflect the fluidity of the new Agentic OS, the OHC frontend must adopt the N
 The UI must hide infrastructure complexity (K8s, MCP) behind consumer-grade "Apple-level aesthetics".
 
 *   **Backdrop & Depth**: Glassmorphism is the core structural element.
-    *   `backdrop-filter: blur(15px) saturate(180%)`
+    *   `backdrop-filter: blur(20px) saturate(180%)`
 *   **Surfaces**: Ghostly, semi-transparent layers to indicate dynamic, ephemeral agent capabilities.
     *   `background: rgba(255, 255, 255, 0.05)`
 *   **Borders**: Subtle definition.
@@ -104,12 +104,14 @@ graph TD
         K8s --> MCP
         K8s --> Agent1
     end
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class PluginB,Agent1,UI,MCP,Tokens,PluginA,DB,K8s premium;
 ```
 
 ## 4. Execution Plan
 1. **Database Migration**: Apply the new `capability_plugins` and `swarm_memory_embeddings` tables to `ohc.db`.
 2. **Handoff (SIP)**: Inject missions into the `agent_missions` table for `backend_dev` (Plugin Mesh) and `ui_dev` (Design Tokens).
 3. **Verification**: Frontend CI pipeline must utilize Playwright to verify visual compliance with the Glassmorphism tokens.
-
 
 </div>

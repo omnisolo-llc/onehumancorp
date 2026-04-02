@@ -36,5 +36,4 @@ When integrating a new SaaS product, a developer simply provides the OpenAPI (Sw
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

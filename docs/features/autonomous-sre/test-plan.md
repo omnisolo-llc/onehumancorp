@@ -56,5 +56,4 @@ A high-level summary of the testing strategy for the Autonomous SRE Engine featu
 - **Break-Glass Escalation**: Tests verify that if an SRE agent requests destructive capabilities (e.g., pod deletion), the system reliably halts execution and creates a Warm Handoff rather than autonomously wrecking the cluster.
 - **Telemetry Disconnect**: If the OpenTelemetry collector drops the connection, tests verify the SRE engine degrades gracefully to basic Kubernetes events instead of crashing.
 
-
 </div>

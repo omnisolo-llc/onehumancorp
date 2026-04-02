@@ -61,5 +61,4 @@ A high-level summary of the testing strategy for the Hardware-Aware Agent Schedu
 | BURN-01 | Forecasting | Ensure extrapolated token usage meets forecast within margin | Forecast accurate to ~5% | Pending |
 | BURN-02 | Throttling | Verify Agent is queued gracefully on quota hit | Queueing mechanism invoked | Pending |
 
-
 </div>

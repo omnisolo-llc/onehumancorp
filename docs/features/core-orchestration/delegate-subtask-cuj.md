@@ -32,6 +32,9 @@ graph TD;
     style Agent fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
     style Hub fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
     style Reject fill:rgba(255, 0, 0, 0.1),stroke:rgba(255, 0, 0, 0.3)
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Provision,Agent,Thread,saturate,Success,Reject,blur,Execute,rgba premium;
 ```
 
 - **Architecture**: The `DelegateSubTask` RPC method handles quota checking, dynamic agent provisioning, and message publication on the `Hub`.
@@ -44,6 +47,5 @@ graph TD;
 ## 5. UI/UX Details
 - The UI can display a "Spawning Specialized [Role] Agent" indicator in the transcript, reflecting dynamic team assembly.
 - Quota errors should be surfaced as a "VRAM Quota Reached: Cannot spawn additional agents" notification to the human CEO.
-
 
 </div>

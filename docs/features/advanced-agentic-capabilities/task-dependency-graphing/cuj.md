@@ -36,5 +36,4 @@ When a massive Epic is broken down, the system visualizes the intricate web of t
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

@@ -20,5 +20,4 @@ Validate the accuracy of coordinate extraction from images and the precise execu
 - All tests must be integrated into the Bazel `//...` test suite.
 - Coverage MUST exceed 95% for the Spatial Parser logic.
 
-
 </div>

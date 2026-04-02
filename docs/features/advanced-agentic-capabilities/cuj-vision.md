@@ -8,5 +8,4 @@
 ## 1. User Journey Overview
 The SWE agent dispatches a visual validation request via the multimodal worker and gets an accurate text bounding box representation.
 
-
 </div>

@@ -36,5 +36,4 @@ When an agent needs to interpret visual data from screenshots or video feeds, th
 - Operations require explicit, short-lived SVID authentication.
 - All actions are subject to strict Human-in-the-Loop gating for high-risk executions.
 
-
 </div>

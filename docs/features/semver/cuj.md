@@ -15,5 +15,4 @@ The system automatically determines the correct version number for a new release
 3. The agent determines the bump level (Major, Minor, Patch).
 4. The agent tags the repository and triggers the release pipeline.
 
-
 </div>

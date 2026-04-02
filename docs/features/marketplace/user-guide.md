@@ -43,5 +43,4 @@ The One Human Corp Marketplace is an ecosystem where the CEO can discover, acqui
 ## 7. Support & Feedback
 If you encounter an issue with a specific marketplace item, contact the creator directly or report it via the OHC Marketplace support channel.
 
-
 </div>

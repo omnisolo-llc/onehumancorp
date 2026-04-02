@@ -41,5 +41,4 @@ The CEO of Acme Corp wants to purchase 100 server racks from Globex. Acme's "Pur
 - Orchestration managed by OHC Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
-
 </div>

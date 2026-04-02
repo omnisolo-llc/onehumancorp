@@ -42,5 +42,4 @@ Core Orchestration serves as the foundational communication and execution framew
 ## 7. Support & Feedback
 For persistent issues with the Orchestration Hub, download the `events.jsonl` log and attach it to a support ticket.
 
-
 </div>

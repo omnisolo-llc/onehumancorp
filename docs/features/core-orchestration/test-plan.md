@@ -55,5 +55,4 @@ A high-level summary of the testing strategy for the Core Orchestration Engine f
 - **Redis Message Loss**: Tests simulate dropping random events from the Redis pub/sub queue. They verify the Engine's reconciliation loop eventually detects the dropped state and triggers a re-fetch from the append-only Postgres log.
 - **Provider API Outages**: Integration tests mock a 503 error from the LLM provider (OpenAI/Anthropic) to verify the Hub pauses active agent workflows and places them in a `ProviderRetry` queue rather than silently dropping or failing tasks.
 
-
 </div>

@@ -31,6 +31,9 @@ graph TD;
     K8s --> Agents[AI Agents];
     Agents --> DB[(Database)];
     K8s --> MCP[Model Context Protocol];
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Hub,Backend,MCP,Agents,Frontend,Rooms,User,DB,K8s premium;
 ```
 
 ## Quick Start
@@ -65,6 +68,5 @@ The following environment variables and configurations are commonly used:
 - `MCP_BUNDLE_DIR`: Directory for MCP bundles.
 - `MONO_FRONTEND_DIST`: Path to the compiled frontend dist directory.
 - Kubernetes Secrets are used to inject runtime credentials safely without committing secrets to the repo.
-
 
 </div>

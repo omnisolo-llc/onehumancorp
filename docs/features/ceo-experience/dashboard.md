@@ -73,5 +73,4 @@ The dashboard must maintain a 100/100 Lighthouse score for accessibility, ensuri
 - **Database Unavailability:** Circuit breakers open, gracefully degrade to read-only mode if possible.
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
 
-
 </div>

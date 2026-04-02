@@ -34,5 +34,4 @@ Instead of carrying raw tokens forward:
 - Define the explicit gRPC streaming payload structure for checkpoint transmission to eliminate polling loops.
 - Provision the Redis/Pinecone backings for the short/long term semantic memory stores.
 
-
 </div>
