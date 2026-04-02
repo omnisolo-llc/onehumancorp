@@ -4,24 +4,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
-// TokenTracker defines an interface to fetch organization tracking data.
-type TokenTracker interface {
-	ActiveOrganizations(ctx context.Context) []string
-	Summary(organizationID string) billing.Summary
-}
-
 // StartTokenBurnForecaster starts a background worker that extrapolates token usage.
-func StartTokenBurnForecaster(ctx context.Context, tracker TokenTracker) {
+func StartTokenBurnForecaster(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
 	// Expose ticker duration to allow overriding in tests.
-	StartTokenBurnForecasterWithTicker(ctx, tracker, 1*time.Minute)
+	StartTokenBurnForecasterWithTicker(ctx, getActiveOrgs, getTokens, 1*time.Minute)
 }
 
 // StartTokenBurnForecasterWithTicker is the underlying implementation that accepts a custom tick duration.
-func StartTokenBurnForecasterWithTicker(ctx context.Context, tracker TokenTracker, tickDuration time.Duration) {
+func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64, tickDuration time.Duration) {
 	ticker := time.NewTicker(tickDuration)
 	defer ticker.Stop()
 
@@ -34,15 +27,15 @@ func StartTokenBurnForecasterWithTicker(ctx context.Context, tracker TokenTracke
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if tracker == nil {
+			if getActiveOrgs == nil || getTokens == nil {
 				continue
 			}
-			orgIDs := tracker.ActiveOrganizations(ctx)
+			orgIDs := getActiveOrgs(ctx)
 			for _, orgID := range orgIDs {
-				summary := tracker.Summary(orgID)
-				if summary.TotalTokens > 0 {
+				totalTokens := getTokens(orgID)
+				if totalTokens > 0 {
 					h := history[orgID]
-					h = append(h, summary.TotalTokens)
+					h = append(h, totalTokens)
 
 					// Keep only the last 5 data points for a 5-tick moving average
 					if len(h) > 5 {
