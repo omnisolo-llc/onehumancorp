@@ -407,3 +407,113 @@ func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
 }
+
+// handleContextSync handles local-to-cloud Hybrid MCP RAG state synchronization
+func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleContextSync")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Memory says: "Safely decode the JSON payload into an interface{} and type assert to map[string]interface{}
+	// (to avoid corrupting arrays or primitives) before utilizing the public telemetry.RedactPII function to strip personally identifiable information."
+
+	// Ensure safe deep recursive redaction on string fields to prevent sensitive data leakage.
+	var redactRecursive func(interface{}) interface{}
+	redactRecursive = func(val interface{}) interface{} {
+		switch v := val.(type) {
+		case string:
+			return telemetry.RedactPII(v)
+		case map[string]interface{}:
+			for mk, mv := range v {
+				v[mk] = redactRecursive(mv)
+			}
+			return v
+		case []interface{}:
+			for i, iv := range v {
+				v[i] = redactRecursive(iv)
+			}
+			return v
+		default:
+			return v
+		}
+	}
+
+	for k, v := range payload {
+		payload[k] = redactRecursive(v)
+	}
+
+	var memoryID string
+	if idVal, ok := payload["memory_id"]; ok {
+		memoryID = fmt.Sprintf("%v", idVal)
+	}
+
+	if memoryID == "" {
+		// Try fallback to just generating a new memory ID if not provided, or return error
+		memoryID = "ctx-" + time.Now().UTC().Format("20060102150405.999999999")
+	}
+
+	var contextStr string
+	if ctxVal, ok := payload["context"]; ok {
+		if strCtx, isStr := ctxVal.(string); isStr {
+			contextStr = strCtx
+		} else {
+			marshaled, _ := json.Marshal(ctxVal)
+			contextStr = string(marshaled)
+		}
+	} else {
+		// If context isn't a direct top level key, marshal the whole sanitized payload as the context
+		sanitizedBytes, _ := json.Marshal(payload)
+		contextStr = string(sanitizedBytes)
+	}
+
+	var sourcePlugin string
+	if srcVal, ok := payload["source_plugin"]; ok {
+		sourcePlugin = fmt.Sprintf("%v", srcVal)
+	} else {
+		sourcePlugin = "sync_daemon"
+	}
+
+	var vectorEmbedding []byte
+	if vecVal, ok := payload["vector_embedding"]; ok {
+		if vecStr, isStr := vecVal.(string); isStr {
+			vectorEmbedding = []byte(vecStr)
+		} else if vecArr, isArr := vecVal.([]interface{}); isArr {
+			bytes, _ := json.Marshal(vecArr)
+			vectorEmbedding = bytes
+		}
+	}
+
+	memory := orchestration.EpisodicMemory{
+		MemoryID:        memoryID,
+		Context:         contextStr,
+		VectorEmbedding: vectorEmbedding,
+		SourcePlugin:    sourcePlugin,
+		CreatedAt:       time.Now().UTC(),
+	}
+
+	// Persist memory
+	if s.hub.SIPDB() != nil {
+		if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err != nil {
+			slog.Error("failed to sync context memory", "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "internal server error: sipdb not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "context synced"})
+}
