@@ -215,7 +215,14 @@ func MetricsHandler() http.Handler {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+// RecordUsageForForecastingFunc allows orchestration to hook into token usage to keep track of per-tenant forecasting.
+var RecordUsageForForecastingFunc func(agentID string, count int64)
+
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+	if RecordUsageForForecastingFunc != nil {
+		RecordUsageForForecastingFunc(agentID, count)
+	}
+
 	if tokenUsageCounter == nil {
 		return
 	}

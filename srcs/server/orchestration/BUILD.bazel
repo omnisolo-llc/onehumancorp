@@ -6,6 +6,7 @@ go_library(
     name = "orchestration",
     srcs = [
         "auth_interceptor.go",
+        "burn_rate_forecast.go",
         "centrifuge_hub.go",
         "delegation.go",
         "postgres_hub.go",
@@ -40,6 +41,7 @@ go_test(
     srcs = [
         "auth_interceptor_test.go",
         "benchmark_test.go",
+        "burn_rate_forecast_test.go",
         "centrifuge_hub_test.go",
         "chaos_test.go",
         "delegation_test.go",
@@ -51,12 +53,15 @@ go_test(
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
+        "sip_throttle_test.go",
     ],
     embed = [":orchestration"],
     deps = [
         "//srcs/proto:hub_go_proto",
         "//srcs/server/settings",
+        "//srcs/server/telemetry",
         "@com_github_centrifugal_centrifuge//:centrifuge",
+        "@io_opentelemetry_go_otel_metric//:metric",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//credentials",

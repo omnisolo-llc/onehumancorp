@@ -352,6 +352,16 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
+
+	// Hook telemetry usage back to orchestration
+	telemetry.RecordUsageForForecastingFunc = func(agentID string, count int64) {
+		agent, ok := h.Agent(agentID)
+		if ok && agent.OrganizationID != "" {
+			RecordUsageForForecasting(agent.OrganizationID, count)
+		}
+	}
+	StartTokenBurnRateForecastingEngine(context.Background())
+
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
 }
