@@ -38,6 +38,11 @@ pub.package(
     version = "3.1.0",
 )
 pub.package(
+    name = "pub_protobuf_v5",
+    package = "protobuf",
+    version = "5.0.0",
+)
+pub.package(
     name = "pub_protoc_plugin",
     package = "protoc_plugin",
     version = "21.1.1",

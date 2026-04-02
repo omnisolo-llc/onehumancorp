@@ -402,6 +402,7 @@ deps_path = os.path.join(os.environ["WORKSPACE_ABS"], "pub_deps.json")
 cache_root = os.environ["PUB_CACHE_ABS"]
 workspace_root = os.environ["WORKSPACE_ABS"]
 config_path = os.environ["PACKAGE_CONFIG_PATH"]
+flutter_root = os.environ.get("FLUTTER_ROOT") or ""
 root_name = os.environ.get("ROOT_PACKAGE_NAME") or ""
 language_spec = os.environ.get("ROOT_LANGUAGE_SPEC") or ""
 
@@ -440,6 +441,20 @@ for entry in data.get("packages", []):
         pkg = dict()
         pkg["name"] = name
         pkg["rootUri"] = "."
+        pkg["packageUri"] = "lib/"
+        pkg["languageVersion"] = language_version
+        packages.append(pkg)
+    elif source == "sdk" and flutter_root:
+        if name == "sky_engine":
+            root_path = os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
+        else:
+            root_path = os.path.join(flutter_root, "packages", name)
+        if not os.path.isdir(root_path):
+            continue
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
+        pkg = dict()
+        pkg["name"] = name
+        pkg["rootUri"] = rel
         pkg["packageUri"] = "lib/"
         pkg["languageVersion"] = language_version
         packages.append(pkg)
@@ -646,7 +661,66 @@ fi
 
 echo "Flutter binary verified at: $FLUTTER_BIN_ABS"
 
-FLUTTER_ROOT="$(cd "$(dirname "$FLUTTER_BIN_ABS")/.." && pwd -P)"
+FLUTTER_ROOT_ORIG="$(cd "$(dirname "$FLUTTER_BIN_ABS")/.." && pwd -P)"
+
+# Flutter updates cache lock and stamp files on startup, so run it from a
+# writable SDK overlay instead of the read-only external repository.
+FLUTTER_WRITABLE="$(mktemp -d "${{TMPDIR:-/tmp}}/flutter_root.XXXXXX")"
+mkdir -p "${{FLUTTER_WRITABLE}}/bin"
+
+for _f in "${{FLUTTER_ROOT_ORIG}}"/* "${{FLUTTER_ROOT_ORIG}}"/.[!.]*; do
+    _n="$(basename -- "$_f")" || continue
+    [ "$_n" = "bin" ] && continue
+    [ -e "$_f" ] || [ -L "$_f" ] || continue
+    ln -sf "$_f" "${{FLUTTER_WRITABLE}}/$_n" 2>/dev/null || true
+done
+
+ln -sf "${{FLUTTER_ROOT_ORIG}}/bin/internal" "${{FLUTTER_WRITABLE}}/bin/internal" 2>/dev/null || true
+
+for _f in "${{FLUTTER_ROOT_ORIG}}/bin"/* "${{FLUTTER_ROOT_ORIG}}/bin"/.[!.]*; do
+    _n="$(basename -- "$_f")" || continue
+    case "$_n" in flutter|cache|internal) continue ;; esac
+    [ -e "$_f" ] || [ -L "$_f" ] || continue
+    ln -sf "$_f" "${{FLUTTER_WRITABLE}}/bin/$_n" 2>/dev/null || true
+done
+
+cat > "${{FLUTTER_WRITABLE}}/bin/flutter" << 'FLUTTER_WRAPPER_HEREDOC'
+#!/usr/bin/env bash
+set -e
+unset CDPATH
+BIN_DIR="$(cd "$(dirname -- "$BASH_SOURCE")" && pwd -P)"
+PROG_NAME="$BIN_DIR/$(basename -- "$BASH_SOURCE")"
+SHARED_NAME="$BIN_DIR/internal/shared.sh"
+OS="$(uname -s)"
+if [[ $OS =~ MINGW.* || $OS =~ CYGWIN.* || $OS =~ MSYS.* ]]; then
+    exec "$BIN_DIR/flutter.bat" "$@"
+fi
+source "$SHARED_NAME"
+shared::execute "$@"
+FLUTTER_WRAPPER_HEREDOC
+chmod +x "${{FLUTTER_WRITABLE}}/bin/flutter"
+
+mkdir -p "${{FLUTTER_WRITABLE}}/bin/cache"
+if [ -d "${{FLUTTER_ROOT_ORIG}}/bin/cache" ]; then
+    for _f in "${{FLUTTER_ROOT_ORIG}}/bin/cache"/* "${{FLUTTER_ROOT_ORIG}}/bin/cache"/.[!.]*; do
+        _n="$(basename -- "$_f")" || continue
+        case "$_n" in lockfile|.upgrade_lock|.dartignore) continue ;; esac
+        [ -e "$_f" ] || [ -L "$_f" ] || continue
+        case "$_n" in
+            *.stamp)
+                cp "$_f" "${{FLUTTER_WRITABLE}}/bin/cache/$_n" 2>/dev/null || \
+                    ln -sf "$_f" "${{FLUTTER_WRITABLE}}/bin/cache/$_n" 2>/dev/null || true
+                ;;
+            *)
+                ln -sf "$_f" "${{FLUTTER_WRITABLE}}/bin/cache/$_n" 2>/dev/null || true
+                ;;
+        esac
+    done
+fi
+chmod u+w "${{FLUTTER_WRITABLE}}/bin/cache" 2>/dev/null || true
+
+FLUTTER_ROOT="$FLUTTER_WRITABLE"
+FLUTTER_BIN_ABS="${{FLUTTER_WRITABLE}}/bin/flutter"
 
 # Configure Flutter for sandbox environment
 export FLUTTER_SUPPRESS_ANALYTICS=true
@@ -657,14 +731,25 @@ export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
 export FLUTTER_ROOT
 export PATH="$FLUTTER_ROOT/bin:$PATH"
+PYTHON_BIN="$(command -v python3 || command -v python || true)"
+if [ -z "$PYTHON_BIN" ]; then
+    echo "✗ FATAL ERROR: python interpreter not found on PATH" >&2
+    exit 1
+fi
 
-# The workspace directory is a Bazel-declared output from the previous stage
-# (PrepareFlutterAppWorkspace), which Bazel marks read-only after the action.
-# We need to make it writable before modifying any files inside it.
-chmod -R u+w "$ORIGINAL_PWD/$WORKSPACE_DIR" 2>/dev/null || true
+# The prepared workspace is an input tree artifact and is mounted read-only in
+# the sandbox. Copy it into a writable runtime directory before mutating it.
+WORKSPACE_SRC_ABS="$ORIGINAL_PWD/$WORKSPACE_DIR"
+RUNTIME_WORKSPACE="$(mktemp -d "${{TMPDIR:-/tmp}}/flutter_workspace.XXXXXX")"
+if command -v rsync >/dev/null 2>&1; then
+    rsync -aL "$WORKSPACE_SRC_ABS/" "$RUNTIME_WORKSPACE/"
+else
+    cp -RL "$WORKSPACE_SRC_ABS/." "$RUNTIME_WORKSPACE/"
+fi
+chmod -R u+rwX "$RUNTIME_WORKSPACE" 2>/dev/null || true
 
-# Change to the workspace directory from execroot
-cd "$ORIGINAL_PWD/$WORKSPACE_DIR"
+cd "$RUNTIME_WORKSPACE"
+WORKSPACE_ROOT="$(pwd)"
 
 # Copy .dart_tool tree to workspace
 if [ -d "$DART_TOOL_DIR_ABS" ]; then
@@ -690,23 +775,139 @@ if [ -n "$PACKAGE_DIR" ] && [ -d "$PACKAGE_DIR" ]; then
     echo "Entered package directory: $(pwd)"
 fi
 
-# Redefine FLUTTER_BIN_ABS relative to the new CWD
-FLUTTER_BIN_ABS="$ORIGINAL_PWD/$FLUTTER_BIN"
-
-echo "Flutter binary: $FLUTTER_BIN"
+echo "Flutter binary: $FLUTTER_BIN_ABS"
 echo "Target: {target}"
 echo ""
 
 # Regenerate package_config.json with correct paths for this sandbox
-# This ensures package imports resolve correctly in the build environment
+# directly from Bazel-generated pub_deps.json so builds stay hermetic and do
+# not require a runtime `flutter pub get`.
 echo ""
 echo "Regenerating package_config.json for build environment..."
-PUB_GET_LOG="$(mktemp "${{TMPDIR:-/tmp}}/flutter_pub_get.XXXXXX.log")"
-if "$FLUTTER_BIN_ABS" --suppress-analytics pub get --offline > "$PUB_GET_LOG" 2>&1; then
-    echo "✓ Package config regenerated successfully (offline)"
+export WORKSPACE_ROOT_PATH="$WORKSPACE_ROOT"
+export PACKAGE_ROOT_PATH="$(pwd)"
+export PACKAGE_PUBSPEC_PATH="$(pwd)/pubspec.yaml"
+export WORKSPACE_PUBSPEC_PATH="$WORKSPACE_ROOT/pubspec.yaml"
+export PUB_DEPS_PATH="$WORKSPACE_ROOT/pub_deps.json"
+export PACKAGE_CONFIG_PATH="$WORKSPACE_ROOT/.dart_tool/package_config.json"
+PACKAGE_CONFIG_OUT="$(mktemp "${{TMPDIR:-/tmp}}/flutter_package_config.XXXXXX.log")"
+if "$PYTHON_BIN" > "$PACKAGE_CONFIG_OUT" 2>&1 <<'PY'
+import json
+import os
+from pathlib import Path
+
+package_pubspec_path = os.environ["PACKAGE_PUBSPEC_PATH"]
+workspace_pubspec_path = os.environ["WORKSPACE_PUBSPEC_PATH"]
+deps_path = os.environ["PUB_DEPS_PATH"]
+config_path = os.environ["PACKAGE_CONFIG_PATH"]
+cache_root = os.environ["PUB_CACHE"]
+workspace_root = os.environ["WORKSPACE_ROOT_PATH"]
+package_root = os.environ["PACKAGE_ROOT_PATH"]
+flutter_root = os.environ.get("FLUTTER_ROOT") or ""
+
+def read_pubspec_meta(pubspec_path):
+    name = ""
+    language_spec = ""
+    if not os.path.exists(pubspec_path):
+        return name, language_spec
+
+    with open(pubspec_path, "r", encoding = "utf-8") as fh:
+        lines = fh.readlines()
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("name:") and not name:
+            name = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+
+    for i, line in enumerate(lines):
+        if line.strip().startswith("environment:"):
+            for j in range(i + 1, len(lines)):
+                subline = lines[j].strip()
+                if subline.startswith("sdk:"):
+                    language_spec = subline.split(":", 1)[1].strip().strip('"').strip("'")
+                    break
+                if subline and not subline.startswith("#") and ":" in subline and not subline.startswith(("flutter:", "flutter_test:", "dart:")):
+                    break
+            break
+
+    return name, language_spec
+
+workspace_name, workspace_language_spec = read_pubspec_meta(workspace_pubspec_path)
+package_name, package_language_spec = read_pubspec_meta(package_pubspec_path)
+
+def _parse_language(spec):
+    if not spec:
+        return "3.0"
+    spec = spec.replace(">=", "").replace("<", "").split()
+    if spec:
+        return spec[0].split("+")[0]
+    return "3.0"
+
+def _as_uri(path):
+    return Path(path).resolve().as_uri()
+
+language_version = _parse_language(package_language_spec)
+workspace_language_version = _parse_language(workspace_language_spec)
+
+with open(deps_path, "r", encoding = "utf-8") as fh:
+    data = json.load(fh)
+
+packages = []
+seen = set()
+
+def add_package(name, root_path, package_language):
+    if not name or name in seen:
+        return
+    if not os.path.isdir(root_path):
+        return
+    packages.append(dict(
+        name = name,
+        rootUri = _as_uri(root_path),
+        packageUri = "lib/",
+        languageVersion = package_language,
+    ))
+    seen.add(name)
+
+if workspace_name and os.path.abspath(workspace_pubspec_path) != os.path.abspath(package_pubspec_path):
+    add_package(workspace_name, workspace_root, workspace_language_version)
+
+for entry in data.get("packages", []):
+    pkg_name = entry.get("name")
+    source = entry.get("source")
+    version = entry.get("version")
+    if not pkg_name:
+        continue
+    if source == "hosted" and version:
+        root_path = os.path.join(cache_root, "hosted", "pub.dev", pkg_name + "-" + version)
+        add_package(pkg_name, root_path, language_version)
+    elif source == "root":
+        add_package(pkg_name, package_root, language_version)
+    elif source == "sdk" and flutter_root:
+        if pkg_name == "sky_engine":
+            root_path = os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
+        else:
+            root_path = os.path.join(flutter_root, "packages", pkg_name)
+        add_package(pkg_name, root_path, language_version)
+
+os.makedirs(os.path.dirname(config_path), exist_ok = True)
+config = dict(
+    configVersion = 2,
+    generated = True,
+    generator = "rules_flutter",
+    packages = packages,
+)
+if flutter_root:
+    config["flutterRoot"] = _as_uri(flutter_root)
+config["pubCache"] = _as_uri(cache_root)
+with open(config_path, "w", encoding = "utf-8") as fh:
+    json.dump(config, fh, indent = 2)
+    fh.write("\\n")
+PY
+then
+    echo "✓ Package config regenerated successfully"
 else
-    cat "$PUB_GET_LOG" >&2 || true
-    echo "✗ FATAL ERROR: flutter pub get --offline failed; ensure dependency caches contain all packages" >&2
+    cat "$PACKAGE_CONFIG_OUT" >&2 || true
+    echo "✗ FATAL ERROR: package_config.json regeneration failed" >&2
     exit 1
 fi
 echo ""

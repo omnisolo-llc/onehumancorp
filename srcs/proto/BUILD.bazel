@@ -1,6 +1,7 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library")
 load("//bazel/rules:proto_ts_library.bzl", "proto_ts_library")
+load("//bazel/rules:proto_dart_library.bzl", "proto_dart_library")
 
 proto_library(
     name = "hub_proto",
@@ -18,5 +19,12 @@ proto_go_grpc_library(
 proto_ts_library(
     name = "proto_types_ts",
     protos = ":hub_proto",
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "hub_dart_proto",
+    protos = ":hub_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )
