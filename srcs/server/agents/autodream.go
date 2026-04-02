@@ -7,19 +7,23 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
+
+// MinimaxClient defines the interface for generating embeddings via Minimax.
+type MinimaxClient interface {
+	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
+}
 
 // AutoDreamEngine manages the background consolidation of memories.
 type AutoDreamEngine struct {
 	db        db.Provider
-	llmClient orchestration.MinimaxClient
+	llmClient MinimaxClient
 	ticker    *time.Ticker
 	quit      chan struct{}
 }
 
 // NewAutoDreamEngine initializes the autoDream engine.
-func NewAutoDreamEngine(db db.Provider, llmClient orchestration.MinimaxClient) *AutoDreamEngine {
+func NewAutoDreamEngine(db db.Provider, llmClient MinimaxClient) *AutoDreamEngine {
 	return &AutoDreamEngine{
 		db:        db,
 		llmClient: llmClient,
@@ -101,7 +105,7 @@ func (ae *AutoDreamEngine) consolidate(ctx context.Context) error {
 				continue
 			}
 		} else {
-			// Mock embedding for tests
+			// Mock embedding for local standalone / environments without Minimax
 			embedding = make([]float32, 1536)
 		}
 

@@ -4,16 +4,20 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	prov := db.NewTestProvider(t)
+	sip, err := orchestration.NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sipdb: %v", err)
+	}
+	prov := sip.GetSIPDBProviderForTest()
 
-	_, err := prov.Exec(context.Background(), `
+	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
@@ -44,9 +48,6 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 
 type mockMinimaxClient struct{}
 
-func (m *mockMinimaxClient) ChatCompletion(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
-	return nil, nil
-}
 func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	return make([]float32, 1536), nil
 }

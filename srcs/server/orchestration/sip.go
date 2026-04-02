@@ -119,6 +119,11 @@ func NewSIPDBWithProvider(provider db.Provider) (*SIPDB, error) {
 	return &SIPDB{db: provider, groundingOnce: &sync.Once{}}, nil
 }
 
+// GetSIPDBProviderForTest returns the internal database provider for tests.
+func (s *SIPDB) GetSIPDBProviderForTest() db.Provider {
+	return s.db
+}
+
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
 // This is kept for backward compatibility and tests.
 // Accepts parameters: dbPath string (No Constraints).

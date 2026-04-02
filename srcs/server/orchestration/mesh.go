@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/redis/go-redis/v9"
+	"github.com/redis/rueidis"
 )
 
 // MeshMessage represents a realtime message sent over the mesh.
@@ -30,7 +30,7 @@ var upgrader = websocket.Upgrader{
 
 // TeammateMesh manages real-time pub/sub for agents
 type TeammateMesh struct {
-	redisClient *redis.Client
+	redisClient rueidis.Client
 	isCloud     bool
 
 	// In-memory pub/sub for standalone mode
@@ -48,14 +48,15 @@ func NewTeammateMesh(redisURL string) (*TeammateMesh, error) {
 	}
 
 	if isCloud && redisURL != "" {
-		opt, err := redis.ParseURL(redisURL)
+		opt, err := rueidis.ParseURL(redisURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse redis url: %w", err)
 		}
-		tm.redisClient = redis.NewClient(opt)
-		if err := tm.redisClient.Ping(context.Background()).Err(); err != nil {
+		c, err := rueidis.NewClient(opt)
+		if err != nil {
 			return nil, fmt.Errorf("failed to connect to redis: %w", err)
 		}
+		tm.redisClient = c
 	}
 
 	return tm, nil
@@ -93,25 +94,17 @@ func (tm *TeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Request, 
 	}()
 
 	// If cloud, subscribe to redis channel
-	var pubsub *redis.PubSub
 	if tm.isCloud && tm.redisClient != nil {
-		pubsub = tm.redisClient.Subscribe(ctx, roomID)
-		defer pubsub.Close()
-
 		go func() {
-			ch := pubsub.Channel()
-			for {
+			err := tm.redisClient.Receive(ctx, tm.redisClient.B().Subscribe().Channel(roomID).Build(), func(msg rueidis.PubSubMessage) {
 				select {
-				case <-ctx.Done():
-					return
-				case msg := <-ch:
-					// Send to the write goroutine
-					select {
-					case msgChan <- []byte(msg.Payload):
-					default:
-						// Drop message if channel is full to prevent blocking
-					}
+				case msgChan <- []byte(msg.Message):
+				default:
+					// Drop message if channel is full to prevent blocking
 				}
+			})
+			if err != nil {
+				slog.Error("mesh: redis subscribe error", "err", err)
 			}
 		}()
 	}
@@ -137,7 +130,8 @@ func (tm *TeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Request, 
 // Publish broadcasts a message to a room.
 func (tm *TeammateMesh) Publish(ctx context.Context, roomID, message string) error {
 	if tm.isCloud && tm.redisClient != nil {
-		return tm.redisClient.Publish(ctx, roomID, message).Err()
+		cmd := tm.redisClient.B().Publish().Channel(roomID).Message(message).Build()
+		return tm.redisClient.Do(ctx, cmd).Error()
 	}
 
 	tm.mu.RLock()
