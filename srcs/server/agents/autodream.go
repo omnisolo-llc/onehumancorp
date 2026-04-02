@@ -2,10 +2,7 @@ package agents
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
+				"fmt"
 	"log/slog"
 	"time"
 
@@ -98,59 +95,22 @@ func (ae *AutoDreamEngine) consolidate(ctx context.Context) error {
 		// 2. Generate embedding (if llmClient provided)
 		var embedding []float32
 		var vectorStr interface{}
-
-		// Use cache
-		hashBytes := sha256.Sum256([]byte(content))
-		contentHash := hex.EncodeToString(hashBytes[:])
-
-		var cachedEmbeddingStr string
-		err = ae.db.QueryRow(ctx, "SELECT embedding FROM embedding_cache WHERE content_hash = $1", contentHash).Scan(&cachedEmbeddingStr)
-		if err == nil && cachedEmbeddingStr != "" {
-			slog.Debug("autodream: found embedding in cache", "hash", contentHash)
-			err = json.Unmarshal([]byte(cachedEmbeddingStr), &embedding)
+		var err error
+		if ae.llmClient != nil {
+			embedding, err = ae.llmClient.GenerateEmbedding(ctx, content)
 			if err != nil {
-				slog.Error("autodream: failed to unmarshal cached embedding", "err", err)
-			} else {
-				if ae.db.IsSQLite() {
-					vectorStr = fmt.Sprintf("%v", embedding)
-				} else {
-					vectorStr = formatVector(embedding)
-				}
+				slog.Error("autodream: failed to generate embedding", "err", err)
+				continue
 			}
+		} else {
+			embedding = make([]float32, 1536)
+		}
+		if ae.db.IsSQLite() {
+			vectorStr = fmt.Sprintf("%v", embedding)
+		} else {
+			vectorStr = formatVector(embedding)
 		}
 
-		if vectorStr == nil {
-			if ae.llmClient != nil {
-				embedding, err = ae.llmClient.GenerateEmbedding(ctx, content)
-				if err != nil {
-					slog.Error("autodream: failed to generate embedding", "err", err)
-					continue
-				}
-			} else {
-				// Mock embedding for tests
-				embedding = make([]float32, 1536)
-			}
-
-			// Convert embedding to postgres pgvector format string or sqlite BLOB
-			if ae.db.IsSQLite() {
-				vectorStr = fmt.Sprintf("%v", embedding) // basic string repr as text fallback
-			} else {
-				// pgvector format '[0.1, 0.2, ...]'
-				vectorStr = formatVector(embedding)
-			}
-
-			// Save back to cache
-			embeddingBytes, _ := json.Marshal(embedding)
-
-			cacheQuery := "INSERT INTO embedding_cache (content_hash, embedding) VALUES ($1, $2) ON CONFLICT (content_hash) DO NOTHING"
-			if ae.db.IsSQLite() {
-				cacheQuery = "INSERT INTO embedding_cache (content_hash, embedding) VALUES (?, ?) ON CONFLICT (content_hash) DO NOTHING"
-			}
-			_, cacheErr := ae.db.Exec(ctx, cacheQuery, contentHash, string(embeddingBytes))
-			if cacheErr != nil {
-				slog.Warn("autodream: failed to save embedding to cache", "err", cacheErr)
-			}
-		}
 
 		// 3. Store in autodream_memories
 		insertQuery := `
