@@ -13,6 +13,7 @@ go_library(
         "service.go",
         "sip.go",
         "sqlite_hub.go",
+        "token_burn.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],

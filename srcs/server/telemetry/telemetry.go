@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,6 +27,10 @@ var (
 	tokenUsageCounter        metric.Int64Counter
 	tokenBurnRateGauge       metric.Float64Gauge
 	agentApiCallsCounter     metric.Int64Counter
+
+	// Track total token usage for burn rate forecasting
+	totalTokenUsageMu        sync.Mutex
+	totalTokenUsage          int64
 	humanInteractionsCounter metric.Int64Counter
 	meetingEventsCounter     metric.Int64Counter
 
@@ -216,6 +221,9 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
+	totalTokenUsageMu.Lock()
+	totalTokenUsage += count
+	totalTokenUsageMu.Unlock()
 	if tokenUsageCounter == nil {
 		return
 	}
@@ -353,4 +361,11 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 			attribute.String("organization_id", organizationID),
 		))
 	}
+}
+
+// GetTotalTokenUsage returns the current total token usage.
+func GetTotalTokenUsage() int64 {
+	totalTokenUsageMu.Lock()
+	defer totalTokenUsageMu.Unlock()
+	return totalTokenUsage
 }

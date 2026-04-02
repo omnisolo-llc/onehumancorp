@@ -317,6 +317,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	burnRateEngine *tokenBurnRateEngine
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -352,6 +353,8 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
 	}
+	h.burnRateEngine = newTokenBurnRateEngine(1*time.Minute, telemetry.GetTotalTokenUsage)
+	go h.burnRateEngine.start(context.Background())
 	go h.eventLogWorker(context.Background(), "events.jsonl")
 	return h
 }
