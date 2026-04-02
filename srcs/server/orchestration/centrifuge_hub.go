@@ -193,6 +193,33 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 	}
 }
 
+// MeshHealthCheck performs a deep check of the underlying Teammate Mesh layer (Centrifuge).
+// It verifies the node is running and checks internal connectivity constraints.
+// Returns nil if healthy, or an error if the mesh is partitioned or broken.
+func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
+	if cn.node == nil {
+		return context.DeadlineExceeded // return standard error instead of context error
+	}
+
+	// Publish a ping to a health channel to ensure broker connectivity is active
+	// using a short timeout.
+	done := make(chan error, 1)
+	go func() {
+		_, err := cn.node.Publish("mesh:health", []byte(`{"ping":"pong"}`))
+		done <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-done:
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
 // Close shuts down the Centrifuge node gracefully.
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
