@@ -10,12 +10,13 @@ import (
 
 // SqliteHubRepository implements HubRepository backed by SQLite.
 type SqliteHubRepository struct {
-	pool db.Provider
+	pool  db.Provider
+	orgID string
 }
 
 // NewSqliteHubRepository creates a SQLite-backed hub repository.
-func NewSqliteHubRepository(pool db.Provider) *SqliteHubRepository {
-	return &SqliteHubRepository{pool: pool}
+func NewSqliteHubRepository(pool db.Provider, orgID string) *SqliteHubRepository {
+	return &SqliteHubRepository{pool: pool, orgID: orgID}
 }
 
 func (r *SqliteHubRepository) RegisterAgent(ctx context.Context, agent Agent) error {
@@ -37,9 +38,13 @@ func (r *SqliteHubRepository) RegisterAgent(ctx context.Context, agent Agent) er
 func (r *SqliteHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool, error) {
 	var a Agent
 	var status string
-	err := r.pool.QueryRow(ctx, `
-		SELECT id, name, role, organization_id, status, provider_type, region
-		FROM agents WHERE id = ?`, id).Scan(
+	query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE id = ?"
+	var args []any = []any{id}
+	if r.orgID != "" {
+		query += " AND organization_id = ?"
+		args = append(args, r.orgID)
+	}
+	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region,
 	)
 	if err != nil {
@@ -53,9 +58,15 @@ func (r *SqliteHubRepository) GetAgent(ctx context.Context, id string) (Agent, b
 }
 
 func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
-	rows, err := r.pool.Query(ctx, `
-		SELECT id, name, role, organization_id, status, provider_type, region
-		FROM agents ORDER BY id`)
+	query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
+	var args []any
+	if r.orgID != "" {
+		query += " WHERE organization_id = ?"
+		args = append(args, r.orgID)
+	}
+	query += " ORDER BY id"
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: list agents: %w", err)
 	}
@@ -75,7 +86,13 @@ func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 }
 
 func (r *SqliteHubRepository) UpdateAgentStatus(ctx context.Context, id string, status Status) error {
-	_, err := r.pool.Exec(ctx, "UPDATE agents SET status = ? WHERE id = ?", string(status), id)
+	query := "UPDATE agents SET status = ? WHERE id = ?"
+	var args []any = []any{string(status), id}
+	if r.orgID != "" {
+		query += " AND organization_id = ?"
+		args = append(args, r.orgID)
+	}
+	_, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("sqlite: update agent status: %w", err)
 	}
@@ -83,6 +100,15 @@ func (r *SqliteHubRepository) UpdateAgentStatus(ctx context.Context, id string, 
 }
 
 func (r *SqliteHubRepository) RemoveAgent(ctx context.Context, id string) error {
+	// Prevent unauthorized deletion if scoped
+	if r.orgID != "" {
+		var count int
+		err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = ? AND organization_id = ?", id, r.orgID).Scan(&count)
+		if err != nil || count == 0 {
+			return fmt.Errorf("sqlite: unauthorized or missing agent")
+		}
+	}
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("sqlite: begin remove agent: %w", err)
