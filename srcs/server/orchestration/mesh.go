@@ -264,11 +264,11 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 
 func (lm *LocalTeammateMesh) persistWorker() {
 	query := `
-		INSERT INTO shared_tasks (id, title, status, assigned_agent_id)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO shared_tasks (id, title, status, agent_id, organization_id)
+		VALUES ($1, $2, $3, $4, 'system')
 		ON CONFLICT(id) DO UPDATE SET
 			status = excluded.status,
-			assigned_agent_id = excluded.assigned_agent_id,
+			agent_id = excluded.agent_id,
 			updated_at = CURRENT_TIMESTAMP
 	`
 	for task := range lm.persist {

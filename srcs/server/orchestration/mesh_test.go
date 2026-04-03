@@ -126,10 +126,13 @@ func TestLocalTeammateMesh(t *testing.T) {
 	_, err := provider.Exec(ctx, `
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
+			organization_id VARCHAR NOT NULL,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
+			agent_id TEXT,
+			priority VARCHAR NOT NULL DEFAULT 'P2',
+			payload JSON,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);
