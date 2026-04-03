@@ -399,13 +399,24 @@ func (s *Server) handleScaleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, event := range events {
+		select {
+		case <-r.Context().Done():
+			return
+		default:
+		}
+
 		s.hub.LogEvent(map[string]interface{}{"type": "ScalingEventStream", "data": event})
 		data := []byte("data: " + event + "\n\n")
 		w.Write(data)
 		if err := rc.Flush(); err != nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+
+		select {
+		case <-r.Context().Done():
+			return
+		case <-time.After(1 * time.Second):
+		}
 	}
 }
 
