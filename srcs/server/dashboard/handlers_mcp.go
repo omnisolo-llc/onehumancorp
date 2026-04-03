@@ -353,6 +353,47 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 	}
 }
 
+type AutoDreamPayload struct {
+	Type     string `json:"type"` // "embedding" or "mission"
+	ID       string `json:"id"`
+	Data     string `json:"data"`
+	Metadata string `json:"metadata"`
+}
+
+// handleSyncMissionsPayloads handles local-to-cloud Hybrid MCP RAG Protocol synchronization
+func (s *Server) handleSyncMissionsPayloads(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleSyncMissionsPayloads")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var payloads []AutoDreamPayload
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	for _, payload := range payloads {
+		if payload.Type != "mission" {
+			continue // skip non-missions
+		}
+
+		forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+		err := s.hub.SIPDB().UpsertMission(ctx, payload.ID, payload.Metadata, payload.Data, forceLocal)
+		if err != nil {
+			slog.Error("failed to upsert synced mission", "error", err, "id", payload.ID)
+		}
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "missions synced"})
+}
+
 // handleMissionsSync handles local-to-cloud mission synchronization via an UPSERT query
 func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleMissionsSync")
