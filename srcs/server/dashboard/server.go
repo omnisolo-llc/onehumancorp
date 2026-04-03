@@ -555,6 +555,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/pipelines/status", server.handlePipelineStatus)
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
+	// Teammate Mesh API
+	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)

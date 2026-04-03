@@ -174,6 +174,12 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 	}
 }
 
+// Publish Raw publishes raw data to a channel.
+func (cn *CentrifugeNode) Publish(channel string, data []byte) error {
+	_, err := cn.node.Publish(channel, data)
+	return err
+}
+
 // PublishTaskBroadcast fans out a task update to all subscribers of the
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {

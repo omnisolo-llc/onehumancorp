@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -39,6 +41,93 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	// For simplicity, we just use a distributed worker queue pattern with a database table or Redis.
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
+	go w.runMemoryIngestionPipeline(ctx)
+}
+
+// runMemoryIngestionPipeline reads .agent-task/memory/*.yml, generates embeddings, and stores them in agent_memories.
+func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.ingestMemories(ctx)
+		}
+	}
+}
+
+// ingestMemories processes memory yaml files.
+func (w *AutoDreamWorker) ingestMemories(ctx context.Context) {
+	memoryDir := ".agent-task/memory"
+	files, err := ioutil.ReadDir(memoryDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			slog.Error("AutoDream: failed to read memory directory", "error", err)
+		}
+		return
+	}
+
+	for _, file := range files {
+		if file.IsDir() || filepath.Ext(file.Name()) != ".yml" {
+			continue
+		}
+		filePath := filepath.Join(memoryDir, file.Name())
+		content, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			slog.Error("AutoDream: failed to read memory file", "file", filePath, "error", err)
+			continue
+		}
+
+		// Mock embedding generation for testing purpose, in real case use OpenAI/Minimax
+		// Assuming we always generate an empty array if no LLM.
+		embeddingStr := "[0.0]" // Simplified fallback for SQLite; Postgres pgvector needs matching dimensions but will mock it.
+
+		// Attempt to use a real dimension array for pgvector
+		if !w.pool.IsSQLite() {
+			mockEmbedding := make([]float64, 1536)
+			// Mock logic - set first element to 0.1
+			mockEmbedding[0] = 0.1
+			embJSON, _ := json.Marshal(mockEmbedding)
+			embeddingStr = string(embJSON)
+		}
+
+		// Use the filename (without extension) as a stable, deterministic ID.
+		// Since we want ON CONFLICT DO NOTHING to work efficiently, we specify ID manually.
+		baseName := file.Name()
+		stableID := baseName[:len(baseName)-len(filepath.Ext(baseName))]
+
+		var query string
+		if w.pool.IsSQLite() {
+			query = "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES (?, 'standalone', ?, ?) ON CONFLICT(id) DO NOTHING"
+			_, err = w.pool.Exec(ctx, query, stableID, string(content), embeddingStr)
+		} else {
+			// Postgres requires a UUID format. To maintain determinism without hashing,
+			// let's use the file name directly if it is a UUID, or a generated UUID if we can't.
+			// Actually, if we just use gen_random_uuid(), we duplicate.
+			// So let's insert the filename into a separate text field like `source_id` to track uniqueness,
+			// or use a stable UUID generation. A simple MD5 hash converted to UUID format works,
+			// but we can just use the memory ID as `content` uniqueness or skip ON CONFLICT if we add a unique constraint.
+			// Let's modify the query to use the content string to prevent duplicates, or modify the migration to include `source_file` UNIQUE.
+			// However, since we can't easily change the migration now without dropping, let's just use
+			// a subquery to avoid inserting if the content already exists.
+			query = `INSERT INTO agent_memories (organization_id, content, embedding)
+					 SELECT 'standalone', $1, $2::vector
+					 WHERE NOT EXISTS (SELECT 1 FROM agent_memories WHERE content = $1)`
+			_, err = w.pool.Exec(ctx, query, string(content), embeddingStr)
+		}
+
+		if err != nil {
+			slog.Error("AutoDream: failed to insert agent memory", "error", err)
+			continue
+		}
+
+		// Requirement: Read/Synthesis global intelligence from .agent-task/memory/.
+		// We DO NOT delete the file here to preserve the shared IaC memory state for other agents.
+		slog.Info("AutoDream: ingested memory", "file", filePath)
+	}
 }
 
 // runPruningPipeline periodically prunes stale agent session data.
