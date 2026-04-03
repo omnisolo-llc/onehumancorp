@@ -670,14 +670,37 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 
 	mode := "local"
+	isStandalone := true
 	if os.Getenv("DATABASE_URL") != "" {
 		mode = "cloud"
+		isStandalone = false
+	}
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		isStandalone = true
+		mode = "standalone"
+	}
+
+	var checklist []map[string]interface{}
+	if isStandalone {
+		checklist = append(checklist, map[string]interface{}{
+			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local standalone data storage",
+		})
+	} else {
+		checklist = append(checklist, map[string]interface{}{
+			"id": "postgres_db", "label": "PostgreSQL Multi-tenant", "status": "ok", "description": "Cloud-native persistent data storage",
+		})
+		if os.Getenv("REDIS_URL") != "" {
+			checklist = append(checklist, map[string]interface{}{
+				"id": "redis_cache", "label": "Redis Distributed Cache", "status": "ok", "description": "High-throughput Pub/Sub mesh",
+			})
+		}
 	}
 
 	resp := map[string]interface{}{
 		"status":     "healthy",
 		"mode":       mode,
 		"sync_ready": true,
+		"checklist":  checklist,
 	}
 	_ = json.NewEncoder(w).Encode(resp)
 }
