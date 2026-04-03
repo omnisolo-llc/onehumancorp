@@ -84,7 +84,10 @@ func NewCachedMinimaxClient(client MinimaxClient, db db.Provider, redisClient ru
 
 // Reason caches calls to the underlying Reason method.
 func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
-	hashBytes := sha256.Sum256([]byte(prompt))
+	// Proactive Miser Token Compression
+	optimizedPrompt := OptimizePromptForCost(prompt)
+
+	hashBytes := sha256.Sum256([]byte(optimizedPrompt))
 	promptHash := hex.EncodeToString(hashBytes[:])
 
 	// 1. Try Redis cache
@@ -128,7 +131,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 
 	// 3. Cache miss: generate response
 	telemetry.RecordCacheMiss(ctx, "reason", "all")
-	response, err := c.client.Reason(ctx, prompt)
+	response, err := c.client.Reason(ctx, optimizedPrompt)
 	if err != nil {
 		return "", err
 	}

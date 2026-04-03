@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Miser
+---
+title: "Miser: Proactive Prompt Optimization for Token Cost Reduction"
+description: >
+  Implemented `OptimizePromptForCost` in `srcs/server/orchestration/cost_optimizer.go` which strips markdown comments and collapses redundant whitespaces in prompts.
+  Integrated this optimizer into `CachedMinimaxClient.Reason()` so that all cached and uncached LLM calls have a smaller token footprint, significantly reducing API costs for large multi-agent context payloads.
+priority: P1
+scope: Small
