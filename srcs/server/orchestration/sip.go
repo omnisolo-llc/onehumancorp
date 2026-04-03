@@ -54,7 +54,7 @@ const (
 
 var (
 	standaloneThrottle     = make(chan struct{}, 1) // Throttle to 1 concurrent write in standalone mode
-	standaloneThrottleOnce sync.Once
+	standaloneThrottleOnce *sync.Once               = &sync.Once{}
 )
 
 // getThrottle conditionally acquires the semaphore if in standalone mode

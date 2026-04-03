@@ -64,7 +64,7 @@ func (cb *CircuitBreaker) RecordFailure() {
 }
 
 var globalPlaneCircuitBreaker *CircuitBreaker
-var globalPlaneCircuitBreakerOnce sync.Once
+var globalPlaneCircuitBreakerOnce *sync.Once = &sync.Once{}
 
 func init() {
 	globalPlaneCircuitBreakerOnce.Do(func() {

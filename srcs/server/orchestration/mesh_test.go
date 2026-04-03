@@ -14,7 +14,7 @@ import (
 )
 
 func TestTeammateMesh_StandaloneMode(t *testing.T) {
-	mesh, err := NewTeammateMesh("")
+	mesh, err := NewLegacyTeammateMesh("")
 	if err != nil {
 		t.Fatalf("failed to create mesh: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestTeammateMesh_StandaloneMode(t *testing.T) {
 }
 
 func TestTeammateMesh_Publish(t *testing.T) {
-	mesh, err := NewTeammateMesh("")
+	mesh, err := NewLegacyTeammateMesh("")
 	if err != nil {
 		t.Fatalf("failed to create mesh: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestTeammateMesh_Publish(t *testing.T) {
 func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 	// Verify that meshes do not leak across tenants by isolating room channels.
 
-	mesh, err := NewTeammateMesh("")
+	mesh, err := NewLegacyTeammateMesh("")
 	if err != nil {
 		t.Fatalf("failed to create mesh: %v", err)
 	}
