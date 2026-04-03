@@ -1,0 +1,10 @@
+-- In 007, id is UUID and there's a mission_id and priority.
+-- We must make sure the schema matches what's needed.
+-- But the task says "Add the shared_tasks table to srcs/server/db/migrations/. Ensure standard ADD COLUMN is used (no IF NOT EXISTS for SQLite compatibility)."
+-- Maybe it just meant to add the schema as a new file if it doesn't exist, but since it exists in 007, and it might be dropping and redefining. Wait, the prompt says "CREATE TABLE shared_tasks ... id TEXT PRIMARY KEY".
+-- But 007 uses `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`.
+-- Let's just create 013 to be safe if any columns were missing, but the columns are:
+-- id, title, description, status, assigned_agent_id, created_at, updated_at. All exist.
+-- What's missing?
+-- Wait, the mission file was written by an agent assuming `shared_tasks` wasn't there or had a different schema.
+-- Since the `shared_tasks` table is fully there with all the fields, maybe we just need to ensure `TeammateMesh` has been implemented correctly.

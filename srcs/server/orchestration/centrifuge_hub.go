@@ -179,10 +179,9 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
 	channel := "mesh:tasks"
 
-	// Ensure we map payload correctly to the required UI keys:
+	// Ensure we map payload correctly to the required UI keys at the root level:
 	// 'agent_id', 'action', 'status', and 'task_id'
 	msg := map[string]interface{}{
-		"type":    "TASK_BROADCAST",
 		"task_id": taskID,
 	}
 

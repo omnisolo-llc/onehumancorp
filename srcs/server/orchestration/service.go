@@ -881,6 +881,17 @@ func (h *Hub) FireAgent(id string) {
 	delete(h.inbox, id)
 }
 
+// PublishTaskBroadcast exposes the underlying CentrifugeNode task broadcast logic to the mesh.
+func (h *Hub) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	h.mu.RLock()
+	cn := h.centrifugeNode
+	h.mu.RUnlock()
+
+	if cn != nil {
+		cn.PublishTaskBroadcast(taskID, payload)
+	}
+}
+
 // Publish validates and routes a message to a direct recipient, a meeting room, or both.
 //
 //   - message: Message; The event payload containing routing headers and content.
