@@ -16,6 +16,9 @@ services:
         limits:
           cpus: "0.2"
           memory: 50M
+        reservations:
+          cpus: "0.05"
+          memory: 10M
     build:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
@@ -37,6 +40,9 @@ services:
         limits:
           cpus: "0.3"
           memory: 100M
+        reservations:
+          cpus: "0.05"
+          memory: 20M
     image: onehumancorp/server:latest
     environment:
       REDIS_ADDR: redis:6379
@@ -66,6 +72,14 @@ services:
       - "8080:8080"
 
   redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 50M
+        reservations:
+          cpus: "0.05"
+          memory: 10M
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -76,6 +90,14 @@ services:
       retries: 10
 
   postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 200M
+        reservations:
+          cpus: "0.1"
+          memory: 50M
     image: postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
@@ -94,6 +116,14 @@ services:
       retries: 10
 
   powersync:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 150M
+        reservations:
+          cpus: "0.05"
+          memory: 50M
     image: journeyapps/powersync-service:latest
     ports:
       - "8081:8080"
@@ -105,6 +135,14 @@ services:
         condition: service_healthy
 
   chatwoot-migrate:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 100M
+        reservations:
+          cpus: "0.05"
+          memory: 20M
     image: chatwoot/chatwoot:latest
     command: bundle exec rails db:chatwoot_prepare
     environment:
@@ -122,6 +160,14 @@ services:
         condition: service_healthy
 
   chatwoot:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: 200M
+        reservations:
+          cpus: "0.1"
+          memory: 50M
     image: chatwoot/chatwoot:latest
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
@@ -138,6 +184,14 @@ services:
       - chatwoot-migrate
 
   chatwoot-worker:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 150M
+        reservations:
+          cpus: "0.05"
+          memory: 50M
     image: chatwoot/chatwoot:latest
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
@@ -152,6 +206,14 @@ services:
       - chatwoot
 
   prometheus:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 100M
+        reservations:
+          cpus: "0.05"
+          memory: 20M
     image: prom/prometheus:latest
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -159,6 +221,14 @@ services:
       - "9090:9090"
 
   grafana:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 100M
+        reservations:
+          cpus: "0.05"
+          memory: 20M
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
@@ -171,6 +241,14 @@ services:
       - prometheus
 
   plane-web:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 100M
+        reservations:
+          cpus: "0.05"
+          memory: 20M
     image: makeplane/plane-frontend:latest
     ports:
       - "3003:3000"
@@ -180,6 +258,14 @@ services:
       - plane-api
 
   plane-api:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 150M
+        reservations:
+          cpus: "0.05"
+          memory: 50M
     image: makeplane/plane-backend:latest
     command: ./bin/takeoff
     ports:
@@ -196,6 +282,14 @@ services:
         condition: service_healthy
 
   plane-worker:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 150M
+        reservations:
+          cpus: "0.05"
+          memory: 50M
     image: makeplane/plane-backend:latest
     command: ./bin/worker
     environment:

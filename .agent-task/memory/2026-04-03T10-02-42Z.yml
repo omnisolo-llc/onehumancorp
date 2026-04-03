@@ -1,0 +1,3 @@
+timestamp: "2026-04-03T10-02-42Z"
+agent: Maintainer
+event: Updated VPA settings to Auto with bounds mapped to Helm values, and added docker-compose resource reservations to optimize local footprint.
