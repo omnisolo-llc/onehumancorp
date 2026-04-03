@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -128,6 +129,7 @@ class _SkillCardState extends State<_SkillCard> {
   bool _busy = false;
   late bool _installed;
   late bool _enabled;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -194,58 +196,112 @@ class _SkillCardState extends State<_SkillCard> {
   @override
   Widget build(BuildContext context) {
     final s = widget.skill;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Chip(
-                  label: Text(s.category),
-                  backgroundColor: _categoryColor(context).withAlpha(40),
-                  labelStyle: TextStyle(color: _categoryColor(context)),
-                  visualDensity: VisualDensity.compact,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  s.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(const <double>[
+                  1.168, -0.153, -0.015, 0, 0,
+                  -0.046, 1.061, -0.015, 0, 0,
+                  -0.046, -0.152, 1.198, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? colors.surfaceContainerHighest.withValues(alpha: 0.3)
+                      : colors.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered
+                        ? colors.outlineVariant
+                        : colors.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'v${s.version}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const Spacer(),
-                if (_installed)
-                  Switch(
-                    value: _enabled,
-                    onChanged: _busy ? null : _toggleEnable,
-                  ),
-                const SizedBox(width: 8),
-                _busy
-                    ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : OutlinedButton(
-                      onPressed: _toggleInstall,
-                      child: Text(_installed ? 'Remove' : 'Install'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Chip(
+                          label: Text(s.category, style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                          backgroundColor: _categoryColor(context).withValues(alpha: 0.15),
+                          labelStyle: TextStyle(color: _categoryColor(context)),
+                          visualDensity: VisualDensity.compact,
+                          side: BorderSide.none,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          s.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontFamily: 'Outfit',
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'v${s.version}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: colors.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_installed)
+                          Switch(
+                            value: _enabled,
+                            onChanged: _busy ? null : _toggleEnable,
+                          ),
+                        const SizedBox(width: 8),
+                        _busy
+                            ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : OutlinedButton(
+                              onPressed: _toggleInstall,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
+                              ),
+                              child: Text(_installed ? 'Remove' : 'Install'),
+                            ),
+                      ],
                     ),
-              ],
+                    if (s.description.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        s.description,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: colors.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            if (s.description.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(s.description, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ],
+          ),
         ),
       ),
     );
