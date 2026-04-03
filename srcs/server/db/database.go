@@ -83,6 +83,15 @@ func New(ctx context.Context) (*DB, error) {
 					f.Close()
 					os.Chmod(basePath, 0600) // Ensure chmod if file already existed
 				}
+				// Also pre-touch wal and shm files so that SQLite respects 0600 when it takes them over if not already created
+				if fwal, err := os.OpenFile(basePath+"-wal", os.O_CREATE|os.O_RDWR, 0600); err == nil {
+					fwal.Close()
+					os.Chmod(basePath+"-wal", 0600)
+				}
+				if fshm, err := os.OpenFile(basePath+"-shm", os.O_CREATE|os.O_RDWR, 0600); err == nil {
+					fshm.Close()
+					os.Chmod(basePath+"-shm", 0600)
+				}
 			}
 		}
 
@@ -108,6 +117,12 @@ func New(ctx context.Context) (*DB, error) {
 			}
 			if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
 				os.Chmod(basePath, 0600)
+			}
+			if info, err := os.Stat(basePath + "-wal"); err == nil && !info.IsDir() {
+				os.Chmod(basePath+"-wal", 0600)
+			}
+			if info, err := os.Stat(basePath + "-shm"); err == nil && !info.IsDir() {
+				os.Chmod(basePath+"-shm", 0600)
 			}
 		}
 
