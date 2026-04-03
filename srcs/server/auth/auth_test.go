@@ -425,6 +425,26 @@ func TestHandleUsers_NonAdminForbidden(t *testing.T) {
 	}
 }
 
+func TestHandleUsers_TenantAdminForbidden(t *testing.T) {
+	s := auth.NewStore()
+	u, _ := s.CreateUser("tenantadmin", "ta@test.com", "tadminpass", []string{auth.RoleAdmin})
+	u.OrganizationID = "some-org-id"
+	tok, _ := s.IssueToken(u)
+
+	h := auth.NewHandlers(s)
+	mw := auth.Middleware(s)
+	handler := mw(http.HandlerFunc(h.HandleUsers))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for tenant admin, got %d", rec.Code)
+	}
+}
+
 func TestHandleRoles_List(t *testing.T) {
 	s := auth.NewStore()
 	tok := loginAs(t, s, "admin", "admin")
