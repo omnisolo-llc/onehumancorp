@@ -1,194 +1,175 @@
 package orchestration
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"os"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel"
 )
 
-type SyncDaemonPayload struct {
-	ID      string `json:"id"`
-	Status  string `json:"status"`
-	Payload string `json:"payload"`
-}
+var (
+	syncMeter        = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	syncCountMetric, _ = syncMeter.Int64Counter("ohc.sync.escalations.count")
+)
 
-type HybridMCPRAGDaemon struct {
-	dbWrapper   *db.DB
-	ticker      *time.Ticker
-	quit        chan struct{}
-	cloudAPIURL string
-}
-
-func NewHybridMCPRAGDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAPIURL string) *HybridMCPRAGDaemon {
-	if cloudAPIURL == "" {
-		cloudAPIURL = os.Getenv("OHC_CORE_URL")
-	}
-	if cloudAPIURL == "" {
-		cloudAPIURL = "http://localhost:8080"
-	}
-
-	return &HybridMCPRAGDaemon{
-		dbWrapper:   dbWrapper,
-		ticker:      time.NewTicker(pollInterval),
-		quit:        make(chan struct{}),
-		cloudAPIURL: cloudAPIURL,
-	}
-}
-
-func (d *HybridMCPRAGDaemon) Start(ctx context.Context) {
-	if !d.dbWrapper.IsSQLite() {
-		// Only run in standalone/SQLite mode
-		slog.Info("sync_daemon: HybridMCPRAGDaemon disabled (not in standalone SQLite mode)")
+// StartSyncDaemon monitors local SQLite for CLOUD_ESCALATION missions,
+// sanitizes them, injects into cloud Postgres, polls for completion,
+// and syncs results back to local SQLite.
+func StartSyncDaemon(ctx context.Context, localDB db.Provider, cloudDB db.Provider) {
+	if localDB == nil || cloudDB == nil {
+		slog.Error("sync_daemon: localDB or cloudDB is nil")
 		return
 	}
 
+	ticker := time.NewTicker(1 * time.Second)
 	go func() {
+		defer ticker.Stop()
 		for {
 			select {
-			case <-d.ticker.C:
-				d.ProcessSync(ctx)
-			case <-d.quit:
-				d.ticker.Stop()
-				return
 			case <-ctx.Done():
-				d.ticker.Stop()
 				return
+			case <-ticker.C:
+				processSyncTick(ctx, localDB, cloudDB)
 			}
 		}
 	}()
 }
 
-func (d *HybridMCPRAGDaemon) Stop() {
-	close(d.quit)
-}
-
-func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
-	if !d.dbWrapper.IsSQLite() {
-		return
-	}
-
-	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 100")
+func processSyncTick(ctx context.Context, localDB db.Provider, cloudDB db.Provider) {
+	// 1. Monitor local SQLite for CLOUD_ESCALATION
+	rows, err := localDB.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
-		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
+		slog.Error("sync_daemon: failed to query localDB", "error", err)
 		return
 	}
-	defer rows.Close()
 
-	var payloads []SyncDaemonPayload
-	var ids []string
+	type mission struct {
+		id      string
+		payload string
+	}
+	var missionsToEscalate []mission
 
 	for rows.Next() {
-		var id, status, payloadData string
-		if err := rows.Scan(&id, &status, &payloadData); err != nil {
-			slog.Error("sync_daemon: failed to scan agent_missions", "error", err)
+		var m mission
+		if err := rows.Scan(&m.id, &m.payload); err != nil {
+			slog.Error("sync_daemon: scan error", "error", err)
+			continue
+		}
+		missionsToEscalate = append(missionsToEscalate, m)
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("sync_daemon: rows error", "error", err)
+	}
+	rows.Close()
+
+	for _, m := range missionsToEscalate {
+		// Sanitize
+		sanitized, err := SanitizePayload(m.payload)
+		if err != nil {
+			slog.Error("sync_daemon: sanitize error", "error", err)
 			continue
 		}
 
-		// Sanitize payload data for PI
-		var sanitizeRecursively func(data interface{}) interface{}
-		sanitizeRecursively = func(data interface{}) interface{} {
-			switch v := data.(type) {
-			case string:
-				return telemetry.RedactPII(v)
-			case map[string]interface{}:
-				for key, val := range v {
-					v[key] = sanitizeRecursively(val)
-				}
-				return v
-			case []interface{}:
-				for i, val := range v {
-					v[i] = sanitizeRecursively(val)
-				}
-				return v
-			default:
-				return v
-			}
-		}
-
-		var parsedPayload map[string]interface{}
-		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
-			parsedIface := sanitizeRecursively(parsedPayload)
-			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
-				payloadData = string(redactedBytes)
-			}
-		} else {
-			payloadData = telemetry.RedactPII(payloadData)
-		}
-
-		payloads = append(payloads, SyncDaemonPayload{
-			ID:      id,
-			Status:  status,
-			Payload: payloadData,
-		})
-		ids = append(ids, id)
-	}
-
-	if len(payloads) == 0 {
-		return
-	}
-
-	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Error("sync_daemon: failed to send agent_missions to cloud", "error", err)
-		return
-	}
-
-	// Mark as synced
-	if len(ids) > 0 {
-		idList := ""
-		for i, id := range ids {
-			if i > 0 {
-				idList += ","
-			}
-			idList += fmt.Sprintf("'%s'", id)
-		}
-		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
-		_, err := d.dbWrapper.Exec(ctx, query)
+		// Inject into cloudDB
+		_, err = cloudDB.Exec(ctx, "INSERT INTO agent_missions (id, status, payload) VALUES ($1, 'PENDING', $2) ON CONFLICT(id) DO UPDATE SET status = 'PENDING', payload = $2", m.id, sanitized)
 		if err != nil {
-			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+			slog.Error("sync_daemon: cloud inject error", "error", err)
+			continue
+		}
+
+		// Update local status to IN_CLOUD to avoid re-syncing
+		_, err = localDB.Exec(ctx, "UPDATE agent_missions SET status = 'IN_CLOUD' WHERE id = $1", m.id)
+		if err != nil {
+			slog.Error("sync_daemon: local update error", "error", err)
+			continue
+		}
+
+		if syncCountMetric != nil {
+			syncCountMetric.Add(ctx, 1)
 		}
 	}
 
-	slog.Info("sync_daemon: successfully synced agent_missions", "count", len(payloads))
-}
-
-func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDaemonPayload) error {
-	jsonData, err := json.Marshal(payloads)
+	// 2. Poll cloud database for completion (status = 'DONE')
+	// For all local missions with 'IN_CLOUD', check cloud
+	inCloudRows, err := localDB.Query(ctx, "SELECT id FROM agent_missions WHERE status = 'IN_CLOUD' LIMIT 100")
 	if err != nil {
-		return fmt.Errorf("marshal payloads: %w", err)
+		slog.Error("sync_daemon: query IN_CLOUD error", "error", err)
+		return
 	}
 
-	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
+	var inCloudIDs []string
+	for inCloudRows.Next() {
+		var id string
+		if err := inCloudRows.Scan(&id); err != nil {
+			continue
+		}
+		inCloudIDs = append(inCloudIDs, id)
+	}
+	if err := inCloudRows.Err(); err != nil {
+		slog.Error("sync_daemon: inCloudRows error", "error", err)
+	}
+	inCloudRows.Close()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
+	if len(inCloudIDs) == 0 {
+		return
+	}
+
+	// Fetch all DONE statuses from cloud in a single query
+	var query string
+	var args []any
+	if cloudDB.IsSQLite() {
+		placeholders := ""
+		for i, id := range inCloudIDs {
+			if i > 0 {
+				placeholders += ","
+			}
+			placeholders += "?"
+			args = append(args, id)
+		}
+		query = "SELECT id, payload FROM agent_missions WHERE id IN (" + placeholders + ") AND status = 'DONE'"
+	} else {
+		placeholders := ""
+		for i, id := range inCloudIDs {
+			if i > 0 {
+				placeholders += ","
+			}
+			placeholders += "$" + fmt.Sprintf("%d", i+1)
+			args = append(args, id)
+		}
+		query = "SELECT id, payload FROM agent_missions WHERE id IN (" + placeholders + ") AND status = 'DONE'"
+	}
+
+	cloudRows, err := cloudDB.Query(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+		slog.Error("sync_daemon: query cloud DONE error", "error", err)
+		return
 	}
-	req.Header.Set("Content-Type", "application/json")
+	defer cloudRows.Close()
 
-	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
-		req.Header.Set("Authorization", "Bearer "+spiffeToken)
+	type doneMission struct {
+		id      string
+		payload string
+	}
+	var doneMissions []doneMission
+
+	for cloudRows.Next() {
+		var dm doneMission
+		if err := cloudRows.Scan(&dm.id, &dm.payload); err == nil {
+			doneMissions = append(doneMissions, dm)
+		}
+	}
+	if err := cloudRows.Err(); err != nil {
+		slog.Error("sync_daemon: cloudRows error", "error", err)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("do request: %w", err)
+	for _, dm := range doneMissions {
+		// Pull back to local
+		_, err = localDB.Exec(ctx, "UPDATE agent_missions SET status = 'DONE', payload = $1 WHERE id = $2", dm.payload, dm.id)
+		if err != nil {
+			slog.Error("sync_daemon: update local DONE error", "error", err)
+		}
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
-	}
-
-	return nil
 }

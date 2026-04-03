@@ -3,9 +3,6 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -13,113 +10,93 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
-	// Setup SQLite in-memory db
-	sqlDB, err := sql.Open("sqlite", ":memory:")
+func TestStartSyncDaemon(t *testing.T) {
+	sqlLocal, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		t.Fatalf("failed to open sqlite db: %v", err)
+		t.Fatalf("failed to open sqlite local db: %v", err)
 	}
-	defer sqlDB.Close()
+	defer sqlLocal.Close()
 
-	_, err = sqlDB.Exec(`
-		CREATE TABLE agent_missions (
-			id TEXT PRIMARY KEY,
-			status TEXT,
-			payload TEXT,
-			synced_to_cloud BOOLEAN DEFAULT false
-		)
-	`)
+	sqlCloud, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		t.Fatalf("failed to create agent_missions table: %v", err)
+		t.Fatalf("failed to open sqlite cloud db: %v", err)
 	}
+	defer sqlCloud.Close()
 
-	_, err = sqlDB.Exec(`
-		INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
-		VALUES
-			('m1', 'PENDING', '{"task":"test-mission"}', false),
-			('m2', 'COMPLETED', '{"task":"synced-mission"}', true)
-	`)
-	if err != nil {
-		t.Fatalf("failed to insert test data: %v", err)
-	}
-
-	sqliteProv := db.NewSqliteProvider(sqlDB)
-	dbWrapper := db.NewWithProvider(sqliteProv)
-
-	// Mock cloud API
-	var receivedPayloads []SyncDaemonPayload
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/sync/missions" && r.Method == http.MethodPost {
-			if err := json.NewDecoder(r.Body).Decode(&receivedPayloads); err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
+	for _, d := range []*sql.DB{sqlLocal, sqlCloud} {
+		_, err = d.Exec(`
+			CREATE TABLE agent_missions (
+				id TEXT PRIMARY KEY,
+				status TEXT,
+				payload TEXT
+			)
+		`)
+		if err != nil {
+			t.Fatalf("failed to create agent_missions table: %v", err)
 		}
-	}))
-	defer srv.Close()
-
-	daemon := NewHybridMCPRAGDaemon(dbWrapper, 1*time.Minute, srv.URL)
-
-	// Process sync manually for testing
-	daemon.ProcessSync(context.Background())
-
-	// Validate received payload
-	if len(receivedPayloads) != 1 {
-		t.Fatalf("expected 1 mission to be synced, got %d", len(receivedPayloads))
-	}
-	if receivedPayloads[0].ID != "m1" {
-		t.Errorf("expected payload ID m1, got %s", receivedPayloads[0].ID)
-	}
-	if receivedPayloads[0].Status != "PENDING" {
-		t.Errorf("expected status PENDING, got %s", receivedPayloads[0].Status)
 	}
 
-	// Validate db status updated
-	var synced bool
-	err = sqlDB.QueryRow("SELECT synced_to_cloud FROM agent_missions WHERE id = 'm1'").Scan(&synced)
-	if err != nil {
-		t.Fatalf("failed to query m1 synced status: %v", err)
-	}
-	if !synced {
-		t.Error("expected m1 to be synced_to_cloud = true")
-	}
-}
-
-func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
-	// Setup SQLite in-memory db
-	sqlDB, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open sqlite db: %v", err)
-	}
-	defer sqlDB.Close()
-
-	_, err = sqlDB.Exec(`
-		CREATE TABLE agent_missions (
-			id TEXT PRIMARY KEY,
-			status TEXT,
-			payload TEXT,
-			synced_to_cloud BOOLEAN DEFAULT false
-		)
+	_, err = sqlLocal.Exec(`
+		INSERT INTO agent_missions (id, status, payload)
+		VALUES
+			('m1', 'CLOUD_ESCALATION', '{"task":"test", "secret":"[PRIVATE:key]"}'),
+			('m2', 'IN_CLOUD', '{"task":"wait"}')
 	`)
 	if err != nil {
-		t.Fatalf("failed to create agent_missions table: %v", err)
+		t.Fatalf("failed to insert local test data: %v", err)
 	}
 
-	sqliteProv := db.NewSqliteProvider(sqlDB)
-	dbWrapper := db.NewWithProvider(sqliteProv)
+	_, err = sqlCloud.Exec(`
+		INSERT INTO agent_missions (id, status, payload)
+		VALUES
+			('m2', 'DONE', '{"result":"success"}')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert cloud test data: %v", err)
+	}
 
-	daemon := NewHybridMCPRAGDaemon(dbWrapper, 10*time.Millisecond, "http://dummy")
+	localProv := db.NewSqliteProvider(sqlLocal)
+	cloudProv := db.NewSqliteProvider(sqlCloud)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	daemon.Start(ctx)
+	StartSyncDaemon(ctx, localProv, cloudProv)
 
-	time.Sleep(50 * time.Millisecond)
+	// Wait for processSyncTick to be called
+	time.Sleep(1500 * time.Millisecond)
 
-	daemon.Stop()
-	// No panic implies successful shutdown via stop channel
+	// Verify m1
+	var m1LocalStatus, m1CloudStatus, m1CloudPayload string
+	err = sqlLocal.QueryRow("SELECT status FROM agent_missions WHERE id = 'm1'").Scan(&m1LocalStatus)
+	if err != nil {
+		t.Fatalf("m1 local query failed: %v", err)
+	}
+	if m1LocalStatus != "IN_CLOUD" {
+		t.Errorf("m1 expected local status IN_CLOUD, got %s", m1LocalStatus)
+	}
+
+	err = sqlCloud.QueryRow("SELECT status, payload FROM agent_missions WHERE id = 'm1'").Scan(&m1CloudStatus, &m1CloudPayload)
+	if err != nil {
+		t.Fatalf("m1 cloud query failed: %v", err)
+	}
+	if m1CloudStatus != "PENDING" {
+		t.Errorf("m1 expected cloud status PENDING, got %s", m1CloudStatus)
+	}
+	if m1CloudPayload != `{"task":"test", "secret":"[REDACTED]"}` {
+		t.Errorf("m1 expected sanitized payload, got %s", m1CloudPayload)
+	}
+
+	// Verify m2
+	var m2LocalStatus, m2LocalPayload string
+	err = sqlLocal.QueryRow("SELECT status, payload FROM agent_missions WHERE id = 'm2'").Scan(&m2LocalStatus, &m2LocalPayload)
+	if err != nil {
+		t.Fatalf("m2 local query failed: %v", err)
+	}
+	if m2LocalStatus != "DONE" {
+		t.Errorf("m2 expected local status DONE, got %s", m2LocalStatus)
+	}
+	if m2LocalPayload != `{"result":"success"}` {
+		t.Errorf("m2 expected updated payload, got %s", m2LocalPayload)
+	}
 }
