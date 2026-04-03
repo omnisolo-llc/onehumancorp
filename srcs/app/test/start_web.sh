@@ -45,7 +45,13 @@ if [[ -n "${runfiles_root}" ]]; then
 		"_main/srcs/app/app_web.web_build_artifacts" \
 		"_main/srcs/app/app_web_build_artifacts" \
 		"__main__/srcs/app/app_web.web_build_artifacts" \
-		"__main__/srcs/app/app_web_build_artifacts" || true)"
+		"__main__/srcs/app/app_web_build_artifacts" \
+		"_main/srcs/app/app.web_build_artifacts" \
+		"_main/srcs/app/app_build_artifacts" \
+		"__main__/srcs/app/app.web_build_artifacts" \
+		"__main__/srcs/app/app_build_artifacts" \
+		"mono/srcs/app/app.web_build_artifacts" \
+		"mono/srcs/app/app_build_artifacts" || true)"
 fi
 
 if [[ -z "${web_artifacts}" ]]; then
