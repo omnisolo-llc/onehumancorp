@@ -46,7 +46,7 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	}
 
 	sqliteProv := db.NewSqliteProvider(sqlDB)
-	dbWrapper := db.NewWithProvider(sqliteProv)
+	dbWrapper := &db.DB{Provider: sqliteProv}
 
 	// Mock cloud API
 	var receivedPayloads []SyncDaemonPayload
@@ -118,7 +118,7 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 	}
 
 	sqliteProv := db.NewSqliteProvider(sqlDB)
-	dbWrapper := db.NewWithProvider(sqliteProv)
+	dbWrapper := &db.DB{Provider: sqliteProv}
 
 	daemon := NewHybridMCPRAGDaemon(dbWrapper, 10*time.Millisecond, "http://dummy")
 
