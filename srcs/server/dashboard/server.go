@@ -53,6 +53,8 @@ type Server struct {
 	rateLimitStates       map[string]*RateLimitState
 	staticDir             string
 	serveUI               bool
+	experiments           []LandingPageExperiment
+	referrals             []Referral
 }
 
 // RateLimitState functionality.
@@ -442,6 +444,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		rateLimitStates:       make(map[string]*RateLimitState),
 		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),
 		serveUI:               shouldServeUI(),
+		experiments:           []LandingPageExperiment{},
+		referrals:             []Referral{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -553,6 +557,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/pipelines", server.handlePipelines)
 	mux.HandleFunc("/api/pipelines/promote", server.handlePipelinePromote)
 	mux.HandleFunc("/api/pipelines/status", server.handlePipelineStatus)
+	// Growth & Referral Endpoints
+	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
+	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
+
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 	// Auth – login / logout / current user
