@@ -54,11 +54,14 @@ const (
 
 var (
 	standaloneThrottle     = make(chan struct{}, 1) // Throttle to 1 concurrent write in standalone mode
-	standaloneThrottleOnce sync.Once
+	standaloneThrottleOnce *sync.Once
 )
 
 // getThrottle conditionally acquires the semaphore if in standalone mode
 func acquireThrottle(ctx context.Context) error {
+	if standaloneThrottleOnce == nil {
+		standaloneThrottleOnce = new(sync.Once)
+	}
 	standaloneThrottleOnce.Do(func() {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			// already initialized to 1
@@ -116,7 +119,7 @@ func NewSIPDBWithProvider(provider db.Provider) (*SIPDB, error) {
 	if err := initializeTables(provider); err != nil {
 		return nil, err
 	}
-	return &SIPDB{db: provider, groundingOnce: &sync.Once{}}, nil
+	return &SIPDB{db: provider, groundingOnce: new(sync.Once)}, nil
 }
 
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
@@ -663,7 +666,7 @@ func (s *SIPDB) Close() error {
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
 	s.cachedGrounding = ""
-	s.groundingOnce = &sync.Once{}
+	s.groundingOnce = new(sync.Once)
 }
 
 // BufferMetric inserts a telemetry metric into the local metric buffer.
