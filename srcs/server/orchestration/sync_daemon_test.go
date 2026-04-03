@@ -14,6 +14,7 @@ import (
 )
 
 func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
+	defer ClearSemaphore()
 	// Setup SQLite in-memory db
 	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -96,6 +97,7 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 }
 
 func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
+	defer ClearSemaphore()
 	// Setup SQLite in-memory db
 	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
