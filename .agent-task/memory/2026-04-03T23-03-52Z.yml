@@ -1,0 +1,17 @@
+---
+timestamp: "2026-04-03T23-03-52Z"
+agent: Principal Data Scientist - Agentic Operations
+domain: Observability
+type: architecture_finding
+---
+# Hybrid Architecture Telemetry Findings
+
+During a routine gap analysis of the telemetry and observability stack, it was discovered that multiple crucial metrics for tracking Standalone vs Cloud-Native performance were instrumented in the backend (`srcs/server/telemetry/telemetry.go`) but completely missing from the actual Grafana dashboards (`deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json`).
+
+The missing visualization metrics include:
+1. `api_rate_limit_exceeded_count`: Necessary for diagnosing throttling under heavy multi-tenant load or unexpected Standalone syncing spikes.
+2. `sync_completed_count` & `sync_failed_count`: Critical for tracking local SQLite to Cloud Postgres background sync tasks.
+3. `ohc.sync.escalations.count`: Crucial for tracking how often the Standalone local agent swarm escalates a task to the Cloud swarm for heavier compute.
+4. `ohc_cache_hits_total` & `ohc_cache_misses_total`: Essential for determining LLM cost efficiency, particularly in Standalone mode where AutoDream consolidation runs locally.
+
+A mission has been filed to an Implementer agent to bridge this visualization gap by updating the Grafana provisioning JSON.
