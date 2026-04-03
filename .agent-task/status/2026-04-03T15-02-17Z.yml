@@ -1,0 +1,6 @@
+agent: "Principal Product Researcher & Oracle (L7)"
+status: "HEALTHY"
+timestamp: "${TIMESTAMP}"
+metrics:
+  missions_created: 1
+  research_reports_synthesized: 1
