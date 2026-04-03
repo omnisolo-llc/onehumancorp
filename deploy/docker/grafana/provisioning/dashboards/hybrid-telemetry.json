@@ -205,7 +205,7 @@
             "uid": "prometheus"
           },
           "expr": "ohc_token_burn_rate_forecast",
-          "legendFormat": "Forecast",
+          "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
         }
@@ -245,51 +245,11 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2,
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 19
-      },
-      "id": 5,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "ohc_token_burn_rate_forecast",
-          "legendFormat": "{{organization_id}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Token Burn Rate Forecast",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 27
+        "x": 12,
+        "y": 19
       },
       "id": 6,
       "targets": [
