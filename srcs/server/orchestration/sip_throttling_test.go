@@ -10,6 +10,7 @@ import (
 )
 
 func TestStandaloneThrottling(t *testing.T) {
+	defer ClearSemaphore()
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
@@ -19,10 +20,6 @@ func TestStandaloneThrottling(t *testing.T) {
 		t.Fatalf("failed to create SIPDB: %v", err)
 	}
 	s.db = provider
-
-	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
 
 	// Fill the semaphore
 	throttleSemaphore <- struct{}{}
@@ -44,6 +41,7 @@ func TestStandaloneThrottling(t *testing.T) {
 }
 
 func TestUpsertMissionThrottling(t *testing.T) {
+	defer ClearSemaphore()
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
@@ -51,9 +49,6 @@ func TestUpsertMissionThrottling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create SIPDB: %v", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
 
 	// Fill the semaphore
 	throttleSemaphore <- struct{}{}
