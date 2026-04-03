@@ -19,7 +19,7 @@ One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) th
 4. **Collaboration (Virtual Meeting Rooms)**: When the CEO defines a goal, multiple agents (e.g., PM, SWE, and Director) convene in Virtual Meeting Rooms to define scopes, debate technical constraints, and finalize designs before execution.
 
 ## Architecture
-Built on a modular, open-source stack (Model Context Protocol, SPIFFE/SPIRE, LangGraph), the system leverages Kubernetes Custom Resource Definitions (CRDs) to manage the organisational structure as Infrastructure as Code. The backend is written in Go (Bazel-based monorepo), and it integrates with a React Next.js-style frontend to allow the human CEO to direct virtual meeting rooms, handle high-risk approvals, and monitor token usage and billing.
+Built on a modular, open-source stack (Model Context Protocol, SPIFFE/SPIRE, LangGraph), the system utilizes a **Hybrid Architecture (OHC-HA)**. It seamlessly scales from a multi-tenant **Cloud-Native Mode** using Kubernetes and PostgreSQL, to a fully localized **Standalone Desktop Mode** powered by SQLite and local in-memory messaging. The backend is written in Go (Bazel-based monorepo), and it integrates with a Flutter frontend (supporting Web, Mobile, and Desktop) to allow the human CEO to direct virtual meeting rooms, handle high-risk approvals, and monitor token usage and billing.
 
 ```mermaid
 graph TD;
@@ -37,6 +37,7 @@ graph TD;
 ```
 
 ## Quick Links
+- [Hybrid Architecture](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
 - [System Design](system-design.md)
@@ -53,13 +54,14 @@ graph TD;
    bazelisk test //...
    ```
 4. Run the Go backend (Dashboard Server) locally on port `8080`.
-5. In parallel, run the frontend dev server:
+5. Serve the Bazel-built Flutter web app:
    ```bash
-   cd srcs/frontend
-   npm install
-   npm run dev &
+   bazelisk run //srcs/app:start
    ```
-6. Access the dashboard at `http://localhost:5173`.
+6. Launch standalone desktop mode:
+   ```bash
+   bazelisk run //:desktop
+   ```
 
 ## Developer Workflow
 This project uses Bazel for deterministic builds and testing.
