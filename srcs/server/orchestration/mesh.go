@@ -38,6 +38,11 @@ type LegacyTeammateMesh struct {
 	// In-memory pub/sub for standalone mode
 	mu          sync.RWMutex
 	subscribers map[string]map[*websocket.Conn]chan []byte
+
+	broadcast chan struct {
+		roomID  string
+		message []byte
+	}
 }
 
 // NewLegacyTeammateMesh creates a new mesh instance.
@@ -47,6 +52,10 @@ func NewLegacyTeammateMesh(redisURL string) (*LegacyTeammateMesh, error) {
 	tm := &LegacyTeammateMesh{
 		isCloud:     isCloud,
 		subscribers: make(map[string]map[*websocket.Conn]chan []byte),
+		broadcast: make(chan struct {
+			roomID  string
+			message []byte
+		}, 10000),
 	}
 
 	if isCloud && redisURL != "" {
@@ -60,7 +69,32 @@ func NewLegacyTeammateMesh(redisURL string) (*LegacyTeammateMesh, error) {
 		}
 	}
 
+	// Coordinator Mode Parallelization
+	for i := 0; i < 10; i++ {
+		go tm.worker()
+	}
+
 	return tm, nil
+}
+
+func (tm *LegacyTeammateMesh) worker() {
+	for job := range tm.broadcast {
+		tm.mu.RLock()
+		subs := tm.subscribers[job.roomID]
+		// Copy channels to avoid holding lock while sending
+		channels := make([]chan []byte, 0, len(subs))
+		for _, ch := range subs {
+			channels = append(channels, ch)
+		}
+		tm.mu.RUnlock()
+
+		for _, ch := range channels {
+			select {
+			case ch <- job.message:
+			default:
+			}
+		}
+	}
 }
 
 // HandleWebSocket handles incoming WS connections for a specific room.
@@ -142,18 +176,15 @@ func (tm *LegacyTeammateMesh) Publish(ctx context.Context, roomID, message strin
 		return tm.redisClient.Publish(ctx, roomID, message).Err()
 	}
 
-	tm.mu.RLock()
-	defer tm.mu.RUnlock()
-
-	subs := tm.subscribers[roomID]
-	payload := []byte(message)
-	for _, ch := range subs {
-		// Non-blocking write to prevent slow clients from blocking the publisher
-		select {
-		case ch <- payload:
-		default:
-		}
+	select {
+	case tm.broadcast <- struct {
+		roomID  string
+		message []byte
+	}{roomID, []byte(message)}:
+	default:
+		slog.Warn("LegacyTeammateMesh broadcast channel full, dropping message", "roomID", roomID)
 	}
+
 	return nil
 }
 

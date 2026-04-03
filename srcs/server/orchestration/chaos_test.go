@@ -94,7 +94,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 		}
 
 		// This will block and retry while the DB is locked
-		err := db.DelegateMission(ctx, "chaos-mission-1", "SOFTWARE_ENGINEER", task)
+		err := db.DelegateMission(ctx, "chaos-mission-1", "CHAOS_ENGINEER", task)
 		if err != nil {
 			// It might ultimately fail if it exhausts retries before we unlock
 			t.Logf("Mission delegation after chaos: %v", err)
@@ -115,7 +115,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 	retryWg.Wait()
 
 	// Verify the mission was actually added
-	missions, err := db.GetPendingMissions(ctx, "SOFTWARE_ENGINEER")
+	missions, err := db.GetPendingMissions(ctx, "CHAOS_ENGINEER")
 	if err != nil {
 		t.Fatalf("Failed to get pending missions: %v", err)
 	}

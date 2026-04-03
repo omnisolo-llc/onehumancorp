@@ -14,7 +14,7 @@ import (
 // ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
 func ClearSemaphore() {
 	select {
-	case <-throttleSemaphore:
+	case <-standaloneThrottle:
 	default:
 	}
 }

@@ -59,7 +59,7 @@ var (
 )
 
 // getThrottle conditionally acquires the semaphore if in standalone mode
-func acquireThrottle(ctx context.Context) error {
+func acquireThrottle(ctx context.Context) (func(), error) {
 	standaloneThrottleOnce.Do(func() {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			// already initialized to 1
@@ -71,28 +71,22 @@ func acquireThrottle(ctx context.Context) error {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case standaloneThrottle <- struct{}{}:
-			return nil
+			return func() { <-standaloneThrottle }, nil
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
-	return nil
-}
-
-func releaseThrottle() {
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		<-standaloneThrottle
-	}
+	return func() {}, nil
 }
 
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withRetry(ctx context.Context, op func() error) error {
-	if err := acquireThrottle(ctx); err != nil {
+	cleanup, err := acquireThrottle(ctx)
+	if err != nil {
 		return err
 	}
-	defer releaseThrottle()
+	defer cleanup()
 
-	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = op()
 		if err == nil {
@@ -292,10 +286,10 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	err := withRetry(ctx, func() error {
 		missions = nil
 
-		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
+		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' LIMIT 100"
 
 		if s.db.IsSQLite() {
-			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING'"
+			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' LIMIT 100"
 		}
 
 		rows, err := s.db.Query(ctx, query, role)
@@ -422,11 +416,6 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 	})
 }
 
-var (
-	// throttleSemaphore limits concurrent DelegateMission executions in SQLite standalone mode.
-	throttleSemaphore = make(chan struct{}, 1)
-)
-
 func envBoolDefault(key string, fallback bool) bool {
 	value, ok := os.LookupEnv(key)
 	if !ok {
@@ -444,17 +433,6 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-
-	if isStandalone {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
 	upsertQuery := `
 		INSERT INTO agent_missions (id, status, payload, created_at)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -482,17 +460,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-
-	if isStandalone {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {

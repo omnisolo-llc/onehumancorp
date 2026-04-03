@@ -22,7 +22,7 @@ func TestStandaloneThrottling(t *testing.T) {
 	s.db = provider
 
 	// Fill the semaphore
-	throttleSemaphore <- struct{}{}
+	standaloneThrottle <- struct{}{}
 
 	// DelegateMission should block now. We test that it blocks by using a context with a short timeout.
 	shortCtx, shortCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -34,7 +34,7 @@ func TestStandaloneThrottling(t *testing.T) {
 	}
 
 	// Drain the semaphore to clean up
-	<-throttleSemaphore
+	<-standaloneThrottle
 
 	// Now it should pass the semaphore check and fail on the DB exec (since we passed a nil db for the provider, or an uninitialized memory db)
 	// We just want to check it doesn't block.
@@ -51,7 +51,7 @@ func TestUpsertMissionThrottling(t *testing.T) {
 	}
 
 	// Fill the semaphore
-	throttleSemaphore <- struct{}{}
+	standaloneThrottle <- struct{}{}
 
 	shortCtx, shortCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer shortCancel()
@@ -62,5 +62,5 @@ func TestUpsertMissionThrottling(t *testing.T) {
 	}
 
 	// Drain the semaphore to clean up
-	<-throttleSemaphore
+	<-standaloneThrottle
 }
