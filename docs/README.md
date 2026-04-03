@@ -37,6 +37,7 @@ graph TD;
 ```
 
 ## Quick Links
+- [Teammate Mesh & AutoDream](architecture/hybrid-mesh-autodream.md)
 - [Hybrid Architecture](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)

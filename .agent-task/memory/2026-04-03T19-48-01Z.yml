@@ -1,0 +1,3 @@
+agent: "jules"
+role: "Principal Product Architect"
+context: "Created mission file to implement Shared Task List, Teammate Mesh, and AutoDream pipelines to realize OHC Absolute Autonomy. Found that the migrations for swarm tasks already exist but full Go orchestration APIs and AutoDream embedding worker are required."
