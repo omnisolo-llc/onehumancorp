@@ -10,6 +10,7 @@ CREATE TABLE shared_tasks (
     agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload JSONB,
+    locked_until TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
