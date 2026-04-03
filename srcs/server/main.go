@@ -64,18 +64,18 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
-func newHubAndTracker(pool *db.DB) (*orchestration.Hub, *billing.Tracker) {
+func newHubAndTracker(pool *db.DB, orgID string) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
 		var hubRepo orchestration.HubRepository
 		var taskRepo scheduler.TaskRepository
 		var usageRepo billing.UsageRepository
 
 		if pool.Provider.IsSQLite() {
-			hubRepo = orchestration.NewSqliteHubRepository(pool.Provider)
+			hubRepo = orchestration.NewSqliteHubRepository(pool.Provider, orgID)
 			taskRepo = scheduler.NewSqliteTaskRepository(pool.Provider)
 			usageRepo = billing.NewSqliteUsageRepository(pool.Provider, billing.DefaultCatalog)
 		} else {
-			hubRepo = orchestration.NewPgHubRepository(pool.Provider)
+			hubRepo = orchestration.NewPgHubRepository(pool.Provider, orgID)
 			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
 			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
 		}
@@ -221,7 +221,7 @@ func run(now time.Time, listen listenFunc) error {
 		sipdb     *orchestration.SIPDB
 	)
 
-	hub, tracker = newHubAndTracker(pool)
+	hub, tracker = newHubAndTracker(pool, "")
 	hub.GetTokenUsage = func(ctx context.Context) map[string]int64 {
 		usage := make(map[string]int64)
 		for _, orgID := range tracker.ActiveOrganizations(ctx) {
@@ -407,7 +407,7 @@ func run(now time.Time, listen listenFunc) error {
 		}
 
 		factory := func(org domain.Organization) http.Handler {
-			tenantHub, tenantTracker := newHubAndTracker(pool)
+			tenantHub, tenantTracker := newHubAndTracker(pool, org.ID)
 			tenantHub.GetTokenUsage = func(ctx context.Context) map[string]int64 {
 				usage := make(map[string]int64)
 				for _, orgID := range tenantTracker.ActiveOrganizations(ctx) {
