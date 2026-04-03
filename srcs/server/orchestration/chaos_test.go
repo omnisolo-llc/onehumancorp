@@ -12,6 +12,7 @@ import (
 // TestSIPDB_Chaos simulates high-concurrency ingestion and a simulated DB lock
 // to verify the exponential backoff retry logic in withRetry.
 func TestSIPDB_Chaos(t *testing.T) {
+	defer ClearSemaphore()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos.db")
 

@@ -1420,6 +1420,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 }
 
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
+	defer ClearSemaphore()
 	hub := NewHub()
 	defer hub.Close()
 

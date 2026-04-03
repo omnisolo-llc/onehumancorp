@@ -120,6 +120,7 @@ func TestSIPDB_CompleteMission_NotFound(t *testing.T) {
 }
 
 func TestSIPDB_DBClosedErrors(t *testing.T) {
+	defer ClearSemaphore()
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to init: %v", err)
