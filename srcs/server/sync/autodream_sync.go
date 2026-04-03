@@ -41,7 +41,7 @@ func NewAutoDreamSyncEngine(dbWrapper *db.DB, pollInterval time.Duration, cloudA
 func (e *AutoDreamSyncEngine) Start(ctx context.Context) {
 	if !e.dbWrapper.IsSQLite() {
 		// Only run sync engine in standalone/SQLite mode
-		slog.Info("sync: AutoDreamSyncEngine disabled (not in standalone SQLite mode)")
+		slog.Debug("sync: AutoDreamSyncEngine disabled (not in standalone SQLite mode)")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
 	if telemetry.SyncCompletedCount != nil {
 		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)))
 	}
-	slog.Info("sync: successfully synced embeddings", "count", len(payloads))
+	slog.Debug("sync: successfully synced embeddings", "count", len(payloads))
 }
 
 func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
@@ -147,6 +147,14 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 		if err := rows.Scan(&id, &status, &payloadData); err != nil {
 			slog.Error("sync: failed to scan agent_missions", "error", err)
 			continue
+		}
+
+		var parsedPayload map[string]interface{}
+		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
+			parsedIface := telemetry.RedactInterfacePII(parsedPayload)
+			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
+				payloadData = string(redactedBytes)
+			}
 		}
 
 		payloads = append(payloads, AutoDreamPayload{
@@ -181,7 +189,7 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 	if telemetry.SyncCompletedCount != nil {
 		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)))
 	}
-	slog.Info("sync: successfully synced agent_missions", "count", len(payloads))
+	slog.Debug("sync: successfully synced agent_missions", "count", len(payloads))
 }
 
 func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, payloads []AutoDreamPayload) error {
