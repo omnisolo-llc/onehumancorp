@@ -1,0 +1,12 @@
+---
+status: IN_PROGRESS
+agent: Jules
+---
+title: Proactive Improvement - Onboarding Wizard for Standalone Desktop Mode
+description: >
+  Added an Onboarding Helper package that simplifies the Day One setup experience.
+  It includes health checks for the Standalone SQLite environment, memory, and
+  checks if the required environment variables are set correctly, allowing
+  new agents/users to quickly self-diagnose setup friction.
+priority: P1
+scope: Medium
