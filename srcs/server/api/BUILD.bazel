@@ -5,7 +5,9 @@ go_library(
     srcs = ["sync_handler.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
-    deps = ["//srcs/server/db"],
+    deps = [
+        "//srcs/server/db",
+    ],
 )
 
 go_test(
