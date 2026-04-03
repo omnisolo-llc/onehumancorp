@@ -15,6 +15,7 @@ import (
 func TestHandleScaleStreamOpsCoverage(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 

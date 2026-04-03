@@ -57,10 +57,18 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 	task.Status = TaskStatus(status)
 	task.Payload = json.RawMessage(payload)
 
-	if !schedAt.Time.IsZero() { task.Schedule.At = &schedAt.Time }
-	if !createdAt.Time.IsZero() { task.CreatedAt = createdAt.Time }
-	if !lastRunAt.Time.IsZero() { task.LastRunAt = &lastRunAt.Time }
-	if !nextRunAt.Time.IsZero() { task.NextRunAt = &nextRunAt.Time }
+	if !schedAt.Time.IsZero() {
+		task.Schedule.At = &schedAt.Time
+	}
+	if !createdAt.Time.IsZero() {
+		task.CreatedAt = createdAt.Time
+	}
+	if !lastRunAt.Time.IsZero() {
+		task.LastRunAt = &lastRunAt.Time
+	}
+	if !nextRunAt.Time.IsZero() {
+		task.NextRunAt = &nextRunAt.Time
+	}
 
 	return task, nil
 }
@@ -92,10 +100,18 @@ func (r *PgTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]Task
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
 
-		if !schedAt.Time.IsZero() { t.Schedule.At = &schedAt.Time }
-		if !createdAt.Time.IsZero() { t.CreatedAt = createdAt.Time }
-		if !lastRunAt.Time.IsZero() { t.LastRunAt = &lastRunAt.Time }
-		if !nextRunAt.Time.IsZero() { t.NextRunAt = &nextRunAt.Time }
+		if !schedAt.Time.IsZero() {
+			t.Schedule.At = &schedAt.Time
+		}
+		if !createdAt.Time.IsZero() {
+			t.CreatedAt = createdAt.Time
+		}
+		if !lastRunAt.Time.IsZero() {
+			t.LastRunAt = &lastRunAt.Time
+		}
+		if !nextRunAt.Time.IsZero() {
+			t.NextRunAt = &nextRunAt.Time
+		}
 
 		tasks = append(tasks, t)
 	}
@@ -144,10 +160,18 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
 
-		if !schedAt.Time.IsZero() { t.Schedule.At = &schedAt.Time }
-		if !createdAt.Time.IsZero() { t.CreatedAt = createdAt.Time }
-		if !lastRunAt.Time.IsZero() { t.LastRunAt = &lastRunAt.Time }
-		if !nextRunAt.Time.IsZero() { t.NextRunAt = &nextRunAt.Time }
+		if !schedAt.Time.IsZero() {
+			t.Schedule.At = &schedAt.Time
+		}
+		if !createdAt.Time.IsZero() {
+			t.CreatedAt = createdAt.Time
+		}
+		if !lastRunAt.Time.IsZero() {
+			t.LastRunAt = &lastRunAt.Time
+		}
+		if !nextRunAt.Time.IsZero() {
+			t.NextRunAt = &nextRunAt.Time
+		}
 
 		tasks = append(tasks, t)
 	}

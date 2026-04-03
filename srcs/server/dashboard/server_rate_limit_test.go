@@ -18,6 +18,7 @@ import (
 func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
@@ -40,11 +41,11 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 
 	invokeTool := func(toolID, agentID string) *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  toolID,
+			"toolId":   toolID,
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
-			"agentId": agentID,
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123"}`),
+			"agentId":  agentID,
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -69,6 +70,7 @@ func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
 func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
@@ -92,11 +94,11 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  "slack-mcp",
+			"toolId":   "slack-mcp",
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
-			"agentId": "agent-2",
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123"}`),
+			"agentId":  "agent-2",
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -123,10 +125,10 @@ func TestHandleMCPInvoke_RateLimiting_Backoff(t *testing.T) {
 	}
 }
 
-
 func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
@@ -142,10 +144,10 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 
 	invokeTool := func(toolID string) *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  toolID,
+			"toolId":   toolID,
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123"}`),
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -162,10 +164,10 @@ func TestHandleMCPInvoke_MissingToolNoAgent(t *testing.T) {
 	})
 }
 
-
 func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
@@ -189,11 +191,11 @@ func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  "github-mcp",
+			"toolId":   "github-mcp",
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123", "repository": "test/test", "title": "t", "body": "b", "sourceBranch": "s", "targetBranch": "t", "createdBy": "a"}`),
-			"agentId": "agent-3",
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123", "repository": "test/test", "title": "t", "body": "b", "sourceBranch": "s", "targetBranch": "t", "createdBy": "a"}`),
+			"agentId":  "agent-3",
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -229,6 +231,7 @@ func TestHandleMCPInvoke_RateLimiting_ResetOnSuccess(t *testing.T) {
 func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
@@ -252,11 +255,11 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  "slack-mcp",
+			"toolId":   "slack-mcp",
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
-			"agentId": "agent-max",
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123"}`),
+			"agentId":  "agent-max",
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -267,7 +270,7 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 
 	app.mu.Lock()
 	app.rateLimitStates[rateLimitKey] = &RateLimitState{
-		Failures:    3, // Set to max threshold
+		Failures:    3,                              // Set to max threshold
 		LastFailure: time.Now().Add(-1 * time.Hour), // Ready for next try, backoff bypassed
 		Backoff:     10 * time.Second,
 	}
@@ -291,16 +294,17 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
 	tracker := billing.NewTracker(prices)
 
 	app := &Server{
-		org:             org,
-		hub:             hub,
-		tracker:         tracker,
-		integReg:        integrations.NewRegistry(),
+		org:      org,
+		hub:      hub,
+		tracker:  tracker,
+		integReg: integrations.NewRegistry(),
 		// Explicitly set to nil to test nil map initialization coverage
 		rateLimitStates: nil,
 		dynamicMCPTools: []MCPTool{},
@@ -316,11 +320,11 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 		reqBody, _ := json.Marshal(map[string]interface{}{
 			// By naming the tool "tool-429", the error returned will be "unknown tool: tool-429"
 			// which contains "429", matching the rate limit error check!
-			"toolId":  "tool-429",
+			"toolId":   "tool-429",
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
-			"agentId": "agent-limited",
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123"}`),
+			"agentId":  "agent-limited",
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
@@ -387,6 +391,7 @@ func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
 func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	prices := map[string]billing.Price{
 		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
 	}
@@ -413,11 +418,11 @@ func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 
 	invokeTool := func() *httptest.ResponseRecorder {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"toolId":  "custom-success-tool",
+			"toolId":   "custom-success-tool",
 			"spiffeId": "spiffe://onehumancorp.io/agent/1",
-			"action":  "test_action",
-			"params":  json.RawMessage(`{"integrationId": "123"}`),
-			"agentId": "agent-success",
+			"action":   "test_action",
+			"params":   json.RawMessage(`{"integrationId": "123"}`),
+			"agentId":  "agent-success",
 		})
 
 		req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))

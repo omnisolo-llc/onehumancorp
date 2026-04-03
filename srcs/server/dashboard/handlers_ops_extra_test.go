@@ -95,6 +95,7 @@ func TestHandleScaleOpsExtra(t *testing.T) {
 func TestHandleScaleStreamOpsExtra(t *testing.T) {
 	org := domain.Organization{ID: "test"}
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(nil)
 
 	s := &Server{

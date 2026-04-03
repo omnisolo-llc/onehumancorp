@@ -27,6 +27,7 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 	defer func() { MinimaxAPIURL = originalURL }()
 
 	hub := NewHub()
+	defer hub.Close()
 	hub.SetMinimaxAPIKey("test-key")
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -77,6 +78,7 @@ func TestPublish_ContextSummarization_Success(t *testing.T) {
 
 func TestPublish_ChannelFull(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
@@ -102,6 +104,7 @@ func TestPublish_ChannelFull(t *testing.T) {
 
 func TestPublish_MeetingChannelFull(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
@@ -155,6 +158,7 @@ func (m *mockStreamMessagesServerError) Send(msg *pb.Message) error {
 
 func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -184,6 +188,7 @@ func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 
 func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -230,6 +235,7 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 	defer func() { MinimaxAPIURL = originalURL }()
 
 	hub := NewHub()
+	defer hub.Close()
 	hub.SetMinimaxAPIKey("test-key")
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -278,6 +284,7 @@ func TestService_CoverageExt(t *testing.T) {
 
 	// 2. DelegateTask with sipDB
 	hub := NewHub()
+	defer hub.Close()
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)

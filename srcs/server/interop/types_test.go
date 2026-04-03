@@ -2,32 +2,32 @@ package interop
 
 import (
 	"strings"
-    "testing"
+	"testing"
 )
 
 func TestLogCheckpoint_ExistingCheckpointsDifferentType(t *testing.T) {
-    state := &State{
-        Data: map[string]interface{}{
-            "checkpoints": "not a slice of strings",
-        },
-    }
-    LogCheckpoint(state, "test-id")
+	state := &State{
+		Data: map[string]interface{}{
+			"checkpoints": "not a slice of strings",
+		},
+	}
+	LogCheckpoint(state, "test-id")
 
-    // It creates a new `[]string` and overwrites it
-    checkpoints, ok := state.Data["checkpoints"].([]string)
-    if !ok {
-        t.Fatalf("expected []string")
-    }
-    if len(checkpoints) != 1 {
-        t.Fatalf("expected length 1")
-    }
+	// It creates a new `[]string` and overwrites it
+	checkpoints, ok := state.Data["checkpoints"].([]string)
+	if !ok {
+		t.Fatalf("expected []string")
+	}
+	if len(checkpoints) != 1 {
+		t.Fatalf("expected length 1")
+	}
 }
 
 func TestValidateSPIFFEID_InvalidIdentity(t *testing.T) {
-    err := ValidateSPIFFEID("invalid-identity")
-    if err == nil || !strings.Contains(err.Error(), "invalid SPIFFE ID scheme") {
-        t.Fatalf("expected invalid SPIFFE ID scheme, got %v", err)
-    }
+	err := ValidateSPIFFEID("invalid-identity")
+	if err == nil || !strings.Contains(err.Error(), "invalid SPIFFE ID scheme") {
+		t.Fatalf("expected invalid SPIFFE ID scheme, got %v", err)
+	}
 }
 
 func TestLogCheckpoint_NilData(t *testing.T) {
@@ -55,7 +55,6 @@ func TestLogCheckpoint_NilData(t *testing.T) {
 	}
 }
 
-
 func TestLogCheckpoint_ExistingCheckpointsSameType(t *testing.T) {
 	state := &State{
 		Data: map[string]interface{}{
@@ -78,7 +77,6 @@ func TestLogCheckpoint_ExistingCheckpointsSameType(t *testing.T) {
 		t.Fatalf("expected 3 checkpoints, got %d", len(checkpoints))
 	}
 }
-
 
 func TestValidateSPIFFEID_ErrorParse(t *testing.T) {
 	// url.Parse only fails on control characters or extreme malformed strings
