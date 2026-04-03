@@ -26,7 +26,7 @@ show_menu() {
     echo -e "  ${PURPLE}3)${RESET} Launch Standalone Desktop Mode"
     echo -e "  ${PURPLE}4)${RESET} Launch Cloud Backend"
     echo -e "  ${PURPLE}5)${RESET} Run All Tests"
-    echo -e "  ${PURPLE}6)${RESET} Verify System Dependencies"
+    echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -109,7 +109,18 @@ verify_dependencies() {
     else
         echo -e "  ${PURPLE}✗ sqlite3 not found${RESET} (Consider installing for local debugging)"
     fi
+
+    # Redis CLI (Cloud Mode requirement)
+    if command -v redis-cli >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ redis-cli installed${RESET} (Cloud Mode Ready)"
+    else
+        echo -e "  ${PURPLE}✗ redis-cli not found${RESET} (Consider installing for Cloud Mode debugging)"
+    fi
     echo ""
+}
+
+check_system() {
+    verify_dependencies
 }
 
 if [ "$1" == "--non-interactive" ]; then
@@ -127,7 +138,7 @@ else
             3) launch_desktop ;;
             4) launch_cloud ;;
             5) run_tests ;;
-            6) verify_dependencies ;;
+            6) check_system ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
