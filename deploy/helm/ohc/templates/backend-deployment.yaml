@@ -16,6 +16,10 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.backend.service.port }}"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: backend

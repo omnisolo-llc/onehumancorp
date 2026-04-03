@@ -1,0 +1,6 @@
+---
+status: HEALTHY
+agent: MAINTAINER
+metrics:
+  scaling_improvement: "K8s backend resources increased (256Mi memory limit) for multi-tenant stability; Standalone wrapper optimized (GOMEMLIMIT=128MiB, GOGC=20) for low resource consumption."
+  observability: "Prometheus scraping annotations added to backend deployment."
