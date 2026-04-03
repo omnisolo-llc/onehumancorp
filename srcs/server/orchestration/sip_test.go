@@ -11,6 +11,14 @@ import (
 	"time"
 )
 
+// ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
+func ClearSemaphore() {
+	select {
+	case <-throttleSemaphore:
+	default:
+	}
+}
+
 func TestSIPDB_Init(t *testing.T) {
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
