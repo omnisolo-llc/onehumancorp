@@ -72,12 +72,12 @@ echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
 BACKEND_BIN=""
 for candidate in \
-    "${RUNFILES}/${WORKSPACE}/srcs/server/server_/server" \
-    "${RUNFILES}/_main/srcs/server/server_/server" \
-    "${RUNFILES}/__main__/srcs/server/server_/server" \
-    "${RUNFILES}/${WORKSPACE}/srcs/server/server" \
-    "${RUNFILES}/_main/srcs/server/server" \
-    "${RUNFILES}/__main__/srcs/server/server"; do
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc"; do
   if [ -x "$candidate" ]; then
     BACKEND_BIN="$candidate"
     break
@@ -85,7 +85,7 @@ for candidate in \
 done
 
 if [ -z "$BACKEND_BIN" ]; then
-  echo "ERROR: Go backend binary not found. Ensure //srcs/server:server is included in data." >&2
+  echo "ERROR: Go backend binary not found. Ensure //srcs/server:ohc is included in data." >&2
   # Fallback to Python server if we can't find the backend binary (e.g. during local dev)
   python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
   SERVER_PID=$!
@@ -100,6 +100,7 @@ else
   # Seed the backend
   "${BACKEND_BIN}" &
   SERVER_PID=$!
+  export API_BASE_URL="http://localhost:${PORT}"
 fi
 
 trap 'kill ${SERVER_PID} 2>/dev/null || true; rm -rf "${TMPDIR}/pw_results" 2>/dev/null || true' EXIT
