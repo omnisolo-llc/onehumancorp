@@ -242,16 +242,6 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-	if isStandalone {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-context.Background().Done():
-			// Not cancellable since it doesn't take context
-		}
-	}
-
 	if err := CheckDocumentationGate(task.Content); err != nil {
 		return err
 	}
