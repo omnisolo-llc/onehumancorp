@@ -79,7 +79,12 @@ func (e *AutoDreamSyncEngine) ProcessForecastTick(ctx context.Context) {
 }
 
 func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
-	rows, err := e.dbWrapper.Query(ctx, "SELECT content_hash, embedding FROM embedding_cache WHERE synced_to_cloud = false LIMIT 50")
+	syncedLiteral := "false"
+	if e.dbWrapper.IsSQLite() {
+		syncedLiteral = "0"
+	}
+
+	rows, err := e.dbWrapper.Query(ctx, fmt.Sprintf("SELECT content_hash, embedding FROM embedding_cache WHERE synced_to_cloud = %s LIMIT 50", syncedLiteral))
 	if err != nil {
 		slog.Error("sync: failed to query embedding_cache", "error", err)
 		return
@@ -118,8 +123,12 @@ func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
 	}
 
 	// Mark as synced
+	syncedTrue := "true"
+	if e.dbWrapper.IsSQLite() {
+		syncedTrue = "1"
+	}
 	for _, h := range hashes {
-		_, err := e.dbWrapper.Exec(ctx, "UPDATE embedding_cache SET synced_to_cloud = true WHERE content_hash = $1", h)
+		_, err := e.dbWrapper.Exec(ctx, fmt.Sprintf("UPDATE embedding_cache SET synced_to_cloud = %s WHERE content_hash = $1", syncedTrue), h)
 		if err != nil {
 			slog.Error("sync: failed to update embedding_cache status", "hash", h, "error", err)
 		}
@@ -128,11 +137,16 @@ func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
 	if telemetry.SyncCompletedCount != nil {
 		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)))
 	}
-	slog.Info("sync: successfully synced embeddings", "count", len(payloads))
+	slog.Debug("sync: successfully synced embeddings", "count", len(payloads))
 }
 
 func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
-	rows, err := e.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 50")
+	syncedLiteral := "false"
+	if e.dbWrapper.IsSQLite() {
+		syncedLiteral = "0"
+	}
+
+	rows, err := e.dbWrapper.Query(ctx, fmt.Sprintf("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = %s LIMIT 50", syncedLiteral))
 	if err != nil {
 		slog.Error("sync: failed to query agent_missions", "error", err)
 		return
@@ -171,8 +185,13 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 	}
 
 	// Mark as synced
+	syncedTrue := "true"
+	if e.dbWrapper.IsSQLite() {
+		syncedTrue = "1"
+	}
+
 	for _, id := range ids {
-		_, err := e.dbWrapper.Exec(ctx, "UPDATE agent_missions SET synced_to_cloud = true WHERE id = $1", id)
+		_, err := e.dbWrapper.Exec(ctx, fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = %s WHERE id = $1", syncedTrue), id)
 		if err != nil {
 			slog.Error("sync: failed to update agent_missions status", "id", id, "error", err)
 		}
@@ -181,7 +200,7 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 	if telemetry.SyncCompletedCount != nil {
 		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)))
 	}
-	slog.Info("sync: successfully synced agent_missions", "count", len(payloads))
+	slog.Debug("sync: successfully synced agent_missions", "count", len(payloads))
 }
 
 func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, payloads []AutoDreamPayload) error {

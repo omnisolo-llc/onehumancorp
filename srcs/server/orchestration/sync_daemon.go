@@ -76,7 +76,12 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+	syncedLiteral := "false"
+	if d.dbWrapper.IsSQLite() {
+		syncedLiteral = "0"
+	}
+
+	rows, err := d.dbWrapper.Query(ctx, fmt.Sprintf("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = %s AND status = 'CLOUD_ESCALATION' LIMIT 100", syncedLiteral))
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
 		return
@@ -144,15 +149,24 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 
 	// Mark as synced
 	if len(ids) > 0 {
-		idList := ""
+		syncedLiteral := "true"
+		if d.dbWrapper.IsSQLite() {
+			syncedLiteral = "1"
+		}
+
+		// Use parameterized query for IN clause to prevent SQL injection
+		placeholders := ""
+		args := make([]interface{}, len(ids))
 		for i, id := range ids {
 			if i > 0 {
-				idList += ","
+				placeholders += ","
 			}
-			idList += fmt.Sprintf("'%s'", id)
+			placeholders += fmt.Sprintf("$%d", i+1)
+			args[i] = id
 		}
-		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
-		_, err := d.dbWrapper.Exec(ctx, query)
+
+		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = %s WHERE id IN (%s)", syncedLiteral, placeholders)
+		_, err := d.dbWrapper.Exec(ctx, query, args...)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
 		} else {
@@ -160,7 +174,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		}
 	}
 
-	slog.Info("sync_daemon: successfully synced agent_missions", "count", len(payloads))
+	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 }
 
 func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDaemonPayload) error {
