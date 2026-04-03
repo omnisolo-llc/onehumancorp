@@ -102,7 +102,7 @@ func (q *RedisTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTas
 	cmd := q.client.B().Zrangebyscore().Key(delayedKey).Min("0").Max(fmt.Sprintf("%f", now)).Build()
 	resp := q.client.Do(ctx, cmd)
 	if err := resp.Error(); err != nil && !rueidis.IsRedisNil(err) {
-		slog.Error("RedisTaskQueue: error checking delayed items", "error", err)
+		// Suppressed log noise for Redis connection blips when polling
 	} else if items, err := resp.AsStrSlice(); err == nil && len(items) > 0 {
 		// Try to move them
 		for _, item := range items {

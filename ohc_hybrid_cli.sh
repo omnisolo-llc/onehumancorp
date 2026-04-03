@@ -109,6 +109,21 @@ verify_dependencies() {
     else
         echo -e "  ${PURPLE}✗ sqlite3 not found${RESET} (Consider installing for local debugging)"
     fi
+
+    # Redis CLI (Cloud Mode Tooling)
+    if command -v redis-cli >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ redis-cli installed${RESET} (Cloud Mode Tooling Ready)"
+    else
+        echo -e "  ${PURPLE}✗ redis-cli not found${RESET} (Consider installing for cloud debugging)"
+    fi
+
+    # Verify System State / DB Check
+    if [ -f ".agent-task/swarm.db" ]; then
+        echo -e "  ${GREEN}✓ Local Swarm Database exists${RESET} (.agent-task/swarm.db)"
+    else
+        echo -e "  ${PURPLE}✗ Local Swarm Database not found${RESET}"
+    fi
+
     echo ""
 }
 

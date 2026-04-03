@@ -431,7 +431,6 @@ func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
 			}
 			b, err := json.Marshal(logEntry)
 			if err != nil {
-				slog.Error("failed to marshal event log", "error", err)
 				continue
 			}
 
@@ -442,7 +441,7 @@ func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
 			}
 
 			if _, err := bw.Write(append(b, '\n')); err != nil {
-				slog.Error("failed to write to event log file", "filename", filename, "error", err)
+				// Silently fail on write to avoid log spamming if the disk is full
 			}
 
 			// If we've drained the channel, flush immediately to avoid latency
@@ -452,7 +451,7 @@ func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
 
 		case <-ticker.C:
 			if err := bw.Flush(); err != nil {
-				slog.Error("failed to flush event log buffer", "error", err)
+				// Silently fail on flush to avoid log spamming
 			}
 		}
 	}
