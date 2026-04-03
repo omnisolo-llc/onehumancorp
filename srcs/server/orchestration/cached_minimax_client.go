@@ -1,10 +1,13 @@
 package orchestration
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"time"
 
@@ -12,6 +15,38 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
+
+// compressString compresses a string using gzip and encodes to base64
+func compressString(s string) (string, error) {
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	if _, err := w.Write([]byte(s)); err != nil {
+		return "", err
+	}
+	if err := w.Close(); err != nil {
+		return "", err
+	}
+	// Encode to hex/base64 to be safe for Postgres TEXT columns
+	return hex.EncodeToString(b.Bytes()), nil
+}
+
+// decompressString decodes from hex and decompresses a gzip compressed string
+func decompressString(s string) (string, error) {
+	decoded, err := hex.DecodeString(s)
+	if err != nil {
+		return "", err
+	}
+	r, err := gzip.NewReader(bytes.NewReader(decoded))
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	decompressed, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	return string(decompressed), nil
+}
 
 // CachedMinimaxClient wraps a MinimaxClient and caches embeddings
 // in Redis (if available) and the DB embedding_cache table.
@@ -43,6 +78,12 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 		if err == nil && val != "" {
 			slog.Debug("CachedMinimaxClient: found reason response in Redis", "hash", promptHash)
 			telemetry.RecordCacheHit(ctx, "reason", "redis")
+			decompressed, err := decompressString(val)
+			if err == nil {
+				return decompressed, nil
+			}
+			slog.Warn("CachedMinimaxClient: failed to decompress Redis cached reason", "err", err)
+			// fallback to return uncompressed just in case it was stored before compression was added
 			return val, nil
 		}
 	}
@@ -64,6 +105,12 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 				cmd := c.redis.B().Set().Key("llm_reason:" + promptHash).Value(cachedResponse).Ex(24 * time.Hour).Build()
 				_ = c.redis.Do(ctx, cmd)
 			}
+
+			decompressed, err := decompressString(cachedResponse)
+			if err == nil {
+				return decompressed, nil
+			}
+			slog.Warn("CachedMinimaxClient: failed to decompress DB cached reason", "err", err)
 			return cachedResponse, nil
 		}
 	}
@@ -75,9 +122,15 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 		return "", err
 	}
 
+	compressedResponse, err := compressString(response)
+	if err != nil {
+		slog.Warn("CachedMinimaxClient: failed to compress reason response", "err", err)
+		compressedResponse = response // Fallback to raw response
+	}
+
 	// Save to Redis
 	if c.redis != nil {
-		cmd := c.redis.B().Set().Key("llm_reason:" + promptHash).Value(response).Ex(24 * time.Hour).Build()
+		cmd := c.redis.B().Set().Key("llm_reason:" + promptHash).Value(compressedResponse).Ex(24 * time.Hour).Build()
 		if err := c.redis.Do(ctx, cmd).Error(); err != nil {
 			slog.Warn("CachedMinimaxClient: failed to save reason response to Redis", "err", err)
 		}
@@ -89,7 +142,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 		if c.db.IsSQLite() {
 			cacheQuery = "INSERT INTO llm_reason_cache (prompt_hash, response) VALUES (?, ?) ON CONFLICT (prompt_hash) DO NOTHING"
 		}
-		_, cacheErr := c.db.Exec(ctx, cacheQuery, promptHash, response)
+		_, cacheErr := c.db.Exec(ctx, cacheQuery, promptHash, compressedResponse)
 		if cacheErr != nil {
 			slog.Warn("CachedMinimaxClient: failed to save reason response to DB cache", "err", cacheErr)
 		}

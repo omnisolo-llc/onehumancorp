@@ -146,7 +146,7 @@ func TestCachedMinimaxClient_Reason(t *testing.T) {
 		t.Fatalf("expected 1 call to mock client, got %d", mockClient.reasonCalls)
 	}
 
-	// 2. Second call with same prompt should hit the DB cache, not the mock client
+	// 2. Second call with same prompt should hit the DB cache (and test decompression), not the mock client
 	resp2, err := cachedClient.Reason(ctx, prompt)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -156,6 +156,19 @@ func TestCachedMinimaxClient_Reason(t *testing.T) {
 	}
 	if mockClient.reasonCalls != 1 {
 		t.Fatalf("expected 1 call to mock client, got %d", mockClient.reasonCalls)
+	}
+
+	// Check compression/decompression helpers explicitly
+	comp, err := compressString("hello gzip")
+	if err != nil {
+		t.Fatalf("compressString error: %v", err)
+	}
+	decomp, err := decompressString(comp)
+	if err != nil {
+		t.Fatalf("decompressString error: %v", err)
+	}
+	if decomp != "hello gzip" {
+		t.Fatalf("expected 'hello gzip', got '%s'", decomp)
 	}
 
 	// 3. Call with different prompt should hit the mock client

@@ -114,7 +114,7 @@ func (ae *AutoDreamEngine) consolidate(ctx context.Context) error {
 
 		// Convert embedding to postgres pgvector format string or sqlite BLOB
 		if ae.db.IsSQLite() {
-			vectorStr = fmt.Sprintf("%v", embedding) // basic string repr as text fallback
+			vectorStr = []byte(formatVector(embedding)) // store as BLOB per memory rules
 		} else {
 			// pgvector format '[0.1, 0.2, ...]'
 			vectorStr = formatVector(embedding)
@@ -159,7 +159,7 @@ func formatVector(v []float32) string {
 		if i > 0 {
 			b = append(b, []byte(",")...)
 		}
-		b = append(b, []byte(fmt.Sprintf("%f", f))...)
+		b = append(b, []byte(fmt.Sprintf("%g", f))...)
 	}
 	b = append(b, []byte("]")...)
 	return string(b)
