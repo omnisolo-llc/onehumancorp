@@ -749,19 +749,19 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions2))
 	}
 
-	expectedContent := "Second instruction\n\n[SYSTEM GROUNDING]:\n" + agentsMdContent
+	expectedContent := "Second instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent
 	if missions2[0].Content != expectedContent {
 		t.Fatalf("expected injected instruction, got %q", missions2[0].Content)
 	}
 
-	// 3. With Context Root and CLAUDE.md but no AGENTS.md
+	// 3. With Context Root and CLAUDE_OHC.md but no AGENTS.md
 	tempDir2 := t.TempDir()
 	db.SetContextRoot(tempDir2)
 
 	claudeMdContent := "Use specialized tokens."
-	err = os.WriteFile(filepath.Join(tempDir2, "CLAUDE.md"), []byte(claudeMdContent), 0644)
+	err = os.WriteFile(filepath.Join(tempDir2, "CLAUDE_OHC.md"), []byte(claudeMdContent), 0644)
 	if err != nil {
-		t.Fatalf("Failed to write CLAUDE.md: %v", err)
+		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
 
 	msg3 := Message{
@@ -785,12 +785,12 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions3))
 	}
 
-	expectedContent2 := "Third instruction\n\n[SYSTEM GROUNDING]:\n" + claudeMdContent
+	expectedContent2 := "Third instruction\n\n[SYSTEM GROUNDING]\n" + claudeMdContent
 	if missions3[0].Content != expectedContent2 {
 		t.Fatalf("expected injected instruction, got %q", missions3[0].Content)
 	}
 
-	// 4. Grounding Priority (Both AGENTS.md and CLAUDE.md exist)
+	// 4. Grounding Priority (Both AGENTS.md and CLAUDE_OHC.md exist)
 	tempDir3 := t.TempDir()
 	db.SetContextRoot(tempDir3)
 
@@ -801,9 +801,9 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 	}
 
 	claudeMdContent4 := "Fallback CLAUDE."
-	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte(claudeMdContent4), 0644)
+	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE_OHC.md"), []byte(claudeMdContent4), 0644)
 	if err != nil {
-		t.Fatalf("Failed to write CLAUDE.md: %v", err)
+		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
 
 	msg4 := Message{
@@ -827,7 +827,7 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]:\n" + agentsMdContent4
+	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4 + "\n\n" + claudeMdContent4
 	if missions4[0].Content != expectedContent4 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}
@@ -872,7 +872,7 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 4. TC4: Both AGENTS.md and CLAUDE.md present, AGENTS.md should take priority
+	// 4. TC4: Both AGENTS.md and CLAUDE_OHC.md present, they should be combined
 	tempDir3 := t.TempDir()
 	db.SetContextRoot(tempDir3)
 
@@ -882,10 +882,10 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 		t.Fatalf("Failed to write AGENTS.md: %v", err)
 	}
 
-	claudeMdContent := "CLAUDE.md rules"
-	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte(claudeMdContent), 0644)
+	claudeMdContent := "CLAUDE_OHC.md rules"
+	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE_OHC.md"), []byte(claudeMdContent), 0644)
 	if err != nil {
-		t.Fatalf("Failed to write CLAUDE.md: %v", err)
+		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
 
 	msg4 := Message{
@@ -909,7 +909,7 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]:\n" + agentsMdContent
+	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent + "\n\n" + claudeMdContent
 	if missions4[0].Content != expectedContent3 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}
