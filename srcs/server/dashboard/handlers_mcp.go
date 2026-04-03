@@ -380,6 +380,10 @@ func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for k, v := range payload {
+		payload[k] = redactInterfacePII(v)
+	}
+
 	idVal, ok := payload["id"]
 	var missionID string
 	if ok {
@@ -439,28 +443,8 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 	// (to avoid corrupting arrays or primitives) before utilizing the public telemetry.RedactPII function to strip personally identifiable information."
 
 	// Ensure safe deep recursive redaction on string fields to prevent sensitive data leakage.
-	var redactRecursive func(interface{}) interface{}
-	redactRecursive = func(val interface{}) interface{} {
-		switch v := val.(type) {
-		case string:
-			return telemetry.RedactPII(v)
-		case map[string]interface{}:
-			for mk, mv := range v {
-				v[mk] = redactRecursive(mv)
-			}
-			return v
-		case []interface{}:
-			for i, iv := range v {
-				v[i] = redactRecursive(iv)
-			}
-			return v
-		default:
-			return v
-		}
-	}
-
 	for k, v := range payload {
-		payload[k] = redactRecursive(v)
+		payload[k] = redactInterfacePII(v)
 	}
 
 	var memoryID string
@@ -555,6 +539,16 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	for i := range payloads {
+		var parsedPayload interface{}
+		if err := json.Unmarshal([]byte(payloads[i].Payload), &parsedPayload); err == nil {
+			redactedPayload := redactInterfacePII(parsedPayload)
+			if redactedBytes, err := json.Marshal(redactedPayload); err == nil {
+				payloads[i].Payload = string(redactedBytes)
+			}
+		}
+	}
+
 	syncedCount := 0
 	for _, p := range payloads {
 		if p.ID == "" {
@@ -585,4 +579,24 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 		"message":      "missions synced successfully",
 		"synced_count": syncedCount,
 	})
+}
+
+
+func redactInterfacePII(val interface{}) interface{} {
+	switch v := val.(type) {
+	case string:
+		return telemetry.RedactPII(v)
+	case map[string]interface{}:
+		for mk, mv := range v {
+			v[mk] = redactInterfacePII(mv)
+		}
+		return v
+	case []interface{}:
+		for i, iv := range v {
+			v[i] = redactInterfacePII(iv)
+		}
+		return v
+	default:
+		return v
+	}
 }
