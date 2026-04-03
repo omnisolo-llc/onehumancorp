@@ -240,29 +240,50 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	return ch, nil
 }
 
+const numShards = 16
+
 type LocalTeammateMesh struct {
 	db        db.Provider
-	broadcast chan Task
-	persist   chan Task
-	mu        sync.RWMutex
-	subs      []chan Task
+	broadcast []chan Task
+	persist   []chan Task
+	mu        []sync.RWMutex
+	subs      []map[chan Task]struct{}
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 	lm := &LocalTeammateMesh{
 		db:        provider,
-		broadcast: make(chan Task, 10000), // Increased buffer for parallel execution
-		persist:   make(chan Task, 10000), // Buffer for persistence workers
+		broadcast: make([]chan Task, numShards),
+		persist:   make([]chan Task, numShards),
+		mu:        make([]sync.RWMutex, numShards),
+		subs:      make([]map[chan Task]struct{}, numShards),
 	}
+
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
-	for i := 0; i < 10; i++ {
-		go lm.run()
-		go lm.persistWorker()
+	// We use sharding by taskID/agentID to reduce lock contention and maximize parallel throughput.
+	for i := 0; i < numShards; i++ {
+		lm.broadcast[i] = make(chan Task, 10000)
+		lm.persist[i] = make(chan Task, 10000)
+		lm.subs[i] = make(map[chan Task]struct{})
+
+		// Spawn multiple worker threads per shard
+		for j := 0; j < 4; j++ {
+			go lm.run(i)
+			go lm.persistWorker(i)
+		}
 	}
 	return lm
 }
 
-func (lm *LocalTeammateMesh) persistWorker() {
+func (lm *LocalTeammateMesh) getShard(key string) int {
+	var hash uint32
+	for i := 0; i < len(key); i++ {
+		hash = hash*31 + uint32(key[i])
+	}
+	return int(hash % numShards)
+}
+
+func (lm *LocalTeammateMesh) persistWorker(shardIdx int) {
 	query := `
 		INSERT INTO shared_tasks (id, title, status, agent_id, organization_id)
 		VALUES ($1, $2, $3, $4, 'system')
@@ -271,7 +292,7 @@ func (lm *LocalTeammateMesh) persistWorker() {
 			agent_id = excluded.agent_id,
 			updated_at = CURRENT_TIMESTAMP
 	`
-	for task := range lm.persist {
+	for task := range lm.persist[shardIdx] {
 		_, err := lm.db.Exec(context.Background(), query, task.TaskID, task.Action, task.Status, task.AgentID)
 		if err != nil {
 			slog.Error("LocalTeammateMesh persist error", "err", err, "taskID", task.TaskID)
@@ -280,53 +301,57 @@ func (lm *LocalTeammateMesh) persistWorker() {
 }
 
 func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
-	// Offload persistence to worker threads
+	shardIdx := lm.getShard(task.TaskID)
+
+	// Offload persistence to worker threads within the specific shard
 	select {
-	case lm.persist <- task:
+	case lm.persist[shardIdx] <- task:
 	default:
 		slog.Warn("LocalTeammateMesh persist channel full, dropping persistence for task", "taskID", task.TaskID)
 	}
 
-	// Broadcast locally
+	// Broadcast locally to the specific shard
 	select {
-	case lm.broadcast <- task:
+	case lm.broadcast[shardIdx] <- task:
 	default:
 	}
 	return nil
 }
 
 func (lm *LocalTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	// A subscriber needs to receive tasks from all shards.
+	// To keep it simple but performant, we add the subscriber to all shards.
 	ch := make(chan Task, 100)
-	lm.mu.Lock()
-	lm.subs = append(lm.subs, ch)
-	lm.mu.Unlock()
+
+	for i := 0; i < numShards; i++ {
+		lm.mu[i].Lock()
+		lm.subs[i][ch] = struct{}{}
+		lm.mu[i].Unlock()
+	}
 
 	// Handle context cancellation
 	go func() {
 		<-ctx.Done()
-		lm.mu.Lock()
-		for i, sub := range lm.subs {
-			if sub == ch {
-				lm.subs = append(lm.subs[:i], lm.subs[i+1:]...)
-				close(ch)
-				break
-			}
+		for i := 0; i < numShards; i++ {
+			lm.mu[i].Lock()
+			delete(lm.subs[i], ch)
+			lm.mu[i].Unlock()
 		}
-		lm.mu.Unlock()
+		close(ch)
 	}()
 
 	return ch, nil
 }
 
-func (lm *LocalTeammateMesh) run() {
-	for msg := range lm.broadcast {
-		lm.mu.RLock()
-		for _, ch := range lm.subs {
+func (lm *LocalTeammateMesh) run(shardIdx int) {
+	for msg := range lm.broadcast[shardIdx] {
+		lm.mu[shardIdx].RLock()
+		for ch := range lm.subs[shardIdx] {
 			select {
 			case ch <- msg:
 			default:
 			}
 		}
-		lm.mu.RUnlock()
+		lm.mu[shardIdx].RUnlock()
 	}
 }
