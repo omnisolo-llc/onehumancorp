@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -318,16 +319,60 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(
-                        _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                          child: Text(
+                            _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          _nameController.text,
+                          style: const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _formatRole(_selectedRole),
+                          style: const TextStyle(fontFamily: 'Inter'),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _selectedProvider.toUpperCase(),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    title: Text(_nameController.text),
-                    subtitle: Text(_formatRole(_selectedRole)),
-                    trailing: Text(_selectedProvider.toUpperCase()),
                   ),
                 ),
                 const SizedBox(height: 16),
