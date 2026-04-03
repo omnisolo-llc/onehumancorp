@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
@@ -310,8 +313,63 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 }
 
-class GrowthReferralWidget extends StatelessWidget {
+class GrowthReferralWidget extends StatefulWidget {
   const GrowthReferralWidget({super.key});
+
+  @override
+  State<GrowthReferralWidget> createState() => _GrowthReferralWidgetState();
+}
+
+class _GrowthReferralWidgetState extends State<GrowthReferralWidget> {
+  final TextEditingController _emailController = TextEditingController();
+  bool _isLoading = false;
+  String? _message;
+
+  Future<void> _sendReferral() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/growth/referrals'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': 'current_user_id', // Mocked user ID
+          'referralCode': 'REF-' + DateTime.now().millisecondsSinceEpoch.toString()
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _message = 'Referral sent successfully!';
+          _emailController.clear();
+        });
+      } else {
+        setState(() {
+          _message = 'Failed to send referral: ${response.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _message = 'Error: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -327,40 +385,73 @@ class GrowthReferralWidget extends StatelessWidget {
             border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.group_add,
-                size: 48,
-                color: colorScheme.primary,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.group_add,
+                    size: 48,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Grow Your Swarm. Maintain Sovereignty.',
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Grow Your Swarm. Maintain Sovereignty.',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email Address',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _sendReferral,
+                    child: _isLoading ? const CircularProgressIndicator() : const Text('Send Invite'),
+                  ),
+                ],
+              ),
+              if (_message != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _message!,
+                  style: TextStyle(
+                    color: _message!.startsWith('Error') || _message!.startsWith('Failed') ? Colors.red : Colors.green,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
