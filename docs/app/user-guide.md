@@ -47,7 +47,7 @@ Generated images are written to:
 
 ### iOS
 
-![OHC Flutter app with iOS profile](../../src/app/ios/login.png)
+![OHC Flutter app with iOS profile](./ios/login.png)
 
 ### Linux
 
