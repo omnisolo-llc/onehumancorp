@@ -299,6 +299,7 @@ type Hub struct {
 	minimaxAPIKey  string
 	subs           map[string][]chan struct{}
 	sipDB          *SIPDB
+	taskManager    *TaskManager
 	tokenTrackers  map[string]struct{}
 	GetTokenUsage  func(ctx context.Context) map[string]int64
 	autoCorTrack   map[string]struct{}
@@ -642,6 +643,20 @@ func (h *Hub) SetSIPDB(sipDB *SIPDB) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.sipDB = sipDB
+}
+
+// SetTaskManager sets the TaskManager instance for the hub.
+func (h *Hub) SetTaskManager(tm *TaskManager) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.taskManager = tm
+}
+
+// TaskManager retrieves the embedded TaskManager.
+func (h *Hub) TaskManager() *TaskManager {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.taskManager
 }
 
 // SIPDB returns the configured database-driven Swarm Intelligence Protocol interface.

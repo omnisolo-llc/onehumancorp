@@ -270,12 +270,44 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	return &task, nil
 }
 
+// ReviewTask marks a task as in review.
+func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
+	query := `
+		UPDATE swarm_tasks
+		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
+	`
+	res, err := tm.db.Exec(ctx, query, taskID, agentID)
+	if err != nil {
+		return fmt.Errorf("failed to mark task as review: %w", err)
+	}
+
+	if res == 0 {
+		return errors.New("task not found or not assigned to agent in IN_PROGRESS state")
+	}
+
+	// Broadcast task review
+	if tm.hub != nil {
+		go func() {
+			tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+				"action":   "REVIEW",
+				"agent_id": agentID,
+				"status":   "REVIEW",
+			})
+		}()
+	}
+
+	telemetry.RecordSwarmTaskStatusChanged(ctx, "REVIEW")
+
+	return nil
+}
+
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	query := `
 		UPDATE swarm_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
+		WHERE id = $1 AND assigned_agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
 	res, err := tm.db.Exec(ctx, query, taskID, agentID)
 	if err != nil {

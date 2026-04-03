@@ -30,6 +30,7 @@ var (
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
+	swarmTaskStatusChangedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
@@ -175,6 +176,14 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTasksCompletedCounter, err = m.Int64Counter(
 		"ohc_swarm_tasks_completed",
 		metric.WithDescription("Total swarm tasks completed"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	swarmTaskStatusChangedCounter, err = m.Int64Counter(
+		"ohc_swarm_task_status_changed",
+		metric.WithDescription("Number of swarm tasks whose status changed"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -482,6 +491,23 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 			"mission_id": missionID,
 		})
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
+	}
+}
+
+// RecordSwarmTaskStatusChanged increments the global counter for status change of swarm tasks.
+func RecordSwarmTaskStatusChanged(ctx context.Context, status string) {
+	if swarmTaskStatusChangedCounter == nil {
+		return
+	}
+	swarmTaskStatusChangedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("status", status),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"status": status,
+		})
+		_ = BufferMetricFunc(ctx, "swarm_task_status_changed", string(payloadBytes))
 	}
 }
 

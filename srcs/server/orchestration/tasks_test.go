@@ -210,3 +210,43 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 		t.Fatalf("expected error when completing non-existent task")
 	}
 }
+
+func TestTaskManager_ReviewTask(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	tm, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
+
+	if claimedTask.ID != task.ID {
+		t.Fatalf("claimed task id mismatch")
+	}
+
+	// Review task
+	err := tm.ReviewTask(ctx, claimedTask.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Try reviewing again
+	err = tm.ReviewTask(ctx, claimedTask.ID, "agent-1")
+	if err == nil {
+		t.Fatalf("expected error when reviewing an already reviewed task")
+	}
+
+	// Complete task from review
+	err = tm.CompleteTask(ctx, claimedTask.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error when completing a reviewed task, got %v", err)
+	}
+
+	// Complete non-existent task
+	err = tm.ReviewTask(ctx, "non-existent", "agent-1")
+	if err == nil {
+		t.Fatalf("expected error when reviewing non-existent task")
+	}
+}
