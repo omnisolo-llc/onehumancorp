@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -563,6 +564,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
+
+	// Teammate Mesh APIs
+	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -806,6 +810,43 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
+}
+
+func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Channel string `json:"channel"`
+		Payload string `json:"payload"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
+		http.Error(w, "invalid channel", http.StatusBadRequest)
+		return
+	}
+
+	err := s.hub.Publish(orchestration.Message{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		FromAgent: "system",
+		ToAgent:   "system",
+		Type:      req.Channel,
+		Content:   req.Payload,
+	})
+
+	if err != nil {
+		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (s *Server) handleCosts(w http.ResponseWriter, _ *http.Request) {

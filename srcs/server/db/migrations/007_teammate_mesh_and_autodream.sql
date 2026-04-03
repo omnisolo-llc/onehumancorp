@@ -22,3 +22,11 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     source_mission_id TEXT,
     consolidated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS agent_memories (
+    id TEXT PRIMARY KEY,
+    organization_id VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    embedding VECTOR(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
