@@ -56,7 +56,6 @@ go_test(
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
-        "throttle_helper.go",
         "throttle_test.go",
     ],
     embed = [":orchestration"],

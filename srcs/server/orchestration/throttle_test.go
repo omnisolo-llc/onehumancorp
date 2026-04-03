@@ -10,6 +10,9 @@ import (
 )
 
 func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
+	ClearThrottleSemaphore()
+	defer ClearThrottleSemaphore()
+
 	// Temporarily enable OHC_STANDALONE to trigger the throttle
 	original := os.Getenv("OHC_STANDALONE")
 	os.Setenv("OHC_STANDALONE", "true")
