@@ -81,9 +81,9 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 	engine.ProcessForecastTick(ctx)
 
 	// 5. Verify the payloads
-	// Note: 006_hybrid_os_mission.sql seeds one mission, so we actually get 3 payloads synced.
-	if len(receivedPayloads) != 3 {
-		t.Fatalf("expected 3 payloads synced, got %d", len(receivedPayloads))
+	// Note: previous migrations seeded some tasks, so we expect exactly 4 payloads
+	if len(receivedPayloads) != 4 {
+		t.Fatalf("expected 4 payloads synced, got %d", len(receivedPayloads))
 	}
 
 	embeddingSynced := false

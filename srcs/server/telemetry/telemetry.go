@@ -32,6 +32,7 @@ var (
 	swarmTasksCompletedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
@@ -190,6 +191,14 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
+		"ohc_autodream_memories_ingested_total",
+		metric.WithDescription("Total number of AutoDream memories ingested"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -484,6 +493,16 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 	cacheHitsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
+	))
+}
+
+// RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.
+func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
+	if AutoDreamMemoriesIngestedCounter == nil {
+		return
+	}
+	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
 	))
 }
 
