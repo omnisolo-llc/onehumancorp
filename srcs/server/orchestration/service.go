@@ -743,6 +743,17 @@ func (h *Hub) CentrifugeNode() *CentrifugeNode {
 	return h.centrifugeNode
 }
 
+// PublishTaskBroadcast fans out a task update to the Teammate Mesh.
+func (h *Hub) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	h.mu.RLock()
+	cn := h.centrifugeNode
+	h.mu.RUnlock()
+
+	if cn != nil {
+		cn.PublishTaskBroadcast(taskID, payload)
+	}
+}
+
 //   - id: string; The unique identifier of the agent.
 //
 // Accepts parameters: h *Hub (No Constraints).
