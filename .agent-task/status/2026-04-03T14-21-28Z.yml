@@ -1,0 +1,6 @@
+timestamp: "2026-04-03T14:21:28Z"
+agent: "Jules"
+status: "HEALTHY"
+metrics:
+  missions_created: 1
+  uptime_seconds: 300
