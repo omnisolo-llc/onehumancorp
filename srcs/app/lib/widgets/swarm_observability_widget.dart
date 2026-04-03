@@ -22,12 +22,11 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
 
   return centrifuge.subscribeRaw('mesh:tasks').map((data) {
     final Map<String, dynamic> json = data as Map<String, dynamic>;
-    final payload = json['payload'] as Map<String, dynamic>? ?? {};
 
     // Extract agent name and action from the payload
     // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
-    final agentName = payload['agent_id'] as String? ?? 'System';
-    final action = payload['action'] as String? ?? payload['status'] as String? ?? 'Task Update';
+    final agentName = json['agent_id'] as String? ?? 'System';
+    final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
 
     return MeshMessage(
       agentName,
