@@ -1,5 +1,7 @@
 package orchestration
 
+import "github.com/onehumancorp/mono/srcs/server/agents"
+
 import (
 	"context"
 	"encoding/json"
@@ -340,7 +342,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 			return
 		}
 
-		client := NewCachedMinimaxClient(NewMinimaxClient(apiKey), to.db, to.redisClient)
+		client := NewCachedMinimaxClient(agents.NewResilientProvider(NewMinimaxClient(apiKey), agents.NewLocalLLMProvider(os.Getenv("OHC_LOCAL_LLM_ENDPOINT"), os.Getenv("OHC_LOCAL_MODEL_NAME"))), to.db, to.redisClient)
 		emb, err := client.GenerateEmbedding(bgCtx, contextStr)
 		if err != nil {
 			slog.Warn("AutoDream: Failed to generate embedding for completed task", "error", err)

@@ -6,6 +6,8 @@ go_library(
         "agent.go",
         "agent_task_worker.go",
         "provider.go",
+        "local_provider.go",
+
         "registry.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents",
@@ -23,6 +25,7 @@ go_test(
         "agents_test.go",
         "coverage_test.go",
         "provider_test.go",
+        "resilient_provider_test.go",
     ],
     embed = [":agents"],
     deps = [
