@@ -12,6 +12,8 @@ import (
 )
 
 func TestSIPDB_Init(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to initialize SIPDB: %v", err)
@@ -349,6 +351,8 @@ func TestSIPDB_Heartbeat_DBError(t *testing.T) {
 }
 
 func TestSIPDB_DelegateMission_DBError(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -676,6 +680,8 @@ func TestSIPDB_BurstMission(t *testing.T) {
 }
 
 func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
 	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -855,6 +861,8 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 	}
 }
 func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
 	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission_missing.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {

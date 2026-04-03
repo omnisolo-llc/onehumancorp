@@ -1385,6 +1385,8 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 }
 
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
+	ClearSemaphore()
+	defer ClearSemaphore()
 	hub := NewHub()
 
 	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")

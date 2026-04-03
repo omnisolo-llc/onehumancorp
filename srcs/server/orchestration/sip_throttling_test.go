@@ -13,6 +13,9 @@ func TestStandaloneThrottling(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
+	ClearSemaphore()
+	defer ClearSemaphore()
+
 	provider := db.NewSqliteProvider(nil) // It doesn't actually need the db for the initial logic check, but let's mock it if possible or use a real db
 	s, err := NewSIPDB(":memory:")
 	if err != nil {
@@ -45,6 +48,9 @@ func TestStandaloneThrottling(t *testing.T) {
 func TestUpsertMissionThrottling(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
+
+	ClearSemaphore()
+	defer ClearSemaphore()
 
 	s, err := NewSIPDB(":memory:")
 	if err != nil {

@@ -403,6 +403,14 @@ var (
 	throttleSemaphore = make(chan struct{}, 1)
 )
 
+// ClearSemaphore is exported ONLY for testing purposes to unblock the global state between tests
+func ClearSemaphore() {
+	select {
+	case <-throttleSemaphore:
+	default:
+	}
+}
+
 func envBoolDefault(key string, fallback bool) bool {
 	value, ok := os.LookupEnv(key)
 	if !ok {
