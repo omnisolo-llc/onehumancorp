@@ -195,7 +195,7 @@ sh_test(
     srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
     args = ["rpm"],
     data = [
-        "//srcs/app:app_rpm.rpm",
+        "//srcs/app:app_rpm",
         "//srcs/app:app_runtime_tar.tar",
     ],
     tags = ["manual"],
