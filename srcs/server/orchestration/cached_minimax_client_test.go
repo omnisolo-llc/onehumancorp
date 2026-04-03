@@ -9,6 +9,36 @@ import (
 	"github.com/redis/rueidis"
 )
 
+func TestDataCompression(t *testing.T) {
+	originalData := []byte("This is a test string to be compressed and decompressed.")
+	compressed, err := compressData(originalData)
+	if err != nil {
+		t.Fatalf("compression failed: %v", err)
+	}
+	if len(compressed) == 0 {
+		t.Fatalf("compressed data is empty")
+	}
+
+	decompressed, err := decompressData(compressed)
+	if err != nil {
+		t.Fatalf("decompression failed: %v", err)
+	}
+
+	if string(decompressed) != string(originalData) {
+		t.Fatalf("expected '%s', got '%s'", originalData, decompressed)
+	}
+
+	// Test backward compatibility (uncompressed data)
+	uncompressedData := []byte("Uncompressed data should pass through.")
+	decompressedUncompressed, err := decompressData(uncompressedData)
+	if err != nil {
+		t.Fatalf("decompression of uncompressed data failed: %v", err)
+	}
+	if string(decompressedUncompressed) != string(uncompressedData) {
+		t.Fatalf("expected '%s', got '%s'", uncompressedData, decompressedUncompressed)
+	}
+}
+
 // mockMinimax is a mock client for testing.
 type mockMinimax struct {
 	calls       int
