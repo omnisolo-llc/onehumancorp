@@ -517,3 +517,52 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, map[string]string{"status": "success", "message": "context synced"})
 }
+
+// handleSyncMissions is the cloud endpoint to receive synced agent_missions from a standalone mode client.
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleSyncMissions")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var payload struct {
+		ID          int64  `json:"id"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Status      string `json:"status"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Title == "" || payload.Description == "" {
+		http.Error(w, "title and description are required", http.StatusBadRequest)
+		return
+	}
+
+	// Insert into the cloud Postgres agent_missions table
+	insertQuery := `
+		INSERT INTO agent_missions (title, description, status)
+		VALUES ($1, $2, $3)
+	`
+	// Fallback to UpsertMission on SIPDB or just SIPDB Exec
+	if s.hub.SIPDB() == nil {
+		http.Error(w, "internal server error: sipdb not initialized", http.StatusInternalServerError)
+		return
+	}
+	_, err := s.hub.SIPDB().Provider().Exec(ctx, insertQuery, payload.Title, payload.Description, payload.Status)
+	if err != nil {
+		slog.Error("handleSyncMissions: failed to insert mission", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "mission synced to cloud"})
+}

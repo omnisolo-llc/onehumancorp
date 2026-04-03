@@ -1036,3 +1036,8 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	return syncedCount, nil
 }
+
+// Provider returns the underlying database provider.
+func (s *SIPDB) Provider() db.Provider {
+	return s.db
+}
