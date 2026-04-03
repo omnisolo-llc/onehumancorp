@@ -199,10 +199,8 @@ class _MessageBubbleState extends State<_MessageBubble> with SingleTickerProvide
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
-    // Slight delay for list view insertion animation
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (mounted) _controller.forward();
-    });
+    // Immediate animation start
+    if (mounted) _controller.forward();
   }
 
   @override
