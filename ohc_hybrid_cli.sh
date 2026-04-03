@@ -26,6 +26,7 @@ show_menu() {
     echo -e "  ${PURPLE}3)${RESET} Launch Standalone Desktop Mode"
     echo -e "  ${PURPLE}4)${RESET} Launch Cloud Backend"
     echo -e "  ${PURPLE}5)${RESET} Run All Tests"
+    echo -e "  ${PURPLE}6)${RESET} Verify System Dependencies"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -78,6 +79,39 @@ run_tests() {
     fi
 }
 
+verify_dependencies() {
+    echo -e "${DIM}[Verifying System Dependencies for OHC Hybrid OS]${RESET}"
+
+    # Bazelisk
+    if command -v bazelisk >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ bazelisk installed${RESET} ($(bazelisk version | grep 'Bazel version' || echo 'unknown version'))"
+    else
+        echo -e "  ${PURPLE}✗ bazelisk not found${RESET}"
+    fi
+
+    # Docker
+    if command -v docker >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ docker installed${RESET} ($(docker --version))"
+    else
+        echo -e "  ${PURPLE}✗ docker not found${RESET}"
+    fi
+
+    # Go
+    if command -v go >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ go installed${RESET} ($(go version))"
+    else
+        echo -e "  ${PURPLE}✗ go not found${RESET}"
+    fi
+
+    # SQLite3 (Standalone fallback)
+    if command -v sqlite3 >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ sqlite3 installed${RESET} (Standalone Mode Ready)"
+    else
+        echo -e "  ${PURPLE}✗ sqlite3 not found${RESET} (Consider installing for local debugging)"
+    fi
+    echo ""
+}
+
 if [ "$1" == "--non-interactive" ]; then
     echo "Running in non-interactive verification mode."
     run_setup
@@ -93,6 +127,7 @@ else
             3) launch_desktop ;;
             4) launch_cloud ;;
             5) run_tests ;;
+            6) verify_dependencies ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
