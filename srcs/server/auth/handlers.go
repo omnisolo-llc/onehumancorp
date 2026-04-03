@@ -149,7 +149,7 @@ type updateUserRequest struct {
 // Has no side effects.
 func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 	claims := ClaimsFromContext(r.Context())
-	if claims == nil || !claims.HasRole(RoleAdmin) {
+	if claims == nil || !claims.HasRole(RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
 		jsonError(w, "forbidden", http.StatusForbidden)
 		return
 	}
