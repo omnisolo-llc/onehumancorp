@@ -178,6 +178,8 @@ func fetchJWKS(issuerURL string) ([]jwk, error) {
 	}
 
 	// Fetch discovery document
+
+	// Fetch discovery document
 	discURL := strings.TrimRight(issuerURL, "/") + "/.well-known/openid-configuration"
 	if err := validateURL(discURL); err != nil {
 		return nil, fmt.Errorf("validate discovery URL: %w", err)
@@ -220,6 +222,12 @@ func fetchJWKS(issuerURL string) ([]jwk, error) {
 	}
 
 	jwksCache.Lock()
+	// Double check in case another goroutine fetched it while we were making the network request
+	cached, ok = jwksCache.byIssuer[issuerURL]
+	if ok && time.Since(cached.fetchAt) < jwksTTL {
+		jwksCache.Unlock()
+		return cached.keys, nil
+	}
 	jwksCache.byIssuer[issuerURL] = cachedJWKS{keys: ks.Keys, fetchAt: time.Now()}
 	jwksCache.Unlock()
 
