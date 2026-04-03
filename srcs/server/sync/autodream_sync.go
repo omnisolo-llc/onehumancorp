@@ -202,9 +202,7 @@ func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, payloads []AutoDr
 	req.Header.Set("Content-Type", "application/json")
 
 	// Set SPIFFE authentication token header if identity token is provided in environment variables.
-	if authHeader := os.Getenv("OHC_CLOUD_API_KEY"); authHeader != "" {
-		req.Header.Set("Authorization", "Bearer "+authHeader)
-	} else if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
+	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
 		req.Header.Set("Authorization", "Bearer "+spiffeToken)
 	}
 
