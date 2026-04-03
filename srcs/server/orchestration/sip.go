@@ -59,7 +59,8 @@ var (
 )
 
 // getThrottle conditionally acquires the semaphore if in standalone mode
-func acquireThrottle(ctx context.Context) error {
+// Returns a cleanup closure instead of explicitly releasing to prevent deadlocks.
+func acquireThrottle(ctx context.Context) (func(), error) {
 	standaloneThrottleOnce.Do(func() {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			// already initialized to 1
@@ -71,28 +72,22 @@ func acquireThrottle(ctx context.Context) error {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case standaloneThrottle <- struct{}{}:
-			return nil
+			return func() { <-standaloneThrottle }, nil
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
-	return nil
-}
-
-func releaseThrottle() {
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		<-standaloneThrottle
-	}
+	return func() {}, nil
 }
 
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withRetry(ctx context.Context, op func() error) error {
-	if err := acquireThrottle(ctx); err != nil {
+	cleanup, err := acquireThrottle(ctx)
+	if err != nil {
 		return err
 	}
-	defer releaseThrottle()
+	defer cleanup()
 
-	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = op()
 		if err == nil {
@@ -429,10 +424,12 @@ func envBoolDefault(key string, fallback bool) bool {
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
 	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 
+	var cleanup func()
 	if isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
+			cleanup = func() { <-throttleSemaphore }
+			defer cleanup()
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -467,10 +464,12 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
 	isStandalone := envBoolDefault("OHC_STANDALONE", false)
 
+	var cleanup func()
 	if isStandalone {
 		select {
 		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
+			cleanup = func() { <-throttleSemaphore }
+			defer cleanup()
 		case <-ctx.Done():
 			return ctx.Err()
 		}
