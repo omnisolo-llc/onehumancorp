@@ -242,15 +242,6 @@ type Message struct {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-	if isStandalone {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-context.Background().Done():
-			// Not cancellable since it doesn't take context
-		}
-	}
 
 	if err := CheckDocumentationGate(task.Content); err != nil {
 		return err
@@ -273,11 +264,16 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 		if isStandalone {
 			// In standalone mode, synchronously delegate to prevent connection contention
 			// caused by thousands of unbounded goroutines hitting the SIPDB.
-			_ = h.sipDB.DelegateMission(context.Background(), task.ID, toAgent.Role, task)
+			// Apply a 5-second context timeout to prevent lock livelocks from long queries.
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = h.sipDB.DelegateMission(ctx, task.ID, toAgent.Role, task)
 		} else {
 			// In cloud mode, Postgres can handle concurrent connections easily.
 			go func(t Message, r string) {
-				_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
+				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+				defer cancel()
+				_ = h.sipDB.DelegateMission(ctx, t.ID, r, t)
 			}(task, toAgent.Role)
 		}
 	}

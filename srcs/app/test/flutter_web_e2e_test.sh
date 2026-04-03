@@ -72,6 +72,12 @@ echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
 BACKEND_BIN=""
 for candidate in \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc" \
     "${RUNFILES}/${WORKSPACE}/srcs/server/server_/server" \
     "${RUNFILES}/_main/srcs/server/server_/server" \
     "${RUNFILES}/__main__/srcs/server/server_/server" \
