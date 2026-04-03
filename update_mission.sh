@@ -1,3 +1,2 @@
 #!/bin/bash
-sed -i 's/status: PENDING/status: DONE/g' .agent-task/missions/2026-04-02T17-17-14Z.md
-sed -i 's/status: PENDING/status: DONE/g' .agent-task/missions/2026-04-02T17-01-33Z.md
+sed -i 's/^status: IN_PROGRESS/status: DONE/' .agent-task/missions/2026-04-02T20-21-55Z.md
