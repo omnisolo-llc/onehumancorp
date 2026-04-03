@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,8 +32,17 @@ func TestHandleScaleStreamOpsCoverage(t *testing.T) {
 	}
 
 	t.Run("invalid method", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/ops/scale/stream", nil)
+		// Create a test context with a timeout to cancel the request
+		ctx, cancel := context.WithCancel(context.Background())
+		req := httptest.NewRequest("POST", "/api/ops/scale/stream", nil).WithContext(ctx)
 		w := httptest.NewRecorder()
+
+		// Run in a goroutine and cancel immediately so the sleep loop exits
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			cancel()
+		}()
+
 		srv.handleScaleStream(w, req)
 		if w.Code != http.StatusOK { // It doesn't check method.
 			t.Errorf("expected 200, got %d", w.Code)
