@@ -41,11 +41,8 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db               db.Provider
-	ContextRoot      string
-	cachedGrounding  string
-	groundingOnce    *sync.Once
-	cachedGroundErr  error
+	db          db.Provider
+	ContextRoot string
 }
 
 const (
@@ -123,7 +120,7 @@ func NewSIPDBWithProvider(provider db.Provider) (*SIPDB, error) {
 	if err := initializeTables(provider); err != nil {
 		return nil, err
 	}
-	return &SIPDB{db: provider, groundingOnce: new(sync.Once)}, nil
+	return &SIPDB{db: provider}, nil
 }
 
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
@@ -496,35 +493,36 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
-		s.groundingOnce.Do(func() {
-			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
-				path := filepath.Join(s.ContextRoot, filename)
+		var groundingContent string
+		var groundErr error
 
-				// Stat the file first to distinguish between missing vs permissions/errors
-				_, statErr := os.Stat(path)
-				if statErr == nil {
-					// File exists
-					content, err := os.ReadFile(path)
-					if err != nil {
-						s.cachedGroundErr = err
-						break // Enforce fail-closed if there's a read error
-					}
-					s.cachedGrounding = "\n\n[SYSTEM GROUNDING]:\n" + string(content)
-					break
-				} else if !os.IsNotExist(statErr) {
-					s.cachedGroundErr = statErr
-					break
+		for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
+			path := filepath.Join(s.ContextRoot, filename)
+
+			// Stat the file first to distinguish between missing vs permissions/errors
+			_, statErr := os.Stat(path)
+			if statErr == nil {
+				// File exists
+				content, err := os.ReadFile(path)
+				if err != nil {
+					groundErr = err
+					break // Enforce fail-closed if there's a read error
 				}
+				groundingContent = "\n\n[SYSTEM GROUNDING]\n" + string(content)
+				break
+			} else if !os.IsNotExist(statErr) {
+				groundErr = statErr
+				break
 			}
-		})
-
-		// Adhering to the Fail-Closed security mandate
-		if s.cachedGroundErr != nil {
-			return fmt.Errorf("fail-closed: unable to read project grounding files: %w", s.cachedGroundErr)
 		}
 
-		if s.cachedGrounding != "" {
-			task.Content += s.cachedGrounding
+		// Adhering to the Fail-Closed security mandate
+		if groundErr != nil {
+			return fmt.Errorf("fail-closed: unable to read project grounding files: %w", groundErr)
+		}
+
+		if groundingContent != "" {
+			task.Content += groundingContent
 		}
 	}
 
@@ -711,9 +709,6 @@ func (s *SIPDB) Close() error {
 // SetContextRoot sets the context root for the SIPDB
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
-	s.cachedGrounding = ""
-	s.cachedGroundErr = nil
-	s.groundingOnce = new(sync.Once)
 }
 
 // BufferMetric inserts a telemetry metric into the local metric buffer.
