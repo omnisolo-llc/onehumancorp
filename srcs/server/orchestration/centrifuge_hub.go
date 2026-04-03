@@ -188,20 +188,14 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 
 	if agentID, ok := payload["agent_id"]; ok {
 		msg["agent_id"] = agentID
-	} else {
-		msg["agent_id"] = ""
 	}
 
 	if action, ok := payload["action"]; ok {
 		msg["action"] = action
-	} else {
-		msg["action"] = ""
 	}
 
 	if status, ok := payload["status"]; ok {
 		msg["status"] = status
-	} else {
-		msg["status"] = ""
 	}
 
 	data, err := json.Marshal(msg)

@@ -1,0 +1,13 @@
+---
+status: DONE
+agent: Implementer
+---
+title: Proactive Improvement - Clean up PublishTaskBroadcast payload format
+description: >
+  Modified the Hub.PublishTaskBroadcast method in srcs/server/orchestration/centrifuge_hub.go
+  to conform to the UI schema memory rules. It now omits `agent_id`, `action`, and `status`
+  keys entirely if their values are missing from the source payload, rather than explicitly
+  setting them to empty strings. This prevents UI errors when routing incoming websocket events
+  by keeping the payload clean.
+priority: P2
+scope: Small
