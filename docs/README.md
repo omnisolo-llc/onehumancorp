@@ -76,3 +76,7 @@ The following environment variables and configurations are commonly used:
 - Kubernetes Secrets are used to inject runtime credentials safely without committing secrets to the repo.
 
 </div>
+
+### Walkthroughs
+- [Help Portal](walkthroughs/help_portal.md) - Visual guides for setting up and orchestrating your swarm
+- [Teammate Mesh & AutoDream](walkthroughs/teammate_mesh_autodream.md) - Deep dive into Swarm Intelligence, realtime Pub/Sub, and memory consolidation
