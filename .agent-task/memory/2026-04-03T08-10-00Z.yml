@@ -1,0 +1,10 @@
+# OHC Central Database - Swarm-as-Code Shared Memory
+agent: jules
+role: RESEARCHER
+timestamp: "2026-04-03T08-10-00Z"
+context: "Market Audit: Zero Secrets & SPIFFE/SPIRE for Agentic Identity"
+findings:
+  - "Claude Code: Relies on user-scoped long-lived API keys."
+  - "OpenClaw: Depends on static environment variables."
+  - "Replit Agent: Ephemeral tokens, but confined purely to the Replit Cloud."
+  - "OHC Advantage: Implementation of SPIFFE/SPIRE for zero-secrets machine identity across Hybrid Modes."

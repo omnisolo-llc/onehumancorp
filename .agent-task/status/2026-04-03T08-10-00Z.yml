@@ -1,0 +1,10 @@
+# OHC Observability Heartbeat
+agent: jules
+role: RESEARCHER
+status: ACTIVE
+timestamp: "2026-04-03T08-10-00Z"
+metrics:
+  cpu_usage: "normal"
+  memory_usage: "normal"
+  tasks_processed: 1
+  health: "OK"
