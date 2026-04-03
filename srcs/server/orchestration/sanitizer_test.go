@@ -32,7 +32,7 @@ func TestSanitizePayload(t *testing.T) {
 		},
 		{
 			name:     "With both private markers and PII data",
-			input:    "[PRIVATE:do not read] My email is secret@example.com and phone is 555-1234.",
+			input:    "[PRIVATE:do not read] My email is secret@example.com and phone is 555-555-1234.",
 			expected: " My email is [REDACTED_EMAIL] and phone is [REDACTED_PHONE].",
 		},
 	}
