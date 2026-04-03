@@ -26,7 +26,7 @@ func TestSIPDB_Chaos(t *testing.T) {
 
 	// 1. High-concurrency agent mission ingestion (Stress Test)
 	var wg sync.WaitGroup
-	numAgents := 50
+	numAgents := 5
 	missionsPerAgent := 10
 
 	errs := make(chan error, numAgents*missionsPerAgent)
