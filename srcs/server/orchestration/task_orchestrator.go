@@ -105,6 +105,7 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 			"mission_id": task.MissionID,
 			"title":      task.Title,
 			"status":     task.Status,
+			"task_id":     task.ID,
 		})
 	}
 
@@ -192,6 +193,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			"action":   "CLAIM",
 			"agent_id": agentID,
 			"status":   task.Status,
+			"task_id":  task.ID,
 		})
 	}
 
@@ -279,11 +281,13 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 			"action":   "COMPLETE",
 			"agent_id": agentID,
 			"status":   "COMPLETED",
+			"task_id":  taskID,
 		})
 		for _, rid := range newReadyTasks {
 			to.hub.PublishTaskBroadcast(rid, map[string]interface{}{
-				"action": "READY",
-				"status": "READY",
+				"action":  "READY",
+				"status":  "READY",
+				"task_id": rid,
 			})
 		}
 	}

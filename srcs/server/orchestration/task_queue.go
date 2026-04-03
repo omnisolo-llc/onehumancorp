@@ -112,6 +112,7 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *Shared
 			"mission_id":  task.MissionID,
 			"title":       task.Title,
 			"status":      task.Status,
+			"task_id":     task.ID,
 		})
 	}
 	return nil
@@ -227,6 +228,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			"action":   "CLAIM",
 			"agent_id": agentID,
 			"status":   task.Status,
+			"task_id":  task.ID,
 		})
 	}
 
@@ -271,8 +273,9 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	// Broadcast
 	if to.hub != nil {
 		to.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
-			"action": "COMPLETE",
-			"status": "COMPLETED",
+			"action":  "COMPLETE",
+			"status":  "COMPLETED",
+			"task_id": taskID,
 		})
 	}
 
