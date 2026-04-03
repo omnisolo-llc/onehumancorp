@@ -246,20 +246,33 @@ class _ProviderCardState extends State<_ProviderCard> {
       context: context,
       builder:
           (_) => AlertDialog(
-            title: Text('API Key — ${widget.provider.name}'),
-            content: TextField(
-              controller: ctrl,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'API Key',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.key),
+            backgroundColor: Colors.white.withAlpha(13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.white.withAlpha(26)),
+            ),
+            title: Text('API Key — ${widget.provider.name}', style: const TextStyle(fontFamily: 'Outfit', color: Colors.white)),
+            content: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextField(
+                  controller: ctrl,
+                  obscureText: true,
+                  style: const TextStyle(fontFamily: 'Inter', color: Colors.white70),
+                  decoration: const InputDecoration(
+                    labelText: 'API Key',
+                    labelStyle: TextStyle(color: Colors.white54),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.key, color: Colors.white70),
+                  ),
+                ),
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const Text('Cancel', style: TextStyle(fontFamily: 'Outfit')),
               ),
               FilledButton(
                 onPressed: () async {
@@ -369,14 +382,23 @@ class _ProviderDialogState extends State<_ProviderDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add AI Provider'),
-      content: SizedBox(
-        width: 480,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: Colors.white.withAlpha(13),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withAlpha(26)),
+      ),
+      title: const Text('Add AI Provider', style: TextStyle(fontFamily: 'Outfit', color: Colors.white)),
+      content: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               DropdownButtonFormField<int>(
                 value: _presetIndex,
                 decoration: const InputDecoration(
@@ -392,60 +414,61 @@ class _ProviderDialogState extends State<_ProviderDialog> {
                 ),
                 onChanged: (i) => i != null ? _applyPreset(i) : null,
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Provider Name',
-                  border: OutlineInputBorder(),
-                ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Provider Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _urlCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Base URL',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _keyCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'API Key',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.key),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _modelsCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Models (comma-separated)',
+                      border: OutlineInputBorder(),
+                      hintText: 'gpt-4o-mini, gpt-4o',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _urlCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Base URL',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _keyCtrl,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'API Key',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.key),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _modelsCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Models (comma-separated)',
-                  border: OutlineInputBorder(),
-                  hintText: 'gpt-4o-mini, gpt-4o',
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('Cancel', style: TextStyle(fontFamily: 'Outfit')),
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Add'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
         ),
       ],
     );

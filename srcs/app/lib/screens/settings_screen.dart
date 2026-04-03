@@ -324,15 +324,27 @@ class _LocalBackendStatusCardState
                                     context: context,
                                     builder:
                                         (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
-                                          content: SingleChildScrollView(
-                                            child: Text(report),
+                                              backgroundColor: Colors.white.withAlpha(13),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(16),
+                                                side: BorderSide(
+                                                    color: Colors.white.withAlpha(26)),
+                                              ),
+                                              title: const Text('System Doctor', style: TextStyle(fontFamily: 'Outfit', color: Colors.white)),
+                                              content: ClipRRect(
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: BackdropFilter(
+                                                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                                  child: SingleChildScrollView(
+                                                    child: Text(report, style: const TextStyle(fontFamily: 'Inter', color: Colors.white70)),
+                                                  ),
+                                                ),
                                           ),
                                           actions: [
                                             TextButton(
                                               onPressed:
                                                   () => Navigator.pop(context),
-                                              child: const Text('Close'),
+                                                  child: const Text('Close', style: TextStyle(fontFamily: 'Outfit')),
                                             ),
                                           ],
                                         ),
