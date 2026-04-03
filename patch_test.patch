@@ -1,0 +1,32 @@
+--- srcs/server/agents/resilient_provider_test.go
++++ srcs/server/agents/resilient_provider_test.go
+@@ -3,6 +3,7 @@
+ import (
+	"context"
++	"database/sql"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/db"
++	_ "modernc.org/sqlite"
+ )
+
+ type mockPrimary struct {
+@@ -87,11 +89,14 @@
+
+ func TestResilientProvider_MockDBLocalFallback(t *testing.T) {
+	// Provide high-coverage unit tests utilizing the existing db.NewSqliteProvider(sqlDB) for local mocking.
+-	prov, err := db.NewSqliteProvider(":memory:")
++	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sqlite provider: %v", err)
+	}
++	defer sqlDB.Close()
++
++	prov := db.NewSqliteProvider(sqlDB)
+	defer prov.Close()
+
+	primary := &mockPrimary{fail: true, err: http.ErrServerClosed}
