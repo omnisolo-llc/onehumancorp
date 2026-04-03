@@ -14,6 +14,9 @@ import (
 )
 
 func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
+	// Clear the throttle semaphore to prevent test deadlocks in parallel test suites
+	ClearSemaphore()
+
 	// Setup SQLite in-memory db
 	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -96,6 +99,9 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 }
 
 func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
+	// Clear the throttle semaphore to prevent test deadlocks in parallel test suites
+	ClearSemaphore()
+
 	// Setup SQLite in-memory db
 	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -129,4 +135,85 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 
 	daemon.Stop()
 	// No panic implies successful shutdown via stop channel
+}
+
+func TestHybridMCPRAGDaemon_ProcessSync_DatabaseHandling(t *testing.T) {
+	// Clear the throttle semaphore to prevent test deadlocks
+	ClearSemaphore()
+
+	// 1. Setup SQLite in-memory db
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT,
+			payload TEXT,
+			synced_to_cloud BOOLEAN DEFAULT false
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create agent_missions table: %v", err)
+	}
+
+	// Insert over 100 items to test the LIMIT clause
+	for i := 0; i < 150; i++ {
+		_, err = sqlDB.Exec("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES (?, 'CLOUD_ESCALATION', '{\"task\":\"test-mission\"}', false)", "m"+string(rune(i)))
+		if err != nil {
+			t.Fatalf("failed to insert test data: %v", err)
+		}
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := db.NewWithProvider(sqliteProv)
+
+	// Mock cloud API
+	var receivedPayloads []SyncDaemonPayload
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/sync/missions" && r.Method == http.MethodPost {
+			var payloads []SyncDaemonPayload
+			if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			receivedPayloads = append(receivedPayloads, payloads...)
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	daemon := NewHybridMCPRAGDaemon(dbWrapper, 1*time.Minute, srv.URL)
+
+	// 2. Process sync manually for testing
+	daemon.ProcessSync(context.Background())
+
+	// 3. Verify exactly 100 items were synced (due to LIMIT 100)
+	if len(receivedPayloads) != 100 {
+		t.Fatalf("expected exactly 100 missions to be synced, got %d", len(receivedPayloads))
+	}
+
+	// Verify DB state updated correctly
+	var syncedCount int
+	err = sqlDB.QueryRow("SELECT COUNT(*) FROM agent_missions WHERE synced_to_cloud = true").Scan(&syncedCount)
+	if err != nil {
+		t.Fatalf("failed to count synced missions: %v", err)
+	}
+	if syncedCount != 100 {
+		t.Fatalf("expected 100 missions to be marked synced_to_cloud = true, got %d", syncedCount)
+	}
+
+	var unsyncedCount int
+	err = sqlDB.QueryRow("SELECT COUNT(*) FROM agent_missions WHERE synced_to_cloud = false").Scan(&unsyncedCount)
+	if err != nil {
+		t.Fatalf("failed to count unsynced missions: %v", err)
+	}
+	if unsyncedCount != 50 {
+		t.Fatalf("expected 50 missions to remain unsynced, got %d", unsyncedCount)
+	}
 }
