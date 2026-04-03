@@ -625,10 +625,10 @@ func TestOIDC_FetchJWKS_ClientError(t *testing.T) {
 	origLookup := LookupIPFunc
 	defer func() { LookupIPFunc = origLookup }()
 	LookupIPFunc = func(host string) ([]net.IP, error) {
-		return []net.IP{net.ParseIP("8.8.8.8")}, nil // some public IP
+		return []net.IP{net.ParseIP("127.0.0.1")}, nil // Point to localhost to fail faster instead of timing out to 8.8.8.8:1
 	}
 
-	_, err := fetchJWKS("http://example-that-does-not-exist-12345.com:1") // Port 1 usually refuses
+	_, err := fetchJWKS("http://example-that-does-not-exist-12345.com:0") // Port 0 refuses immediately
 	if err == nil || (!strings.Contains(err.Error(), "fetch OIDC discovery") && !strings.Contains(err.Error(), "fetch JWKS")) {
 		// Just want to hit the error branch
 	}
