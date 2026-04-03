@@ -151,9 +151,6 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 
 	// Ensure the base file is created with correct permissions if it's not in memory
 	if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
-		// Ping to ensure file is actually created
-		_ = sqlDB.Ping()
-
 		basePath := dbPath
 		if strings.HasPrefix(basePath, "file:") {
 			basePath = strings.TrimPrefix(basePath, "file:")
@@ -162,16 +159,36 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 			basePath = basePath[:idx]
 		}
 
+		// Touch the file with 0600 permissions before opening
+		if f, err := os.OpenFile(basePath, os.O_CREATE|os.O_RDWR, 0600); err == nil {
+			f.Close()
+			os.Chmod(basePath, 0600) // Ensure chmod if file already existed
+		}
+		// Pre-create wal and shm files so that SQLite respects 0600
+		if fwal, err := os.OpenFile(basePath+"-wal", os.O_CREATE|os.O_RDWR, 0600); err == nil {
+			fwal.Close()
+			os.Chmod(basePath+"-wal", 0600)
+		}
+		if fshm, err := os.OpenFile(basePath+"-shm", os.O_CREATE|os.O_RDWR, 0600); err == nil {
+			fshm.Close()
+			os.Chmod(basePath+"-shm", 0600)
+		}
+
+		// Ping to ensure file is actually created and loaded
+		_ = sqlDB.Ping()
+
+		// Also secure SQLite temporary files just in case
 		if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
 			os.Chmod(basePath, 0600)
 		}
-		// Also secure SQLite temporary files for WAL mode
 		if info, err := os.Stat(basePath + "-wal"); err == nil && !info.IsDir() {
 			os.Chmod(basePath+"-wal", 0600)
 		}
 		if info, err := os.Stat(basePath + "-shm"); err == nil && !info.IsDir() {
 			os.Chmod(basePath+"-shm", 0600)
 		}
+	} else {
+		_ = sqlDB.Ping()
 	}
 
 	provider := db.NewSqliteProvider(sqlDB)
