@@ -35,6 +35,7 @@ var (
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
+	SyncEscalationsCount metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -101,6 +102,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncEscalationsCount, err = m.Int64Counter(
+		"ohc.sync.escalations.count",
+		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -476,6 +485,14 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+}
+
+// RecordSyncEscalation increments the global counter for synced cloud escalations.
+func RecordSyncEscalation(ctx context.Context, count int64) {
+	if SyncEscalationsCount == nil {
+		return
+	}
+	SyncEscalationsCount.Add(ctx, count)
 }
 
 // RecordCacheMiss increments the global counter for LLM cache misses.
