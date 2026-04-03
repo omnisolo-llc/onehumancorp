@@ -211,13 +211,12 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	defer tx.Rollback(ctx)
 
 	// Update status to COMPLETED
-	res, err := tx.Exec(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'", taskID, agentID)
+	affected, err := tx.Exec(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'", taskID, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
-	affected, err := res.RowsAffected()
-	if err != nil || affected == 0 {
+	if affected == 0 {
 		return fmt.Errorf("task not found or not assigned to agent")
 	}
 

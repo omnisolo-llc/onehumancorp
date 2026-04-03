@@ -255,11 +255,10 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		return fmt.Errorf("task not found: %w", err)
 	}
 
-	res, err := tx.Exec(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", taskID)
+	rowsAffected, err := tx.Exec(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", taskID)
 	if err != nil {
 		return err
 	}
-	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("failed to complete task")
 	}
