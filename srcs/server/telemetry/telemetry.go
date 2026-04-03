@@ -30,6 +30,7 @@ var (
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
+	swarmTaskTransitionsCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
@@ -209,6 +210,14 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTasksCompletedCounter, err = m.Int64Counter(
 		"ohc_swarm_tasks_completed",
 		metric.WithDescription("Total swarm tasks completed"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	swarmTaskTransitionsCounter, err = m.Int64Counter(
+		"ohc_swarm_task_transitions_total",
+		metric.WithDescription("Total number of swarm task state transitions"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -546,6 +555,18 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
+}
+
+// RecordSwarmTaskTransition increments the counter for task state transitions.
+func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus string, newStatus string) {
+	if swarmTaskTransitionsCounter == nil {
+		return
+	}
+	swarmTaskTransitionsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("mission_id", missionID),
+		attribute.String("old_status", oldStatus),
+		attribute.String("new_status", newStatus),
+	))
 }
 
 // RecordCacheMiss increments the global counter for LLM cache misses.

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -230,6 +231,10 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read', 'write']", "'[\"read\", \"write\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read']", "'[\"read\"]'")
+
+			// Remove constraint drops for SQLite since it's unsupported
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+\w+;`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT\s+\w+\s+CHECK\s*\([^;]+;`).ReplaceAllString(sqlStr, "")
 		}
 
 		tx, err := p.Begin(ctx)
