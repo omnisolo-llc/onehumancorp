@@ -1,0 +1,7 @@
+agent: Oracle
+status: HEALTHY
+uptime: 100
+metrics:
+  tasks_completed: 1
+  reports_generated: 1
+  missions_dispatched: 1
