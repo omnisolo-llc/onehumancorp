@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // SwarmSynchronizer synchronizes local RAG state to the cloud.
@@ -106,6 +107,5 @@ func (s *SwarmSynchronizer) ProcessSyncTick(ctx context.Context) {
 
 // sanitizeContext is a basic implementation of sanitization.
 func sanitizeContext(input string) string {
-	// Basic implementation - replace this with actual sanitization logic
-	return fmt.Sprintf("[SANITIZED] %s", input)
+	return telemetry.RedactPII(input)
 }
