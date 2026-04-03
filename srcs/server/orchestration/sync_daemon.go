@@ -47,7 +47,7 @@ func NewHybridMCPRAGDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAP
 func (d *HybridMCPRAGDaemon) Start(ctx context.Context) {
 	if !d.dbWrapper.IsSQLite() {
 		// Only run in standalone/SQLite mode
-		slog.Info("sync_daemon: HybridMCPRAGDaemon disabled (not in standalone SQLite mode)")
+		slog.Debug("sync_daemon: HybridMCPRAGDaemon disabled (not in standalone SQLite mode)")
 		return
 	}
 
@@ -167,7 +167,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		}
 	}
 
-	slog.Info("sync_daemon: successfully synced agent_missions", "count", len(payloads))
+	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 }
 
 func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDaemonPayload) error {
