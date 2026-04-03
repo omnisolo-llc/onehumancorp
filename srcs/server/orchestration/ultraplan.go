@@ -145,14 +145,13 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		SET status = $1, state_machine = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $3
 	`
-	res, err := tx.Exec(ctx, updateQuery, newStatus, stateMachineJSON, planID)
+	rowsAffected, err := tx.Exec(ctx, updateQuery, newStatus, stateMachineJSON, planID)
 	if err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
 
-	rowsAffected, err := res.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		return fmt.Errorf("update status no rows affected: %w", err)
+	if rowsAffected == 0 {
+		return fmt.Errorf("update status no rows affected")
 	}
 
 	if err := tx.Commit(ctx); err != nil {

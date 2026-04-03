@@ -415,22 +415,17 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	var claimedTasks []*SharedTask
 
 	for _, task := range tasks {
-		res, err := tx.Exec(ctx, `
-			UPDATE swarm_tasks
-			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id = $2 AND status = 'PENDING'
-		`, agentID, task.ID)
+			rowsAffected, err := tx.Exec(ctx, `
+				UPDATE swarm_tasks
+				SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $2 AND status = 'PENDING'
+			`, agentID, task.ID)
 
-		if err != nil {
-			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
-		}
+			if err != nil {
+				return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
+			}
 
-		rowsAffected, err := res.RowsAffected()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get rows affected for task %s: %w", task.ID, err)
-		}
-
-		if rowsAffected > 0 {
+			if rowsAffected > 0 {
 			task.Status = "IN_PROGRESS"
 			task.AssignedAgentID = agentID
 			claimedTasks = append(claimedTasks, task)
