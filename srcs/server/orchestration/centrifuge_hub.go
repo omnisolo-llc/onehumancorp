@@ -181,8 +181,8 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 
 	// Ensure we map payload correctly to the required UI keys:
 	// 'agent_id', 'action', 'status', and 'task_id'
+	// It is crucial they are at the root level, not nested.
 	msg := map[string]interface{}{
-		"type":    "TASK_BROADCAST",
 		"task_id": taskID,
 	}
 

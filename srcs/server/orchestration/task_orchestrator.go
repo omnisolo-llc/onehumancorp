@@ -24,14 +24,16 @@ type DefaultTaskOrchestrator struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode
+	mesh        TeammateMesh
 	mu          sync.Mutex // For standalone mode coordination
 }
 
-func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode) TaskOrchestrator {
+func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	return &DefaultTaskOrchestrator{
 		db:          provider,
 		redisClient: redisClient,
 		hub:         hub,
+		mesh:        mesh,
 	}
 }
 
@@ -99,7 +101,14 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 	}
 
 	// Broadcast
-	if to.hub != nil {
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: "",
+			Action:  "CREATE",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 			"action":     "CREATE",
 			"mission_id": task.MissionID,
@@ -187,7 +196,14 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	}
 
 	// Broadcast
-	if to.hub != nil {
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "CLAIM",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 			"action":   "CLAIM",
 			"agent_id": agentID,
@@ -274,7 +290,22 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	_ = to.db.QueryRow(ctx, "SELECT payload FROM swarm_tasks WHERE id = $1", taskID).Scan(&taskPayload)
 
 	// Broadcast
-	if to.hub != nil {
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "COMPLETE",
+			Status:  "COMPLETED",
+			TaskID:  taskID,
+		})
+		for _, rid := range newReadyTasks {
+			_ = to.mesh.BroadcastTask(ctx, Task{
+				AgentID: "",
+				Action:  "READY",
+				Status:  "READY",
+				TaskID:  rid,
+			})
+		}
+	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
 			"action":   "COMPLETE",
 			"agent_id": agentID,

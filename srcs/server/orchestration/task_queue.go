@@ -32,6 +32,7 @@ type DefaultTaskOrchestrator struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode
+	mesh        TeammateMesh
 	autoDream   *AutoDreamWorker
 	minimax     MinimaxClient
 
@@ -40,11 +41,12 @@ type DefaultTaskOrchestrator struct {
 	locks map[string]time.Time
 }
 
-func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, autoDream *AutoDreamWorker, minimax MinimaxClient) *DefaultTaskOrchestrator {
+func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh, autoDream *AutoDreamWorker, minimax MinimaxClient) *DefaultTaskOrchestrator {
 	return &DefaultTaskOrchestrator{
 		db:          provider,
 		redisClient: redisClient,
 		hub:         hub,
+		mesh:        mesh,
 		autoDream:   autoDream,
 		minimax:     minimax,
 		locks:       make(map[string]time.Time),
@@ -106,7 +108,14 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *Shared
 	}
 
 	// Broadcast
-	if to.hub != nil {
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: "",
+			Action:  "CREATE",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 			"action":      "CREATE",
 			"mission_id":  task.MissionID,
@@ -222,7 +231,14 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	task.AssignedAgentID = agentID
 
 	// Broadcast
-	if to.hub != nil {
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "CLAIM",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 			"action":   "CLAIM",
 			"agent_id": agentID,
@@ -269,7 +285,14 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	}
 
 	// Broadcast
-	if to.hub != nil {
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: "",
+			Action:  "COMPLETE",
+			Status:  "COMPLETED",
+			TaskID:  taskID,
+		})
+	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
 			"action": "COMPLETE",
 			"status": "COMPLETED",
