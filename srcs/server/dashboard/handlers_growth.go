@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// LandingPageExperiment defines a growth experiment.
+// LandingPageExperiment defines a growth experiment for the OHC platform.
 type LandingPageExperiment struct {
 	ID           string    `json:"id"`
 	Title        string    `json:"title"`
