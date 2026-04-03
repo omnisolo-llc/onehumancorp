@@ -254,6 +254,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	task.Status = "IN_PROGRESS"
+			telemetry.RecordSwarmTaskTransition(ctx, task.MissionID, "PENDING", "IN_PROGRESS")
+	telemetry.RecordSwarmTaskTransition(ctx, task.MissionID, "PENDING", "IN_PROGRESS")
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
@@ -270,12 +272,48 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	return &task, nil
 }
 
+// ReviewTask marks a task for review.
+func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
+	query := `
+		UPDATE swarm_tasks
+		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
+	`
+	res, err := tm.db.Exec(ctx, query, taskID, agentID)
+	if err != nil {
+		return fmt.Errorf("failed to move task to review: %w", err)
+	}
+
+	if res == 0 {
+		return errors.New("task not found, not assigned to agent, or not in progress")
+	}
+
+	var missionID string
+	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+	if err == nil {
+		telemetry.RecordSwarmTaskTransition(ctx, missionID, "IN_PROGRESS", "REVIEW")
+	}
+
+	// Broadcast task review
+	if tm.hub != nil {
+		go func() {
+			tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+				"action":   "REVIEW",
+				"agent_id": agentID,
+				"status":   "REVIEW",
+			})
+		}()
+	}
+
+	return nil
+}
+
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	query := `
 		UPDATE swarm_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
+		WHERE id = $1 AND assigned_agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
 	res, err := tm.db.Exec(ctx, query, taskID, agentID)
 	if err != nil {
@@ -304,6 +342,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
 	if err == nil {
 		telemetry.RecordSwarmTaskCompleted(ctx, missionID)
+		telemetry.RecordSwarmTaskTransition(ctx, missionID, "IN_PROGRESS_OR_REVIEW", "COMPLETED")
 	}
 
 	return nil
