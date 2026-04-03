@@ -2,6 +2,7 @@ package agents
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -88,10 +89,13 @@ func TestResilientProvider_Fallback(t *testing.T) {
 
 func TestResilientProvider_MockDBLocalFallback(t *testing.T) {
 	// Provide high-coverage unit tests utilizing the existing db.NewSqliteProvider(sqlDB) for local mocking.
-	prov, err := db.NewSqliteProvider(":memory:")
+	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to create sqlite provider: %v", err)
 	}
+	defer sqlDB.Close()
+
+	prov := db.NewSqliteProvider(sqlDB)
 	defer prov.Close()
 
 	primary := &mockPrimary{fail: true, err: http.ErrServerClosed}

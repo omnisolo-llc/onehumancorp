@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 var fallbackClient = &http.Client{
@@ -139,7 +140,7 @@ func isNetworkError(err error) bool {
 	if errors.Is(err, net.ErrClosed) {
 		return true
 	}
-	if err.Error() == "http: server closed" || err.Error() == "local LLM error (status 503)" {
+	if err.Error() == "http: Server closed" || err.Error() == "local LLM error (status 503)" || err == http.ErrServerClosed {
 		return true
 	}
 	return false

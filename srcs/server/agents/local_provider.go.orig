@@ -11,7 +11,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
+
+var fallbackClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
 
 // LocalLLMProvider implements orchestration.MinimaxClient but uses a local endpoint.
 type LocalLLMProvider struct {
@@ -53,7 +58,7 @@ func (l *LocalLLMProvider) Reason(ctx context.Context, prompt string) (string, e
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := fallbackClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -86,7 +91,7 @@ func (l *LocalLLMProvider) GenerateEmbedding(ctx context.Context, text string) (
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := fallbackClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
