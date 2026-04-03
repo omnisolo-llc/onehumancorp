@@ -317,7 +317,7 @@
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "JkH1eDZCQD5f/N2wbACZXFt269f5zRFtw1vsk/vr8SQ=",
-        "usagesDigest": "t+AIZH0eK3b+vKJTmVXNbqo6TuOsT16jUsv7Lz+p/IQ=",
+        "usagesDigest": "h+0l0x2kQbAnlu/AohskS2jeBlBa/PidtNQ/Mbb7fuo=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
@@ -1278,7 +1278,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "b0IHv/aoAxXczkfS8p6YFOG+5YkG1JtZo2L4X/nULKk=",
+        "usagesDigest": "7ZGK1GE02/YgvVj92ym1dNbqSU3D/HUDemroI5mLdW4=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {

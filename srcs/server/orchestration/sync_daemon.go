@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -76,7 +77,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 100")
+	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
 		return
@@ -93,7 +94,14 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 			continue
 		}
 
-		// Sanitize payload data for PI
+		// Sanitize payload data
+		sanitizedPayload, err := SanitizePayload(payloadData)
+		if err != nil {
+			slog.Error("sync_daemon: failed to sanitize payload", "error", err)
+			continue
+		}
+
+		// Sanitize payload data for PII as well
 		var sanitizeRecursively func(data interface{}) interface{}
 		sanitizeRecursively = func(data interface{}) interface{} {
 			switch v := data.(type) {
@@ -115,19 +123,19 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		}
 
 		var parsedPayload map[string]interface{}
-		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
+		if err := json.Unmarshal([]byte(sanitizedPayload), &parsedPayload); err == nil {
 			parsedIface := sanitizeRecursively(parsedPayload)
 			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
-				payloadData = string(redactedBytes)
+				sanitizedPayload = string(redactedBytes)
 			}
 		} else {
-			payloadData = telemetry.RedactPII(payloadData)
+			sanitizedPayload = telemetry.RedactPII(sanitizedPayload)
 		}
 
 		payloads = append(payloads, SyncDaemonPayload{
 			ID:      id,
 			Status:  status,
-			Payload: payloadData,
+			Payload: sanitizedPayload,
 		})
 		ids = append(ids, id)
 	}
@@ -141,23 +149,107 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	// Mark as synced
+	// Mark as synced and record metrics
 	if len(ids) > 0 {
-		idList := ""
+		placeholders := ""
+		args := make([]interface{}, len(ids))
 		for i, id := range ids {
 			if i > 0 {
-				idList += ","
+				placeholders += ","
 			}
-			idList += fmt.Sprintf("'%s'", id)
+			placeholders += fmt.Sprintf("$%d", i+1)
+			args[i] = id
 		}
-		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
-		_, err := d.dbWrapper.Exec(ctx, query)
+		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true, status = 'PENDING_CLOUD' WHERE id IN (%s)", placeholders)
+		_, err := d.dbWrapper.Exec(ctx, query, args...)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+		}
+
+		if telemetry.SyncEscalationsCount != nil {
+			telemetry.SyncEscalationsCount.Add(ctx, int64(len(ids)))
 		}
 	}
 
 	slog.Info("sync_daemon: successfully synced agent_missions", "count", len(payloads))
+
+	d.pollCloudResults(ctx)
+}
+
+func (d *HybridMCPRAGDaemon) pollCloudResults(ctx context.Context) {
+	// Query local DB for missions that are waiting for cloud completion
+	rows, err := d.dbWrapper.Query(ctx, "SELECT id FROM agent_missions WHERE status = 'PENDING_CLOUD' LIMIT 100")
+	if err != nil {
+		slog.Error("sync_daemon: failed to query local agent_missions for polling", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	var pendingIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			pendingIDs = append(pendingIDs, id)
+		}
+	}
+
+	if len(pendingIDs) == 0 {
+		return
+	}
+
+	// Poll the cloud for completion concurrently
+	var wg sync.WaitGroup
+	for _, id := range pendingIDs {
+		wg.Add(1)
+		go func(missionID string) {
+			defer wg.Done()
+			d.fetchResultFromCloud(ctx, missionID)
+		}(id)
+	}
+	wg.Wait()
+}
+
+func (d *HybridMCPRAGDaemon) fetchResultFromCloud(ctx context.Context, missionID string) {
+	fetchEndpoint := fmt.Sprintf("%s/api/sync/missions/%s", d.cloudAPIURL, missionID)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fetchEndpoint, nil)
+	if err != nil {
+		slog.Error("sync_daemon: failed to create fetch request", "error", err)
+		return
+	}
+
+	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
+		req.Header.Set("Authorization", "Bearer "+spiffeToken)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		slog.Error("sync_daemon: failed to fetch result from cloud", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// Cloud might not be done yet, skip
+		return
+	}
+
+	var result SyncDaemonPayload
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		slog.Error("sync_daemon: failed to decode cloud result", "error", err)
+		return
+	}
+
+	if result.Status == "DONE" {
+		query := "UPDATE agent_missions SET status = 'DONE', payload = $1 WHERE id = $2"
+		_, err := d.dbWrapper.Exec(ctx, query, result.Payload, result.ID)
+		if err != nil {
+			slog.Error("sync_daemon: failed to update local agent_missions with cloud result", "error", err)
+		} else {
+			slog.Info("sync_daemon: successfully pulled completed mission from cloud", "id", result.ID)
+		}
+	}
 }
 
 func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDaemonPayload) error {
