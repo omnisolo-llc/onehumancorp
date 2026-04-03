@@ -517,3 +517,69 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, map[string]string{"status": "success", "message": "context synced"})
 }
+
+// handleSyncMissions handles receiving synced agent_missions payloads from the offline Standalone mode daemon and inserting them into the Cloud Postgres instance.
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleSyncMissions")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // Allow up to 5MB for sync payload
+
+	var payloads []map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if s.hub.SIPDB() == nil {
+		http.Error(w, "internal server error: sipdb not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	successCount := 0
+	for _, payload := range payloads {
+		idVal, ok := payload["id"]
+		var missionID string
+		if ok {
+			missionID = fmt.Sprintf("%v", idVal)
+		} else {
+			// Skip if no ID is present
+			continue
+		}
+
+		statusVal, ok := payload["status"]
+		var status string
+		if ok {
+			status = fmt.Sprintf("%v", statusVal)
+		} else {
+			status = "PENDING"
+		}
+
+		// Re-marshal to string to store
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			slog.Error("failed to re-marshal sync mission payload", "error", err)
+			continue
+		}
+
+		// Use the existing UpsertMission method in SIPDB which handles upserting into Postgres `agent_missions`
+		err = s.hub.SIPDB().UpsertMission(ctx, missionID, status, string(payloadBytes), false)
+		if err != nil {
+			slog.Error("failed to upsert synced mission", "error", err)
+			continue
+		}
+
+		successCount++
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"status": "success",
+		"message": fmt.Sprintf("synced %d missions", successCount),
+		"count": successCount,
+	})
+}
