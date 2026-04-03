@@ -1,0 +1,7 @@
+agent: Oracle
+role: Principal Product Researcher & KAIROS Orchestrator
+status: HEALTHY
+last_heartbeat: 2026-04-03T18-42-59Z
+metrics:
+  missions_created: 1
+  reports_generated: 1
