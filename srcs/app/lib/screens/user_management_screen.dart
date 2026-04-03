@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui';
 import 'package:ohc_app/models/user.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -88,7 +89,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         icon: const Icon(Icons.person_add),
         label: const Text('Invite User'),
       ),
-      body: FutureBuilder<List<UserPublic>>(
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(24.0),
+            child: GrowthReferralWidget(),
+          ),
+          Expanded(
+            child: FutureBuilder<List<UserPublic>>(
         future: _usersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -178,10 +186,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           );
         },
       ),
+          ),
+        ],
+      ),
     );
   }
 
   void _showAddUserDialog() {
+    final usernameController = TextEditingController();
+
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.2), // Semi-transparent barrier for glass effect
@@ -191,12 +204,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: const ColorFilter.matrix([
-              1, 0, 0, 0, 0,
-              0, 1, 0, 0, 0,
-              0, 0, 1, 0, 0,
-              0, 0, 0, 1, 0, // Using backdrop filter for glassmorphism
-            ]),
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
@@ -230,8 +238,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const TextField(
-                    decoration: InputDecoration(
+                  TextField(
+                    controller: usernameController,
+                    decoration: const InputDecoration(
                       labelText: 'Username',
                       border: OutlineInputBorder(),
                     ),
@@ -253,20 +262,37 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        onPressed: () {
-                          final snackBar = SnackBar(
-                            content: Text(
-                                'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                  fontFamily: 'Inter',
+                        onPressed: () async {
+                          try {
+                            await ref.read(apiServiceProvider)!.createReferral(
+                              usernameController.text.isNotEmpty ? usernameController.text : "anonymous",
+                              "xYz8vQ_local_sovereign",
+                            );
+                            if (context.mounted) {
+                              final snackBar = SnackBar(
+                                content: Text(
+                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontFamily: 'Inter',
+                                    ),
                                 ),
-                            ),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                          Navigator.pop(context);
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
                         },
                         child: const Text('Generate Secure Invite'),
                       ),
@@ -275,6 +301,67 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    ).then((_) {
+      usernameController.dispose();
+    });
+  }
+}
+
+class GrowthReferralWidget extends StatelessWidget {
+  const GrowthReferralWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.1),
+            border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.group_add,
+                size: 48,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Grow Your Swarm. Maintain Sovereignty.',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

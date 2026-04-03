@@ -456,6 +456,21 @@ class ApiService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
+  Future<void> createReferral(String userId, String referralCode) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/growth/referrals'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'userId': userId,
+        'referralCode': referralCode,
+      }),
+    );
+    _checkStatus(response);
+  }
+
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('API error ${res.statusCode}: ${res.body}');
