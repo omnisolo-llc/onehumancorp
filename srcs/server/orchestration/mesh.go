@@ -250,9 +250,12 @@ type LocalTeammateMesh struct {
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 	lm := &LocalTeammateMesh{
 		db:        provider,
-		broadcast: make(chan Task, 100),
+		broadcast: make(chan Task, 10000), // Increased buffer for parallel execution
 	}
-	go lm.run()
+	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
+	for i := 0; i < 10; i++ {
+		go lm.run()
+	}
 	return lm
 }
 
