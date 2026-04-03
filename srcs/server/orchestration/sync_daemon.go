@@ -97,13 +97,12 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 			continue
 		}
 
-		// Sanitize payload data for PI and private markers
+		// Sanitize payload data for PI
 		var sanitizeRecursively func(data interface{}) interface{}
 		sanitizeRecursively = func(data interface{}) interface{} {
 			switch v := data.(type) {
 			case string:
-				sanitized, _ := SanitizePayload(v)
-				return sanitized
+				return telemetry.RedactPII(v)
 			case map[string]interface{}:
 				for key, val := range v {
 					v[key] = sanitizeRecursively(val)
@@ -126,7 +125,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 				payloadData = string(redactedBytes)
 			}
 		} else {
-			payloadData, _ = SanitizePayload(payloadData)
+			payloadData = telemetry.RedactPII(payloadData)
 		}
 
 		payloads = append(payloads, SyncDaemonPayload{
