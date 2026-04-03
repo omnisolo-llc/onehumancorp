@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
@@ -119,6 +120,8 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 			slog.Error("AutoDream: failed to insert memory", "file", file.Name(), "error", err)
 			continue
 		}
+
+		telemetry.RecordAutoDreamMemoryIngested(ctx, "system")
 
 		// Archive or delete processed file
 		err = os.Remove(filePath)
