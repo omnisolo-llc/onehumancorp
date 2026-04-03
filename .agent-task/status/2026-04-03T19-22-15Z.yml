@@ -1,0 +1,5 @@
+status: OK
+agent: jules
+metrics:
+  health: green
+  active_tasks: 1
