@@ -14,6 +14,7 @@ import (
 )
 
 func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
+	defer ClearSemaphore()
 	// Setup SQLite in-memory db
 	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -45,7 +46,7 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	}
 
 	sqliteProv := db.NewSqliteProvider(sqlDB)
-	dbWrapper := db.NewWithProvider(sqliteProv)
+	dbWrapper := &db.DB{Provider: sqliteProv}
 
 	// Mock cloud API
 	var receivedPayloads []SyncDaemonPayload
@@ -96,6 +97,7 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 }
 
 func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
+	defer ClearSemaphore()
 	// Setup SQLite in-memory db
 	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -116,7 +118,7 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 	}
 
 	sqliteProv := db.NewSqliteProvider(sqlDB)
-	dbWrapper := db.NewWithProvider(sqliteProv)
+	dbWrapper := &db.DB{Provider: sqliteProv}
 
 	daemon := NewHybridMCPRAGDaemon(dbWrapper, 10*time.Millisecond, "http://dummy")
 
