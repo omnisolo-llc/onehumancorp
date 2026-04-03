@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -434,7 +435,22 @@ func run(now time.Time, listen listenFunc) error {
 	} else {
 		handler = newDemoHandler(now, hub, tracker, authStore)
 		slog.Info("using single-tenant dashboard server", "headless", headless)
+
+		// Start the Offline-to-Cloud sync daemon if we have a local SIPDB
+		if sipdb != nil {
+			syncDaemon := orchestration.NewSyncDaemon(sipdb)
+			syncDaemon.Start()
+			// Ensure we stop it eventually
+			defer syncDaemon.Stop()
+			slog.Info("started offline-to-cloud sync daemon")
+		}
 	}
+
+	// Add global API multiplexer
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+	api.RegisterRoutes(mux, pool, authStore)
+	handler = mux
 
 	// 4. Start Scheduler Background Task
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {

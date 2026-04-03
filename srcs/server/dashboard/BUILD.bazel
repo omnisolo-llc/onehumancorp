@@ -6,6 +6,7 @@ go_library(
         "handlers_agent.go",
         "handlers_b2b.go",
         "handlers_chat.go",
+        "handlers_growth.go",
         "handlers_integration.go",
         "handlers_mcp.go",
         "handlers_ops.go",
@@ -37,6 +38,7 @@ go_test(
     name = "dashboard_test",
     srcs = [
         "handlers_b2b_extra_test.go",
+        "handlers_growth_test.go",
         "handlers_mcp_test.go",
         "handlers_ops_extra_test.go",
         "handlers_ops_test.go",
@@ -44,6 +46,7 @@ go_test(
         "handlers_wizard_test.go",
         "server_missing_test.go",
         "server_rate_limit_test.go",
+        "server_sync_rules_test.go",
         "server_test.go",
         "tenant_test.go",
     ],

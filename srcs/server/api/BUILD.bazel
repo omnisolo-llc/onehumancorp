@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "api",
+    srcs = ["server.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/api",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "api_test",
+    srcs = ["server_test.go"],
+    deps = [
+        ":api",
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
