@@ -11,9 +11,15 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-backend
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: backend
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
+        minAllowed:
+          cpu: {{ .Values.backend.resources.requests.cpu }}
+          memory: {{ .Values.backend.resources.requests.memory }}
+        maxAllowed:
+          cpu: {{ .Values.backend.resources.limits.cpu }}
+          memory: {{ .Values.backend.resources.limits.memory }}
 {{- end }}
