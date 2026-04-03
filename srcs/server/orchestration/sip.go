@@ -497,7 +497,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 
 	if s.ContextRoot != "" {
 		s.groundingOnce.Do(func() {
-			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
+			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
 				path := filepath.Join(s.ContextRoot, filename)
 
 				// Stat the file first to distinguish between missing vs permissions/errors
