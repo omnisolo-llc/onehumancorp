@@ -544,6 +544,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", server.handleHybridSyncMissions)
 	mux.HandleFunc("/api/context/sync", server.handleContextSync)
+	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
 	mux.HandleFunc("/api/clusters/", server.handleClusterStatus)
@@ -598,6 +599,34 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
 	return telemetry.Middleware(auth.Middleware(store)(mux))
+}
+
+func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
+		TaskID  string `json:"task_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if s.hub.CentrifugeNode() != nil {
+		s.hub.CentrifugeNode().PublishTaskBroadcast(req.TaskID, map[string]interface{}{
+			"agent_id": req.AgentID,
+			"action":   req.Action,
+			"status":   req.Status,
+		})
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching

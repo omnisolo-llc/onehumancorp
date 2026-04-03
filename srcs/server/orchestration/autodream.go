@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -39,6 +40,106 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	// For simplicity, we just use a distributed worker queue pattern with a database table or Redis.
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
+	go w.runYamlMemoryConsolidationPipeline(ctx)
+}
+
+func (w *AutoDreamWorker) runYamlMemoryConsolidationPipeline(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.consolidateYamlMemories(ctx)
+		}
+	}
+}
+
+func (w *AutoDreamWorker) consolidateYamlMemories(ctx context.Context) {
+	memoryDir := ".agent-task/memory"
+	files, err := os.ReadDir(memoryDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			slog.Error("AutoDream: failed to read memory directory", "error", err)
+		}
+		return
+	}
+
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	var client MinimaxClient
+	if minimaxKey != "" {
+		client = NewMinimaxClient(minimaxKey)
+	} else {
+		slog.Warn("AutoDream: MINIMAX_API_KEY not set, skipping embedding generation")
+		return
+	}
+
+	for _, file := range files {
+		if file.IsDir() || filepath.Ext(file.Name()) != ".yml" {
+			continue
+		}
+
+		filePath := filepath.Join(memoryDir, file.Name())
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			slog.Error("AutoDream: failed to read memory file", "file", filePath, "error", err)
+			continue
+		}
+
+		// Parse organization ID from context or default
+		// In a real implementation, we would extract org_id from the yaml or context.
+		// For now, default to "sys"
+		orgID := "sys"
+
+		// Generate embedding
+		embeddingCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		embedding, err := client.GenerateEmbedding(embeddingCtx, string(content))
+		cancel()
+
+		if err != nil {
+			slog.Error("AutoDream: failed to generate embedding for memory", "file", filePath, "error", err)
+			continue
+		}
+
+		embeddingBytes, _ := json.Marshal(embedding)
+		embeddingStr := string(embeddingBytes)
+
+		// Store in agent_memories
+		var query string
+		if w.pool.IsSQLite() {
+			query = `
+				INSERT INTO agent_memories (id, organization_id, content, embedding, created_at)
+				VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+			`
+		} else {
+			query = `
+				INSERT INTO agent_memories (id, organization_id, content, embedding, created_at)
+				VALUES (gen_random_uuid(), $1, $2, $3::vector, NOW())
+			`
+		}
+
+		var execArgs []interface{}
+		if w.pool.IsSQLite() {
+			execArgs = []interface{}{fmt.Sprintf("%d", time.Now().UnixNano()), orgID, string(content), embeddingStr}
+		} else {
+			execArgs = []interface{}{orgID, string(content), embeddingStr}
+		}
+
+		_, err = w.pool.Exec(ctx, query, execArgs...)
+		if err != nil {
+			slog.Error("AutoDream: failed to store memory in db", "file", filePath, "error", err)
+			continue
+		}
+
+		// Delete the processed file
+		if err := os.Remove(filePath); err != nil {
+			slog.Error("AutoDream: failed to delete processed memory file", "file", filePath, "error", err)
+		} else {
+			slog.Info("AutoDream: consolidated memory file", "file", filePath)
+		}
+	}
 }
 
 // runPruningPipeline periodically prunes stale agent session data.

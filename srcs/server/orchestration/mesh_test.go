@@ -175,4 +175,25 @@ func TestLocalTeammateMesh(t *testing.T) {
 	if count != 1 {
 		t.Errorf("expected 1 record in shared_tasks, got %d", count)
 	}
+
+	// Test Coordination Broadcast
+	coordSub, err := mesh.SubscribeCoordination(ctx)
+	if err != nil {
+		t.Fatalf("failed to subscribe coordination: %v", err)
+	}
+
+	payload := []byte(`{"event":"hello"}`)
+	err = mesh.BroadcastCoordination(ctx, payload)
+	if err != nil {
+		t.Fatalf("failed to broadcast coordination: %v", err)
+	}
+
+	select {
+	case received := <-coordSub:
+		if string(received) != string(payload) {
+			t.Errorf("expected coordination payload %s, got %s", string(payload), string(received))
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for coordination broadcast")
+	}
 }

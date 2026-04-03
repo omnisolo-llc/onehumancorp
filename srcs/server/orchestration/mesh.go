@@ -193,6 +193,8 @@ type Task struct {
 type TeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
+	BroadcastCoordination(ctx context.Context, payload []byte) error
+	SubscribeCoordination(ctx context.Context) (<-chan []byte, error)
 }
 
 type RedisTeammateMesh struct {
@@ -223,8 +225,6 @@ func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
 	ch := make(chan Task)
 
-	// Implementation to consume from rueidis
-	// For rueidis, we typically use DedicatedClient for PubSub
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:tasks").Build(), func(msg rueidis.PubSubMessage) {
 			var t Task
@@ -232,8 +232,28 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 				ch <- t
 			}
 		})
-		if err != nil {
+		if err != nil && err != context.Canceled {
 			slog.Error("RedisTeammateMesh.SubscribeTasks error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, payload []byte) error {
+	cmd := rm.client.B().Publish().Channel("mesh:coordination").Message(string(payload)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan []byte, error) {
+	ch := make(chan []byte)
+
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
+			ch <- []byte(msg.Message)
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisTeammateMesh.SubscribeCoordination error", "err", err)
 		}
 		close(ch)
 	}()
@@ -243,32 +263,48 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 type LocalTeammateMesh struct {
 	db        db.Provider
 	broadcast chan Task
+	coordBroadcast chan []byte
 	mu        sync.RWMutex
 	subs      []chan Task
+	coordSubs []chan []byte
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 	lm := &LocalTeammateMesh{
-		db:        provider,
-		broadcast: make(chan Task, 10000), // Increased buffer for parallel execution
+		db:             provider,
+		broadcast:      make(chan Task, 10000), // Increased buffer for parallel execution
+		coordBroadcast: make(chan []byte, 10000),
 	}
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
 	for i := 0; i < 10; i++ {
 		go lm.run()
+		go lm.runCoord()
 	}
 	return lm
 }
 
 func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
 	// Persist to shared_tasks
-	query := `
-		INSERT INTO shared_tasks (id, title, status, assigned_agent_id)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT(id) DO UPDATE SET
-			status = excluded.status,
-			assigned_agent_id = excluded.assigned_agent_id,
-			updated_at = CURRENT_TIMESTAMP
-	`
+	var query string
+	if lm.db.IsSQLite() {
+		query = `
+			INSERT INTO shared_tasks (id, title, status, assigned_agent_id)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT(id) DO UPDATE SET
+				status = excluded.status,
+				assigned_agent_id = excluded.assigned_agent_id,
+				updated_at = CURRENT_TIMESTAMP
+		`
+	} else {
+		query = `
+			INSERT INTO shared_tasks (id, title, status, assigned_agent_id)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT(id) DO UPDATE SET
+				status = excluded.status,
+				assigned_agent_id = excluded.assigned_agent_id,
+				updated_at = NOW()
+		`
+	}
 	// Fallback to simpler upsert if needed, but since it's SQLite, ON CONFLICT works.
 	_, err := lm.db.Exec(ctx, query, task.TaskID, task.Action, task.Status, task.AgentID)
 	if err != nil {
@@ -306,10 +342,53 @@ func (lm *LocalTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	return ch, nil
 }
 
+func (lm *LocalTeammateMesh) BroadcastCoordination(ctx context.Context, payload []byte) error {
+	select {
+	case lm.coordBroadcast <- payload:
+	default:
+	}
+	return nil
+}
+
+func (lm *LocalTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan []byte, error) {
+	ch := make(chan []byte, 100)
+	lm.mu.Lock()
+	lm.coordSubs = append(lm.coordSubs, ch)
+	lm.mu.Unlock()
+
+	go func() {
+		<-ctx.Done()
+		lm.mu.Lock()
+		for i, sub := range lm.coordSubs {
+			if sub == ch {
+				lm.coordSubs = append(lm.coordSubs[:i], lm.coordSubs[i+1:]...)
+				close(ch)
+				break
+			}
+		}
+		lm.mu.Unlock()
+	}()
+
+	return ch, nil
+}
+
 func (lm *LocalTeammateMesh) run() {
 	for msg := range lm.broadcast {
 		lm.mu.RLock()
 		for _, ch := range lm.subs {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		lm.mu.RUnlock()
+	}
+}
+
+func (lm *LocalTeammateMesh) runCoord() {
+	for msg := range lm.coordBroadcast {
+		lm.mu.RLock()
+		for _, ch := range lm.coordSubs {
 			select {
 			case ch <- msg:
 			default:

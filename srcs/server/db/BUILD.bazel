@@ -23,6 +23,7 @@ go_library(
         "migrations/009_llm_reason_cache.sql",
         "migrations/010_ultraplan.sql",
         "migrations/011_autodream_sync.sql",
+        "migrations/013_orchestration.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
