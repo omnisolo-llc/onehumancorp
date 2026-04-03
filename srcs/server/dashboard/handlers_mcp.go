@@ -517,3 +517,63 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, map[string]string{"status": "success", "message": "context synced"})
 }
+
+// handleHybridSyncMissions handles receiving synced local missions from HybridMCPRAGDaemon.
+func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleHybridSyncMissions")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5MB limit
+
+	var payloads []struct {
+		ID      string `json:"id"`
+		Status  string `json:"status"`
+		Payload string `json:"payload"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid JSON payload array", http.StatusBadRequest)
+		return
+	}
+
+	if len(payloads) == 0 {
+		writeJSON(w, map[string]string{"status": "success", "message": "no missions to sync"})
+		return
+	}
+
+	syncedCount := 0
+	for _, p := range payloads {
+		if p.ID == "" {
+			continue // Skip invalid items
+		}
+
+		status := p.Status
+		if status == "" {
+			status = "PENDING"
+		}
+
+		forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+		// Use the UpsertMission method to store in Postgres
+		if s.hub.SIPDB() != nil {
+			err := s.hub.SIPDB().UpsertMission(ctx, p.ID, status, p.Payload, forceLocal)
+			if err != nil {
+				slog.Error("failed to upsert mission from sync daemon", "id", p.ID, "error", err)
+				// continue syncing the rest
+			} else {
+				syncedCount++
+			}
+		}
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"status":       "success",
+		"message":      "missions synced successfully",
+		"synced_count": syncedCount,
+	})
+}
