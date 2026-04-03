@@ -189,24 +189,9 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	}
 	_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 
-	// Try acquiring lock
-	if to.redisClient != nil {
-		lockKey := "lock:task:" + task.ID
-		cmd := to.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Px(time.Minute).Build()
-		err = to.redisClient.Do(ctx, cmd).Error()
-		if err != nil {
-			if rueidis.IsRedisNil(err) {
-				return nil, nil // Locked by someone else
-			}
-			return nil, fmt.Errorf("redis lock failed: %w", err)
-		}
-	} else {
-		// Standalone mode lock
-		if _, exists := to.locks[task.ID]; exists {
-			return nil, nil // Locked locally
-		}
-		to.locks[task.ID] = time.Now().Add(time.Minute)
-	}
+	// Distributed locks inside an active database transaction are a livelock risk.
+	// We rely on database-native concurrency controls (FOR UPDATE SKIP LOCKED) for transactional queue management.
+	// In standalone mode, we rely on the global to.mu lock and SQLite connection concurrency.
 
 	// Update status
 	_, err = tx.Exec(ctx, "UPDATE swarm_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1 WHERE id = $2", agentID, task.ID)
@@ -276,10 +261,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		})
 	}
 
-	if to.redisClient != nil {
-		cmd := to.redisClient.B().Del().Key("lock:task:" + taskID).Build()
-		_ = to.redisClient.Do(ctx, cmd)
-	}
+	// We do not acquire Redis locks for transactional tasks anymore.
 
 	// Trigger AutoDream ingestion
 	if to.autoDream != nil && to.minimax != nil {
