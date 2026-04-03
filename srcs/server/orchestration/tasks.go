@@ -134,23 +134,15 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, missionID, parent
 	// Broadcast task creation
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, _ := json.Marshal(map[string]interface{}{
+			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 				"action":      "CREATE",
+				"agent_id":    task.AssignedAgentID,
+				"status":      task.Status,
 				"mission_id":  task.MissionID,
 				"title":       task.Title,
 				"description": task.Description,
 				"priority":    task.Priority,
-				"status":      task.Status,
 			})
-			msg := Message{
-				ID:        generateID(),
-				FromAgent: "system",
-				ToAgent:   "system",
-				Type:      "TASK_CREATE",
-				Payload:   string(payloadBytes),
-				Status:    task.Status,
-			}
-			_ = tm.hub.Publish(msg)
 		}()
 	}
 
@@ -267,20 +259,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	// Broadcast task claim
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, _ := json.Marshal(map[string]interface{}{
+			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 				"action":   "CLAIM",
 				"agent_id": agentID,
 				"status":   task.Status,
 			})
-			msg := Message{
-				ID:        generateID(),
-				FromAgent: "system",
-				ToAgent:   "system",
-				Type:      "TASK_CLAIM",
-				Payload:   string(payloadBytes),
-				Status:    task.Status,
-			}
-			_ = tm.hub.Publish(msg)
 		}()
 	}
 
@@ -306,20 +289,11 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	// Broadcast task completion
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, _ := json.Marshal(map[string]interface{}{
+			tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
 				"action":   "COMPLETE",
 				"agent_id": agentID,
 				"status":   "COMPLETED",
 			})
-			msg := Message{
-				ID:        generateID(),
-				FromAgent: "system",
-				ToAgent:   "system",
-				Type:      "TASK_COMPLETE",
-				Payload:   string(payloadBytes),
-				Status:    "COMPLETED",
-			}
-			_ = tm.hub.Publish(msg)
 		}()
 	}
 
@@ -440,20 +414,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		// Broadcast task claim
 		if tm.hub != nil {
 			go func() {
-				payloadBytes, _ := json.Marshal(map[string]interface{}{
+				tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
 					"action":   "CLAIM",
 					"agent_id": agentID,
 					"status":   task.Status,
 				})
-				msg := Message{
-					ID:        generateID(),
-					FromAgent: "system",
-					ToAgent:   "system",
-					Type:      "TASK_CLAIM",
-					Payload:   string(payloadBytes),
-					Status:    task.Status,
-				}
-				_ = tm.hub.Publish(msg)
 			}()
 		}
 	}

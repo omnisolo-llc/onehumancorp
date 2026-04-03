@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -39,6 +41,93 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	// For simplicity, we just use a distributed worker queue pattern with a database table or Redis.
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
+	go w.runMemoryIngestionPipeline(ctx)
+}
+
+// runMemoryIngestionPipeline reads files from .agent-task/memory/ and injects them.
+func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.ingestAgentMemories(ctx)
+		}
+	}
+}
+
+// ingestAgentMemories processes YAML files from .agent-task/memory/.
+func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
+	memoryDir := ".agent-task/memory"
+	files, err := os.ReadDir(memoryDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			slog.Error("AutoDream: failed to read memory directory", "error", err)
+		}
+		return
+	}
+
+	for _, file := range files {
+		if file.IsDir() || filepath.Ext(file.Name()) != ".yml" && filepath.Ext(file.Name()) != ".yaml" {
+			continue
+		}
+
+		filePath := filepath.Join(memoryDir, file.Name())
+		contentBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			slog.Error("AutoDream: failed to read memory file", "file", filePath, "error", err)
+			continue
+		}
+		content := string(contentBytes)
+
+		// Generate embedding
+		embeddingStr := "[0.0]" // fallback embedding
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			embedding, err := client.GenerateEmbedding(ctxTimeout, content)
+			cancel()
+			if err != nil {
+				slog.Warn("AutoDream: LLM embedding failed, using fallback", "error", err)
+			} else if len(embedding) > 0 {
+				// Convert float array to pgvector string format
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				// Replace space separated array `[1 2 3]` to comma separated `[1,2,3]` required by pgvector
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+		}
+
+		memoryID := "mem-" + file.Name()
+
+		// Store into agent_memories (the table defined for AutoDream data pipelines)
+		query := "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, $2, $3, $4::vector) ON CONFLICT(id) DO NOTHING"
+		if w.pool.IsSQLite() {
+			query = "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
+		}
+
+		// Since organization_id isn't explicitly tied to these system-wide memories by default,
+		// we use "system" or let it be inferred. The schema requires organization_id NOT NULL.
+		orgID := "system"
+
+		_, err = w.pool.Exec(ctx, query, memoryID, orgID, content, embeddingStr)
+		if err != nil {
+			slog.Error("AutoDream: failed to insert memory", "file", file.Name(), "error", err)
+			continue
+		}
+
+		// Archive or delete processed file
+		err = os.Remove(filePath)
+		if err != nil {
+			slog.Error("AutoDream: failed to delete memory file", "file", filePath, "error", err)
+		} else {
+			slog.Info("AutoDream: successfully processed and deleted memory file", "file", file.Name())
+		}
+	}
 }
 
 // runPruningPipeline periodically prunes stale agent session data.
