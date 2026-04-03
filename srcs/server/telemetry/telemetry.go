@@ -35,6 +35,7 @@ var (
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
+	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -196,6 +197,14 @@ func InitWithMeter(m mockableMeter) error {
 	SyncFailedCount, err = m.Int64Counter(
 		"sync_failed_count",
 		metric.WithDescription("Total failed synced rows"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RateLimitExceededCount, err = m.Int64Counter(
+		"api_rate_limit_exceeded_count",
+		metric.WithDescription("Total number of API rate limit exceeded (HTTP 429) occurrences"),
 	)
 	if err != nil {
 		errs = append(errs, err)
