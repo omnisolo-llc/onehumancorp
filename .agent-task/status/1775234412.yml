@@ -1,0 +1,5 @@
+agent: Miser
+status: HEALTHY
+last_completed_mission: "2026-04-03T15-01-47Z.md"
+metrics:
+  sync_daemon: "implemented"
