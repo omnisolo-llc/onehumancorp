@@ -26,6 +26,7 @@ show_menu() {
     echo -e "  ${PURPLE}3)${RESET} Launch Standalone Desktop Mode"
     echo -e "  ${PURPLE}4)${RESET} Launch Cloud Backend"
     echo -e "  ${PURPLE}5)${RESET} Run All Tests"
+    echo -e "  ${PURPLE}6)${RESET} Run Doctor & API Key Wizard"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -78,6 +79,72 @@ run_tests() {
     fi
 }
 
+run_doctor() {
+    echo -e "${DIM}[Running System Doctor & API Key Wizard...]${RESET}"
+    echo -e "${BOLD}1. Checking Dependencies${RESET}"
+
+    local deps=("docker" "bazelisk" "go" "flutter")
+    local missing=0
+    for dep in "${deps[@]}"; do
+        if command -v $dep >/dev/null 2>&1; then
+            echo -e "  [${GREEN}OK${RESET}] $dep is installed."
+        else
+            echo -e "  [${PURPLE}MISSING${RESET}] $dep is not found in PATH."
+            missing=1
+        fi
+    done
+
+    echo -e "\n${BOLD}2. Checking Ports${RESET}"
+    local ports=(8080 5432 6379)
+    for port in "${ports[@]}"; do
+        if command -v lsof >/dev/null 2>&1; then
+            if lsof -i :$port >/dev/null 2>&1; then
+                echo -e "  [${PURPLE}IN USE${RESET}] Port $port is currently occupied."
+            else
+                echo -e "  [${GREEN}FREE${RESET}] Port $port is available."
+            fi
+        else
+            echo -e "  [${DIM}SKIP${RESET}] lsof not installed, skipping port check."
+            break
+        fi
+    done
+
+    echo -e "\n${BOLD}3. API Key Wizard${RESET}"
+    if [ ! -f .env ]; then
+        echo "Creating default .env file..."
+        echo "LOG_LEVEL=info" > .env
+        echo "PORT=8080" >> .env
+        echo "OHC_MULTITENANT=false" >> .env
+        echo "OHC_HEADLESS=false" >> .env
+        echo "OHC_SOURCE_MODE=standalone" >> .env
+    fi
+
+    local keys=("GEMINI_API_KEY" "ANTHROPIC_API_KEY" "OPENAI_API_KEY")
+    for key in "${keys[@]}"; do
+        if grep -q "^${key}=" .env; then
+            local current_val=$(grep "^${key}=" .env | cut -d '=' -f2)
+            if [ -n "$current_val" ]; then
+                echo -e "  [${GREEN}OK${RESET}] $key is already set."
+                continue
+            fi
+        fi
+
+        read -s -p "  Enter $key (leave blank to skip): " key_val\n        echo ""
+        if [ -n "$key_val" ]; then
+            if grep -q "^${key}=" .env; then
+                sed -i.bak "s|^${key}=.*|${key}=${key_val}|" .env
+            else
+                echo "${key}=${key_val}" >> .env
+            fi
+            echo -e "  [${GREEN}SAVED${RESET}] $key added to .env."
+        else
+            echo -e "  [${DIM}SKIPPED${RESET}] $key."
+        fi
+    done
+
+    echo -e "\n${GREEN}Doctor & Wizard complete.${RESET}\n"
+}
+
 if [ "$1" == "--non-interactive" ]; then
     echo "Running in non-interactive verification mode."
     run_setup
@@ -93,6 +160,7 @@ else
             3) launch_desktop ;;
             4) launch_cloud ;;
             5) run_tests ;;
+            6) run_doctor ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
