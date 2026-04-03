@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -277,7 +278,7 @@ func TestPublish_ContextSummarization_Failure(t *testing.T) {
 func TestService_CoverageExt(t *testing.T) {
 	// 1. Array in redactInterfacePII (lines 51-55)
 	arr := []interface{}{"555-555-5555"}
-	redacted := redactInterfacePII(arr).([]interface{})
+	redacted := telemetry.RedactInterfacePII(arr).([]interface{})
 	if redacted[0] != "[REDACTED_PHONE]" {
 		t.Errorf("Expected phone redaction in array, got %v", redacted[0])
 	}
