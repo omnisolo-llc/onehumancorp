@@ -64,6 +64,7 @@ s.close()
 print(port)
 ")
 export PLAYWRIGHT_BASE_URL="http://localhost:${PORT}"
+export API_BASE_URL="http://localhost:${PORT}"
 echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
 # ── Start the Go backend serving the Flutter app ───────────────────────────
@@ -72,6 +73,12 @@ echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
 BACKEND_BIN=""
 for candidate in \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc_/ohc" \
+    "${RUNFILES}/${WORKSPACE}/srcs/server/ohc" \
+    "${RUNFILES}/_main/srcs/server/ohc" \
+    "${RUNFILES}/__main__/srcs/server/ohc" \
     "${RUNFILES}/${WORKSPACE}/srcs/server/server_/server" \
     "${RUNFILES}/_main/srcs/server/server_/server" \
     "${RUNFILES}/__main__/srcs/server/server_/server" \
@@ -85,7 +92,7 @@ for candidate in \
 done
 
 if [ -z "$BACKEND_BIN" ]; then
-  echo "ERROR: Go backend binary not found. Ensure //srcs/server:server is included in data." >&2
+  echo "ERROR: Go backend binary not found. Ensure //srcs/server:ohc is included in data." >&2
   # Fallback to Python server if we can't find the backend binary (e.g. during local dev)
   python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
   SERVER_PID=$!

@@ -58,7 +58,7 @@ var (
 )
 
 // getThrottle conditionally acquires the semaphore if in standalone mode
-func acquireThrottle(ctx context.Context) error {
+func acquireThrottle(ctx context.Context) (func(), error) {
 	standaloneThrottleOnce.Do(func() {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			// already initialized to 1
@@ -70,28 +70,22 @@ func acquireThrottle(ctx context.Context) error {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case standaloneThrottle <- struct{}{}:
-			return nil
+			return func() { <-standaloneThrottle }, nil
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		}
 	}
-	return nil
-}
-
-func releaseThrottle() {
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		<-standaloneThrottle
-	}
+	return func() {}, nil
 }
 
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withRetry(ctx context.Context, op func() error) error {
-	if err := acquireThrottle(ctx); err != nil {
+	release, err := acquireThrottle(ctx)
+	if err != nil {
 		return err
 	}
-	defer releaseThrottle()
+	defer release()
 
-	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = op()
 		if err == nil {

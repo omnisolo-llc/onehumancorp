@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/settings_service.dart';
@@ -81,9 +82,14 @@ final backendUrlProvider = Provider<String>((ref) {
   // Fallback to environment variable if provided at compile time (Web/Desktop)
   const envUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://localhost:18789',
+    defaultValue: '',
   );
-  return envUrl;
+
+  if (kIsWeb && envUrl.isEmpty) {
+    return Uri.base.origin;
+  }
+
+  return envUrl.isEmpty ? 'http://localhost:18789' : envUrl;
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {

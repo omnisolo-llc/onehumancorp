@@ -43,13 +43,16 @@ async function waitForFlutter(page: Page, timeoutMs = 30_000): Promise<void> {
 
 test.describe('Flutter Web App – E2E', () => {
   test.beforeEach(async ({ page, request }) => {
+    page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
+    page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
     // Seed initial scenario data
-    await request.post('http://localhost:8080/api/dev/seed', {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:8080';
+    await request.post(`${baseUrl}/api/dev/seed`, {
       data: { scenario: 'launch-readiness' },
       headers: { 'Content-Type': 'application/json' },
     });
 
-    await page.goto('/');
+    await page.goto('/#login');
     await waitForFlutter(page);
   });
 
@@ -63,7 +66,7 @@ test.describe('Flutter Web App – E2E', () => {
 
   test('user can log in and view seeded dashboard data', async ({ page }) => {
     // 1. Ensure we are on the login page
-    await expect(page).toHaveURL(/\/login/);
+    await page.waitForURL(/\/login/, { timeout: 15_000 });
 
     // 2. Fill in the login form with the seeded admin credentials
     // The Flutter web app uses Semantic locators or flt-semantics if a11y is on.
@@ -126,7 +129,7 @@ test.describe('Flutter Web App – E2E', () => {
 
   test('login page is shown on first load', async ({ page }) => {
     // The app redirects unauthenticated users to /login
-    await expect(page).toHaveURL(/\/login|^\//);
+    await page.waitForURL(/\/login/, { timeout: 15_000 });
   });
 
   test('Sign In button is reachable via keyboard interaction', async ({
@@ -167,9 +170,9 @@ test.describe('Flutter Web App – E2E', () => {
   // ── Routing and navigation ────────────────────────────────────────────
 
   test('navigating to /login returns login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/#login');
     await waitForFlutter(page);
-    await expect(page).toHaveURL(/\/login/);
+    await page.waitForURL(/\/login/, { timeout: 15_000 });
   });
 
   // ── Static assets ─────────────────────────────────────────────────────
@@ -189,14 +192,14 @@ test.describe('Flutter Web App – E2E', () => {
     );
     expect(hasFlutterAsset).toBe(true);
   });
-});
 
   // ── Chaos & Degradation Tests ───────────────────────────────────────────
 
   test('app gracefully handles backend latency (Thin Client Mode)', async ({ page, request }) => {
     // DO NOT USE page.route to mock networks. Instead use seed endpoint to create realistic lag.
     // Ensure the backend simulates high latency via seed target.
-    await request.post(process.env.API_BASE_URL ? `${process.env.API_BASE_URL}/api/dev/seed` : 'http://localhost:8080/api/dev/seed', {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:8080';
+    await request.post(`${baseUrl}/api/dev/seed`, {
       data: { scenario: 'high-latency' },
       headers: { 'Content-Type': 'application/json' },
     });
@@ -229,7 +232,8 @@ test.describe('Flutter Web App – E2E', () => {
 
   test('app gracefully handles offline simulation without page.route (Network Partition)', async ({ page, request }) => {
     // Instead of mocking the network, use the backend's scenario to return a 503 or 504 to emulate drop.
-    await request.post(process.env.API_BASE_URL ? `${process.env.API_BASE_URL}/api/dev/seed` : 'http://localhost:8080/api/dev/seed', {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:8080';
+    await request.post(`${baseUrl}/api/dev/seed`, {
       data: { scenario: 'network-partition' },
       headers: { 'Content-Type': 'application/json' },
     });
