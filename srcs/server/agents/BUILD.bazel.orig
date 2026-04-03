@@ -30,6 +30,5 @@ go_test(
     deps = [
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
-        "//srcs/server/db",
     ],
 )
