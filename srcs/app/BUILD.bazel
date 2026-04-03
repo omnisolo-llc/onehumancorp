@@ -228,7 +228,7 @@ sh_test(
         "e2e/web.spec.ts",
         ":app",
         "//:node_modules/@playwright/test",
-        "//srcs/server",
+        "//srcs/server:ohc",
     ],
     tags = [
         "manual",
