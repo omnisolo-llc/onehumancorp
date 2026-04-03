@@ -177,6 +177,36 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	}
 }
 
+func TestTaskManager_ReviewTask(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	tm, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
+
+	// Review task
+	err := tm.ReviewTask(ctx, claimedTask.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error reviewing task, got %v", err)
+	}
+
+	// Try reviewing again
+	err = tm.ReviewTask(ctx, claimedTask.ID, "agent-1")
+	if err == nil {
+		t.Fatalf("expected error when reviewing a task not in IN_PROGRESS")
+	}
+
+	// Complete task from REVIEW
+	err = tm.CompleteTask(ctx, claimedTask.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error completing task from REVIEW, got %v", err)
+	}
+}
+
 func TestTaskManager_CompleteTask(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")

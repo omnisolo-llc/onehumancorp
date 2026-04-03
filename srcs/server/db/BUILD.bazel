@@ -27,6 +27,7 @@ go_library(
         "migrations/013_shared_tasks.sql",
         "migrations/014_task_dependencies.sql",
         "migrations/015_sync_log.sql",
+        "migrations/016_swarm_tasks_review.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

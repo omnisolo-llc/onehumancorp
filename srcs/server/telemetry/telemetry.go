@@ -30,6 +30,7 @@ var (
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
+	swarmTasksTransitionedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
@@ -175,6 +176,14 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTasksCompletedCounter, err = m.Int64Counter(
 		"ohc_swarm_tasks_completed",
 		metric.WithDescription("Total swarm tasks completed"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	swarmTasksTransitionedCounter, err = m.Int64Counter(
+		"ohc_swarm_tasks_transitioned",
+		metric.WithDescription("Total swarm tasks transitioned"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -482,6 +491,25 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 			"mission_id": missionID,
 		})
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
+	}
+}
+
+// RecordSwarmTaskTransitioned increments the global counter for swarm task state transitions.
+func RecordSwarmTaskTransitioned(ctx context.Context, missionID string, status string) {
+	if swarmTasksTransitionedCounter == nil {
+		return
+	}
+	swarmTasksTransitionedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("mission_id", missionID),
+		attribute.String("status", status),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"mission_id": missionID,
+			"status":     status,
+		})
+		_ = BufferMetricFunc(ctx, "swarm_task_transitioned", string(payloadBytes))
 	}
 }
 
