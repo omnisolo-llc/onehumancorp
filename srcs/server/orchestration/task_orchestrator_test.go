@@ -51,7 +51,7 @@ func TestTaskOrchestrator(t *testing.T) {
 		);
 	`)
 
-	orchestrator := NewTaskOrchestrator(prov, nil, nil)
+	orchestrator := NewTaskOrchestrator(prov, nil, nil, nil)
 
 	// Create Task A
 	taskA := &models.Task{
