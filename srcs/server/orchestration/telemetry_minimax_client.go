@@ -26,6 +26,22 @@ func (c *TelemetryMinimaxClient) Reason(ctx context.Context, prompt string) (str
 	duration := time.Since(start).Seconds()
 
 	telemetry.RecordMinimaxCall(ctx, "Reason", duration, err)
+
+	// Estimate and record token usage (1 token ~= 4 chars)
+	if err == nil {
+		promptTokens := int64(len(prompt) / 4)
+		completionTokens := int64(len(response) / 4)
+
+		// For system level calls via client, we use generic identifiers if agent context is missing.
+		// However, it's safer to just record it generally.
+		if promptTokens > 0 {
+			telemetry.RecordTokenUsage(ctx, "system", "system", "minimax", "prompt", promptTokens)
+		}
+		if completionTokens > 0 {
+			telemetry.RecordTokenUsage(ctx, "system", "system", "minimax", "completion", completionTokens)
+		}
+	}
+
 	return response, err
 }
 
@@ -36,5 +52,14 @@ func (c *TelemetryMinimaxClient) GenerateEmbedding(ctx context.Context, text str
 	duration := time.Since(start).Seconds()
 
 	telemetry.RecordMinimaxCall(ctx, "GenerateEmbedding", duration, err)
+
+	// Estimate and record token usage (1 token ~= 4 chars)
+	if err == nil {
+		embeddingTokens := int64(len(text) / 4)
+		if embeddingTokens > 0 {
+			telemetry.RecordTokenUsage(ctx, "system", "system", "minimax", "embedding", embeddingTokens)
+		}
+	}
+
 	return embedding, err
 }
