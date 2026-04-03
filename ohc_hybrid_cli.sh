@@ -103,6 +103,20 @@ verify_dependencies() {
         echo -e "  ${PURPLE}✗ go not found${RESET}"
     fi
 
+    # Flutter
+    if command -v flutter >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ flutter installed${RESET} ($(flutter --version | head -n 1))"
+    else
+        echo -e "  ${PURPLE}✗ flutter not found${RESET} (Required for client app development)"
+    fi
+
+    # Dart
+    if command -v dart >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ dart installed${RESET} ($(dart --version 2>&1))"
+    else
+        echo -e "  ${PURPLE}✗ dart not found${RESET} (Required for client app development)"
+    fi
+
     # SQLite3 (Standalone fallback)
     if command -v sqlite3 >/dev/null 2>&1; then
         echo -e "  ${GREEN}✓ sqlite3 installed${RESET} (Standalone Mode Ready)"
