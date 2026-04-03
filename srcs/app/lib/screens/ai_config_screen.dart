@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/ai_provider.dart';
@@ -63,7 +64,7 @@ class _EmptyProviders extends StatelessWidget {
             size: 64,
             color: Theme.of(
               context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
           const SizedBox(height: 16),
           Text(
@@ -102,83 +103,150 @@ class _ProviderList extends StatelessWidget {
   }
 }
 
-class _ProviderCard extends StatelessWidget {
+class _ProviderCard extends StatefulWidget {
   final AiProvider provider;
   final WidgetRef ref;
 
   const _ProviderCard({required this.provider, required this.ref});
 
   @override
+  State<_ProviderCard> createState() => _ProviderCardState();
+}
+
+class _ProviderCardState extends State<_ProviderCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.psychology,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  provider.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const Spacer(),
-                if (provider.isOfficial)
-                  Chip(
-                    label: const Text('Official'),
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Edit API key',
-                  onPressed: () => _showEditKeyDialog(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              provider.baseUrl,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (provider.models.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children:
-                    provider.models
-                        .map(
-                          (m) => Chip(
-                            label: Text(m),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        )
-                        .toList(),
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(const <double>[
+                  1.168, -0.153, -0.015, 0, 0,
+                  -0.046, 1.061, -0.015, 0, 0,
+                  -0.046, -0.152, 1.198, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
-            ],
-          ],
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? colors.surfaceContainerHighest.withOpacity(0.3)
+                      : colors.surface.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered
+                        ? colors.outlineVariant
+                        : colors.outlineVariant.withOpacity(0.5),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: colors.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.psychology,
+                            color: colors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          widget.provider.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontFamily: 'Outfit',
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (widget.provider.isOfficial)
+                          Chip(
+                            label: const Text('Official', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                            backgroundColor: colors.primaryContainer.withOpacity(0.8),
+                            side: BorderSide.none,
+                          ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Edit API key',
+                          color: colors.primary,
+                          onPressed: () => _showEditKeyDialog(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.provider.baseUrl,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: colors.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (widget.provider.models.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: widget.provider.models.map(
+                          (m) => Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: colors.secondaryContainer.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: colors.secondary.withOpacity(0.2)),
+                            ),
+                            child: Text(
+                              m,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: colors.onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                        ).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   void _showEditKeyDialog(BuildContext context) {
-    final ctrl = TextEditingController(text: provider.apiKey);
+    final ctrl = TextEditingController(text: widget.provider.apiKey);
     showDialog(
       context: context,
       builder:
           (_) => AlertDialog(
-            title: Text('API Key — ${provider.name}'),
+            title: Text('API Key — ${widget.provider.name}'),
             content: TextField(
               controller: ctrl,
               obscureText: true,
@@ -195,9 +263,9 @@ class _ProviderCard extends StatelessWidget {
               ),
               FilledButton(
                 onPressed: () async {
-                  final api = ref.read(apiServiceProvider);
-                  await api?.saveAiProviderKey(provider.id, ctrl.text.trim());
-                  ref.invalidate(_providersProvider);
+                  final api = widget.ref.read(apiServiceProvider);
+                  await api?.saveAiProviderKey(widget.provider.id, ctrl.text.trim());
+                  widget.ref.invalidate(_providersProvider);
                   if (context.mounted) Navigator.pop(context);
                 },
                 child: const Text('Save'),
