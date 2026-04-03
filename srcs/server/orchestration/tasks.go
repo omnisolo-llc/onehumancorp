@@ -23,7 +23,7 @@ type SharedTask struct {
 	Title           string
 	Description     string
 	AssignedAgentID string
-	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED
+	Status          string // PENDING, IN_PROGRESS, REVIEW, COMPLETED, FAILED
 	Priority        string
 	Payload         string
 	LockedUntil     sql.NullTime
@@ -270,6 +270,67 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	return &task, nil
 }
 
+// ReviewTask marks a task as ready for review.
+
+func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
+
+	query := `
+
+		UPDATE swarm_tasks
+
+		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
+
+		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
+
+	`
+
+	res, err := tm.db.Exec(ctx, query, taskID, agentID)
+
+	if err != nil {
+
+		return fmt.Errorf("failed to review task: %w", err)
+
+	}
+
+	if res == 0 {
+
+		return errors.New("task not found or not assigned to agent in IN_PROGRESS state")
+
+	}
+
+	// Broadcast task review
+
+	if tm.hub != nil {
+
+		go func() {
+
+			tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+
+				"action": "REVIEW",
+
+				"agent_id": agentID,
+
+				"status": "REVIEW",
+			})
+
+		}()
+
+	}
+
+	var missionID string
+
+	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+
+	if err == nil {
+
+		telemetry.RecordSwarmTaskReviewed(ctx, missionID)
+
+	}
+
+	return nil
+
+}
+
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	query := `
@@ -389,17 +450,17 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	var claimedTasks []*SharedTask
 
 	for _, task := range tasks {
-			rowsAffected, err := tx.Exec(ctx, `
+		rowsAffected, err := tx.Exec(ctx, `
 				UPDATE swarm_tasks
 				SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 				WHERE id = $2 AND status = 'PENDING'
 			`, agentID, task.ID)
 
-			if err != nil {
-				return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
-			}
+		if err != nil {
+			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
+		}
 
-			if rowsAffected > 0 {
+		if rowsAffected > 0 {
 			task.Status = "IN_PROGRESS"
 			task.AssignedAgentID = agentID
 			claimedTasks = append(claimedTasks, task)
