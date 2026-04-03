@@ -381,7 +381,7 @@ func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for k, v := range payload {
-		payload[k] = redactInterfacePII(v)
+		payload[k] = telemetry.RedactInterfacePII(v)
 	}
 
 	idVal, ok := payload["id"]
@@ -444,7 +444,7 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure safe deep recursive redaction on string fields to prevent sensitive data leakage.
 	for k, v := range payload {
-		payload[k] = redactInterfacePII(v)
+		payload[k] = telemetry.RedactInterfacePII(v)
 	}
 
 	var memoryID string
@@ -542,7 +542,7 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 	for i := range payloads {
 		var parsedPayload interface{}
 		if err := json.Unmarshal([]byte(payloads[i].Payload), &parsedPayload); err == nil {
-			redactedPayload := redactInterfacePII(parsedPayload)
+			redactedPayload := telemetry.RedactInterfacePII(parsedPayload)
 			if redactedBytes, err := json.Marshal(redactedPayload); err == nil {
 				payloads[i].Payload = string(redactedBytes)
 			}
@@ -582,21 +582,3 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 }
 
 
-func redactInterfacePII(val interface{}) interface{} {
-	switch v := val.(type) {
-	case string:
-		return telemetry.RedactPII(v)
-	case map[string]interface{}:
-		for mk, mv := range v {
-			v[mk] = redactInterfacePII(mv)
-		}
-		return v
-	case []interface{}:
-		for i, iv := range v {
-			v[i] = redactInterfacePII(iv)
-		}
-		return v
-	default:
-		return v
-	}
-}
