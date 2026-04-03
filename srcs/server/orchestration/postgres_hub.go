@@ -12,7 +12,8 @@ import (
 
 // PgHubRepository implements HubRepository backed by PostgreSQL.
 type PgHubRepository struct {
-	pool db.Provider
+	pool  db.Provider
+	orgID string
 }
 
 // pgWithRetry wraps a database operation with exponential backoff for transient errors
@@ -62,8 +63,8 @@ func pgWithRetry(ctx context.Context, op func() error) error {
 }
 
 // NewPgHubRepository creates a Postgres-backed hub repository.
-func NewPgHubRepository(pool db.Provider) *PgHubRepository {
-	return &PgHubRepository{pool: pool}
+func NewPgHubRepository(pool db.Provider, orgID string) *PgHubRepository {
+	return &PgHubRepository{pool: pool, orgID: orgID}
 }
 
 func (r *PgHubRepository) RegisterAgent(ctx context.Context, agent Agent) error {
@@ -121,9 +122,14 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 	var agents []Agent
 	err := pgWithRetry(ctx, func() error {
 		agents = nil // Reset on retry
-		rows, err := r.pool.Query(ctx, `
-			SELECT id, name, role, organization_id, status, provider_type, region
-			FROM agents ORDER BY id`)
+		query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
+		var args []any
+		if r.orgID != "" {
+			query += " WHERE organization_id = $1"
+			args = append(args, r.orgID)
+		}
+		query += " ORDER BY id"
+		rows, err := r.pool.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("pg: list agents: %w", err)
 		}
@@ -146,7 +152,13 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 
 func (r *PgHubRepository) UpdateAgentStatus(ctx context.Context, id string, status Status) error {
 	return pgWithRetry(ctx, func() error {
-		_, err := r.pool.Exec(ctx, "UPDATE agents SET status = $2 WHERE id = $1", id, string(status))
+		query := "UPDATE agents SET status = $2 WHERE id = $1"
+		var args []any = []any{id, string(status)}
+		if r.orgID != "" {
+			query += " AND organization_id = $3"
+			args = append(args, r.orgID)
+		}
+		_, err := r.pool.Exec(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("pg: update agent status: %w", err)
 		}
@@ -155,6 +167,15 @@ func (r *PgHubRepository) UpdateAgentStatus(ctx context.Context, id string, stat
 }
 
 func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
+	// Prevent unauthorized deletion if scoped
+	if r.orgID != "" {
+		var count int
+		err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = $1 AND organization_id = $2", id, r.orgID).Scan(&count)
+		if err != nil || count == 0 {
+			return fmt.Errorf("pg: unauthorized or missing agent")
+		}
+	}
+
 	return pgWithRetry(ctx, func() error {
 		tx, err := r.pool.Begin(ctx)
 		if err != nil {
