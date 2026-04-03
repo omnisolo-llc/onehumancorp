@@ -408,6 +408,11 @@ func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "success", "message": "mission synced"})
 }
 
+// handleSyncMissionsPOST handles local-to-cloud mission synchronization via an UPSERT query
+func (s *Server) handleSyncMissionsPOST(w http.ResponseWriter, r *http.Request) {
+	s.handleMissionsSync(w, r)
+}
+
 // handleContextSync handles local-to-cloud Hybrid MCP RAG state synchronization
 func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleContextSync")
