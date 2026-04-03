@@ -76,7 +76,11 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+	query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
+	if d.dbWrapper.IsSQLite() {
+		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'CLOUD_ESCALATION' LIMIT 100"
+	}
+	rows, err := d.dbWrapper.Query(ctx, query)
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
 		return
@@ -152,6 +156,9 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 			idList += fmt.Sprintf("'%s'", id)
 		}
 		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
+		if d.dbWrapper.IsSQLite() {
+			query = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
+		}
 		_, err := d.dbWrapper.Exec(ctx, query)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
