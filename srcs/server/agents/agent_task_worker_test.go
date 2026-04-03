@@ -16,10 +16,10 @@ import (
 func TestTaskWorker_pollAndAssign(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	tests := []struct {
-		name           string
-		setupMock      func() *httptest.Server
-		envSetup       func(url string)
-		envTeardown    func()
+		name        string
+		setupMock   func() *httptest.Server
+		envSetup    func(url string)
+		envTeardown func()
 	}{
 		{
 			name: "not enabled",
@@ -141,6 +141,7 @@ func TestTaskWorker_pollAndAssign(t *testing.T) {
 
 			client := plane.NewClientFromEnv()
 			hub := orchestration.NewHub()
+			defer hub.Close()
 			worker := NewTaskWorker(client, hub)
 
 			// Doesn't return anything or error, just covering branches
@@ -153,6 +154,7 @@ func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
 	// Simple test to exercise the context cancellation branch
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	worker := NewTaskWorker(nil, hub)
 	worker.pollInterval = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
@@ -182,6 +184,7 @@ func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 
 	client := plane.NewClientFromEnv()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	worker := NewTaskWorker(client, hub)
 	worker.pollInterval = 10 * time.Millisecond
 
@@ -202,10 +205,10 @@ func TestTaskWorker_pollAndAssign_NotEnabled(t *testing.T) {
 
 	client := plane.NewClientFromEnv()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }
-
 
 func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
@@ -215,6 +218,7 @@ func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
 
 	client := plane.NewClientFromEnv()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
 }

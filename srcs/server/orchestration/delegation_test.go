@@ -16,6 +16,7 @@ import (
 
 func TestDelegateSubTask_Success(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
@@ -69,6 +70,7 @@ func TestDelegateSubTask_Success(t *testing.T) {
 
 func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
 
@@ -103,6 +105,7 @@ func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
 
 func TestDelegateSubTask_MissingFields(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
 
@@ -143,6 +146,7 @@ func TestDelegateSubTask_MissingFields(t *testing.T) {
 // TestDelegateSubTask_Integration checks the real data law by seeing if the message gets processed properly
 func TestDelegateSubTask_Integration(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
@@ -196,6 +200,7 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 
 func TestDelegateSubTask_Validation(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{
 		ID:             "sys-agent",
 		Name:           "sys",
@@ -267,6 +272,7 @@ func TestDelegateSubTask_Validation(t *testing.T) {
 
 func TestDelegateSubTask_WithSIPDB(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	db, err := NewSIPDB(filepath.Join(t.TempDir(), "test.db"))
 	if err == nil {
 		hub.SetSIPDB(db)
@@ -298,6 +304,7 @@ func TestDelegateSubTask_WithSIPDB(t *testing.T) {
 
 func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender-fail", Name: "Sender", Role: "PM", Status: StatusIdle})
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
@@ -334,6 +341,7 @@ func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
 
 func TestDelegateSubTask_MissingSenderCover(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	// Deliberately DO NOT register sender
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()

@@ -17,8 +17,8 @@ import (
 
 // Task dependency model
 type TaskDependency struct {
-	TaskID           string `json:"task_id"`
-	DependsOnTaskID  string `json:"depends_on_task_id"`
+	TaskID          string `json:"task_id"`
+	DependsOnTaskID string `json:"depends_on_task_id"`
 }
 
 // TaskOrchestrator interface matches the requested methods
@@ -117,10 +117,10 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *Shared
 		})
 	} else if to.hub != nil {
 		to.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
-			"action":      "CREATE",
-			"mission_id":  task.MissionID,
-			"title":       task.Title,
-			"status":      task.Status,
+			"action":     "CREATE",
+			"mission_id": task.MissionID,
+			"title":      task.Title,
+			"status":     task.Status,
 		})
 	}
 	return nil

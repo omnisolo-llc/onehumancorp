@@ -47,6 +47,7 @@ func BenchmarkTaskWorker_pollAndDispatch(b *testing.B) {
 
 	client := plane.NewClientFromEnv()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	worker := NewTaskWorker(client, hub)
 
 	// Create a buffered channel for tasks
@@ -86,6 +87,7 @@ func BenchmarkTaskWorker_processIssue(b *testing.B) {
 
 	client := plane.NewClientFromEnv()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 
 	// Register some agents
 	for i := 0; i < 10; i++ {
@@ -95,7 +97,7 @@ func BenchmarkTaskWorker_processIssue(b *testing.B) {
 	worker := NewTaskWorker(client, hub)
 
 	issue := plane.Issue{
-		ID: "test-issue",
+		ID:   "test-issue",
 		Name: "Test Issue",
 	}
 

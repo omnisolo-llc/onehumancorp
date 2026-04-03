@@ -22,6 +22,7 @@ func init() {
 // accumulated in order.
 func TestMultiAgentMeetingInteraction(t *testing.T) {
 	hub := orchestration.NewHub()
+	defer hub.Close()
 
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Alice", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Bob", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
@@ -172,6 +173,7 @@ func TestHumanChatWithAgent(t *testing.T) {
 
 	// Set up the orchestration hub with a router and a support agent.
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	// The "router" is the system that dispatches inbound human messages to agents.
 	hub.RegisterAgent(orchestration.Agent{
 		ID:             "router",
