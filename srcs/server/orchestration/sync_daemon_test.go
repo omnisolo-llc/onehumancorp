@@ -36,8 +36,9 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	_, err = sqlDB.Exec(`
 		INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
 		VALUES
-			('m1', 'PENDING', '{"task":"test-mission"}', false),
-			('m2', 'COMPLETED', '{"task":"synced-mission"}', true)
+			('m1', 'CLOUD_ESCALATION', '{"task":"test-mission", "details":"[PRIVATE:secret] email is a@b.com"}', false),
+			('m2', 'COMPLETED', '{"task":"synced-mission"}', true),
+			('m3', 'PENDING', '{"task":"ignored"}', false)
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test data: %v", err)
@@ -73,8 +74,14 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	if receivedPayloads[0].ID != "m1" {
 		t.Errorf("expected payload ID m1, got %s", receivedPayloads[0].ID)
 	}
-	if receivedPayloads[0].Status != "PENDING" {
-		t.Errorf("expected status PENDING, got %s", receivedPayloads[0].Status)
+	if receivedPayloads[0].Status != "CLOUD_ESCALATION" {
+		t.Errorf("expected status CLOUD_ESCALATION, got %s", receivedPayloads[0].Status)
+	}
+
+	// Verify sanitization
+	expectedPayload := `{"details":" email is [REDACTED_EMAIL]","task":"test-mission"}`
+	if receivedPayloads[0].Payload != expectedPayload {
+		t.Errorf("expected sanitized payload %q, got %q", expectedPayload, receivedPayloads[0].Payload)
 	}
 
 	// Validate db status updated
