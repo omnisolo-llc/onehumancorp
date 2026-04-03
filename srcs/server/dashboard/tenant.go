@@ -152,8 +152,9 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// Unauthenticated request — serve it using a fresh handler that doesn't leak
 	// tenant state. This handles public routes (login, healthz, readyz, metrics, /api/auth/login)
-	// without falling back to a random tenant.
-	h := r.factory(defaultTenantOrganization("public"))
+	// without falling back to a random tenant. We use Provision to lazily create and reuse a static public handler
+	// rather than spawning a new hub and tracker for every public request (which causes resource exhaustion).
+	h := r.Provision(defaultTenantOrganization("public"))
 	h.ServeHTTP(w, req)
 }
 
