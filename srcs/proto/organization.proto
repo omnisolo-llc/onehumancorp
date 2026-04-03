@@ -4,7 +4,7 @@ package ohc.organization;
 
 import "srcs/proto/common.proto";
 
-option go_package = "github.com/onehumancorp/mono/srcs/proto/ohc/organization;organizationpb";
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
 
 message RoleProfile {
   ohc.common.Role role = 1;

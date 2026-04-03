@@ -147,10 +147,9 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, missionID, parent
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "TASK_CREATE",
-				Payload:   string(payloadBytes),
-				Status:    task.Status,
+				Content:   string(payloadBytes),
 			}
-			_ = tm.hub.Publish(msg)
+			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{"agent_id": agentID, "action": "CLAIM", "status": task.Status})
 		}()
 	}
 
@@ -277,10 +276,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "TASK_CLAIM",
-				Payload:   string(payloadBytes),
-				Status:    task.Status,
+				Content:   string(payloadBytes),
 			}
-			_ = tm.hub.Publish(msg)
+			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{"agent_id": agentID, "action": "CLAIM", "status": task.Status})
 		}()
 	}
 
@@ -316,10 +314,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "TASK_COMPLETE",
-				Payload:   string(payloadBytes),
-				Status:    "COMPLETED",
+				Content:   string(payloadBytes),
 			}
-			_ = tm.hub.Publish(msg)
+			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{"agent_id": agentID, "action": "CLAIM", "status": task.Status})
 		}()
 	}
 
@@ -450,10 +447,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					FromAgent: "system",
 					ToAgent:   "system",
 					Type:      "TASK_CLAIM",
-					Payload:   string(payloadBytes),
-					Status:    task.Status,
+					Content:   string(payloadBytes),
 				}
-				_ = tm.hub.Publish(msg)
+				tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{"agent_id": agentID, "action": "CLAIM", "status": task.Status})
 			}()
 		}
 	}

@@ -6,7 +6,7 @@ import "srcs/proto/agent.proto";
 import "srcs/proto/billing.proto";
 import "srcs/proto/organization.proto";
 
-option go_package = "github.com/onehumancorp/mono/srcs/proto/ohc/api/v1;apiv1";
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
 
 message MeetingRoom {
   string id = 1;

@@ -4,7 +4,7 @@ package ohc.skills;
 
 import "srcs/proto/common.proto";
 
-option go_package = "github.com/onehumancorp/mono/srcs/proto/ohc/skills;skillspb";
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
 
 // A Phase represents a single execution step in a multi-phase agent prompt.
 message Phase {

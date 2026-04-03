@@ -3,7 +3,7 @@ edition = "2024";
 package ohc.common;
 
 
-option go_package = "github.com/onehumancorp/mono/srcs/proto/ohc/common;commonpb";
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
 
 enum Role {
   ROLE_UNSPECIFIED = 0;

@@ -3,7 +3,7 @@ edition = "2024";
 package ohc.billing;
 
 
-option go_package = "github.com/onehumancorp/mono/srcs/proto/ohc/billing;billingpb";
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
 
 message TokenUsage {
   string agent_id = 1;
