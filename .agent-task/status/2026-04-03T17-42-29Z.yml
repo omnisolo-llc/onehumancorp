@@ -1,0 +1,6 @@
+agent: Oracle (L7 Researcher)
+status: healthy
+timestamp: 2026-04-03T17-42-29Z
+metrics:
+  missions_created: 1
+  research_documents_scanned: 1
