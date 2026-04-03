@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
+- Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
+- Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.
+
 ## v0.2.6 (Cloud) / v0.1.6+1 (Standalone)
 - Scaling (Cloud): Integrated PowerSync Go backend service to enforce strict Tenant isolation.
 - Privacy/Offline (Standalone): Integrated PowerSync Flutter SDK for seamless local-to-cloud synchronization.
