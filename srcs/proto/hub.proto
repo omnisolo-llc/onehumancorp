@@ -3,7 +3,7 @@ edition = "2024";
 package ohc.orchestration;
 
 
-option go_package = "github.com/onehumancorp/mono/srcs/proto;orchestrationpb";
+option go_package = "github.com/onehumancorp/mono/srcs/proto;pb";
 
 message Agent {
   string id = 1;
