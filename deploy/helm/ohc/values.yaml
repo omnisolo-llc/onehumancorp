@@ -6,20 +6,32 @@ backend:
     port: 8080
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 10
     targetCPUUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "15m"
-      memory: "30Mi"
-    limits:
       cpu: "100m"
       memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
   multiTenant: false
+
+  resourceQuota:
+    enabled: true
+    requests:
+      cpu: "2"
+      memory: "2Gi"
+    limits:
+      cpu: "4"
+      memory: "4Gi"
+      pods: "20"
+  networkPolicy:
+    enabled: true
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -31,11 +43,11 @@ ohcCore:
     port: 18789
   resources:
     requests:
-      cpu: "15m"
-      memory: "15Mi"
-    limits:
-      cpu: "100m"
+      cpu: "50m"
       memory: "64Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -49,9 +61,9 @@ redis:
 cnpg:
   enabled: false
   clusterName: ohc-pg
-  instances: 1
+  instances: 3
   storage:
-    size: 1Gi
+    size: 10Gi
   database: ohc
   owner: ohc
 
@@ -65,11 +77,11 @@ chatwoot:
     port: 3000
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
-    limits:
-      cpu: "250m"
+      cpu: "100m"
       memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
   # Admin credentials used by OHC backend to auto-configure the inbox.
   adminEmail: admin@ohc.local
   # PostgreSQL connection for Chatwoot's own schema.
@@ -82,9 +94,9 @@ chatwoot:
 # When multiTenant.enabled is true the backend uses the TenantRegistry so
 # that every logged-in user can only see their own company's data.
 multiTenant:
-  enabled: false
+  enabled: true
   # Maximum number of tenant organisations supported per replica.
-  maxOrgs: 1000
+  maxOrgs: 5000
 
 # Plane - Open Source Issue Tracker
 plane:
@@ -94,23 +106,12 @@ plane:
   replicas: 1
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
-    limits:
-      cpu: "250m"
+      cpu: "100m"
       memory: "256Mi"
-
-
-  resourceQuota:
-    enabled: true
-    requests:
-      cpu: "1"
-      memory: "1Gi"
     limits:
-      cpu: "2"
-      memory: "2Gi"
-  networkPolicy:
-    enabled: true
+      cpu: "500m"
+      memory: "512Mi"
+
 
 # PowerSync - synchronization engine
 powersync:
@@ -124,7 +125,7 @@ powersync:
   resources:
     requests:
       cpu: "50m"
-      memory: "64Mi"
+      memory: "128Mi"
     limits:
       cpu: "250m"
       memory: "256Mi"
