@@ -488,7 +488,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
         "bzlTransitiveDigest": "n7ikY1+oP7Nssu8MICB1PWFz7miMTtiZuw8PZ+8UIMc=",
-        "usagesDigest": "Pw31737hRNS998nwqu2q41FC3rKyFsK/H5VfBDrtYu0=",
+        "usagesDigest": "zkZeph+lxoMKZNyWS7nIH/N7IbJeoPyitdLUxyvCR5U=",
         "recordedInputs": [
           "FILE:@@//srcs/app/pub_deps.json 1560bc913a6b08cf84069fa98e0080297ffcad0db7f0c86241569f570b18360a"
         ],
