@@ -76,7 +76,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 100")
+	rows, err := d.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
 		return
@@ -93,12 +93,13 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 			continue
 		}
 
-		// Sanitize payload data for PI
+		// Sanitize payload data for PI and private markers
 		var sanitizeRecursively func(data interface{}) interface{}
 		sanitizeRecursively = func(data interface{}) interface{} {
 			switch v := data.(type) {
 			case string:
-				return telemetry.RedactPII(v)
+				sanitized, _ := SanitizePayload(v)
+				return sanitized
 			case map[string]interface{}:
 				for key, val := range v {
 					v[key] = sanitizeRecursively(val)
@@ -121,7 +122,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 				payloadData = string(redactedBytes)
 			}
 		} else {
-			payloadData = telemetry.RedactPII(payloadData)
+			payloadData, _ = SanitizePayload(payloadData)
 		}
 
 		payloads = append(payloads, SyncDaemonPayload{
@@ -154,6 +155,8 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		_, err := d.dbWrapper.Exec(ctx, query)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+		} else {
+			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
 		}
 	}
 
