@@ -292,10 +292,10 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	err := withRetry(ctx, func() error {
 		missions = nil
 
-		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING'"
+		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 500"
 
 		if s.db.IsSQLite() {
-			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING'"
+			query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 500"
 		}
 
 		rows, err := s.db.Query(ctx, query, role)
