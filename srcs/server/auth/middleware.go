@@ -15,6 +15,7 @@ var publicPaths = []string{
 	"/healthz",
 	"/readyz",
 	"/api/auth/login",
+	"/api/dev/seed",
 	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
 }
 
@@ -98,7 +99,7 @@ func isPublic(path string) bool {
 		}
 	}
 	// Static assets
-	if strings.HasPrefix(path, "/app") || path == "/" {
+	if !strings.HasPrefix(path, "/api") || path == "/" {
 		return true
 	}
 	return false

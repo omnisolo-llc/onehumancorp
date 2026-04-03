@@ -16,6 +16,8 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RoleCEO Role = "CEO"
+	// RoleNewsCollector defines the AI_NEWS_COLLECTOR role.
+	RoleNewsCollector Role = "AI_NEWS_COLLECTOR"
 	// RoleProductManager defines the standard operational responsibilities and system access boundaries for the ProductManager persona.
 	// Accepts no parameters.
 	// Returns nothing.
@@ -257,6 +259,20 @@ func (o Organization) RoleProfile(role Role) (RoleProfile, bool) {
 
 func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 	return []RoleProfile{
+		{
+			Role:       RoleNewsCollector,
+			BasePrompt: "Scrape, summarize, and distribute industry news from a given set of sources.",
+			Capabilities: []string{
+				"Scrape websites",
+				"Summarize articles",
+				"Publish reports",
+			},
+			ContextInputs: []string{
+				"RSS feeds",
+				"News sites",
+				"Internal channels",
+			},
+		},
 		{
 			Role:       RoleCEO,
 			BasePrompt: "Set company direction, approve tradeoffs, and keep the organization aligned with the CEO's goals.",
