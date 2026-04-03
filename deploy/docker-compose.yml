@@ -14,8 +14,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: 50M
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
     build:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
@@ -35,8 +38,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.3"
-          memory: 100M
+          cpus: "1.0"
+          memory: 256M
+        reservations:
+          cpus: "0.2"
+          memory: 128M
     image: onehumancorp/server:latest
     environment:
       REDIS_ADDR: redis:6379
@@ -74,6 +80,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   postgres:
     image: postgres:16-alpine
@@ -92,6 +103,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   powersync:
     image: journeyapps/powersync-service:latest
@@ -103,6 +119,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   chatwoot-migrate:
     image: chatwoot/chatwoot:latest
@@ -136,6 +157,11 @@ services:
       - "3002:3000"
     depends_on:
       - chatwoot-migrate
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   chatwoot-worker:
     image: chatwoot/chatwoot:latest
@@ -150,6 +176,11 @@ services:
       FORCE_SSL: "false"
     depends_on:
       - chatwoot
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   prometheus:
     image: prom/prometheus:latest
@@ -157,6 +188,11 @@ services:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   grafana:
     image: grafana/grafana:latest
@@ -169,6 +205,11 @@ services:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   plane-web:
     image: makeplane/plane-frontend:latest
@@ -178,6 +219,11 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
     depends_on:
       - plane-api
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   plane-api:
     image: makeplane/plane-backend:latest
@@ -194,6 +240,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   plane-worker:
     image: makeplane/plane-backend:latest
@@ -204,3 +255,8 @@ services:
       - SECRET_KEY=an_extremely_secret_key_that_is_long_enough_for_plane
     depends_on:
       - plane-api
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M

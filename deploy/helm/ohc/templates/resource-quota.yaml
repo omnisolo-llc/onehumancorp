@@ -9,5 +9,5 @@ spec:
     requests.memory: {{ .Values.backend.resourceQuota.requests.memory | default "1Gi" }}
     limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "2" }}
     limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "2Gi" }}
-    pods: "10"
+    pods: {{ .Values.backend.resourceQuota.limits.pods | default "20" | quote }}
 {{- end }}
