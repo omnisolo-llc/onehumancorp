@@ -109,6 +109,14 @@ verify_dependencies() {
     else
         echo -e "  ${PURPLE}✗ sqlite3 not found${RESET} (Consider installing for local debugging)"
     fi
+
+    # redis-cli
+    if command -v redis-cli >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ redis-cli installed${RESET}"
+    else
+        echo -e "  ${PURPLE}✗ redis-cli not found${RESET}"
+    fi
+
     echo ""
 }
 
