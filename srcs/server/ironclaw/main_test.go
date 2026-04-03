@@ -388,7 +388,6 @@ func TestPerformScan_WalkError(t *testing.T) {
 	os.Chmod(unreadableDir, 0755) // restore for cleanup
 }
 
-
 func TestRunScan_TargetNoEquals(t *testing.T) {
 	file, err := os.CreateTemp("", "ironclaw-test")
 	if err != nil {

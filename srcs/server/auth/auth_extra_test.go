@@ -209,7 +209,6 @@ func TestGetSetContext(t *testing.T) {
 	}
 }
 
-
 func TestOIDC_ErrorPaths(t *testing.T) {
 	_, err := ValidateOIDCToken("invalid-token", OIDCConfig{Enabled: true})
 	if err == nil {

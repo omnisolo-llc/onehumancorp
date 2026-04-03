@@ -161,7 +161,6 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
-
 	swarmTasksCompletedCounter, err = m.Int64Counter(
 		"ohc_swarm_tasks_completed",
 		metric.WithDescription("Total swarm tasks completed"),
@@ -441,7 +440,6 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 		))
 	}
 }
-
 
 // RecordSwarmTaskCompleted increments the global counter for completed swarm tasks.
 func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {

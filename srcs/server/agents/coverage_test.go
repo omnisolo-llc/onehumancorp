@@ -113,9 +113,9 @@ type stubProvider struct {
 	pt ProviderType
 }
 
-func (s *stubProvider) Type() ProviderType        { return s.pt }
-func (s *stubProvider) Description() string       { return "stub" }
-func (s *stubProvider) SupportedRoles() []string  { return []string{"STUB"} }
+func (s *stubProvider) Type() ProviderType               { return s.pt }
+func (s *stubProvider) Description() string              { return "stub" }
+func (s *stubProvider) SupportedRoles() []string         { return []string{"STUB"} }
 func (s *stubProvider) Authenticate(_ Credentials) error { return nil }
 func (s *stubProvider) GetCredentials() Credentials      { return Credentials{} }
 func (s *stubProvider) IsAuthenticated() bool            { return true }
@@ -184,12 +184,12 @@ func TestRegistry_Infos_EmptyRegistry(t *testing.T) {
 
 func TestProviderTypeConstants(t *testing.T) {
 	types := map[ProviderType]string{
-		ProviderTypeClaude:    "claude",
-		ProviderTypeGemini:    "gemini",
-		ProviderTypeOpenCode:  "opencode",
-		ProviderTypeOpenClaw:  "openclaw",
-		ProviderTypeIronClaw:  "ironclaw",
-		ProviderTypeBuiltin:   "builtin",
+		ProviderTypeClaude:   "claude",
+		ProviderTypeGemini:   "gemini",
+		ProviderTypeOpenCode: "opencode",
+		ProviderTypeOpenClaw: "openclaw",
+		ProviderTypeIronClaw: "ironclaw",
+		ProviderTypeBuiltin:  "builtin",
 	}
 	for pt, expected := range types {
 		if string(pt) != expected {

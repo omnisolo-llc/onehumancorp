@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel"
 )
 
 func (s *Server) handleMCPRegister(w http.ResponseWriter, r *http.Request) {

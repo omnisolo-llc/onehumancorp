@@ -16,6 +16,7 @@ import (
 
 func TestRegisterAgentViaGRPC(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := NewHubServiceServer(hub)
 
 	req := pb.RegisterAgentRequest_builder{
@@ -47,6 +48,7 @@ func TestRegisterAgentViaGRPC(t *testing.T) {
 
 func TestOpenMeetingViaGRPC(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
@@ -76,6 +78,7 @@ func TestOpenMeetingViaGRPC(t *testing.T) {
 
 func TestPublishViaGRPC(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
@@ -124,6 +127,7 @@ func (m *MockStreamServer) RecvMsg(m_ interface{}) error { return nil }
 
 func TestStreamMessagesViaGRPC(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
 	srv := NewHubServiceServer(hub)
@@ -177,6 +181,7 @@ func TestStreamMessagesViaGRPC(t *testing.T) {
 
 func TestHubMinimaxAPIKey(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	if hub.MinimaxAPIKey() != "" {
 		t.Errorf("expected empty API key initially")
 	}
@@ -188,6 +193,7 @@ func TestHubMinimaxAPIKey(t *testing.T) {
 
 func TestReasonViaMinimaxEmptyKey(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := NewHubServiceServer(hub)
 
 	hub.SetMinimaxAPIKey("")
@@ -200,6 +206,7 @@ func TestReasonViaMinimaxEmptyKey(t *testing.T) {
 
 func TestReasonViaMinimaxDummyKey(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := NewHubServiceServer(hub)
 
 	hub.SetMinimaxAPIKey("dummy-key")
@@ -212,12 +219,14 @@ func TestReasonViaMinimaxDummyKey(t *testing.T) {
 
 func TestRegisterHubServiceCoverage(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := grpc.NewServer()
 	RegisterHubService(srv, hub)
 }
 
 func TestPublishViaGRPCError(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := NewHubServiceServer(hub)
 
 	req := pb.PublishMessageRequest_builder{
@@ -239,6 +248,7 @@ func TestPublishViaGRPCError(t *testing.T) {
 
 func TestStreamMessagesViaGRPCCancellation(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := NewHubServiceServer(hub)
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -33,6 +33,7 @@ func (m *benchStreamMessagesServer) Send(msg *pb.Message) error {
 
 func BenchmarkStreamLatency(b *testing.B) {
 	hub := NewHub()
+	defer hub.Close()
 	srv := NewHubServiceServer(hub)
 
 	hub.RegisterAgent(Agent{ID: "agent1", Status: StatusIdle})
@@ -71,6 +72,7 @@ func BenchmarkStreamLatency(b *testing.B) {
 
 func BenchmarkPublish_Concurrent(b *testing.B) {
 	hub := NewHub()
+	defer hub.Close()
 	numAgents := 100
 	for i := 0; i < numAgents; i++ {
 		hub.RegisterAgent(Agent{ID: fmt.Sprintf("agent%d", i), Status: StatusIdle})
@@ -94,6 +96,7 @@ func BenchmarkPublish_Concurrent(b *testing.B) {
 
 func BenchmarkInbox(b *testing.B) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "agent1", Status: StatusIdle})
 
 	msg := Message{

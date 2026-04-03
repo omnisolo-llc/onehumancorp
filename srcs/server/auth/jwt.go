@@ -39,7 +39,6 @@ type Claims struct {
 //
 //   - role: string; The target role identifier to check for.
 //
-//
 // Accepts parameters: c *Claims (No Constraints).
 // Returns HasRole(role string) bool.
 // Produces no errors.

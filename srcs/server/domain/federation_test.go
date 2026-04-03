@@ -42,8 +42,8 @@ func TestFederatedRegistry(t *testing.T) {
 
 	t.Run("Register Duplicate Agent", func(t *testing.T) {
 		agent := FederatedAgent{
-			AgentID:      "agent-1",
-			HomeCluster:  "eu-central-1",
+			AgentID:     "agent-1",
+			HomeCluster: "eu-central-1",
 		}
 		err := registry.RegisterAgent(agent)
 		if err == nil {

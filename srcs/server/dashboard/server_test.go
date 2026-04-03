@@ -61,6 +61,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 
 	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
@@ -86,6 +87,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 func TestNewServerBootstrapsInternalDefaultAgentWhenHubEmpty(t *testing.T) {
 	org := domain.NewSoftwareCompany("org-empty", "Empty Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
 	NewServer(org, hub, tracker)
@@ -119,6 +121,7 @@ func TestNewServerBootstrapsInternalDefaultAgentFromEnv(t *testing.T) {
 
 	org := domain.NewSoftwareCompany("org-env", "Configurable Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
 	NewServer(org, hub, tracker)
@@ -142,6 +145,7 @@ func TestNewServerBootstrapsInternalDefaultAgentFromEnv(t *testing.T) {
 func TestNewServerDoesNotBootstrapInternalDefaultAgentWhenAgentsExist(t *testing.T) {
 	org := domain.NewSoftwareCompany("org-existing", "Existing Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(orchestration.Agent{ID: "existing-1", Name: "Existing", Role: "CEO", OrganizationID: org.ID})
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
@@ -161,6 +165,7 @@ func TestNewServerHeadlessDisablesFrontendRoutes(t *testing.T) {
 
 	org := domain.NewSoftwareCompany("org-headless", "Headless Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
 	server := httptest.NewServer(NewServer(org, hub, tracker))
@@ -223,6 +228,7 @@ func TestHandleDashboardReturnsSnapshot(t *testing.T) {
 func TestHandleDashboardFiltersOtherOrganizationState(t *testing.T) {
 	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "other-1", Name: "Other", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-2"})
 	hub.OpenMeeting("kickoff", []string{"pm-1"})
@@ -694,6 +700,7 @@ func TestHandleFireAgentRejectsMissingAgentID(t *testing.T) {
 func TestHandleFireAgentRejectsCrossOrganizationAgent(t *testing.T) {
 	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(orchestration.Agent{ID: "foreign-1", Name: "Foreign", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-2"})
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry()}

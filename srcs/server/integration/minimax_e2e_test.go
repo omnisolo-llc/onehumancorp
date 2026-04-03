@@ -55,6 +55,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	}
 
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	hub.SetMinimaxAPIKey(key)
 
 	hub.RegisterAgent(orchestration.Agent{
@@ -163,6 +164,7 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	}
 
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	hub.SetMinimaxAPIKey(key)
 
 	hub.RegisterAgent(orchestration.Agent{
@@ -289,6 +291,7 @@ func TestMinimaxHubAPIKeyFromEnv(t *testing.T) {
 	t.Setenv("MINIMAX_API_KEY", testKey)
 
 	hub := orchestration.NewHub()
+	defer hub.Close()
 
 	// Simulate what the dashboard server does on startup.
 	if key := os.Getenv("MINIMAX_API_KEY"); key != "" {

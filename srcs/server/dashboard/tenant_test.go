@@ -38,6 +38,7 @@ func adminToken(t *testing.T) string {
 func newTestRegistry() *TenantRegistry {
 	factory := func(org domain.Organization) http.Handler {
 		hub := orchestration.NewHub()
+		defer hub.Close()
 		tracker := billing.NewTracker(billing.DefaultCatalog)
 		return NewServer(org, hub, tracker, sharedAuthStore)
 	}

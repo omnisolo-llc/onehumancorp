@@ -303,62 +303,62 @@ func TestAdapters_InvalidIdentity(t *testing.T) {
 }
 
 func TestValidateSPIFFEID_EdgeCases(t *testing.T) {
-    tests := []struct {
-        name    string
-        id      string
-        wantErr bool
-    }{
-        {
-            name:    "invalid URL format",
-            id:      "http://[::1]:namedport",
-            wantErr: true,
-        },
-        {
-            name:    "invalid scheme",
-            id:      "http://onehumancorp.io/agent/test",
-            wantErr: true,
-        },
-        {
-            name:    "invalid domain",
-            id:      "spiffe://evil.com/agent/test",
-            wantErr: true,
-        },
-        {
-            name:    "invalid path - missing agent prefix",
-            id:      "spiffe://onehumancorp.io/user/test",
-            wantErr: true,
-        },
-        {
-            name:    "valid",
-            id:      "spiffe://onehumancorp.io/agent/test",
-            wantErr: false,
-        },
-    }
+	tests := []struct {
+		name    string
+		id      string
+		wantErr bool
+	}{
+		{
+			name:    "invalid URL format",
+			id:      "http://[::1]:namedport",
+			wantErr: true,
+		},
+		{
+			name:    "invalid scheme",
+			id:      "http://onehumancorp.io/agent/test",
+			wantErr: true,
+		},
+		{
+			name:    "invalid domain",
+			id:      "spiffe://evil.com/agent/test",
+			wantErr: true,
+		},
+		{
+			name:    "invalid path - missing agent prefix",
+			id:      "spiffe://onehumancorp.io/user/test",
+			wantErr: true,
+		},
+		{
+			name:    "valid",
+			id:      "spiffe://onehumancorp.io/agent/test",
+			wantErr: false,
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            err := ValidateSPIFFEID(tt.id)
-            if (err != nil) != tt.wantErr {
-                t.Errorf("ValidateSPIFFEID() error = %v, wantErr %v", err, tt.wantErr)
-            }
-        })
-    }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSPIFFEID(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSPIFFEID() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func TestLogCheckpoint_ExistingNonStringSlice(t *testing.T) {
-    state := &State{
-        Data: map[string]interface{}{
-            "checkpoints": []int{1, 2, 3}, // Not []string
-        },
-    }
-    LogCheckpoint(state, "test-identity")
+	state := &State{
+		Data: map[string]interface{}{
+			"checkpoints": []int{1, 2, 3}, // Not []string
+		},
+	}
+	LogCheckpoint(state, "test-identity")
 
-    // Should gracefully create a new []string with the new checkpoint
-    cps := state.Data["checkpoints"].([]string)
-    if len(cps) != 1 {
-        t.Errorf("Expected exactly 1 checkpoint, got %d", len(cps))
-    }
-    if cps[0] != "Synced by: test-identity" {
-        t.Errorf("Unexpected checkpoint content: %s", cps[0])
-    }
+	// Should gracefully create a new []string with the new checkpoint
+	cps := state.Data["checkpoints"].([]string)
+	if len(cps) != 1 {
+		t.Errorf("Expected exactly 1 checkpoint, got %d", len(cps))
+	}
+	if cps[0] != "Synced by: test-identity" {
+		t.Errorf("Unexpected checkpoint content: %s", cps[0])
+	}
 }

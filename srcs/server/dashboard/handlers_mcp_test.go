@@ -16,6 +16,7 @@ import (
 func TestHandleMCPInvokeCoverage(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
@@ -83,7 +84,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	t.Run("large payload", func(t *testing.T) {
 		// generate > 1MB string
 		largeStr := strings.Repeat("a", 2<<20)
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy", "params": {"a": "` + largeStr + `"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy", "params": {"a": "`+largeStr+`"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -113,6 +114,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 func TestHandleMCPInvoke_MissingSPIFFEID(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
@@ -131,6 +133,7 @@ func TestHandleMCPInvoke_MissingSPIFFEID(t *testing.T) {
 func TestHandleMCPInvoke_InvalidSPIFFEID(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
@@ -149,6 +152,7 @@ func TestHandleMCPInvoke_InvalidSPIFFEID(t *testing.T) {
 func TestHandleMCPRegister_Dynamic(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
@@ -232,6 +236,7 @@ func TestHandleMCPRegister_Dynamic(t *testing.T) {
 
 func TestHandleContextSync(t *testing.T) {
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	// Create an in-memory SIPDB
 	sipdb, err := orchestration.NewSIPDB(":memory:")
 	if err != nil {
@@ -297,6 +302,7 @@ func TestHandleContextSync(t *testing.T) {
 func TestHandleMCPTools(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 

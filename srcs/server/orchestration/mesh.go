@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/redis/go-redis/v9"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 )
 

@@ -79,6 +79,7 @@ func TestNewCentrifugeNode_CreationError(t *testing.T) {
 
 func TestHubCentrifugeIntegration(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 
 	cn, err := NewCentrifugeNode()
 	if err != nil {
@@ -119,6 +120,7 @@ func TestHubCentrifugeIntegration(t *testing.T) {
 
 func TestHubCentrifugeNilSafe(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 
 	hub.RegisterAgent(Agent{
 		ID:             "nil-pm",

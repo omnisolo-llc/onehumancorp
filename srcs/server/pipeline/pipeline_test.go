@@ -61,6 +61,7 @@ func TestParseSpecApproved(t *testing.T) {
 func setupHubAndOrchestrator(t *testing.T) (*orchestration.Hub, *Orchestrator) {
 	t.Helper()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 
 	hub.RegisterAgent(orchestration.Agent{
 		ID:             "system-hub",

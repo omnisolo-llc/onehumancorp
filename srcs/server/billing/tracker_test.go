@@ -42,13 +42,13 @@ func TestTracker_Track(t *testing.T) {
 		{
 			name: "zero tokens",
 			usage: Usage{
-				OrganizationID: "org-1",
-				Model:          "test-model",
-				PromptTokens:   0,
+				OrganizationID:   "org-1",
+				Model:            "test-model",
+				PromptTokens:     0,
 				CompletionTokens: 0,
 			},
 			wantError: false,
-			wantCost: 0.0,
+			wantCost:  0.0,
 		},
 	}
 

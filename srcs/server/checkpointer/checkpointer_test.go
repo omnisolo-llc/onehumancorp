@@ -74,7 +74,7 @@ func TestPGCheckpointer_SaveAndLoad(t *testing.T) {
 			name:     "Empty state map",
 			threadID: "thread-empty-state",
 			state:    map[string]interface{}{},
-			wantErr: false,
+			wantErr:  false,
 		},
 		{
 			name:     "Update existing thread ID",

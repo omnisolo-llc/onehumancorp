@@ -19,6 +19,7 @@ func setupSchedulerServer(t *testing.T) *Server {
 	t.Helper()
 	org := domain.NewSoftwareCompany("test-org", "Test Org", "CEO", time.Now().UTC())
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
