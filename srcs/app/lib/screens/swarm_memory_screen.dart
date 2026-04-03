@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart' hide Column, Row;
-import 'package:sqlite3/sqlite3.dart' as sqlite;
+// import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
   const SwarmMemoryScreen({super.key});
@@ -203,7 +203,7 @@ class _DurableMemoryWidget extends ConsumerWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return StreamBuilder<List<sqlite.Row>>(
+    return StreamBuilder<List<dynamic>>(
       stream: db.watch('SELECT * FROM swarm_memory ORDER BY updated_at DESC LIMIT 50'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -224,8 +224,8 @@ class _DurableMemoryWidget extends ConsumerWidget {
           itemCount: rows.length,
           itemBuilder: (context, index) {
             final row = rows[index];
-            final value = row['value'] as String?;
-            final updatedAt = row['updated_at'] as String?;
+            final value = (row is Map) ? row['value'] as String? : (row as dynamic).read('value') as String?;
+            final updatedAt = (row is Map) ? row['updated_at'] as String? : (row as dynamic).read('updated_at') as String?;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
