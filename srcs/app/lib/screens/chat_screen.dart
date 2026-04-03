@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
@@ -168,45 +169,130 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 // ── Widgets ────────────────────────────────────────────────────────────────
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends StatefulWidget {
   final CentrifugeMessage message;
   final bool isMe;
 
   const _MessageBubble({required this.message, required this.isMe});
 
   @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+
+    // Slight delay for list view insertion animation
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isMe = widget.isMe;
+
+    // OHC Glassmorphism styling - applying the visual excellence mandate
+    final bgColor = isMe
+        ? cs.primaryContainer.withOpacity(0.4)
+        : cs.surfaceContainerHighest.withOpacity(0.4);
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isMe ? 12 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 12),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-            Text(message.body),
-          ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isMe ? 16 : 0),
+                  bottomRight: Radius.circular(isMe ? 0 : 16),
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(const <double>[
+                      1.168, -0.153, -0.015, 0, 0,
+                      -0.046, 1.061, -0.015, 0, 0,
+                      -0.046, -0.152, 1.198, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isMe ? 16 : 0),
+                        bottomRight: Radius.circular(isMe ? 0 : 16),
+                      ),
+                      border: Border.all(
+                        color: cs.outlineVariant.withOpacity(0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      children: [
+                        if (!isMe)
+                          Text(
+                            widget.message.authorName,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Outfit',
+                            ),
+                          ),
+                        if (!isMe) const SizedBox(height: 4),
+                        Text(
+                          widget.message.body,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: cs.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
