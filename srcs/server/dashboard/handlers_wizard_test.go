@@ -15,6 +15,7 @@ import (
 func newWizardTestServer(t *testing.T) (*Server, *httptest.Server) {
 	t.Helper()
 	hub := orchestration.NewHub()
+	defer hub.Close()
 	s := &Server{
 		hub:      hub,
 		settings: settings.DefaultSettings(),

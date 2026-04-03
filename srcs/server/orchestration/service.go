@@ -317,6 +317,15 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	ctx            context.Context
+	cancel         context.CancelFunc
+}
+
+// Close gracefully stops the Hub and its background workers.
+func (h *Hub) Close() {
+	if h.cancel != nil {
+		h.cancel()
+	}
 }
 
 // NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
@@ -340,6 +349,8 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		sched = scheduler.NewSchedulerWithRepository(taskRepo)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	h := &Hub{
 		agents:        map[string]Agent{},
 		inbox:         map[string][]Message{},
@@ -351,9 +362,11 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		repo:          repo,
 		scheduler:     sched,
 		settingsStore: settings.NewStore(),
+		ctx:           ctx,
+		cancel:        cancel,
 	}
-	go h.eventLogWorker(context.Background(), "events.jsonl")
-	go h.tokenBurnRateWorker(context.Background())
+	go h.eventLogWorker(h.ctx, "events.jsonl")
+	go h.tokenBurnRateWorker(h.ctx)
 	return h
 }
 

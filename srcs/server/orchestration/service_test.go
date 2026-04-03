@@ -20,6 +20,7 @@ import (
 
 func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
@@ -58,6 +59,7 @@ func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
 
 func TestNewHubStartsEmpty(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 
 	if meetings := hub.Meetings(); len(meetings) != 0 {
 		t.Fatalf("expected no meetings, got %d", len(meetings))
@@ -69,6 +71,7 @@ func TestNewHubStartsEmpty(t *testing.T) {
 
 func TestRegisterAgentDefaultsStatusAndLookupMiss(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "agent-1", Name: "Agent", Role: "SWE", OrganizationID: "org-1"})
 
 	agent, ok := hub.Agent("agent-1")
@@ -85,6 +88,7 @@ func TestRegisterAgentDefaultsStatusAndLookupMiss(t *testing.T) {
 
 func TestOpenMeetingMarksParticipantsInMeeting(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
 
@@ -101,6 +105,7 @@ func TestOpenMeetingMarksParticipantsInMeeting(t *testing.T) {
 
 func TestDelegateTask(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "specialist", Name: "Specialist", Role: "SWE", OrganizationID: "org-1"})
 
@@ -135,6 +140,7 @@ func TestDelegateTask(t *testing.T) {
 
 func TestDelegateTask_AgentNotFound(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "org-1"})
 
 	task := Message{
@@ -163,6 +169,7 @@ func TestDelegateTask_AgentNotFound(t *testing.T) {
 
 func TestPublishValidationErrors(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 
 	if err := hub.Publish(Message{FromAgent: "missing"}); err == nil {
@@ -178,6 +185,7 @@ func TestPublishValidationErrors(t *testing.T) {
 
 func TestPublishWithoutMeetingMarksSenderActive(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 
 	if err := hub.Publish(Message{
@@ -198,6 +206,7 @@ func TestPublishWithoutMeetingMarksSenderActive(t *testing.T) {
 
 func TestMeetingLookupMiss(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	if _, ok := hub.Meeting("missing"); ok {
 		t.Fatalf("expected missing meeting lookup to fail")
 	}
@@ -205,6 +214,7 @@ func TestMeetingLookupMiss(t *testing.T) {
 
 func TestMeetingsReturnsSnapshot(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
 	hub.OpenMeeting("kickoff", []string{"a", "b"})
@@ -220,6 +230,7 @@ func TestMeetingsReturnsSnapshot(t *testing.T) {
 
 func TestAgentsReturnsSortedSnapshot(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 
@@ -240,6 +251,7 @@ func TestAgentsReturnsSortedSnapshot(t *testing.T) {
 
 func TestFireAgentRemovesFromHubAndInbox(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a", Name: "A", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "b", Name: "B", Role: "SWE", OrganizationID: "org-1"})
 	hub.OpenMeeting("m1", []string{"a", "b"})
@@ -267,6 +279,7 @@ func TestFireAgentRemovesFromHubAndInbox(t *testing.T) {
 
 func TestOpenMeetingWithAgendaPreservesAgendaField(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "pm", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
@@ -326,6 +339,7 @@ func TestMinimaxAPIKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hub := NewHub()
+			defer hub.Close()
 			hub.SetMinimaxAPIKey(tt.apiKey)
 			if got := hub.MinimaxAPIKey(); got != tt.expected {
 				t.Fatalf("expected %q, got %q", tt.expected, got)
@@ -355,6 +369,7 @@ func (m *mockStreamMessagesServer) Send(msg *pb.Message) error {
 
 func TestHubServiceServer_StreamMessages(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -402,6 +417,7 @@ func TestHubServiceServer_StreamMessages(t *testing.T) {
 
 func TestHubServiceServer_StreamMessages_SendError(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -432,6 +448,7 @@ func TestHubServiceServer_StreamMessages_SendError(t *testing.T) {
 
 func TestHubServiceServer_StreamMessages_ContextDone(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -453,6 +470,7 @@ func TestHubServiceServer_StreamMessages_ContextDone(t *testing.T) {
 
 func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -564,6 +582,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 			MinimaxAPIURL = ts.URL
 
 			hub := NewHub()
+			defer hub.Close()
 			hub.SetMinimaxAPIKey(tt.apiKey)
 			server := NewHubServiceServer(hub)
 			ctx := context.Background()
@@ -592,6 +611,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 func TestRegisterHubService(t *testing.T) {
 	s := grpc.NewServer()
 	hub := NewHub()
+	defer hub.Close()
 	RegisterHubService(s, hub)
 
 	// Since we cannot easily introspect the server to see if it's registered without a client,
@@ -607,6 +627,7 @@ func TestRegisterHubService(t *testing.T) {
 
 func TestHubServiceServer_RegisterAgent(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	server := NewHubServiceServer(hub)
 	ctx := context.Background()
 
@@ -639,6 +660,7 @@ func TestHubServiceServer_RegisterAgent(t *testing.T) {
 
 func TestHubServiceServer_OpenMeeting(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -672,6 +694,7 @@ func TestHubServiceServer_OpenMeeting(t *testing.T) {
 
 func TestHubServiceServer_DelegateTask(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "specialist", Name: "Specialist", Role: "SWE", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -754,6 +777,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 
 func TestHub_Publish_UnbufferedChannel(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 
@@ -903,6 +927,7 @@ func TestMinimaxClient_Reason_ClientDo_Error(t *testing.T) {
 
 func TestHubServiceServer_Publish(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
 	server := NewHubServiceServer(hub)
@@ -971,6 +996,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 	ResetGlobalCircuitBreakerForTest()
 	hub := NewHub()
+	defer hub.Close()
 	agentID := "test-agent"
 	validPayload := []byte(`{"context": "some data to summarize"}`)
 	invalidPayload := []byte(`{"context": "some data", "unknown_field": "bad data"}`)
@@ -1078,6 +1104,7 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 
 	// 2. Initialize Hub and set a fake API key
 	hub := NewHub()
+	defer hub.Close()
 	hub.mu.Lock()
 	hub.minimaxAPIKey = "fake-key"
 	hub.mu.Unlock()
@@ -1132,6 +1159,7 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 
 func TestHub_ToolParameterAutoCorrection(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	agentID := "test-agent"
 
 	defer func() {
@@ -1214,6 +1242,7 @@ func TestHub_ToolParameterAutoCorrection(t *testing.T) {
 
 func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 
 	agentID := "test-agent-2"
 	eventID := "event-123"
@@ -1289,6 +1318,7 @@ func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 
 func TestSetSIPDB(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	db, _ := NewSIPDB("file:dummy_1.db?mode=memory&cache=shared")
 	hub.SetSIPDB(db)
 	if hub.GetSIPDB() != db {
@@ -1298,6 +1328,7 @@ func TestSetSIPDB(t *testing.T) {
 
 func TestDelegateTask_AgentNotRegistered(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	err := hub.DelegateTask("task-1", "ROLE", Message{Content: "instruction"})
 	if err == nil {
 		t.Fatal("expected error")
@@ -1306,6 +1337,7 @@ func TestDelegateTask_AgentNotRegistered(t *testing.T) {
 
 func TestEventLogWorker_Coverage(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 
 	// Create temp file for events
 	tmpFile, err := os.CreateTemp("", "events-*.jsonl")
@@ -1351,6 +1383,7 @@ func TestRedactInterfacePII_Slice(t *testing.T) {
 
 func TestHub_LogEvent_FullChan(t *testing.T) {
 	hub := NewHub() // eventLogChan is buffered to 1000
+	defer hub.Close()
 
 	// Fill it up to cause a drop
 	for i := 0; i < 1000; i++ {
@@ -1362,6 +1395,7 @@ func TestHub_LogEvent_FullChan(t *testing.T) {
 
 func TestHub_AppendEventWorker_ContextCancel(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go hub.eventLogWorker(ctx, "/tmp/dummy_events.jsonl")
@@ -1374,6 +1408,7 @@ func TestHub_AppendEventWorker_ContextCancel(t *testing.T) {
 
 func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 	ctx := context.Background()
 
 	go hub.eventLogWorker(ctx, "/tmp/dummy_events2.jsonl")
@@ -1386,6 +1421,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 
 func TestHub_DelegateMissionWithSIPDB(t *testing.T) {
 	hub := NewHub()
+	defer hub.Close()
 
 	db, err := NewSIPDB("file:dummy_2.db?mode=memory&cache=shared")
 	if err != nil {
