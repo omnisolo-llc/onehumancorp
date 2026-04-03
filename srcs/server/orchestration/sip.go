@@ -41,10 +41,11 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db              db.Provider
-	ContextRoot     string
-	cachedGrounding string
-	groundingOnce   *sync.Once
+	db               db.Provider
+	ContextRoot      string
+	cachedGrounding  string
+	groundingOnce    *sync.Once
+	cachedGroundErr  error
 }
 
 const (
@@ -481,12 +482,30 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		s.groundingOnce.Do(func() {
 			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
 				path := filepath.Join(s.ContextRoot, filename)
-				if content, err := os.ReadFile(path); err == nil {
+
+				// Stat the file first to distinguish between missing vs permissions/errors
+				_, statErr := os.Stat(path)
+				if statErr == nil {
+					// File exists
+					content, err := os.ReadFile(path)
+					if err != nil {
+						s.cachedGroundErr = err
+						break // Enforce fail-closed if there's a read error
+					}
 					s.cachedGrounding = "\n\n[SYSTEM GROUNDING]:\n" + string(content)
+					break
+				} else if !os.IsNotExist(statErr) {
+					s.cachedGroundErr = statErr
 					break
 				}
 			}
 		})
+
+		// Adhering to the Fail-Closed security mandate
+		if s.cachedGroundErr != nil {
+			return fmt.Errorf("fail-closed: unable to read project grounding files: %w", s.cachedGroundErr)
+		}
+
 		if s.cachedGrounding != "" {
 			task.Content += s.cachedGrounding
 		}
@@ -676,6 +695,7 @@ func (s *SIPDB) Close() error {
 func (s *SIPDB) SetContextRoot(path string) {
 	s.ContextRoot = path
 	s.cachedGrounding = ""
+	s.cachedGroundErr = nil
 	s.groundingOnce = new(sync.Once)
 }
 
