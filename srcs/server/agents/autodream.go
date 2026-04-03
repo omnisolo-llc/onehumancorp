@@ -22,6 +22,7 @@ type AutoDreamEngine struct {
 func NewAutoDreamEngine(db db.Provider, llmClient orchestration.MinimaxClient) *AutoDreamEngine {
 	// Wrap the client to ensure caching is enabled for all generated embeddings
 	if llmClient != nil {
+		llmClient = NewResilientProvider(llmClient, nil)
 		llmClient = orchestration.NewCachedMinimaxClient(llmClient, db, nil)
 	}
 
