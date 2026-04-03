@@ -243,6 +243,7 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 type LocalTeammateMesh struct {
 	db        db.Provider
 	broadcast chan Task
+	persist   chan Task
 	mu        sync.RWMutex
 	subs      []chan Task
 }
@@ -251,16 +252,17 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 	lm := &LocalTeammateMesh{
 		db:        provider,
 		broadcast: make(chan Task, 10000), // Increased buffer for parallel execution
+		persist:   make(chan Task, 10000), // Buffer for persistence workers
 	}
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
 	for i := 0; i < 10; i++ {
 		go lm.run()
+		go lm.persistWorker()
 	}
 	return lm
 }
 
-func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
-	// Persist to shared_tasks
+func (lm *LocalTeammateMesh) persistWorker() {
 	query := `
 		INSERT INTO shared_tasks (id, title, status, assigned_agent_id)
 		VALUES ($1, $2, $3, $4)
@@ -269,10 +271,20 @@ func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 			assigned_agent_id = excluded.assigned_agent_id,
 			updated_at = CURRENT_TIMESTAMP
 	`
-	// Fallback to simpler upsert if needed, but since it's SQLite, ON CONFLICT works.
-	_, err := lm.db.Exec(ctx, query, task.TaskID, task.Action, task.Status, task.AgentID)
-	if err != nil {
-		return err
+	for task := range lm.persist {
+		_, err := lm.db.Exec(context.Background(), query, task.TaskID, task.Action, task.Status, task.AgentID)
+		if err != nil {
+			slog.Error("LocalTeammateMesh persist error", "err", err, "taskID", task.TaskID)
+		}
+	}
+}
+
+func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
+	// Offload persistence to worker threads
+	select {
+	case lm.persist <- task:
+	default:
+		slog.Warn("LocalTeammateMesh persist channel full, dropping persistence for task", "taskID", task.TaskID)
 	}
 
 	// Broadcast locally
