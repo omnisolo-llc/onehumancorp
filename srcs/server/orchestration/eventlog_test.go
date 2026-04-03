@@ -10,6 +10,7 @@ import (
 func TestEventLogWorker_CoverageGaps(t *testing.T) {
 	// Create a new Hub instance
 	hub := NewHub()
+	defer hub.Close()
 
 	// 1. Test LogEvent channel full capacity dropping logic
 	// We need to fill the channel *before* the worker starts draining it,

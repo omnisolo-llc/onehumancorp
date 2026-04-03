@@ -99,7 +99,6 @@ type Orchestrator struct {
 //
 //   - hub: *orchestration.Hub; The communication hub used to publish and receive orchestration messages.
 //
-//
 // Accepts parameters: hub *orchestration.Hub (No Constraints).
 // Returns *Orchestrator.
 // Produces no errors.
@@ -423,7 +422,6 @@ func (o *Orchestrator) GetPipelineState(branch string) (PipelineState, error) {
 }
 
 // GetCIJobs safely retrieves a snapshot of all CI jobs triggered by the orchestrator.
-//
 //
 // Accepts parameters: o *Orchestrator (No Constraints).
 // Returns GetCIJobs() []CIJob.

@@ -319,7 +319,7 @@ func run(now time.Time, listen listenFunc) error {
 									break
 								}
 								if syncedCount > 0 {
-								slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
+									slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
 								}
 								if syncedCount < 500 {
 									break // No more batches
@@ -372,7 +372,7 @@ func run(now time.Time, listen listenFunc) error {
 					}
 				}()
 			}
-	}
+		}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
 		go func() {
@@ -393,7 +393,7 @@ func run(now time.Time, listen listenFunc) error {
 			}
 		}()
 	} else {
-			slog.Error("failed to initialize SIPDB", "error", sipdbErr)
+		slog.Error("failed to initialize SIPDB", "error", sipdbErr)
 	}
 
 	var handler http.Handler

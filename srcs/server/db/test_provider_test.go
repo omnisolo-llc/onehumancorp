@@ -1,9 +1,9 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"testing"
-	"context"
 
 	_ "modernc.org/sqlite"
 )
