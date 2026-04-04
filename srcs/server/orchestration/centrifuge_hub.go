@@ -174,6 +174,19 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 	}
 }
 
+// PublishCoordinationMessage fans out a coordination message to the coordination channel.
+func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
+	channel := "mesh:coordination"
+	data, err := json.Marshal(msg)
+	if err != nil {
+		slog.Error("[centrifuge] marshal coordination message", "error", err)
+		return
+	}
+	if _, err := cn.node.Publish(channel, data); err != nil {
+		slog.Debug("[centrifuge] publish coordination message", "channel", channel, "error", err)
+	}
+}
+
 // PublishTaskBroadcast fans out a task update to all subscribers of the
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
