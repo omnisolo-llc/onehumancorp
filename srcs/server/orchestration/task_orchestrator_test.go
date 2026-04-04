@@ -129,3 +129,66 @@ func TestTaskOrchestrator(t *testing.T) {
 		t.Fatalf("expected memory to be inserted, got err %v", err)
 	}
 }
+
+func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	ctx := context.Background()
+
+	// Ensure tables exist
+	_, _ = prov.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			payload TEXT NOT NULL DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	orchestrator := NewTaskOrchestrator(prov, nil, nil, nil)
+
+	// Create Task
+	task := &models.Task{
+		MissionID:   "m2",
+		Title:       "Task Distributed",
+		Description: "Testing Locks",
+		Priority:    "1",
+	}
+	_, err := orchestrator.EnqueueTask(ctx, task, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Try acquiring concurrently
+	agent1Chan := make(chan *models.Task)
+	agent2Chan := make(chan *models.Task)
+
+	go func() {
+		acq, _ := orchestrator.AcquireReadyTask(ctx, "agent1", nil)
+		agent1Chan <- acq
+	}()
+
+	go func() {
+		acq, _ := orchestrator.AcquireReadyTask(ctx, "agent2", nil)
+		agent2Chan <- acq
+	}()
+
+	acq1 := <-agent1Chan
+	acq2 := <-agent2Chan
+
+	if acq1 != nil && acq2 != nil {
+		t.Fatalf("both agents acquired the task, distributed lock failed")
+	}
+
+	if acq1 == nil && acq2 == nil {
+		t.Fatalf("neither agent acquired the task")
+	}
+}
