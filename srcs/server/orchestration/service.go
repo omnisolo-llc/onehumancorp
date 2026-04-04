@@ -19,6 +19,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -1892,9 +1893,15 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 		return
 	}
 
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	limit := 10 // Default limit
 
-	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	tasks, err := tm.PollTasks(r.Context(), claims.OrganizationID, agentID, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1925,12 +1932,18 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 		return
 	}
 
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var err error
 	switch req.Status {
 	case "REVIEW":
-		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
+		err = tm.ReviewTask(r.Context(), claims.OrganizationID, taskID, req.AgentID)
 	case "COMPLETED":
-		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
+		err = tm.CompleteTask(r.Context(), claims.OrganizationID, taskID, req.AgentID)
 	default:
 		http.Error(w, "invalid status transition", http.StatusBadRequest)
 		return

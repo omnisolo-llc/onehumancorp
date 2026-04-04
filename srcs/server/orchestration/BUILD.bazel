@@ -72,6 +72,7 @@ go_test(
     deps = [
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
+        "//srcs/server/auth",
         "//srcs/server/db",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
