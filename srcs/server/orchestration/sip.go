@@ -422,11 +422,6 @@ func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) err
 	})
 }
 
-var (
-	// throttleSemaphore limits concurrent DelegateMission executions in SQLite standalone mode.
-	throttleSemaphore = make(chan struct{}, 1)
-)
-
 func envBoolDefault(key string, fallback bool) bool {
 	value, ok := os.LookupEnv(key)
 	if !ok {
@@ -444,17 +439,6 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-
-	if isStandalone {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
 	upsertQuery := `
 		INSERT INTO agent_missions (id, status, payload, created_at)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -482,17 +466,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	isStandalone := envBoolDefault("OHC_STANDALONE", false)
-
-	if isStandalone {
-		select {
-		case throttleSemaphore <- struct{}{}:
-			defer func() { <-throttleSemaphore }()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
