@@ -21,6 +21,10 @@ One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) th
 ## Architecture
 Built on a modular, open-source stack (Model Context Protocol, SPIFFE/SPIRE, LangGraph), the system utilizes a **Hybrid Architecture (OHC-HA)**. It seamlessly scales from a multi-tenant **Cloud-Native Mode** using Kubernetes and PostgreSQL, to a fully localized **Standalone Desktop Mode** powered by SQLite and local in-memory messaging. The backend is written in Go (Bazel-based monorepo), and it integrates with a Flutter frontend (supporting Web, Mobile, and Desktop) to allow the human CEO to direct virtual meeting rooms, handle high-risk approvals, and monitor token usage and billing.
 
+Key components of the Hybrid Architecture include:
+- **Teammate Mesh**: Real-time agent coordination using Redis Pub/Sub (Cloud) or in-memory mutexes (Standalone).
+- **AutoDream Sync Engine**: Local memory consolidation from SQLite that seamlessly syncs to Cloud PgVector when connected.
+
 ```mermaid
 graph TD;
     User[Human CEO] --> Frontend[React Next.js Frontend];
@@ -29,7 +33,7 @@ graph TD;
     Hub --> Rooms[Virtual Meeting Rooms];
     Hub --> K8s[Kubernetes Cluster];
     K8s --> Agents[AI Agents];
-    Agents --> DB[(Database)];
+    Agents --> DB[(Database / SQLite / PostgreSQL)];
     K8s --> MCP[Model Context Protocol];
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
