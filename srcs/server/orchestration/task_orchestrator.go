@@ -187,23 +187,27 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var task models.Task
 	var query string
 	if to.db.IsSQLite() {
-		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-		// Since we have a mutex for SQLite (standalone), TOCTOU is prevented by the mutex
-		// but using UPDATE RETURNING is cleaner and atomic.
+		// SQLite doesn't cleanly support UPDATE with a subquery LIMIT 1.
+		// Use a two-step select-then-update process wrapped in an explicit transaction.
+		var taskID string
 		query = `
-			UPDATE swarm_tasks
-			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id = (
-				SELECT id FROM swarm_tasks
-				WHERE status = 'READY'
-				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
-				LIMIT 1
-			)
-			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+			SELECT id FROM swarm_tasks
+			WHERE status = 'READY'
+			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			LIMIT 1
 		`
-		err = tx.QueryRow(ctx, query, agentID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
-		)
+		err = tx.QueryRow(ctx, query).Scan(&taskID)
+		if err == nil {
+			query = `
+				UPDATE swarm_tasks
+				SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $2
+				RETURNING id, mission_id, title, status, payload, created_at, updated_at
+			`
+			err = tx.QueryRow(ctx, query, agentID, taskID).Scan(
+				&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+			)
+		}
 	} else {
 		// In Postgres, use UPDATE RETURNING with a subquery that uses FOR UPDATE SKIP LOCKED.
 		query = `
