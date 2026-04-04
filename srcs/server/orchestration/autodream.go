@@ -156,25 +156,126 @@ func (w *AutoDreamWorker) pruneStaleSessionsWithDistributedLock(ctx context.Cont
 	w.pruneStaleSessions(ctx)
 }
 
-// pruneStaleSessions deletes agent_session_data older than 24 hours.
+// pruneStaleSessions deletes agent_session_data older than 24 hours and compresses context into autodream_memories.
 func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
 	threshold := time.Now().Add(-24 * time.Hour).UTC()
-	var query string
+
+	// 1. First fetch sessions that are going to be pruned
+	var selectQuery string
 	if w.pool.IsSQLite() {
-		query = "DELETE FROM agent_session_data WHERE last_accessed < ?"
+		selectQuery = "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?"
 	} else {
-		// Use SKIP LOCKED for a simple distributed worker queue mechanism when running multiple replicas
-		query = "DELETE FROM agent_session_data WHERE session_id IN (SELECT session_id FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED)"
+		selectQuery = "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED"
 	}
 
-	res, err := w.pool.Exec(ctx, query, threshold)
+	tx, err := w.pool.Begin(ctx)
 	if err != nil {
-		slog.Error("AutoDream: failed to prune stale sessions", "error", err)
+		slog.Error("AutoDream: failed to begin transaction for pruning", "error", err)
 		return
 	}
-	if res > 0 {
-		slog.Info("AutoDream: pruned stale sessions via distributed queue", "count", res)
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, selectQuery, threshold)
+	if err != nil {
+		slog.Error("AutoDream: failed to select stale sessions", "error", err)
+		return
 	}
+
+	type StaleSession struct {
+		SessionID   string
+		ContextData string
+	}
+	var staleSessions []StaleSession
+
+	for rows.Next() {
+		var s StaleSession
+		if err := rows.Scan(&s.SessionID, &s.ContextData); err != nil {
+			continue
+		}
+		staleSessions = append(staleSessions, s)
+	}
+	rows.Close()
+
+	if len(staleSessions) == 0 {
+		return
+	}
+
+	// Release the transaction lock early so we do not block other workers while we call LLMs
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("AutoDream: failed to commit select transaction", "error", err)
+		return
+	}
+
+	var fallbackVector string = "["
+	for i := 0; i < 1536; i++ {
+		if i > 0 {
+			fallbackVector += ","
+		}
+		fallbackVector += "0.0"
+	}
+	fallbackVector += "]"
+
+	// 2. Compress context into autodream_memories (without holding tx locks)
+	for _, s := range staleSessions {
+		embeddingStr := fallbackVector // fallback embedding
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		compressedContext := s.ContextData
+
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+
+			// Summarize the context
+			prompt := "Summarize the following agent session context into a durable memory: " + s.ContextData
+			summary, err := client.Reason(ctxTimeout, prompt)
+			if err == nil && summary != "" {
+				compressedContext = summary
+			}
+
+			// Generate embedding
+			embedding, err := client.GenerateEmbedding(ctxTimeout, compressedContext)
+			cancel()
+			if err != nil {
+				slog.Warn("AutoDream: LLM embedding failed, using fallback", "error", err)
+			} else if len(embedding) > 0 {
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+		} else {
+			// Fallback: simple truncation for testing/standalone
+			if len(compressedContext) > 500 {
+				compressedContext = compressedContext[:500] + "..."
+			}
+		}
+
+		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		if w.pool.IsSQLite() {
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES (?, ?, ?, ?)"
+			// In SQLite we need to provide a string ID since it uses text for UUID
+			id := "mem-" + s.SessionID
+			_, err = w.pool.Exec(ctx, insertQuery, id, compressedContext, embeddingStr, "session-prune")
+		} else {
+			_, err = w.pool.Exec(ctx, insertQuery, compressedContext, embeddingStr, "session-prune")
+		}
+
+		if err != nil {
+			slog.Error("AutoDream: failed to insert into autodream_memories", "error", err)
+			continue
+		}
+
+		// Delete the session data
+		deleteQuery := "DELETE FROM agent_session_data WHERE session_id = $1"
+		if w.pool.IsSQLite() {
+			deleteQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+		}
+		_, err = w.pool.Exec(ctx, deleteQuery, s.SessionID)
+		if err != nil {
+			slog.Error("AutoDream: failed to delete stale session", "error", err)
+		}
+	}
+
+	slog.Info("AutoDream: pruned stale sessions via distributed queue", "count", len(staleSessions))
 }
 
 // runConflictResolutionPipeline detects contradicting knowledge in the vector database.
