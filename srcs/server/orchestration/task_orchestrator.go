@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"log/slog"
 	"sync"
 	"time"
@@ -325,9 +326,9 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 
 		var worker *AutoDreamWorker
 		if to.redisClient != nil {
-			worker = NewAutoDreamWorker(to.db, to.redisClient)
+			worker = NewAutoDreamWorker(to.db)
 		} else {
-			worker = NewAutoDreamWorker(to.db, nil)
+			worker = NewAutoDreamWorker(to.db)
 		}
 
 		// Let AutoDreamWorker handle it via direct LLM call

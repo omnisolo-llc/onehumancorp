@@ -8,6 +8,7 @@ go_library(
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
+        "test_provider.go",
     ],
     embedsrcs = [
         "migrations/001_users.sql",
