@@ -134,7 +134,8 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, missionID, parent
 	// Broadcast task creation
 	if tm.hub != nil {
 		go func() {
-			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
+			payloadBytes, err := json.Marshal(map[string]interface{}{
+				"task_id":     task.ID,
 				"action":      "CREATE",
 				"agent_id":    task.AssignedAgentID,
 				"status":      task.Status,
@@ -143,6 +144,9 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, missionID, parent
 				"description": task.Description,
 				"priority":    task.Priority,
 			})
+			if err == nil {
+				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
+			}
 		}()
 	}
 
@@ -223,11 +227,29 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	// Check DAG dependencies
-	for _, depID := range task.Dependencies {
-		var status string
-		err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
-		if err != nil || status != "COMPLETED" {
-			// Dependency not satisfied
+	// For DAG dependency check across swarm_tasks, PostgreSQL uses JSONB array text elements and SQLite uses json_each
+	if len(task.Dependencies) > 0 {
+		var pendingDeps int
+		var checkQuery string
+
+		if tm.db.IsSQLite() {
+			checkQuery = `
+				SELECT COUNT(*)
+				FROM swarm_tasks
+				WHERE id IN (SELECT value FROM json_each($1)) AND status != 'COMPLETED'
+			`
+		} else {
+			checkQuery = `
+				SELECT COUNT(*)
+				FROM swarm_tasks
+				WHERE id IN (SELECT jsonb_array_elements_text($1::jsonb)) AND status != 'COMPLETED'
+			`
+		}
+
+		depsBytes, _ := json.Marshal(task.Dependencies)
+		err = tx.QueryRow(ctx, checkQuery, string(depsBytes)).Scan(&pendingDeps)
+		if err != nil || pendingDeps > 0 {
+			// Dependencies not satisfied
 			return nil, nil // Cannot claim yet
 		}
 	}
@@ -270,11 +292,15 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	// Broadcast task claim
 	if tm.hub != nil {
 		go func() {
-			tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
+			payloadBytes, err := json.Marshal(map[string]interface{}{
+				"task_id":  task.ID,
 				"action":   "CLAIM",
 				"agent_id": agentID,
 				"status":   task.Status,
 			})
+			if err == nil {
+				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
+			}
 		}()
 	}
 
@@ -306,11 +332,15 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	// Broadcast task review
 	if tm.hub != nil {
 		go func() {
-			tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+			payloadBytes, err := json.Marshal(map[string]interface{}{
+				"task_id":  taskID,
 				"action":   "REVIEW",
 				"agent_id": agentID,
 				"status":   "REVIEW",
 			})
+			if err == nil {
+				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
+			}
 		}()
 	}
 
@@ -336,11 +366,15 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	// Broadcast task completion
 	if tm.hub != nil {
 		go func() {
-			tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+			payloadBytes, err := json.Marshal(map[string]interface{}{
+				"task_id":  taskID,
 				"action":   "COMPLETE",
 				"agent_id": agentID,
 				"status":   "COMPLETED",
 			})
+			if err == nil {
+				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
+			}
 		}()
 	}
 
@@ -435,12 +469,29 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	for _, task := range candidateTasks {
 		// Check DAG dependencies: Task is only available if all dependencies are COMPLETED
 		depsSatisfied := true
-		for _, depID := range task.Dependencies {
-			var status string
-			err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
-			if err != nil || status != "COMPLETED" {
+
+		if len(task.Dependencies) > 0 {
+			var pendingDeps int
+			var checkQuery string
+
+			if tm.db.IsSQLite() {
+				checkQuery = `
+					SELECT COUNT(*)
+					FROM swarm_tasks
+					WHERE id IN (SELECT value FROM json_each($1)) AND status != 'COMPLETED'
+				`
+			} else {
+				checkQuery = `
+					SELECT COUNT(*)
+					FROM swarm_tasks
+					WHERE id IN (SELECT jsonb_array_elements_text($1::jsonb)) AND status != 'COMPLETED'
+				`
+			}
+
+			depsBytes, _ := json.Marshal(task.Dependencies)
+			err = tx.QueryRow(ctx, checkQuery, string(depsBytes)).Scan(&pendingDeps)
+			if err != nil || pendingDeps > 0 {
 				depsSatisfied = false
-				break
 			}
 		}
 
@@ -485,13 +536,17 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	for _, task := range claimedTasks {
 		// Broadcast task claim
 		if tm.hub != nil {
-			go func() {
-				tm.hub.PublishTaskBroadcast(task.ID, map[string]interface{}{
+			go func(t *SharedTask) {
+				payloadBytes, err := json.Marshal(map[string]interface{}{
+					"task_id":  t.ID,
 					"action":   "CLAIM",
 					"agent_id": agentID,
-					"status":   task.Status,
+					"status":   t.Status,
 				})
-			}()
+				if err == nil {
+					_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
+				}
+			}(task)
 		}
 	}
 
