@@ -236,19 +236,19 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		// Mock summarization:
 		summary := "Summarized context from session " + s.ID + ": " + s.ContextData
 
-		embeddingStr := "[0.0]" // fallback embedding
+		vector_embeddingStr := "[0.0]" // fallback vector_embedding
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
 			client := NewMinimaxClient(minimaxKey)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
-			embedding, embedErr := client.GenerateEmbedding(ctxTimeout, summary)
+			vector_embedding, embedErr := client.GenerateEmbedding(ctxTimeout, summary)
 			cancel()
 			if embedErr != nil {
-				slog.Warn("AutoDream: LLM embedding failed during compression, using fallback", "error", embedErr)
-			} else if len(embedding) > 0 {
-				embeddingStr = fmt.Sprintf("%v", embedding)
-				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
-				embeddingStr = "[" + embeddingStr + "]"
+				slog.Warn("AutoDream: LLM vector_embedding failed during compression, using fallback", "error", embedErr)
+			} else if len(vector_embedding) > 0 {
+				vector_embeddingStr = fmt.Sprintf("%v", vector_embedding)
+				vector_embeddingStr = strings.ReplaceAll(strings.Trim(vector_embeddingStr, "[]"), " ", ",")
+				vector_embeddingStr = "[" + vector_embeddingStr + "]"
 			}
 		}
 
@@ -258,18 +258,18 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 			continue
 		}
 
-		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		insertQuery := "INSERT INTO autodream_memories (content, vector_embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, content, vector_embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 		}
 
 		missionID := "session-" + s.ID
 
 		if w.pool.IsSQLite() {
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, id, summary, embeddingStr, missionID)
+			_, err = tx.Exec(ctx, insertQuery, id, summary, vector_embeddingStr, missionID)
 		} else {
-			_, err = tx.Exec(ctx, insertQuery, summary, embeddingStr, missionID)
+			_, err = tx.Exec(ctx, insertQuery, summary, vector_embeddingStr, missionID)
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
@@ -321,34 +321,34 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		}
 		content := string(contentBytes)
 
-		// Generate embedding
-		embeddingStr := "[0.0]" // fallback embedding
+		// Generate vector_embedding
+		vector_embeddingStr := "[0.0]" // fallback vector_embedding
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
 			client := NewMinimaxClient(minimaxKey)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
-			embedding, err := client.GenerateEmbedding(ctxTimeout, content)
+			vector_embedding, err := client.GenerateEmbedding(ctxTimeout, content)
 			cancel()
 			if err != nil {
-				slog.Warn("AutoDream: LLM embedding failed, using fallback", "error", err)
-			} else if len(embedding) > 0 {
+				slog.Warn("AutoDream: LLM vector_embedding failed, using fallback", "error", err)
+			} else if len(vector_embedding) > 0 {
 				// Convert float array to pgvector string format
-				embeddingStr = fmt.Sprintf("%v", embedding)
+				vector_embeddingStr = fmt.Sprintf("%v", vector_embedding)
 				// Replace space separated array `[1 2 3]` to comma separated `[1,2,3]` required by pgvector
-				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
-				embeddingStr = "[" + embeddingStr + "]"
+				vector_embeddingStr = strings.ReplaceAll(strings.Trim(vector_embeddingStr, "[]"), " ", ",")
+				vector_embeddingStr = "[" + vector_embeddingStr + "]"
 			}
 		}
 
 		memoryID := "mem-" + file.Name()
 
 		// Store into autodream_memories (the table defined for AutoDream data pipelines)
-		query := "INSERT INTO autodream_memories (id, content, embedding) VALUES ($1, $2, $3::vector) ON CONFLICT(id) DO NOTHING"
+		query := "INSERT INTO autodream_memories (id, content, vector_embedding) VALUES ($1, $2, $3::vector) ON CONFLICT(id) DO NOTHING"
 		if w.pool.IsSQLite() {
-			query = "INSERT INTO autodream_memories (id, content, embedding) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING"
+			query = "INSERT INTO autodream_memories (id, content, vector_embedding) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING"
 		}
 
-		_, err = w.pool.Exec(ctx, query, memoryID, content, embeddingStr)
+		_, err = w.pool.Exec(ctx, query, memoryID, content, vector_embeddingStr)
 		if err != nil {
 			slog.Error("AutoDream: failed to insert memory", "file", file.Name(), "error", err)
 			continue
@@ -482,7 +482,7 @@ func (w *AutoDreamWorker) runConflictResolutionPipeline(ctx context.Context) {
 	}
 }
 
-// resolveConflicts finds vector embeddings that are similar but have conflicting contexts.
+// resolveConflicts finds vector vector_embeddings that are similar but have conflicting contexts.
 func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 	if w.pool.IsSQLite() {
 		// Vector similarity search relies on pgvector extension, skipping complex join on SQLite local wrapper.
@@ -493,15 +493,15 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 	// Find pairs of memories with highly similar semantic vectors (cosine distance < 0.05).
 	query := `
 		SELECT a.memory_id, a.context, b.memory_id, b.context
-		FROM swarm_truth_embeddings a
-		JOIN swarm_truth_embeddings b ON a.memory_id < b.memory_id
-		WHERE a.embedding <=> b.embedding < 0.05
+		FROM swarm_memory_embeddings a
+		JOIN swarm_memory_embeddings b ON a.memory_id < b.memory_id
+		WHERE a.vector_embedding <=> b.vector_embedding < 0.05
 		LIMIT 10
 	`
 
 	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
-		slog.Error("AutoDream: failed to query embeddings with pgvector", "error", err)
+		slog.Error("AutoDream: failed to query vector_embeddings with pgvector", "error", err)
 		return
 	}
 	defer rows.Close()
@@ -568,12 +568,12 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 			continue
 		}
 
-		// Insert consolidated truth (we'll re-use embedding 1 for simplicity of this demo since they are 95% similar anyway).
+		// Insert consolidated truth (we'll re-use vector_embedding 1 for simplicity of this demo since they are 95% similar anyway).
 		// Note: pgvector allows copying vectors.
-		_, _ = tx.Exec(ctx, "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) SELECT $1, $2, embedding FROM swarm_truth_embeddings WHERE memory_id = $3 ON CONFLICT DO NOTHING", resolvedID, resolvedContext, c.ID1)
+		_, _ = tx.Exec(ctx, "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding) SELECT $1, $2, vector_embedding FROM swarm_memory_embeddings WHERE memory_id = $3 ON CONFLICT DO NOTHING", resolvedID, resolvedContext, c.ID1)
 
 		// Delete old fragments
-		_, _ = tx.Exec(ctx, "DELETE FROM swarm_truth_embeddings WHERE memory_id IN ($1, $2)", c.ID1, c.ID2)
+		_, _ = tx.Exec(ctx, "DELETE FROM swarm_memory_embeddings WHERE memory_id IN ($1, $2)", c.ID1, c.ID2)
 
 		// Mark conflict as resolved
 		_, _ = tx.Exec(ctx, "UPDATE memory_conflicts SET resolution_status = 'RESOLVED', resolved_memory_id = $1 WHERE conflict_id = $2", resolvedID, conflictID)
@@ -587,14 +587,14 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 }
 
 // InjectTruth inserts high-dimensional semantic memory directly into the store.
-// embedding expects a valid vector string representation like "[0.1, 0.2, 0.3]" for pgvector, or equivalent array.
-func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr string, embedding string) error {
-	query := "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES ($1, $2, $3::vector, NOW()) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
+// vector_embedding expects a valid vector string representation like "[0.1, 0.2, 0.3]" for pgvector, or equivalent array.
+func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr string, vector_embedding string) error {
+	query := "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, created_at) VALUES ($1, $2, $3::vector, NOW()) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding"
 	if w.pool.IsSQLite() {
-		query = "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
+		query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding"
 	}
 
-	_, err := w.pool.Exec(ctx, query, memoryID, contextStr, embedding)
+	_, err := w.pool.Exec(ctx, query, memoryID, contextStr, vector_embedding)
 	return err
 }
 
@@ -605,14 +605,14 @@ type TruthSearchResult struct {
 	Distance float64
 }
 
-// SearchTruth queries the vector database for the closest semantic embeddings.
-func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
+// SearchTruth queries the vector database for the closest semantic vector_embeddings.
+func (w *AutoDreamWorker) SearchTruth(ctx context.Context, vector_embedding string, limit int) ([]TruthSearchResult, error) {
 	if w.pool.IsSQLite() {
 		// In SQLite standalone mode, vector search relies on linear fallback or simple text match.
 		// Fallback to returning recent memories as a mock for vector search
 		query := `
 			SELECT memory_id, context, 0 as distance
-			FROM swarm_truth_embeddings
+			FROM swarm_memory_embeddings
 			ORDER BY created_at DESC
 			LIMIT ?
 		`
@@ -634,12 +634,12 @@ func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, lim
 	}
 
 	query := `
-		SELECT memory_id, context, embedding <=> $1::vector as distance
-		FROM swarm_truth_embeddings
+		SELECT memory_id, context, vector_embedding <=> $1::vector as distance
+		FROM swarm_memory_embeddings
 		ORDER BY distance ASC
 		LIMIT $2
 	`
-	rows, err := w.pool.Query(ctx, query, embedding, limit)
+	rows, err := w.pool.Query(ctx, query, vector_embedding, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search truth with pgvector: %w", err)
 	}
@@ -675,7 +675,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to create epoch: %w", err)
 	}
 
-	// 2. Fetch context from agent_session_data and compress it into autodream_memories/swarm_truth_embeddings
+	// 2. Fetch context from agent_session_data and compress it into autodream_memories/swarm_memory_embeddings
 	var rows db.Rows
 	var errQuery error
 	if w.pool.IsSQLite() {
@@ -721,8 +721,8 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 				slog.Info("AutoDream: Consolidated epoch via LLM")
 				clusterData["consolidated_insight"] = response
 
-				// Inject the summarized task embeddings into the Vector DB
-				// Use dummy embedding for now, as we don't have a real embedder here.
+				// Inject the summarized task vector_embeddings into the Vector DB
+				// Use dummy vector_embedding for now, as we don't have a real embedder here.
 				_ = w.InjectTruth(ctx, epochID, response, "[0.0, 0.0, 0.0]")
 			} else {
 				clusterData["error"] = err.Error()

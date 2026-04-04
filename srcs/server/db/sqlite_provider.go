@@ -74,7 +74,18 @@ func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ..
 	if err != nil {
 		return 0, err
 	}
-	return res.RowsAffected()
+	if res == nil {
+		return 0, nil
+	}
+	// Do not call RowsAffected() inside migrations or ALTER TABLE because some sqlite drivers panic with nil pointer
+	if strings.Contains(strings.ToUpper(sqlQuery), "ALTER") || strings.Contains(strings.ToUpper(sqlQuery), "CREATE") || strings.Contains(strings.ToUpper(sqlQuery), "DROP") || strings.Contains(strings.ToUpper(sqlQuery), "INSERT INTO schema_migrations") {
+		return 0, nil
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return 0, nil
+	}
+	return rows, nil
 }
 
 func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
@@ -203,7 +214,17 @@ func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) 
 	if err != nil {
 		return 0, err
 	}
-	return res.RowsAffected()
+	if res == nil {
+		return 0, nil
+	}
+	if strings.Contains(strings.ToUpper(sqlQuery), "ALTER") || strings.Contains(strings.ToUpper(sqlQuery), "CREATE") || strings.Contains(strings.ToUpper(sqlQuery), "DROP") || strings.Contains(strings.ToUpper(sqlQuery), "INSERT INTO schema_migrations") {
+		return 0, nil
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return 0, nil
+	}
+	return rows, nil
 }
 
 func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {

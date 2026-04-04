@@ -480,6 +480,18 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
 // SQLite's concurrent writes lock for safe queue picking.
 func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int) ([]*SharedTask, error) {
+	// First acquire a distributed Redis lock if enabled (cross-node sync fallback)
+	if tm.redisClient != nil {
+		lockKey := "lock:poll_tasks:" + agentID
+		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(5 * time.Second).Build()
+		err := tm.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return nil, nil // Another polling process for this agent is running
+			}
+			return nil, fmt.Errorf("failed to acquire distributed lock for polling: %w", err)
+		}
+	}
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)

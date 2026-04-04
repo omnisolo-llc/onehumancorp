@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_session_accessed ON agent_session_data(last
 -- However, we must modify the 005_sip.sql to use VECTOR, but since we can't alter an existing deployed table easily without ALTER,
 -- we'll add a new table for high-dimensional semantic truth injection.
 
-CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
+CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
     memory_id TEXT PRIMARY KEY,
     context TEXT NOT NULL,
     embedding VECTOR(1536),

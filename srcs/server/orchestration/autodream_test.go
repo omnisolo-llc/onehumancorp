@@ -78,7 +78,7 @@ func TestAutoDreamTruthInjectionAndConflict(t *testing.T) {
 	ctx := context.Background()
 
 	// Clear out truth table
-	_, _ = pool.Exec(ctx, "DELETE FROM swarm_truth_embeddings")
+	_, _ = pool.Exec(ctx, "DELETE FROM swarm_memory_embeddings")
 
 	// Create dummy vector string representation of 1536 dimension (or we mock it with a smaller one for SQLite fallback, but the column expects 1536 in pgvector).
 	vectorStr := "["
