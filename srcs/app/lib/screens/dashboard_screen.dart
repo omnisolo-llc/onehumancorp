@@ -316,6 +316,156 @@ class _Metric extends StatelessWidget {
   }
 }
 
+class _AnimatedRoleScaleCardInner extends StatefulWidget {
+  final String formattedRole;
+  final int count;
+  final bool isScaling;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
+  final ColorScheme colors;
+
+  const _AnimatedRoleScaleCardInner({
+    required this.formattedRole,
+    required this.count,
+    required this.isScaling,
+    this.onDecrease,
+    this.onIncrease,
+    required this.colors,
+  });
+
+  @override
+  State<_AnimatedRoleScaleCardInner> createState() => _AnimatedRoleScaleCardInnerState();
+}
+
+class _AnimatedRoleScaleCardInnerState extends State<_AnimatedRoleScaleCardInner> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: SizedBox(
+          width: 320,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(const <double>[
+                  1.168, -0.153, -0.015, 0, 0,
+                  -0.046, 1.061, -0.015, 0, 0,
+                  -0.046, -0.152, 1.198, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? widget.colors.surfaceContainerHighest.withValues(alpha: 0.5)
+                      : widget.colors.surfaceContainerHighest.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered
+                        ? widget.colors.outlineVariant
+                        : widget.colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.formattedRole,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                fontFamily: 'Outfit',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: widget.colors.onSurfaceVariant,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Semantics(
+                            button: true,
+                            label: 'Decrease ${widget.formattedRole} count',
+                            child: IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, size: 28),
+                              color: widget.colors.primary,
+                              onPressed: widget.onDecrease,
+                              tooltip: 'Fire Agent',
+                            ),
+                          ),
+                          SizedBox(
+                            width: 32,
+                            child: Center(
+                              child: widget.isScaling
+                                  ? SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: widget.colors.primary,
+                                      ),
+                                    )
+                                  : Text(
+                                      '${widget.count}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          Semantics(
+                            button: true,
+                            label: 'Increase ${widget.formattedRole} count',
+                            child: IconButton(
+                              icon: const Icon(Icons.add_circle_outline, size: 28),
+                              color: widget.colors.primary,
+                              onPressed: widget.onIncrease,
+                              tooltip: 'Hire Agent',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RoleScaleCard extends StatefulWidget {
   final String role;
   final int count;
@@ -371,131 +521,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
       label: 'Scale $formattedRole role',
       child: Tooltip(
         message: 'Manage $formattedRole Allocation',
-        child: SizedBox(
-          width: 320,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              formattedRole,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                fontFamily: 'Outfit',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: colors.onSurfaceVariant,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Semantics(
-                            button: true,
-                            label: 'Decrease $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: widget.count > 0 && !_isScaling
-                                  ? () => _scaleTo(widget.count - 1)
-                                  : null,
-                              tooltip: 'Fire Agent',
-                            ),
-                          ),
-                          SizedBox(
-                            width: 32,
-                            child: Center(
-                              child: _isScaling
-                                  ? SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: colors.primary,
-                                      ),
-                                    )
-                                  : Text(
-                                      '${widget.count}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          Semantics(
-                            button: true,
-                            label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        child: _AnimatedRoleScaleCardInner(
+          formattedRole: formattedRole,
+          count: widget.count,
+          isScaling: _isScaling,
+          onDecrease: widget.count > 0 && !_isScaling ? () => _scaleTo(widget.count - 1) : null,
+          onIncrease: !_isScaling ? () => _scaleTo(widget.count + 1) : null,
+          colors: colors,
+        )
       ),
     );
   }
@@ -516,7 +549,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _StatCard extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -532,89 +565,92 @@ class _StatCard extends StatelessWidget {
   });
 
   @override
+  State<_StatCard> createState() => _StatCardState();
+}
+
+class _StatCardState extends State<_StatCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ?? color;
+    final effectiveIconColor = widget.iconColor ?? widget.color;
     return Semantics(
-      label: '$label: $value',
+      label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
       child: Tooltip(
-        message: 'View $label',
-        child: SizedBox(
-          width: 200,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.08),
+        message: 'View ${widget.label}',
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedScale(
+            scale: _isHovered ? 1.02 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: SizedBox(
+              width: 200,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(const <double>[
+                      1.168, -0.153, -0.015, 0, 0,
+                      -0.046, 1.061, -0.015, 0, 0,
+                      -0.046, -0.152, 1.198, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   ),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Semantics(
-                    button: true,
-                    label: '$label: $value action',
-                    child: InkWell(
-                      onTap: () {},
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: _isHovered
+                          ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.1)
+                          : Theme.of(context).colorScheme.surface.withValues(alpha: 0.03),
                       borderRadius: BorderRadius.circular(16),
-                      splashColor: color.withValues(alpha: 0.1),
-                      highlightColor: color.withValues(alpha: 0.05),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(icon, color: effectiveIconColor, size: 32),
-                            const SizedBox(height: 16),
-                            Text(
-                              value,
-                              style: TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: effectiveIconColor,
-                                fontFamily: 'Inter',
-                              ),
+                      border: Border.all(
+                        color: _isHovered
+                            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15)
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Semantics(
+                        button: true,
+                        label: '${widget.label}: ${widget.value} action',
+                        child: InkWell(
+                          onTap: () {},
+                          borderRadius: BorderRadius.circular(16),
+                          splashColor: widget.color.withValues(alpha: 0.1),
+                          highlightColor: widget.color.withValues(alpha: 0.05),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(widget.icon, color: effectiveIconColor, size: 32),
+                                const SizedBox(height: 16),
+                                Text(
+                                  widget.value,
+                                  style: TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                    color: effectiveIconColor,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  widget.label,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              label,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
