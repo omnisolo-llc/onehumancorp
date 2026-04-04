@@ -102,15 +102,18 @@ func (m *mockMeter) Int64Counter(name string, options ...metric.Int64CounterOpti
 	return &mockInt64Counter{}, nil
 }
 
+func (m *mockMeter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
+	if m.failCounters {
+		return nil, fmt.Errorf("mock error")
+	}
+	return &mockInt64UpDownCounter{}, nil
+}
+
 func (m *mockMeter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	if m.failHistograms {
 		return nil, fmt.Errorf("mock histogram error")
 	}
 	return &mockFloat64Histogram{}, nil
-}
-
-func (m *mockMeter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
-	return nil, nil
 }
 
 func (m *mockMeter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
@@ -160,6 +163,16 @@ type mockFloat64Gauge struct {
 
 func (m *mockFloat64Gauge) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
 	m.lastValue = value
+}
+
+type mockInt64UpDownCounter struct {
+	metric.Int64UpDownCounter
+}
+
+func (m *mockInt64UpDownCounter) Add(ctx context.Context, incr int64, options ...metric.AddOption) {}
+
+func (m *mockInt64UpDownCounter) Enabled(ctx context.Context) bool {
+	return true
 }
 
 func (m *mockMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {

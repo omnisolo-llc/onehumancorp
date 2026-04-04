@@ -403,6 +403,10 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 			if err == nil {
 				slog.Info("AutoDream: Consolidated epoch via LLM")
 				clusterData["consolidated_insight"] = response
+
+				// Inject the summarized task embeddings into the Vector DB
+				// Use dummy embedding for now, as we don't have a real embedder here.
+				_ = w.InjectTruth(ctx, epochID, response, "[0.0, 0.0, 0.0]")
 			} else {
 				clusterData["error"] = err.Error()
 			}

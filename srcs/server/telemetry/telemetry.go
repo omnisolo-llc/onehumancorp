@@ -36,6 +36,8 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	TaskQueueLengthGauge       metric.Int64UpDownCounter
+	TaskProcessingLatency      metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
@@ -125,6 +127,7 @@ func InitTelemetry() (func(), error) {
 // We take any interface that implements the needed method to allow easy mocking
 type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
+	Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 }
@@ -260,6 +263,23 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskQueueLengthGauge, err = m.Int64UpDownCounter(
+		"ohc_task_queue_length",
+		metric.WithDescription("Current length of the shared task queue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskProcessingLatency, err = m.Float64Histogram(
+		"ohc_task_processing_latency_seconds",
+		metric.WithDescription("Task processing latency in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -565,6 +585,22 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
 	))
+}
+
+// RecordTaskQueueLength modifies the queue length gauge.
+func RecordTaskQueueLength(ctx context.Context, amount int64) {
+	if TaskQueueLengthGauge == nil {
+		return
+	}
+	TaskQueueLengthGauge.Add(ctx, amount)
+}
+
+// RecordTaskProcessed Latency
+func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
+	if TaskProcessingLatency == nil {
+		return
+	}
+	TaskProcessingLatency.Record(ctx, latency.Seconds())
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.

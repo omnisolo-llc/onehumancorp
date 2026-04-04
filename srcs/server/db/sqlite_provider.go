@@ -108,6 +108,55 @@ func (p *SqliteProvider) Close() {
 	p.db.Close()
 }
 
+func (p *SqliteProvider) AcquireTask(ctx context.Context, agentID string) (*TaskRecord, error) {
+	start := time.Now()
+	// SQLite supports UPDATE ... RETURNING
+	// But it does not support subqueries with LIMIT in UPDATE directly.
+	// So we use a transaction and two steps, or a simple single update if we use a specific condition.
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		trackQuery(ctx, "AcquireTask", err, time.Since(start))
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	// In SQLite we can do UPDATE ... RETURNING where ID is subquery limit 1
+	// because SQLite Begin creates an immediate transaction lock by default or
+	// we rely on the concurrent writes lock.
+	query := `
+		UPDATE tasks
+		SET status = 'RUNNING', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT id FROM tasks
+			WHERE status = 'PENDING'
+			ORDER BY created_at ASC
+			LIMIT 1
+		)
+		RETURNING id, parent_task_id, agent_id, status, payload, created_at, updated_at
+	`
+
+	var t TaskRecord
+	err = tx.QueryRow(ctx, query, agentID).Scan(
+		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &t.Payload, &t.CreatedAt, &t.UpdatedAt,
+	)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			trackQuery(ctx, "AcquireTask", nil, time.Since(start))
+			return nil, nil
+		}
+		trackQuery(ctx, "AcquireTask", err, time.Since(start))
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		trackQuery(ctx, "AcquireTask_Commit", err, time.Since(start))
+		return nil, err
+	}
+
+	trackQuery(ctx, "AcquireTask", nil, time.Since(start))
+	return &t, nil
+}
+
 func (p *SqliteProvider) IsSQLite() bool {
 	return true
 }
