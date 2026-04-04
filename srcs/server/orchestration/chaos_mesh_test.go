@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -61,4 +62,73 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	}
 	wg.Wait()
 	t.Log("Successfully verified standalone database operations without deadlock")
+
+	// 3. Chaos Engineering: Break .agent-task/mailbox/ and .agent-lock/
+	// In the real system, some fallback offline queues write to .agent-task/mailbox or status files.
+	// We simulate ML-Resilience behavior by corrupting these directories.
+	chaosCtx, chaosCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer chaosCancel()
+
+	mailboxDir := filepath.Join(tmpDir, ".agent-task", "mailbox")
+	lockDir := filepath.Join(tmpDir, ".agent-lock")
+
+	err = os.MkdirAll(mailboxDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create mailbox dir: %v", err)
+	}
+	err = os.MkdirAll(lockDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create lock dir: %v", err)
+	}
+
+	// Corrupt permissions to read-only
+	os.Chmod(mailboxDir, 0400)
+	os.Chmod(lockDir, 0400)
+	defer func() {
+		os.Chmod(mailboxDir, 0755)
+		os.Chmod(lockDir, 0755)
+	}()
+
+	// Phase 2 (Implementation): Actually test the system's resilience by having the AutoDreamWorker
+	// run its memory ingestion pipeline while the .agent-task/memory directory is corrupted.
+	// ML-Resilience mandates that the worker gracefully logs the error without panicking.
+
+	// Temporarily override the working directory to point to our chaos environment
+	// so that memoryDir = ".agent-task/memory" hits our temporary directory.
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
+
+	memoryDir := filepath.Join(tmpDir, ".agent-task", "memory")
+	err = os.MkdirAll(memoryDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create memory dir: %v", err)
+	}
+
+	// Create a dummy memory file that will become unreadable
+	dummyMemory := filepath.Join(memoryDir, "test.yml")
+	os.WriteFile(dummyMemory, []byte("content: chaos"), 0644)
+
+	// Corrupt permissions to prevent reading
+	os.Chmod(memoryDir, 0000)
+	defer os.Chmod(memoryDir, 0755)
+
+	// Instantiate the AutoDreamWorker (the real application code)
+	worker := NewAutoDreamWorker(db)
+
+	// Use a waitgroup to run ingestAgentMemories concurrently
+	var chaosWg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		chaosWg.Add(1)
+		go func() {
+			defer chaosWg.Done()
+			// This tests the real AutoDreamWorker logic against the corrupted directory.
+			// ML-Resilience requires that this does not panic, and gracefully returns or ignores.
+			worker.ingestAgentMemories(chaosCtx)
+		}()
+	}
+
+	// If it doesn't panic, ML-Resilience passes.
+	chaosWg.Wait()
+	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handles corrupted .agent-task/memory without panic")
 }
