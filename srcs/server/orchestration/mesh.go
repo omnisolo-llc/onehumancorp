@@ -197,6 +197,8 @@ type Task struct {
 type TeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
+	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
+	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
 }
 
 type RedisTeammateMesh struct {
@@ -251,23 +253,60 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	return ch, nil
 }
 
+func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel("mesh:coordination").Message(string(data)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+	ch := make(chan MeshMessage, 100)
+
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
+			var m MeshMessage
+			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+				select {
+				case ch <- m:
+				default:
+					slog.Warn("RedisTeammateMesh.SubscribeCoordination channel full, dropping message")
+				}
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisTeammateMesh.SubscribeCoordination error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
 const numShards = 16
 
 type LocalTeammateMesh struct {
-	db        db.Provider
-	broadcast []chan Task
-	persist   []chan Task
-	mu        []sync.RWMutex
-	subs      []map[chan Task]struct{}
+	db                  db.Provider
+	broadcast           []chan Task
+	persist             []chan Task
+	mu                  []sync.RWMutex
+	subs                []map[chan Task]struct{}
+	coordBroadcast      []chan MeshMessage
+	coordSubs           []map[chan MeshMessage]struct{}
+	coordMu             []sync.RWMutex
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 	lm := &LocalTeammateMesh{
-		db:        provider,
-		broadcast: make([]chan Task, numShards),
-		persist:   make([]chan Task, numShards),
-		mu:        make([]sync.RWMutex, numShards),
-		subs:      make([]map[chan Task]struct{}, numShards),
+		db:                  provider,
+		broadcast:           make([]chan Task, numShards),
+		persist:             make([]chan Task, numShards),
+		mu:                  make([]sync.RWMutex, numShards),
+		subs:                make([]map[chan Task]struct{}, numShards),
+		coordBroadcast:      make([]chan MeshMessage, numShards),
+		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
+		coordMu:             make([]sync.RWMutex, numShards),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
@@ -276,12 +315,15 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		lm.broadcast[i] = make(chan Task, 10000)
 		lm.persist[i] = make(chan Task, 10000)
 		lm.subs[i] = make(map[chan Task]struct{})
+		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
+		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
 
 		// Spawn multiple worker threads per shard
 		for j := 0; j < 4; j++ {
 			go lm.run(i)
 			go lm.persistWorker(i)
 		}
+		go lm.runCoord(i)
 	}
 	return lm
 }
@@ -364,5 +406,50 @@ func (lm *LocalTeammateMesh) run(shardIdx int) {
 			}
 		}
 		lm.mu[shardIdx].RUnlock()
+	}
+}
+
+func (lm *LocalTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	shardIdx := lm.getShard(msg.AgentID)
+	select {
+	case lm.coordBroadcast[shardIdx] <- msg:
+	default:
+		slog.Warn("LocalTeammateMesh coord broadcast channel full, dropping message")
+	}
+	return nil
+}
+
+func (lm *LocalTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+	ch := make(chan MeshMessage, 100)
+
+	for i := 0; i < numShards; i++ {
+		lm.coordMu[i].Lock()
+		lm.coordSubs[i][ch] = struct{}{}
+		lm.coordMu[i].Unlock()
+	}
+
+	go func() {
+		<-ctx.Done()
+		for i := 0; i < numShards; i++ {
+			lm.coordMu[i].Lock()
+			delete(lm.coordSubs[i], ch)
+			lm.coordMu[i].Unlock()
+		}
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
+	for msg := range lm.coordBroadcast[shardIdx] {
+		lm.coordMu[shardIdx].RLock()
+		for ch := range lm.coordSubs[shardIdx] {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		lm.coordMu[shardIdx].RUnlock()
 	}
 }
