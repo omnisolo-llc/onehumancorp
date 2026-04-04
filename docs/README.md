@@ -47,6 +47,7 @@ graph TD;
 - [Help Portal](walkthroughs/help_portal.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)
+- [UI Testing Guidelines](developer/ui_testing_guidelines.md)
 
 ## Quick Start
 1. Ensure you have `bazelisk` and `npm` installed.
