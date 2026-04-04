@@ -385,14 +385,19 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to create epoch: %w", err)
 	}
 
-	// 2. Mock semantic clustering process (as full DBSCAN requires extra pgvector compute)
-	// In reality we would run a query against swarm_truth_embeddings to find dense areas
-	// For this exercise, we simulate finding clusters and sending to Minimax for consolidation.
+	// 2. Fetch context from agent_session_data and compress it into autodream_memories/swarm_truth_embeddings
+	var rows db.Rows
+	var errQuery error
+	if w.pool.IsSQLite() {
+		// SQLite fallback using recency
+		rows, errQuery = w.pool.Query(ctx, "SELECT session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 50")
+	} else {
+		// Postgres mode
+		rows, errQuery = w.pool.Query(ctx, "SELECT session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 50")
+	}
 
-	// Try fetching recent memories to simulate clustering
-	rows, err := w.pool.Query(ctx, "SELECT memory_id, context FROM swarm_truth_embeddings ORDER BY created_at DESC LIMIT 10")
 	var memories []string
-	if err == nil {
+	if errQuery == nil {
 		for rows.Next() {
 			var id, contextStr string
 			if rows.Scan(&id, &contextStr) == nil {
@@ -400,6 +405,8 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 			}
 		}
 		rows.Close()
+	} else {
+		slog.Error("AutoDream: failed to fetch agent_session_data", "error", errQuery)
 	}
 
 	clusterData := map[string]interface{}{
