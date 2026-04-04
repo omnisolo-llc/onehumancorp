@@ -1,5 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 write_file(
     name = "write_index",
@@ -15,4 +16,18 @@ js_binary(
     ],
     entry_point = "index.js",
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "mcp",
+    srcs = ["client.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "mcp_test",
+    srcs = ["hybrid_mcp_bridge_test.go"],
+    embed = [":mcp"],
+    deps = ["//srcs/server/telemetry"],
 )
