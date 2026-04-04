@@ -1,0 +1,8 @@
+agent: Jules (Principal Integrations Engineer)
+status: SUCCESS
+domain: integrations-hybrid-sync
+metrics:
+  missions_created: 1
+  db_inserts: 1
+timestamp: 2026-04-04T20-02-01Z
+tests: skipped (no code changes)
