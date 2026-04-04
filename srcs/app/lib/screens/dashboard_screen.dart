@@ -341,6 +341,7 @@ class _RoleScaleCard extends StatefulWidget {
 
 class _RoleScaleCardState extends State<_RoleScaleCard> {
   bool _isScaling = false;
+  bool _isHovered = false;
 
   Future<void> _scaleTo(int newCount) async {
     if (_isScaling || newCount < 0) return;
@@ -381,11 +382,18 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
         message: 'Manage $formattedRole Allocation',
         child: SizedBox(
           width: 320,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _isHovered = true),
+            onExit: (_) => setState(() => _isHovered = false),
+            child: AnimatedScale(
+              scale: _isHovered ? 1.02 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(<double>[
                   1.168,
                   -0.153,
                   -0.015,
@@ -405,48 +413,55 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                   0,
                   0,
                   1,
-                  0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              formattedRole,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                fontFamily: 'Outfit',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: colors.onSurfaceVariant,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ],
-                        ),
+                      0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: _isHovered
+                          ? const Color.fromRGBO(255, 255, 255, 0.08)
+                          : const Color.fromRGBO(255, 255, 255, 0.03),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _isHovered
+                            ? Colors.white.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.1),
                       ),
-                      const SizedBox(width: 16),
-                      Row(
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  formattedRole,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    fontFamily: 'Outfit',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: colors.onSurfaceVariant,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Semantics(
@@ -495,9 +510,11 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               tooltip: 'Hire Agent',
                             ),
                           ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -616,7 +633,9 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         decoration: BoxDecoration(
-                          color: const Color.fromRGBO(255, 255, 255, 0.03),
+                          color: _isHovered
+                              ? const Color.fromRGBO(255, 255, 255, 0.08)
+                              : const Color.fromRGBO(255, 255, 255, 0.03),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: _isHovered
