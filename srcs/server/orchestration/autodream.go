@@ -234,17 +234,13 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		memoryID := "mem-" + file.Name()
 
-		// Store into agent_memories (the table defined for AutoDream data pipelines)
-		query := "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, $2, $3, $4::vector) ON CONFLICT(id) DO NOTHING"
+		// Store into autodream_memories (the table defined for AutoDream data pipelines)
+		query := "INSERT INTO autodream_memories (id, content, embedding) VALUES ($1, $2, $3::vector) ON CONFLICT(id) DO NOTHING"
 		if w.pool.IsSQLite() {
-			query = "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
+			query = "INSERT INTO autodream_memories (id, content, embedding) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING"
 		}
 
-		// Since organization_id isn't explicitly tied to these system-wide memories by default,
-		// we use "system" or let it be inferred. The schema requires organization_id NOT NULL.
-		orgID := "system"
-
-		_, err = w.pool.Exec(ctx, query, memoryID, orgID, content, embeddingStr)
+		_, err = w.pool.Exec(ctx, query, memoryID, content, embeddingStr)
 		if err != nil {
 			slog.Error("AutoDream: failed to insert memory", "file", file.Name(), "error", err)
 			continue
@@ -285,24 +281,81 @@ func (w *AutoDreamWorker) pruneStaleSessionsWithDistributedLock(ctx context.Cont
 	w.pruneStaleSessions(ctx)
 }
 
-// pruneStaleSessions deletes agent_session_data older than 24 hours.
+// pruneStaleSessions deletes agent_session_data older than 24 hours and compresses it.
 func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
 	threshold := time.Now().Add(-24 * time.Hour).UTC()
-	var query string
-	if w.pool.IsSQLite() {
-		query = "DELETE FROM agent_session_data WHERE last_accessed < ?"
-	} else {
-		// Use SKIP LOCKED for a simple distributed worker queue mechanism when running multiple replicas
-		query = "DELETE FROM agent_session_data WHERE session_id IN (SELECT session_id FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED)"
-	}
 
-	res, err := w.pool.Exec(ctx, query, threshold)
+	tx, err := w.pool.Begin(ctx)
 	if err != nil {
-		slog.Error("AutoDream: failed to prune stale sessions", "error", err)
+		slog.Error("AutoDream: failed to begin transaction for pruning", "error", err)
 		return
 	}
-	if res > 0 {
-		slog.Info("AutoDream: pruned stale sessions via distributed queue", "count", res)
+	defer tx.Rollback(ctx)
+
+	var query string
+	if w.pool.IsSQLite() {
+		query = "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?"
+	} else {
+		// Use SKIP LOCKED for a simple distributed worker queue mechanism when running multiple replicas
+		query = "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := tx.Query(ctx, query, threshold)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch stale sessions", "error", err)
+		return
+	}
+
+	type sessionData struct {
+		id   string
+		data string
+	}
+	var sessions []sessionData
+	for rows.Next() {
+		var s sessionData
+		if err := rows.Scan(&s.id, &s.data); err == nil {
+			sessions = append(sessions, s)
+		}
+	}
+	rows.Close()
+
+	for _, s := range sessions {
+		// In a real system, we'd batch or offload this to a separate worker due to the external API call
+		// But for now, perform the compression sync
+		compressedContext := s.data
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			prompt := "Summarize and compress this agent session memory into its most crucial factual elements:\n" + s.data
+			if response, err := client.Reason(ctxTimeout, prompt); err == nil {
+				compressedContext = response
+			}
+			cancel()
+		}
+
+		// Delete from agent_session_data first
+		delQuery := "DELETE FROM agent_session_data WHERE session_id = $1"
+		if w.pool.IsSQLite() {
+			delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+		}
+		_, _ = tx.Exec(ctx, delQuery, s.id)
+
+		// Note: InjectTruth uses w.pool.Exec (which will run outside this TX),
+		// but since we want to commit the deletion, we trigger the injection asynchronously.
+		go func(sessionID string, compressed string) {
+			// use a separate context for the background operation
+			// to avoid importing context package aliasing issue
+			_ = w.InjectTruth(context.Background(), "session-summary-"+sessionID, compressed, "[0.0]")
+		}(s.id, compressedContext)
+	}
+
+	if err := tx.Commit(ctx); err == nil {
+		if len(sessions) > 0 {
+			slog.Info("AutoDream: pruned and compressed stale sessions via distributed queue", "count", len(sessions))
+		}
+	} else {
+		slog.Error("AutoDream: failed to commit prune stale sessions", "error", err)
 	}
 }
 
