@@ -264,7 +264,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	task.Status = "IN_PROGRESS"
-			telemetry.RecordSwarmTaskTransition(ctx, task.MissionID, "PENDING", "IN_PROGRESS")
 	telemetry.RecordSwarmTaskTransition(ctx, task.MissionID, "PENDING", "IN_PROGRESS")
 	task.AssignedAgentID = agentID
 

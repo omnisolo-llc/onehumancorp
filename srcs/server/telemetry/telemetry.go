@@ -545,13 +545,25 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 // Produces no errors.
 // Has no side effects.
 func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, content string) {
+	var parsed interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err == nil {
+		redacted := RedactInterfacePII(parsed)
+		if redactedBytes, err := json.Marshal(redacted); err == nil {
+			content = string(redactedBytes)
+		} else {
+			content = RedactPII(content)
+		}
+	} else {
+		content = RedactPII(content)
+	}
+
 	slog.InfoContext(ctx, "agent execution trace",
 		"component", "telemetry",
 		"agent_id", agentID,
 		"role", role,
 		"api", api,
 		"event_type", eventType,
-		"content", RedactPII(content),
+		"content", content,
 	)
 }
 
