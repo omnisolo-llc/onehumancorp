@@ -60,15 +60,29 @@ func (ae *AutoDreamEngine) Stop() {
 }
 
 func (ae *AutoDreamEngine) consolidate(ctx context.Context) error {
+
 	// 1. Sweep completed shared_tasks that have not been consolidated
 	// In a real implementation we'd track which tasks were consolidated via a flag or join.
 	// For now, we select completed tasks.
-	query := `
-		SELECT id, mission_id, title, description
-		FROM shared_tasks
-		WHERE status = 'COMPLETED'
-		ORDER BY updated_at DESC LIMIT 10
-	`
+	var query string
+	if ae.db.IsSQLite() {
+		query = `
+			SELECT id, mission_id, title, description
+			FROM shared_tasks
+			WHERE status = 'COMPLETED'
+			ORDER BY updated_at DESC LIMIT 10
+		`
+	} else {
+		// Use Postgres specific skip locked for concurrency
+		query = `
+			SELECT id, mission_id, title, description
+			FROM shared_tasks
+			WHERE status = 'COMPLETED'
+			ORDER BY updated_at DESC LIMIT 10
+			FOR UPDATE SKIP LOCKED
+		`
+	}
+
 	rows, err := ae.db.Query(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to query tasks: %w", err)

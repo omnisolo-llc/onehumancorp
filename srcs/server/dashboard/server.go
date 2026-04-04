@@ -825,6 +825,9 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Channel string `json:"channel"`
 		Payload string `json:"payload"`
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -836,12 +839,29 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// We can merge the root level attributes into the content or use them directly if Centrifuge message structure supports it.
+	// Since orchestration.Message has Type and Content, we can encode them inside Content.
+	type augmentedPayload struct {
+		Payload string `json:"payload"`
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
+	}
+
+	aug := augmentedPayload{
+		Payload: req.Payload,
+		AgentID: req.AgentID,
+		Action:  req.Action,
+		Status:  req.Status,
+	}
+	augBytes, _ := json.Marshal(aug)
+
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		FromAgent: "system",
+		FromAgent: req.AgentID,
 		ToAgent:   "system",
 		Type:      req.Channel,
-		Content:   req.Payload,
+		Content:   string(augBytes),
 	})
 
 	if err == nil {
@@ -862,20 +882,45 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		ToAgent string `json:"toAgent"`
+		Channel string `json:"channel"`
 		Payload string `json:"payload"`
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
+	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
+		http.Error(w, "invalid channel", http.StatusBadRequest)
+		return
+	}
+
+	// We can merge the root level attributes into the content or use them directly if Centrifuge message structure supports it.
+	// Since orchestration.Message has Type and Content, we can encode them inside Content.
+	type augmentedPayload struct {
+		Payload string `json:"payload"`
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
+	}
+
+	aug := augmentedPayload{
+		Payload: req.Payload,
+		AgentID: req.AgentID,
+		Action:  req.Action,
+		Status:  req.Status,
+	}
+	augBytes, _ := json.Marshal(aug)
+
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		FromAgent: "system",
-		ToAgent:   req.ToAgent,
-		Type:      "mesh:direct",
-		Content:   req.Payload,
+		FromAgent: req.AgentID,
+		ToAgent:   "system",
+		Type:      req.Channel,
+		Content:   string(augBytes),
 	})
 
 	if err == nil {
