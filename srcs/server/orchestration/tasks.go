@@ -179,10 +179,15 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	if tm.db.IsSQLite() {
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			SELECT st.id, st.mission_id, st.parent_plan_id, st.dependencies, st.title, st.payload, st.status, st.locked_until, st.created_at, st.updated_at
+			FROM swarm_tasks st
+			WHERE st.id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM task_dependencies td
+			      JOIN swarm_tasks dep ON dep.id = td.depends_on_task_id
+			      WHERE td.task_id = st.id AND dep.status != 'COMPLETED'
+			  )
+			ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
 			LIMIT 1
 		`
 		var pID sql.NullString
@@ -197,10 +202,15 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY payload->>'priority' ASC, created_at ASC
+			SELECT st.id, st.mission_id, st.parent_plan_id, st.dependencies, st.title, st.payload, st.status, st.locked_until, st.created_at, st.updated_at
+			FROM swarm_tasks st
+			WHERE st.id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM task_dependencies td
+			      JOIN swarm_tasks dep ON dep.id = td.depends_on_task_id
+			      WHERE td.task_id = st.id AND dep.status != 'COMPLETED'
+			  )
+			ORDER BY st.payload->>'priority' ASC, st.created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
@@ -360,20 +370,31 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	var query string
 	if tm.db.IsSQLite() {
+		// Check if task has uncompleted dependencies
 		query = `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			SELECT st.id, st.mission_id, st.parent_plan_id, st.dependencies, st.title, st.payload, st.status, st.locked_until, st.created_at, st.updated_at
+			FROM swarm_tasks st
+			WHERE st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM task_dependencies td
+			      JOIN swarm_tasks dep ON dep.id = td.depends_on_task_id
+			      WHERE td.task_id = st.id AND dep.status != 'COMPLETED'
+			  )
+			ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
 			LIMIT $1
 		`
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query = `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY payload->>'priority' ASC, created_at ASC
+			SELECT st.id, st.mission_id, st.parent_plan_id, st.dependencies, st.title, st.payload, st.status, st.locked_until, st.created_at, st.updated_at
+			FROM swarm_tasks st
+			WHERE st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM task_dependencies td
+			      JOIN swarm_tasks dep ON dep.id = td.depends_on_task_id
+			      WHERE td.task_id = st.id AND dep.status != 'COMPLETED'
+			  )
+			ORDER BY st.payload->>'priority' ASC, st.created_at ASC
 			LIMIT $1
 			FOR UPDATE SKIP LOCKED
 		`
