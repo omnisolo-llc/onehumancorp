@@ -101,12 +101,13 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 
 		var parsedPayload map[string]interface{}
 		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
-			parsedIface := SanitizePayloadMap(parsedPayload)
+			parsedIface := telemetry.RedactInterfacePII(SanitizePayloadMap(parsedPayload))
 			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
 				payloadData = string(redactedBytes)
 			}
 		} else {
-			payloadData, _ = SanitizePayload(payloadData)
+			sanitizedStr, _ := SanitizePayload(payloadData)
+			payloadData = telemetry.RedactPII(sanitizedStr)
 		}
 
 		payloads = append(payloads, SyncDaemonPayload{
