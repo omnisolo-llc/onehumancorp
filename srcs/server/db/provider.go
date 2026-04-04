@@ -43,6 +43,18 @@ type Provider interface {
 	Begin(ctx context.Context) (Tx, error)
 	Close()
 	IsSQLite() bool
+	AcquireTask(ctx context.Context, agentID string) (*TaskRecord, error)
+}
+
+// TaskRecord represents a task fetched from the queue.
+type TaskRecord struct {
+	ID           string
+	ParentTaskID *string
+	AgentID      *string
+	Status       string
+	Payload      *string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // Rows abstracts multiple rows returned from a query.
