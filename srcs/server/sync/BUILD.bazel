@@ -2,12 +2,16 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "sync",
-    srcs = ["autodream_sync.go"],
+    srcs = [
+        "autodream_sync.go",
+        "autodream_sync_synthesis.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/sync",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
         "//srcs/server/telemetry",
+        "//srcs/server/orchestration",
     ],
 )
 

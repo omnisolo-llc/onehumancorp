@@ -76,6 +76,9 @@ func (e *AutoDreamSyncEngine) ProcessForecastTick(ctx context.Context) {
 
 	// 2. Sync Agent Missions
 	e.syncAgentMissions(ctx)
+
+	// 3. Synthesize Memory
+	e.synthesizeMemory(ctx)
 }
 
 func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {

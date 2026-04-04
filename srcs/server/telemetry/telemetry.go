@@ -42,6 +42,7 @@ var (
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
+	MeshBroadcastCount metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -296,6 +297,14 @@ func InitWithMeter(m mockableMeter) error {
 	SyncFailedCount, err = m.Int64Counter(
 		"sync_failed_count",
 		metric.WithDescription("Total failed synced rows"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshBroadcastCount, err = m.Int64Counter(
+		"ohc_mesh_broadcast_count_total",
+		metric.WithDescription("Total number of Mesh Broadcasts"),
 	)
 	if err != nil {
 		errs = append(errs, err)
