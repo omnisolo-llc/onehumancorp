@@ -117,7 +117,7 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
                 opacity: animation,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _GlassMessageCard(message: msg),
+                  child: _AnimatedGlassMessageCard(message: msg),
                 ),
               ),
             );
@@ -128,63 +128,94 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
   }
 }
 
-class _GlassMessageCard extends StatelessWidget {
+class _AnimatedGlassMessageCard extends StatefulWidget {
   final CentrifugeMessage message;
 
-  const _GlassMessageCard({required this.message});
+  const _AnimatedGlassMessageCard({required this.message});
+
+  @override
+  State<_AnimatedGlassMessageCard> createState() => _AnimatedGlassMessageCardState();
+}
+
+class _AnimatedGlassMessageCardState extends State<_AnimatedGlassMessageCard> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isHovered
+                    ? colors.surfaceContainerHighest.withValues(alpha: 0.3)
+                    : colors.surfaceContainerHighest.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isHovered
+                      ? colors.outlineVariant.withValues(alpha: 0.8)
+                      : colors.outlineVariant.withValues(alpha: 0.4),
                 ),
-                child: Icon(Icons.memory, color: colors.primary),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      message.authorName,
-                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: colors.primary, fontSize: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message.body,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+                    child: Icon(Icons.memory, color: colors.primary),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.message.authorName,
+                          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: colors.primary, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.message.body,
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -229,7 +260,7 @@ class _DurableMemoryWidget extends ConsumerWidget {
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
-              child: _MemoryCard(value: value ?? '', updatedAt: updatedAt ?? ''),
+              child: _AnimatedMemoryCard(value: value ?? '', updatedAt: updatedAt ?? ''),
             );
           },
         );
@@ -238,47 +269,78 @@ class _DurableMemoryWidget extends ConsumerWidget {
   }
 }
 
-class _MemoryCard extends StatelessWidget {
+class _AnimatedMemoryCard extends StatefulWidget {
   final String value;
   final String updatedAt;
 
-  const _MemoryCard({required this.value, required this.updatedAt});
+  const _AnimatedMemoryCard({required this.value, required this.updatedAt});
+
+  @override
+  State<_AnimatedMemoryCard> createState() => _AnimatedMemoryCardState();
+}
+
+class _AnimatedMemoryCardState extends State<_AnimatedMemoryCard> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colors.secondaryContainer.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isHovered
+                    ? colors.secondaryContainer.withValues(alpha: 0.15)
+                    : colors.secondaryContainer.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isHovered
+                      ? colors.outlineVariant.withValues(alpha: 0.6)
+                      : colors.outlineVariant.withValues(alpha: 0.3),
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.cloud_sync, size: 14, color: colors.secondary),
-                  const SizedBox(width: 4),
                   Text(
-                    updatedAt,
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant),
+                    widget.value,
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.cloud_sync, size: 14, color: colors.secondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.updatedAt,
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
