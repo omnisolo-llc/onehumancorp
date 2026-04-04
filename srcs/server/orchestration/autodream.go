@@ -595,6 +595,18 @@ func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr 
 	}
 
 	_, err := w.pool.Exec(ctx, query, memoryID, contextStr, embedding)
+
+	// Also insert into the global swarm_memory_embeddings as per autoDream Pipelines design doc
+	swarmMemoryQuery := "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES ($1, $2, $3::vector, 'AutoDream', NOW()) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding"
+	if w.pool.IsSQLite() {
+		swarmMemoryQuery = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at) VALUES (?, ?, ?, 'AutoDream', CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding"
+	}
+
+	_, err2 := w.pool.Exec(ctx, swarmMemoryQuery, memoryID, contextStr, embedding)
+	if err2 != nil {
+		slog.Warn("AutoDream: failed to insert into swarm_memory_embeddings", "error", err2)
+	}
+
 	return err
 }
 

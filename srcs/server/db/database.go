@@ -248,6 +248,9 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// Remove constraint drops for SQLite since it's unsupported
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+\w+;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT\s+\w+\s+CHECK\s*\([^;]+;`).ReplaceAllString(sqlStr, "")
+
+			// Remove alter column type for SQLite since it's unsupported
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ALTER\s+COLUMN\s+\w+\s+TYPE\s+[^;]+;`).ReplaceAllString(sqlStr, "")
 		}
 
 		tx, err := p.Begin(ctx)

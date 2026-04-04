@@ -479,6 +479,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
 // SQLite's concurrent writes lock for safe queue picking.
+// In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
 func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int) ([]*SharedTask, error) {
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
@@ -581,6 +582,19 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		}
 
 		if depsSatisfied {
+			// Acquire Redis-backed distributed lock if available
+			if tm.redisClient != nil {
+				lockKey := "lock:task:" + task.ID
+				cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
+				err := tm.redisClient.Do(ctx, cmd).Error()
+				if err != nil {
+					if rueidis.IsRedisNil(err) {
+						continue // Lock could not be acquired (task is locked), skip
+					}
+					return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
+				}
+			}
+
 			tasks = append(tasks, task)
 			taskIDs = append(taskIDs, task.ID)
 			if len(tasks) >= limit {

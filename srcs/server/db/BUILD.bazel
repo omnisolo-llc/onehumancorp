@@ -32,6 +32,7 @@ go_library(
         "migrations/018_tasks.sql",
         "migrations/019_alter_tasks_schema.sql",
         "migrations/020_tasks_review.sql",
+        "migrations/021_autodream_pgvector.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

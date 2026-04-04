@@ -69,10 +69,32 @@ func convertBindVars(query string) string {
 // SQLite natively expects `?` instead of `$1`, `$2`. Wait, no, SQLite actually accepts `$1`, `$2` bindings if using proper parameter names, but default `database/sql` positional parameters are usually just `?`. Wait, `database/sql` driver for SQLite usually supports `?`, `$1`, and `:name`. Let's assume standard passing works unless proven otherwise.
 func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
 	start := time.Now()
+	sqlQuery = strings.TrimSpace(sqlQuery)
+	if sqlQuery == "" {
+		return 0, nil
+	}
+
+	// Fast check for entirely comment block
+	lines := strings.Split(sqlQuery, "\n")
+	allComments := true
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l != "" && !strings.HasPrefix(l, "--") {
+			allComments = false
+			break
+		}
+	}
+	if allComments {
+		return 0, nil
+	}
+
 	res, err := p.db.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
 	trackQuery(ctx, "Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
+	}
+	if res == nil {
+		return 0, nil
 	}
 	return res.RowsAffected()
 }
@@ -198,10 +220,34 @@ type SqliteTx struct {
 
 func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
 	start := time.Now()
+	sqlQuery = strings.TrimSpace(sqlQuery)
+	// If a migration regex clears the entire statement (or leaves just comments), ExecContext might return a nil res
+	if sqlQuery == "" || (strings.HasPrefix(sqlQuery, "--") && !strings.Contains(sqlQuery, "\n")) {
+		return 0, nil
+	}
+
+	// Fast check for entirely comment block
+	lines := strings.Split(sqlQuery, "\n")
+	allComments := true
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l != "" && !strings.HasPrefix(l, "--") {
+			allComments = false
+			break
+		}
+	}
+	if allComments {
+		return 0, nil
+	}
+
 	res, err := t.tx.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
 	trackQuery(ctx, "Tx.Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
+	}
+	// For empty queries like just comments, modernc/sqlite returns a nil result.
+	if res == nil {
+		return 0, nil
 	}
 	return res.RowsAffected()
 }
