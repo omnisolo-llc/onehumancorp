@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/db/testutil"
 )
 
 func TestUltraPlanManager(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := testutil.NewTestProvider(t)
 	defer prov.Close()
 
 	// Ensure the table exists in memory DB for the test (test provider only creates some)

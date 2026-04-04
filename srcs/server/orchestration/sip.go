@@ -48,6 +48,11 @@ type SIPDB struct {
 	cachedGroundErr  error
 }
 
+// DBProvider returns the database provider used by the SIPDB.
+func (s *SIPDB) DBProvider() db.Provider {
+	return s.db
+}
+
 const (
 	maxRetries    = 3
 	retryInterval = 100 * time.Millisecond

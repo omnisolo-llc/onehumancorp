@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 )
@@ -447,4 +448,130 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 		}
 		lm.coordMu[shardIdx].RUnlock()
 	}
+}
+
+func RegisterMeshHTTPHandlers(mux *http.ServeMux, tm TeammateMesh, hub *Hub) {
+	mux.HandleFunc("/api/mesh/broadcast", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			Channel string `json:"channel"`
+			AgentID string `json:"agent_id"`
+			Action  string `json:"action"`
+			Status  string `json:"status"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
+			http.Error(w, "invalid channel", http.StatusBadRequest)
+			return
+		}
+
+		payloadBytes, err := json.Marshal(map[string]interface{}{
+			"agent_id": req.AgentID,
+			"action":   req.Action,
+			"status":   req.Status,
+		})
+		if err != nil {
+			http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
+			return
+		}
+
+		err = hub.Publish(Message{
+			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+			FromAgent: "system",
+			ToAgent:   "system",
+			Type:      req.Channel,
+			Content:   string(payloadBytes),
+		})
+
+		if err == nil {
+			telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
+			if req.Channel == "mesh:tasks" {
+				_ = tm.BroadcastTask(r.Context(), Task{
+					AgentID: req.AgentID,
+					Action:  req.Action,
+					Status:  req.Status,
+					TaskID:  fmt.Sprintf("%d", time.Now().UnixNano()),
+				})
+			} else {
+				_ = tm.BroadcastCoordination(r.Context(), MeshMessage{
+					AgentID:   req.AgentID,
+					Action:    req.Action,
+					Status:    req.Status,
+					Timestamp: time.Now(),
+				})
+			}
+		} else {
+			http.Error(w, "failed to broadcast", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	mux.HandleFunc("/api/mesh/direct", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			ToAgent string `json:"toAgent"`
+			Payload string `json:"payload"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+
+		err := hub.Publish(Message{
+			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+			FromAgent: "system",
+			ToAgent:   req.ToAgent,
+			Type:      "mesh:direct",
+			Content:   req.Payload,
+		})
+
+		if err == nil {
+			telemetry.RecordTeammateMeshDirectMessage(r.Context())
+		} else {
+			http.Error(w, "failed to send direct message", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	mux.HandleFunc("/api/mesh/mailbox", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		agentID := r.URL.Query().Get("agent_id")
+		if agentID == "" {
+			http.Error(w, "agent_id parameter is required", http.StatusBadRequest)
+			return
+		}
+
+		directMessages := make([]Message, 0)
+		response := struct {
+			Messages []Message `json:"messages"`
+		}{
+			Messages: directMessages,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(response)
+	})
 }

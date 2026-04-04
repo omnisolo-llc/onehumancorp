@@ -1,7 +1,7 @@
 package orchestration
 
 import (
-	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/db/testutil"
 
 	"context"
 	"net/http"
@@ -119,7 +119,7 @@ func TestLocalTeammateMesh(t *testing.T) {
 	// Use NewTestProvider or db.New to init db
 	ctx := context.Background()
 
-	provider := db.NewTestProvider(t)
+	provider := testutil.NewTestProvider(t)
 	defer provider.Close()
 
 	// Explicitly define the schema within the test initialization
@@ -168,6 +168,9 @@ func TestLocalTeammateMesh(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for task broadcast")
 	}
+
+	// Wait to let worker persist
+	time.Sleep(100 * time.Millisecond)
 
 	// Verify persistence
 	var count int

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/db/testutil"
 	"github.com/onehumancorp/mono/srcs/server/models"
 )
 
@@ -14,7 +15,7 @@ func TestTaskOrchestrator(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := testutil.NewTestProvider(t)
 	defer prov.Close()
 
 	ctx := context.Background()
@@ -134,7 +135,7 @@ func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := testutil.NewTestProvider(t)
 	defer prov.Close()
 
 	ctx := context.Background()

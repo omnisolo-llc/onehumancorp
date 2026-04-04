@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/db/testutil"
 )
 
 func setupTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
-	prov := db.NewTestProvider(t)
+	prov := testutil.NewTestProvider(t)
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `

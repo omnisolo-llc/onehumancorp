@@ -2,12 +2,14 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
 )
 
 // TestSIPDB_ChaosMesh simulates team mesh corruption and standalone limits.
@@ -34,13 +36,16 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				msg := MeshMessage{
+				msgBytes, _ := json.Marshal(MeshMessage{
+					AgentID:   "stress-test",
+					Action:    "STRESS",
+					Status:    "PENDING",
 					SenderID:  fmt.Sprintf("agent-%d", idx),
 					Role:      "TEST",
 					Content:   "Stress mesh message",
 					Timestamp: time.Now(),
-				}
-				_ = mesh.PublishMessage(ctx, msg)
+				})
+				_ = mesh.Publish(ctx, "mesh:tasks", string(msgBytes))
 			}(i)
 		}
 		wg.Wait()
@@ -114,7 +119,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	defer os.Chmod(memoryDir, 0755)
 
 	// Instantiate the AutoDreamWorker (the real application code)
-	worker := NewAutoDreamWorker(db)
+	worker := NewAutoDreamWorker(db.DBProvider())
 
 	// Use a waitgroup to run ingestAgentMemories concurrently
 	var chaosWg sync.WaitGroup
