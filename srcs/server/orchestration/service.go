@@ -1009,8 +1009,11 @@ func (h *Hub) Publish(message Message) error {
 			if m.MeetingID != "" {
 				cn.PublishMeetingMessage(m.MeetingID, m)
 			}
-			if m.ToAgent != "" {
+			if m.ToAgent != "" && m.ToAgent != "system" {
 				cn.PublishAgentNotification(m.ToAgent, m)
+			}
+			if m.Type == "mesh:tasks" || m.Type == "mesh:coordination" {
+				cn.PublishMeshMessage(m.Type, m)
 			}
 		}(message, centrifugeNode)
 	}
@@ -1088,8 +1091,11 @@ func (h *Hub) publishRepository(message Message) error {
 			if message.MeetingID != "" {
 				cn.PublishMeetingMessage(message.MeetingID, message)
 			}
-			if message.ToAgent != "" {
+			if message.ToAgent != "" && message.ToAgent != "system" {
 				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+			if message.Type == "mesh:tasks" || message.Type == "mesh:coordination" {
+				cn.PublishMeshMessage(message.Type, message)
 			}
 		}()
 	}

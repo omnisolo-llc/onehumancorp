@@ -186,6 +186,11 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 		"task_id": taskID,
 	}
 
+	// Copy all keys from payload to root level
+	for k, v := range payload {
+		msg[k] = v
+	}
+
 	if agentID, ok := payload["agent_id"]; ok {
 		msg["agent_id"] = agentID
 	} else {
@@ -244,4 +249,31 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 // Close shuts down the Centrifuge node gracefully.
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
+}
+
+// PublishMeshMessage broadcasts a raw message to a mesh channel.
+func (cn *CentrifugeNode) PublishMeshMessage(channel string, msg Message) {
+	if channel == "mesh:tasks" {
+		// As per requirements: "Ensure that messages broadcasted to the mesh:tasks Centrifuge channel have agent_id, action, and status keys at the root level of the JSON payload. Use the Content field for the JSON string in the Message{} struct."
+		var payload map[string]interface{}
+		if err := json.Unmarshal([]byte(msg.Content), &payload); err == nil {
+			data, err := json.Marshal(payload)
+			if err == nil {
+				if _, err := cn.node.Publish(channel, data); err != nil {
+					slog.Debug("[centrifuge] publish mesh:tasks", "channel", channel, "error", err)
+				}
+				return
+			}
+		}
+	}
+
+	// Fallback or other mesh channels
+	data, err := json.Marshal(msg)
+	if err != nil {
+		slog.Error("[centrifuge] marshal mesh message", "error", err)
+		return
+	}
+	if _, err := cn.node.Publish(channel, data); err != nil {
+		slog.Debug("[centrifuge] publish mesh message", "channel", channel, "error", err)
+	}
 }
