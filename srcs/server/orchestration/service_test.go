@@ -1,6 +1,11 @@
 package orchestration
 
 import (
+
+	"bytes"
+	"database/sql"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 	"path/filepath"
 	"context"
 	"encoding/json"
@@ -1470,5 +1475,56 @@ func TestPublish_PII_Redaction_In_Telemetry(t *testing.T) {
 	redacted := telemetry.RedactPII(rawContent)
 	if redacted != "Here is my info: [REDACTED_EMAIL] and [REDACTED_PHONE] and SSN [REDACTED_SSN]" {
 		t.Fatalf("Expected full PII redaction, got: %s", redacted)
+	}
+}
+
+func TestHandleSyncMissions(t *testing.T) {
+	defer ClearSemaphore()
+	// Setup db and mock hub
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT,
+			payload TEXT,
+			synced_to_cloud BOOLEAN DEFAULT false
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create agent_missions table: %v", err)
+	}
+
+	provider := db.NewSqliteProvider(sqlDB)
+	hub, _ := NewCentrifugeNode()
+	tm := NewTaskManager(provider, hub)
+
+	payloads := []SyncDaemonPayload{
+		{ID: "m1", Status: "SYNCED", Payload: `{"data": "test"}`},
+	}
+	body, _ := json.Marshal(payloads)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/sync/missions", bytes.NewBuffer(body))
+	w := httptest.NewRecorder()
+
+	handleSyncMissions(w, req, tm)
+
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("expected 200 OK, got %d", w.Result().StatusCode)
+	}
+
+	// Verify DB inserted
+	var status string
+	var synced bool
+	err = sqlDB.QueryRow("SELECT status, synced_to_cloud FROM agent_missions WHERE id = 'm1'").Scan(&status, &synced)
+	if err != nil {
+		t.Fatalf("failed to verify insert: %v", err)
+	}
+	if status != "SYNCED" || !synced {
+		t.Errorf("unexpected row data: status=%s, synced=%v", status, synced)
 	}
 }
