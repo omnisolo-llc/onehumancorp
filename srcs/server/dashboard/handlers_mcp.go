@@ -146,8 +146,28 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.invokeMCPTool(req)
 
+	if err == nil && req.HybridEscalation {
+		var paramsMap map[string]interface{}
+		json.Unmarshal(req.Params, &paramsMap)
+		redactedParams := telemetry.RedactInterfacePII(paramsMap)
+		redactedResult := telemetry.RedactInterfacePII(result)
+		missionID := "mcp-sync-" + time.Now().UTC().Format("20060102150405.999999999")
+		payloadMap := map[string]interface{}{
+			"toolId": req.ToolID,
+			"action": req.Action,
+			"params": redactedParams,
+			"result": redactedResult,
+			"escalation": true,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		if s.hub.SIPDB() != nil {
+			_ = s.hub.SIPDB().UpsertMission(r.Context(), missionID, "CLOUD_ESCALATION", string(payloadBytes), false)
+		}
+	}
+
 	s.mu.Lock()
 	if err != nil {
+
 		// e.g. "Rate limited" or "429" or missing tool handling
 		if strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "rate limited") {
 			state.Failures++

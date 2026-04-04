@@ -1080,6 +1080,7 @@ type mcpInvokeRequest struct {
 	Params   json.RawMessage `json:"params"`
 	AgentID  string          `json:"agentId,omitempty"`
 	SPIFFEID string          `json:"spiffeId,omitempty"`
+	HybridEscalation bool    `json:"hybridEscalation,omitempty"`
 }
 
 type chatToolParams struct {
