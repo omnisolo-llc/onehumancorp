@@ -40,9 +40,122 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	// Create distributed pruning queue using Postgres
 	// In multi-tenant cloud mode, this could use a distributed lock or queue.
 	// For simplicity, we just use a distributed worker queue pattern with a database table or Redis.
+	go w.runCompressionPipeline(ctx)
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
+}
+
+// runCompressionPipeline periodically compresses context from agent_session_data into autodream_memories.
+func (w *AutoDreamWorker) runCompressionPipeline(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.compressSessions(ctx)
+		}
+	}
+}
+
+// compressSessions selects old sessions and compresses them into autodream_memories.
+func (w *AutoDreamWorker) compressSessions(ctx context.Context) {
+	threshold := time.Now().Add(-1 * time.Hour).UTC()
+
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("AutoDream: failed to begin transaction for compression", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if w.pool.IsSQLite() {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 10"
+	} else {
+		// Use SKIP LOCKED to avoid multiple workers compressing the same session
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 10 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := tx.Query(ctx, query, threshold)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch sessions for compression", "error", err)
+		return
+	}
+
+	type session struct {
+		ID      string
+		AgentID string
+		Context string
+	}
+	var sessions []session
+	for rows.Next() {
+		var s session
+		if err := rows.Scan(&s.ID, &s.AgentID, &s.Context); err != nil {
+			continue
+		}
+		sessions = append(sessions, s)
+	}
+	rows.Close() // Explicitly close rows before proceeding
+
+	for _, s := range sessions {
+		// Generate embedding
+		embeddingStr := "[0.0]" // fallback embedding
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		compressedContext := s.Context
+
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+
+			// Summarize context before embedding
+			prompt := fmt.Sprintf("Summarize the following agent session context into a concise memory:\n%s", s.Context)
+			summary, err := client.Reason(ctxTimeout, prompt)
+			if err == nil && summary != "" {
+				compressedContext = summary
+			}
+
+			embedding, err := client.GenerateEmbedding(ctxTimeout, compressedContext)
+			cancel()
+			if err != nil {
+				slog.Warn("AutoDream: LLM embedding failed, using fallback", "error", err)
+			} else if len(embedding) > 0 {
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+		}
+
+		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		if w.pool.IsSQLite() {
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES (?, ?, ?)"
+		}
+
+		_, err = tx.Exec(ctx, insertQuery, compressedContext, embeddingStr, s.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to insert into autodream_memories", "error", err)
+			continue
+		}
+
+		slog.Info("AutoDream: successfully compressed session memory", "session_id", s.ID)
+
+		// Update last_accessed so it doesn't get compressed again immediately
+		updateQuery := "UPDATE agent_session_data SET last_accessed = NOW() WHERE session_id = $1"
+		if w.pool.IsSQLite() {
+			updateQuery = "UPDATE agent_session_data SET last_accessed = CURRENT_TIMESTAMP WHERE session_id = ?"
+		}
+		_, err = tx.Exec(ctx, updateQuery, s.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to update session last_accessed", "error", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("AutoDream: failed to commit transaction for compression", "error", err)
+	}
 }
 
 // runMemoryIngestionPipeline reads files from .agent-task/memory/ and injects them.

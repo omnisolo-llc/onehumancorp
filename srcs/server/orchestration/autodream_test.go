@@ -152,3 +152,67 @@ func TestAutoDreamConsolidateEpoch(t *testing.T) {
 		t.Errorf("expected epoch status COMPLETED, got %s", status)
 	}
 }
+
+func TestAutoDreamCompressSessions(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://:memory:")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	ctx := context.Background()
+
+	// Clear out table
+	_, _ = pool.Exec(ctx, "DELETE FROM agent_session_data")
+	_, _ = pool.Exec(ctx, "DELETE FROM autodream_memories")
+
+	oldTime := time.Now().Add(-2 * time.Hour).UTC().Format("2006-01-02 15:04:05")
+	newTime := time.Now().Add(-30 * time.Minute).UTC().Format("2006-01-02 15:04:05")
+
+	if pool.Provider.IsSQLite() {
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'c1', ?)", oldTime)
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s2', 'a1', 'c2', ?)", newTime)
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
+	} else {
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'c1', $1)", oldTime)
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s2', 'a1', 'c2', $1)", newTime)
+		if err != nil {
+			t.Fatalf("failed to insert: %v", err)
+		}
+	}
+
+	worker.compressSessions(ctx)
+
+	// Check if s1 was compressed
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 's1'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 compressed memory for s1, got %d", count)
+	}
+
+	// Check if s2 was NOT compressed (because it's newer than 1 hour)
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 's2'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 compressed memory for s2, got %d", count)
+	}
+}
