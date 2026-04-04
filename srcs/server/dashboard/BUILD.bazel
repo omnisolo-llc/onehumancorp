@@ -56,6 +56,7 @@ go_test(
         "//srcs/server/domain",
         "//srcs/server/integrations",
         "//srcs/server/orchestration",
+        "//srcs/server/db",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
     ],

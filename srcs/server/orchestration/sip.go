@@ -864,18 +864,23 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 
 	for _, rec := range records {
 		// Sanitize sensitive data by explicitly deleting `rag_context` key
-		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
-			delete(payloadData, "rag_context")
+		var rawData interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &rawData); err == nil {
+			if payloadData, ok := rawData.(map[string]interface{}); ok {
+				delete(payloadData, "rag_context")
+			}
+			rawData = telemetry.RedactInterfacePII(rawData)
 		} else {
 			// If not JSON, we assume it's raw text but the memory states
 			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
 			// Let's create a generic JSON payload
-			payloadData = map[string]interface{}{
+			payloadData := map[string]interface{}{
 				"context": rec.payload,
 			}
+			rawData = telemetry.RedactInterfacePII(payloadData)
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
+
+		sanitizedPayload, _ := json.Marshal(rawData)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {
@@ -1024,4 +1029,9 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	}
 
 	return syncedCount, nil
+}
+
+// Provider returns the underlying db.Provider.
+func (s *SIPDB) Provider() db.Provider {
+	return s.db
 }

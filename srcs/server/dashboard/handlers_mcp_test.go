@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
@@ -402,6 +405,125 @@ func TestHandleHybridSyncMissions(t *testing.T) {
 
 		if !strings.Contains(w.Body.String(), "synced_count\":0") {
 			t.Errorf("expected 'synced_count\":0', got %s", w.Body.String())
+		}
+	})
+}
+
+func TestHandleRAGSync(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	defer hub.Close()
+
+	sqlDB, _ := sql.Open("sqlite", "file::memory:?cache=shared")
+	testDB := db.NewSqliteProvider(sqlDB)
+	testDB.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
+			memory_id TEXT PRIMARY KEY,
+			context TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	sipdb, _ := orchestration.NewSIPDBWithProvider(testDB)
+	hub.SetSIPDB(sipdb)
+
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+	authStore := auth.NewStore()
+
+	srv := &Server{org: org, hub: hub, tracker: tracker, authStore: authStore}
+
+	t.Run("invalid method", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/orchestration/sync/rag", nil)
+		w := httptest.NewRecorder()
+		srv.handleRAGSync(w, req)
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected 405, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid payload", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(`{invalid}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleRAGSync(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("successful sync with PII redaction and force-local", func(t *testing.T) {
+		payload := `{"memory_id": "test-rag-1", "rag_context": "sensitive raw vector db text", "context": {"user_email": "alice@example.com", "nested": ["some text", "bob@example.com"]}}`
+		req := httptest.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+		w := httptest.NewRecorder()
+		srv.handleRAGSync(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		// Verify it was stored correctly and PII redacted, and rag_context removed
+		var ctxStr string
+		err := testDB.QueryRow(req.Context(), "SELECT context FROM swarm_memory_embeddings WHERE memory_id = 'test-rag-1'").Scan(&ctxStr)
+		if err != nil {
+			t.Fatalf("QueryRow failed: %v", err)
+		}
+
+		if strings.Contains(ctxStr, "sensitive raw vector db text") || strings.Contains(ctxStr, "rag_context") {
+			t.Errorf("expected rag_context to be stripped, got %s", ctxStr)
+		}
+		if !strings.Contains(ctxStr, "[REDACTED_EMAIL]") {
+			t.Errorf("expected context to contain [REDACTED_EMAIL], got %s", ctxStr)
+		}
+		if strings.Contains(ctxStr, "alice@example.com") || strings.Contains(ctxStr, "bob@example.com") {
+			t.Errorf("expected context to NOT contain original emails, got %s", ctxStr)
+		}
+	})
+
+	t.Run("conflict handling without force-local", func(t *testing.T) {
+		// First insert to create a conflict state
+		payload1 := `{"memory_id": "test-rag-conflict", "context": {"status": "original"}}`
+		req1 := httptest.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(payload1))
+		w1 := httptest.NewRecorder()
+		srv.handleRAGSync(w1, req1)
+
+		// Second insert without force-local
+		payload2 := `{"memory_id": "test-rag-conflict", "context": {"status": "updated"}}`
+		req2 := httptest.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(payload2))
+		w2 := httptest.NewRecorder()
+		srv.handleRAGSync(w2, req2)
+
+		if w2.Code != http.StatusConflict {
+			t.Errorf("expected 409 Conflict, got %d", w2.Code)
+		}
+
+		var ctxStr string
+		_ = testDB.QueryRow(context.Background(), "SELECT context FROM swarm_memory_embeddings WHERE memory_id = 'test-rag-conflict'").Scan(&ctxStr)
+
+		if strings.Contains(ctxStr, "updated") {
+			t.Errorf("expected original data to be preserved, got %s", ctxStr)
+		}
+	})
+
+	t.Run("conflict handling with force-local", func(t *testing.T) {
+		// First insert to create a conflict state
+		payload1 := `{"memory_id": "test-rag-force", "context": {"status": "original"}}`
+		req1 := httptest.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(payload1))
+		w1 := httptest.NewRecorder()
+		srv.handleRAGSync(w1, req1)
+
+		// Second insert with force-local
+		payload2 := `{"memory_id": "test-rag-force", "context": {"status": "updated"}}`
+		req2 := httptest.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(payload2))
+		req2.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+		w2 := httptest.NewRecorder()
+		srv.handleRAGSync(w2, req2)
+
+		var ctxStr string
+		_ = testDB.QueryRow(context.Background(), "SELECT context FROM swarm_memory_embeddings WHERE memory_id = 'test-rag-force'").Scan(&ctxStr)
+
+		if !strings.Contains(ctxStr, "updated") {
+			t.Errorf("expected data to be updated with force-local, got %s", ctxStr)
 		}
 	})
 }

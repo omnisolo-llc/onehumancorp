@@ -622,3 +622,83 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 }
 
 
+
+// handleRAGSync handles local-to-cloud Hybrid MCP RAG synchronization payloads
+func (s *Server) handleRAGSync(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleRAGSync")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Delete rag_context if it somehow slipped through to ensure privacy
+	delete(payload, "rag_context")
+
+	// Apply deep recursive redaction on all fields
+	for k, v := range payload {
+		payload[k] = telemetry.RedactInterfacePII(v)
+	}
+
+	conflictResolution := r.Header.Get("X-OHC-Conflict-Resolution")
+
+	// Store logic... We upsert the context into the cloud memory embeddings
+	idVal, idOk := payload["memory_id"]
+	var memoryID string
+	if idOk {
+		if idStr, isStr := idVal.(string); isStr {
+			memoryID = idStr
+		}
+	}
+
+	if memoryID == "" {
+		// Generate an ID if not provided
+		memoryID = "mem-sync-" + fmt.Sprintf("%d", time.Now().UnixNano())
+		payload["memory_id"] = memoryID
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("Failed to re-marshal RAG sync payload", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Basic insert. By not resolving conflicts natively, we can catch the error and handle it programmatically
+	query := "INSERT INTO swarm_memory_embeddings (memory_id, context, created_at, updated_at) VALUES ($1, $2, $3, $3)"
+
+	_, err = s.hub.SIPDB().Provider().Exec(ctx, query, memoryID, string(payloadBytes), time.Now())
+
+	if err != nil {
+		// Specifically handle conflicts
+		if strings.Contains(err.Error(), "duplicate key value") || strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			if conflictResolution == "force-local" {
+				// Retry with an update if insert failed unexpectedly
+				_, err = s.hub.SIPDB().Provider().Exec(ctx, "UPDATE swarm_memory_embeddings SET context = $1, updated_at = $2 WHERE memory_id = $3", string(payloadBytes), time.Now(), memoryID)
+				if err != nil {
+					slog.Error("Failed to update RAG context payload", "error", err)
+					http.Error(w, "internal server error", http.StatusInternalServerError)
+					return
+				}
+			} else {
+				http.Error(w, "conflict", http.StatusConflict)
+				return
+			}
+		} else {
+			slog.Error("Failed to insert RAG context payload", "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "rag context synced"})
+}
