@@ -54,6 +54,6 @@ graph LR
 - **Redis Connections in Standalone Mode**: In Standalone mode, OHC falls back gracefully to SQLite. Ensure your `DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
 - **Teammate Mesh Not Syncing**: Verify the connection to the Centrifuge realtime pub/sub system and ensure your client is subscribed to the `mesh:tasks` channels. Check the network logs for any 401 Unauthorized errors indicating token expiration.
 
-*For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
+*For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md). For an overview of modes, see the [Architecture Walkthrough](architecture.md).*
 
 </div>
