@@ -148,6 +148,8 @@ start_daemon() {
   fi
 
   rm -f "${PID_FILE}" "${STATE_DIR}"/*.tmp "${LOG_FILE}"
+  touch "${LOG_FILE}" "${PID_FILE}"
+  chmod 0600 "${LOG_FILE}" "${PID_FILE}"
 
   env \
     HOME="${HOME}" \

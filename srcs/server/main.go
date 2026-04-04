@@ -440,7 +440,7 @@ func run(now time.Time, listen listenFunc) error {
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {
 		slog.Info("executing scheduled task", "task_id", task.ID, "name", task.Name)
 		// Mark as running
-		if _, err := hub.Scheduler().MarkRunning(task.ID); err != nil {
+		if _, err := hub.Scheduler().MarkRunning(task.OrganizationID, task.ID); err != nil {
 			slog.Error("failed to mark task as running", "task_id", task.ID, "error", err)
 			return
 		}
@@ -460,9 +460,9 @@ func run(now time.Time, listen listenFunc) error {
 		err := hub.Publish(msg)
 		if err != nil {
 			slog.Error("failed to publish scheduled task message", "task_id", task.ID, "error", err)
-			_ = hub.Scheduler().MarkDone(task.ID, false)
+			_ = hub.Scheduler().MarkDone(task.OrganizationID, task.ID, false)
 		} else {
-			_ = hub.Scheduler().MarkDone(task.ID, true)
+			_ = hub.Scheduler().MarkDone(task.OrganizationID, task.ID, true)
 		}
 	})
 

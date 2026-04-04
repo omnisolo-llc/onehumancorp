@@ -67,7 +67,7 @@ func (s *Server) handleSchedulerCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.hub.Scheduler().Cancel(req.ID); err != nil {
+	if err := s.hub.Scheduler().Cancel(s.org.ID, req.ID); err != nil {
 		http.Error(w, "failed to cancel task: "+err.Error(), http.StatusNotFound)
 		return
 	}

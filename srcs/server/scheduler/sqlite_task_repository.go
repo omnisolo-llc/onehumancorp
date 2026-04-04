@@ -34,13 +34,13 @@ func (r *SqliteTaskRepository) Create(ctx context.Context, task Task) error {
 	return nil
 }
 
-func (r *SqliteTaskRepository) Get(ctx context.Context, id string) (Task, error) {
+func (r *SqliteTaskRepository) Get(ctx context.Context, orgID, id string) (Task, error) {
 	task := Task{}
 	var schedType, status string
 	var payload string
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
-		FROM scheduled_tasks WHERE id = ?`, id).Scan(
+		FROM scheduled_tasks WHERE id = ? AND organization_id = ?`, id, orgID).Scan(
 		&task.ID, &task.OrganizationID, &task.AgentID, &task.Name,
 		&schedType, &task.Schedule.At, &task.Schedule.IntervalS, &task.Schedule.Expression,
 		&status, &payload, &task.CreatedAt, &task.LastRunAt, &task.NextRunAt,
@@ -145,7 +145,13 @@ func (r *SqliteTaskRepository) UpdateStatus(ctx context.Context, id string, stat
 	return err
 }
 
-func (r *SqliteTaskRepository) Cancel(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = ?", id)
-	return err
+func (r *SqliteTaskRepository) Cancel(ctx context.Context, orgID, id string) error {
+	res, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = ? AND organization_id = ?", id, orgID)
+	if err != nil {
+		return err
+	}
+	if res == 0 {
+		return fmt.Errorf("task not found or does not belong to organization")
+	}
+	return nil
 }

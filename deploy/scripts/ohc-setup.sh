@@ -22,6 +22,7 @@ OHC_MULTITENANT=false
 OHC_HEADLESS=false
 OHC_SOURCE_MODE=standalone
 ENV
+  chmod 0600 .env
 fi
 
 echo "[2/4] Verifying Standalone Mode..."

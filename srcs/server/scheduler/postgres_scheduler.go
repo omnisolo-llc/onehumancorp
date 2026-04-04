@@ -36,7 +36,7 @@ func (r *PgTaskRepository) Create(ctx context.Context, task Task) error {
 	return nil
 }
 
-func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
+func (r *PgTaskRepository) Get(ctx context.Context, orgID, id string) (Task, error) {
 	task := Task{}
 	var schedType, status string
 	var payload string
@@ -45,7 +45,7 @@ func (r *PgTaskRepository) Get(ctx context.Context, id string) (Task, error) {
 
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
-		FROM scheduled_tasks WHERE id = $1`, id).Scan(
+		FROM scheduled_tasks WHERE id = $1 AND organization_id = $2`, id, orgID).Scan(
 		&task.ID, &task.OrganizationID, &task.AgentID, &task.Name,
 		&schedType, &schedAt, &task.Schedule.IntervalS, &task.Schedule.Expression,
 		&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
@@ -211,7 +211,13 @@ func (r *PgTaskRepository) UpdateStatus(ctx context.Context, id string, status T
 	return err
 }
 
-func (r *PgTaskRepository) Cancel(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1", id)
-	return err
+func (r *PgTaskRepository) Cancel(ctx context.Context, orgID, id string) error {
+	res, err := r.pool.Exec(ctx, "UPDATE scheduled_tasks SET status = 'cancelled' WHERE id = $1 AND organization_id = $2", id, orgID)
+	if err != nil {
+		return err
+	}
+	if res == 0 {
+		return fmt.Errorf("task not found or does not belong to organization")
+	}
+	return nil
 }
