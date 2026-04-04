@@ -268,7 +268,7 @@ func TestAnalyseFile_NoFindings(t *testing.T) {
 
 func TestAnalyseFile_Unreadable(t *testing.T) {
 	// analyseFile should return nil (no panic) for non-existent path.
-	findings := analyseFile("/tmp/does-not-exist-ironclaw-test-12345")
+	findings := analyseFile(filepath.Join(t.TempDir(), "does-not-exist-ironclaw-test-12345"))
 	if findings != nil {
 		t.Errorf("expected nil findings for unreadable file, got: %v", findings)
 	}

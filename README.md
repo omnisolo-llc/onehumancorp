@@ -85,8 +85,6 @@ Services:
 | `chatwoot` | 3002 | Chat platform |
 | `prometheus` | 9090 | Metrics |
 | `grafana` | 3000 | Dashboards |
-| `plane-web` | 3003 | Plane frontend |
-| `plane-api` | 8000 | Plane backend |
 
 When the backend starts with an empty workforce, it now bootstraps an **internal default agent** backed by the built-in provider so a single-container deployment has an immediately available agent runtime.
 
