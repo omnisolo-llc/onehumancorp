@@ -1864,7 +1864,7 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 
 	limit := 10 // Default limit
 
-	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	tasks, err := tm.PollTasks(r.Context(), r.Header.Get("X-Organization-ID"), agentID, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1898,9 +1898,9 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	var err error
 	switch req.Status {
 	case "REVIEW":
-		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
+		err = tm.ReviewTask(r.Context(), r.Header.Get("X-Organization-ID"), taskID, req.AgentID)
 	case "COMPLETED":
-		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
+		err = tm.CompleteTask(r.Context(), r.Header.Get("X-Organization-ID"), taskID, req.AgentID)
 	default:
 		http.Error(w, "invalid status transition", http.StatusBadRequest)
 		return
