@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"path/filepath"
 	"context"
 	"encoding/json"
 	"errors"
@@ -1399,7 +1400,7 @@ func TestHub_AppendEventWorker_ContextCancel(t *testing.T) {
 	defer hub.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go hub.eventLogWorker(ctx, "/tmp/dummy_events.jsonl")
+	go hub.eventLogWorker(ctx, filepath.Join(t.TempDir(), "dummy_events.jsonl"))
 
 	// Let it start then cancel
 	time.Sleep(10 * time.Millisecond)
@@ -1412,7 +1413,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 	defer hub.Close()
 	ctx := context.Background()
 
-	go hub.eventLogWorker(ctx, "/tmp/dummy_events2.jsonl")
+	go hub.eventLogWorker(ctx, filepath.Join(t.TempDir(), "dummy_events2.jsonl"))
 
 	// Let it start then close channel
 	time.Sleep(10 * time.Millisecond)

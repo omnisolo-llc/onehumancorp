@@ -147,7 +147,7 @@ start_daemon() {
     return 0
   fi
 
-  rm -f "${PID_FILE}"
+  rm -f "${PID_FILE}" "${STATE_DIR}"/*.tmp
 
   env \
     HOME="${HOME}" \
@@ -170,7 +170,7 @@ start_daemon() {
 
 stop_daemon() {
   if ! is_pid_running; then
-    rm -f "${PID_FILE}"
+    rm -f "${PID_FILE}" "${STATE_DIR}"/*.tmp
     echo "ohc is not running"
     return 0
   fi
@@ -183,7 +183,7 @@ stop_daemon() {
   pkill -P "${pid}" 2>/dev/null || true
   for attempt in $(seq 1 20); do
     if ! kill -0 "${pid}" 2>/dev/null; then
-      rm -f "${PID_FILE}"
+      rm -f "${PID_FILE}" "${STATE_DIR}"/*.tmp
       echo "ohc stopped"
       return 0
     fi
@@ -192,7 +192,7 @@ stop_daemon() {
 
   pkill -9 -P "${pid}" 2>/dev/null || true
   kill -9 "${pid}" 2>/dev/null || true
-  rm -f "${PID_FILE}"
+  rm -f "${PID_FILE}" "${STATE_DIR}"/*.tmp
   echo "ohc stopped"
 }
 

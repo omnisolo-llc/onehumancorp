@@ -220,7 +220,6 @@ Services:
 | Redis | 6379 | redis://localhost:6379 |
 | PostgreSQL | 5432 | postgres://localhost:5432/ohc |
 | Chatwoot | 3002 | http://localhost:3002 |
-| Plane | 3003 / 8000 | http://localhost:3003 / http://localhost:8000 |
 
 ### 2 — Seed demo data
 

@@ -98,20 +98,6 @@ multiTenant:
   # Maximum number of tenant organisations supported per replica.
   maxOrgs: 5000
 
-# Plane - Open Source Issue Tracker
-plane:
-  enabled: true
-  frontendImage: makeplane/plane-frontend:latest
-  backendImage: makeplane/plane-backend:latest
-  replicas: 1
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "500m"
-      memory: "512Mi"
-
 
 # PowerSync - synchronization engine
 powersync:

@@ -16,7 +16,7 @@
 
 **Current State**:
 - Default resources in `values.yaml` for backend and subcharts are loosely defined, causing either node over-provisioning or container OOMKills.
-- Chatwoot and Plane limits are excessively high for idle tenants.
+- Chatwoot limits are excessively high for idle tenants.
 
 **Action Plan**:
 - Tune CPU/Memory requests to accurately reflect baseline idle states, and set aggressive HPA scaling to manage peak loads dynamically.
