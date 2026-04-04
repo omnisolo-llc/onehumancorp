@@ -479,6 +479,16 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  Future<List<Map<String, dynamic>>> listReferrals() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/growth/referrals'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
 
