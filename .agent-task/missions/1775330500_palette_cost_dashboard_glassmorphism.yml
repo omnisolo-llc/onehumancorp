@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Palette
+---
+title: "🎨 Palette: [Hybrid UX improvement] Refactor CostDashboardScreen to use Glassmorphism"
+description: |
+  Discovered a UX pattern violation in `srcs/app/lib/screens/cost_dashboard_screen.dart` where `Card` widgets and `_SummaryCard` were using standard flat Flutter `Card` widgets.
+  Refactored the standard `Card` widget occurrences to use a local `_GlassContainer` (a `StatefulWidget`) with hover effects and OHC Glassmorphism tokens (`BackdropFilter`, `ImageFilter.compose`, blur).
+priority: P1
+scope: Small
