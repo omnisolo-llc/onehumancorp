@@ -83,6 +83,7 @@ func newHubAndTracker(pool *db.DB, orgID string) (*orchestration.Hub, *billing.T
 		return orchestration.NewHubWithRepository(
 				hubRepo,
 				taskRepo,
+				pool.Provider,
 			), billing.NewTrackerWithRepository(
 				billing.DefaultCatalog,
 				usageRepo,

@@ -19,6 +19,8 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -266,8 +268,14 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	dbProvider     db.Provider
 	ctx            context.Context
 	cancel         context.CancelFunc
+}
+
+// Provider returns the underlying database provider.
+func (h *Hub) Provider() db.Provider {
+	return h.dbProvider
 }
 
 // Close gracefully stops the Hub and its background workers.
@@ -288,8 +296,10 @@ func NewHub() *Hub {
 }
 
 // NewHubWithRepository creates a Hub backed by the provided repositories.
-func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
-	return newHub(repo, taskRepo)
+func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository, provider db.Provider) *Hub {
+	h := newHub(repo, taskRepo)
+	h.dbProvider = provider
+	return h
 }
 
 func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
@@ -1761,6 +1771,32 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	}
 
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
+}
+
+// RegisterMeshHTTPHandlers registers the REST endpoints for Teammate Mesh API.
+func RegisterMeshHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
+	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if tm.hub != nil {
+			// Extract task_id, and if absent, it's a general mesh message
+			taskID, _ := payload["task_id"].(string)
+			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}))
 }
 
 // RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.

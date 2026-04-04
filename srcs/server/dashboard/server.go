@@ -594,6 +594,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Health check probe for hybrid-mode switching and local-to-cloud mission sync.
 	mux.HandleFunc("/api/health/hybrid", server.handleHybridHealthCheck)
 
+	if hub.Provider() != nil {
+		taskManager := orchestration.NewTaskManager(hub.Provider(), hub.CentrifugeNode())
+		orchestration.RegisterMeshHTTPHandlers(mux, taskManager)
+		orchestration.RegisterTaskHTTPHandlers(mux, taskManager)
+	}
+
 	// Centrifuge real-time WebSocket endpoint for Flutter/web clients.
 	// Mounted at /connection/websocket — the default Centrifuge path.
 	if hub.CentrifugeNode() == nil {
