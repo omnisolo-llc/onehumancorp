@@ -178,6 +178,79 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 	}
 }
 
+func TestAutoDreamWorker_ProcessCompletedTasks(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	ctx := context.Background()
+
+	// Ensure table exists manually for this test specifically to guarantee test determinism
+	// irrespective of migration state across environments, since we just test the worker logic.
+	_, err = pool.Provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			status TEXT NOT NULL,
+			payload TEXT,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create shared_tasks: %v", err)
+	}
+
+	_, err = pool.Provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			content TEXT NOT NULL,
+			source_mission_id TEXT
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create autodream_memories: %v", err)
+	}
+
+	// Insert a COMPLETED task
+	_, err = pool.Provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, status, payload) VALUES ('00000000-0000-0000-0000-000000000001', 'title1', 'COMPLETED', '{\"foo\":\"bar\"}')")
+	if err != nil {
+		t.Fatalf("failed to insert mock task: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	processedCount, err := worker.ProcessCompletedTasks(ctx)
+	if err != nil {
+		t.Fatalf("ProcessCompletedTasks failed: %v", err)
+	}
+
+	if processedCount != 1 {
+		t.Errorf("expected 1 task processed, got %d", processedCount)
+	}
+
+	// Verify the task was archived
+	var status string
+	err = pool.Provider.QueryRow(ctx, "SELECT status FROM shared_tasks LIMIT 1").Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query status: %v", err)
+	}
+	if status != "ARCHIVED" {
+		t.Errorf("expected ARCHIVED status, got %s", status)
+	}
+
+	// Verify the memory was inserted
+	var count int
+	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id LIKE 'task-%'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 memory inserted, got %d", count)
+	}
+}
+
 func TestAutoDreamConsolidateEpoch(t *testing.T) {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
 	pool, err := db.New(context.Background())

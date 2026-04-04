@@ -19,6 +19,116 @@ type AutoDreamWorker struct {
 	pool db.Provider
 }
 
+// ProcessCompletedTasks reads COMPLETED shared_tasks and moves them into autodream_memories
+func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) (int64, error) {
+	// Must return (int64, error) and not use RowsAffected() per prompt constraints
+	var processedCount int64 = 0
+
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("ProcessCompletedTasks: failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if w.pool.IsSQLite() {
+		// SQLite Recency Fallback without row locks
+		query = `
+			SELECT id, CAST(COALESCE(payload, '{}') AS TEXT)
+			FROM shared_tasks
+			WHERE status = 'COMPLETED'
+			ORDER BY updated_at ASC
+			LIMIT 10
+		`
+	} else {
+		// PostgreSQL with SKIP LOCKED
+		query = `
+			SELECT CAST(id AS TEXT), CAST(COALESCE(payload, '{}') AS TEXT)
+			FROM shared_tasks
+			WHERE status = 'COMPLETED'
+			ORDER BY updated_at ASC
+			LIMIT 10
+			FOR UPDATE SKIP LOCKED
+		`
+	}
+
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("ProcessCompletedTasks: failed to query shared_tasks: %w", err)
+	}
+	defer rows.Close()
+
+	type taskRec struct {
+		ID      string
+		Payload string
+	}
+	var records []taskRec
+	for rows.Next() {
+		var rec taskRec
+		var payload *string
+		if err := rows.Scan(&rec.ID, &payload); err != nil {
+			slog.Error("AutoDream: failed to scan shared_task row", "error", err)
+			continue
+		}
+		if payload != nil {
+			rec.Payload = *payload
+		}
+		records = append(records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("ProcessCompletedTasks: iteration error: %w", err)
+	}
+	rows.Close()
+
+	if len(records) == 0 {
+		return 0, nil
+	}
+
+	for _, rec := range records {
+		var insertQuery string
+		if w.pool.IsSQLite() {
+			insertQuery = `
+				INSERT INTO autodream_memories (content, source_mission_id)
+				VALUES (?, ?)
+			`
+		} else {
+			insertQuery = `
+				INSERT INTO autodream_memories (content, source_mission_id)
+				VALUES ($1, $2)
+			`
+		}
+
+		memID := "task-" + rec.ID
+		_, err := tx.Exec(ctx, insertQuery, rec.Payload, memID)
+		if err != nil {
+			slog.Error("AutoDream: failed to insert completed task memory", "error", err)
+			continue
+		}
+
+		// Update task to ARCHIVED or delete it to prevent reprocessing
+		var updateQuery string
+		if w.pool.IsSQLite() {
+			updateQuery = "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = ?"
+		} else {
+			updateQuery = "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE CAST(id AS TEXT) = $1"
+		}
+		_, err = tx.Exec(ctx, updateQuery, rec.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to archive shared_task after compression", "error", err)
+			tx.Rollback(ctx)
+			return 0, err
+		}
+
+		processedCount++
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return processedCount, fmt.Errorf("ProcessCompletedTasks: failed to commit transaction: %w", err)
+	}
+
+	return processedCount, nil
+}
+
 // AutoDreamWorker options
 type AutoDreamWorkerOptions struct {
 	PruningInterval  time.Duration
@@ -342,13 +452,29 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		memoryID := "mem-" + file.Name()
 
-		// Store into autodream_memories (the table defined for AutoDream data pipelines)
-		query := "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, 'system', $2, $3::vector) ON CONFLICT(id) DO NOTHING"
+		// Check for idempotency
+		var exists int
+		checkQuery := "SELECT 1 FROM autodream_memories WHERE source_mission_id = $1"
 		if w.pool.IsSQLite() {
-			query = "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES (?, 'system', ?, ?) ON CONFLICT(id) DO NOTHING"
+			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = ?"
+		}
+		err = w.pool.QueryRow(ctx, checkQuery, memoryID).Scan(&exists)
+		if err == nil && exists == 1 {
+			// Already exists
+			err = os.Remove(filePath)
+			if err != nil {
+				slog.Error("AutoDream: failed to delete already processed memory file", "file", filePath, "error", err)
+			}
+			continue
 		}
 
-		_, err = w.pool.Exec(ctx, query, memoryID, content, embeddingStr)
+		// Store into autodream_memories (the table defined for AutoDream data pipelines)
+		query := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		if w.pool.IsSQLite() {
+			query = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES (?, ?, ?)"
+		}
+
+		_, err = w.pool.Exec(ctx, query, content, embeddingStr, memoryID)
 		if err != nil {
 			slog.Error("AutoDream: failed to insert memory", "file", file.Name(), "error", err)
 			continue
