@@ -115,10 +115,20 @@ func (r *SqliteHubRepository) RemoveAgent(ctx context.Context, id string) error 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, "DELETE FROM agent_inbox WHERE agent_id = ?", id); err != nil {
+	clearQuery := "DELETE FROM agent_inbox WHERE agent_id = ?"
+	delQuery := "DELETE FROM agents WHERE id = ?"
+	var args []any = []any{id}
+
+	if r.orgID != "" {
+		clearQuery += " AND organization_id = ?"
+		delQuery += " AND organization_id = ?"
+		args = append(args, r.orgID)
+	}
+
+	if _, err := tx.Exec(ctx, clearQuery, args...); err != nil {
 		return fmt.Errorf("sqlite: clear inbox: %w", err)
 	}
-	if _, err := tx.Exec(ctx, "DELETE FROM agents WHERE id = ?", id); err != nil {
+	if _, err := tx.Exec(ctx, delQuery, args...); err != nil {
 		return fmt.Errorf("sqlite: delete agent: %w", err)
 	}
 	return tx.Commit(ctx)
