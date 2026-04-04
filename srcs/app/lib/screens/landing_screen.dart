@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
+import 'package:ohc_app/services/api_service.dart';
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -41,20 +42,20 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                       const SizedBox(height: 48),
                       _ValuePropGrid(isVariantB: _showVariantB),
                       const SizedBox(height: 48),
-                      FilledButton.icon(
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _DownloadButton(os: 'Mac', icon: Icons.apple),
+                          _DownloadButton(os: 'Windows', icon: Icons.window),
+                          _DownloadButton(os: 'Linux', icon: Icons.laptop_chromebook),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
                         onPressed: () => context.go('/login'),
-                        icon: const Icon(Icons.rocket_launch),
-                        label: const Text('Launch OHC Desktop'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 20,
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: const Text('Or continue to Cloud Dashboard'),
                       ),
                     ],
                   ),
@@ -242,6 +243,53 @@ class _GlassCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends ConsumerWidget {
+  final String os;
+  final IconData icon;
+
+  const _DownloadButton({required this.os, required this.icon});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FilledButton.icon(
+      onPressed: () async {
+        try {
+          await ref.read(apiServiceProvider)!.trackDownload(os, '1.0.0');
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Downloading OHC Desktop for $os...'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        }
+      },
+      icon: Icon(icon),
+      label: Text('Download for $os'),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 16,
+        ),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
