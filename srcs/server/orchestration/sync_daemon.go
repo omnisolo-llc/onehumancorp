@@ -26,6 +26,7 @@ type HybridMCPRAGDaemon struct {
 	ticker      *time.Ticker
 	quit        chan struct{}
 	cloudAPIURL string
+	distLock    DistributedLock
 }
 
 func NewHybridMCPRAGDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAPIURL string) *HybridMCPRAGDaemon {
@@ -36,11 +37,15 @@ func NewHybridMCPRAGDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAP
 		cloudAPIURL = "http://localhost:8080"
 	}
 
+	redisURL := os.Getenv("REDIS_URL")
+	distLock := NewDistributedLockManager(redisURL, dbWrapper)
+
 	return &HybridMCPRAGDaemon{
 		dbWrapper:   dbWrapper,
 		ticker:      time.NewTicker(pollInterval),
 		quit:        make(chan struct{}),
 		cloudAPIURL: cloudAPIURL,
+		distLock:    distLock,
 	}
 }
 
@@ -55,7 +60,26 @@ func (d *HybridMCPRAGDaemon) Start(ctx context.Context) {
 		for {
 			select {
 			case <-d.ticker.C:
+				// Acquire lock to ensure only one pod does the sync
+				lockKey := "sync_daemon_hybrid_mcp"
+				lockOwner := os.Getenv("HOSTNAME") // Simple owner ID based on pod/hostname
+				if lockOwner == "" {
+					lockOwner = "standalone"
+				}
+
+				err := d.distLock.Acquire(ctx, lockKey, lockOwner, 5*time.Minute)
+				if err != nil {
+					// Either locked by another node or error
+					if err != ErrLockNotAcquired {
+						slog.Warn("sync_daemon: error acquiring lock", "error", err)
+					}
+					continue
+				}
+
 				d.ProcessSync(ctx)
+
+				_ = d.distLock.Release(ctx, lockKey, lockOwner)
+
 			case <-d.quit:
 				d.ticker.Stop()
 				return
