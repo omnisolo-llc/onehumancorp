@@ -72,7 +72,7 @@ func (p *PgProvider) AcquireTask(ctx context.Context, agentID string) (*TaskReco
 		SET status = 'RUNNING', agent_id = $1, updated_at = NOW()
 		WHERE id = (
 			SELECT id FROM tasks
-			WHERE status = 'PENDING'
+			WHERE status = 'PENDING' AND organization_id = 'system'
 			ORDER BY created_at ASC
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
