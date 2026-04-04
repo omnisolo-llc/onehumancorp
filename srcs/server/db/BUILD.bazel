@@ -44,10 +44,6 @@ go_library(
 
 go_test(
     name = "db_test",
-    srcs = [
-        "provider_test.go",
-        "test_provider_test.go",
-    ],
+    srcs = ["provider_test.go"],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
 )
