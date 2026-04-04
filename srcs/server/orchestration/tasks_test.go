@@ -16,7 +16,7 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS swarm_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
 			parent_plan_id TEXT,

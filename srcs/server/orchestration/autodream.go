@@ -105,10 +105,10 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		memoryID := "mem-" + file.Name()
 
-		// Store into agent_memories (the table defined for AutoDream data pipelines)
-		query := "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, $2, $3, $4::vector) ON CONFLICT(id) DO NOTHING"
+		// Store into autodream_memories (the table defined for AutoDream data pipelines)
+		query := "INSERT INTO autodream_memories (id, organization_id, content, embedding) VALUES ($1, $2, $3, $4::vector) ON CONFLICT(id) DO NOTHING"
 		if w.pool.IsSQLite() {
-			query = "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
+			query = "INSERT INTO autodream_memories (id, organization_id, content, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
 		}
 
 		// Since organization_id isn't explicitly tied to these system-wide memories by default,

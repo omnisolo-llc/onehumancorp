@@ -100,13 +100,13 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, missionID, parent
 
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at)
+			INSERT INTO shared_tasks (id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			RETURNING id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, dependencies, title, payload, status)
+			INSERT INTO shared_tasks (id, mission_id, parent_plan_id, dependencies, title, payload, status)
 			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
 			RETURNING id, mission_id, parent_plan_id, dependencies, title, payload, status, created_at, updated_at
 		`
@@ -180,7 +180,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
 		query := `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
+			FROM shared_tasks
 			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 			LIMIT 1
@@ -198,7 +198,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		// PostgreSQL with SKIP LOCKED
 		query := `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
+			FROM shared_tasks
 			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY payload->>'priority' ASC, created_at ASC
 			LIMIT 1
@@ -225,7 +225,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	// Check DAG dependencies
 	for _, depID := range task.Dependencies {
 		var status string
-		err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
+		err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", depID).Scan(&status)
 		if err != nil || status != "COMPLETED" {
 			// Dependency not satisfied
 			return nil, nil // Cannot claim yet
@@ -245,7 +245,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	// Update task status to IN_PROGRESS
 	updateQuery := `
-		UPDATE swarm_tasks
+		UPDATE shared_tasks
 		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND status = 'PENDING'
 	`
@@ -284,7 +284,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 // ReviewTask marks a task for review.
 func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
 	query := `
-		UPDATE swarm_tasks
+		UPDATE shared_tasks
 		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
 	`
@@ -298,7 +298,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	}
 
 	var missionID string
-	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM shared_tasks WHERE id = $1", taskID).Scan(&missionID)
 	if err == nil {
 		telemetry.RecordSwarmTaskTransition(ctx, missionID, "IN_PROGRESS", "REVIEW")
 	}
@@ -320,7 +320,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	query := `
-		UPDATE swarm_tasks
+		UPDATE shared_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
@@ -348,7 +348,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	// Note: We don't have mission_id readily available in this block, but telemetry.RecordSwarmTaskCompleted can take it or we can pass an empty string / agent string.
 	// Actually we should fetch it if we want it perfect, but it's optional for the counter.
 	var missionID string
-	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM shared_tasks WHERE id = $1", taskID).Scan(&missionID)
 	if err == nil {
 		telemetry.RecordSwarmTaskCompleted(ctx, missionID)
 		telemetry.RecordSwarmTaskTransition(ctx, missionID, "IN_PROGRESS_OR_REVIEW", "COMPLETED")
@@ -373,7 +373,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
+			FROM shared_tasks
 			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 			LIMIT $1
@@ -382,7 +382,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		// PostgreSQL with SKIP LOCKED
 		query = `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
+			FROM shared_tasks
 			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY payload->>'priority' ASC, created_at ASC
 			LIMIT $1
@@ -437,7 +437,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		depsSatisfied := true
 		for _, depID := range task.Dependencies {
 			var status string
-			err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
+			err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", depID).Scan(&status)
 			if err != nil || status != "COMPLETED" {
 				depsSatisfied = false
 				break
@@ -462,7 +462,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for _, task := range tasks {
 			rowsAffected, err := tx.Exec(ctx, `
-				UPDATE swarm_tasks
+				UPDATE shared_tasks
 				SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 				WHERE id = $2 AND status = 'PENDING'
 			`, agentID, task.ID)
