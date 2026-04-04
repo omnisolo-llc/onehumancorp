@@ -12,12 +12,12 @@ import (
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	dbConn, err := sql.Open("sqlite", ":memory:")
+	dbConn, err := sql.Open("sqlite", "file:autodream-test?mode=memory&cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}
-	dbConn.SetMaxOpenConns(1)
-prov := db.NewSqliteProvider(dbConn)
+	dbConn.SetMaxOpenConns(4)
+	prov := db.NewSqliteProvider(dbConn)
 
 	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
