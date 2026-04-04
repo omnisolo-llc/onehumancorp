@@ -21,6 +21,7 @@ import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
+import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -125,6 +126,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/swarm-memory',
             builder: (context, state) => const SwarmMemoryScreen(),
           ),
+          GoRoute(
+            path: '/growth-experiments',
+            builder: (context, state) => const LandingPageExperimentsScreen(),
+          ),
         ],
       ),
     ],
@@ -173,6 +178,11 @@ class _Sidebar extends StatelessWidget {
           path: '/scaling',
         ),
         _NavItem(icon: Icons.alt_route, label: 'Pipelines', path: '/pipelines'),
+        _NavItem(
+          icon: Icons.science,
+          label: 'Growth Experiments',
+          path: '/growth-experiments',
+        ),
         _NavItem(
           icon: Icons.extension,
           label: 'Integrations & Tools',
