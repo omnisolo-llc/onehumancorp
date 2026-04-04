@@ -9,9 +9,7 @@ import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart';
 
 class MockCentrifugeService extends Mock implements CentrifugeService {}
-
 class MockPowerSyncService extends Mock implements PowerSyncService {}
-
 class MockPowerSyncDatabase extends Mock implements PowerSyncDatabase {}
 
 void main() {
@@ -29,13 +27,11 @@ void main() {
     });
 
     testWidgets('renders basic UI structure', (tester) async {
-      when(
-        () => mockCentrifugeService.subscribe('mesh:tasks'),
-      ).thenAnswer((_) => const Stream.empty());
+      when(() => mockCentrifugeService.subscribe('mesh:tasks'))
+          .thenAnswer((_) => const Stream.empty());
 
-      when(
-        () => mockPowerSyncDatabase.watch(any()),
-      ).thenAnswer((_) => const Stream.empty());
+      when(() => mockPowerSyncDatabase.watch(any()))
+          .thenAnswer((_) => const Stream.empty());
 
       await tester.pumpWidget(
         ProviderScope(
@@ -43,7 +39,9 @@ void main() {
             centrifugeServiceProvider.overrideWithValue(mockCentrifugeService),
             powersyncProvider.overrideWithValue(mockPowerSyncService),
           ],
-          child: const MaterialApp(home: SwarmMemoryScreen()),
+          child: const MaterialApp(
+            home: SwarmMemoryScreen(),
+          ),
         ),
       );
 
@@ -53,12 +51,9 @@ void main() {
       expect(find.text('Durable Swarm Memory'), findsOneWidget);
     });
 
-    testWidgets('shows loading state for durable memory when db is null', (
-      tester,
-    ) async {
-      when(
-        () => mockCentrifugeService.subscribe('mesh:tasks'),
-      ).thenAnswer((_) => const Stream.empty());
+    testWidgets('shows loading state for durable memory when db is null', (tester) async {
+      when(() => mockCentrifugeService.subscribe('mesh:tasks'))
+          .thenAnswer((_) => const Stream.empty());
 
       when(() => mockPowerSyncService.db).thenReturn(null);
 
@@ -68,7 +63,9 @@ void main() {
             centrifugeServiceProvider.overrideWithValue(mockCentrifugeService),
             powersyncProvider.overrideWithValue(mockPowerSyncService),
           ],
-          child: const MaterialApp(home: SwarmMemoryScreen()),
+          child: const MaterialApp(
+            home: SwarmMemoryScreen(),
+          ),
         ),
       );
 
@@ -76,13 +73,11 @@ void main() {
     });
 
     testWidgets('shows empty state for durable memory', (tester) async {
-      when(
-        () => mockCentrifugeService.subscribe('mesh:tasks'),
-      ).thenAnswer((_) => const Stream.empty());
+      when(() => mockCentrifugeService.subscribe('mesh:tasks'))
+          .thenAnswer((_) => const Stream.empty());
 
-      when(
-        () => mockPowerSyncDatabase.watch(any()),
-      ).thenAnswer((_) => const Stream.empty());
+      when(() => mockPowerSyncDatabase.watch(any()))
+          .thenAnswer((_) => const Stream.empty());
 
       await tester.pumpWidget(
         ProviderScope(
@@ -90,7 +85,9 @@ void main() {
             centrifugeServiceProvider.overrideWithValue(mockCentrifugeService),
             powersyncProvider.overrideWithValue(mockPowerSyncService),
           ],
-          child: const MaterialApp(home: SwarmMemoryScreen()),
+          child: const MaterialApp(
+            home: SwarmMemoryScreen(),
+          ),
         ),
       );
 
