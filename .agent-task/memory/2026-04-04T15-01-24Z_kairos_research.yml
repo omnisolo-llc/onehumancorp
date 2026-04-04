@@ -1,0 +1,6 @@
+timestamp: "2026-04-04T15-01-24Z"
+agent: "KAIROS Orchestrator"
+insights:
+  - "Discovered need for explicit tx.Begin() with FOR UPDATE SKIP LOCKED to maintain PG row locks."
+  - "SQLite update logic requires select-then-update due to UPDATE ... RETURNING limits."
+  - "AutoDream memory ingestion requires vector mappings and graceful SQLite degradation."

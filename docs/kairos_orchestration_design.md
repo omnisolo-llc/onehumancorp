@@ -12,8 +12,8 @@ The OHC Swarm demands a highly scalable, fault-tolerant backbone to coordinate l
 
 ### 2.1 Shared Task List
 A distributed state machine for tracking and orchestrating asynchronous tasks across the swarm. KAIROS utilizes `swarm_tasks` for mission-critical steps and `shared_tasks` for inter-agent delegation.
-*   **PostgreSQL Native (Cloud)**: Relies on `FOR UPDATE SKIP LOCKED` for lock-free concurrency and zero TOCTOU (Time-Of-Check to Time-Of-Use) race conditions across parallel K8s agent pods.
-*   **SQLite Fallback (Standalone)**: Degrades to single-node concurrency guarantees, utilizing local table locks (`UPDATE ... RETURNING` or mutexes) to preserve transactional integrity for single-user workloads.
+*   **PostgreSQL Native (Cloud)**: Relies on `FOR UPDATE SKIP LOCKED` inside explicit transactions (`tx.Begin()`) for lock-free concurrency and zero TOCTOU (Time-Of-Check to Time-Of-Use) race conditions across parallel K8s agent pods. Explicit `organization_id` filtering is strictly enforced for tenant isolation.
+*   **SQLite Fallback (Standalone)**: Degrades to single-node concurrency guarantees, utilizing local table locks (a two-step select-then-update via `UPDATE ... RETURNING` workaround) or mutexes to preserve transactional integrity for single-user workloads.
 *   **DAG Dependencies**: Enforces sequence and parallel task unblocking (e.g., frontend tasks block on backend completion).
 
 ### 2.2 Teammate Mesh APIs
@@ -24,7 +24,7 @@ A high-throughput realtime event bus that allows agents to broadcast intent, coo
 
 ### 2.3 AutoDream Vector Data Pipelines
 A semantic memory consolidation pipeline running passively to translate ephemeral session contexts into durable, vectorized truth.
-*   **Pipeline Logic**: Background workers monitor `agent_session_data` and trigger Minimax/LLM summarization jobs (`AutoDreamWorker`), transforming short-term token buffers into high-dimensional `pgvector` records in `autodream_memories` and `swarm_truth_embeddings`.
+*   **Pipeline Logic**: Background workers monitor `agent_session_data` (older than 24 hours) and trigger Minimax/LLM summarization jobs (`AutoDreamWorker`), transforming short-term token buffers into high-dimensional `pgvector` records in `autodream_memories` and `swarm_truth_embeddings`.
 *   **Cloud Mode**: Uses `pgvector` for exact Nearest Neighbor search (`ORDER BY embedding <-> $1`).
 *   **Local Degration**: In SQLite, falls back to recency-based full-text extraction (`ORDER BY created_at DESC`).
 
