@@ -43,6 +43,145 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
+	go w.runSessionCompressionPipeline(ctx)
+}
+
+// runSessionCompressionPipeline compresses ephemeral session context into vector truth.
+func (w *AutoDreamWorker) runSessionCompressionPipeline(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.compressSessions(ctx)
+		}
+	}
+}
+
+// compressSessions extracts context from agent_session_data and consolidates it.
+func (w *AutoDreamWorker) compressSessions(ctx context.Context) {
+	// We'll process sessions that haven't been accessed recently (e.g. idle for 1 hour).
+	threshold := time.Now().Add(-1 * time.Hour).UTC()
+	var query string
+	var rows db.Rows
+	var err error
+
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("AutoDream: failed to begin tx for compression", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	if w.pool.IsSQLite() {
+		// SQLite fallback
+		query = `
+			SELECT session_id, agent_id, context_data
+			FROM agent_session_data
+			WHERE last_accessed < ?
+			LIMIT 10
+		`
+		rows, err = tx.Query(ctx, query, threshold)
+	} else {
+		// PostgreSQL with distributed worker lock
+		query = `
+			SELECT session_id, agent_id, context_data
+			FROM agent_session_data
+			WHERE last_accessed < $1
+			LIMIT 10
+			FOR UPDATE SKIP LOCKED
+		`
+		rows, err = tx.Query(ctx, query, threshold)
+	}
+
+	if err != nil {
+		slog.Error("AutoDream: failed to query sessions", "error", err)
+		return
+	}
+
+	type sessionRec struct {
+		ID      string
+		AgentID string
+		Context string
+	}
+	var records []sessionRec
+
+	for rows.Next() {
+		var rec sessionRec
+		if err := rows.Scan(&rec.ID, &rec.AgentID, &rec.Context); err == nil {
+			records = append(records, rec)
+		}
+	}
+	rows.Close()
+
+	if len(records) == 0 {
+		return
+	}
+
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+
+	for _, rec := range records {
+		var summary string
+		var embeddingStr string
+
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+
+			// Generate Summary
+			prompt := fmt.Sprintf("Compress the following agent session context into a concise memory:\n%s", rec.Context)
+			response, errReason := client.Reason(ctxTimeout, prompt)
+			if errReason == nil {
+				summary = response
+			} else {
+				summary = "Consolidated Session: " + rec.ID // Fallback
+			}
+
+			// Generate Embedding
+			embedding, errEmbed := client.GenerateEmbedding(ctxTimeout, summary)
+			if errEmbed == nil && len(embedding) > 0 {
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+			cancel()
+		}
+
+		if summary == "" {
+			summary = "Consolidated Session: " + rec.ID
+		}
+		if embeddingStr == "" {
+			embeddingStr = "[0.0]"
+		}
+
+		// Insert into autodream_memories
+		memQuery := "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES ($1, $2, $3::vector, $4)"
+		if w.pool.IsSQLite() {
+			memQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES (?, ?, ?, ?)"
+		}
+
+		// We assume source_mission_id is nil for simple sessions or infer it.
+		// Generating new UUID or dummy string for sqlite compatibility if gen_random_uuid isn't natively supported.
+		// Since schema uses DEFAULT gen_random_uuid() or TEXT, we let the DB handle ID unless it's SQLite.
+		// For safety we'll explicitly provide an ID.
+		newMemID := fmt.Sprintf("mem-session-%s", rec.ID)
+		_, errIns := tx.Exec(ctx, memQuery, newMemID, summary, embeddingStr, "session")
+		if errIns != nil {
+			slog.Warn("AutoDream: failed to insert autodream_memories", "error", errIns)
+		}
+
+		// Then delete the session data to avoid re-processing
+		delQuery := "DELETE FROM agent_session_data WHERE session_id = $1"
+		if w.pool.IsSQLite() {
+			delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+		}
+		_, _ = tx.Exec(ctx, delQuery, rec.ID)
+	}
+
+	_ = tx.Commit(ctx)
 }
 
 // runMemoryIngestionPipeline reads files from .agent-task/memory/ and injects them.

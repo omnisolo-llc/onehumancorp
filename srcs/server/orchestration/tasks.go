@@ -319,18 +319,99 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	query := `
 		UPDATE swarm_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
-	res, err := tm.db.Exec(ctx, query, taskID, agentID)
+	res, err := tx.Exec(ctx, query, taskID, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
 	if res == 0 {
 		return errors.New("task not found or not assigned to agent")
+	}
+
+	var missionID string
+	_ = tx.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+
+	// In KAIROS, completing a task means we should find tasks that depended on this
+	// and see if they are now READY (all dependencies completed).
+	// For `TaskManager`, it checks DAG dependencies from JSON field `dependencies`
+	// but KAIROS might also use `task_dependencies` if we migrated. Wait, tasks.go uses JSON field!
+	// So we need to query tasks that have this taskID in their dependencies JSON array.
+
+	var newReadyTasks []string
+	if tm.db.IsSQLite() {
+		// SQLite JSON1 extension
+		rows, err := tx.Query(ctx, "SELECT id, dependencies FROM swarm_tasks WHERE status = 'PENDING' AND json_type(dependencies) = 'array'")
+		if err == nil {
+			for rows.Next() {
+				var tid, depsJSON string
+				if rows.Scan(&tid, &depsJSON) == nil {
+					var deps []string
+					if json.Unmarshal([]byte(depsJSON), &deps) == nil {
+						hasDep := false
+						for _, d := range deps {
+							if d == taskID {
+								hasDep = true
+								break
+							}
+						}
+						if hasDep {
+							// Check if all are now completed
+							allDone := true
+							for _, d := range deps {
+								var st string
+								if tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", d).Scan(&st) != nil || st != "COMPLETED" {
+									allDone = false
+									break
+								}
+							}
+							if allDone {
+								newReadyTasks = append(newReadyTasks, tid)
+							}
+						}
+					}
+				}
+			}
+			rows.Close()
+		}
+	} else {
+		// Postgres JSONB array
+		rows, err := tx.Query(ctx, "SELECT id, dependencies FROM swarm_tasks WHERE status = 'PENDING' AND dependencies @> $1::jsonb", fmt.Sprintf(`["%s"]`, taskID))
+		if err == nil {
+			for rows.Next() {
+				var tid string
+				var deps []string
+				if rows.Scan(&tid, &deps) == nil {
+					// Check if all are now completed
+					allDone := true
+					for _, d := range deps {
+						var st string
+						if tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", d).Scan(&st) != nil || st != "COMPLETED" {
+							allDone = false
+							break
+						}
+					}
+					if allDone {
+						newReadyTasks = append(newReadyTasks, tid)
+					}
+				}
+			}
+			rows.Close()
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Broadcast task completion
@@ -341,15 +422,17 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 				"agent_id": agentID,
 				"status":   "COMPLETED",
 			})
+			for _, rid := range newReadyTasks {
+				tm.hub.PublishTaskBroadcast(rid, map[string]interface{}{
+					"action": "READY",
+					"status": "PENDING", // Keep PENDING status but notify ready to be picked
+				})
+			}
 		}()
 	}
 
 	// Record Telemetry
-	// Note: We don't have mission_id readily available in this block, but telemetry.RecordSwarmTaskCompleted can take it or we can pass an empty string / agent string.
-	// Actually we should fetch it if we want it perfect, but it's optional for the counter.
-	var missionID string
-	err = tm.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
-	if err == nil {
+	if missionID != "" {
 		telemetry.RecordSwarmTaskCompleted(ctx, missionID)
 		telemetry.RecordSwarmTaskTransition(ctx, missionID, "IN_PROGRESS_OR_REVIEW", "COMPLETED")
 	}
