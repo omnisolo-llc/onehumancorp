@@ -28,6 +28,7 @@ go_library(
         "migrations/014_task_dependencies.sql",
         "migrations/015_sync_log.sql",
         "migrations/016_review_status.sql",
+        "migrations/017_tenant_isolation.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
