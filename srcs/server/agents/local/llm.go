@@ -195,7 +195,7 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 					Input: p.ToolInput,
 				})
 			case "tool_result":
-				var cont interface{} = p.ResultContent
+				var cont interface{} = utils.MinifyJSONString(p.ResultContent)
 				ac := anthropicContent{
 					Type:      "tool_result",
 					ToolUseID: p.ResultForToolUseID,
@@ -427,7 +427,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 					// Tool results are separate messages with role "tool"
 					msgs = append(msgs, openAIMessage{
 						Role:       "tool",
-						Content:    p.ResultContent,
+						Content:    utils.MinifyJSONString(p.ResultContent),
 						ToolCallID: p.ResultForToolUseID,
 					})
 				}
