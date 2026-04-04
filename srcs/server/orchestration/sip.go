@@ -46,6 +46,7 @@ type SIPDB struct {
 	cachedGrounding  string
 	groundingOnce    *sync.Once
 	cachedGroundErr  error
+	HTTPClient       *http.Client
 }
 
 const (
@@ -131,7 +132,8 @@ func NewSIPDBWithProvider(provider db.Provider) (*SIPDB, error) {
 	if err := initializeTables(provider); err != nil {
 		return nil, err
 	}
-	return &SIPDB{db: provider, groundingOnce: new(sync.Once)}, nil
+	client := &http.Client{Timeout: 10 * time.Second}
+	return &SIPDB{db: provider, groundingOnce: new(sync.Once), HTTPClient: client}, nil
 }
 
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
@@ -407,7 +409,10 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 10 * time.Second}
+		client := s.HTTPClient
+		if client == nil {
+			client = &http.Client{Timeout: 10 * time.Second}
+		}
 		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to sync bursting mission: %w", err)
@@ -795,7 +800,10 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := s.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("failed to sync metrics: %w", err)
@@ -858,7 +866,10 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		return 0, nil
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := s.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
 	syncedCount := 0
 	var idsToDelete []string
 
@@ -953,7 +964,10 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		return 0, nil
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := s.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
 	syncedCount := 0
 
 	for _, m := range missions {
