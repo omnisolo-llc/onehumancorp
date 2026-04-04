@@ -159,21 +159,103 @@ func (w *AutoDreamWorker) pruneStaleSessionsWithDistributedLock(ctx context.Cont
 // pruneStaleSessions deletes agent_session_data older than 24 hours.
 func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
 	threshold := time.Now().Add(-24 * time.Hour).UTC()
-	var query string
-	if w.pool.IsSQLite() {
-		query = "DELETE FROM agent_session_data WHERE last_accessed < ?"
-	} else {
-		// Use SKIP LOCKED for a simple distributed worker queue mechanism when running multiple replicas
-		query = "DELETE FROM agent_session_data WHERE session_id IN (SELECT session_id FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED)"
-	}
 
-	res, err := w.pool.Exec(ctx, query, threshold)
+	tx, err := w.pool.Begin(ctx)
 	if err != nil {
-		slog.Error("AutoDream: failed to prune stale sessions", "error", err)
+		slog.Error("AutoDream: failed to begin transaction for pruning", "error", err)
 		return
 	}
-	if res > 0 {
-		slog.Info("AutoDream: pruned stale sessions via distributed queue", "count", res)
+	defer tx.Rollback(ctx)
+
+	// Compress context from agent_session_data into autodream_memories before deleting
+	var selectQuery string
+	if w.pool.IsSQLite() {
+		selectQuery = "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?"
+	} else {
+		selectQuery = "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := tx.Query(ctx, selectQuery, threshold)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch stale sessions for pruning", "error", err)
+		return
+	}
+
+	type SessionData struct {
+		ID      string
+		Context string
+	}
+	var sessions []SessionData
+	for rows.Next() {
+		var s SessionData
+		if err := rows.Scan(&s.ID, &s.Context); err == nil {
+			sessions = append(sessions, s)
+		}
+	}
+	rows.Close()
+
+	if len(sessions) > 0 {
+		for _, s := range sessions {
+			// Compress context using LLM Reasoner
+			prompt := fmt.Sprintf("Summarize and extract the core truth from this agent session context:\n%s", s.Context)
+
+			minimaxKey := os.Getenv("MINIMAX_API_KEY")
+			compressedContext := s.Context
+			embeddingStr := "[0.0]"
+
+			if minimaxKey != "" {
+				client := NewMinimaxClient(minimaxKey)
+				ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+				response, err := client.Reason(ctxTimeout, prompt)
+				cancel()
+				if err == nil {
+					compressedContext = response
+				} else {
+					slog.Warn("AutoDream: LLM reasoning failed during compression, using raw context", "error", err)
+				}
+
+				// Get vector embedding
+				ctxTimeout2, cancel2 := context.WithTimeout(ctx, 15*time.Second)
+				embedding, err := client.GenerateEmbedding(ctxTimeout2, compressedContext)
+				cancel2()
+				if err == nil && len(embedding) > 0 {
+					embeddingStr = fmt.Sprintf("%v", embedding)
+					embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+					embeddingStr = "[" + embeddingStr + "]"
+				} else {
+					slog.Warn("AutoDream: LLM embedding failed during compression", "error", err)
+				}
+			}
+
+			// Store into autodream_memories
+			insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+			if w.pool.IsSQLite() {
+				insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES (?, ?, ?)"
+			}
+
+			_, err = tx.Exec(ctx, insertQuery, compressedContext, embeddingStr, "session-"+s.ID)
+			if err != nil {
+				slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
+			}
+
+			// Delete processed session
+			var delQuery string
+			if w.pool.IsSQLite() {
+				delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+			} else {
+				delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
+			}
+			_, _ = tx.Exec(ctx, delQuery, s.ID)
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			slog.Error("AutoDream: failed to commit pruning transaction", "error", err)
+			return
+		}
+
+		slog.Info("AutoDream: compressed and pruned stale sessions", "count", len(sessions))
+	} else {
+		_ = tx.Commit(ctx)
 	}
 }
 
