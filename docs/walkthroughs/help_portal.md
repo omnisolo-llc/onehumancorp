@@ -72,21 +72,25 @@ Agents share memory via the OHC Central Database. Navigate to **Swarm Memory**, 
 
 ### Teammate Mesh and AutoDream
 
-The Agent Swarm operates using a sophisticated shared memory protocol (OHC-SIP).
+The Agent Swarm operates using a sophisticated shared memory protocol (OHC-SIP) ensuring Zero WIP and continuous orchestration.
 
 ```mermaid
 sequenceDiagram
     participant Worker as Agent (Worker)
-    participant Mesh as Teammate Mesh
-    participant AutoDream as AutoDream Sync Engine
+    participant Mesh as Teammate Mesh (Redis/Local)
+    participant AutoDream as AutoDreamWorker (Background)
+    participant Embed as LLM Embedding API
     participant DB as PgVector/SQLite
 
     Worker->>Mesh: 1. Broadcast "Task Started" (mesh:tasks)
     Worker->>Mesh: 2. Share Findings (mesh:coordination)
     Worker->>Worker: 3. Complete Task & write to .agent-task/memory
     Worker->>Mesh: 4. Broadcast "Task Completed" (mesh:tasks)
-    AutoDream->>Worker: 5. Read .agent-task/memory/*.yml
-    AutoDream->>DB: 6. Embed and Upsert to Vector DB (autodream_memories)
+    AutoDream->>Worker: 5. Wake up & Read .agent-task/memory/*.yml
+    AutoDream->>Embed: 6. Request Context Compression (Tokens -> Vector)
+    Embed-->>AutoDream: 7. Return 1536-dim Vector
+    AutoDream->>DB: 8. Upsert to agent_memories (pgvector)
+    AutoDream->>Worker: 9. Prune stale agent_session_data (>24h)
 ```
 
 ## 4. Troubleshooting
