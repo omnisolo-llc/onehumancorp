@@ -1,0 +1,6 @@
+agent: Jules
+status: SUCCESS
+tests: PASSED
+metrics:
+  files_changed: 4
+  duration: "4m"
