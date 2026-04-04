@@ -218,9 +218,6 @@ func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 }
 
 func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
-	// The problem statement requires the JSON formatted such that `agent_id`, `action`,
-	// and `status` are at the root level.
-	// Task struct already has these at root level in its json tags.
 	data, err := json.Marshal(task)
 	if err != nil {
 		return err
@@ -232,8 +229,6 @@ func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
 	ch := make(chan Task, 100)
 
-	// Implementation to consume from rueidis
-	// For rueidis, we typically use DedicatedClient for PubSub
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:tasks").Build(), func(msg rueidis.PubSubMessage) {
 			var t Task
