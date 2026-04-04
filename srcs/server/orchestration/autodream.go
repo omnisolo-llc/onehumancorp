@@ -224,10 +224,17 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 	}
 
 	for _, s := range sessions {
+		var check string
+		var tx db.Tx
+
 		// Try to claim the session explicitly via SKIP LOCKED if in PG
 		if !w.pool.IsSQLite() {
-			var check string
-			err = w.pool.QueryRow(ctx, "SELECT session_id FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", s.ID).Scan(&check)
+			tx, err = w.pool.Begin(ctx)
+			if err != nil {
+				continue
+			}
+			defer tx.Rollback(ctx)
+			err = tx.QueryRow(ctx, "SELECT session_id FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", s.ID).Scan(&check)
 			if err != nil {
 				continue // Skip if locked by another worker
 			}
@@ -252,10 +259,13 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 			}
 		}
 
-		// Store into autodream_memories using a short transaction
-		tx, txErr := w.pool.Begin(ctx)
-		if txErr != nil {
-			continue
+		if w.pool.IsSQLite() {
+			// In SQLite mode we did not start a transaction previously, so we start one here.
+			tx, err = w.pool.Begin(ctx)
+			if err != nil {
+				continue
+			}
+			defer tx.Rollback(ctx)
 		}
 
 		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
@@ -273,7 +283,6 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
-			tx.Rollback(ctx)
 			continue
 		}
 
@@ -287,7 +296,6 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		_, err = tx.Exec(ctx, deleteQuery, s.ID)
 		if err != nil {
 			slog.Error("AutoDream: failed to delete compressed session", "session", s.ID, "error", err)
-			tx.Rollback(ctx)
 			continue
 		}
 

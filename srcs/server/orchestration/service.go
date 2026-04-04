@@ -19,6 +19,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -1818,7 +1819,13 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 
 	limit := 10 // Default limit
 
-	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil || claims.OrganizationID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tasks, err := tm.PollTasks(r.Context(), agentID, claims.OrganizationID, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
