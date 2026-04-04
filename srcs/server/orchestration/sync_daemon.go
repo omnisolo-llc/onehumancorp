@@ -140,6 +140,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		if d.dbWrapper.IsSQLite() {
 			query = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
 		}
+
 		_, err := d.dbWrapper.Exec(ctx, query)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
@@ -153,11 +154,12 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 
 func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDaemonPayload) error {
 	jsonData, err := json.Marshal(payloads)
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
 
-	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
+	syncEndpoint := fmt.Sprintf("%s/api/orchestration/sync", d.cloudAPIURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -170,7 +172,9 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	startTime := time.Now()
 	resp, err := client.Do(req)
+	telemetry.RecordSyncLatency(ctx, time.Since(startTime))
 	if err != nil {
 		return fmt.Errorf("do request: %w", err)
 	}

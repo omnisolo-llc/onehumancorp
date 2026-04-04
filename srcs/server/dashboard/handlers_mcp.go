@@ -600,6 +600,17 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 				// continue syncing the rest
 			} else {
 				syncedCount++
+
+				// Publish to Teammate Mesh
+				if cnNode := s.hub.CentrifugeNode(); cnNode != nil {
+					broadcastData := map[string]interface{}{
+						"type":      "MISSION_SYNC",
+						"missionID": p.ID,
+						"status":    status,
+						"source":    "hybrid_mcp_rag",
+					}
+					cnNode.PublishTaskBroadcast(p.ID, broadcastData)
+				}
 			}
 		}
 	}

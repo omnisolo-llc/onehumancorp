@@ -51,7 +51,7 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	// Mock cloud API
 	var receivedPayloads []SyncDaemonPayload
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/sync/missions" && r.Method == http.MethodPost {
+		if r.URL.Path == "/api/orchestration/sync" && r.Method == http.MethodPost {
 			if err := json.NewDecoder(r.Body).Decode(&receivedPayloads); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
