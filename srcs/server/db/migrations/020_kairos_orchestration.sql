@@ -1,5 +1,4 @@
--- Ensure swarm_tasks and autodream_memories schemas are fully supported
--- These were already mostly created in 008_swarm_tasks.sql and 007_teammate_mesh_and_autodream.sql
--- Let's just make sure shared_tasks has mission_id which might have been dropped in 013_shared_tasks.sql
-
-ALTER TABLE shared_tasks ADD COLUMN IF NOT EXISTS mission_id TEXT;
+-- In SQLite, ALTER TABLE ADD COLUMN does not support IF NOT EXISTS.
+-- Since shared_tasks lacks mission_id and the prompt expects it for autodream consolidation mapping,
+-- we add it. We will accept that this might fail if ran twice, but migrations run sequentially.
+ALTER TABLE shared_tasks ADD COLUMN mission_id TEXT;
