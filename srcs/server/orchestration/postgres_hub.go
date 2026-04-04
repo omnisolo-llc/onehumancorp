@@ -92,9 +92,13 @@ func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool,
 	var isNotFound bool
 
 	err := pgWithRetry(ctx, func() error {
-		queryErr = r.pool.QueryRow(ctx, `
-			SELECT id, name, role, organization_id, status, provider_type, region
-			FROM agents WHERE id = $1`, id).Scan(
+		query := `SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE id = $1`
+		args := []any{id}
+		if r.orgID != "" {
+			query += ` AND organization_id = $2`
+			args = append(args, r.orgID)
+		}
+		queryErr = r.pool.QueryRow(ctx, query, args...).Scan(
 			&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region,
 		)
 		if queryErr != nil {
@@ -195,10 +199,17 @@ func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
 
 func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg Message) error {
 	return pgWithRetry(ctx, func() error {
+		if r.orgID != "" {
+			var count int
+			err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = $1 AND organization_id = $2", toAgent, r.orgID).Scan(&count)
+			if err != nil || count == 0 {
+				return fmt.Errorf("pg: unauthorized or missing agent for push")
+			}
+		}
 		_, err := r.pool.Exec(ctx, `
-			INSERT INTO agent_inbox (agent_id, message_id, from_agent, to_agent, type, content, meeting_id, occurred_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			toAgent, msg.ID, msg.FromAgent, msg.ToAgent, msg.Type, msg.Content, msg.MeetingID, msg.OccurredAt,
+			INSERT INTO agent_inbox (agent_id, message_id, from_agent, to_agent, type, content, meeting_id, occurred_at, organization_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			toAgent, msg.ID, msg.FromAgent, msg.ToAgent, msg.Type, msg.Content, msg.MeetingID, msg.OccurredAt, r.orgID,
 		)
 		if err != nil {
 			return fmt.Errorf("pg: push message: %w", err)
@@ -214,15 +225,29 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 	err := pgWithRetry(ctx, func() error {
 		msgs = nil // Reset on retry
 
+		if r.orgID != "" {
+			var count int
+			err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = $1 AND organization_id = $2", agentID, r.orgID).Scan(&count)
+			if err != nil || count == 0 {
+				return fmt.Errorf("pg: unauthorized or missing agent for pop")
+			}
+		}
+
 		tx, err := r.pool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("pg: begin pop: %w", err)
 		}
 		defer func() { _ = tx.Rollback(ctx) }()
 
-		rows, err := tx.Query(ctx, `
-			SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at
-			FROM agent_inbox WHERE agent_id = $1 ORDER BY seq`, agentID)
+		query := `SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at FROM agent_inbox WHERE agent_id = $1`
+		args := []any{agentID}
+		if r.orgID != "" {
+			query += ` AND organization_id = $2`
+			args = append(args, r.orgID)
+		}
+		query += ` ORDER BY seq`
+
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("pg: peek messages for pop: %w", err)
 		}
@@ -238,7 +263,13 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 		rows.Close()
 
 		if len(msgs) > 0 {
-			_, err = tx.Exec(ctx, "DELETE FROM agent_inbox WHERE agent_id = $1", agentID)
+			delQuery := "DELETE FROM agent_inbox WHERE agent_id = $1"
+			delArgs := []any{agentID}
+			if r.orgID != "" {
+				delQuery += " AND organization_id = $2"
+				delArgs = append(delArgs, r.orgID)
+			}
+			_, err = tx.Exec(ctx, delQuery, delArgs...)
 			if err != nil {
 				return fmt.Errorf("pg: delete popped messages: %w", err)
 			}
@@ -256,10 +287,25 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]Message, error) {
 	var msgs []Message
 	err := pgWithRetry(ctx, func() error {
+		if r.orgID != "" {
+			var count int
+			err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = $1 AND organization_id = $2", agentID, r.orgID).Scan(&count)
+			if err != nil || count == 0 {
+				return fmt.Errorf("pg: unauthorized or missing agent for peek")
+			}
+		}
+
 		msgs = nil // Reset on retry
-		rows, err := r.pool.Query(ctx, `
-			SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at
-			FROM agent_inbox WHERE agent_id = $1 ORDER BY seq`, agentID)
+
+		query := `SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at FROM agent_inbox WHERE agent_id = $1`
+		args := []any{agentID}
+		if r.orgID != "" {
+			query += ` AND organization_id = $2`
+			args = append(args, r.orgID)
+		}
+		query += ` ORDER BY seq`
+
+		rows, err := r.pool.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("pg: peek messages: %w", err)
 		}
@@ -281,10 +327,10 @@ func (r *PgHubRepository) CreateMeeting(ctx context.Context, room MeetingRoom) e
 	return pgWithRetry(ctx, func() error {
 		participantsJSON, _ := json.Marshal(room.Participants)
 		_, err := r.pool.Exec(ctx, `
-			INSERT INTO meeting_rooms (id, agenda, participants)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (id) DO UPDATE SET agenda=EXCLUDED.agenda, participants=EXCLUDED.participants`,
-			room.ID, room.Agenda, string(participantsJSON),
+			INSERT INTO meeting_rooms (id, agenda, participants, organization_id)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (id) DO UPDATE SET agenda=EXCLUDED.agenda, participants=EXCLUDED.participants, organization_id=EXCLUDED.organization_id`,
+			room.ID, room.Agenda, string(participantsJSON), r.orgID,
 		)
 		if err != nil {
 			return fmt.Errorf("pg: create meeting: %w", err)
@@ -299,7 +345,13 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 
 	err := pgWithRetry(ctx, func() error {
 		var participantsJSON string
-		err := r.pool.QueryRow(ctx, "SELECT id, agenda, participants FROM meeting_rooms WHERE id = $1", id).Scan(
+		query := "SELECT id, agenda, participants FROM meeting_rooms WHERE id = $1"
+		args := []any{id}
+		if r.orgID != "" {
+			query += " AND organization_id = $2"
+			args = append(args, r.orgID)
+		}
+		err := r.pool.QueryRow(ctx, query, args...).Scan(
 			&room.ID, &room.Agenda, &participantsJSON,
 		)
 		if err != nil {
@@ -343,6 +395,13 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 
 func (r *PgHubRepository) AppendTranscript(ctx context.Context, meetingID string, msg Message) error {
 	return pgWithRetry(ctx, func() error {
+		if r.orgID != "" {
+			var count int
+			err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM meeting_rooms WHERE id = $1 AND organization_id = $2", meetingID, r.orgID).Scan(&count)
+			if err != nil || count == 0 {
+				return fmt.Errorf("pg: unauthorized or missing meeting room for transcript")
+			}
+		}
 		_, err := r.pool.Exec(ctx, `
 			INSERT INTO meeting_transcripts (meeting_id, message_id, from_agent, to_agent, type, content, occurred_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -359,7 +418,14 @@ func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, erro
 	var rooms []MeetingRoom
 	err := pgWithRetry(ctx, func() error {
 		rooms = nil // Reset on retry
-		rows, err := r.pool.Query(ctx, "SELECT id, agenda, participants FROM meeting_rooms ORDER BY id")
+		query := "SELECT id, agenda, participants FROM meeting_rooms"
+		var args []any
+		if r.orgID != "" {
+			query += " WHERE organization_id = $1"
+			args = append(args, r.orgID)
+		}
+		query += " ORDER BY id"
+		rows, err := r.pool.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("pg: list meetings: %w", err)
 		}
