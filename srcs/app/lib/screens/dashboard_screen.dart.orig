@@ -6,9 +6,7 @@ import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
-  ref,
-) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -22,10 +20,7 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Dashboard',
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -42,10 +37,7 @@ class DashboardScreen extends ConsumerWidget {
             (e, _) => Center(
               child: Text(
                 'Error: $e',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                  fontFamily: 'Inter',
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
             ),
         data: (data) => _DashboardContent(data: data, ref: ref),
@@ -125,19 +117,22 @@ class _DashboardContent extends StatelessWidget {
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontFamily: 'Inter',
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontFamily: 'Inter',
+              ),
         ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 16,
           runSpacing: 16,
-          children:
-              roleList.map((role) {
-                final count = data.agents.where((a) => a.role == role).length;
-                return _RoleScaleCard(role: role, count: count, ref: ref);
-              }).toList(),
+          children: roleList.map((role) {
+            final count = data.agents.where((a) => a.role == role).length;
+            return _RoleScaleCard(
+              role: role,
+              count: count,
+              ref: ref,
+            );
+          }).toList(),
         ),
       ],
     );
@@ -155,11 +150,7 @@ class _ObservabilityWidget extends StatelessWidget {
 
     final activeMissions = data.statuses.length; // Approximate from statuses
     final totalAgents = data.agents.length;
-    final healthScore =
-        totalAgents > 0
-            ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100)
-                .round()
-            : 100;
+    final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
       label: 'System Observability Panel',
@@ -170,26 +161,10 @@ class _ObservabilityWidget extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(const <double>[
-                1.168,
-                -0.153,
-                -0.015,
-                0,
-                0,
-                -0.046,
-                1.061,
-                -0.015,
-                0,
-                0,
-                -0.046,
-                -0.152,
-                1.198,
-                0,
-                0,
-                0,
-                0,
-                0,
-                1,
-                0,
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
               ]),
               inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             ),
@@ -228,11 +203,7 @@ class _ObservabilityWidget extends StatelessWidget {
                                 color: colors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(
-                                Icons.monitor_heart,
-                                color: colors.primary,
-                                size: 28,
-                              ),
+                              child: Icon(Icons.monitor_heart, color: colors.primary, size: 28),
                             ),
                             const SizedBox(width: 16),
                             Text(
@@ -252,31 +223,10 @@ class _ObservabilityWidget extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _Metric(
-                              label: 'Health Score',
-                              value: '$healthScore%',
-                              color: colors.primary,
-                              icon: Icons.health_and_safety,
-                            ),
-                            _Metric(
-                              label: 'Active Missions',
-                              value: '$activeMissions',
-                              color: colors.secondary,
-                              icon: Icons.rocket_launch,
-                            ),
-                            _Metric(
-                              label: 'Latency (Avg)',
-                              value: '12ms',
-                              color: colors.tertiary,
-                              icon: Icons.speed,
-                            ),
-                            _Metric(
-                              label: 'Active Pods',
-                              value: '$totalAgents',
-                              color: colors.primaryContainer,
-                              icon: Icons.dns,
-                              iconColor: colors.onPrimaryContainer,
-                            ),
+                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
+                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -313,7 +263,10 @@ class _StatusBadge extends StatelessWidget {
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 8),
           Text(
@@ -338,13 +291,7 @@ class _Metric extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
 
-  const _Metric({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-    this.iconColor,
-  });
+  const _Metric({required this.label, required this.value, required this.color, required this.icon, this.iconColor});
 
   @override
   Widget build(BuildContext context) {
@@ -392,8 +339,7 @@ class _RoleScaleCard extends StatefulWidget {
   State<_RoleScaleCard> createState() => _RoleScaleCardState();
 }
 
-class _RoleScaleCardState extends State<_RoleScaleCard>
-    with SingleTickerProviderStateMixin {
+class _RoleScaleCardState extends State<_RoleScaleCard> with SingleTickerProviderStateMixin {
   bool _isScaling = false;
   bool _isHovered = false;
   late AnimationController _controller;
@@ -411,10 +357,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard>
       begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
   }
 
@@ -437,10 +381,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to scale ${widget.role}: $e',
-              style: const TextStyle(fontFamily: 'Inter'),
-            ),
+            content: Text('Failed to scale ${widget.role}: $e', style: const TextStyle(fontFamily: 'Inter')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -455,14 +396,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard>
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((word) {
-          if (word.isEmpty) return '';
-          return word[0].toUpperCase() + word.substring(1).toLowerCase();
-        })
-        .join(' ');
+    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
 
     return Semantics(
       label: 'Scale $formattedRole role',
@@ -486,138 +423,107 @@ class _RoleScaleCardState extends State<_RoleScaleCard>
                     child: BackdropFilter(
                       filter: ImageFilter.compose(
                         outer: ColorFilter.matrix(const <double>[
-                          1.168,
-                          -0.153,
-                          -0.015,
-                          0,
-                          0,
-                          -0.046,
-                          1.061,
-                          -0.015,
-                          0,
-                          0,
-                          -0.046,
-                          -0.152,
-                          1.198,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          1,
-                          0,
+                          1.168, -0.153, -0.015, 0, 0,
+                          -0.046, 1.061, -0.015, 0, 0,
+                          -0.046, -0.152, 1.198, 0, 0,
+                          0, 0, 0, 1, 0,
                         ]),
                         inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                       ),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         decoration: BoxDecoration(
-                          color:
-                              _isHovered
-                                  ? const Color.fromRGBO(255, 255, 255, 0.06)
-                                  : const Color.fromRGBO(255, 255, 255, 0.03),
+                          color: _isHovered
+                              ? const Color.fromRGBO(255, 255, 255, 0.06)
+                              : const Color.fromRGBO(255, 255, 255, 0.03),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color:
-                                _isHovered
-                                    ? Colors.white.withValues(alpha: 0.3)
-                                    : Colors.white.withValues(alpha: 0.1),
+                            color: _isHovered
+                                ? Colors.white.withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 24,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                           child: Row(
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      formattedRole,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              formattedRole,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                fontFamily: 'Outfit',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: colors.onSurfaceVariant,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Semantics(
+                            button: true,
+                            label: 'Decrease $formattedRole count',
+                            child: IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, size: 28),
+                              color: colors.primary,
+                              onPressed: widget.count > 0 && !_isScaling
+                                  ? () => _scaleTo(widget.count - 1)
+                                  : null,
+                              tooltip: 'Fire Agent',
+                            ),
+                          ),
+                          SizedBox(
+                            width: 32,
+                            child: Center(
+                              child: _isScaling
+                                  ? SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colors.primary,
+                                      ),
+                                    )
+                                  : Text(
+                                      '${widget.count}',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                        fontFamily: 'Outfit',
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: colors.onSurfaceVariant,
+                                        fontSize: 20,
                                         fontFamily: 'Inter',
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Semantics(
-                                    button: true,
-                                    label: 'Decrease $formattedRole count',
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                        size: 28,
-                                      ),
-                                      color: colors.primary,
-                                      onPressed:
-                                          widget.count > 0 && !_isScaling
-                                              ? () => _scaleTo(widget.count - 1)
-                                              : null,
-                                      tooltip: 'Fire Agent',
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 32,
-                                    child: Center(
-                                      child:
-                                          _isScaling
-                                              ? SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: colors.primary,
-                                                    ),
-                                              )
-                                              : Text(
-                                                '${widget.count}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 20,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                    ),
-                                  ),
-                                  Semantics(
-                                    button: true,
-                                    label: 'Increase $formattedRole count',
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.add_circle_outline,
-                                        size: 28,
-                                      ),
-                                      color: colors.primary,
-                                      onPressed:
-                                          !_isScaling
-                                              ? () => _scaleTo(widget.count + 1)
-                                              : null,
-                                      tooltip: 'Hire Agent',
-                                    ),
-                                  ),
-                                ],
+                            ),
+                          ),
+                          Semantics(
+                            button: true,
+                            label: 'Increase $formattedRole count',
+                            child: IconButton(
+                              icon: const Icon(Icons.add_circle_outline, size: 28),
+                              color: colors.primary,
+                              onPressed: !_isScaling
+                                  ? () => _scaleTo(widget.count + 1)
+                                  : null,
+                              tooltip: 'Hire Agent',
+                            ),
+                          ),
+                        ],
                               ),
                             ],
                           ),
@@ -643,10 +549,9 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-        fontWeight: FontWeight.bold,
-        fontFamily: 'Outfit',
-      ),
+      style: Theme.of(
+        context,
+      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
     );
   }
 }
@@ -670,8 +575,7 @@ class _StatCard extends StatefulWidget {
   State<_StatCard> createState() => _StatCardState();
 }
 
-class _StatCardState extends State<_StatCard>
-    with SingleTickerProviderStateMixin {
+class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -688,10 +592,8 @@ class _StatCardState extends State<_StatCard>
       begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Optional delay for staggered entrance animation if needed
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -736,26 +638,10 @@ class _StatCardState extends State<_StatCard>
                     child: BackdropFilter(
                       filter: ImageFilter.compose(
                         outer: ColorFilter.matrix(const <double>[
-                          1.168,
-                          -0.153,
-                          -0.015,
-                          0,
-                          0,
-                          -0.046,
-                          1.061,
-                          -0.015,
-                          0,
-                          0,
-                          -0.046,
-                          -0.152,
-                          1.198,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          1,
-                          0,
+                          1.168, -0.153, -0.015, 0, 0,
+                          -0.046, 1.061, -0.015, 0, 0,
+                          -0.046, -0.152, 1.198, 0, 0,
+                          0, 0, 0, 1, 0,
                         ]),
                         inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                       ),
@@ -765,10 +651,9 @@ class _StatCardState extends State<_StatCard>
                           color: const Color.fromRGBO(255, 255, 255, 0.03),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color:
-                                _isHovered
-                                    ? Colors.white.withValues(alpha: 0.3)
-                                    : Colors.white.withValues(alpha: 0.1),
+                            color: _isHovered
+                                ? Colors.white.withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Material(
@@ -780,19 +665,13 @@ class _StatCardState extends State<_StatCard>
                               onTap: () {},
                               borderRadius: BorderRadius.circular(16),
                               splashColor: widget.color.withValues(alpha: 0.1),
-                              highlightColor: widget.color.withValues(
-                                alpha: 0.05,
-                              ),
+                              highlightColor: widget.color.withValues(alpha: 0.05),
                               child: Padding(
                                 padding: const EdgeInsets.all(24),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      widget.icon,
-                                      color: effectiveIconColor,
-                                      size: 32,
-                                    ),
+                                    Icon(widget.icon, color: effectiveIconColor, size: 32),
                                     const SizedBox(height: 16),
                                     Text(
                                       widget.value,
@@ -806,9 +685,7 @@ class _StatCardState extends State<_StatCard>
                                     const SizedBox(height: 6),
                                     Text(
                                       widget.label,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.copyWith(
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w500,
                                       ),
