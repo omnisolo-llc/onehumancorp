@@ -986,6 +986,46 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 	}
 }
 
+func TestSIPDB_SyncMissions_Sanitization(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_missions.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert a mission with private markers and PII
+	_, err = db.db.Exec(context.Background(), `
+		INSERT INTO agent_missions (id, status, payload)
+		VALUES ('m-sync-1', 'PENDING', '{"role":"TESTER", "task":{"id":"m-sync-1","type":"task","content":"[PRIVATE:secret] my email is user@example.com and [PRIVATE:other] phone is 555-555-5555"}}')
+	`)
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	var reqBody []byte
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if syncedCount != 1 {
+		t.Fatalf("Expected 1 synced record, got %d", syncedCount)
+	}
+
+	expectedPayload := `{"id":"m-sync-1","role":"TESTER","task":{"content":" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]","id":"m-sync-1","type":"task"}}`
+	if string(reqBody) != expectedPayload {
+		t.Fatalf("Expected payload %s, got %s", expectedPayload, string(reqBody))
+	}
+}
+
 func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test_sync_metrics.db")
 	db, err := NewSIPDB(dbPath)

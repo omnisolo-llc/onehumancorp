@@ -942,27 +942,6 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 
-	// Deep recursive redaction
-	var sanitizeRecursively func(data interface{}) interface{}
-	sanitizeRecursively = func(data interface{}) interface{} {
-		switch v := data.(type) {
-		case string:
-			return telemetry.RedactPII(v)
-		case map[string]interface{}:
-			for key, val := range v {
-				v[key] = sanitizeRecursively(val)
-			}
-			return v
-		case []interface{}:
-			for i, val := range v {
-				v[i] = sanitizeRecursively(val)
-			}
-			return v
-		default:
-			return v
-		}
-	}
-
 	for _, m := range missions {
 		// Parse payload to redact and sanitize
 		var rawData interface{}
@@ -982,8 +961,8 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 			payloadData["id"] = m.id
 		}
 
-		// Unconditionally apply redaction
-		rawData = sanitizeRecursively(rawData)
+		// Unconditionally apply redaction and remove private markers
+		rawData = telemetry.RedactInterfacePII(SanitizePayloadMap(rawData))
 
 		// Re-marshal sanitized payload
 		sanitizedBytes, err := json.Marshal(rawData)
