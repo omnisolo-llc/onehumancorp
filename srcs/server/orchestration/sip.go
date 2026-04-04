@@ -822,31 +822,43 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Has side effects: Posts local RAG context to a remote endpoint, deletes local records on success.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
-	var records []struct {
-		id      string
-		payload string
-	}
+	var records []EpisodicMemory
 
 	err := withRetry(ctx, func() error {
 		records = nil
 		// Fetch local episodic memories that haven't been synced (or just all local RAG data).
 		// Note: The memory states the data is stored in swarm_memory_embeddings or similar
-		// We can fetch from swarm_memory_embeddings
-		rows, err := s.db.Query(ctx, "SELECT memory_id, context FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
+		rows, err := s.db.Query(ctx, "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings ORDER BY created_at ASC LIMIT 100")
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, payload string
-			if err := rows.Scan(&id, &payload); err != nil {
+			var rec EpisodicMemory
+			var t interface{}
+			if err := rows.Scan(&rec.MemoryID, &rec.Context, &rec.VectorEmbedding, &rec.SourcePlugin, &t); err != nil {
 				return err
 			}
-			records = append(records, struct {
-				id      string
-				payload string
-			}{id, payload})
+
+			switch v := t.(type) {
+			case time.Time:
+				rec.CreatedAt = v
+			case string:
+				parsed, err := time.Parse(time.RFC3339Nano, v)
+				if err != nil {
+					parsed, _ = time.Parse("2006-01-02 15:04:05", v)
+				}
+				rec.CreatedAt = parsed
+			case []byte:
+				parsed, err := time.Parse(time.RFC3339Nano, string(v))
+				if err != nil {
+					parsed, _ = time.Parse("2006-01-02 15:04:05", string(v))
+				}
+				rec.CreatedAt = parsed
+			}
+
+			records = append(records, rec)
 		}
 		return nil
 	})
@@ -859,44 +871,58 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	syncedCount := 0
 	var idsToDelete []string
+	var sanitizedRecords []EpisodicMemory
 
 	for _, rec := range records {
 		// Sanitize sensitive data by explicitly deleting `rag_context` key
 		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
+		if err := json.Unmarshal([]byte(rec.Context), &payloadData); err == nil {
 			delete(payloadData, "rag_context")
+			sanitizedContext, _ := json.Marshal(payloadData)
+			rec.Context = string(sanitizedContext)
 		} else {
 			// If not JSON, we assume it's raw text but the memory states
 			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
 			// Let's create a generic JSON payload
 			payloadData = map[string]interface{}{
-				"context": rec.payload,
+				"context": rec.Context,
 			}
+			sanitizedContext, _ := json.Marshal(payloadData)
+			rec.Context = string(sanitizedContext)
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
-
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		// robust conflict resolution prioritising local client
-		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
-
-		resp, err := client.Do(req)
-		if err == nil {
-			// treat 409 Conflict as success for local parity
-			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
-				idsToDelete = append(idsToDelete, rec.id)
-				syncedCount++
-			}
-			resp.Body.Close()
-		}
+		sanitizedRecords = append(sanitizedRecords, rec)
+		idsToDelete = append(idsToDelete, rec.MemoryID)
 	}
 
-	if len(idsToDelete) > 0 {
+	reqBody, err := json.Marshal(sanitizedRecords)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal records: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(reqBody)))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	// robust conflict resolution prioritising local client
+	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+	syncedCount := 0
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		// treat 409 Conflict as success for local parity
+		if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
+			syncedCount = len(sanitizedRecords)
+		} else {
+			return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+		}
+	} else {
+		return 0, err
+	}
+
+	if syncedCount > 0 && len(idsToDelete) > 0 {
 		err = withRetry(ctx, func() error {
 			idList := "'" + strings.Join(idsToDelete, "','") + "'"
 			_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))

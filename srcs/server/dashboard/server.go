@@ -553,6 +553,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", server.handleHybridSyncMissions))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
+	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleRAGSync))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
 	mux.HandleFunc("/api/clusters/", server.handleClusterStatus)
@@ -684,6 +685,59 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, syncRules)
+}
+
+func (s *Server) handleRAGSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+	var memories []orchestration.EpisodicMemory
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&memories); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	db := s.hub.SIPDB()
+	if db == nil {
+		http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	// For cloud sync we iterate and upsert. If there are massive amounts, batching could be used,
+	// but single queries are fine for now as batch size is limited.
+	for _, mem := range memories {
+		if !forceLocal {
+			// If not force local, only insert if it doesn't already exist.
+			existing, err := db.GetEpisodicMemoriesByPlugin(r.Context(), mem.SourcePlugin)
+			if err != nil {
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+			exists := false
+			for _, e := range existing {
+				if e.MemoryID == mem.MemoryID {
+					exists = true
+					break
+				}
+			}
+			if exists {
+				continue // Skip overwriting
+			}
+		}
+
+		if err := db.StoreEpisodicMemory(r.Context(), mem); err != nil {
+			http.Error(w, "failed to store episodic memory", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
