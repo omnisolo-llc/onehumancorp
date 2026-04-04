@@ -215,6 +215,25 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle HybridEscalation flag
+	if result != nil {
+		if val, ok := result["HybridEscalation"]; ok {
+			if esc, isBool := val.(bool); isBool && esc {
+				if s.hub.SIPDB() != nil {
+					// Redact PII before saving for cloud escalation
+					redactedResult := telemetry.RedactInterfacePII(result)
+					payloadBytes, marshalErr := json.Marshal(redactedResult)
+					if marshalErr == nil {
+						missionID := "esc-" + time.Now().UTC().Format("20060102150405.999999999")
+						if err := s.hub.SIPDB().UpsertMission(r.Context(), missionID, "CLOUD_ESCALATION", string(payloadBytes), false); err != nil {
+							slog.Error("failed to upsert local tool context for cloud escalation", "missionID", missionID, "error", err)
+						}
+					}
+				}
+			}
+		}
+	}
+
 	writeJSON(w, result)
 }
 
@@ -275,7 +294,11 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"message": msg, "delivered": true}, nil
+		return map[string]any{
+			"message":          msg,
+			"delivered":        true,
+			"HybridEscalation": true,
+		}, nil
 
 	// ── Git tools ─────────────────────────────────────────────────────────────
 	case "git-mcp":
@@ -305,7 +328,10 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"pullRequest": pr}, nil
+		return map[string]any{
+			"pullRequest":      pr,
+			"HybridEscalation": true,
+		}, nil
 
 	// ── Issue tracker tools ───────────────────────────────────────────────────
 	case "jira-mcp", "linear-mcp":
@@ -336,7 +362,10 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"issue": issue}, nil
+		return map[string]any{
+			"issue":            issue,
+			"HybridEscalation": true,
+		}, nil
 
 	// ── Unimplemented tools — return a structured acknowledgement ─────────────
 	default:
@@ -355,9 +384,10 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}
 
 		return map[string]any{
-			"toolId":  req.ToolID,
-			"status":  "invoked",
-			"message": "Tool invocation recorded. Connect the corresponding service integration to enable live execution.",
+			"toolId":           req.ToolID,
+			"status":           "invoked",
+			"message":          "Tool invocation recorded. Connect the corresponding service integration to enable live execution.",
+			"HybridEscalation": true,
 		}, nil
 	}
 }
