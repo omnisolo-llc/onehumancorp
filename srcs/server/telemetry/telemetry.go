@@ -37,6 +37,8 @@ var (
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
+	sqliteLockContentionCounter metric.Int64Counter
+	sqliteRetryExhaustedCounter metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
@@ -305,6 +307,22 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sqliteLockContentionCounter, err = m.Int64Counter(
+		"ohc_sqlite_lock_contention_total",
+		metric.WithDescription("Total times SQLite database lock contention (SQLITE_BUSY) was encountered."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sqliteRetryExhaustedCounter, err = m.Int64Counter(
+		"ohc_sqlite_retry_exhausted_total",
+		metric.WithDescription("Total times an SQLite transaction failed after exhausting retries."),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -652,6 +670,26 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 	cacheHitsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
+	))
+}
+
+// RecordSQLiteLockContention increments the counter for SQLite lock contention.
+func RecordSQLiteLockContention(ctx context.Context, operation string) {
+	if sqliteLockContentionCounter == nil {
+		return
+	}
+	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordSQLiteRetryExhausted increments the counter for SQLite retry exhaustion.
+func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
+	if sqliteRetryExhaustedCounter == nil {
+		return
+	}
+	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
 	))
 }
 

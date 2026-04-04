@@ -282,6 +282,23 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "title": "Standalone SQLite Contention Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sqlite_lock_contention_total[1m])) by (operation)",
+          "refId": "A",
+          "legendFormat": "{{operation}}"
+        }
+      ]
     }
   ],
   "refresh": "",

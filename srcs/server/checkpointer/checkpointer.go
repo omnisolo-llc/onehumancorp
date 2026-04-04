@@ -149,7 +149,12 @@ func (p *PGCheckpointer) withRetry(operation func() error) error {
 
 		// Basic check for SQLite busy/locked errors, or transient connection issues
 		errMsg := err.Error()
-		if errMsg == "database is locked" || errMsg == "database table is locked" {
+		if errMsg == "database is locked" || errMsg == "database table is locked" || errMsg == "SQLITE_BUSY" {
+			// Record telemetry metric for lock contention
+			// Not recording here since this module isn't strictly passing ctx down to withRetry and we want to keep checkpointer agnostic,
+			// but wait, we should pass context down if we can, however telemetry should be used in sip.go. Let's leave checkpointer alone
+			// and just modify sip.go or add telemetry where context is available.
+
 			// Calculate exponential backoff with jitter
 			delay := baseDelay * (1 << i)
 			if delay > maxDelay {
