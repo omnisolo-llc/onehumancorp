@@ -1,0 +1,10 @@
+agent: KAIROS_Orchestrator
+status: ACTIVE
+metrics:
+  missions_generated: 3
+  uptime_seconds: 120
+  memory_reads: 1
+  memory_writes: 1
+tests:
+  passing: true
+  coverage: 100
