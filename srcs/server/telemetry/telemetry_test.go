@@ -500,6 +500,48 @@ func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 	return true
 }
 
+type dummyCounter struct{
+	metric.Int64Counter
+}
+
+func (d dummyCounter) Add(ctx context.Context, incr int64, options ...metric.AddOption) {}
+
+type dummyMeter struct{}
+func (d dummyMeter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return dummyCounter{}, nil
+}
+func (d dummyMeter) Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
+	return nil, nil
+}
+func (d dummyMeter) Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
+	return nil, nil
+}
+func (d dummyMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+	return nil, nil
+}
+func (d dummyMeter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
+	return nil, nil
+}
+
+func TestRecordSQLiteLockContention(t *testing.T) {
+	mockMeter := dummyMeter{}
+	err := InitWithMeter(mockMeter)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	ctx := context.Background()
+	RecordSQLiteLockContention(ctx, "test_op")
+	RecordSQLiteRetryExhausted(ctx, "test_op")
+
+	if sqliteLockContentionCounter == nil {
+		t.Error("sqliteLockContentionCounter is nil")
+	}
+	if sqliteRetryExhaustedCounter == nil {
+		t.Error("sqliteRetryExhaustedCounter is nil")
+	}
+}
+
 func TestInitTelemetry_PrometheusError(t *testing.T) {
 	originalReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
