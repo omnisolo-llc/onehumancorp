@@ -177,7 +177,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   }
 }
 
-class _IntegrationCard extends StatelessWidget {
+class _IntegrationCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
@@ -185,6 +185,7 @@ class _IntegrationCard extends StatelessWidget {
   final VoidCallback onConnect;
 
   const _IntegrationCard({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -193,15 +194,22 @@ class _IntegrationCard extends StatelessWidget {
   });
 
   @override
+  State<_IntegrationCard> createState() => _IntegrationCardState();
+}
+
+class _IntegrationCardState extends State<_IntegrationCard> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return Semantics(
-      label: 'Connect to $title. $subtitle',
+      label: 'Connect to ${widget.title}. ${widget.subtitle}',
       button: true,
       child: Card(
         child: InkWell(
-          onTap: onConnect,
+          onTap: widget.onConnect,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -213,10 +221,10 @@ class _IntegrationCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
+                        color: widget.color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(icon, color: color, size: 24),
+                      child: Icon(widget.icon, color: widget.color, size: 24),
                     ),
                     const Spacer(),
                     Text(
@@ -232,7 +240,7 @@ class _IntegrationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  title,
+                  widget.title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -240,7 +248,7 @@ class _IntegrationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  subtitle,
+                  widget.subtitle,
                   style: TextStyle(
                     fontSize: 12,
                     color: colors.onSurfaceVariant,
@@ -250,7 +258,7 @@ class _IntegrationCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: onConnect,
+                    onPressed: widget.onConnect,
                     child: const Text('Configure'),
                   ),
                 ),
