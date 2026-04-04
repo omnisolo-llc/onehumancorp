@@ -13,7 +13,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := NewTestProvider(t)
 	defer prov.Close()
 
 	q := NewTaskQueue(prov, nil)
@@ -64,7 +64,7 @@ func TestSQLiteTaskQueue_Delayed(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := NewTestProvider(t)
 	defer prov.Close()
 
 	q := NewTaskQueue(prov, nil)

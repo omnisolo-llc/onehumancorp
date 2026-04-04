@@ -14,7 +14,7 @@ func TestTaskOrchestrator(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := NewTestProvider(t)
 	defer prov.Close()
 
 	ctx := context.Background()
@@ -134,7 +134,7 @@ func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := NewTestProvider(t)
 	defer prov.Close()
 
 	ctx := context.Background()

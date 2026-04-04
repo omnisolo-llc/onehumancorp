@@ -12,7 +12,7 @@ func TestUltraPlanManager(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := NewTestProvider(t)
 	defer prov.Close()
 
 	// Ensure the table exists in memory DB for the test (test provider only creates some)

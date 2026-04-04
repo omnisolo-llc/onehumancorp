@@ -119,7 +119,7 @@ func TestLocalTeammateMesh(t *testing.T) {
 	// Use NewTestProvider or db.New to init db
 	ctx := context.Background()
 
-	provider := db.NewTestProvider(t)
+	provider := NewTestProvider(t)
 	defer provider.Close()
 
 	// Explicitly define the schema within the test initialization

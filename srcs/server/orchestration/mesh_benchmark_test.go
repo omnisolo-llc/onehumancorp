@@ -10,7 +10,7 @@ import (
 
 func BenchmarkLocalTeammateMesh_Broadcast(b *testing.B) {
 	b.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
-	provider := db.NewTestProvider(b)
+	provider := NewTestProvider(b)
 	defer provider.Close()
 
 	ctx := context.Background()

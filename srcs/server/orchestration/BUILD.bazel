@@ -5,6 +5,13 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
+
+        "autodream_kairos_test.go",
+        "test_provider_test.go",
+        "kairos_api_test.go",
+
+        "autodream_kairos.go",
+        "kairos_api.go",
         "auth_interceptor.go",
         "autodream.go",
         "cached_minimax_client.go",

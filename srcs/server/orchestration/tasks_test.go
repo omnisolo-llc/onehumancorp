@@ -12,7 +12,7 @@ import (
 func setupTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
-	prov := db.NewTestProvider(t)
+	prov := NewTestProvider(t)
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
