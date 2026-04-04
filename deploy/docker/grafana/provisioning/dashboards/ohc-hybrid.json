@@ -106,6 +106,40 @@
       "title": "OHC Server Memory Usage (Glassmorphism Styled)",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "title": "Shared Tasks Created",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(shared_tasks_created_total[5m]))",
+          "legendFormat": "Tasks Created"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "title": "Mesh Broadcasts",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(mesh_messages_broadcast_total[5m]))",
+          "legendFormat": "Broadcasts"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      }
     }
   ],
   "schemaVersion": 38,

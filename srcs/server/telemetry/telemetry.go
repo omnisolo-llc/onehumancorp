@@ -42,6 +42,10 @@ var (
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
+
+	SharedTasksCreatedCounter metric.Int64Counter
+	MeshMessagesBroadcastCounter metric.Int64Counter
+
 	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
