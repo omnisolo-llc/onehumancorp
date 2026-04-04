@@ -56,6 +56,7 @@ type Server struct {
 	serveUI               bool
 	experiments           []LandingPageExperiment
 	referrals             []Referral
+	downloads             []Download
 }
 
 // RateLimitState functionality.
@@ -561,6 +562,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Growth & Referral Endpoints
 	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
 	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
+	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
