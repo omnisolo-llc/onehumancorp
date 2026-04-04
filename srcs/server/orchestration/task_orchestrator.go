@@ -188,20 +188,27 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var query string
 	if to.db.IsSQLite() {
 		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-		// Since we have a mutex for SQLite (standalone), TOCTOU is prevented by the mutex
-		// but using UPDATE RETURNING is cleaner and atomic.
-		query = `
-			UPDATE swarm_tasks
-			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id = (
+			// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
+			// Instead, we use a two-step SELECT then UPDATE approach.
+			selectQuery := `
 				SELECT id FROM swarm_tasks
 				WHERE status = 'READY'
 				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 				LIMIT 1
-			)
+			`
+			var taskID string
+			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
+			if err != nil {
+				return nil, err // Could be sql.ErrNoRows if queue is empty
+			}
+
+			updateQuery := `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $2
 			RETURNING id, mission_id, title, status, payload, created_at, updated_at
 		`
-		err = tx.QueryRow(ctx, query, agentID).Scan(
+			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
 			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
