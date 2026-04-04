@@ -37,6 +37,11 @@ func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
 func (w *AutoDreamWorker) Start(ctx context.Context) {
 	slog.Info("Starting AutoDream memory consolidation worker")
 
+	if w.pool.IsSQLite() {
+		// Before starting standalone routines if applicable
+		slog.Info("AutoDream worker started in Standalone Mode")
+	}
+
 	// Create distributed pruning queue using Postgres
 	// In multi-tenant cloud mode, this could use a distributed lock or queue.
 	// For simplicity, we just use a distributed worker queue pattern with a database table or Redis.
@@ -82,7 +87,12 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 			slog.Error("AutoDream: failed to read memory file", "file", filePath, "error", err)
 			continue
 		}
+
+		// Redact PII logic
 		content := string(contentBytes)
+		// We could be reading YAML or JSON. Redact interface logic if possible.
+		// However, telemetry.RedactPII can redact text.
+		content = telemetry.RedactPII(content)
 
 		// Generate embedding
 		embeddingStr := "[0.0]" // fallback embedding

@@ -567,6 +567,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
+	mux.HandleFunc("/api/mesh/direct", server.handleMeshDirect)
+	mux.HandleFunc("/api/mesh/mailbox", server.handleMeshMailbox)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
