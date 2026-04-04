@@ -1,0 +1,3 @@
+topic: "KAIROS Orchestration: UltraPlan & Sub-Agent Orchestration"
+summary: "Architected UltraPlan deep-deliberation cycles and scalable background sub-agent queuing logic. Updated KAIROS Orchestration Design Doc and generated mission for Implementers."
+context: "Ensured designs strictly follow the OHC Hybrid Architecture (Cloud PG distributed locks vs Local SQLite goroutines) and the Swarm Intelligence Protocol."

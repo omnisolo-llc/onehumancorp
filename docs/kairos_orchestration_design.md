@@ -10,6 +10,17 @@ The OHC Swarm demands a highly scalable, fault-tolerant backbone to coordinate l
 
 ## 2. Core Components
 
+### 2.4 UltraPlan Deliberation
+Manages deep-deliberation cycles for complex architectural changes (e.g., Database migrations, Auth overhaul).
+*   **Deliberation Cycles**: Tasks are broken down and re-evaluated by specialized researcher agents.
+*   **State Tracking**: State transitions (e.g., PROPOSAL -> DELIBERATING -> APPROVED) are tracked in `ultraplan_states` via distributed database locks.
+
+### 2.5 Sub-Agent Orchestration
+Scalable background queuing logic needed to spawn isolated sub-agents.
+*   **Cloud Native**: Implements scalable background queuing logic similar to BullMQ/Celery, integrated directly with PostgreSQL distributed locks to dispatch isolated agent containers in Kubernetes.
+*   **Standalone**: Uses lightweight Goroutine pools with local channel constraints.
+
+
 ### 2.1 Shared Task List
 A distributed state machine for tracking and orchestrating asynchronous tasks across the swarm. KAIROS utilizes `swarm_tasks` for mission-critical steps and `shared_tasks` for inter-agent delegation.
 *   **PostgreSQL Native (Cloud)**: Relies on `FOR UPDATE SKIP LOCKED` for lock-free concurrency and zero TOCTOU (Time-Of-Check to Time-Of-Use) race conditions across parallel K8s agent pods.
@@ -52,6 +63,18 @@ sequenceDiagram
 ```
 
 ## 4. DB Schema References
+
+**UltraPlan Deliberation (`ultraplan_states`)**
+```sql
+CREATE TABLE IF NOT EXISTS ultraplan_states (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PROPOSAL',
+    deliberation_context JSONB,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 
 **Task Tracking (`swarm_tasks`)**
 ```sql
