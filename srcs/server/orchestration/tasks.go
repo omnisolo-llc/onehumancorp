@@ -182,6 +182,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(dependencies) as dep
+				LEFT JOIN swarm_tasks st ON st.id = dep.value
+				WHERE st.status != 'COMPLETED' OR st.status IS NULL
+			)
 			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 			LIMIT 1
 		`
@@ -200,6 +205,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (
+				SELECT 1 FROM jsonb_array_elements_text(dependencies) as dep(id)
+				LEFT JOIN swarm_tasks st ON st.id::text = dep.id
+				WHERE st.status != 'COMPLETED' OR st.status IS NULL
+			)
 			ORDER BY payload->>'priority' ASC, created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
@@ -364,6 +374,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(dependencies) as dep
+				LEFT JOIN swarm_tasks st ON st.id = dep.value
+				WHERE st.status != 'COMPLETED' OR st.status IS NULL
+			)
 			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 			LIMIT $1
 		`
@@ -373,6 +388,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 			FROM swarm_tasks
 			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (
+				SELECT 1 FROM jsonb_array_elements_text(dependencies) as dep(id)
+				LEFT JOIN swarm_tasks st ON st.id::text = dep.id
+				WHERE st.status != 'COMPLETED' OR st.status IS NULL
+			)
 			ORDER BY payload->>'priority' ASC, created_at ASC
 			LIMIT $1
 			FOR UPDATE SKIP LOCKED
