@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,7 +115,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat — #$room'),
+        title: Text('Chat — #$room', style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         actions: [
           Semantics(
             label: 'Switch to a different chat room',
@@ -129,19 +130,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child:
-                messages.isEmpty
-                    ? const Center(child: Text('No messages yet. Say hello!'))
-                    : ListView.builder(
-                      controller: _scrollCtrl,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: messages.length,
-                      itemBuilder: (_, i) {
-                        final m = messages[i];
-                        final isMe = m.authorId == user?.id;
-                        return _MessageBubble(message: m, isMe: isMe);
-                      },
-                    ),
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/mesh_bg.png'),
+                  fit: BoxFit.cover,
+                  opacity: 0.1,
+                ),
+              ),
+              child: messages.isEmpty
+                  ? Center(child: Text('No messages yet. Say hello!', style: TextStyle(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurfaceVariant)))
+                  : ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (_, i) {
+                      final m = messages[i];
+                      final isMe = m.authorId == user?.id;
+                      return _MessageBubble(key: ValueKey(m.id), message: m, isMe: isMe);
+                    },
+                  ),
+            ),
           ),
           _InputBar(controller: _ctrl, sending: _sending, onSend: _send),
         ],
@@ -168,45 +177,115 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 // ── Widgets ────────────────────────────────────────────────────────────────
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends StatefulWidget {
   final CentrifugeMessage message;
   final bool isMe;
 
-  const _MessageBubble({required this.message, required this.isMe});
+  const _MessageBubble({super.key, required this.message, required this.isMe});
+
+  @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: widget.isMe ? const Offset(0.2, 0) : const Offset(-0.2, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isMe ? 12 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 12),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+      alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(widget.isMe ? 16 : 0),
+                bottomRight: Radius.circular(widget.isMe ? 0 : 16),
               ),
-            Text(message.body),
-          ],
+              child: BackdropFilter(
+                filter: ImageFilter.compose(
+                  outer: ColorFilter.matrix(const <double>[
+                    1.168, -0.153, -0.015, 0, 0,
+                    -0.046, 1.061, -0.015, 0, 0,
+                    -0.046, -0.152, 1.198, 0, 0,
+                    0, 0, 0, 1, 0,
+                  ]),
+                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: widget.isMe
+                        ? cs.primaryContainer.withValues(alpha: 0.3)
+                        : cs.surfaceContainerHighest.withValues(alpha: 0.3),
+                    border: Border.all(
+                      color: widget.isMe
+                          ? cs.primary.withValues(alpha: 0.2)
+                          : cs.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: widget.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    children: [
+                      if (!widget.isMe) ...[
+                        Text(
+                          widget.message.authorName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Outfit',
+                            color: cs.primary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                      Text(
+                        widget.message.body,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 15,
+                          color: widget.isMe ? cs.onPrimaryContainer : cs.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -226,38 +305,70 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                hintText: 'Type a message…',
-                border: OutlineInputBorder(),
-                isDense: true,
+    final cs = Theme.of(context).colorScheme;
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surface.withValues(alpha: 0.7),
+            border: Border(
+              top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    style: const TextStyle(fontFamily: 'Inter'),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message…',
+                      hintStyle: TextStyle(fontFamily: 'Inter', color: cs.onSurfaceVariant),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    ),
+                    onSubmitted: (_) => onSend(),
+                  ),
+                ),
               ),
-              onSubmitted: (_) => onSend(),
-            ),
+              const SizedBox(width: 12),
+              Semantics(
+                label: 'Send chat message',
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: cs.primary.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: IconButton.filled(
+                    tooltip: 'Send message',
+                    icon: sending
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.send),
+                    onPressed: sending ? null : onSend,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Semantics(
-            label: 'Send chat message',
-            child: IconButton.filled(
-              tooltip: 'Send message',
-              icon:
-                  sending
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.send),
-              onPressed: sending ? null : onSend,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
