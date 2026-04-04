@@ -16,6 +16,7 @@ go_library(
         "seeder.go",
         "server.go",
         "tenant.go",
+        "mesh_handlers.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/dashboard",
     visibility = ["//visibility:public"],

@@ -11,6 +11,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -54,6 +55,7 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 		// Capacity-managed channel for throttling
 		concurrencyLimit := 10
 		sem := make(chan struct{}, concurrencyLimit)
+		_ = sem
 
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
@@ -380,11 +382,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		defer cancel()
 
 		var worker *AutoDreamWorker
-		if to.redisClient != nil {
-			worker = NewAutoDreamWorker(to.db, to.redisClient)
-		} else {
-			worker = NewAutoDreamWorker(to.db, nil)
-		}
+		worker = NewAutoDreamWorker(to.db)
 
 		// Let AutoDreamWorker handle it via direct LLM call
 		contextStr := fmt.Sprintf("Task ID: %s, Result: %s, Initial Payload: %s", taskID, result, taskPayload)
