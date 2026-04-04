@@ -146,6 +146,50 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.invokeMCPTool(req)
 
+	// Intercept execution result for Hybrid MCP RAG Escalation
+	if err == nil && result != nil {
+		s.mu.RLock()
+		var tool MCPTool
+		for _, t := range s.dynamicMCPTools {
+			if t.ID == req.ToolID {
+				tool = t
+				break
+			}
+		}
+		s.mu.RUnlock()
+
+		if tool.HybridEscalation {
+			result["HybridEscalation"] = true
+
+			if s.hub.SIPDB() != nil {
+				// Prepare payload to sync
+				payload := map[string]interface{}{
+					"toolId":    req.ToolID,
+					"action":    req.Action,
+					"agentId":   req.AgentID,
+					"params":    map[string]interface{}{},
+					"result":    result,
+					"timestamp": time.Now().UTC().Format(time.RFC3339),
+				}
+
+				// Redact parameters
+				var paramsMap map[string]interface{}
+				if err := json.Unmarshal(req.Params, &paramsMap); err == nil {
+					payload["params"] = telemetry.RedactInterfacePII(paramsMap)
+				}
+
+				// Redact the result payload itself before persisting to limit PII exposure
+				redactedResult := telemetry.RedactInterfacePII(result)
+				payload["result"] = redactedResult
+
+				payloadBytes, _ := json.Marshal(payload)
+				missionID := fmt.Sprintf("mcp-esc-%d", time.Now().UnixNano())
+
+				_ = s.hub.SIPDB().UpsertMission(r.Context(), missionID, "CLOUD_ESCALATION", string(payloadBytes), false)
+			}
+		}
+	}
+
 	s.mu.Lock()
 	if err != nil {
 		// e.g. "Rate limited" or "429" or missing tool handling

@@ -322,11 +322,12 @@ type AnalyticsSummary struct {
 // Produces no errors.
 // Has no side effects.
 type MCPTool struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Category    string `json:"category"`
-	Status      string `json:"status"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	Category         string `json:"category"`
+	Status           string `json:"status"`
+	HybridEscalation bool   `json:"hybridEscalation,omitempty"`
 }
 
 // DomainInfo describes a supported organizational domain template providing a pre-configured role hierarchy (e.g., 'Software Company').
