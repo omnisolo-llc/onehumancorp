@@ -155,7 +155,12 @@ To simplify setup and environment management, use the interactive wizard located
 ```bash
 ./ohc_hybrid_cli.sh
 ```
-This tool provides a guided menu to run the initial setup, switch environment modes (Cloud, Standalone, Headless), execute builds, and start the app natively or via cloud services without needing to memorize individual scripts.
+This tool provides a guided menu to:
+- Run the initial setup
+- Switch environment modes (Cloud, Standalone, Headless)
+- Execute builds and run tests
+- Launch the app natively or via cloud services
+- **Verify System State (Diagnostics)** for deeper dependency analysis
 
 ### Setup and Mode Switching (Manual)
 We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets:
