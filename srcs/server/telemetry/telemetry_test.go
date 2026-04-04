@@ -500,6 +500,27 @@ func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 	return true
 }
 
+func TestRecordSQLiteLockContention(t *testing.T) {
+	ctx := context.Background()
+
+	// Should not panic when nil
+	RecordSQLiteLockContention(ctx, "test_operation")
+	RecordSQLiteRetryExhausted(ctx, "test_operation")
+
+	// Init properly to test counter
+	meter := &mockMeter{}
+	err := InitWithMeter(meter)
+	if err != nil {
+		t.Fatalf("InitWithMeter failed: %v", err)
+	}
+
+	RecordSQLiteLockContention(ctx, "test_operation")
+	RecordSQLiteRetryExhausted(ctx, "test_operation")
+
+	// We can't easily assert the values inside the mocked counters without
+	// extending the mock heavily, but we verified it doesn't panic.
+}
+
 func TestInitTelemetry_PrometheusError(t *testing.T) {
 	originalReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = originalReg }()

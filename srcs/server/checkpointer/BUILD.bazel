@@ -5,6 +5,9 @@ go_library(
     srcs = ["checkpointer.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/checkpointer",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry",
+    ],
 )
 
 go_test(
