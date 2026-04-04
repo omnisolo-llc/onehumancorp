@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Palette
+---
+title: "🎨 Palette: [Hybrid UX improvement] Refactor RoomCard in MeetingsScreen to use Glassmorphism"
+description: |
+  Discovered a UX pattern violation in `srcs/app/lib/screens/meetings_screen.dart` where `_RoomCard` was using a flat `Card` widget.
+  Refactored `_RoomCard` to use a `StatefulWidget` with hover effects and OHC Glassmorphism tokens (`BackdropFilter`, `ImageFilter.compose`, blur).
+priority: P1
+scope: Small
