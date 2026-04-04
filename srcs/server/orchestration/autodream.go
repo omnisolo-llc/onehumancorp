@@ -56,6 +56,135 @@ func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
 			return
 		case <-ticker.C:
 			w.ingestAgentMemories(ctx)
+			w.compressSessionContexts(ctx)
+		}
+	}
+}
+
+// compressSessionContexts periodically compresses context from agent_session_data into autodream_memories.
+func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
+	// Only process sessions older than 5 minutes to avoid compressing active sessions
+	threshold := time.Now().Add(-5 * time.Minute).UTC()
+	var query string
+	if w.pool.IsSQLite() {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? ORDER BY last_accessed ASC LIMIT 50"
+	} else {
+		// Needs to happen in a transaction for SKIP LOCKED
+		// But for simple SELECT and then process, SKIP LOCKED doesn't lock for long without a transaction.
+		// Actually, FOR UPDATE SKIP LOCKED without a transaction will lock the row until the statement finishes, which is immediate.
+		// Let's use a transaction.
+	}
+
+	// Just use standard query for SQLite, for PG we use BEGIN.
+	var rows db.Rows
+	var err error
+
+	if w.pool.IsSQLite() {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? ORDER BY last_accessed ASC LIMIT 50"
+		rows, err = w.pool.Query(ctx, query, threshold)
+	} else {
+		// No need for FOR UPDATE SKIP LOCKED here because we are not inside a transaction for the LLM call.
+		// A distributed queue with row locking shouldn't block LLM calls.
+		// Instead we select, and then attempt to delete/update during processing.
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 ORDER BY last_accessed ASC LIMIT 50"
+		rows, err = w.pool.Query(ctx, query, threshold)
+	}
+
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch stale sessions for compression", "error", err)
+		return
+	}
+
+	type Session struct {
+		ID          string
+		AgentID     string
+		ContextData string
+	}
+
+	var sessions []Session
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err != nil {
+			continue
+		}
+		sessions = append(sessions, s)
+	}
+	rows.Close()
+
+	if len(sessions) == 0 {
+		return
+	}
+
+	for _, s := range sessions {
+		// Try to claim the session explicitly via SKIP LOCKED if in PG
+		if !w.pool.IsSQLite() {
+			var check string
+			err = w.pool.QueryRow(ctx, "SELECT session_id FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", s.ID).Scan(&check)
+			if err != nil {
+				continue // Skip if locked by another worker
+			}
+		}
+
+		// Mock summarization:
+		summary := "Summarized context from session " + s.ID + ": " + s.ContextData
+
+		embeddingStr := "[0.0]" // fallback embedding
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			embedding, embedErr := client.GenerateEmbedding(ctxTimeout, summary)
+			cancel()
+			if embedErr != nil {
+				slog.Warn("AutoDream: LLM embedding failed during compression, using fallback", "error", embedErr)
+			} else if len(embedding) > 0 {
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+		}
+
+		// Store into autodream_memories using a short transaction
+		tx, txErr := w.pool.Begin(ctx)
+		if txErr != nil {
+			continue
+		}
+
+		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		if w.pool.IsSQLite() {
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+		}
+
+		missionID := "session-" + s.ID
+
+		if w.pool.IsSQLite() {
+			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			_, err = tx.Exec(ctx, insertQuery, id, summary, embeddingStr, missionID)
+		} else {
+			_, err = tx.Exec(ctx, insertQuery, summary, embeddingStr, missionID)
+		}
+		if err != nil {
+			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
+			tx.Rollback(ctx)
+			continue
+		}
+
+		telemetry.RecordAutoDreamMemoryCompressed(ctx, s.AgentID)
+
+		// Remove compressed session
+		deleteQuery := "DELETE FROM agent_session_data WHERE session_id = $1"
+		if w.pool.IsSQLite() {
+			deleteQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+		}
+		_, err = tx.Exec(ctx, deleteQuery, s.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to delete compressed session", "session", s.ID, "error", err)
+			tx.Rollback(ctx)
+			continue
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			slog.Error("AutoDream: failed to commit compression transaction", "error", err)
 		}
 	}
 }
