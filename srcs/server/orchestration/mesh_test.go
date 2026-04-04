@@ -44,7 +44,7 @@ func TestTeammateMesh_StandaloneMode(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Client 1 sends a message
-	msg := `{"sender_id":"agent-1","role":"SWE","content":"hello"}`
+	msg := `{"agent_id":"agent-1","action":"CHAT","status":"SENT","sender_id":"agent-1","role":"SWE","content":"hello"}`
 	err = conn1.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		t.Fatalf("client 1 write failed: %v", err)
