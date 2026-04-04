@@ -548,7 +548,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
-	mux.HandleFunc("/api/sync/missions", server.handleHybridSyncMissions)
 	mux.HandleFunc("/api/context/sync", server.handleContextSync)
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
@@ -568,7 +567,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 
 	// Teammate Mesh APIs
-	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
@@ -594,12 +592,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Health check probe for hybrid-mode switching and local-to-cloud mission sync.
 	mux.HandleFunc("/api/health/hybrid", server.handleHybridHealthCheck)
 
-	if hub.Provider() != nil {
-		taskManager := orchestration.NewTaskManager(hub.Provider(), hub.CentrifugeNode())
-		orchestration.RegisterMeshHTTPHandlers(mux, taskManager)
-		orchestration.RegisterTaskHTTPHandlers(mux, taskManager)
-	}
-
 	// Centrifuge real-time WebSocket endpoint for Flutter/web clients.
 	// Mounted at /connection/websocket — the default Centrifuge path.
 	if hub.CentrifugeNode() == nil {
@@ -613,6 +605,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	}
 	if cnNode := hub.CentrifugeNode(); cnNode != nil {
 		mux.Handle("/connection/websocket", cnNode.Handler())
+	}
+
+	if hub.Provider() != nil {
+		taskManager := orchestration.NewTaskManager(hub.Provider(), hub.CentrifugeNode())
+		orchestration.RegisterMeshHTTPHandlers(mux, taskManager)
+		orchestration.RegisterTaskHTTPHandlers(mux, taskManager)
 	}
 
 	// Config wizard API endpoints.
