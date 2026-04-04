@@ -21,6 +21,7 @@ import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -1894,7 +1895,13 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 
 	limit := 10 // Default limit
 
-	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	claims := auth.ClaimsFromContext(r.Context())
+	orgID := ""
+	if claims != nil {
+		orgID = claims.OrganizationID
+	}
+
+	tasks, err := tm.PollTasks(r.Context(), agentID, orgID, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1926,11 +1933,18 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	}
 
 	var err error
+
+	claims := auth.ClaimsFromContext(r.Context())
+	orgID := ""
+	if claims != nil {
+		orgID = claims.OrganizationID
+	}
+
 	switch req.Status {
 	case "REVIEW":
-		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
+		err = tm.ReviewTask(r.Context(), taskID, req.AgentID, orgID)
 	case "COMPLETED":
-		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
+		err = tm.CompleteTask(r.Context(), taskID, req.AgentID, orgID)
 	default:
 		http.Error(w, "invalid status transition", http.StatusBadRequest)
 		return
