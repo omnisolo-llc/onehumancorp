@@ -600,6 +600,16 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 				// continue syncing the rest
 			} else {
 				syncedCount++
+
+				// Publish to Teammate Mesh
+				if cnNode := s.hub.CentrifugeNode(); cnNode != nil {
+					var payloadMap map[string]interface{}
+					if err := json.Unmarshal([]byte(p.Payload), &payloadMap); err != nil {
+						payloadMap = map[string]interface{}{}
+					}
+					payloadMap["status"] = status
+					cnNode.PublishTaskBroadcast(p.ID, payloadMap)
+				}
 			}
 		}
 	}

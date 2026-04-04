@@ -319,3 +319,89 @@ func TestHandleMCPTools(t *testing.T) {
 		t.Errorf("expected response to contain test-tool, got %s", w.Body.String())
 	}
 }
+
+func TestHandleHybridSyncMissions(t *testing.T) {
+	hub := orchestration.NewHub()
+	defer hub.Close()
+
+	// Create an in-memory SIPDB
+	sipdb, err := orchestration.NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sipdb: %v", err)
+	}
+	hub.SetSIPDB(sipdb)
+
+	cnNode, err := orchestration.NewCentrifugeNode()
+	if err == nil {
+		hub.SetCentrifugeNode(cnNode)
+	}
+
+	srv := &Server{
+		org: domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now()),
+		hub: hub,
+	}
+
+	t.Run("invalid method", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/sync/missions", nil)
+		w := httptest.NewRecorder()
+		srv.handleHybridSyncMissions(w, req)
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected 405, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/sync/missions", strings.NewReader(`{invalid}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleHybridSyncMissions(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("empty payload", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/sync/missions", strings.NewReader(`[]`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleHybridSyncMissions(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "no missions to sync") {
+			t.Errorf("expected 'no missions to sync', got %s", w.Body.String())
+		}
+	})
+
+	t.Run("success sync missions", func(t *testing.T) {
+		payload := `[{"id": "m-1", "status": "CLOUD_ESCALATION", "payload": "{\"agent_id\": \"agent-1\", \"action\": \"test\"}"}]`
+		req := httptest.NewRequest("POST", "/api/sync/missions", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleHybridSyncMissions(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		if !strings.Contains(w.Body.String(), "synced_count\":1") {
+			t.Errorf("expected 'synced_count\":1', got %s", w.Body.String())
+		}
+	})
+
+	t.Run("skips invalid items", func(t *testing.T) {
+		payload := `[{"id": "", "status": "CLOUD_ESCALATION", "payload": "{}"}]`
+		req := httptest.NewRequest("POST", "/api/sync/missions", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleHybridSyncMissions(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		if !strings.Contains(w.Body.String(), "synced_count\":0") {
+			t.Errorf("expected 'synced_count\":0', got %s", w.Body.String())
+		}
+	})
+}
