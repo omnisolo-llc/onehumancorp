@@ -95,16 +95,9 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	}
 	_ = tasks // Ignore if using PeekTasks, but let's implement a real check
 
-	var query string
-	if tm.db.IsSQLite() {
-		query = `
-			SELECT id, dependencies, status FROM swarm_tasks WHERE status = 'PENDING'
-		`
-	} else {
-		query = `
-			SELECT id, dependencies, status FROM swarm_tasks WHERE status = 'PENDING'
-		`
-	}
+	query := `
+		SELECT id, status FROM shared_tasks WHERE status = 'PENDING'
+	`
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
 		return
@@ -112,21 +105,20 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var id, deps, status string
-		if err := rows.Scan(&id, &deps, &status); err == nil {
+		var id, status string
+		if err := rows.Scan(&id, &status); err == nil {
 			// For each task, check dependencies
-			var depList []string
-			if err := json.Unmarshal([]byte(deps), &depList); err == nil && len(depList) > 0 {
-				allMet := true
-				for _, depID := range depList {
-					var depStatus string
-					err := tm.db.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&depStatus)
-					if err != nil || depStatus != "COMPLETED" {
-						allMet = false
-						break
-					}
-				}
-				if allMet && tm.hub != nil {
+			var pendingDeps int
+			checkQuery := `
+				SELECT COUNT(*)
+				FROM shared_tasks
+				WHERE id IN (SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1) AND status != 'COMPLETED'
+			`
+			err = tm.db.QueryRow(ctx, checkQuery, id).Scan(&pendingDeps)
+
+			if err == nil && pendingDeps == 0 {
+				// All dependencies met
+				if tm.hub != nil {
 					// Broadcast that task is now ready
 					go func(taskID string) {
 						tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
@@ -236,7 +228,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 }
 
 // ClaimTask attempts to claim a specific PENDING task for the given agentID.
-// It uses row-level locking (FOR UPDATE) in Postgres, and relies on SQLite's lock mechanism
+// It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, and relies on SQLite's lock mechanism
 // to prevent race conditions.
 // In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
 func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*SharedTask, error) {
