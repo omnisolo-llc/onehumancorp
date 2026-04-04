@@ -67,6 +67,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Stream messages with reconnect loop
+    let mut backoff_secs: u64 = 1;
     loop {
         info!("connecting to message stream");
         match stream_loop(
@@ -77,13 +78,15 @@ async fn main() -> anyhow::Result<()> {
         .await
         {
             Ok(_) => {
-                info!("stream ended cleanly, reconnecting in 5s");
+                info!("stream ended cleanly, reconnecting in {}s", backoff_secs);
+                backoff_secs = 1; // reset on clean exit
             }
             Err(e) => {
-                error!(error = %e, "stream error, reconnecting in 5s");
+                error!(error = %e, "stream error, reconnecting in {}s", backoff_secs);
+                backoff_secs = (backoff_secs * 2).min(60); // exponential backoff, cap at 60s
             }
         }
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(backoff_secs)).await;
     }
 }
 

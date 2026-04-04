@@ -529,13 +529,13 @@ func startBuiltinAgentProcess(ctx context.Context, grpcEndpoint string) {
 		binaryPath = "ohc-builtin-agent"
 	}
 
+	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+		slog.Warn("builtin agent binary not found, agent subprocess will not start", "path", binaryPath)
+		return
+	}
+
 	go func() {
 		for {
-			if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-				slog.Debug("builtin agent binary not found, skipping", "path", binaryPath)
-				return
-			}
-
 			cmd := exec.CommandContext(ctx, binaryPath)
 			cmd.Env = append(os.Environ(),
 				"OHC_GRPC_ENDPOINT="+grpcEndpoint,
