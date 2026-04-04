@@ -204,7 +204,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                       decoration: BoxDecoration(
                         color: _isHovered
                             ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-                            : colorScheme.surface.withValues(alpha: 0.1),
+                            : colorScheme.surface.withValues(alpha: 0.03),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: _isHovered
