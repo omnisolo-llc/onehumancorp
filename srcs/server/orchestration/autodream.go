@@ -43,6 +43,7 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
+	go w.runCompressionPipeline(ctx)
 }
 
 // runMemoryIngestionPipeline reads files from .agent-task/memory/ and injects them.
@@ -450,4 +451,121 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 
 	slog.Info("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
 	return nil
+}
+
+
+// runCompressionPipeline periodically compresses old agent_session_data into autodream_memories.
+func (w *AutoDreamWorker) runCompressionPipeline(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.compressSessions(ctx)
+		}
+	}
+}
+
+// compressSessions compresses old agent_session_data contexts into autodream_memories.
+func (w *AutoDreamWorker) compressSessions(ctx context.Context) {
+	// Find sessions that have been idle for a while
+	threshold := time.Now().Add(-1 * time.Hour).UTC()
+	var query string
+	if w.pool.IsSQLite() {
+		query = "SELECT session_id, context FROM agent_session_data WHERE last_accessed < ?"
+	} else {
+		query = "SELECT session_id, context FROM agent_session_data WHERE last_accessed < $1 FOR UPDATE SKIP LOCKED"
+	}
+
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("AutoDream: failed to begin tx for compression", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, query, threshold)
+	if err != nil {
+		slog.Error("AutoDream: failed to query stale sessions for compression", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	type Session struct {
+		ID      string
+		Context string
+	}
+	var sessions []Session
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(&s.ID, &s.Context); err == nil {
+			sessions = append(sessions, s)
+		}
+	}
+	rows.Close()
+
+	for _, s := range sessions {
+		// Compress using LLM
+		prompt := fmt.Sprintf("Compress this agent session context into a concise memory: %s", s.Context)
+
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		compressedContext := s.Context // default to uncompressed
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			response, err := client.Reason(ctxTimeout, prompt)
+			cancel()
+			if err == nil && response != "" {
+				compressedContext = response
+			}
+		}
+
+		// Inject into vector DB (swarm_truth_embeddings which acts as our autodream_memories here based on InjectTruth method)
+		// Or insert into autodream_memories table if it exists. Looking at kairos_orchestration_design.md it mentions autodream_memories.
+		// Wait, kairos_orchestration_design.md says `autodream_memories` table:
+		// CREATE TABLE IF NOT EXISTS autodream_memories ( id UUID, content TEXT, embedding VECTOR(1536), source_mission_id TEXT )
+		// Let's insert into autodream_memories directly.
+
+		// Generate embedding
+		embeddingStr := "[0.0]"
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			embedding, err := client.GenerateEmbedding(ctxTimeout, compressedContext)
+			cancel()
+			if err == nil && len(embedding) > 0 {
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+		}
+
+		memoryID := fmt.Sprintf("dream-%s-%d", s.ID, time.Now().Unix())
+		if w.pool.IsSQLite() {
+			_, err = tx.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING", memoryID, compressedContext, embeddingStr, s.ID)
+		} else {
+			_, err = tx.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES ($1, $2, $3::vector, $4) ON CONFLICT DO NOTHING", memoryID, compressedContext, embeddingStr, s.ID)
+		}
+
+		if err != nil {
+			slog.Error("AutoDream: failed to insert into autodream_memories", "error", err)
+			continue
+		}
+
+		// Delete compressed session
+		if w.pool.IsSQLite() {
+			_, _ = tx.Exec(ctx, "DELETE FROM agent_session_data WHERE session_id = ?", s.ID)
+		} else {
+			_, _ = tx.Exec(ctx, "DELETE FROM agent_session_data WHERE session_id = $1", s.ID)
+		}
+
+		slog.Info("AutoDream: successfully compressed session", "session_id", s.ID)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("AutoDream: failed to commit compression tx", "error", err)
+	}
 }
