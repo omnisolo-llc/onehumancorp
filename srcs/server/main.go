@@ -303,7 +303,7 @@ func run(now time.Time, listen listenFunc) error {
 
 			// Background sync for standalone metrics to cloud
 			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
-			if cloudEndpoint != "" {
+			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
 				go func() {
 					ticker := time.NewTicker(5 * time.Minute)
 					defer ticker.Stop()
