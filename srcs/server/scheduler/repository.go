@@ -10,7 +10,7 @@ type TaskRepository interface {
 	// Create adds a new task.  Returns an error if the task ID already exists.
 	Create(ctx context.Context, task Task) error
 	// Get returns a task by ID.
-	Get(ctx context.Context, id string) (Task, error)
+	Get(ctx context.Context, orgID, id string) (Task, error)
 	// ListForOrg returns all tasks associated with an organization.
 	ListForOrg(ctx context.Context, orgID string) ([]Task, error)
 	// PollDue returns tasks that are ready to execute.  In a distributed
@@ -21,5 +21,5 @@ type TaskRepository interface {
 	// reschedules it (for interval tasks).
 	UpdateStatus(ctx context.Context, id string, status TaskStatus, reschedule bool) error
 	// Cancel marks a task as cancelled.
-	Cancel(ctx context.Context, id string) error
+	Cancel(ctx context.Context, orgID, id string) error
 }

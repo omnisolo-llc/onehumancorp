@@ -117,16 +117,16 @@ func (s *Scheduler) Create(task Task) error {
 }
 
 // Cancel marks a task as cancelled.
-func (s *Scheduler) Cancel(id string) error {
+func (s *Scheduler) Cancel(orgID, id string) error {
 	if s.repo != nil {
-		return s.repo.Cancel(context.Background(), id)
+		return s.repo.Cancel(context.Background(), orgID, id)
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	task, ok := s.tasks[id]
-	if !ok {
-		return errors.New("task not found")
+	if !ok || task.OrganizationID != orgID {
+		return errors.New("task not found or does not belong to organization")
 	}
 	task.Status = TaskStatusCancelled
 	s.tasks[id] = task
@@ -179,10 +179,10 @@ func (s *Scheduler) PollDue() []Task {
 }
 
 // MarkRunning marks a task as running and updates its last run time.
-func (s *Scheduler) MarkRunning(id string) (Task, error) {
+func (s *Scheduler) MarkRunning(orgID, id string) (Task, error) {
 	if s.repo != nil {
 		ctx := context.Background()
-		task, err := s.repo.Get(ctx, id)
+		task, err := s.repo.Get(ctx, orgID, id)
 		if err != nil {
 			return Task{}, err
 		}
@@ -198,8 +198,8 @@ func (s *Scheduler) MarkRunning(id string) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	task, ok := s.tasks[id]
-	if !ok {
-		return Task{}, errors.New("task not found")
+	if !ok || task.OrganizationID != orgID {
+		return Task{}, errors.New("task not found or does not belong to organization")
 	}
 	now := time.Now().UTC()
 	task.Status = TaskStatusRunning
@@ -209,10 +209,10 @@ func (s *Scheduler) MarkRunning(id string) (Task, error) {
 }
 
 // MarkDone marks a task as succeeded or failed, and reschedules if it's an interval task.
-func (s *Scheduler) MarkDone(id string, success bool) error {
+func (s *Scheduler) MarkDone(orgID, id string, success bool) error {
 	if s.repo != nil {
 		ctx := context.Background()
-		task, err := s.repo.Get(ctx, id)
+		task, err := s.repo.Get(ctx, orgID, id)
 		if err != nil {
 			return err
 		}
@@ -225,8 +225,8 @@ func (s *Scheduler) MarkDone(id string, success bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	task, ok := s.tasks[id]
-	if !ok {
-		return errors.New("task not found")
+	if !ok || task.OrganizationID != orgID {
+		return errors.New("task not found or does not belong to organization")
 	}
 
 	if success {
