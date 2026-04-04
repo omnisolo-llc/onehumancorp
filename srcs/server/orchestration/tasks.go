@@ -222,6 +222,16 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
 	}
 
+	// Check DAG dependencies
+	for _, depID := range task.Dependencies {
+		var status string
+		err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
+		if err != nil || status != "COMPLETED" {
+			// Dependency not satisfied
+			return nil, nil // Cannot claim yet
+		}
+	}
+
 	// Reconstruct Description and Priority from JSON payload
 	var payloadMap map[string]interface{}
 	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
@@ -359,6 +369,8 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	defer tx.Rollback(ctx)
 
 	var query string
+	// Fetch slightly more tasks initially in case some are filtered out by dependency checks
+	fetchLimit := limit * 3
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
@@ -379,14 +391,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		`
 	}
 
-	rows, err := tx.Query(ctx, query, limit)
+	rows, err := tx.Query(ctx, query, fetchLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}
 	defer rows.Close()
 
-	var tasks []*SharedTask
-	var taskIDs []string
+	var candidateTasks []*SharedTask
 
 	for rows.Next() {
 		task := &SharedTask{}
@@ -412,12 +423,35 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			}
 		}
 
-		tasks = append(tasks, task)
-		taskIDs = append(taskIDs, task.ID)
+		candidateTasks = append(candidateTasks, task)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	var tasks []*SharedTask
+	var taskIDs []string
+
+	for _, task := range candidateTasks {
+		// Check DAG dependencies: Task is only available if all dependencies are COMPLETED
+		depsSatisfied := true
+		for _, depID := range task.Dependencies {
+			var status string
+			err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&status)
+			if err != nil || status != "COMPLETED" {
+				depsSatisfied = false
+				break
+			}
+		}
+
+		if depsSatisfied {
+			tasks = append(tasks, task)
+			taskIDs = append(taskIDs, task.ID)
+			if len(tasks) >= limit {
+				break
+			}
+		}
 	}
 
 	if len(tasks) == 0 {
