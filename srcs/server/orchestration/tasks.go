@@ -265,51 +265,55 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	var task SharedTask
 	var errQuery error
 
+	var pID sql.NullString
+	var deps string
+
 	if tm.db.IsSQLite() {
-		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
+		// Ensure SQLite mode handles task locking appropriately using UPDATE ... RETURNING
 		query := `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
-			LIMIT 1
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM swarm_tasks
+				WHERE id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+				LIMIT 1
+			)
+			RETURNING id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 		`
-		var pID sql.NullString
-		var deps string
-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
+		errQuery = tx.QueryRow(ctx, query, agentID, taskID).Scan(
 			&task.ID, &task.MissionID, &pID, &deps, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
-		if pID.Valid {
-			task.ParentPlanID = pID.String
-		}
-		_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 	} else {
-		// PostgreSQL with SKIP LOCKED
+		// PostgreSQL Native with SKIP LOCKED via subquery to prevent TOCTOU race condition
 		query := `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY payload->>'priority' ASC, created_at ASC
-			LIMIT 1
-			FOR UPDATE SKIP LOCKED
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM swarm_tasks
+				WHERE id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+				ORDER BY payload->>'priority' ASC, created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
 		`
-		var pID sql.NullString
-		var deps string
-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
+		errQuery = tx.QueryRow(ctx, query, agentID, taskID).Scan(
 			&task.ID, &task.MissionID, &pID, &deps, &task.Title, &task.Payload, &task.Status, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
-		if pID.Valid {
-			task.ParentPlanID = pID.String
-		}
-		_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 	}
 
 	if errQuery != nil {
 		if errors.Is(errQuery, sql.ErrNoRows) {
-			return nil, nil // No task available
+			return nil, nil // No task available or claimed by another worker
 		}
-		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
+		return nil, fmt.Errorf("failed to claim pending task: %w", errQuery)
 	}
+
+	if pID.Valid {
+		task.ParentPlanID = pID.String
+	}
+	_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 
 	// Check DAG dependencies
 	// For DAG dependency check across swarm_tasks, PostgreSQL uses JSONB array text elements and SQLite uses json_each
@@ -334,7 +338,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		depsBytes, _ := json.Marshal(task.Dependencies)
 		err = tx.QueryRow(ctx, checkQuery, string(depsBytes)).Scan(&pendingDeps)
 		if err != nil || pendingDeps > 0 {
-			// Dependencies not satisfied
+			// Dependencies not satisfied - Rollback status to PENDING
+			revertQuery := `UPDATE swarm_tasks SET status = 'PENDING', assigned_agent_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+			_, _ = tx.Exec(ctx, revertQuery, task.ID)
 			return nil, nil // Cannot claim yet
 		}
 	}
@@ -348,22 +354,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if prio, ok := payloadMap["priority"].(string); ok {
 			task.Priority = prio
 		}
-	}
-
-	// Update task status to IN_PROGRESS
-	updateQuery := `
-		UPDATE swarm_tasks
-		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2 AND status = 'PENDING'
-	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, agentID, task.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		// Task was likely claimed by another worker concurrently.
-		return nil, nil
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -489,6 +479,10 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	var query string
 	// Fetch slightly more tasks initially in case some are filtered out by dependency checks
 	fetchLimit := limit * 3
+
+	// We want to update and return directly where possible, but since we are fetching multiple
+	// tasks, SQLite doesn't cleanly support UPDATE ... RETURNING with a LIMIT in the outer clause
+	// while assigning directly. So we keep a two step process but ensure it's within the explicit tx.
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at

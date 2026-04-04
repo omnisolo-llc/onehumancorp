@@ -317,7 +317,7 @@
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "JkH1eDZCQD5f/N2wbACZXFt269f5zRFtw1vsk/vr8SQ=",
-        "usagesDigest": "h+0l0x2kQbAnlu/AohskS2jeBlBa/PidtNQ/Mbb7fuo=",
+        "usagesDigest": "7qKBj4zkPTIUoj3wy+TJvnPFhPVVUevBIT7A3b+rzLk=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
