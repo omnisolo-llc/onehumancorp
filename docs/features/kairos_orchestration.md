@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 # OHC AI OS Orchestration: Shared Task List, Teammate Mesh & AutoDream
 
 ## 1. Introduction
@@ -33,3 +35,6 @@ All associated UI components must represent the OHC "Premium Feel".
 - Backdrop Filter: `blur(20px) saturate(200%)`
 - Background: `rgba(255, 255, 255, 0.03)`
 - Typography: `'Outfit', 'Inter', sans-serif`
+
+
+</div>
