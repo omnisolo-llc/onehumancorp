@@ -1,0 +1,12 @@
+--- srcs/server/checkpointer/BUILD.bazel
++++ srcs/server/checkpointer/BUILD.bazel
+@@ -5,6 +5,9 @@
+     srcs = ["checkpointer.go"],
+     importpath = "github.com/onehumancorp/mono/srcs/server/checkpointer",
+     visibility = ["//visibility:public"],
++    deps = [
++        "//srcs/server/telemetry",
++    ],
+ )
+
+ go_test(

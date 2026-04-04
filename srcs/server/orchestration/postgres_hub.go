@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"math/rand"
 	"time"
 
@@ -34,6 +36,9 @@ func pgWithRetry(ctx context.Context, op func() error) error {
 		// For Postgres this might be deadlocks or network issues.
 		// For SQLite this might be "database is locked" or "database table is locked".
 		errMsg := err.Error()
+		if errMsg == "database is locked" || errMsg == "database table is locked" || strings.Contains(errMsg, "SQLITE_BUSY") {
+			telemetry.RecordSQLiteLockContention(context.Background(), "hub")
+		}
 		isTransient := errMsg == "database is locked" ||
 			errMsg == "database table is locked" ||
 			// Postgres serialization/deadlock errors (often 40001 or 40P01)
@@ -58,6 +63,12 @@ func pgWithRetry(ctx context.Context, op func() error) error {
 			continue
 		}
 		break
+	}
+	if err != nil {
+		errMsg := err.Error()
+		if errMsg == "database is locked" || errMsg == "database table is locked" || strings.Contains(errMsg, "SQLITE_BUSY") {
+			telemetry.RecordSQLiteRetryExhausted(context.Background(), "hub")
+		}
 	}
 	return err
 }

@@ -1,0 +1,5 @@
+agent: Implementer
+status: COMPLETED
+tests: PASSED
+metrics:
+  sqlite_contention_instrumented: true

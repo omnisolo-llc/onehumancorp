@@ -520,3 +520,45 @@ func TestInitTelemetry_PrometheusError(t *testing.T) {
 		t.Errorf("Expected error from InitTelemetry due to registerer failure")
 	}
 }
+
+func TestRecordSQLiteLockContention(t *testing.T) {
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	cleanup, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("InitTelemetry failed: %v", err)
+	}
+	defer cleanup()
+
+	// Should not panic
+	RecordSQLiteLockContention(context.Background(), "test_op")
+}
+
+func TestRecordSQLiteRetryExhausted(t *testing.T) {
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	cleanup, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("InitTelemetry failed: %v", err)
+	}
+	defer cleanup()
+
+	// Should not panic
+	RecordSQLiteRetryExhausted(context.Background(), "test_op")
+}

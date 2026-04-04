@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"math/rand"
 	"time"
 )
@@ -149,7 +151,8 @@ func (p *PGCheckpointer) withRetry(operation func() error) error {
 
 		// Basic check for SQLite busy/locked errors, or transient connection issues
 		errMsg := err.Error()
-		if errMsg == "database is locked" || errMsg == "database table is locked" {
+		if errMsg == "database is locked" || errMsg == "database table is locked" || strings.Contains(errMsg, "SQLITE_BUSY") {
+			telemetry.RecordSQLiteLockContention(context.Background(), "checkpointer")
 			// Calculate exponential backoff with jitter
 			delay := baseDelay * (1 << i)
 			if delay > maxDelay {
@@ -165,5 +168,6 @@ func (p *PGCheckpointer) withRetry(operation func() error) error {
 		return err
 	}
 
+	telemetry.RecordSQLiteRetryExhausted(context.Background(), "checkpointer")
 	return fmt.Errorf("operation failed after %d retries", maxRetries)
 }
