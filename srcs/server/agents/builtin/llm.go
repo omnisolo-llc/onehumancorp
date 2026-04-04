@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"time"
 )
 
@@ -206,7 +207,7 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 	body := anthropicRequest{
 		Model:     c.model,
 		MaxTokens: maxTok,
-		System:    req.SystemPrompt,
+		System:    utils.MinifyJSONString(req.SystemPrompt),
 		Messages:  msgs,
 		Tools:     tools,
 	}
@@ -358,7 +359,7 @@ type openAIResponse struct {
 func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest) (*AssistantMessage, error) {
 	var msgs []openAIMessage
 	if req.SystemPrompt != "" {
-		msgs = append(msgs, openAIMessage{Role: "system", Content: req.SystemPrompt})
+		msgs = append(msgs, openAIMessage{Role: "system", Content: utils.MinifyJSONString(req.SystemPrompt)})
 	}
 	for _, m := range req.Messages {
 		switch m.Role {
@@ -368,7 +369,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 			for _, p := range m.Content {
 				switch p.Type {
 				case "text":
-					textParts = append(textParts, p.Text)
+					textParts = append(textParts, utils.MinifyJSONString(p.Text))
 				case "tool_result":
 					// Tool results are separate messages with role "tool"
 					msgs = append(msgs, openAIMessage{
@@ -387,7 +388,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 			for _, p := range m.Content {
 				switch p.Type {
 				case "text":
-					textParts = append(textParts, p.Text)
+					textParts = append(textParts, utils.MinifyJSONString(p.Text))
 				case "tool_use":
 					argBytes, _ := json.Marshal(p.ToolInput)
 					am.ToolCalls = append(am.ToolCalls, openAIToolCall{
