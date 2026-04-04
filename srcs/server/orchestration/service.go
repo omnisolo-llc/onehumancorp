@@ -268,6 +268,13 @@ type Hub struct {
 	centrifugeNode *CentrifugeNode
 	ctx            context.Context
 	cancel         context.CancelFunc
+	taskManager    *TaskManager
+}
+
+func (h *Hub) TaskManager() *TaskManager {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.taskManager
 }
 
 // Close gracefully stops the Hub and its background workers.
@@ -314,6 +321,9 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		ctx:           ctx,
 		cancel:        cancel,
 	}
+
+	// Create a dummy/empty taskManager. Real deployment will set a DB provider.
+	// TaskManager doesn't export a default without a DB, but we can set one when needed.
 	go h.eventLogWorker(h.ctx, "events.jsonl")
 	go h.tokenBurnRateWorker(h.ctx)
 	return h
