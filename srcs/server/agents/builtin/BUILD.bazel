@@ -4,7 +4,6 @@ go_library(
     name = "builtin",
     srcs = [
         "agent.go",
-        "hub_adapter.go",
         "llm.go",
         "output.go",
         "runner.go",
@@ -14,7 +13,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/orchestration",
+        "//srcs/server/utils",
         "@com_github_google_uuid//:uuid",
     ],
 )
@@ -25,5 +24,5 @@ go_test(
         "agent_test.go",
         "tools_test.go",
     ],
-    embed = [":builtin"],
+    deps = [":builtin"],
 )
