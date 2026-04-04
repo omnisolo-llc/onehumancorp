@@ -65,10 +65,11 @@ func (m *mockMinimax) GenerateEmbedding(ctx context.Context, text string) ([]flo
 // setupDB creates an in-memory SQLite database and initializes the embedding_cache table.
 func setupDB(t *testing.T) db.Provider {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
-	prov, err := db.NewDBProvider(context.Background(), "")
+	pool, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("failed to create db provider: %v", err)
 	}
+	prov := pool.Provider
 
 	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS embedding_cache (
