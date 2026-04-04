@@ -75,6 +75,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 	if !d.dbWrapper.IsSQLite() {
 		return
 	}
+	start := time.Now()
 
 	query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	if d.dbWrapper.IsSQLite() {
@@ -148,6 +149,8 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		}
 	}
 
+	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
+
 	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 }
 
@@ -156,6 +159,7 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
 
 	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
 
