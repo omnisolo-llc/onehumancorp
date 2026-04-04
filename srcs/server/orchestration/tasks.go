@@ -215,7 +215,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	// Broadcast task creation
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, err := json.Marshal(map[string]interface{}{
+			payload := map[string]interface{}{
 				"task_id":     task.ID,
 				"action":      "CREATE",
 				"agent_id":    task.AssignedAgentID,
@@ -224,10 +224,8 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 				"title":       task.Title,
 				"description": task.Description,
 				"priority":    task.Priority,
-			})
-			if err == nil {
-				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
 			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
 
@@ -360,15 +358,13 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	// Broadcast task claim
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, err := json.Marshal(map[string]interface{}{
+			payload := map[string]interface{}{
 				"task_id":  task.ID,
 				"action":   "CLAIM",
 				"agent_id": agentID,
 				"status":   task.Status,
-			})
-			if err == nil {
-				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
 			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
 
@@ -400,15 +396,13 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	// Broadcast task review
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, err := json.Marshal(map[string]interface{}{
+			payload := map[string]interface{}{
 				"task_id":  taskID,
 				"action":   "REVIEW",
 				"agent_id": agentID,
 				"status":   "REVIEW",
-			})
-			if err == nil {
-				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
 			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
 
@@ -434,15 +428,13 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	// Broadcast task completion
 	if tm.hub != nil {
 		go func() {
-			payloadBytes, err := json.Marshal(map[string]interface{}{
+			payload := map[string]interface{}{
 				"task_id":  taskID,
 				"action":   "COMPLETE",
 				"agent_id": agentID,
 				"status":   "COMPLETED",
-			})
-			if err == nil {
-				_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
 			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
 
@@ -589,15 +581,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		// Broadcast task claim
 		if tm.hub != nil {
 			go func(t *SharedTask) {
-				payloadBytes, err := json.Marshal(map[string]interface{}{
+				payload := map[string]interface{}{
 					"task_id":  t.ID,
 					"action":   "CLAIM",
 					"agent_id": agentID,
 					"status":   t.Status,
-				})
-				if err == nil {
-					_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
 				}
+				tm.hub.PublishTaskBroadcast(t.ID, payload)
 			}(task)
 		}
 	}
