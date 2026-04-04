@@ -6,20 +6,26 @@ import (
 	"strings"
 )
 
-// MinifyJSONString takes a string, checks if it is potentially valid JSON (starts with { or [),
-// and if it is, attempts to minify it. If it fails or is not JSON, it returns the original string.
-// This saves LLM tokens when passing embedded JSON structures.
+// MinifyJSONString takes a string, checks if it is valid JSON, and returns
+// the minified version of it (whitespace removed). If it's not valid JSON,
+// it returns the original string.
 func MinifyJSONString(input string) string {
 	trimmed := strings.TrimSpace(input)
-	if len(trimmed) == 0 {
+	if trimmed == "" {
 		return input
 	}
-	if (strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) ||
-		(strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]")) {
-		var minified bytes.Buffer
-		if err := json.Compact(&minified, []byte(trimmed)); err == nil {
-			return minified.String()
-		}
+
+	// Quick check to see if it even looks like JSON
+	if !(strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) &&
+		!(strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]")) {
+		return input
 	}
-	return input
+
+	var buf bytes.Buffer
+	err := json.Compact(&buf, []byte(trimmed))
+	if err != nil {
+		return input // Not valid JSON, return original
+	}
+
+	return buf.String()
 }

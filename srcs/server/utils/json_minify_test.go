@@ -11,32 +11,78 @@ func TestMinifyJSONString(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "valid json object",
-			input:    "{\n  \"hello\": \"world\"\n}",
-			expected: `{"hello":"world"}`,
+			name:     "Empty string",
+			input:    "",
+			expected: "",
 		},
 		{
-			name:     "valid json array",
-			input:    "[\n  1,\n  2\n]",
-			expected: `[1,2]`,
+			name:     "Whitespace only",
+			input:    "   \n  \t ",
+			expected: "   \n  \t ",
 		},
 		{
-			name:     "invalid json",
-			input:    "{\n  \"hello\": \"world\",\n}",
-			expected: "{\n  \"hello\": \"world\",\n}",
+			name:     "Not JSON",
+			input:    "Just a normal string",
+			expected: "Just a normal string",
 		},
 		{
-			name:     "not json",
-			input:    "hello world",
-			expected: "hello world",
+			name:     "Not JSON with whitespace",
+			input:    "  Just a normal string  \n",
+			expected: "  Just a normal string  \n",
+		},
+		{
+			name: "Valid JSON Object",
+			input: `{
+				"key1": "value1",
+				"key2": 2
+			}`,
+			expected: `{"key1":"value1","key2":2}`,
+		},
+		{
+			name: "Valid JSON Object with surrounding whitespace",
+			input: `  {
+				"key1": "value1",
+				"key2": 2
+			}  `,
+			expected: `{"key1":"value1","key2":2}`,
+		},
+		{
+			name: "Valid JSON Array",
+			input: `[
+				"item1",
+				"item2"
+			]`,
+			expected: `["item1","item2"]`,
+		},
+		{
+			name: "Invalid JSON that looks like JSON",
+			input: `{
+				"key1": "value1",
+				"key2": 2,
+			}`,
+			expected: `{
+				"key1": "value1",
+				"key2": 2,
+			}`,
+		},
+		{
+			name: "Invalid JSON that looks like JSON with surrounding whitespace",
+			input: `  {
+				"key1": "value1",
+				"key2": 2,
+			}  `,
+			expected: `  {
+				"key1": "value1",
+				"key2": 2,
+			}  `,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MinifyJSONString(tt.input)
-			if got != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, got)
+			result := MinifyJSONString(tt.input)
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
 			}
 		})
 	}
