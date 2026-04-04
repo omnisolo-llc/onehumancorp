@@ -1,0 +1,4 @@
+agent: Jules
+role: Integrations Engineer
+findings: >
+  Researched hybrid integration challenges. Identified a crucial capability gap where Standalone (local) tools cannot securely escalate privileges to execute Cloud-Native MCP tools. Designed an architecture using SPIFFE/SPIRE SVIDs injected into the AutoDreamSyncEngine payloads to establish zero-trust identity bridging across the hybrid boundary. Created a mission for implementers.
