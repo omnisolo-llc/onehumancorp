@@ -103,6 +103,13 @@ class _DashboardContent extends StatelessWidget {
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
+            _StatCard(
+              label: 'Tasks in Queue',
+              value: data.queueLength.toString(),
+              icon: Icons.assignment,
+              color: Theme.of(context).colorScheme.errorContainer,
+              iconColor: Theme.of(context).colorScheme.onErrorContainer,
+            ),
           ],
         ),
         const SizedBox(height: 32),

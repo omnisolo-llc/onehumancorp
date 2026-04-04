@@ -7,6 +7,7 @@ class DashboardSnapshot {
   final CostSummary costs;
   final List<Agent> agents;
   final List<StatusBucket> statuses;
+  final int queueLength;
   final DateTime updatedAt;
 
   const DashboardSnapshot({
@@ -15,6 +16,7 @@ class DashboardSnapshot {
     required this.costs,
     required this.agents,
     required this.statuses,
+    this.queueLength = 0,
     required this.updatedAt,
   });
 
@@ -39,6 +41,7 @@ class DashboardSnapshot {
               ?.map((e) => StatusBucket.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      queueLength: json['queueLength'] as int? ?? json['queue_length'] as int? ?? 0,
       updatedAt:
           json['updatedAt'] != null || json['updated_at'] != null
               ? DateTime.parse(
