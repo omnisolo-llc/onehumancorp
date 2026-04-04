@@ -590,7 +590,11 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 			status = "PENDING"
 		}
 
+
 		forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+		startSync := time.Now()
+
+
 
 		// Use the UpsertMission method to store in Postgres
 		if s.hub.SIPDB() != nil {
@@ -599,7 +603,20 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 				slog.Error("failed to upsert mission from sync daemon", "id", p.ID, "error", err)
 				// continue syncing the rest
 			} else {
+
+
 				syncedCount++
+				if cn := s.hub.CentrifugeNode(); cn != nil {
+					cn.PublishTaskBroadcast(p.ID, map[string]interface{}{
+						"action": "hybrid_sync",
+						"status": status,
+						"agent_id": "hybrid-sync-daemon",
+					})
+				}
+				telemetry.RecordSyncLatency(ctx, time.Since(startSync))
+				telemetry.RecordSyncEscalation(ctx, 1)
+				telemetry.RecordPayloadSize(ctx, int64(len(p.Payload)))
+
 			}
 		}
 	}

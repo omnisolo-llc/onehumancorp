@@ -38,7 +38,10 @@ var (
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
+
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
+	syncLatencyHistogram metric.Float64Histogram
+	payloadSizeHistogram metric.Float64Histogram
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 
@@ -302,6 +305,22 @@ func InitWithMeter(m mockableMeter) error {
 	)
 	if err != nil {
 		errs = append(errs, err)
+	}
+
+	syncLatencyHistogram, err = m.Float64Histogram(
+		"ohc.sync.latency",
+		metric.WithDescription("Duration of a mission sync operation in seconds"),
+	)
+	if err != nil {
+		slog.Error("failed to initialize sync latency histogram", "error", err)
+	}
+
+	payloadSizeHistogram, err = m.Float64Histogram(
+		"ohc.sync.payload.size",
+		metric.WithDescription("Size of a synced payload in bytes"),
+	)
+	if err != nil {
+		slog.Error("failed to initialize payload size histogram", "error", err)
 	}
 
 	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
@@ -671,6 +690,21 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
+
+// RecordSyncLatency records the duration of a mission sync operation.
+func RecordSyncLatency(ctx context.Context, latency time.Duration) {
+	if syncLatencyHistogram != nil {
+		syncLatencyHistogram.Record(ctx, latency.Seconds())
+	}
+}
+
+// RecordPayloadSize records the size of a synced payload in bytes.
+func RecordPayloadSize(ctx context.Context, size int64) {
+	if payloadSizeHistogram != nil {
+		payloadSizeHistogram.Record(ctx, float64(size))
+	}
+}
+
 func RecordSyncEscalation(ctx context.Context, count int64) {
 	if SyncEscalationsCount == nil {
 		return
