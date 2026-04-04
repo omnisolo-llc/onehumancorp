@@ -40,6 +40,8 @@ var (
 	TaskProcessingLatency      metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
+	MeshMessagesBroadcastedCounter metric.Int64Counter
+	AutoDreamVectorsGeneratedCounter metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
@@ -284,6 +286,11 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+	MeshMessagesBroadcastedCounter, err = m.Int64Counter("ohc_mesh_messages_broadcasted_total", metric.WithDescription("Total mesh messages broadcasted"))
+	if err != nil { errs = append(errs, err) }
+	AutoDreamVectorsGeneratedCounter, err = m.Int64Counter("ohc_autodream_vectors_generated_total", metric.WithDescription("Total autoDream vectors generated"))
+	if err != nil { errs = append(errs, err) }
 
 	SyncCompletedCount, err = m.Int64Counter(
 		"sync_completed_count",
@@ -653,4 +660,18 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+}
+
+// RecordMeshMessageBroadcasted records a mesh broadcast message.
+func RecordMeshMessageBroadcasted(ctx context.Context, channel string) {
+	if MeshMessagesBroadcastedCounter != nil {
+		MeshMessagesBroadcastedCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("channel", channel)))
+	}
+}
+
+// RecordAutoDreamVectorGenerated records when an AutoDream vector is generated.
+func RecordAutoDreamVectorGenerated(ctx context.Context) {
+	if AutoDreamVectorsGeneratedCounter != nil {
+		AutoDreamVectorsGeneratedCounter.Add(ctx, 1)
+	}
 }

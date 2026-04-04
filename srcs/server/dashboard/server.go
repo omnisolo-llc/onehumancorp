@@ -567,6 +567,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
+	mux.HandleFunc("/api/mesh/direct", server.handleMeshDirect)
+	mux.HandleFunc("/api/mesh/mailbox", server.handleMeshMailbox)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -832,6 +834,8 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	telemetry.RecordMeshMessageBroadcasted(r.Context(), req.Channel)
+
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
@@ -847,6 +851,65 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		AgentID string `json:"agent_id"`
+		Payload string `json:"payload"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	telemetry.RecordMeshMessageBroadcasted(r.Context(), "mesh:direct")
+
+	err := s.hub.Publish(orchestration.Message{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		FromAgent: "system",
+		ToAgent:   req.AgentID,
+		Type:      "mesh:direct",
+		Content:   req.Payload,
+	})
+
+	if err != nil {
+		http.Error(w, "failed to send direct message", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	agentID := r.URL.Query().Get("agent_id")
+	if agentID == "" {
+		http.Error(w, "agent_id is required", http.StatusBadRequest)
+		return
+	}
+
+	messages := s.hub.Inbox(agentID)
+	if messages == nil {
+		messages = []orchestration.Message{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	response := map[string]interface{}{"messages": messages}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) handleCosts(w http.ResponseWriter, _ *http.Request) {

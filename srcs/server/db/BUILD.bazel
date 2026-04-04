@@ -30,6 +30,7 @@ go_library(
         "migrations/016_review_status.sql",
         "migrations/017_tenant_isolation.sql",
         "migrations/018_tasks.sql",
+        "migrations/019_tasks_update.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

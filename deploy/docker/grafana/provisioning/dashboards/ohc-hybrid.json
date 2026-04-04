@@ -106,6 +106,40 @@
       "title": "OHC Server Memory Usage (Glassmorphism Styled)",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "title": "AutoDream Vectors Generated",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "expr": "sum(ohc_autodream_vectors_generated_total)",
+          "legendFormat": "Vectors",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Teammate Mesh Broadcasts",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "expr": "sum by (channel) (rate(ohc_mesh_messages_broadcasted_total[5m]))",
+          "legendFormat": "{{channel}}",
+          "refId": "B"
+        }
+      ]
     }
   ],
   "schemaVersion": 38,
