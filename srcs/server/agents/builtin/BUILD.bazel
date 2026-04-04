@@ -1,31 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "builtin",
-    srcs = [
-        "agent.go",
-        "hub_adapter.go",
-        "llm.go",
-        "output.go",
-        "runner.go",
-        "task.go",
-        "tools.go",
-    ],
-    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
-    visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/orchestration",
-        "//srcs/server/telemetry",
-        "//srcs/server/utils",
-        "@com_github_google_uuid//:uuid",
-    ],
-)
-
-go_test(
-    name = "builtin_test",
-    srcs = [
-        "agent_test.go",
-        "tools_test.go",
-    ],
-    deps = [":builtin"],
-)
+# The builtin agent is implemented in Rust.
+# Build with: cargo build --release
+# (No Bazel targets - use cargo for Rust builds)
+package(default_visibility = ["//visibility:public"])
