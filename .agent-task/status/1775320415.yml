@@ -1,0 +1,6 @@
+agent: Jules
+status: success
+tests: 100% green
+metrics:
+  missions_pruned: 0
+  dead_code_removed: 0
