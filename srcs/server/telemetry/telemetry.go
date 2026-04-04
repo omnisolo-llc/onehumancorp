@@ -46,6 +46,8 @@ var (
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
+	HybridSyncLatencyHistogram metric.Float64Histogram
+	HybridSyncPayloadSizeHistogram metric.Int64Histogram
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -132,6 +134,7 @@ type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
 	Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
+	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 }
 
@@ -323,6 +326,24 @@ func InitWithMeter(m mockableMeter) error {
 	SyncFailedCount, err = m.Int64Counter(
 		"sync_failed_count",
 		metric.WithDescription("Total failed synced rows"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HybridSyncLatencyHistogram, err = m.Float64Histogram(
+		"ohc.hybrid.sync.latency",
+		metric.WithDescription("Latency of local-to-cloud payload synchronization"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HybridSyncPayloadSizeHistogram, err = m.Int64Histogram(
+		"ohc.hybrid.sync.payload_size",
+		metric.WithDescription("Size in bytes of synced payloads"),
+		metric.WithUnit("By"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -676,6 +697,16 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
+}
+
+// RecordHybridSyncMetrics records latency and payload size for Hybrid MCP RAG Protocol syncs.
+func RecordHybridSyncMetrics(ctx context.Context, latency time.Duration, payloadSizeBytes int64) {
+	if HybridSyncLatencyHistogram != nil {
+		HybridSyncLatencyHistogram.Record(ctx, latency.Seconds())
+	}
+	if HybridSyncPayloadSizeHistogram != nil {
+		HybridSyncPayloadSizeHistogram.Record(ctx, payloadSizeBytes)
+	}
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.

@@ -206,6 +206,7 @@ func initializeTables(provider db.Provider) error {
 			id TEXT PRIMARY KEY,
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
+			synced_to_cloud BOOLEAN DEFAULT false,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (

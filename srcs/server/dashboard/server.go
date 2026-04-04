@@ -549,6 +549,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", server.handleHybridSyncMissions)
+	mux.HandleFunc("/api/orchestration/sync", server.handleHybridSyncMissions)
 	mux.HandleFunc("/api/context/sync", server.handleContextSync)
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)

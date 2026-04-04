@@ -122,10 +122,15 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
+	start := time.Now()
+	payloadSizeBytes := d.estimatePayloadSize(payloads)
+
 	if err := d.sendToCloud(ctx, payloads); err != nil {
 		slog.Error("sync_daemon: failed to send agent_missions to cloud", "error", err)
 		return
 	}
+
+	telemetry.RecordHybridSyncMetrics(ctx, time.Since(start), payloadSizeBytes)
 
 	// Mark as synced
 	if len(ids) > 0 {
@@ -182,4 +187,12 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	}
 
 	return nil
+}
+
+func (d *HybridMCPRAGDaemon) estimatePayloadSize(payloads []SyncDaemonPayload) int64 {
+	size := int64(0)
+	for _, p := range payloads {
+		size += int64(len(p.ID) + len(p.Status) + len(p.Payload))
+	}
+	return size
 }

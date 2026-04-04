@@ -600,6 +600,23 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 				// continue syncing the rest
 			} else {
 				syncedCount++
+
+				// Publish to Teammate Mesh
+				payloadBytes, meshErr := json.Marshal(map[string]interface{}{
+					"agent_id": "system",
+					"action":   "TASK_UPSERTED",
+					"status":   status,
+					"mission_id": p.ID,
+				})
+				if meshErr == nil {
+					_ = s.hub.Publish(orchestration.Message{
+						ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+						FromAgent: "system",
+						ToAgent:   "system",
+						Type:      "mesh:tasks",
+						Content:   string(payloadBytes),
+					})
+				}
 			}
 		}
 	}
