@@ -31,26 +31,26 @@ Generated images are written to:
 
 ### Web
 
-![OHC Flutter app on web](./web/login.png)
+![OHC Flutter app on web](./app/web/login.png)
 
 ### macOS
 
-![OHC Flutter app with macOS profile](./macos/login.png)
+![OHC Flutter app with macOS profile](./app/macos/login.png)
 
 ### Windows
 
-![OHC Flutter app with Windows profile](./windows/login.png)
+![OHC Flutter app with Windows profile](./app/windows/login.png)
 
 ### Android
 
-![OHC Flutter app with Android profile](./android/login.png)
+![OHC Flutter app with Android profile](./app/android/login.png)
 
 ### iOS
 
-![OHC Flutter app with iOS profile](./ios/login.png)
+![OHC Flutter app with iOS profile](./app/ios/login.png)
 
 ### Linux
 
-![OHC Flutter app with Linux profile](./linux/login.png)
+![OHC Flutter app with Linux profile](./app/linux/login.png)
 
 </div>
