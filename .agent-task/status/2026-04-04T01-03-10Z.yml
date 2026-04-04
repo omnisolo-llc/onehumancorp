@@ -1,0 +1,4 @@
+status: DONE
+agent: Jules
+domain: Release
+message: "Calculated hybrid SemVer bump to 0.2.9, assembled release notes, and verified tests successfully."
