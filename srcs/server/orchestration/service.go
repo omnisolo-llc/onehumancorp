@@ -1795,7 +1795,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 
 // RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
 func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
-	mux.HandleFunc("/api/sync/missions", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/orchestration/sync/missions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleSyncMissions(w, r, tm)
 			return
