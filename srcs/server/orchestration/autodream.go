@@ -194,28 +194,6 @@ func (w *AutoDreamWorker) runConflictResolutionPipeline(ctx context.Context) {
 
 // resolveConflicts finds vector embeddings that are similar but have conflicting contexts.
 func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
-	if w.pool.IsSQLite() {
-		// Vector similarity search relies on pgvector extension, skipping complex join on SQLite local wrapper.
-		return
-	}
-
-	// 1. Detect conflicts directly via pgvector cosine distance (<-> operator) and nested loops.
-	// Find pairs of memories with highly similar semantic vectors (cosine distance < 0.05).
-	query := `
-		SELECT a.memory_id, a.context, b.memory_id, b.context
-		FROM swarm_truth_embeddings a
-		JOIN swarm_truth_embeddings b ON a.memory_id < b.memory_id
-		WHERE a.embedding <=> b.embedding < 0.05
-		LIMIT 10
-	`
-
-	rows, err := w.pool.Query(ctx, query)
-	if err != nil {
-		slog.Error("AutoDream: failed to query embeddings with pgvector", "error", err)
-		return
-	}
-	defer rows.Close()
-
 	type Conflict struct {
 		ID1      string
 		Context1 string
@@ -224,12 +202,55 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 	}
 
 	var conflicts []Conflict
-	for rows.Next() {
-		var c Conflict
-		if err := rows.Scan(&c.ID1, &c.Context1, &c.ID2, &c.Context2); err != nil {
-			continue
+
+	if w.pool.IsSQLite() {
+		// Fallback for SQLite: basic text filtering / mock overlap since pgvector is not available
+		query := `
+			SELECT a.memory_id, a.context, b.memory_id, b.context
+			FROM swarm_truth_embeddings a
+			JOIN swarm_truth_embeddings b ON a.memory_id < b.memory_id
+			WHERE a.context LIKE '%' || substr(b.context, 1, 10) || '%'
+			LIMIT 10
+		`
+		rows, err := w.pool.Query(ctx, query)
+		if err != nil {
+			slog.Error("AutoDream: failed to query basic text overlap with SQLite", "error", err)
+			return
 		}
-		conflicts = append(conflicts, c)
+		defer rows.Close()
+
+		for rows.Next() {
+			var c Conflict
+			if err := rows.Scan(&c.ID1, &c.Context1, &c.ID2, &c.Context2); err != nil {
+				continue
+			}
+			conflicts = append(conflicts, c)
+		}
+	} else {
+		// 1. Detect conflicts directly via pgvector cosine distance (<-> operator) and nested loops.
+		// Find pairs of memories with highly similar semantic vectors (cosine distance < 0.05).
+		query := `
+			SELECT a.memory_id, a.context, b.memory_id, b.context
+			FROM swarm_truth_embeddings a
+			JOIN swarm_truth_embeddings b ON a.memory_id < b.memory_id
+			WHERE a.embedding <=> b.embedding < 0.05
+			LIMIT 10
+		`
+
+		rows, err := w.pool.Query(ctx, query)
+		if err != nil {
+			slog.Error("AutoDream: failed to query embeddings with pgvector", "error", err)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var c Conflict
+			if err := rows.Scan(&c.ID1, &c.Context1, &c.ID2, &c.Context2); err != nil {
+				continue
+			}
+			conflicts = append(conflicts, c)
+		}
 	}
 
 	// 2. Resolve conflicts using LLM reasoner
@@ -280,7 +301,11 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 
 		// Insert consolidated truth (we'll re-use embedding 1 for simplicity of this demo since they are 95% similar anyway).
 		// Note: pgvector allows copying vectors.
-		_, _ = tx.Exec(ctx, "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) SELECT $1, $2, embedding FROM swarm_truth_embeddings WHERE memory_id = $3 ON CONFLICT DO NOTHING", resolvedID, resolvedContext, c.ID1)
+		if w.pool.IsSQLite() {
+			_, _ = tx.Exec(ctx, "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) SELECT $1, $2, embedding, CURRENT_TIMESTAMP FROM swarm_truth_embeddings WHERE memory_id = $3 ON CONFLICT DO NOTHING", resolvedID, resolvedContext, c.ID1)
+		} else {
+			_, _ = tx.Exec(ctx, "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) SELECT $1, $2, embedding FROM swarm_truth_embeddings WHERE memory_id = $3 ON CONFLICT DO NOTHING", resolvedID, resolvedContext, c.ID1)
+		}
 
 		// Delete old fragments
 		_, _ = tx.Exec(ctx, "DELETE FROM swarm_truth_embeddings WHERE memory_id IN ($1, $2)", c.ID1, c.ID2)
@@ -317,21 +342,31 @@ type TruthSearchResult struct {
 
 // SearchTruth queries the vector database for the closest semantic embeddings.
 func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
+	var query string
+	var rows db.Rows
+	var err error
+
 	if w.pool.IsSQLite() {
 		// In SQLite standalone mode, vector search relies on linear fallback or simple text match.
-		// For true pgvector equivalence, we just return empty or mock due to lack of local vector ops.
-		return nil, nil
+		query = `
+			SELECT memory_id, context, 0.0 as distance
+			FROM swarm_truth_embeddings
+			ORDER BY created_at DESC
+			LIMIT $1
+		`
+		rows, err = w.pool.Query(ctx, query, limit)
+	} else {
+		query = `
+			SELECT memory_id, context, embedding <=> $1::vector as distance
+			FROM swarm_truth_embeddings
+			ORDER BY distance ASC
+			LIMIT $2
+		`
+		rows, err = w.pool.Query(ctx, query, embedding, limit)
 	}
 
-	query := `
-		SELECT memory_id, context, embedding <=> $1::vector as distance
-		FROM swarm_truth_embeddings
-		ORDER BY distance ASC
-		LIMIT $2
-	`
-	rows, err := w.pool.Query(ctx, query, embedding, limit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search truth with pgvector: %w", err)
+		return nil, fmt.Errorf("failed to search truth: %w", err)
 	}
 	defer rows.Close()
 

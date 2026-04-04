@@ -178,11 +178,17 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	if tm.db.IsSQLite() {
 		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
+		// Enforce state machine logic: task is only claimable if all dependencies are COMPLETED (or it has no dependencies).
 		query := `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			FROM swarm_tasks st
+			WHERE st.id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM json_each(st.dependencies) d
+			      JOIN swarm_tasks dep_task ON dep_task.id = d.value
+			      WHERE dep_task.status != 'COMPLETED'
+			  )
+			ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
 			LIMIT 1
 		`
 		var pID sql.NullString
@@ -196,11 +202,17 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		_ = json.Unmarshal([]byte(deps), &task.Dependencies)
 	} else {
 		// PostgreSQL with SKIP LOCKED
+		// Enforce state machine logic: task is only claimable if all dependencies are COMPLETED (or it has no dependencies).
 		query := `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY payload->>'priority' ASC, created_at ASC
+			FROM swarm_tasks st
+			WHERE st.id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM jsonb_array_elements_text(st.dependencies) d(value)
+			      JOIN swarm_tasks dep_task ON dep_task.id = d.value::uuid
+			      WHERE dep_task.status != 'COMPLETED'
+			  )
+			ORDER BY st.payload->>'priority' ASC, st.created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
@@ -352,6 +364,26 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
 // SQLite's concurrent writes lock for safe queue picking.
 func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int) ([]*SharedTask, error) {
+	if tm.redisClient != nil {
+		// Acquire a coarse-grained Redis-backed distributed lock for polling with 30s TTL
+		// to prevent thundering herd when multiple workers try to poll simultaneously
+		lockKey := "lock:poll_tasks"
+		cmd := tm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(30 * time.Second).Build()
+		err := tm.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return nil, nil // Lock could not be acquired (polling is locked by another agent)
+			}
+			return nil, fmt.Errorf("failed to acquire distributed lock for polling: %w", err)
+		}
+
+		// Ensure lock is released after polling
+		defer func() {
+			delCmd := tm.redisClient.B().Del().Key(lockKey).Build()
+			_ = tm.redisClient.Do(context.Background(), delCmd).Error()
+		}()
+	}
+
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -362,18 +394,28 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			FROM swarm_tasks st
+			WHERE st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM json_each(st.dependencies) d
+			      JOIN swarm_tasks dep_task ON dep_task.id = d.value
+			      WHERE dep_task.status != 'COMPLETED'
+			  )
+			ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
 			LIMIT $1
 		`
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query = `
 			SELECT id, mission_id, parent_plan_id, dependencies, title, payload, status, locked_until, created_at, updated_at
-			FROM swarm_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY payload->>'priority' ASC, created_at ASC
+			FROM swarm_tasks st
+			WHERE st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			  AND NOT EXISTS (
+			      SELECT 1 FROM jsonb_array_elements_text(st.dependencies) d(value)
+			      JOIN swarm_tasks dep_task ON dep_task.id = d.value::uuid
+			      WHERE dep_task.status != 'COMPLETED'
+			  )
+			ORDER BY st.payload->>'priority' ASC, st.created_at ASC
 			LIMIT $1
 			FOR UPDATE SKIP LOCKED
 		`
