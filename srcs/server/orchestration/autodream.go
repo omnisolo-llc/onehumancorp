@@ -43,6 +43,114 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
+	go w.runSessionCompressionPipeline(ctx)
+}
+
+// runSessionCompressionPipeline periodically compresses context from agent_session_data.
+func (w *AutoDreamWorker) runSessionCompressionPipeline(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.compressSessionData(ctx)
+		}
+	}
+}
+
+// compressSessionData reads agent_session_data and inserts it into autodream_memories.
+func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("AutoDream: failed to begin transaction for compression", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if w.pool.IsSQLite() {
+		// SQLite Recency Fallback
+		query = `
+			SELECT session_id, context_data
+			FROM agent_session_data
+			ORDER BY last_accessed ASC
+			LIMIT 10
+		`
+	} else {
+		// PostgreSQL with SKIP LOCKED
+		query = `
+			SELECT session_id, context_data
+			FROM agent_session_data
+			ORDER BY last_accessed ASC
+			LIMIT 10
+			FOR UPDATE SKIP LOCKED
+		`
+	}
+
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch session data", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	type sessionRec struct {
+		ID   string
+		Data string
+	}
+	var records []sessionRec
+	for rows.Next() {
+		var rec sessionRec
+		if err := rows.Scan(&rec.ID, &rec.Data); err == nil {
+			records = append(records, rec)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("AutoDream: iteration error", "error", err)
+		return
+	}
+	rows.Close()
+
+	for _, rec := range records {
+		var insertQuery string
+		if w.pool.IsSQLite() {
+			insertQuery = `
+				INSERT INTO autodream_memories (id, content, source_mission_id)
+				VALUES (?, ?, ?)
+			`
+		} else {
+			insertQuery = `
+				INSERT INTO autodream_memories (id, content, source_mission_id)
+				VALUES ($1, $2, $3)
+			`
+		}
+		memID := "ad-" + rec.ID
+		_, err := tx.Exec(ctx, insertQuery, memID, rec.Data, rec.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to insert compressed memory", "error", err)
+			continue
+		}
+
+		var delQuery string
+		if w.pool.IsSQLite() {
+			delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+		} else {
+			delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
+		}
+		_, err = tx.Exec(ctx, delQuery, rec.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to delete session data after compression", "error", err)
+			tx.Rollback(ctx)
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("AutoDream: failed to commit compression transaction", "error", err)
+	}
 }
 
 // runMemoryIngestionPipeline reads files from .agent-task/memory/ and injects them.

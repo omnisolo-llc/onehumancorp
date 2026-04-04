@@ -36,6 +36,7 @@ type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
+	stopChan    chan struct{}
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -54,7 +55,88 @@ func NewTaskManager(provider db.Provider) *TaskManager {
 			}
 		}
 	}
+	tm.stopChan = make(chan struct{})
 	return tm
+}
+
+// StartWorkerLoop periodically checks for satisfied PENDING tasks and ensures they are broadcasted
+// to unblock awaiting agents, properly handling DAG dependency checks across swarm_tasks.
+func (tm *TaskManager) StartWorkerLoop(ctx context.Context) {
+	ticker := time.NewTicker(2 * time.Second)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tm.stopChan:
+				return
+			case <-ticker.C:
+				tm.evaluatePendingDependencies(ctx)
+			}
+		}
+	}()
+}
+
+// StopWorkerLoop stops the task manager background loop
+func (tm *TaskManager) StopWorkerLoop() {
+	close(tm.stopChan)
+}
+
+// evaluatePendingDependencies finds tasks whose dependencies have just been met and broadcasts them.
+func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
+	// A simple check to find PENDING tasks without active locks and met dependencies
+	// and trigger a broadcast to awake idle agents.
+	tasks, err := tm.PollTasks(ctx, "system-orchestrator", 0) // Polling with 0 limit acts as a peek if implemented, or we can just run a custom query.
+	if err != nil {
+		return
+	}
+	_ = tasks // Ignore if using PollTasks, but let's implement a real check
+
+	var query string
+	if tm.db.IsSQLite() {
+		query = `
+			SELECT id, dependencies, status FROM swarm_tasks WHERE status = 'PENDING'
+		`
+	} else {
+		query = `
+			SELECT id, dependencies, status FROM swarm_tasks WHERE status = 'PENDING'
+		`
+	}
+	rows, err := tm.db.Query(ctx, query)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, deps, status string
+		if err := rows.Scan(&id, &deps, &status); err == nil {
+			// For each task, check dependencies
+			var depList []string
+			if err := json.Unmarshal([]byte(deps), &depList); err == nil && len(depList) > 0 {
+				allMet := true
+				for _, depID := range depList {
+					var depStatus string
+					err := tm.db.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&depStatus)
+					if err != nil || depStatus != "COMPLETED" {
+						allMet = false
+						break
+					}
+				}
+				if allMet && tm.hub != nil {
+					// Broadcast that task is now ready
+					go func(taskID string) {
+						tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+							"action":   "READY",
+							"agent_id": "",
+							"status":   "PENDING",
+						})
+					}(id)
+				}
+			}
+		}
+	}
 }
 
 // SetHub injects the CentrifugeNode dependency into the TaskManager.
