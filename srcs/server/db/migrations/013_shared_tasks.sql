@@ -1,7 +1,4 @@
--- Drop the table if it exists to replace with the correct schema
-DROP TABLE IF EXISTS shared_tasks;
-
-CREATE TABLE shared_tasks (
+CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
