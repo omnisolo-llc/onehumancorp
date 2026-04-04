@@ -5,13 +5,15 @@ go_library(
     srcs = [
         "agent.go",
         "agent_task_worker.go",
-        "provider.go",
+        "autodream.go",
         "local_provider.go",
+        "provider.go",
         "registry.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
     ],
@@ -20,16 +22,19 @@ go_library(
 go_test(
     name = "agents_test",
     srcs = [
+        "agent_task_worker_benchmark_test.go",
         "agent_task_worker_test.go",
         "agents_test.go",
+        "autodream_test.go",
         "coverage_test.go",
-        "resilient_provider_test.go",
         "provider_test.go",
+        "resilient_provider_test.go",
     ],
     embed = [":agents"],
     deps = [
+        "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
-        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

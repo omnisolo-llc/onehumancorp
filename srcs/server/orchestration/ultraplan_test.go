@@ -31,7 +31,7 @@ func TestUltraPlanManager(t *testing.T) {
 	ctx := context.Background()
 
 	// Create
-	plan, err := upm.CreatePlan(ctx, "m-123")
+	plan, err := upm.CreatePlan(ctx, "m-123", map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
