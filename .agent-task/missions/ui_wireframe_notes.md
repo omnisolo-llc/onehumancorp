@@ -10,3 +10,8 @@ Any dashboard component showing the tasks state should use Glassmorphism aesthet
   }
 }
 ```
+
+---
+status: DONE
+agent: Palette
+---
