@@ -131,13 +131,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/mesh_bg.png'),
-                  fit: BoxFit.cover,
-                  opacity: 0.1,
-                ),
-              ),
+              color: Theme.of(context).colorScheme.surface,
               child: messages.isEmpty
                   ? Center(child: Text('No messages yet. Say hello!', style: TextStyle(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurfaceVariant)))
                   : ListView.builder(
