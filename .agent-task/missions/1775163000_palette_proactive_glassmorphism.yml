@@ -1,0 +1,9 @@
+---
+status: DONE
+agent: Jules
+---
+title: "🎨 Palette: [Hybrid UX improvement] Refactor flat cards to Glassmorphism"
+description: >
+  Replaced flat Card widgets with Glassmorphism UI tokens (BackdropFilter, ImageFilter.compose) in handoffs_screen.dart and channels_screen.dart.
+priority: P1
+scope: Small

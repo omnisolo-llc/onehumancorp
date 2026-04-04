@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -192,17 +193,18 @@ class ChannelsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data:
-            (channels) =>
-                channels.isEmpty
-                    ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
-                    : _ChannelList(channels: channels),
+        data: (channels) => channels.isEmpty
+            ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
+            : _ChannelList(channels: channels),
       ),
     );
   }
 
   void _showAddDialog(BuildContext context, WidgetRef ref) {
-    showDialog(context: context, builder: (_) => _AddChannelDialog(ref: ref));
+    showDialog(
+      context: context,
+      builder: (_) => _AddChannelDialog(ref: ref),
+    );
   }
 }
 
@@ -273,26 +275,69 @@ class _ChannelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
-        title: Text(
-          channel.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(channel.backend.displayName),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Chip(
-              label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
-              backgroundColor:
-                  channel.enabled
-                      ? Theme.of(context).colorScheme.secondaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(const <double>[
+              1.168,
+              -0.153,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              1.061,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              -0.152,
+              1.198,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: colors.outlineVariant.withValues(alpha: 0.5),
+              ),
             ),
-          ],
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
+              title: Text(
+                channel.name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(channel.backend.displayName),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Chip(
+                    label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
+                    backgroundColor: channel.enabled
+                        ? colors.secondaryContainer
+                        : colors.surfaceContainerHighest,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -385,26 +430,25 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                   labelText: 'Backend',
                   border: OutlineInputBorder(),
                 ),
-                items:
-                    _channelDefs
-                        .map(
-                          (d) => DropdownMenuItem(
-                            value: d,
-                            child: Row(
-                              children: [
-                                Text(d.icon),
-                                const SizedBox(width: 8),
-                                Text(
-                                  d.type.name == 'centrifuge'
-                                      ? 'Native (Centrifuge)'
-                                      : d.type.name[0].toUpperCase() +
-                                          d.type.name.substring(1),
-                                ),
-                              ],
+                items: _channelDefs
+                    .map(
+                      (d) => DropdownMenuItem(
+                        value: d,
+                        child: Row(
+                          children: [
+                            Text(d.icon),
+                            const SizedBox(width: 8),
+                            Text(
+                              d.type.name == 'centrifuge'
+                                  ? 'Native (Centrifuge)'
+                                  : d.type.name[0].toUpperCase() +
+                                        d.type.name.substring(1),
                             ),
-                          ),
-                        )
-                        .toList(),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (val) {
                   if (val == null) return;
                   setState(() {
@@ -439,8 +483,9 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                       labelText: f.label,
                       hintText: f.hint,
                       border: const OutlineInputBorder(),
-                      suffixIcon:
-                          f.secret ? const Icon(Icons.lock_outline) : null,
+                      suffixIcon: f.secret
+                          ? const Icon(Icons.lock_outline)
+                          : null,
                     ),
                   ),
                 ),
@@ -456,14 +501,13 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Add'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
         ),
       ],
     );
