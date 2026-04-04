@@ -21,6 +21,11 @@ One Human Corp is an innovative Cloud-Native Hybrid Architecture (Agentic OS) th
 ## Architecture
 Built on a modular, open-source stack (Model Context Protocol, SPIFFE/SPIRE, LangGraph), the system utilizes a **Hybrid Architecture (OHC-HA)**. It seamlessly scales from a multi-tenant **Cloud-Native Mode** using Kubernetes and PostgreSQL, to a fully localized **Standalone Desktop Mode** powered by SQLite and local in-memory messaging. The backend is written in Go (Bazel-based monorepo), and it integrates with a Flutter frontend (supporting Web, Mobile, and Desktop) to allow the human CEO to direct virtual meeting rooms, handle high-risk approvals, and monitor token usage and billing.
 
+### Hybrid Architecture Modes
+- **Cloud-Native Mode**: Multi-tenant, K8s-orchestrated (PostgreSQL, Redis). Optimized for horizontal/vertical scaling, pod high-concurrency, and strict tenant isolation.
+- **Standalone Desktop Mode**: Local single-user (SQLite). Optimized for low resource consumption, host-machine efficiency, and local-to-cloud synchronization. Services designed to degrade gracefully when heavy dependencies (Redis/Chatwoot) are absent.
+- **Thin Client Mode**: UI-only (Mobile/Desktop) connecting to Cloud via API/OAuth with configurable remote endpoints. Focus on API reliability, auth stability, and low-latency interaction.
+
 ```mermaid
 graph TD;
     User[Human CEO] --> Frontend[React Next.js Frontend];
