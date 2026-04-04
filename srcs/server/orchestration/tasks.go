@@ -289,12 +289,12 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'
 	`
-	res, err := tm.db.Exec(ctx, query, taskID, agentID)
+	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to move task to review: %w", err)
 	}
 
-	if res == 0 {
+	if rowsAffected == 0 {
 		return errors.New("task not found, not assigned to agent, or not in progress")
 	}
 
@@ -325,12 +325,12 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND assigned_agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
-	res, err := tm.db.Exec(ctx, query, taskID, agentID)
+	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
-	if res == 0 {
+	if rowsAffected == 0 {
 		return errors.New("task not found or not assigned to agent")
 	}
 
@@ -462,17 +462,17 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	var claimedTasks []*SharedTask
 
 	for _, task := range tasks {
-			rowsAffected, err := tx.Exec(ctx, `
-				UPDATE swarm_tasks
-				SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2 AND status = 'PENDING'
-			`, agentID, task.ID)
+		rowsAffected, err := tx.Exec(ctx, `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND status = 'PENDING'
+		`, agentID, task.ID)
 
-			if err != nil {
-				return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
-			}
+		if err != nil {
+			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
+		}
 
-			if rowsAffected > 0 {
+		if rowsAffected > 0 {
 			task.Status = "IN_PROGRESS"
 			task.AssignedAgentID = agentID
 			claimedTasks = append(claimedTasks, task)
