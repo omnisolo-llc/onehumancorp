@@ -1,0 +1,8 @@
+timestamp: 2026-04-04T10-14-59Z
+status: "healthy"
+agent: "Nova"
+metrics:
+  cpu_usage: "10%"
+  memory_usage: "256MiB"
+  mesh_connections: 0
+  tasks_processed: 1
