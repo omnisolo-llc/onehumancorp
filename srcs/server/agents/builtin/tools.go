@@ -1110,7 +1110,6 @@ func (t *todoTool) Execute(_ context.Context, _ string, input map[string]interfa
 				status := fmt.Sprint(m["status"])
 				content := fmt.Sprint(m["content"])
 				priority := fmt.Sprint(m["priority"])
-				activeForm := fmt.Sprint(m["activeForm"])
 				switch status {
 				case "pending":
 					pending++
@@ -1118,8 +1117,8 @@ func (t *todoTool) Execute(_ context.Context, _ string, input map[string]interfa
 				case "in_progress":
 					inProgress++
 					label := content
-					if activeForm != "" && activeForm != "<nil>" {
-						label = activeForm
+					if af, ok := m["activeForm"].(string); ok && af != "" {
+						label = af
 					}
 					sb.WriteString(fmt.Sprintf("[~] %s (%s)\n", label, priority))
 				case "completed":
@@ -1627,9 +1626,13 @@ func (t *notebookEditTool) Execute(_ context.Context, workDir string, input map[
 		if ct == "" {
 			ct = "code"
 		}
+		cellNewID, err := generateTaskID()
+		if err != nil {
+			return "", fmt.Errorf("notebook_edit: generate cell id: %w", err)
+		}
 		newCell := notebookCell{
 			CellType: ct,
-			ID:       fmt.Sprintf("cell-%d", len(nb.Cells)+1),
+			ID:       cellNewID,
 			Source:   encodeSource(newSource),
 			Metadata: map[string]interface{}{},
 		}
