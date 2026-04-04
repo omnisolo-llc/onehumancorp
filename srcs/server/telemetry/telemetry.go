@@ -36,6 +36,8 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	TeammateMeshBroadcastsCounter    metric.Int64Counter
+	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 
@@ -280,6 +282,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_task_processing_latency_seconds",
 		metric.WithDescription("Task processing latency in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TeammateMeshBroadcastsCounter, err = m.Int64Counter(
+		"teammate_mesh_broadcasts_total",
+		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
+		"teammate_mesh_direct_messages_total",
+		metric.WithDescription("Total number of Teammate Mesh direct messages sent"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -575,6 +593,24 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+}
+
+// RecordTeammateMeshBroadcast increments the global counter for Teammate Mesh broadcasts.
+func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
+	if TeammateMeshBroadcastsCounter == nil {
+		return
+	}
+	TeammateMeshBroadcastsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("channel", channel),
+	))
+}
+
+// RecordTeammateMeshDirectMessage increments the global counter for Teammate Mesh direct messages.
+func RecordTeammateMeshDirectMessage(ctx context.Context) {
+	if TeammateMeshDirectMessagesCounter == nil {
+		return
+	}
+	TeammateMeshDirectMessagesCounter.Add(ctx, 1)
 }
 
 // RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.
