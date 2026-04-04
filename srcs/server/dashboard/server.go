@@ -824,7 +824,9 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Channel string `json:"channel"`
-		Payload string `json:"payload"`
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -836,12 +838,22 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.hub.Publish(orchestration.Message{
+	payloadBytes, err := json.Marshal(map[string]interface{}{
+		"agent_id": req.AgentID,
+		"action":   req.Action,
+		"status":   req.Status,
+	})
+	if err != nil {
+		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
+		return
+	}
+
+	err = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   "system",
 		Type:      req.Channel,
-		Content:   req.Payload,
+		Content:   string(payloadBytes),
 	})
 
 	if err == nil {
