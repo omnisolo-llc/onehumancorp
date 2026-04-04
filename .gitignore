@@ -27,7 +27,6 @@ go.work.sum
 # env file
 .env
 
-# Claude Code source (downloaded locally for reference, not committed)
 .claude-code/
 
 # Editor/IDE
