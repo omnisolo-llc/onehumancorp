@@ -58,6 +58,12 @@ func TestInitTelemetry(t *testing.T) {
 	if swarmTasksCompletedCounter == nil {
 		t.Error("expected swarmTasksCompletedCounter to be initialized")
 	}
+	if sqliteLockContentionCounter == nil {
+		t.Error("expected sqliteLockContentionCounter to be initialized")
+	}
+	if sqliteRetryExhaustedCounter == nil {
+		t.Error("expected sqliteRetryExhaustedCounter to be initialized")
+	}
 
 	cleanup() // Clean up resources
 }
@@ -372,6 +378,14 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
+		RecordSQLiteLockContention(ctx, "exec/query")
+	})
+
+	t.Run("RecordSQLiteRetryExhausted", func(t *testing.T) {
+		RecordSQLiteRetryExhausted(ctx, "exec/query")
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -440,6 +454,20 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordSQLiteLockContention Uninitialized", func(t *testing.T) {
+		originalLockCounter := sqliteLockContentionCounter
+		sqliteLockContentionCounter = nil
+		RecordSQLiteLockContention(ctx, "test")
+		sqliteLockContentionCounter = originalLockCounter
+	})
+
+	t.Run("RecordSQLiteRetryExhausted Uninitialized", func(t *testing.T) {
+		originalRetryCounter := sqliteRetryExhaustedCounter
+		sqliteRetryExhaustedCounter = nil
+		RecordSQLiteRetryExhausted(ctx, "test")
+		sqliteRetryExhaustedCounter = originalRetryCounter
 	})
 }
 
