@@ -96,6 +96,71 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	}
 }
 
+func TestHybridMCPRAGDaemon_RetryBackoff(t *testing.T) {
+	defer ClearSemaphore()
+	// Setup SQLite in-memory db
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT,
+			payload TEXT,
+			synced_to_cloud BOOLEAN DEFAULT false
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create agent_missions table: %v", err)
+	}
+
+	_, err = sqlDB.Exec(`
+		INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+		VALUES
+			('m_retry', 'CLOUD_ESCALATION', '{"task":"retry-mission"}', false)
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	// Mock cloud API that fails on first few attempts
+	attempts := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts <= 2 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	daemon := NewHybridMCPRAGDaemon(dbWrapper, 1*time.Minute, srv.URL)
+
+	// Process sync manually for testing
+	daemon.ProcessSync(context.Background())
+
+	if attempts < 3 {
+		t.Fatalf("expected at least 3 attempts due to retries, got %d", attempts)
+	}
+
+	// Validate db status updated
+	var synced bool
+	err = sqlDB.QueryRow("SELECT synced_to_cloud FROM agent_missions WHERE id = 'm_retry'").Scan(&synced)
+	if err != nil {
+		t.Fatalf("failed to query m_retry synced status: %v", err)
+	}
+	if !synced {
+		t.Error("expected m_retry to be synced_to_cloud = true after retries")
+	}
+}
+
 func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 	defer ClearSemaphore()
 	// Setup SQLite in-memory db
