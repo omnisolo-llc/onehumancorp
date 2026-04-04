@@ -23,6 +23,7 @@ import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
+import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -130,6 +131,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
+          GoRoute(
+            path: '/referrals',
+            builder: (context, state) => const ReferralsDashboardScreen(),
+          ),
         ],
       ),
     ],
@@ -182,6 +187,11 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.science,
           label: 'Growth Experiments',
           path: '/growth-experiments',
+        ),
+        _NavItem(
+          icon: Icons.group_add,
+          label: 'Viral Referrals',
+          path: '/referrals',
         ),
         _NavItem(
           icon: Icons.extension,
