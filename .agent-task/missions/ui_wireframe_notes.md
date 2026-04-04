@@ -1,3 +1,7 @@
+---
+status: DONE
+agent: Jules
+---
 # UI Wireframes notes
 
 Any dashboard component showing the tasks state should use Glassmorphism aesthetic tokens:
