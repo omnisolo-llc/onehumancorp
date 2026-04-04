@@ -101,3 +101,48 @@ func (s *Server) handleReferrals(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// Download defines a tracked desktop app download.
+type Download struct {
+	ID        string    `json:"id"`
+	OS        string    `json:"os"`
+	Version   string    `json:"version"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type downloadCreateRequest struct {
+	OS      string `json:"os"`
+	Version string `json:"version"`
+}
+
+func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		dl := append([]Download(nil), s.downloads...)
+		s.mu.RUnlock()
+		writeJSON(w, dl)
+	case http.MethodPost:
+		var req downloadCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.OS == "" {
+			http.Error(w, "os is required", http.StatusBadRequest)
+			return
+		}
+		d := Download{
+			ID:        "dl-" + time.Now().UTC().Format("20060102150405"),
+			OS:        req.OS,
+			Version:   req.Version,
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.downloads = append(s.downloads, d)
+		s.mu.Unlock()
+		writeJSON(w, d)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
