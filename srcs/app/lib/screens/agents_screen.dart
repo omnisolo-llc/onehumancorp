@@ -223,9 +223,16 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                             padding: const EdgeInsets.all(16.0),
                             child: Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: isRunningColor.withValues(alpha: 0.8),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                  width: 48,
+                                  height: 48,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isRunningColor.withValues(alpha: 0.8),
+                                  ),
                                   child: Icon(Icons.smart_toy, color: isRunningIconColor),
                                 ),
                                 const SizedBox(width: 16),
@@ -257,6 +264,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                 const SizedBox(width: 16),
                                 AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: chipBgColor.withValues(alpha: 0.8),
