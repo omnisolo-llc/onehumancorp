@@ -567,6 +567,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
+	mux.HandleFunc("/api/mesh/direct", server.handleMeshDirect)
+	mux.HandleFunc("/api/mesh/mailbox", server.handleMeshMailbox)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -1584,4 +1586,21 @@ type pipelineCreateRequest struct {
 type pipelinePromoteRequest struct {
 	PipelineID string `json:"pipelineId"`
 	ApprovedBy string `json:"approvedBy"`
+}
+
+
+func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
+	if s.hub == nil {
+		http.Error(w, "orchestration hub not configured", http.StatusInternalServerError)
+		return
+	}
+	s.hub.HandleMeshDirect(w, r)
+}
+
+func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
+	if s.hub == nil {
+		http.Error(w, "orchestration hub not configured", http.StatusInternalServerError)
+		return
+	}
+	s.hub.HandleMeshMailbox(w, r)
 }

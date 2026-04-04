@@ -451,3 +451,28 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 	slog.Info("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
 	return nil
 }
+
+// SynthesizeMarkdownSummary generates an embedding for a markdown summary and stores it.
+func (w *AutoDreamWorker) SynthesizeMarkdownSummary(ctx context.Context, memoryID string, markdownSummary string, llmClient MinimaxClient) error {
+	if llmClient == nil {
+		return fmt.Errorf("llmClient is required")
+	}
+
+	embedding, err := llmClient.GenerateEmbedding(ctx, markdownSummary)
+	if err != nil {
+		return fmt.Errorf("failed to generate embedding: %w", err)
+	}
+
+	embeddingBytes, err := json.Marshal(embedding)
+	if err != nil {
+		return fmt.Errorf("failed to marshal embedding: %w", err)
+	}
+
+	// Inject into storage
+	err = w.InjectTruth(ctx, memoryID, markdownSummary, string(embeddingBytes))
+	if err != nil {
+		return fmt.Errorf("failed to inject truth: %w", err)
+	}
+
+	return nil
+}
