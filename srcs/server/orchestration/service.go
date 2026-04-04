@@ -1784,6 +1784,54 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
+
+	mux.HandleFunc("/api/orchestration/sync", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleSyncMissions(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+}
+
+func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var payloads []SyncDaemonPayload
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	for _, p := range payloads {
+		// Inject into Postgres agent_missions table
+		_, err := tm.db.Exec(ctx, `
+			INSERT INTO agent_missions (id, status, payload, synced_to_cloud, created_at)
+			VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, synced_to_cloud = true
+		`, p.ID, p.Status, p.Payload)
+
+		if err != nil {
+			slog.Error("failed to insert synced mission", "error", err, "id", p.ID)
+			continue
+		}
+
+		// Broadcast to Teammate Mesh
+		if tm.hub != nil {
+			go func(missionID, status string) {
+				payloadBytes, err := json.Marshal(map[string]interface{}{
+					"mission_id": missionID,
+					"action":     "SYNC",
+					"status":     status,
+				})
+				if err == nil {
+					_, _ = tm.hub.node.Publish("mesh:tasks", payloadBytes)
+				}
+			}(p.ID, p.Status)
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
