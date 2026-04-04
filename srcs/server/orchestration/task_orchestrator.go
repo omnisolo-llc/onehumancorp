@@ -155,16 +155,14 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 			TaskID:  task.ID,
 		})
 	} else if to.hub != nil {
-		payloadBytes, err := json.Marshal(map[string]interface{}{
+		payload := map[string]interface{}{
 			"task_id":    task.ID,
 			"action":     "CREATE",
 			"mission_id": task.MissionID,
 			"title":      task.Title,
 			"status":     task.Status,
-		})
-		if err == nil {
-			_, _ = to.hub.node.Publish("mesh:tasks", payloadBytes)
 		}
+		to.hub.PublishTaskBroadcast(task.ID, payload)
 	}
 
 	return task, nil
@@ -261,15 +259,13 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			TaskID:  task.ID,
 		})
 	} else if to.hub != nil {
-		payloadBytes, err := json.Marshal(map[string]interface{}{
+		payload := map[string]interface{}{
 			"task_id":  task.ID,
 			"action":   "CLAIM",
 			"agent_id": agentID,
 			"status":   task.Status,
-		})
-		if err == nil {
-			_, _ = to.hub.node.Publish("mesh:tasks", payloadBytes)
 		}
+		to.hub.PublishTaskBroadcast(task.ID, payload)
 	}
 
 	return &task, nil
@@ -369,25 +365,21 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 			})
 		}
 	} else if to.hub != nil {
-		payloadBytes, err := json.Marshal(map[string]interface{}{
+		payload := map[string]interface{}{
 			"task_id":  taskID,
 			"action":   "COMPLETE",
 			"agent_id": agentID,
 			"status":   "COMPLETED",
-		})
-		if err == nil {
-			_, _ = to.hub.node.Publish("mesh:tasks", payloadBytes)
 		}
+		to.hub.PublishTaskBroadcast(taskID, payload)
 
 		for _, rid := range newReadyTasks {
-			readyBytes, err := json.Marshal(map[string]interface{}{
+			readyPayload := map[string]interface{}{
 				"task_id": rid,
 				"action":  "READY",
 				"status":  "READY",
-			})
-			if err == nil {
-				_, _ = to.hub.node.Publish("mesh:tasks", readyBytes)
 			}
+			to.hub.PublishTaskBroadcast(rid, readyPayload)
 		}
 	}
 
