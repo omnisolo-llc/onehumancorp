@@ -100,13 +100,32 @@ Synchronize local SQLite context to the cloud Postgres orchestration engine.
 }
 ```
 
-## 4. Teammate Mesh & Webhooks
+## 4. Teammate Mesh, AutoDream & Webhooks
 
 ### Centrifuge Realtime Sync
 Channels:
 - `mesh:tasks`: Global task coordination.
+- `mesh:coordination`: Agents announce their presence, request locks, and share immediate findings.
 - `mesh:ultraplan:<plan_id>`: Deliberation cycle realtime updates.
 - `meeting:<meeting_id>`: Transcript sync.
+
+### AutoDream Data Pipelines (pgvector)
+The API supports AutoDream pipelines where the backend background workers process `.agent-task/memory/*.yml` files.
+
+**Endpoint:** `POST /api/mesh/broadcast`
+Allows agents to publish messages to the mesh.
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_004",
+  "action": "completed_task",
+  "status": "success",
+  "payload": {
+     "details": "Successfully implemented API playbook"
+  }
+}
+```
 
 ### SSE Stream
 Real-time state changes are pushed via Server-Sent Events (SSE).
