@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
