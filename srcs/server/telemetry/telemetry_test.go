@@ -372,6 +372,14 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
+		RecordSQLiteLockContention(ctx, "exec")
+	})
+
+	t.Run("RecordSQLiteRetryExhausted", func(t *testing.T) {
+		RecordSQLiteRetryExhausted(ctx, "exec")
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -380,12 +388,16 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
 	originalTokenBurnRateGauge := tokenBurnRateGauge
+	originalSqliteLockContentionCounter := sqliteLockContentionCounter
+	originalSqliteRetryExhaustedCounter := sqliteRetryExhaustedCounter
 
 	tokenUsageCounter = nil
 	agentApiCallsCounter = nil
 	humanInteractionsCounter = nil
 	meetingEventsCounter = nil
 	tokenBurnRateGauge = nil
+	sqliteLockContentionCounter = nil
+	sqliteRetryExhaustedCounter = nil
 
 	defer func() {
 		tokenUsageCounter = originalTokenUsageCounter
@@ -393,6 +405,8 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		humanInteractionsCounter = originalHumanInteractionsCounter
 		meetingEventsCounter = originalMeetingEventsCounter
 		tokenBurnRateGauge = originalTokenBurnRateGauge
+		sqliteLockContentionCounter = originalSqliteLockContentionCounter
+		sqliteRetryExhaustedCounter = originalSqliteRetryExhaustedCounter
 	}()
 
 	ctx := context.Background()
@@ -440,6 +454,14 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordSQLiteLockContention Uninitialized", func(t *testing.T) {
+		RecordSQLiteLockContention(ctx, "exec")
+	})
+
+	t.Run("RecordSQLiteRetryExhausted Uninitialized", func(t *testing.T) {
+		RecordSQLiteRetryExhausted(ctx, "exec")
 	})
 }
 

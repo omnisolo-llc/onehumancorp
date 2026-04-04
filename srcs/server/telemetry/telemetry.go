@@ -51,6 +51,9 @@ var (
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 
+	sqliteLockContentionCounter metric.Int64Counter
+	sqliteRetryExhaustedCounter metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -375,6 +378,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	sqliteLockContentionCounter, err = m.Int64Counter(
+		"ohc_sqlite_lock_contention_total",
+		metric.WithDescription("Total times SQLite database lock contention (SQLITE_BUSY) was encountered."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sqliteRetryExhaustedCounter, err = m.Int64Counter(
+		"ohc_sqlite_retry_exhausted_total",
+		metric.WithDescription("Total times an SQLite transaction failed after exhausting retries."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	if len(errs) > 0 {
 		return errs[0]
 	}
@@ -652,6 +671,26 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 	cacheHitsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
+	))
+}
+
+// RecordSQLiteLockContention increments the counter for SQLite lock contention.
+func RecordSQLiteLockContention(ctx context.Context, operation string) {
+	if sqliteLockContentionCounter == nil {
+		return
+	}
+	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordSQLiteRetryExhausted increments the counter for SQLite retry exhaustion.
+func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
+	if sqliteRetryExhaustedCounter == nil {
+		return
+	}
+	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
 	))
 }
 

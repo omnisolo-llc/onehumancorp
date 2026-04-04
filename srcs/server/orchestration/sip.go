@@ -112,9 +112,24 @@ func withRetry(ctx context.Context, op func() error) error {
 			return err
 		}
 
+		if err != nil {
+			lowerErr := strings.ToLower(err.Error())
+			if strings.Contains(lowerErr, "database is locked") || strings.Contains(lowerErr, "sqlite_busy") {
+				telemetry.RecordSQLiteLockContention(ctx, "exec/query")
+			}
+		}
+
 		slog.Warn("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
 		time.Sleep(retryInterval * time.Duration(1<<i))
 	}
+
+	if err != nil {
+		lowerErr := strings.ToLower(err.Error())
+		if strings.Contains(lowerErr, "database is locked") || strings.Contains(lowerErr, "sqlite_busy") {
+			telemetry.RecordSQLiteRetryExhausted(ctx, "exec/query")
+		}
+	}
+
 	return err
 }
 

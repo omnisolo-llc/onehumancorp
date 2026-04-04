@@ -282,6 +282,40 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "title": "SQLite Lock Contention Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sqlite_lock_contention_total[1m])) by (operation)",
+          "refId": "A",
+          "legendFormat": "{{operation}}"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Retry Exhausted",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sqlite_retry_exhausted_total[1m])) by (operation)",
+          "refId": "A",
+          "legendFormat": "{{operation}}"
+        }
+      ]
     }
   ],
   "refresh": "",
