@@ -9,12 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func TestTaskWorker_pollAndAssign(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
+	oldAllow := integrations.AllowLocalIPsForTesting
+	integrations.AllowLocalIPsForTesting = true
+	defer func() { integrations.AllowLocalIPsForTesting = oldAllow }()
 	tests := []struct {
 		name        string
 		setupMock   func() *httptest.Server
@@ -167,6 +171,9 @@ func TestTaskWorker_Start_CancelDuringSleep(t *testing.T) {
 
 func TestTaskWorker_Start_TickerTrigger_Wait(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
+	oldAllow := integrations.AllowLocalIPsForTesting
+	integrations.AllowLocalIPsForTesting = true
+	defer func() { integrations.AllowLocalIPsForTesting = oldAllow }()
 	mockSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"results": []interface{}{}})
