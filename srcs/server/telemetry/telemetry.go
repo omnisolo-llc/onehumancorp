@@ -36,6 +36,7 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
@@ -145,6 +146,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
+		"ohc_autodream_memories_compressed_total",
+		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -631,6 +640,16 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+	))
+}
+
+// RecordAutoDreamMemoryCompressed increments the counter when an agent session is compressed.
+func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
+	if AutoDreamMemoriesCompressedCounter == nil {
+		return
+	}
+	AutoDreamMemoriesCompressedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
 	))
 }
