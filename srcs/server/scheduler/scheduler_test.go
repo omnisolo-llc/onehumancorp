@@ -51,10 +51,10 @@ func TestScheduler_Interval(t *testing.T) {
 	}
 
 	// Mark as running
-	task, _ = s.MarkRunning(task.ID)
+	task, _ = s.MarkRunning("org1", task.ID)
 
 	// Mark as done
-	if err := s.MarkDone(task.ID, true); err != nil {
+	if err := s.MarkDone("org1", task.ID, true); err != nil {
 		t.Fatalf("failed to mark done: %v", err)
 	}
 
@@ -84,7 +84,7 @@ func TestScheduler_Cancel(t *testing.T) {
 
 	_ = s.Create(task)
 
-	if err := s.Cancel(task.ID); err != nil {
+	if err := s.Cancel("org1", task.ID); err != nil {
 		t.Fatalf("failed to cancel task: %v", err)
 	}
 
@@ -126,15 +126,15 @@ func TestScheduler_Errors(t *testing.T) {
 		t.Errorf("expected error when creating duplicate task")
 	}
 
-	if err := s.Cancel("nonexistent"); err == nil {
+	if err := s.Cancel("org1", "nonexistent"); err == nil {
 		t.Errorf("expected error when cancelling nonexistent task")
 	}
 
-	if _, err := s.MarkRunning("nonexistent"); err == nil {
+	if _, err := s.MarkRunning("org1", "nonexistent"); err == nil {
 		t.Errorf("expected error when marking nonexistent task as running")
 	}
 
-	if err := s.MarkDone("nonexistent", true); err == nil {
+	if err := s.MarkDone("org1", "nonexistent", true); err == nil {
 		t.Errorf("expected error when marking nonexistent task as done")
 	}
 }
@@ -144,7 +144,7 @@ func TestScheduler_MarkDone_Failed(t *testing.T) {
 	task := NewTask("org1", "agent1", "task1", Schedule{Type: ScheduleOnce}, nil)
 	_ = s.Create(task)
 
-	if err := s.MarkDone(task.ID, false); err != nil {
+	if err := s.MarkDone("org1", task.ID, false); err != nil {
 		t.Fatalf("failed to mark done: %v", err)
 	}
 
