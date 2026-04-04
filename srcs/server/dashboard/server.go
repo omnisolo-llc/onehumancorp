@@ -568,7 +568,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 
 	// Teammate Mesh APIs
-	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
+	orchestration.RegisterMeshHTTPHandlers(mux, server.hub.TaskManager(), auth.RequireRole)
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
@@ -847,56 +847,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
 }
 
-func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		Channel string `json:"channel"`
-		AgentID string `json:"agent_id"`
-		Action  string `json:"action"`
-		Status  string `json:"status"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
-		http.Error(w, "invalid channel", http.StatusBadRequest)
-		return
-	}
-
-	payloadBytes, err := json.Marshal(map[string]interface{}{
-		"agent_id": req.AgentID,
-		"action":   req.Action,
-		"status":   req.Status,
-	})
-	if err != nil {
-		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
-		return
-	}
-
-	err = s.hub.Publish(orchestration.Message{
-		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		FromAgent: "system",
-		ToAgent:   "system",
-		Type:      req.Channel,
-		Content:   string(payloadBytes),
-	})
-
-	if err == nil {
-		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
-	} else {
-		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}`))
-}
+// handleMeshBroadcast has been moved to orchestration.RegisterMeshHTTPHandlers
 
 func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

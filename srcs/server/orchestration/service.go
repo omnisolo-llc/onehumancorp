@@ -264,6 +264,7 @@ type Hub struct {
 	eventLogChan   chan interface{}
 	repo           HubRepository
 	scheduler      *scheduler.Scheduler
+	taskManager    *TaskManager
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
 	ctx            context.Context
@@ -685,6 +686,18 @@ func (h *Hub) MinimaxAPIKey() string {
 // Scheduler returns the Hub's task scheduler.
 func (h *Hub) Scheduler() *scheduler.Scheduler {
 	return h.scheduler
+}
+
+// TaskManager returns the Hub's task manager.
+func (h *Hub) TaskManager() *TaskManager {
+	return h.taskManager
+}
+
+// SetTaskManager injects a task manager into the Hub.
+func (h *Hub) SetTaskManager(tm *TaskManager) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.taskManager = tm
 }
 
 // SettingsStore returns the Hub's settings store.
@@ -1792,6 +1805,56 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
+}
+
+// RegisterMeshHTTPHandlers registers the REST endpoints for Teammate Mesh APIs.
+// To enforce SPIFFE/SPIRE zero-trust authentication on internal Teammate Mesh API endpoints,
+// the respective handlers must be wrapped with the auth.RequireRole("system", ...) middleware.
+func RegisterMeshHTTPHandlers(mux *http.ServeMux, tm *TaskManager, requireRoleFunc func(string, http.HandlerFunc) http.HandlerFunc) {
+	if requireRoleFunc == nil {
+		// Mock for test or fallback if no auth provided (though middleware usually wraps it)
+		requireRoleFunc = func(role string, next http.HandlerFunc) http.HandlerFunc {
+			return next
+		}
+	}
+
+	mux.HandleFunc("/api/mesh/broadcast", requireRoleFunc("system", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleMeshBroadcast(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}))
+}
+
+func handleMeshBroadcast(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	taskID, ok := payload["task_id"].(string)
+	if !ok || taskID == "" {
+		http.Error(w, "task_id is required in the root payload", http.StatusBadRequest)
+		return
+	}
+
+	// Legacy channel support from existing systems
+	var channel string
+	if c, ok := payload["channel"].(string); ok && c != "" {
+		channel = c
+	} else {
+		channel = "mesh:tasks"
+	}
+
+	if tm != nil && tm.hub != nil {
+		tm.hub.PublishTaskBroadcast(taskID, payload)
+	}
+
+	telemetry.RecordTeammateMeshBroadcast(r.Context(), channel)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
