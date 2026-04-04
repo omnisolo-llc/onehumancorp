@@ -333,6 +333,7 @@ class _RoleScaleCard extends StatefulWidget {
 
 class _RoleScaleCardState extends State<_RoleScaleCard> {
   bool _isScaling = false;
+  bool _isHovered = false;
 
   Future<void> _scaleTo(int newCount) async {
     if (_isScaling || newCount < 0) return;
@@ -373,49 +374,63 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
         message: 'Manage $formattedRole Allocation',
         child: SizedBox(
           width: 320,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _isHovered = true),
+            onExit: (_) => setState(() => _isHovered = false),
+            child: AnimatedScale(
+              scale: _isHovered ? 1.02 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(<double>[
+                      1.168,
+                      -0.153,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      1.061,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      -0.152,
+                      1.198,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      1,
+                      0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      color: _isHovered
+                          ? colors.surfaceContainerHighest.withValues(alpha: 0.5)
+                          : colors.surfaceContainerHighest.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _isHovered
+                            ? colors.outlineVariant
+                            : colors.outlineVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
                               formattedRole,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -426,21 +441,21 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: colors.onSurfaceVariant,
-                                fontFamily: 'Inter',
-                              ),
+                                Text(
+                                  '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: colors.onSurfaceVariant,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                          ),
+                          const SizedBox(width: 16),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                           Semantics(
                             button: true,
                             label: 'Decrease $formattedRole count',
@@ -475,21 +490,23 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                                     ),
                             ),
                           ),
-                          Semantics(
-                            button: true,
-                            label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
-                            ),
+                              Semantics(
+                                button: true,
+                                label: 'Increase $formattedRole count',
+                                child: IconButton(
+                                  icon: const Icon(Icons.add_circle_outline, size: 28),
+                                  color: colors.primary,
+                                  onPressed: !_isScaling
+                                      ? () => _scaleTo(widget.count + 1)
+                                      : null,
+                                  tooltip: 'Hire Agent',
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
