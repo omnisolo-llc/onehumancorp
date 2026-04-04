@@ -93,9 +93,16 @@ run_tests() {
 verify_dependencies() {
     echo -e "${DIM}[Verifying System Dependencies for OHC Hybrid OS]${RESET}"
 
+    # Bash
+    if command -v bash >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ bash installed${RESET} ($(bash --version | head -n 1))"
+    else
+        echo -e "  ${PURPLE}✗ bash not found${RESET}"
+    fi
+
     # Bazelisk
     if command -v bazelisk >/dev/null 2>&1; then
-        echo -e "  ${GREEN}✓ bazelisk installed${RESET} ($(bazelisk version | grep 'Bazel version' || echo 'unknown version'))"
+        echo -e "  ${GREEN}✓ bazelisk installed${RESET} ($(bazelisk version 2>&1 | grep 'Bazel version' || echo 'unknown version'))"
     else
         echo -e "  ${PURPLE}✗ bazelisk not found${RESET}"
     fi
@@ -112,6 +119,13 @@ verify_dependencies() {
         echo -e "  ${GREEN}✓ go installed${RESET} ($(go version))"
     else
         echo -e "  ${PURPLE}✗ go not found${RESET}"
+    fi
+
+    # Flutter
+    if command -v flutter >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ flutter installed${RESET} ($(flutter --version | head -n 1))"
+    else
+        echo -e "  ${PURPLE}✗ flutter not found${RESET} (Consider installing if working on UI directly)"
     fi
 
     # SQLite3 (Standalone fallback)
