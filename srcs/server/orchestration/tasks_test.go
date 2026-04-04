@@ -19,6 +19,8 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies TEXT NOT NULL DEFAULT '[]',
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			assigned_agent_id TEXT,
