@@ -106,6 +106,10 @@ func withRetry(ctx context.Context, op func() error) error {
 		default:
 		}
 
+		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
+			telemetry.RecordSQLiteLockContention(ctx, "exec/query")
+		}
+
 		// Optimization: Avoid long exponential backoff retries when the DB connection is explicitly closed,
 		// as it is non-recoverable and causes test timeouts.
 		if err != nil && (err.Error() == "sql: database is closed" || err.Error() == "database is closed") {
@@ -114,6 +118,10 @@ func withRetry(ctx context.Context, op func() error) error {
 
 		slog.Warn("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
 		time.Sleep(retryInterval * time.Duration(1<<i))
+	}
+
+	if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
+		telemetry.RecordSQLiteRetryExhausted(ctx, "exec/query")
 	}
 	return err
 }
