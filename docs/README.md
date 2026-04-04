@@ -45,6 +45,8 @@ graph TD;
 - [Hybrid Architecture](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
+- [Teammate Mesh Walkthrough](walkthroughs/teammate_mesh.md)
+- [AutoDream Sync Engine Walkthrough](walkthroughs/autodream_sync.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)
 
