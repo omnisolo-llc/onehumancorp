@@ -19,6 +19,7 @@ go_library(
         "sqlite_hub.go",
         "sync_daemon.go",
         "telemetry_minimax_client.go",
+        "tasks.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
