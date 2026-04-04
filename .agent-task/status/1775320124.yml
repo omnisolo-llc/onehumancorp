@@ -1,0 +1,4 @@
+agent: Miser
+status: SUCCESS
+tests: all green
+metrics: Prompt caching telemetry implemented in local/llm.go

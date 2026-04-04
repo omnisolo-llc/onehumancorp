@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
-	"github.com/onehumancorp/mono/srcs/server/utils"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // LLMClient is the abstraction used by the agent loop to interact with a language model.
@@ -118,10 +121,20 @@ func NewAnthropicClient(apiKey, model, endpoint string) LLMClient {
 }
 
 // anthropicRequest is the JSON body for POST /v1/messages.
+type anthropicCacheControl struct {
+	Type string `json:"type"`
+}
+
+type anthropicSystem struct {
+	Type         string                 `json:"type"`
+	Text         string                 `json:"text"`
+	CacheControl *anthropicCacheControl `json:"cache_control,omitempty"`
+}
+
 type anthropicRequest struct {
 	Model     string               `json:"model"`
 	MaxTokens int                  `json:"max_tokens"`
-	System    string               `json:"system,omitempty"`
+	System    []anthropicSystem    `json:"system,omitempty"`
 	Messages  []anthropicMessage   `json:"messages"`
 	Tools     []anthropicToolDef   `json:"tools,omitempty"`
 }
@@ -132,28 +145,32 @@ type anthropicMessage struct {
 }
 
 type anthropicContent struct {
-	Type       string                 `json:"type"`
-	Text       string                 `json:"text,omitempty"`
-	ID         string                 `json:"id,omitempty"`
-	Name       string                 `json:"name,omitempty"`
-	Input      map[string]interface{} `json:"input,omitempty"`
-	ToolUseID  string                 `json:"tool_use_id,omitempty"`
-	Content    interface{}            `json:"content,omitempty"`
-	IsError    bool                   `json:"is_error,omitempty"`
+	Type         string                 `json:"type"`
+	Text         string                 `json:"text,omitempty"`
+	ID           string                 `json:"id,omitempty"`
+	Name         string                 `json:"name,omitempty"`
+	Input        map[string]interface{} `json:"input,omitempty"`
+	ToolUseID    string                 `json:"tool_use_id,omitempty"`
+	Content      interface{}            `json:"content,omitempty"`
+	IsError      bool                   `json:"is_error,omitempty"`
+	CacheControl *anthropicCacheControl `json:"cache_control,omitempty"`
 }
 
 type anthropicToolDef struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	InputSchema map[string]interface{} `json:"input_schema"`
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description"`
+	InputSchema  map[string]interface{} `json:"input_schema"`
+	CacheControl *anthropicCacheControl `json:"cache_control,omitempty"`
 }
 
 type anthropicResponse struct {
 	Content    []anthropicContent `json:"content"`
 	StopReason string             `json:"stop_reason"`
 	Usage      struct {
-		InputTokens  int64 `json:"input_tokens"`
-		OutputTokens int64 `json:"output_tokens"`
+		InputTokens              int64 `json:"input_tokens"`
+		OutputTokens             int64 `json:"output_tokens"`
+		CacheCreationInputTokens int64 `json:"cache_creation_input_tokens"`
+		CacheReadInputTokens     int64 `json:"cache_read_input_tokens"`
 	} `json:"usage"`
 }
 
@@ -191,23 +208,47 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 		msgs = append(msgs, am)
 	}
 
+	// Add cache control to the last user message if any to cache the multi-turn conversation
+	for i := len(msgs) - 1; i >= 0; i-- {
+		if msgs[i].Role == "user" && len(msgs[i].Content) > 0 {
+			lastContentIdx := len(msgs[i].Content) - 1
+			msgs[i].Content[lastContentIdx].CacheControl = &anthropicCacheControl{Type: "ephemeral"}
+			break
+		}
+	}
+
 	tools := make([]anthropicToolDef, 0, len(req.Tools))
-	for _, t := range req.Tools {
+	for i, t := range req.Tools {
 		schema := t.InputSchema
 		if schema == nil {
 			schema = map[string]interface{}{"type": "object", "properties": map[string]interface{}{}}
 		}
-		tools = append(tools, anthropicToolDef{
+		toolDef := anthropicToolDef{
 			Name:        t.Name,
 			Description: t.Description,
 			InputSchema: schema,
+		}
+		// Add cache control to the last tool definition
+		if i == len(req.Tools)-1 {
+			toolDef.CacheControl = &anthropicCacheControl{Type: "ephemeral"}
+		}
+		tools = append(tools, toolDef)
+	}
+
+	var systemBlocks []anthropicSystem
+	if req.SystemPrompt != "" {
+		systemBlocks = append(systemBlocks, anthropicSystem{
+			Type: "text",
+			Text: utils.MinifyJSONString(req.SystemPrompt),
+			// Cache the system prompt
+			CacheControl: &anthropicCacheControl{Type: "ephemeral"},
 		})
 	}
 
 	body := anthropicRequest{
 		Model:     c.model,
 		MaxTokens: maxTok,
-		System:    utils.MinifyJSONString(req.SystemPrompt),
+		System:    systemBlocks,
 		Messages:  msgs,
 		Tools:     tools,
 	}
@@ -224,6 +265,7 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("x-api-key", c.apiKey)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
+	httpReq.Header.Set("anthropic-beta", "prompt-caching-2024-07-31") // Ensure prompt caching is active
 
 	resp, err := c.hc.Do(httpReq)
 	if err != nil {
@@ -247,9 +289,20 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 
 	out := &AssistantMessage{
 		StopReason:   ar.StopReason,
-		InputTokens:  ar.Usage.InputTokens,
+		InputTokens:  ar.Usage.InputTokens, // This usually includes the total input tokens billed (non-cached + cache_creation)
 		OutputTokens: ar.Usage.OutputTokens,
 	}
+
+	// Add telemetry for caching efficiency
+	if ar.Usage.CacheReadInputTokens > 0 {
+		telemetry.RecordCacheHit(ctx, "anthropic_prompt_cache", "api")
+		slog.DebugContext(ctx, "Anthropic Prompt Caching", "cache_read_input_tokens", ar.Usage.CacheReadInputTokens)
+	}
+	if ar.Usage.CacheCreationInputTokens > 0 {
+		telemetry.RecordCacheMiss(ctx, "anthropic_prompt_cache", "api")
+		slog.DebugContext(ctx, "Anthropic Prompt Caching", "cache_creation_input_tokens", ar.Usage.CacheCreationInputTokens)
+	}
+
 	for _, c := range ar.Content {
 		switch c.Type {
 		case "text":
