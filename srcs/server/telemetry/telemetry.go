@@ -31,6 +31,8 @@ var (
 	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
 	swarmTaskTransitionsCounter metric.Int64Counter
+	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
+	swarmTaskProcessingLatency  metric.Float64Histogram
 	taskEnqueuedCounter metric.Int64Counter
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
@@ -149,6 +151,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	swarmTaskQueueLengthGauge, err = m.Int64UpDownCounter(
+		"ohc_swarm_task_queue_length",
+		metric.WithDescription("Current number of pending swarm tasks"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	swarmTaskProcessingLatency, err = m.Float64Histogram(
+		"ohc_swarm_task_processing_latency_ms",
+		metric.WithDescription("Latency of processing swarm tasks"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -725,6 +743,22 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 		attribute.String("old_status", oldStatus),
 		attribute.String("new_status", newStatus),
 	))
+}
+
+// RecordSwarmTaskQueueLength adds a delta to the current queue length gauge.
+func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
+	if swarmTaskQueueLengthGauge == nil {
+		return
+	}
+	swarmTaskQueueLengthGauge.Add(ctx, int64(delta))
+}
+
+// RecordSwarmTaskProcessingLatency records the processing time of a task.
+func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
+	if swarmTaskProcessingLatency == nil {
+		return
+	}
+	swarmTaskProcessingLatency.Record(ctx, latencyMS)
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.

@@ -89,11 +89,11 @@ func (tm *TaskManager) StopWorkerLoop() {
 func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	// A simple check to find PENDING tasks without active locks and met dependencies
 	// and trigger a broadcast to awake idle agents.
-	tasks, err := tm.PollTasks(ctx, "system-orchestrator", 0) // Polling with 0 limit acts as a peek if implemented, or we can just run a custom query.
+	tasks, err := tm.PeekTasks(ctx, 1) // Peek if we have at least one to possibly notify agents
 	if err != nil {
 		return
 	}
-	_ = tasks // Ignore if using PollTasks, but let's implement a real check
+	_ = tasks // Ignore if using PeekTasks, but let's implement a real check
 
 	var query string
 	if tm.db.IsSQLite() {
@@ -211,6 +211,9 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// Record +1 delta to the queue length gauge.
+	telemetry.RecordSwarmTaskQueueLength(ctx, 1)
 
 	// Broadcast task creation
 	if tm.hub != nil {
@@ -411,6 +414,13 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
+	var createdAt time.Time
+	err := tm.db.QueryRow(ctx, "SELECT created_at FROM shared_tasks WHERE id = $1", taskID).Scan(&createdAt)
+	if err == nil {
+		latencyMS := float64(time.Since(createdAt).Milliseconds())
+		telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+	}
+
 	query := `
 		UPDATE shared_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
@@ -439,6 +449,58 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	return nil
+}
+
+// PeekTasks returns up to `limit` PENDING tasks without claiming them. Used for read-only dashboards.
+func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+	var query string
+	if tm.db.IsSQLite() {
+		query = `
+			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY priority ASC, created_at ASC
+		`
+		if limit > 0 {
+			query += fmt.Sprintf(" LIMIT %d", limit)
+		}
+	} else {
+		query = `
+			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY priority ASC, created_at ASC
+		`
+		if limit > 0 {
+			query += fmt.Sprintf(" LIMIT %d", limit)
+		}
+	}
+
+	rows, err := tm.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	for rows.Next() {
+		task := &SharedTask{}
+		if err := rows.Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan task: %w", err)
+		}
+
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+			if desc, ok := payloadMap["description"].(string); ok {
+				task.Description = desc
+			}
+		}
+
+		tasks = append(tasks, task)
+	}
+	return tasks, nil
 }
 
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
@@ -548,6 +610,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		}
 	}
 
+	// Add telemetry for pending queue length roughly estimated by candidates.
+	telemetry.RecordSwarmTaskQueueLength(ctx, len(candidateTasks)-len(tasks))
+
 	if len(tasks) == 0 {
 		return nil, nil // No tasks to claim
 	}
@@ -575,6 +640,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Record -N delta to the queue length gauge for every successfully claimed task.
+	if len(claimedTasks) > 0 {
+		telemetry.RecordSwarmTaskQueueLength(ctx, -len(claimedTasks))
 	}
 
 	for _, task := range claimedTasks {

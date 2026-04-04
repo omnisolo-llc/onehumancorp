@@ -675,15 +675,24 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to create epoch: %w", err)
 	}
 
-	// 2. Fetch context from agent_session_data and compress it into autodream_memories/swarm_truth_embeddings
+	// 2. Fetch context from agent_session_data and shared_tasks, and compress it into autodream_memories/swarm_truth_embeddings/agent_memories
 	var rows db.Rows
 	var errQuery error
 	if w.pool.IsSQLite() {
 		// SQLite fallback using recency
-		rows, errQuery = w.pool.Query(ctx, "SELECT session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 50")
+		rows, errQuery = w.pool.Query(ctx, `
+			SELECT 'session-' || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
+			UNION ALL
+			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+		`)
 	} else {
 		// Postgres mode
-		rows, errQuery = w.pool.Query(ctx, "SELECT session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 50")
+		// Ensure context_data is cast to TEXT to prevent UNION ALL type mismatch with JSONB payloads
+		rows, errQuery = w.pool.Query(ctx, `
+			SELECT 'session-' || session_id, CAST(context_data AS TEXT) FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
+			UNION ALL
+			SELECT 'task-' || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+		`)
 	}
 
 	var memories []string
@@ -696,7 +705,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		}
 		rows.Close()
 	} else {
-		slog.Error("AutoDream: failed to fetch agent_session_data", "error", errQuery)
+		slog.Error("AutoDream: failed to fetch memories for consolidation", "error", errQuery)
 	}
 
 	clusterData := map[string]interface{}{
@@ -724,6 +733,11 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 				// Inject the summarized task embeddings into the Vector DB
 				// Use dummy embedding for now, as we don't have a real embedder here.
 				_ = w.InjectTruth(ctx, epochID, response, "[0.0, 0.0, 0.0]")
+
+				// Also write to agent_memories for the AutoDream pipeline requirements
+				if !w.pool.IsSQLite() {
+					_, _ = w.pool.Exec(ctx, "INSERT INTO agent_memories (organization_id, content, embedding) VALUES ($1, $2, $3::vector)", "system", response, "[0.0, 0.0, 0.0]")
+				}
 			} else {
 				clusterData["error"] = err.Error()
 			}
