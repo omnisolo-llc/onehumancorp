@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -66,6 +68,11 @@ func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
 	}
 	if cfg.MaxTurns <= 0 {
 		cfg.MaxTurns = maxAgentTurns
+		if s := os.Getenv("OHC_LOCAL_AGENT_MAX_TURNS"); s != "" {
+			if n, err := strconv.Atoi(s); err == nil && n > 0 {
+				cfg.MaxTurns = n
+			}
+		}
 	}
 	if cfg.MaxTokensPerTurn <= 0 {
 		cfg.MaxTokensPerTurn = defaultMaxTokens

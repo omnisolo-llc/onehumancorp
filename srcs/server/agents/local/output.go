@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	// maxOutputBytes is the hard cap per task output file (mirrors CC-Source's 5 GB).
-	// In practice we cap at 50 MB to be safe on resource-constrained environments.
+	// maxOutputBytes is the hard cap per task output file.
+	// We cap at 50 MB for local execution to avoid filling disk on resource-constrained
+	// environments. CC-Source uses 5 GB because it runs on remote cloud machines.
 	maxOutputBytes = 50 * 1024 * 1024
 )
 

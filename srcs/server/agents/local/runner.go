@@ -20,11 +20,11 @@ import (
 
 // HubAgent is the minimal agent registration struct the Runner needs.
 type HubAgent struct {
-ID           string
-Name         string
-Role         string
-Status       HubStatus
-ProviderType string
+ID           string    `json:"id"`
+Name         string    `json:"name"`
+Role         string    `json:"role"`
+Status       HubStatus `json:"status"`
+ProviderType string    `json:"providerType,omitempty"`
 }
 
 // HubStatus mirrors orchestration.Status.
@@ -37,11 +37,11 @@ HubStatusActive HubStatus = "ACTIVE"
 
 // HubMessage is the minimal message struct the Runner reads from the inbox.
 type HubMessage struct {
-ID        string
-FromAgent string
-ToAgent   string
-Type      string
-Content   string
+ID        string `json:"id"`
+FromAgent string `json:"fromAgent"`
+ToAgent   string `json:"toAgent"`
+Type      string `json:"type"`
+Content   string `json:"content"`
 }
 
 // Hub is the subset of orchestration.Hub that the Runner requires.
