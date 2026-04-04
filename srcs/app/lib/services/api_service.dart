@@ -481,6 +481,24 @@ class ApiService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
+
+  Future<void> trackDownload(String os, String version) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/growth/downloads'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'os': os,
+        'version': version,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to track download');
+    }
+  }
+
   Future<void> createReferral(String userId, String referralCode) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/referrals'),
