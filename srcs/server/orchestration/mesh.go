@@ -17,10 +17,14 @@ import (
 )
 
 // MeshMessage represents a realtime message sent over the mesh.
+// OHC-SIP requires agent_id, action, status at root.
 type MeshMessage struct {
-	SenderID  string    `json:"sender_id"`
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
+	AgentID   string    `json:"agent_id"`
+	Action    string    `json:"action"`
+	Status    string    `json:"status"`
+	SenderID  string    `json:"sender_id,omitempty"`
+	Role      string    `json:"role,omitempty"`
+	Content   string    `json:"content,omitempty"`
 	Timestamp time.Time `json:"timestamp"`
 }
 

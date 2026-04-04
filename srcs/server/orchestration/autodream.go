@@ -319,8 +319,28 @@ type TruthSearchResult struct {
 func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
 	if w.pool.IsSQLite() {
 		// In SQLite standalone mode, vector search relies on linear fallback or simple text match.
-		// For true pgvector equivalence, we just return empty or mock due to lack of local vector ops.
-		return nil, nil
+		// Fallback to returning recent memories as a mock for vector search
+		query := `
+			SELECT memory_id, context, 0 as distance
+			FROM swarm_truth_embeddings
+			ORDER BY created_at DESC
+			LIMIT ?
+		`
+		rows, err := w.pool.Query(ctx, query, limit)
+		if err != nil {
+			return nil, fmt.Errorf("failed to search truth with SQLite fallback: %w", err)
+		}
+		defer rows.Close()
+
+		var results []TruthSearchResult
+		for rows.Next() {
+			var res TruthSearchResult
+			if err := rows.Scan(&res.MemoryID, &res.Context, &res.Distance); err != nil {
+				continue
+			}
+			results = append(results, res)
+		}
+		return results, nil
 	}
 
 	query := `
