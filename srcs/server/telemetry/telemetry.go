@@ -45,6 +45,8 @@ var (
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
+	SyncPayloadSizeHistogram metric.Float64Histogram
+	SyncLatencyHistogram metric.Float64Histogram
 	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -323,6 +325,24 @@ func InitWithMeter(m mockableMeter) error {
 	SyncFailedCount, err = m.Int64Counter(
 		"sync_failed_count",
 		metric.WithDescription("Total failed synced rows"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncPayloadSizeHistogram, err = m.Float64Histogram(
+		"ohc_sync_payload_size_bytes",
+		metric.WithDescription("Size of payload synced to cloud in bytes"),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncLatencyHistogram, err = m.Float64Histogram(
+		"ohc_sync_latency_seconds",
+		metric.WithDescription("Latency of syncing payloads to cloud in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -676,6 +696,22 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
+}
+
+// RecordSyncPayloadSize records the size of a synced payload.
+func RecordSyncPayloadSize(ctx context.Context, sizeBytes int64) {
+	if SyncPayloadSizeHistogram == nil {
+		return
+	}
+	SyncPayloadSizeHistogram.Record(ctx, float64(sizeBytes))
+}
+
+// RecordSyncLatency records the latency of a sync operation.
+func RecordSyncLatency(ctx context.Context, latency time.Duration) {
+	if SyncLatencyHistogram == nil {
+		return
+	}
+	SyncLatencyHistogram.Record(ctx, latency.Seconds())
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.

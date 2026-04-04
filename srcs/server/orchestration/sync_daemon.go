@@ -122,10 +122,13 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
+	start := time.Now()
 	if err := d.sendToCloud(ctx, payloads); err != nil {
 		slog.Error("sync_daemon: failed to send agent_missions to cloud", "error", err)
 		return
 	}
+	latency := time.Since(start)
+	telemetry.RecordSyncLatency(ctx, latency)
 
 	// Mark as synced
 	if len(ids) > 0 {
@@ -157,7 +160,9 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
 
-	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
+
+	syncEndpoint := fmt.Sprintf("%s/api/orchestration/sync", d.cloudAPIURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
 	if err != nil {

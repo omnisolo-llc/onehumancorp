@@ -600,6 +600,23 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 				// continue syncing the rest
 			} else {
 				syncedCount++
+
+				// Publish to Teammate Mesh
+				if s.hub.CentrifugeNode() != nil {
+					meshPayload, _ := json.Marshal(map[string]interface{}{
+						"agent_id": "SYSTEM",
+						"action":   "SYNCED_MISSION",
+						"status":   status,
+						"mission_id": p.ID,
+					})
+					s.hub.Publish(orchestration.Message{
+						ID:        "sync-" + p.ID,
+						FromAgent: "SYSTEM",
+						ToAgent:   "SYSTEM",
+						Type:      "mesh:tasks",
+						Content:   string(meshPayload),
+					})
+				}
 			}
 		}
 	}
