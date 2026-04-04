@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,7 +73,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
           filter: ImageFilter.compose(
-            outer: ColorFilter.matrix(const <double>[
+            outer: const ColorFilter.matrix(<double>[
               1.168, -0.153, -0.015, 0, 0,
               -0.046, 1.061, -0.015, 0, 0,
               -0.046, -0.152, 1.198, 0, 0,
@@ -258,7 +257,15 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              filter: ImageFilter.compose(
+                outer: const ColorFilter.matrix(<double>[
+                  1.168, -0.153, -0.015, 0, 0,
+                  -0.046, 1.061, -0.015, 0, 0,
+                  -0.046, -0.152, 1.198, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
