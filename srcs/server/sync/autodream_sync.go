@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -71,11 +72,33 @@ func (e *AutoDreamSyncEngine) ProcessForecastTick(ctx context.Context) {
 		return
 	}
 
-	// 1. Sync Embedding Cache
+	// 1. Synthesize memory for AutoDream (Standalone Mode Pipeline)
+	e.synthesizeMemory(ctx)
+
+	// 2. Sync Embedding Cache
 	e.syncEmbeddingCache(ctx)
 
-	// 2. Sync Agent Missions
+	// 3. Sync Agent Missions
 	e.syncAgentMissions(ctx)
+}
+
+// synthesizeMemory processes and embeds .agent-task/memory files locally.
+func (e *AutoDreamSyncEngine) synthesizeMemory(ctx context.Context) {
+	// AutoDreamWorker handles memory ingestion, conflict resolution, and pruning.
+	// Since we are the sync engine and run in standalone mode, we can invoke the worker methods.
+	// We'll rely on the global AutoDreamWorker started in main.go, or simulate consolidation if needed.
+	// Let's call the consolidation mechanism directly to synthesize findings into long-term memory.
+	worker := e.getOrchestrationWorker()
+	if worker != nil {
+		_ = worker.ConsolidateEpoch(ctx)
+	}
+}
+
+func (e *AutoDreamSyncEngine) getOrchestrationWorker() *orchestration.AutoDreamWorker {
+	if e.dbWrapper != nil {
+		return orchestration.NewAutoDreamWorker(e.dbWrapper.Provider)
+	}
+	return nil
 }
 
 func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {

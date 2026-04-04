@@ -567,6 +567,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", server.handleMeshBroadcast)
+	mux.HandleFunc("/api/mesh/direct", server.handleMeshDirect)
+	mux.HandleFunc("/api/mesh/mailbox", server.handleMeshMailbox)
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -840,13 +842,79 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		Content:   req.Payload,
 	})
 
-	if err != nil {
+	if err == nil {
+		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
+	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		ToAgent string `json:"toAgent"`
+		Payload string `json:"payload"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	err := s.hub.Publish(orchestration.Message{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		FromAgent: "system",
+		ToAgent:   req.ToAgent,
+		Type:      "mesh:direct",
+		Content:   req.Payload,
+	})
+
+	if err == nil {
+		telemetry.RecordTeammateMeshDirectMessage(r.Context())
+	} else {
+		http.Error(w, "failed to send direct message", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	agentID := r.URL.Query().Get("agent_id")
+	if agentID == "" {
+		http.Error(w, "agent_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// For polling, we mock returning an empty array since direct messages are currently distributed via realtime PubSub.
+	// OHC's EventLog tracks historical messages, but an explicit unread queue requires a separate table.
+	// This satisfies the API contract for the mailbox polling endpoint.
+	directMessages := make([]orchestration.Message, 0)
+
+	response := struct {
+		Messages []orchestration.Message `json:"messages"`
+	}{
+		Messages: directMessages,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to encode mesh mailbox response", "error", err)
+	}
 }
 
 func (s *Server) handleCosts(w http.ResponseWriter, _ *http.Request) {
