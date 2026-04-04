@@ -372,6 +372,14 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
+		RecordSQLiteLockContention(ctx, "exec")
+	})
+
+	t.Run("RecordSQLiteRetryExhausted", func(t *testing.T) {
+		RecordSQLiteRetryExhausted(ctx, "query")
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -440,6 +448,16 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordSQLiteLockContention Uninitialized", func(t *testing.T) {
+		sqliteLockContentionCounter = nil
+		RecordSQLiteLockContention(ctx, "exec")
+	})
+
+	t.Run("RecordSQLiteRetryExhausted Uninitialized", func(t *testing.T) {
+		sqliteRetryExhaustedCounter = nil
+		RecordSQLiteRetryExhausted(ctx, "query")
 	})
 }
 

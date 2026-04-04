@@ -274,11 +274,27 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 27
       },
       "targets": [
         {
           "expr": "rate(teammate_mesh_broadcasts_total[1m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Lock Contention Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sqlite_lock_contention_total[1m])) by (operation)",
           "refId": "A"
         }
       ]

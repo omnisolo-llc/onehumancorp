@@ -3,6 +3,9 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"fmt"
 	"math/rand"
 	"time"
@@ -44,6 +47,9 @@ func pgWithRetry(ctx context.Context, op func() error) error {
 			true // retry on all errors since we don't inspect PgxError codes directly here easily due to db.Provider abstraction.
 
 		if isTransient {
+			if strings.Contains(errMsg, "database is locked") || strings.Contains(errMsg, "database table is locked") || strings.Contains(errMsg, "SQLITE_BUSY") {
+				telemetry.RecordSQLiteLockContention(ctx, "exec/query")
+			}
 			delay := baseDelay * (1 << i)
 			if delay > maxDelay {
 				delay = maxDelay
@@ -58,6 +64,12 @@ func pgWithRetry(ctx context.Context, op func() error) error {
 			continue
 		}
 		break
+	}
+	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "database is locked") || strings.Contains(errMsg, "database table is locked") || strings.Contains(errMsg, "SQLITE_BUSY") {
+			telemetry.RecordSQLiteRetryExhausted(ctx, "exec/query")
+		}
 	}
 	return err
 }
