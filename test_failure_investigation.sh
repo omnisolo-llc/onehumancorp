@@ -1,0 +1,3 @@
+#!/bin/bash
+# Re-run bazel to capture the exact error message
+bazelisk test //...
