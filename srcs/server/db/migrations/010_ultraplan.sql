@@ -7,8 +7,6 @@ CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE swarm_tasks ADD COLUMN parent_plan_id UUID;
-ALTER TABLE swarm_tasks ADD COLUMN dependencies JSONB DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS swarm_dream_epochs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
