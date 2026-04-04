@@ -343,9 +343,9 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		memoryID := "mem-" + file.Name()
 
 		// Store into autodream_memories (the table defined for AutoDream data pipelines)
-		query := "INSERT INTO autodream_memories (id, content, embedding) VALUES ($1, $2, $3::vector) ON CONFLICT(id) DO NOTHING"
+		query := "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, 'system', $2, $3::vector) ON CONFLICT(id) DO NOTHING"
 		if w.pool.IsSQLite() {
-			query = "INSERT INTO autodream_memories (id, content, embedding) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING"
+			query = "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES (?, 'system', ?, ?) ON CONFLICT(id) DO NOTHING"
 		}
 
 		_, err = w.pool.Exec(ctx, query, memoryID, content, embeddingStr)
