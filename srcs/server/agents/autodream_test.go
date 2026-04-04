@@ -16,7 +16,8 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}
-	prov := db.NewSqliteProvider(dbConn)
+	dbConn.SetMaxOpenConns(1)
+prov := db.NewSqliteProvider(dbConn)
 
 	_, err = prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
