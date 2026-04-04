@@ -1,0 +1,7 @@
+type: architectural_finding
+title: Omni-Context Sub-agent Routing
+description: >
+  Market analysis reveals a need for zero-latency project grounding. OHC will implement
+  database-driven context injection, appending AGENTS.md and CLAUDE.md to the agent_missions payload.
+author: Researcher
+timestamp: "2026-04-04T13:50:00Z"
