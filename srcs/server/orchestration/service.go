@@ -1765,6 +1765,14 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 
 // RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
 func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
+	mux.HandleFunc("/api/sync/missions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleSyncMissions(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleCreateTask(w, r, tm)
@@ -1784,6 +1792,44 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
+}
+
+func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var payloads []SyncDaemonPayload
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	for _, payload := range payloads {
+		// Assuming we do an INSERT on conflict UPDATE or just an INSERT
+		// Let's implement an upsert logic using tm.db
+		// Or using K8s cloud orchestration agent_missions table
+		query := `INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+				  VALUES ($1, $2, $3, true)
+				  ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, synced_to_cloud = true`
+		if tm.db.IsSQLite() {
+			query = `INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+					 VALUES ($1, $2, $3, 1)
+					 ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, synced_to_cloud = 1`
+		}
+
+		_, err := tm.db.Exec(r.Context(), query, payload.ID, payload.Status, payload.Payload)
+		if err != nil {
+			slog.Error("failed to inject synced mission", "error", err, "id", payload.ID)
+			continue
+		}
+
+		// KAIROS Orchestration broadcasts task updates
+		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
+			"action": "sync",
+			"status": payload.Status,
+			"agent_id": "system", // Or something appropriate
+			"payload": payload.Payload,
+		})
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
