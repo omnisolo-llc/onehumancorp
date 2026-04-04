@@ -1010,7 +1010,17 @@ func (h *Hub) Publish(message Message) error {
 			if m.MeetingID != "" {
 				cn.PublishMeetingMessage(m.MeetingID, m)
 			}
-			if m.ToAgent != "" {
+			if m.ToAgent != "" && m.Type != "mesh:tasks" && m.Type != "mesh:coordination" && m.Type != "mesh:direct" {
+				cn.PublishAgentNotification(m.ToAgent, m)
+			}
+			if m.Type == "mesh:tasks" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(m.Content), &payload); err == nil {
+					cn.PublishTaskBroadcast(m.ID, payload)
+				}
+			} else if m.Type == "mesh:coordination" {
+				cn.PublishCoordinationMessage(m)
+			} else if m.Type == "mesh:direct" && m.ToAgent != "" {
 				cn.PublishAgentNotification(m.ToAgent, m)
 			}
 		}(message, centrifugeNode)
@@ -1089,7 +1099,17 @@ func (h *Hub) publishRepository(message Message) error {
 			if message.MeetingID != "" {
 				cn.PublishMeetingMessage(message.MeetingID, message)
 			}
-			if message.ToAgent != "" {
+			if message.ToAgent != "" && message.Type != "mesh:tasks" && message.Type != "mesh:coordination" && message.Type != "mesh:direct" {
+				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+			if message.Type == "mesh:tasks" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(message.Content), &payload); err == nil {
+					cn.PublishTaskBroadcast(message.ID, payload)
+				}
+			} else if message.Type == "mesh:coordination" {
+				cn.PublishCoordinationMessage(message)
+			} else if message.Type == "mesh:direct" && message.ToAgent != "" {
 				cn.PublishAgentNotification(message.ToAgent, message)
 			}
 		}()
