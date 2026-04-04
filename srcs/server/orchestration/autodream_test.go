@@ -117,6 +117,67 @@ func TestAutoDreamTruthInjectionAndConflict(t *testing.T) {
 	}
 }
 
+func TestAutoDreamWorker_SessionCompression(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Ensure table exists
+	_, err = pool.Provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS agent_session_data (
+			session_id TEXT PRIMARY KEY,
+			agent_id TEXT NOT NULL,
+			context_data TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create agent_session_data: %v", err)
+	}
+	_, err = pool.Provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			content TEXT NOT NULL,
+			source_mission_id TEXT
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create autodream_memories: %v", err)
+	}
+
+	_, err = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess-1', 'agent-1', 'test context')")
+	if err != nil {
+		t.Fatalf("failed to insert mock session: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	worker.compressSessionData(ctx)
+
+	// Verify the session was deleted
+	var count int
+	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 sessions left, got %d", count)
+	}
+
+	// Verify the memory was inserted
+	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 'sess-1'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 memory inserted, got %d", count)
+	}
+}
+
 func TestAutoDreamConsolidateEpoch(t *testing.T) {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
 	pool, err := db.New(context.Background())
