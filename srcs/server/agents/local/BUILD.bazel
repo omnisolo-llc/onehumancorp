@@ -4,7 +4,6 @@ go_library(
     name = "local",
     srcs = [
         "agent.go",
-        "hub_adapter.go",
         "llm.go",
         "output.go",
         "runner.go",
@@ -13,14 +12,11 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/local",
     visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/orchestration",
-        "@com_github_google_uuid//:uuid",
-    ],
+    deps = ["@com_github_google_uuid//:uuid"],
 )
 
 go_test(
     name = "local_test",
     srcs = ["agent_test.go"],
-    embed = [":local"],
+    deps = [":local"],
 )
