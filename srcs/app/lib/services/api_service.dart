@@ -454,6 +454,31 @@ class ApiService {
     }
   }
 
+  // ── Growth ───────────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> listLandingPageExperiments() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/growth/experiments'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createLandingPageExperiment(String title, double trafficSplit) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/growth/experiments'),
+      headers: _headers,
+      body: jsonEncode({
+        'title': title,
+        'trafficSplit': trafficSplit,
+      }),
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   Future<void> createReferral(String userId, String referralCode) async {
