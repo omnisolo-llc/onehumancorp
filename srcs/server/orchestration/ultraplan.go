@@ -77,15 +77,15 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 	if m.hub != nil {
 		// Use Publish function instead of the hallucinated PublishTaskBroadcast
 		go func() {
-			msg := Message{
-				ID:        generateID(),
-				FromAgent: "system",
-				ToAgent:   "system",
-				Type:      "ULTRAPLAN_CREATE",
-				Payload:   string(stateMachineJSON),
-				Status:    plan.Status,
+			msg := map[string]interface{}{
+				"id":           generateID(),
+				"from_agent":   "system",
+				"to_agent":     "system",
+				"type":         "ULTRAPLAN_CREATE",
+				"payload":      string(stateMachineJSON),
+				"status":       plan.Status,
 			}
-			_ = m.hub.Publish(msg)
+			m.hub.PublishTaskBroadcast(plan.ID, msg)
 		}()
 	}
 
@@ -161,15 +161,15 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 	if m.hub != nil {
 		// Use Publish function or custom logic instead of the hallucinated PublishTaskBroadcast
 		go func() {
-			msg := Message{
-				ID:        generateID(),
-				FromAgent: "system",
-				ToAgent:   "system",
-				Type:      "ULTRAPLAN_UPDATE",
-				Payload:   string(stateMachineJSON),
-				Status:    newStatus,
+			msg := map[string]interface{}{
+				"id":           generateID(),
+				"from_agent":   "system",
+				"to_agent":     "system",
+				"type":         "ULTRAPLAN_UPDATE",
+				"payload":      string(stateMachineJSON),
+				"status":       newStatus,
 			}
-			_ = m.hub.Publish(msg)
+			m.hub.PublishTaskBroadcast(planID, msg)
 		}()
 	}
 
