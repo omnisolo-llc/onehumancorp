@@ -159,12 +159,20 @@ class _ObservabilityWidget extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
             child: Container(
               decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: const Color.fromRGBO(255, 255, 255, 0.03),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -403,9 +411,9 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+                  color: const Color.fromRGBO(255, 255, 255, 0.03),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -608,14 +616,12 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         decoration: BoxDecoration(
-                          color: _isHovered
-                              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-                              : colorScheme.surface.withValues(alpha: 0.1),
+                          color: const Color.fromRGBO(255, 255, 255, 0.03),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: _isHovered
-                                ? colorScheme.outlineVariant
-                                : colorScheme.onSurface.withValues(alpha: 0.08),
+                                ? Colors.white.withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Material(
