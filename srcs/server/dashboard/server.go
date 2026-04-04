@@ -823,29 +823,58 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Channel string `json:"channel"`
-		Payload string `json:"payload"`
+		Channel string `json:"channel,omitempty"`
+		Payload string `json:"payload,omitempty"`
+		AgentID string `json:"agent_id,omitempty"`
+		Action  string `json:"action,omitempty"`
+		Status  string `json:"status,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
+	// Support either explicit channel or infer from the rest
+	channel := req.Channel
+	if channel == "" {
+		channel = "mesh:tasks" // Default
+	}
+
+	if channel != "mesh:tasks" && channel != "mesh:coordination" {
 		http.Error(w, "invalid channel", http.StatusBadRequest)
 		return
+	}
+
+	// Use AgentID, Action, Status at root JSON level if provided
+	payloadData := req.Payload
+	if req.AgentID != "" || req.Action != "" || req.Status != "" {
+		payloadMap := map[string]interface{}{}
+		if req.Payload != "" {
+			_ = json.Unmarshal([]byte(req.Payload), &payloadMap)
+		}
+		if req.AgentID != "" {
+			payloadMap["agent_id"] = req.AgentID
+		}
+		if req.Action != "" {
+			payloadMap["action"] = req.Action
+		}
+		if req.Status != "" {
+			payloadMap["status"] = req.Status
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		payloadData = string(payloadBytes)
 	}
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   "system",
-		Type:      req.Channel,
-		Content:   req.Payload,
+		Type:      channel,
+		Content:   payloadData,
 	})
 
 	if err == nil {
-		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
+		telemetry.RecordTeammateMeshBroadcast(r.Context(), channel)
 	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return

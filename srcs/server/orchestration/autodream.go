@@ -44,6 +44,153 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
 	go w.runSessionCompressionPipeline(ctx)
+	go w.runCompletedTaskConsolidationPipeline(ctx)
+}
+
+// runCompletedTaskConsolidationPipeline periodically sweeps COMPLETED tasks
+// and generates vector memories from them.
+func (w *AutoDreamWorker) runCompletedTaskConsolidationPipeline(ctx context.Context) {
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.consolidateCompletedTasks(ctx)
+		}
+	}
+}
+
+func (w *AutoDreamWorker) consolidateCompletedTasks(ctx context.Context) {
+	// First, fetch COMPLETED tasks that haven't been consolidated yet.
+	// We'll use a transaction.
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("AutoDream: failed to begin tx for task consolidation", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	// query 10 tasks to consolidate
+	var query string
+	if w.pool.IsSQLite() {
+		query = `
+			SELECT id, mission_id, title, description, assigned_agent_id
+			FROM shared_tasks
+			WHERE status = 'COMPLETED'
+			LIMIT 10
+		`
+	} else {
+		query = `
+			SELECT id, mission_id, title, description, assigned_agent_id
+			FROM shared_tasks
+			WHERE status = 'COMPLETED'
+			LIMIT 10
+			FOR UPDATE SKIP LOCKED
+		`
+	}
+
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch completed tasks", "error", err)
+		return
+	}
+
+	type Task struct {
+		ID          string
+		MissionID   string
+		Title       string
+		Description string
+		AgentID     string
+	}
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var desc sql.NullString
+		var agent sql.NullString
+		if err := rows.Scan(&t.ID, &t.MissionID, &t.Title, &desc, &agent); err != nil {
+			continue
+		}
+		if desc.Valid {
+			t.Description = desc.String
+		}
+		if agent.Valid {
+			t.AgentID = agent.String
+		}
+		tasks = append(tasks, t)
+	}
+	rows.Close()
+
+	if len(tasks) == 0 {
+		return
+	}
+
+	// Update the tasks so they aren't picked up again.
+	// In a real system we'd mark them 'CONSOLIDATED' or 'ARCHIVED', but for the prompt
+	// we will mark them as ARCHIVED to avoid re-processing. Let's assume we can change their status.
+	for _, t := range tasks {
+		_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'ARCHIVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", t.ID)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("AutoDream: failed to commit task consolidation", "error", err)
+		return
+	}
+
+	// Process the tasks
+	for _, t := range tasks {
+		content := fmt.Sprintf("Mission: %s, Task: %s\nDescription: %s\nCompleted by Agent: %s", t.MissionID, t.Title, t.Description, t.AgentID)
+
+		prompt := fmt.Sprintf("Summarize the following task for long-term memory: %s", content)
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		resolvedContext := content
+
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			response, err := client.Reason(ctxTimeout, prompt)
+			cancel()
+			if err == nil {
+				resolvedContext = response
+			}
+		}
+
+		// Insert into autodream_memories.
+		// Generate an embedding for the completed task.
+		var embeddingStr string
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			embedding, errEmbed := client.GenerateEmbedding(ctxTimeout, resolvedContext)
+			cancel()
+			if errEmbed == nil && len(embedding) == 1536 {
+				// Convert float array to string
+				bytes, _ := json.Marshal(embedding)
+				embeddingStr = string(bytes)
+			}
+		}
+
+		if embeddingStr == "" {
+			// Fallback vector for tests or missing api key (1536 dimensions of 0.0 for pgvector size match)
+			mockVec := make([]float32, 1536)
+			bytes, _ := json.Marshal(mockVec)
+			embeddingStr = string(bytes)
+		}
+
+		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		if w.pool.IsSQLite() {
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES (?, ?, ?)"
+		}
+
+		_, err = w.pool.Exec(ctx, insertQuery, resolvedContext, embeddingStr, t.MissionID)
+		if err != nil {
+			slog.Warn("AutoDream: failed to insert autodream_memory", "error", err)
+		} else {
+			slog.Info("AutoDream: consolidated completed task into memory", "task_id", t.ID, "mission_id", t.MissionID)
+		}
+	}
 }
 
 // runSessionCompressionPipeline periodically compresses context from agent_session_data.

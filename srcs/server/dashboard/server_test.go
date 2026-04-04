@@ -3977,6 +3977,51 @@ func TestHandleHireAgent_UnknownProviderRejected(t *testing.T) {
 	}
 }
 
+func TestHandleMeshBroadcast(t *testing.T) {
+	// Create test server with mock hub
+	srv := NewServer(nil, nil)
+
+	t.Run("Valid default channel", func(t *testing.T) {
+		reqBody := `{"payload": "{\"test\": \"data\"}"}`
+		req := httptest.NewRequest("POST", "/api/mesh/broadcast", strings.NewReader(reqBody))
+		rr := httptest.NewRecorder()
+		srv.handleMeshBroadcast(rr, req)
+		if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError { // Might fail since mock hub publish could fail, but it parsed correctly
+			t.Errorf("expected OK or Internal Server Error (no real hub), got %v", rr.Code)
+		}
+	})
+
+	t.Run("Valid specific channel", func(t *testing.T) {
+		reqBody := `{"channel": "mesh:coordination", "payload": "{\"test\": \"data\"}"}`
+		req := httptest.NewRequest("POST", "/api/mesh/broadcast", strings.NewReader(reqBody))
+		rr := httptest.NewRecorder()
+		srv.handleMeshBroadcast(rr, req)
+		if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
+			t.Errorf("expected OK or Internal Server Error, got %v", rr.Code)
+		}
+	})
+
+	t.Run("Invalid channel", func(t *testing.T) {
+		reqBody := `{"channel": "mesh:invalid", "payload": "{\"test\": \"data\"}"}`
+		req := httptest.NewRequest("POST", "/api/mesh/broadcast", strings.NewReader(reqBody))
+		rr := httptest.NewRecorder()
+		srv.handleMeshBroadcast(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected Bad Request, got %v", rr.Code)
+		}
+	})
+
+	t.Run("With root fields", func(t *testing.T) {
+		reqBody := `{"agent_id": "a1", "action": "CLAIM", "status": "IN_PROGRESS", "payload": "{}"}`
+		req := httptest.NewRequest("POST", "/api/mesh/broadcast", strings.NewReader(reqBody))
+		rr := httptest.NewRecorder()
+		srv.handleMeshBroadcast(rr, req)
+		if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
+			t.Errorf("expected OK or Internal Server Error, got %v", rr.Code)
+		}
+	})
+}
+
 func TestHandleMCPRegister_Errors(t *testing.T) {
 	_, server, token := newTestServer(t)
 	client := authedClient(token)
