@@ -3979,7 +3979,7 @@ func TestHandleHireAgent_UnknownProviderRejected(t *testing.T) {
 
 func TestHandleMeshBroadcast(t *testing.T) {
 	// Create test server with mock hub
-	srv := NewServer(nil, nil)
+	srv, _, _ := newTestServer(t)
 
 	t.Run("Valid default channel", func(t *testing.T) {
 		reqBody := `{"payload": "{\"test\": \"data\"}"}`
