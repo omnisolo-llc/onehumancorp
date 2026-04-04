@@ -19,3 +19,24 @@ func SanitizePayload(payload string) (string, error) {
 
 	return sanitized, nil
 }
+
+// SanitizePayloadMap recursively sanitizes a map interface
+func SanitizePayloadMap(data interface{}) interface{} {
+	switch v := data.(type) {
+	case string:
+		sanitized, _ := SanitizePayload(v)
+		return sanitized
+	case map[string]interface{}:
+		for key, val := range v {
+			v[key] = SanitizePayloadMap(val)
+		}
+		return v
+	case []interface{}:
+		for i, val := range v {
+			v[i] = SanitizePayloadMap(val)
+		}
+		return v
+	default:
+		return v
+	}
+}

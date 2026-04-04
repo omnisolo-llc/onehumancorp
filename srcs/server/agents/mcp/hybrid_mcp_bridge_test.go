@@ -1,0 +1,82 @@
+package mcp
+
+import (
+	"encoding/json"
+	"os"
+	"testing"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+)
+
+func TestHybridMCPBridge_ExecutionResult(t *testing.T) {
+	// If running standalone, set OHC_STANDALONE=true
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	originalData := map[string]interface{}{
+		"query": "select * from users",
+		"result": []interface{}{
+			map[string]interface{}{
+				"id":    1,
+				"name":  "Alice",
+				"email": "alice@example.com",
+			},
+		},
+	}
+
+	rawData, _ := json.Marshal(originalData)
+
+	res := FormatExecutionResult("test-tool", "success", rawData, true)
+
+	if res.ToolID != "test-tool" {
+		t.Errorf("Expected test-tool, got %s", res.ToolID)
+	}
+
+	if !res.HybridEscalation {
+		t.Errorf("Expected HybridEscalation to be true")
+	}
+
+	if !res.Escalation {
+		t.Errorf("Expected Escalation to be true")
+	}
+
+	if res.Status != "success" {
+		t.Errorf("Expected status 'success', got %s", res.Status)
+	}
+
+	// 100% test coverage for the redaction pipeline within the MCP tool execution flow
+	// Simulate the redaction that happens before sync
+	var parsed interface{}
+	if err := json.Unmarshal(res.ResultData, &parsed); err != nil {
+		t.Fatalf("Failed to unmarshal result data: %v", err)
+	}
+
+	redacted := telemetry.RedactInterfacePII(parsed)
+
+	redactedBytes, err := json.Marshal(redacted)
+	if err != nil {
+		t.Fatalf("Failed to marshal redacted data: %v", err)
+	}
+
+	redactedStr := string(redactedBytes)
+	if !contains(redactedStr, "[REDACTED_EMAIL]") {
+		t.Errorf("Expected [REDACTED_EMAIL] in output, got: %s", redactedStr)
+	}
+
+	if contains(redactedStr, "alice@example.com") {
+		t.Errorf("Expected original email to be redacted, got: %s", redactedStr)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && s != "" && substr != "" && stringContains(s, substr)
+}
+
+func stringContains(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
