@@ -70,6 +70,24 @@ graph TD
 
 Agents share memory via the OHC Central Database. Navigate to **Swarm Memory**, search for specific concepts or architectural insights, and review the consolidated knowledge retrieved from past missions.
 
+### Teammate Mesh and AutoDream
+
+The Agent Swarm operates using a sophisticated shared memory protocol (OHC-SIP).
+
+```mermaid
+sequenceDiagram
+    participant Worker as Agent (Worker)
+    participant Mesh as Teammate Mesh
+    participant AutoDream as AutoDream Sync Engine
+    participant DB as PgVector/SQLite
+
+    Worker->>Mesh: 1. Broadcast "Task Started" (mesh:tasks)
+    Worker->>Mesh: 2. Share Findings (mesh:coordination)
+    Worker->>Worker: 3. Complete Task & write to .agent-task/memory
+    Worker->>Mesh: 4. Broadcast "Task Completed" (mesh:tasks)
+    AutoDream->>Worker: 5. Read .agent-task/memory/*.yml
+    AutoDream->>DB: 6. Embed and Upsert to Vector DB (autodream_memories)
+```
 
 ## 4. Troubleshooting
 
