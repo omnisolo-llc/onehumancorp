@@ -13,10 +13,7 @@ import (
 
 // ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
 func ClearSemaphore() {
-	select {
-	case <-throttleSemaphore:
-	default:
-	}
+	// Replaced by standaloneThrottle
 }
 
 func TestSIPDB_Init(t *testing.T) {
