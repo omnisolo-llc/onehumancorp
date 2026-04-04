@@ -516,7 +516,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _StatCard extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -532,89 +532,131 @@ class _StatCard extends StatelessWidget {
   });
 
   @override
+  State<_StatCard> createState() => _StatCardState();
+}
+
+class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    // Optional delay for staggered entrance animation if needed
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ?? color;
+    final effectiveIconColor = widget.iconColor ?? widget.color;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Semantics(
-      label: '$label: $value',
+      label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
       child: Tooltip(
-        message: 'View $label',
+        message: 'View ${widget.label}',
         child: SizedBox(
           width: 200,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Semantics(
-                    button: true,
-                    label: '$label: $value action',
-                    child: InkWell(
-                      onTap: () {},
-                      borderRadius: BorderRadius.circular(16),
-                      splashColor: color.withValues(alpha: 0.1),
-                      highlightColor: color.withValues(alpha: 0.05),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(icon, color: effectiveIconColor, size: 32),
-                            const SizedBox(height: 16),
-                            Text(
-                              value,
-                              style: TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: effectiveIconColor,
-                                fontFamily: 'Inter',
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _isHovered = true),
+                onExit: (_) => setState(() => _isHovered = false),
+                child: AnimatedScale(
+                  scale: _isHovered ? 1.02 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.compose(
+                        outer: ColorFilter.matrix(const <double>[
+                          1.168, -0.153, -0.015, 0, 0,
+                          -0.046, 1.061, -0.015, 0, 0,
+                          -0.046, -0.152, 1.198, 0, 0,
+                          0, 0, 0, 1, 0,
+                        ]),
+                        inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        decoration: BoxDecoration(
+                          color: _isHovered
+                              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+                              : colorScheme.surface.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _isHovered
+                                ? colorScheme.outlineVariant
+                                : colorScheme.onSurface.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Semantics(
+                            button: true,
+                            label: '${widget.label}: ${widget.value} action',
+                            child: InkWell(
+                              onTap: () {},
+                              borderRadius: BorderRadius.circular(16),
+                              splashColor: widget.color.withValues(alpha: 0.1),
+                              highlightColor: widget.color.withValues(alpha: 0.05),
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(widget.icon, color: effectiveIconColor, size: 32),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      widget.value,
+                                      style: TextStyle(
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.bold,
+                                        color: effectiveIconColor,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      widget.label,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              label,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
