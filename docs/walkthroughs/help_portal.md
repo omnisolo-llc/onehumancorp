@@ -49,7 +49,29 @@ graph LR
     class Task,Director,SWE,QA premium;
 ```
 
-## 3. Troubleshooting
+## 3. Delegating Tasks & Reviewing Agent Memory
+
+Task delegation is seamless in OHC:
+1. Navigate to the **Orchestration Hub**.
+2. Click **New Task**.
+3. Select the target role (e.g., `swe`, `scribe`).
+4. Provide a clear instruction.
+5. Submit. The system will automatically provision the agent and begin execution.
+
+```mermaid
+graph TD
+    User[Human CEO] -->|Create Task| Hub[Orchestration Hub]
+    Hub -->|Provision| Agent[Specialized Agent]
+    Agent -->|Execute| Outcome[Completed Mission]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class User,Hub,Agent,Outcome premium;
+```
+
+Agents share memory via the OHC Central Database. Navigate to **Swarm Memory**, search for specific concepts or architectural insights, and review the consolidated knowledge retrieved from past missions.
+
+
+## 4. Troubleshooting
 
 - **Redis Connections in Standalone Mode**: In Standalone mode, OHC falls back gracefully to SQLite. Ensure your `DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
 - **Teammate Mesh Not Syncing**: Verify the connection to the Centrifuge realtime pub/sub system and ensure your client is subscribed to the `mesh:tasks` channels. Check the network logs for any 401 Unauthorized errors indicating token expiration.
