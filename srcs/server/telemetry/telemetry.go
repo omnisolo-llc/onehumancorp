@@ -31,6 +31,8 @@ var (
 	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
 	swarmTaskTransitionsCounter metric.Int64Counter
+	taskEnqueuedCounter metric.Int64Counter
+	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
@@ -218,6 +220,22 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTaskTransitionsCounter, err = m.Int64Counter(
 		"ohc_swarm_task_transitions_total",
 		metric.WithDescription("Total number of swarm task state transitions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	taskEnqueuedCounter, err = m.Int64Counter(
+		"ohc_task_enqueued_total",
+		metric.WithDescription("Total number of tasks enqueued"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	taskFailedCounter, err = m.Int64Counter(
+		"ohc_task_failed_total",
+		metric.WithDescription("Total number of tasks failed"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -566,6 +584,27 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 		attribute.String("mission_id", missionID),
 		attribute.String("old_status", oldStatus),
 		attribute.String("new_status", newStatus),
+	))
+}
+
+// RecordTaskEnqueued increments the counter for tasks enqueued.
+func RecordTaskEnqueued(ctx context.Context, taskID string) {
+	if taskEnqueuedCounter == nil {
+		return
+	}
+	taskEnqueuedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("task_id", taskID),
+	))
+}
+
+// RecordTaskFailed increments the counter for tasks failed.
+func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
+	if taskFailedCounter == nil {
+		return
+	}
+	taskFailedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("task_id", taskID),
+		attribute.String("error", errStr),
 	))
 }
 
