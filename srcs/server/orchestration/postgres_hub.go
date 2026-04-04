@@ -187,10 +187,20 @@ func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
 		}
 		defer func() { _ = tx.Rollback(ctx) }()
 
-		if _, err := tx.Exec(ctx, "DELETE FROM agent_inbox WHERE agent_id = $1", id); err != nil {
+		clearQuery := "DELETE FROM agent_inbox WHERE agent_id = $1"
+		delQuery := "DELETE FROM agents WHERE id = $1"
+		var args []any = []any{id}
+
+		if r.orgID != "" {
+			clearQuery += " AND organization_id = $2"
+			delQuery += " AND organization_id = $2"
+			args = append(args, r.orgID)
+		}
+
+		if _, err := tx.Exec(ctx, clearQuery, args...); err != nil {
 			return fmt.Errorf("pg: clear inbox: %w", err)
 		}
-		if _, err := tx.Exec(ctx, "DELETE FROM agents WHERE id = $1", id); err != nil {
+		if _, err := tx.Exec(ctx, delQuery, args...); err != nil {
 			return fmt.Errorf("pg: delete agent: %w", err)
 		}
 		return tx.Commit(ctx)
