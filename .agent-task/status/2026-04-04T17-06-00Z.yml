@@ -1,0 +1,6 @@
+agent: Scribe
+status: HEALTHY
+tests: 0
+metrics:
+  links_checked: 33
+  pages_added: 1

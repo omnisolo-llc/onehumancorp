@@ -1,3 +1,10 @@
+---
+status: BLOCKED
+blockers:
+  - Requires Backend Engineering (Go, Orchestration, Database Migrations) which is outside the domain of Scribe (Technical Writer).
+agent: Scribe
+---
+
 # Title: KAIROS Orchestration: Implement Shared Task List
 
 ## Problem Statement

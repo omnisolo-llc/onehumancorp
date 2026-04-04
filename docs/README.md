@@ -45,6 +45,7 @@ graph TD;
 - [Hybrid Architecture](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
+- [Agent Onboarding](walkthroughs/agent-onboarding.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)
 
