@@ -45,6 +45,8 @@ var (
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
+	SyncLatencyMs        metric.Float64Histogram
+	SyncPayloadSizeBytes metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -132,6 +134,7 @@ type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
 	Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
+	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 }
 
@@ -146,6 +149,24 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncLatencyMs, err = m.Float64Histogram(
+		"ohc.sync.latency_ms",
+		metric.WithDescription("Latency of sync escalation requests in milliseconds"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncPayloadSizeBytes, err = m.Int64Histogram(
+		"ohc.sync.payload_size_bytes",
+		metric.WithDescription("Size of the synchronized payload in bytes"),
+		metric.WithUnit("By"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -676,6 +697,22 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
+}
+
+// RecordSyncLatency records the latency of a sync escalation request.
+func RecordSyncLatency(ctx context.Context, latencyMs float64) {
+	if SyncLatencyMs == nil {
+		return
+	}
+	SyncLatencyMs.Record(ctx, latencyMs)
+}
+
+// RecordSyncPayloadSize records the size of a synchronized payload.
+func RecordSyncPayloadSize(ctx context.Context, sizeBytes int64) {
+	if SyncPayloadSizeBytes == nil {
+		return
+	}
+	SyncPayloadSizeBytes.Record(ctx, sizeBytes)
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.

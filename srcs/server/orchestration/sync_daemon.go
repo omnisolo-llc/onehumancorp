@@ -157,6 +157,8 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
 
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
+
 	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
@@ -170,7 +172,12 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
+
+	start := time.Now()
 	resp, err := client.Do(req)
+	latency := time.Since(start).Milliseconds()
+	telemetry.RecordSyncLatency(ctx, float64(latency))
+
 	if err != nil {
 		return fmt.Errorf("do request: %w", err)
 	}

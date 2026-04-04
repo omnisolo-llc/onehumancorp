@@ -600,6 +600,13 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 				// continue syncing the rest
 			} else {
 				syncedCount++
+				if s.hub != nil {
+					s.hub.PublishTaskBroadcast(p.ID, map[string]interface{}{
+						"action":   "SYNC",
+						"status":   status,
+						"agent_id": "",
+					})
+				}
 			}
 		}
 	}
