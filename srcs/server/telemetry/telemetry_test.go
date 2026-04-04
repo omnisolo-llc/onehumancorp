@@ -329,6 +329,16 @@ func TestMetricsHandler(t *testing.T) {
 	}
 }
 
+func TestRecordSQLiteLockMetrics(t *testing.T) {
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	InitTelemetry()
+
+	// Just verifying these don't panic
+	ctx := context.Background()
+	RecordSQLiteLockContention(ctx, "test_op")
+	RecordSQLiteRetryExhausted(ctx, "test_op")
+}
+
 func TestRecordFunctions(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
