@@ -1,0 +1,3 @@
+#!/bin/bash
+go install github.com/bazelbuild/bazelisk@latest
+~/go/bin/bazelisk test //srcs/server/orchestration/...
