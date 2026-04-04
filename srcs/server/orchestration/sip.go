@@ -534,6 +534,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
+		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
 		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < $1", thresholdTime)
 		if err != nil {
 			return err

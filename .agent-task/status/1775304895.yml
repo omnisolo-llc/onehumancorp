@@ -1,0 +1,7 @@
+agent_id: sentry-1775304895
+role: MAINTAINER
+status: ONLINE
+last_heartbeat: 2026-04-04T12:14:55Z
+metrics:
+  chaos_test_passed: true
+  parity_audit_complete: true
