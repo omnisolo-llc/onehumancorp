@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -49,7 +50,10 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         children: [
                           _DownloadButton(os: 'Mac', icon: Icons.apple),
                           _DownloadButton(os: 'Windows', icon: Icons.window),
-                          _DownloadButton(os: 'Linux', icon: Icons.laptop_chromebook),
+                          _DownloadButton(
+                            os: 'Linux',
+                            icon: Icons.laptop_chromebook,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -108,9 +112,9 @@ class _HeaderSection extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           'One Human Corp',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -231,9 +235,9 @@ class _GlassCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -283,14 +287,8 @@ class _DownloadButton extends ConsumerWidget {
       icon: Icon(icon),
       label: Text('Download for $os'),
       style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 16,
-        ),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     );
   }

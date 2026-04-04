@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────
 
@@ -603,10 +604,26 @@ class _CentrifugeStep extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: ColorFilter.matrix(const <double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),

@@ -54,3 +54,6 @@ Generated images are written to:
 ![OHC Flutter app with Linux profile](./app/linux/login.png)
 
 </div>
+
+## 6. OHC Aesthetic Design
+The OHC UI utilizes a "Premium Glassmorphism" aesthetic characterized by high saturation, blurring, and low opacity backgrounds. The standard `Card` widget should not be used in preference of `GlassCard`.

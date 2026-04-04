@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 /// Screen for financial analytics and token usage monitoring.
 class CostDashboardScreen extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -214,7 +215,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -284,7 +285,7 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
-      child: Card(
+      child: GlassCard(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(

@@ -10,8 +10,8 @@ The OHC UI does not fully align with the "Visual Truth" mandate. Many screens st
 
 ## Implementation Details
 1. Created `GlassCard` widget in `srcs/app/lib/widgets/glass_card.dart`.
-2. Refactored 17 screens in `srcs/app/lib/screens/` to replace `Card` with `GlassCard`.
-3. Verified the build and visual aesthetic using Playwright screenshots (`landing_glass.png`, `dashboard_glass.png`).
-4. Passed all Flutter unit/widget tests.
+2. Refactored 17 screens in `srcs/app/lib/screens/` to safely wrap components with `GlassCard` instead of `Card`, removing conflicting properties from the root cards while preserving inner styles.
+3. Passed all Flutter tests locally.
+4. Updated User Guide aesthetic notes.
 
 Mission marked as DONE successfully.
