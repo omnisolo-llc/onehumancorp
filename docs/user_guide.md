@@ -27,7 +27,17 @@ Generated images are written to:
 - `docs/app/android/`
 - `docs/app/linux/`
 
-## 3. Screenshot Gallery
+## 3. Standalone Mode Configuration
+
+When operating OHC in **Standalone Desktop Mode**, it uses a local SQLite database instead of PostgreSQL.
+To meet encrypted SQLite storage requirements, you must inject the encryption key via the `OHC_SQLITE_KEY` environment variable.
+
+```bash
+export OHC_SQLITE_KEY="your-encryption-key-here"
+bazelisk run //:desktop
+```
+
+## 4. Screenshot Gallery
 
 ### Web
 

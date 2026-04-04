@@ -104,7 +104,7 @@ Synchronize local SQLite context to the cloud Postgres orchestration engine.
 
 ### Centrifuge Realtime Sync
 Channels:
-- `mesh:tasks`: Global task coordination.
+- `mesh:tasks`: Global task coordination. Payloads broadcasted to this channel must have `agent_id`, `action`, and `status` fields at the root level.
 - `mesh:ultraplan:<plan_id>`: Deliberation cycle realtime updates.
 - `meeting:<meeting_id>`: Transcript sync.
 

@@ -34,7 +34,9 @@ Broadcast messages to all connected clients in a room:
 **Payload Example:**
 ```json
 {
-  "sender_id": "agent-123",
+  "agent_id": "agent-123",
+  "action": "task_claimed",
+  "status": "IN_PROGRESS",
   "role": "SWE",
   "content": "I have claimed the database migration task.",
   "timestamp": "2026-04-02T10:00:00Z"
