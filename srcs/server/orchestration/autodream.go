@@ -44,6 +44,117 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
 	go w.runSessionCompressionPipeline(ctx)
+	go w.runTaskConsolidationPipeline(ctx)
+}
+
+func (w *AutoDreamWorker) runTaskConsolidationPipeline(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.consolidateCompletedTasks(ctx)
+		}
+	}
+}
+
+func (w *AutoDreamWorker) consolidateCompletedTasks(ctx context.Context) {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		slog.Error("AutoDream: failed to begin transaction for task consolidation", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if w.pool.IsSQLite() {
+		query = "SELECT id, mission_id, description, payload FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at ASC LIMIT 20"
+	} else {
+		query = "SELECT id, mission_id, description, payload FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at ASC LIMIT 20 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch completed tasks", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	type taskRec struct {
+		ID          string
+		MissionID   string
+		Description string
+		Payload     string
+	}
+	var records []taskRec
+	for rows.Next() {
+		var rec taskRec
+		if err := rows.Scan(&rec.ID, &rec.MissionID, &rec.Description, &rec.Payload); err == nil {
+			records = append(records, rec)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		slog.Error("AutoDream: task iteration error", "error", err)
+		return
+	}
+	rows.Close()
+
+	for _, rec := range records {
+		content := fmt.Sprintf("Mission: %s\nDescription: %s\nPayload: %s", rec.MissionID, rec.Description, rec.Payload)
+
+		// Generate embedding
+		embeddingStr := "[0.0]"
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			client := NewMinimaxClient(minimaxKey)
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			embedding, err := client.GenerateEmbedding(ctxTimeout, content)
+			cancel()
+			if err != nil {
+				slog.Warn("AutoDream: LLM embedding failed for task, using fallback", "error", err)
+			} else if len(embedding) > 0 {
+				embeddingStr = fmt.Sprintf("%v", embedding)
+				embeddingStr = strings.ReplaceAll(strings.Trim(embeddingStr, "[]"), " ", ",")
+				embeddingStr = "[" + embeddingStr + "]"
+			}
+		}
+
+		insertQuery := "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+		if w.pool.IsSQLite() {
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+		}
+
+		var insertErr error
+		if w.pool.IsSQLite() {
+			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			_, insertErr = tx.Exec(ctx, insertQuery, id, content, embeddingStr, rec.MissionID)
+		} else {
+			_, insertErr = tx.Exec(ctx, insertQuery, content, embeddingStr, rec.MissionID)
+		}
+
+		if insertErr != nil {
+			slog.Error("AutoDream: failed to insert consolidated task", "error", insertErr)
+			continue
+		}
+
+		// Update task to prevent reconsolidation (e.g. set status to 'CONSOLIDATED' or just delete it)
+		// Assuming we can delete it to save space as it's been consolidated.
+		deleteQuery := "DELETE FROM shared_tasks WHERE id = $1"
+		if w.pool.IsSQLite() {
+			deleteQuery = "DELETE FROM shared_tasks WHERE id = ?"
+		}
+		_, err = tx.Exec(ctx, deleteQuery, rec.ID)
+		if err != nil {
+			slog.Error("AutoDream: failed to delete consolidated task", "error", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("AutoDream: failed to commit task consolidation", "error", err)
+	}
 }
 
 // runSessionCompressionPipeline periodically compresses context from agent_session_data.
