@@ -77,11 +77,18 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 	}
 	start := time.Now()
 
+	tx, err := d.dbWrapper.Begin(ctx)
+	if err != nil {
+		slog.Error("sync_daemon: failed to begin transaction", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
 	query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	if d.dbWrapper.IsSQLite() {
 		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	}
-	rows, err := d.dbWrapper.Query(ctx, query)
+	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
 		return
@@ -137,17 +144,25 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 			}
 			idList += fmt.Sprintf("'%s'", id)
 		}
-		query := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
+		updateQuery := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
 		if d.dbWrapper.IsSQLite() {
-			query = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
+			updateQuery = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
 		}
-		_, err := d.dbWrapper.Exec(ctx, query)
+		_, err := tx.Exec(ctx, updateQuery)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+			return
 		} else {
 			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
 		}
 	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("sync_daemon: failed to commit transaction", "error", err)
+		return
+	}
+
+	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
 
 	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
 
