@@ -978,6 +978,16 @@ func (s *Server) handleDevSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Multi-tenant check: Prevent tenants from overwriting other tenant's org state.
+	// We ensure only sys admins can seed the environment.
+	claims := auth.ClaimsFromContext(r.Context())
+	if os.Getenv("OHC_STANDALONE") != "true" && claims != nil {
+		if claims.OrganizationID != "" && claims.OrganizationID != "sys" {
+			http.Error(w, "system admin role required to seed dev environment", http.StatusForbidden)
+			return
+		}
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var payload seedRequest
