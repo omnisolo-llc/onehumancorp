@@ -9,11 +9,15 @@ import (
 )
 
 func BenchmarkLocalTeammateMesh_Broadcast(b *testing.B) {
-	b.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
-	provider := db.NewTestProvider(b)
+	b.Setenv("DATABASE_URL", "sqlite://file::memory:?cache=shared")
+	ctx := context.Background()
+	pool, err := db.New(ctx)
+	if err != nil {
+		b.Fatalf("failed to init db: %v", err)
+	}
+	provider := pool.Provider
 	defer provider.Close()
 
-	ctx := context.Background()
 	_, err := provider.Exec(ctx, `
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,

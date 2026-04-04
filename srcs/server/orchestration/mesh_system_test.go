@@ -9,7 +9,15 @@ import (
 )
 
 func TestLocalTeammateMesh_BroadcastAndSubscribe(t *testing.T) {
-	provider := db.NewTestProvider(t)
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?cache=shared")
+	ctx := context.Background()
+	pool, err := db.New(ctx)
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	provider := pool.Provider
+	defer provider.Close()
+
 	_, err := provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,

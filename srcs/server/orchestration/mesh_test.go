@@ -115,15 +115,18 @@ func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 }
 
 func TestLocalTeammateMesh(t *testing.T) {
-	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
-	// Use NewTestProvider or db.New to init db
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?cache=shared")
 	ctx := context.Background()
 
-	provider := db.NewTestProvider(t)
+	pool, err := db.New(ctx)
+	if err != nil {
+		t.Fatalf("Failed to initialize db: %v", err)
+	}
+	provider := pool.Provider
 	defer provider.Close()
 
 	// Explicitly define the schema within the test initialization
-	_, err := provider.Exec(ctx, `
+	_, err = provider.Exec(ctx, `
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id VARCHAR NOT NULL,
