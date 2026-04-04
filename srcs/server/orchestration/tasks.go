@@ -40,8 +40,11 @@ type TaskManager struct {
 }
 
 // NewTaskManager creates a new TaskManager.
-func NewTaskManager(provider db.Provider) *TaskManager {
-	tm := &TaskManager{db: provider}
+func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
+	tm := &TaskManager{
+		db:  provider,
+		hub: hub,
+	}
 
 	if os.Getenv("OHC_MULTITENANT") == "true" {
 		redisURL := os.Getenv("REDIS_URL")
