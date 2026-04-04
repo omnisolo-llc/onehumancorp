@@ -713,6 +713,28 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Check for stuck agent_missions specifically for Hybrid metric insights
+	var stuckMissionsCount int
+	var missionsProbeStatus = "ok"
+	if s.hub != nil && s.hub.SIPDB() != nil {
+		ctx := r.Context()
+		missions, err := s.hub.SIPDB().GetPendingMissions(ctx, "ANY")
+		if err == nil {
+			stuckMissionsCount = len(missions)
+		}
+	}
+	if stuckMissionsCount > 10 {
+		missionsProbeStatus = "degraded"
+	}
+
+	checklist = append(checklist, map[string]interface{}{
+		"id":          "stuck_missions_probe",
+		"label":       "Stagnant Missions Backlog",
+		"status":      missionsProbeStatus,
+		"description": "Count of stuck or pending agent missions across cloud/local boundary",
+		"count":       stuckMissionsCount,
+	})
+
 	resp := map[string]interface{}{
 		"status":     "healthy",
 		"mode":       mode,
