@@ -25,6 +25,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/db",
         "//srcs/server/scheduler",
@@ -71,6 +72,7 @@ go_test(
     embed = [":orchestration"],
     deps = [
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/db",
         "//srcs/server/settings",
@@ -84,5 +86,6 @@ go_test(
         "@org_golang_google_grpc//peer",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

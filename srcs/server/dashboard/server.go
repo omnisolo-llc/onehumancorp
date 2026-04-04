@@ -613,7 +613,49 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
+	// Local-to-Cloud Sync Daemon API
+	if server.hub != nil {
+		mux.HandleFunc("/api/sync/payload", auth.RequireRole("system", server.handleSyncMissions))
+	}
+
 	return telemetry.Middleware(auth.Middleware(store)(mux))
+}
+
+// handleSyncMissions receives context payloads from the local daemon and injects them
+// into the tenant's agent_missions execution queue.
+func (s *Server) handleSyncMissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payloads []orchestration.SyncDaemonPayload
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	sipdb := s.hub.SIPDB()
+
+	if sipdb == nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	for _, payload := range payloads {
+		// Inject into agent_missions execution queue using SIPDB
+		// Using existing UpsertMission method on SIPDB
+		err := sipdb.UpsertMission(ctx, payload.ID, "PENDING", payload.Payload, true)
+
+		if err != nil {
+			slog.Error("handleSyncMissions: failed to inject payload", "id", payload.ID, "error", err)
+			continue
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching

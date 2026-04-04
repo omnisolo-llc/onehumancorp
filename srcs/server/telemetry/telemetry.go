@@ -47,6 +47,8 @@ var (
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
+	SyncDaemonBatchSize metric.Int64Histogram
+	SyncDaemonLatencyMs metric.Float64Histogram
 	RateLimitExceededCount metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -183,6 +185,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc.sync.payload_size_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncDaemonBatchSize, err = m.Int64Histogram(
+		"sync_daemon_batch_size",
+		metric.WithDescription("Number of tasks processed in a single sync batch"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncDaemonLatencyMs, err = m.Float64Histogram(
+		"sync_daemon_latency_ms",
+		metric.WithDescription("Latency of the sync daemon process in ms"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -713,6 +731,22 @@ func RecordSyncPayloadSize(ctx context.Context, size int64) {
 		return
 	}
 	SyncPayloadSize.Record(ctx, size)
+}
+
+// RecordSyncDaemonBatchSize records the size of the batch processed by the sync daemon.
+func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+	if SyncDaemonBatchSize == nil {
+		return
+	}
+	SyncDaemonBatchSize.Record(ctx, size)
+}
+
+// RecordSyncDaemonLatencyMs records the latency of the sync daemon process.
+func RecordSyncDaemonLatencyMs(ctx context.Context, latency float64) {
+	if SyncDaemonLatencyMs == nil {
+		return
+	}
+	SyncDaemonLatencyMs.Record(ctx, latency)
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
