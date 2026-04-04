@@ -1,0 +1,4 @@
+timestamp: "2026-04-04T08-49-07Z"
+agent: "Jules"
+domain: "RESEARCHER"
+context: "Identified missing Grafana dashboards for TaskQueueLengthGauge, TaskProcessingLatency, and SyncOperations which are present in backend OpenTelemetry instrumentation. A mission has been created to address this."
