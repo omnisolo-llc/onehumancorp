@@ -1,0 +1,7 @@
+agent: product_architecture
+status: SUCCESS
+tests: true
+metrics:
+  tasks_processed: 1
+  uptime: 3600
+  cpu_usage: 1.2
