@@ -33,6 +33,7 @@ func DefaultTools() []Tool {
 		&fileReadTool{},
 		&fileWriteTool{},
 		&fileEditTool{},
+		&notebookEditTool{},
 		&grepTool{},
 		&globTool{},
 		&lsTool{},
@@ -1068,7 +1069,9 @@ func (t *todoTool) Definition() ToolDefinition {
 		Description: `Write or update the session task todo list. The entire list is replaced with
 the provided items. Use this to track multi-step tasks, mark items as done, and
 keep yourself organised across a complex task. Items have a status of "pending",
-"in_progress", or "completed", and a priority of "high", "medium", or "low".`,
+"in_progress", or "completed", and a priority of "high", "medium", or "low".
+Provide both "content" (imperative form) and "activeForm" (present-continuous form)
+for each item so the UI can display the right tense during execution.`,
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -1077,10 +1080,11 @@ keep yourself organised across a complex task. Items have a status of "pending",
 					"items": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
-							"id":       map[string]interface{}{"type": "string"},
-							"content":  map[string]interface{}{"type": "string"},
-							"status":   map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed"}},
-							"priority": map[string]interface{}{"type": "string", "enum": []string{"high", "medium", "low"}},
+							"id":         map[string]interface{}{"type": "string"},
+							"content":    map[string]interface{}{"type": "string", "description": "Imperative form of the task (e.g. 'Run tests')."},
+							"activeForm": map[string]interface{}{"type": "string", "description": "Present-continuous form shown during execution (e.g. 'Running tests')."},
+							"status":     map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed"}},
+							"priority":   map[string]interface{}{"type": "string", "enum": []string{"high", "medium", "low"}},
 						},
 						"required": []string{"id", "content", "status"},
 					},
@@ -1106,13 +1110,18 @@ func (t *todoTool) Execute(_ context.Context, _ string, input map[string]interfa
 				status := fmt.Sprint(m["status"])
 				content := fmt.Sprint(m["content"])
 				priority := fmt.Sprint(m["priority"])
+				activeForm := fmt.Sprint(m["activeForm"])
 				switch status {
 				case "pending":
 					pending++
 					sb.WriteString(fmt.Sprintf("[ ] %s (%s)\n", content, priority))
 				case "in_progress":
 					inProgress++
-					sb.WriteString(fmt.Sprintf("[~] %s (%s)\n", content, priority))
+					label := content
+					if activeForm != "" && activeForm != "<nil>" {
+						label = activeForm
+					}
+					sb.WriteString(fmt.Sprintf("[~] %s (%s)\n", label, priority))
 				case "completed":
 					done++
 					sb.WriteString(fmt.Sprintf("[x] %s\n", content))
@@ -1482,4 +1491,197 @@ func (t *sendMessageTool) Execute(_ context.Context, _ string, input map[string]
 	}
 
 	return fmt.Sprintf("Message %q sent to %q (type: %s)", msgID, to, msgType), nil
+}
+
+// ─── NotebookEditTool ─────────────────────────────────────────────────────────
+
+// notebookEditTool implements the CC-Source NotebookEditTool for Jupyter notebooks.
+// It supports replace, insert, and delete operations on notebook cells.
+// Mirrors the CC-Source NotebookEditTool schema (notebook_path, cell_id,
+// new_source, cell_type, edit_mode).
+type notebookEditTool struct{}
+
+func (t *notebookEditTool) Definition() ToolDefinition {
+	return ToolDefinition{
+		Name: "notebook_edit",
+		Description: "Edit a Jupyter notebook (.ipynb) cell. Supports replace (default), insert, and delete operations. " +
+			"The notebook_path must be an absolute path. cell_id identifies the target cell; " +
+			"use edit_mode=insert to add a new cell after the given cell_id (or at the beginning if omitted), " +
+			"and edit_mode=delete to remove a cell.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"notebook_path": map[string]interface{}{
+					"type":        "string",
+					"description": "Absolute path to the Jupyter notebook file (.ipynb).",
+				},
+				"cell_id": map[string]interface{}{
+					"type":        "string",
+					"description": "The ID of the cell to edit, insert after, or delete. Optional for insert (inserts at beginning if omitted).",
+				},
+				"new_source": map[string]interface{}{
+					"type":        "string",
+					"description": "The new source content for the cell. Not required for delete.",
+				},
+				"cell_type": map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"code", "markdown"},
+					"description": "Cell type: 'code' or 'markdown'. Defaults to existing cell type for replace; required for insert.",
+				},
+				"edit_mode": map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"replace", "insert", "delete"},
+					"description": "Edit mode: 'replace' (default), 'insert', or 'delete'.",
+				},
+			},
+			"required": []string{"notebook_path"},
+		},
+	}
+}
+
+// notebookCell mirrors the minimal Jupyter cell JSON structure.
+type notebookCell struct {
+	CellType       string                 `json:"cell_type"`
+	ID             string                 `json:"id,omitempty"`
+	Source         json.RawMessage        `json:"source"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	Outputs        []interface{}          `json:"outputs,omitempty"`
+	ExecutionCount *int                   `json:"execution_count,omitempty"`
+}
+
+// notebookDoc mirrors the top-level Jupyter notebook JSON.
+type notebookDoc struct {
+	NBFormat      int                    `json:"nbformat"`
+	NBFormatMinor int                    `json:"nbformat_minor"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+	Cells         []notebookCell         `json:"cells"`
+}
+
+func (t *notebookEditTool) Execute(_ context.Context, workDir string, input map[string]interface{}) (string, error) {
+	nbPath := strArg(input, "notebook_path")
+	if nbPath == "" {
+		return "", errors.New("notebook_edit: notebook_path is required")
+	}
+	if !filepath.IsAbs(nbPath) {
+		nbPath = filepath.Join(workDir, nbPath)
+	}
+	if ext := filepath.Ext(nbPath); ext != ".ipynb" {
+		return "", fmt.Errorf("notebook_edit: file must have .ipynb extension, got %q", ext)
+	}
+
+	editMode := strArg(input, "edit_mode")
+	if editMode == "" {
+		editMode = "replace"
+	}
+	cellID := strArg(input, "cell_id")
+	newSource := strArg(input, "new_source")
+	cellType := strArg(input, "cell_type")
+
+	// Read and parse the notebook.
+	data, err := os.ReadFile(nbPath)
+	if err != nil {
+		return "", fmt.Errorf("notebook_edit: read %s: %w", nbPath, err)
+	}
+	var nb notebookDoc
+	if err := json.Unmarshal(data, &nb); err != nil {
+		return "", fmt.Errorf("notebook_edit: parse notebook: %w", err)
+	}
+
+	// encodeSource converts a plain string to the Jupyter multiline-array format.
+	encodeSource := func(src string) json.RawMessage {
+		lines := strings.Split(src, "\n")
+		out := make([]string, 0, len(lines))
+		for i, line := range lines {
+			if i < len(lines)-1 {
+				out = append(out, line+"\n")
+			} else if line != "" {
+				out = append(out, line)
+			}
+		}
+		b, _ := json.Marshal(out)
+		return b
+	}
+
+	switch editMode {
+	case "replace":
+		if cellID == "" {
+			return "", errors.New("notebook_edit: cell_id is required for replace mode")
+		}
+		found := false
+		for i, cell := range nb.Cells {
+			if cell.ID == cellID {
+				if cellType != "" {
+					nb.Cells[i].CellType = cellType
+				}
+				nb.Cells[i].Source = encodeSource(newSource)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return "", fmt.Errorf("notebook_edit: cell with id %q not found", cellID)
+		}
+
+	case "insert":
+		ct := cellType
+		if ct == "" {
+			ct = "code"
+		}
+		newCell := notebookCell{
+			CellType: ct,
+			ID:       fmt.Sprintf("cell-%d", len(nb.Cells)+1),
+			Source:   encodeSource(newSource),
+			Metadata: map[string]interface{}{},
+		}
+		if ct == "code" {
+			newCell.Outputs = []interface{}{}
+		}
+
+		if cellID == "" {
+			// Insert at the beginning.
+			nb.Cells = append([]notebookCell{newCell}, nb.Cells...)
+		} else {
+			insertIdx := -1
+			for i, cell := range nb.Cells {
+				if cell.ID == cellID {
+					insertIdx = i + 1
+					break
+				}
+			}
+			if insertIdx < 0 {
+				return "", fmt.Errorf("notebook_edit: cell with id %q not found for insert", cellID)
+			}
+			nb.Cells = append(nb.Cells[:insertIdx], append([]notebookCell{newCell}, nb.Cells[insertIdx:]...)...)
+		}
+
+	case "delete":
+		if cellID == "" {
+			return "", errors.New("notebook_edit: cell_id is required for delete mode")
+		}
+		found := false
+		for i, cell := range nb.Cells {
+			if cell.ID == cellID {
+				nb.Cells = append(nb.Cells[:i], nb.Cells[i+1:]...)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return "", fmt.Errorf("notebook_edit: cell with id %q not found for delete", cellID)
+		}
+
+	default:
+		return "", fmt.Errorf("notebook_edit: unknown edit_mode %q", editMode)
+	}
+
+	// Write back.
+	out, err := json.MarshalIndent(nb, "", " ")
+	if err != nil {
+		return "", fmt.Errorf("notebook_edit: marshal: %w", err)
+	}
+	if err := os.WriteFile(nbPath, out, 0o644); err != nil {
+		return "", fmt.Errorf("notebook_edit: write %s: %w", nbPath, err)
+	}
+
+	return fmt.Sprintf("Notebook edited (%s): %s — %d cells total", editMode, nbPath, len(nb.Cells)), nil
 }

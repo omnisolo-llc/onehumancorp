@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -466,6 +467,15 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	})
 
+	// 5. Start the default builtin agent runner.
+	// This is the canonical agent implementation used when ProviderType is "" or "builtin".
+	// It registers itself in the Hub and listens for TaskAssignment/TaskDelegation messages,
+	// executing each task via the full LLM + tool loop (mirroring CC-Source agent harness).
+	builtinAdapter := &builtinHubAdapter{hub: hub}
+	builtinRunner := builtin.NewRunner(builtinAdapter, "", "", "", builtin.AgentConfig{})
+	go builtinRunner.Start(ctx)
+	slog.Info("builtin agent runner started", "agent_id", builtinRunner.AgentID())
+
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
@@ -507,4 +517,51 @@ func main() {
 	if err := run(nowUTC().UTC(), listenForMain); err != nil {
 		fatalForMain(err)
 	}
+}
+
+// builtinHubAdapter adapts orchestration.Hub to the builtin.Hub interface.
+// It is used in main.go to wire the builtin agent runner to the Hub without
+// needing the Bazel-only hub_adapter.go from the builtin package.
+type builtinHubAdapter struct {
+	hub *orchestration.Hub
+}
+
+func (a *builtinHubAdapter) RegisterAgent(agent builtin.HubAgent) {
+	a.hub.RegisterAgent(orchestration.Agent{
+		ID:           agent.ID,
+		Name:         agent.Name,
+		Role:         agent.Role,
+		Status:       orchestration.Status(agent.Status),
+		ProviderType: agent.ProviderType,
+	})
+}
+
+func (a *builtinHubAdapter) Subscribe(agentID string) (<-chan struct{}, func()) {
+	return a.hub.Subscribe(agentID)
+}
+
+func (a *builtinHubAdapter) Inbox(agentID string) []builtin.HubMessage {
+	msgs := a.hub.Inbox(agentID)
+	out := make([]builtin.HubMessage, 0, len(msgs))
+	for _, m := range msgs {
+		out = append(out, builtin.HubMessage{
+			ID:        m.ID,
+			FromAgent: m.FromAgent,
+			ToAgent:   m.ToAgent,
+			Type:      m.Type,
+			Content:   m.Content,
+		})
+	}
+	return out
+}
+
+func (a *builtinHubAdapter) Publish(msg builtin.HubMessage) error {
+	return a.hub.Publish(orchestration.Message{
+		ID:         msg.ID,
+		FromAgent:  msg.FromAgent,
+		ToAgent:    msg.ToAgent,
+		Type:       msg.Type,
+		Content:    msg.Content,
+		OccurredAt: time.Now().UTC(),
+	})
 }
