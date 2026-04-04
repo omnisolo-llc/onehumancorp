@@ -1,19 +1,18 @@
-// Deprecated: Package local has been superseded by package builtin
-// (srcs/server/agents/builtin). New code should use builtin instead.
-// This package is kept for backward compatibility only.
+// Package builtin implements the platform's default (builtin) agent — a full
+// agentic loop modelled after the Claude Code TypeScript harness.
 //
-// Package local implements a full agentic loop as the default local agent.
-//
-// It is modelled after the Claude Code TypeScript LocalAgentTask harness:
+// Features:
 //   - tasks move through pending → running → completed/failed/killed
 //   - progress (tool-use count, token count, recent activities) is tracked
 //   - output is streamed to a per-task disk file
 //   - task completion sends an XML-tagged notification into the Hub
 //
-// The LocalAgent uses a configurable LLM backend (Anthropic Messages API,
-// OpenAI-compatible, or Ollama) and exposes the standard tool set:
-// Bash, FileRead, FileWrite, FileEdit, Grep, Glob, WebFetch, TodoWrite.
-package local
+// The builtin agent uses a configurable LLM backend (Anthropic Messages API,
+// OpenAI-compatible, or Ollama) and exposes the full tool set derived from
+// CC-Source's ASYNC_AGENT_ALLOWED_TOOLS: Bash, FileRead, FileWrite, FileEdit,
+// Grep, Glob, WebFetch, WebSearch, TodoWrite, TaskCreate/Get/List/Update,
+// SendMessage, ToolSearch, LS.
+package builtin
 
 import (
 	"crypto/rand"
