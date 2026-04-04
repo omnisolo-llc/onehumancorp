@@ -369,6 +369,7 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		if txErr != nil {
 			continue
 		}
+		defer tx.Rollback(ctx)
 
 		var insertQuery string
 		missionID := "session-" + s.ID
@@ -698,6 +699,7 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 		if err != nil {
 			continue
 		}
+		defer tx.Rollback(ctx)
 
 		// Insert consolidated truth (we'll re-use embedding 1 for simplicity of this demo since they are 95% similar anyway).
 		// Note: pgvector allows copying vectors.
