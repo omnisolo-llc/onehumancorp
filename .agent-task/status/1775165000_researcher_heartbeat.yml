@@ -1,0 +1,5 @@
+agent: KAIROS-Orchestrator
+status: ACTIVE
+tests: 100%
+metrics:
+  missions_created: 1
