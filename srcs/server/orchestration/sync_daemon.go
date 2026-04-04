@@ -98,30 +98,10 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 		}
 
 		// Sanitize payload data for PI and private markers
-		var sanitizeRecursively func(data interface{}) interface{}
-		sanitizeRecursively = func(data interface{}) interface{} {
-			switch v := data.(type) {
-			case string:
-				sanitized, _ := SanitizePayload(v)
-				return sanitized
-			case map[string]interface{}:
-				for key, val := range v {
-					v[key] = sanitizeRecursively(val)
-				}
-				return v
-			case []interface{}:
-				for i, val := range v {
-					v[i] = sanitizeRecursively(val)
-				}
-				return v
-			default:
-				return v
-			}
-		}
 
 		var parsedPayload map[string]interface{}
 		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
-			parsedIface := sanitizeRecursively(parsedPayload)
+			parsedIface := SanitizePayloadMap(parsedPayload)
 			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
 				payloadData = string(redactedBytes)
 			}
