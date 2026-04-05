@@ -1,0 +1,115 @@
+openapi: 3.0.0
+info:
+  title: KAIROS Orchestration API
+  description: The KAIROS Orchestration API drives the core backbone of the One Human Corp Swarm. It encompasses the Shared Task List, Teammate Mesh APIs, and AutoDream Vector Data Pipelines.
+  version: 1.0.0
+servers:
+  - url: 'https://api.ohc.local/v1'
+    description: Local Standalone Server
+  - url: 'https://api.onehumancorp.com/v1'
+    description: Cloud Server
+paths:
+  /tasks/claim:
+    post:
+      summary: Claim a Task
+      description: Claims a PENDING task from the shared task queue.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_id:
+                  type: string
+                role:
+                  type: string
+      responses:
+        '200':
+          description: Task successfully claimed.
+  '/tasks/{task_id}/complete':
+    post:
+      summary: Complete a Task
+      description: Marks a task as COMPLETED and unlocks dependent tasks.
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_id:
+                  type: string
+                outcome_summary:
+                  type: string
+      responses:
+        '200':
+          description: Task successfully completed.
+  '/mesh/rooms/{room_id}/messages':
+    post:
+      summary: Publish to Room
+      description: Broadcasts an intent to the designated room.
+      parameters:
+        - name: room_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_id:
+                  type: string
+                action:
+                  type: string
+                status:
+                  type: string
+                payload:
+                  type: object
+      responses:
+        '200':
+          description: Message successfully published.
+  /autodream/sync:
+    post:
+      summary: Trigger Manual AutoDream Sync
+      description: Forces the background worker to scan memory files and upsert embeddings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force_reindex:
+                  type: boolean
+      responses:
+        '200':
+          description: Sync started.
+  /autodream/query:
+    post:
+      summary: Query Consolidated Memories
+      description: Executes an exact Nearest Neighbor search against the long-term swarm memory.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query_text:
+                  type: string
+                limit:
+                  type: integer
+      responses:
+        '200':
+          description: Results returned.

@@ -139,9 +139,26 @@ Events emitted:
 - `QuotaExhausted`
 
 ### 4.3 KAIROS Orchestration APIs
-Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines can be found in the [KAIROS Orchestration API Reference](kairos_orchestration_api.md).
+Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines can be found in the [KAIROS Orchestration API Reference](kairos_orchestration_api.md) and our interactive [OpenAPI Specification](openapi.yaml).
 
-## 5. Visualizing the Flow
+## 5. Visualizing the AutoDream Flow
+```mermaid
+sequenceDiagram
+    participant Worker as Agent (Worker)
+    participant FS as Local Filesystem
+    participant AutoDream as AutoDream API
+    participant LLM as Embedding Model
+    participant DB as pgvector
+
+    Worker->>FS: Writes Session Context to .agent-task/memory
+    AutoDream->>FS: Polling/Manual Sync Trigger
+    AutoDream->>LLM: Pass text to Minimax/Ada
+    LLM-->>AutoDream: Return 1536-dim Embedding
+    AutoDream->>DB: Upsert Vector to autodream_memories
+    AutoDream-->>Worker: Broadcast Consolidation Success
+```
+
+## 6. Visualizing the Flow
 ```mermaid
 graph TD
     Client[Human CEO / External Tools] --> API[OHC Gateway]
