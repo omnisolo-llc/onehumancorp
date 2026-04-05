@@ -1,0 +1,12 @@
+bucket_definitions:
+  user_bucket:
+    parameters:
+      - select: auth.jwt()->>'organization_id'
+        name: organization_id
+    data:
+      - select: *
+        from: agent_missions
+        where: organization_id = bucket.organization_id
+      - select: *
+        from: tenant_registry
+        where: organization_id = bucket.organization_id

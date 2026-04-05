@@ -10,6 +10,7 @@ go_library(
         "postgres_store.go",
         "repository.go",
         "store.go",
+        "powersync.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/auth",
     visibility = ["//visibility:public"],
@@ -26,6 +27,7 @@ go_test(
         "auth_test.go",
         "jwt_extra_test.go",
         "oidc_test.go",
+        "powersync_test.go",
     ],
     embed = [":auth"],
 )
