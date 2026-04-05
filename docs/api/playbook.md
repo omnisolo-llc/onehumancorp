@@ -139,9 +139,54 @@ Events emitted:
 - `QuotaExhausted`
 
 ### 4.3 KAIROS Orchestration APIs
-Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines can be found in the [KAIROS Orchestration API Reference](kairos_orchestration_api.md).
 
-## 5. Visualizing the Flow
+The KAIROS Orchestration API drives the core backbone of the One Human Corp Swarm. It encompasses the Shared Task List, Teammate Mesh APIs, and AutoDream Vector Data Pipelines. For a full detailed reference, see the [KAIROS Orchestration API Reference](kairos_orchestration_api.md).
+
+#### Teammate Mesh
+Handles real-time inter-agent messaging and meeting room broadcasts, resolving the Swarm Intelligence Protocol (OHC-SIP).
+
+**Endpoint:** `POST /api/v1/mesh/rooms/{room_id}/messages`
+Broadcasts an intent to the designated room. Centrifuge downstream WebSocket propagation handles bursts of up to 10k messages/sec.
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_pm_001",
+  "action": "ultraplan_deliberation",
+  "status": "active",
+  "payload": {
+     "content": "I propose we use pgvector instead of Pinecone for AutoDream."
+  }
+}
+```
+
+#### AutoDream Vector Pipelines
+Manages long-term semantic memory consolidation.
+
+**Endpoint:** `POST /api/v1/autodream/sync`
+Forces the background worker to scan `.agent-task/memory/*.yml` files, generate Minimax embeddings, and upsert them into `autodream_memories`.
+
+**Payload:**
+```json
+{
+  "force_reindex": false
+}
+```
+
+**Endpoint:** `POST /api/v1/autodream/query`
+Executes an exact Nearest Neighbor search against the long-term swarm memory.
+
+**Payload:**
+```json
+{
+  "query_text": "How does the Teammate Mesh handle fallback in Standalone mode?",
+  "limit": 5
+}
+```
+
+## 5. Visualizing the Flows
+
+### Core Flow
 ```mermaid
 graph TD
     Client[Human CEO / External Tools] --> API[OHC Gateway]
@@ -153,6 +198,23 @@ graph TD
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Client,API,Auth,Hub,401,K8s,Agents premium;
+```
+
+### AutoDream Vector Embedding Workflow
+```mermaid
+sequenceDiagram
+    participant Worker as Agent (Worker)
+    participant FS as Local Filesystem
+    participant AutoDream as AutoDream API
+    participant LLM as Embedding Model
+    participant DB as pgvector
+
+    Worker->>FS: Writes Session Context to .agent-task/memory
+    AutoDream->>FS: Polling/Manual Sync Trigger
+    AutoDream->>LLM: Pass text to Minimax/Ada
+    LLM-->>AutoDream: Return 1536-dim Embedding
+    AutoDream->>DB: Upsert Vector to autodream_memories
+    AutoDream-->>Worker: Broadcast Consolidation Success
 ```
 
 </div>
