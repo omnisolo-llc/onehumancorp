@@ -116,3 +116,52 @@ func TestHandleHybridSyncMissions_PIIRedaction(t *testing.T) {
 		t.Errorf("Expected [REDACTED_EMAIL] in payload")
 	}
 }
+
+func TestHandleSyncRAG_PIIRedaction(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test Org", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	defer hub.Close()
+
+	// Create mock SIPDB
+	db, err := orchestration.NewSIPDB("file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to init sipdb: %v", err)
+	}
+	hub.SetSIPDB(db)
+
+	srv := NewServer(org, hub, nil, nil)
+
+	payload := map[string]interface{}{
+		"memory_id": "ctx-pii-3",
+		"context": "Context with PII: bob@example.com and phone 999-888-7777.",
+		"source_plugin": "test-plugin",
+	}
+	body, _ := json.Marshal(payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/sync/rag", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	srv.handleSyncRAG(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+
+	// Fetch from SIPDB to verify
+	memories, err := db.GetEpisodicMemoriesByPlugin(context.Background(), "test-plugin")
+	if err != nil || len(memories) == 0 {
+		t.Fatalf("memory not found in sipdb")
+	}
+	memory := memories[0]
+
+	if bytes.Contains([]byte(memory.Context), []byte("bob@example.com")) {
+		t.Errorf("PII email leaked in RAG context")
+	}
+	if bytes.Contains([]byte(memory.Context), []byte("999-888-7777")) {
+		t.Errorf("PII phone leaked in RAG context")
+	}
+	if !bytes.Contains([]byte(memory.Context), []byte("[REDACTED_EMAIL]")) {
+		t.Errorf("Expected [REDACTED_EMAIL] in context")
+	}
+}
