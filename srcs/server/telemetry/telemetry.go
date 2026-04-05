@@ -403,6 +403,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	if len(errs) > 0 {
 		return errs[0]
 	}
@@ -484,13 +489,15 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 	))
 
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{
+		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
 			"role":     role,
 			"model":    model,
 			"type":     tokenType,
 			"count":    count,
-		})
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
 	}
 }
@@ -517,11 +524,13 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 	))
 
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{
+		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
 			"role":     role,
 			"api":      api,
-		})
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
 	}
 }
@@ -548,11 +557,13 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 	))
 
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{
+		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
 			"role":     role,
 			"api":      api,
-		})
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
 	}
 }
@@ -575,9 +586,11 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 	))
 
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{
+		payloadMap := map[string]interface{}{
 			"type": interactionType,
-		})
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
 	}
 }
@@ -600,9 +613,11 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 	))
 
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{
+		payloadMap := map[string]interface{}{
 			"type": eventType,
-		})
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "meeting_event", string(payloadBytes))
 	}
 }
@@ -665,9 +680,11 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 	))
 
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{
+		payloadMap := map[string]interface{}{
 			"mission_id": missionID,
-		})
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
 }
