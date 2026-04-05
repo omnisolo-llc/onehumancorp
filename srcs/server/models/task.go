@@ -23,3 +23,20 @@ type TaskDependency struct {
 	TaskID          string
 	DependsOnTaskID string
 }
+
+// SharedTask is used primarily by TaskManager for multi-tenant queue operations.
+type SharedTask struct {
+	ID              string   `json:"id"`
+	OrganizationID  string   `json:"organization_id"`
+	ParentPlanID    string   `json:"parent_plan_id"`
+	Dependencies    []string `json:"dependencies"`
+	Title           string   `json:"title"`
+	Description     string   `json:"description,omitempty"`
+	Status          string   `json:"status"`
+	AssignedAgentID string   `json:"assigned_agent_id,omitempty"`
+	Priority        string   `json:"priority"`
+	Payload         string   `json:"payload"`
+	LockedUntil     *time.Time `json:"locked_until,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
