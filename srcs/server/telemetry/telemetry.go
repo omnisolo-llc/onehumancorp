@@ -55,6 +55,10 @@ var (
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
+	autoDreamSyncDuration       metric.Float64Histogram
+	autoDreamQueryDuration      metric.Float64Histogram
+	meshBroadcastTotal          metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -875,4 +879,31 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+}
+
+// RecordAutoDreamSyncLatency records the duration of the AutoDream sync operation.
+func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode string) {
+	if autoDreamSyncDuration != nil {
+		autoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordAutoDreamQueryLatency records the duration of the AutoDream RAG query.
+func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode string) {
+	if autoDreamQueryDuration != nil {
+		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordMeshBroadcast increments the mesh broadcast counter.
+func RecordMeshBroadcast(ctx context.Context, mode string) {
+	if meshBroadcastTotal != nil {
+		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
 }
