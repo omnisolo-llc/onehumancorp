@@ -431,3 +431,44 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
 }
+
+// handleStream streams real-time orchestration events to the dashboard.
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	// Set headers for SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	rc := http.NewResponseController(w)
+
+	// In a real implementation this would subscribe to a global event broker (e.g. s.hub).
+	// For now we simulate an orchestration stream similarly to handleScaleStream.
+	events := []string{
+		`{"event":"KAIROS Orchestrator: Connecting to Teammate Mesh...","status":"INFO"}`,
+		`{"event":"KAIROS Orchestrator: Synced AutoDream state.","status":"INFO"}`,
+		`{"event":"KAIROS Orchestrator: Hybrid cluster ready.","status":"Ready"}`,
+	}
+
+	for _, event := range events {
+		select {
+		case <-r.Context().Done():
+			return
+		default:
+		}
+
+		if s.hub != nil {
+			s.hub.LogEvent(map[string]interface{}{"type": "OrchestrationEventStream", "data": event})
+		}
+		data := []byte("data: " + event + "\n\n")
+		w.Write(data)
+		if err := rc.Flush(); err != nil {
+			break
+		}
+
+		select {
+		case <-r.Context().Done():
+			return
+		case <-time.After(1 * time.Second):
+		}
+	}
+}

@@ -19,38 +19,41 @@ import (
 )
 
 var (
-	meter            metric.Meter
-	requestCounter   metric.Int64Counter
-	latencyHistogram metric.Float64Histogram
+	meter                         metric.Meter
+	AutoDreamSyncDurationSeconds  metric.Float64Histogram
+	AutoDreamQueryDurationSeconds metric.Float64Histogram
+	MeshBroadcastTotal            metric.Int64Counter
+	requestCounter                metric.Int64Counter
+	latencyHistogram              metric.Float64Histogram
 
-	tokenUsageCounter          metric.Int64Counter
-	tokenBurnRateGauge         metric.Float64Gauge
-	agentApiCallsCounter       metric.Int64Counter
-	agentApiErrorsCounter      metric.Int64Counter
-	humanInteractionsCounter   metric.Int64Counter
-	meetingEventsCounter       metric.Int64Counter
-	swarmTasksCompletedCounter metric.Int64Counter
-	swarmTaskTransitionsCounter metric.Int64Counter
-	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
-	swarmTaskProcessingLatency  metric.Float64Histogram
-	taskEnqueuedCounter metric.Int64Counter
-	taskFailedCounter metric.Int64Counter
-	cacheHitsCounter           metric.Int64Counter
-	cacheMissesCounter         metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	tokenUsageCounter                  metric.Int64Counter
+	tokenBurnRateGauge                 metric.Float64Gauge
+	agentApiCallsCounter               metric.Int64Counter
+	agentApiErrorsCounter              metric.Int64Counter
+	humanInteractionsCounter           metric.Int64Counter
+	meetingEventsCounter               metric.Int64Counter
+	swarmTasksCompletedCounter         metric.Int64Counter
+	swarmTaskTransitionsCounter        metric.Int64Counter
+	swarmTaskQueueLengthGauge          metric.Int64UpDownCounter
+	swarmTaskProcessingLatency         metric.Float64Histogram
+	taskEnqueuedCounter                metric.Int64Counter
+	taskFailedCounter                  metric.Int64Counter
+	cacheHitsCounter                   metric.Int64Counter
+	cacheMissesCounter                 metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	TeammateMeshBroadcastsCounter    metric.Int64Counter
-	TeammateMeshDirectMessagesCounter metric.Int64Counter
-	TaskQueueLengthGauge       metric.Int64UpDownCounter
-	TaskProcessingLatency      metric.Float64Histogram
+	TeammateMeshBroadcastsCounter      metric.Int64Counter
+	TeammateMeshDirectMessagesCounter  metric.Int64Counter
+	TaskQueueLengthGauge               metric.Int64UpDownCounter
+	TaskProcessingLatency              metric.Float64Histogram
 
-	SyncCompletedCount metric.Int64Counter
-	SyncFailedCount    metric.Int64Counter
-	SyncEscalationsCount metric.Int64Counter
-	SyncLatency metric.Float64Histogram
-	SyncPayloadSize metric.Int64Histogram
+	SyncCompletedCount     metric.Int64Counter
+	SyncFailedCount        metric.Int64Counter
+	SyncEscalationsCount   metric.Int64Counter
+	SyncLatency            metric.Float64Histogram
+	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
-	syncDaemonBatchSize metric.Int64Histogram
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
@@ -350,6 +353,32 @@ func InitWithMeter(m mockableMeter) error {
 
 	TeammateMeshBroadcastsCounter, err = m.Int64Counter(
 		"teammate_mesh_broadcasts_total",
+		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamSyncDurationSeconds, err = m.Float64Histogram(
+		"ohc_autodream_sync_duration_seconds",
+		metric.WithDescription("Duration of AutoDream sync in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamQueryDurationSeconds, err = m.Float64Histogram(
+		"ohc_autodream_query_duration_seconds",
+		metric.WithDescription("Duration of AutoDream query in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshBroadcastTotal, err = m.Int64Counter(
+		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
 	)
 	if err != nil {
@@ -874,5 +903,40 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 	cacheMissesCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
+	))
+}
+
+func getDeploymentMode() string {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		return "standalone"
+	}
+	return "cloud"
+}
+
+func RecordAutoDreamSyncDuration(ctx context.Context, duration time.Duration) {
+	if AutoDreamSyncDurationSeconds == nil {
+		return
+	}
+	AutoDreamSyncDurationSeconds.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("deployment_mode", getDeploymentMode()),
+	))
+}
+
+func RecordAutoDreamQueryDuration(ctx context.Context, duration time.Duration) {
+	if AutoDreamQueryDurationSeconds == nil {
+		return
+	}
+	AutoDreamQueryDurationSeconds.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("deployment_mode", getDeploymentMode()),
+	))
+}
+
+func RecordMeshBroadcast(ctx context.Context, channel string) {
+	if MeshBroadcastTotal == nil {
+		return
+	}
+	MeshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("channel", channel),
+		attribute.String("deployment_mode", getDeploymentMode()),
 	))
 }
