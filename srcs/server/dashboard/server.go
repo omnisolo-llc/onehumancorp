@@ -548,7 +548,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 5 – Autonomous SRE / Incident Management
 	mux.HandleFunc("/api/v1/scale", server.handleScale)
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
-	mux.HandleFunc("/api/v1/stream", server.handleStream)
+	mux.HandleFunc("/api/v1/stream", auth.RequireRole("system", server.handleStream))
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
@@ -1797,29 +1797,62 @@ type pipelinePromoteRequest struct {
 
 // handleStream pushes real-time state changes via Server-Sent Events (SSE)
 func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
 	// Set headers for SSE
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	rc := http.NewResponseController(w)
+	ctx := r.Context()
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
 
-	// In a real implementation this would subscribe to a message bus like Centrifuge Hub or Redis.
-	// We'll simulate pushing the required events for observability gap closure.
-	events := []string{
-		`{"event":"AgentHired","status":"INFO"}`,
-		`{"event":"TaskCompleted","status":"COMPLETED"}`,
-		`{"event":"AgentFired","status":"INFO"}`,
+	var subChan <-chan struct{}
+	var unsubscribe func()
+
+	if s.hub != nil {
+		// As a workaround since TeammateMesh isn't directly exposed on Hub,
+		// we can subscribe via the existing hub.Subscribe logic which triggers
+		// on any new message to the system/agent.
+		subChan, unsubscribe = s.hub.Subscribe("system")
+		defer unsubscribe()
 	}
 
-	for _, event := range events {
+	// Make sure headers are sent immediately
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	for {
 		select {
-		case <-r.Context().Done():
+		case <-ctx.Done():
 			return
-		default:
-			fmt.Fprintf(w, "data: %s\n\n", event)
-			_ = rc.Flush()
-			time.Sleep(500 * time.Millisecond)
+		case <-ticker.C:
+			// Heartbeat ping
+			fmt.Fprintf(w, ": heartbeat\n\n")
+			flusher.Flush()
+		case _, ok := <-subChan:
+			if !ok {
+				// Channel closed
+				return
+			}
+
+			// We received a ping that there's a new message.
+			// Let's pull the latest messages from the inbox.
+			messages := s.hub.Inbox("system")
+			for _, msg := range messages {
+				eventStr := `{"event":"TaskBroadcast","status":"INFO"}`
+				if msg.Type == "mesh:tasks" {
+					eventStr = msg.Content
+				}
+				fmt.Fprintf(w, "data: %s\n\n", eventStr)
+			}
+			flusher.Flush()
 		}
 	}
 }
