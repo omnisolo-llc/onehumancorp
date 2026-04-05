@@ -1040,15 +1040,20 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BufferMetric failed: %v", err)
 	}
-	err = db.BufferMetric(ctx, "agent_api_call", `{"agent_id":"a2","api":"fetch"}`)
+	err = db.BufferMetric(ctx, "agent_api_call", `{"agent_id":"a2","api":"fetch", "details": "called by bob@example.com"}`)
+	if err != nil {
+		t.Fatalf("BufferMetric failed: %v", err)
+	}
+	// Raw text with PII
+	err = db.BufferMetric(ctx, "raw_metric", `some error with ssn 123-45-6789`)
 	if err != nil {
 		t.Fatalf("BufferMetric failed: %v", err)
 	}
 
 	var count int
 	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
-	if err != nil || count != 2 {
-		t.Fatalf("Expected 2 metrics, got %d, err: %v", count, err)
+	if err != nil || count != 3 {
+		t.Fatalf("Expected 3 metrics, got %d, err: %v", count, err)
 	}
 
 	var reqBody []byte
@@ -1062,11 +1067,11 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SyncBufferedMetrics failed: %v", err)
 	}
-	if syncedCount != 2 {
-		t.Fatalf("Expected 2 synced records, got %d", syncedCount)
+	if syncedCount != 3 {
+		t.Fatalf("Expected 3 synced records, got %d", syncedCount)
 	}
 
-	expectedBody := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
+	expectedBody := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","details":"called by [REDACTED_EMAIL]","metric_type":"agent_api_call"},"some error with ssn [REDACTED_SSN]"]`
 	if string(reqBody) != expectedBody {
 		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
 	}
