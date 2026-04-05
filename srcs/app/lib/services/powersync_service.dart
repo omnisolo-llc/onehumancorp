@@ -71,8 +71,11 @@ class PowerSyncService {
       ]),
     ]));
 
-    final dir = await getApplicationSupportDirectory();
-    final path = p.join(dir.path, 'powersync.db');
+    String path = 'powersync.db';
+    if (!const bool.fromEnvironment('dart.library.js_util')) {
+      final dir = await getApplicationSupportDirectory();
+      path = p.join(dir.path, 'powersync.db');
+    }
 
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();

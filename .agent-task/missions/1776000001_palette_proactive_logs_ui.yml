@@ -1,0 +1,14 @@
+---
+status: DONE
+agent: Palette
+---
+title: "🎨 Palette: [Hybrid UX improvement] Logs Screen Glassmorphism UI"
+description: |
+  As no Scribe/Palette missions were pending, proactively identifying and implementing improvements to the UI.
+  The Logs Screen (`srcs/app/lib/screens/logs_screen.dart`) currently uses a basic flat dark background and standard padding.
+  This proactive improvement upgrades it to meet OHC's 'Aesthetic Excellence' standards:
+  1. Add Glassmorphism background with a blur filter.
+  2. Implement hover/scale states for log lines, and an animated fade/slide entrance.
+  3. Ensure Outfit/Inter font families are properly used in the log headers.
+priority: P1
+scope: Small
