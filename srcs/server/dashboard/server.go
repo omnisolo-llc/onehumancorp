@@ -23,6 +23,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
+	"go.opentelemetry.io/otel"
 )
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
@@ -554,6 +556,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", server.handleHybridSyncMissions))
+	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
@@ -1785,4 +1788,60 @@ type pipelineCreateRequest struct {
 type pipelinePromoteRequest struct {
 	PipelineID string `json:"pipelineId"`
 	ApprovedBy string `json:"approvedBy"`
+}
+
+// handleTelemetrySync handles receiving synced local telemetry buffers from the standalone sync daemon.
+func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleTelemetrySync")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5MB limit
+
+	// We decode into []interface{} to preserve all dynamic fields for buffer forwarding
+	var rawPayloads []map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&rawPayloads); err != nil {
+		http.Error(w, "invalid JSON payload array", http.StatusBadRequest)
+		return
+	}
+
+	if len(rawPayloads) == 0 {
+		writeJSON(w, map[string]string{"status": "success", "message": "no metrics to sync"})
+		return
+	}
+
+	syncedCount := 0
+	for _, p := range rawPayloads {
+		metricType, ok := p["metric_type"].(string)
+		if !ok || metricType == "" {
+			continue // skip invalid items
+		}
+
+		// Ensure payload is redacted
+		redactedPayload := telemetry.RedactInterfacePII(p)
+
+		if s.hub.SIPDB() != nil {
+			// Strip metric_type before saving the payload to match local behavior
+			delete(redactedPayload.(map[string]interface{}), "metric_type")
+
+			payloadBytes, err := json.Marshal(redactedPayload)
+			if err == nil {
+				if err := s.hub.SIPDB().BufferMetric(ctx, metricType, string(payloadBytes)); err != nil {
+					slog.Error("failed to buffer synced metric", "metricType", metricType, "error", err)
+				} else {
+					syncedCount++
+				}
+			}
+		}
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"status":       "success",
+		"message":      "metrics synced successfully",
+		"synced_count": syncedCount,
+	})
 }
