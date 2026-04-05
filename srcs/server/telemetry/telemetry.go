@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	isStandaloneEnv  bool
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -108,7 +109,8 @@ func RedactInterfacePII(val interface{}) interface{} {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitTelemetry() (func(), error) {
-	if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
+	isStandaloneEnv = os.Getenv("OHC_STANDALONE") == "true"
+	if isStandaloneEnv && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
 		// Enforce user data privacy and local sovereignty in Standalone Mode.
 		// Exporter is strictly opt-in and disabled by default.
 		return func() {}, nil
@@ -488,7 +490,7 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		attribute.String("type", tokenType),
 	))
 
-	if BufferMetricFunc != nil {
+	if BufferMetricFunc != nil && isStandaloneEnv {
 		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
 			"role":     role,
@@ -498,7 +500,10 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+		bgCtx := context.WithoutCancel(ctx)
+		go func() {
+			_ = BufferMetricFunc(bgCtx, "token_usage", string(payloadBytes))
+		}()
 	}
 }
 
@@ -523,7 +528,7 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		attribute.String("api", api),
 	))
 
-	if BufferMetricFunc != nil {
+	if BufferMetricFunc != nil && isStandaloneEnv {
 		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
 			"role":     role,
@@ -531,7 +536,10 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
+		bgCtx := context.WithoutCancel(ctx)
+		go func() {
+			_ = BufferMetricFunc(bgCtx, "agent_api_call", string(payloadBytes))
+		}()
 	}
 }
 
@@ -556,7 +564,7 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 		attribute.String("api", api),
 	))
 
-	if BufferMetricFunc != nil {
+	if BufferMetricFunc != nil && isStandaloneEnv {
 		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
 			"role":     role,
@@ -564,7 +572,10 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
+		bgCtx := context.WithoutCancel(ctx)
+		go func() {
+			_ = BufferMetricFunc(bgCtx, "agent_api_error", string(payloadBytes))
+		}()
 	}
 }
 
@@ -585,13 +596,16 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 		attribute.String("type", interactionType),
 	))
 
-	if BufferMetricFunc != nil {
+	if BufferMetricFunc != nil && isStandaloneEnv {
 		payloadMap := map[string]interface{}{
 			"type": interactionType,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
+		bgCtx := context.WithoutCancel(ctx)
+		go func() {
+			_ = BufferMetricFunc(bgCtx, "human_interaction", string(payloadBytes))
+		}()
 	}
 }
 
@@ -612,13 +626,16 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 		attribute.String("type", eventType),
 	))
 
-	if BufferMetricFunc != nil {
+	if BufferMetricFunc != nil && isStandaloneEnv {
 		payloadMap := map[string]interface{}{
 			"type": eventType,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "meeting_event", string(payloadBytes))
+		bgCtx := context.WithoutCancel(ctx)
+		go func() {
+			_ = BufferMetricFunc(bgCtx, "meeting_event", string(payloadBytes))
+		}()
 	}
 }
 
@@ -679,13 +696,16 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		attribute.String("mission_id", missionID),
 	))
 
-	if BufferMetricFunc != nil {
+	if BufferMetricFunc != nil && isStandaloneEnv {
 		payloadMap := map[string]interface{}{
 			"mission_id": missionID,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
+		bgCtx := context.WithoutCancel(ctx)
+		go func() {
+			_ = BufferMetricFunc(bgCtx, "swarm_task_completed", string(payloadBytes))
+		}()
 	}
 }
 
