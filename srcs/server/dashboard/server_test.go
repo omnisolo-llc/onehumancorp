@@ -4126,7 +4126,9 @@ func TestHandleSyncRAG(t *testing.T) {
 	if memories[0].MemoryID != "test-memory-123" {
 		t.Errorf("Expected memory ID 'test-memory-123', got '%s'", memories[0].MemoryID)
 	}
-	if !strings.Contains(memories[0].Context, "test sensitive context") {
-		t.Errorf("Expected context to contain 'test sensitive context', got '%s'", memories[0].Context)
+	// Wait, the new logic we added explicitly overwrites with REDACTED_LOCAL_RAG_CONTEXT
+	// Let's ensure the test validates our recent change
+	if !strings.Contains(memories[0].Context, "[REDACTED_LOCAL_RAG_CONTEXT]") {
+		t.Errorf("Expected context to contain '[REDACTED_LOCAL_RAG_CONTEXT]', got '%s'", memories[0].Context)
 	}
 }

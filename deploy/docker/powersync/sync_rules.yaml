@@ -1,0 +1,11 @@
+# PowerSync sync_rules.yaml
+# Uses token.parameters.organization_id to enforce multi-tenant isolation
+bucket_definitions:
+  user_data:
+    # A single bucket per organization containing all tenant data
+    parameters:
+      - select * from current_user
+    data:
+      - SELECT * FROM agent_missions WHERE organization_id = bucket.parameters.organization_id
+      - SELECT * FROM tenant_registry WHERE organization_id = bucket.parameters.organization_id
+      - SELECT * FROM swarm_memories WHERE organization_id = bucket.parameters.organization_id

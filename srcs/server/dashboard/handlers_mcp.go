@@ -695,6 +695,16 @@ func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
 
 	// Respect local parity if conflict resolution is explicitly force-local
 	if r.Header.Get("X-OHC-Conflict-Resolution") == "force-local" {
+		// Strip the 'rag_context' or context string before syncing to the cloud as required by PowerSync instructions
+		memory.Context = "[REDACTED_LOCAL_RAG_CONTEXT]"
+
+		if s.hub.SIPDB() != nil {
+			// Update the stored memory with redacted context
+			if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err != nil {
+				slog.Error("failed to update synced context memory with redacted local parity", "error", err)
+			}
+		}
+
 		w.WriteHeader(http.StatusConflict) // Acknowledgement of local state priority
 		writeJSON(w, map[string]string{"status": "conflict_resolved", "message": "rag sync accepted via local priority"})
 		return
