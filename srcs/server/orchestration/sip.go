@@ -780,10 +780,11 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		var obj map[string]interface{}
 		if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
 			obj["metric_type"] = rec.metricType
-			b, _ := json.Marshal(obj)
+			redactedObj := telemetry.RedactInterfacePII(obj)
+			b, _ := json.Marshal(redactedObj)
 			payloadBuilder.Write(b)
 		} else {
-			payloadBuilder.WriteString(rec.payload)
+			payloadBuilder.WriteString(telemetry.RedactPII(rec.payload))
 		}
 		idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
 	}
