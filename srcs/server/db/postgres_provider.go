@@ -120,6 +120,14 @@ func (r *PgRows) Scan(dest ...any) error {
 	return r.rows.Scan(dest...)
 }
 
+func (r *PgRows) Columns() ([]string, error) {
+	var cols []string
+	for _, fd := range r.rows.FieldDescriptions() {
+		cols = append(cols, string(fd.Name))
+	}
+	return cols, nil
+}
+
 func (r *PgRows) Close() {
 	r.rows.Close()
 }

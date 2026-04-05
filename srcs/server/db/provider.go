@@ -62,6 +62,7 @@ type Rows interface {
 	Next() bool
 	Scan(dest ...any) error
 	Close()
+	Columns() ([]string, error)
 	Err() error
 }
 
