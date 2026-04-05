@@ -30,6 +30,7 @@ type DefaultTaskOrchestrator struct {
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
 	workerWg    sync.WaitGroup
+	spawner     SubAgentSpawner
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
@@ -42,6 +43,8 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 		workerCtx:   ctx,
 		workerCancel: cancel,
 	}
+	// Note: We use nil hub for task manager to avoid circular dependency in DefaultSubAgentSpawner
+	to.spawner = NewDefaultSubAgentSpawner(hub, NewTaskManager(provider, nil))
 	to.StartBackgroundWorker()
 	return to
 }
@@ -63,11 +66,73 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+				// Only poll DELEGATED tasks for Sub-Agent Spawner worker, otherwise leave it.
+				// We do a manual peek to avoid acquiring non-delegated tasks.
+				// For the sake of the KAIROS DAG orchestration, the orchestrator only consumes
+				// DELEGATED tasks locally.
+
+				// A simpler query just for sub agent polling
+				var candidateID string
+				query := `SELECT id FROM swarm_tasks WHERE status = 'READY' AND json_extract(payload, '$.priority') = 'DELEGATED' LIMIT 1`
+				if !to.db.IsSQLite() {
+					query = `SELECT id FROM swarm_tasks WHERE status = 'READY' AND payload->>'priority' = 'DELEGATED' LIMIT 1 FOR UPDATE SKIP LOCKED`
+				}
+
+				tx, err := to.db.Begin(to.workerCtx)
+				if err != nil {
+					continue
+				}
+				err = tx.QueryRow(to.workerCtx, query).Scan(&candidateID)
+
+				if err != nil {
+					_ = tx.Rollback(to.workerCtx)
+					continue
+				}
+
+				// Re-acquire correctly with ID
+				var task models.Task
+				if to.db.IsSQLite() {
+					updateQuery := `
+						UPDATE swarm_tasks
+						SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+						WHERE id = $2
+						RETURNING id, mission_id, title, status, payload, created_at, updated_at
+					`
+					err = tx.QueryRow(to.workerCtx, updateQuery, "sub-agent-spawner", candidateID).Scan(
+						&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+					)
+				} else {
+					updateQuery := `
+						UPDATE swarm_tasks
+						SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+						WHERE id = $2
+						RETURNING id, mission_id, title, status, payload, created_at, updated_at
+					`
+					err = tx.QueryRow(to.workerCtx, updateQuery, "sub-agent-spawner", candidateID).Scan(
+						&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+					)
+				}
+
+				_ = tx.Commit(to.workerCtx)
+
+				if err == nil && task.ID != "" {
+					if to.db.IsSQLite() {
+						sem <- struct{}{}
+					}
+
+					go func(t *models.Task) {
+						if to.db.IsSQLite() {
+							defer func() { <-sem }()
+						}
+
+						sharedTask := &SharedTask{
+							ID:             t.ID,
+							OrganizationID: "system",
+							ParentPlanID:   t.MissionID,
+						}
+						_ = to.spawner.Spawn(context.Background(), sharedTask)
+					}(&task)
+				}
 			}
 		}
 	}()
