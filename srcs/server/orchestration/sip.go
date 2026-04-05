@@ -715,6 +715,16 @@ func (s *SIPDB) Provider() db.Provider {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the telemetry_buffer table.
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
+	var parsedPayload interface{}
+	if err := json.Unmarshal([]byte(payload), &parsedPayload); err == nil {
+		redacted := telemetry.RedactInterfacePII(parsedPayload)
+		if redactedBytes, err := json.Marshal(redacted); err == nil {
+			payload = string(redactedBytes)
+		}
+	} else {
+		payload = telemetry.RedactPII(payload)
+	}
+
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO telemetry_buffer (metric_type, payload, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",

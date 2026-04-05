@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -1036,7 +1037,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = db.BufferMetric(ctx, "token_usage", `{"agent_id":"a1","role":"r1","count":10}`)
+	err = db.BufferMetric(ctx, "token_usage", `{"agent_id":"a1","role":"r1","email":"test@example.com"}`)
 	if err != nil {
 		t.Fatalf("BufferMetric failed: %v", err)
 	}
@@ -1049,6 +1050,15 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
 	if err != nil || count != 2 {
 		t.Fatalf("Expected 2 metrics, got %d, err: %v", count, err)
+	}
+
+	var payload string
+	err = db.db.QueryRow(ctx, "SELECT payload FROM telemetry_buffer WHERE metric_type = 'token_usage'").Scan(&payload)
+	if err != nil {
+		t.Fatalf("Failed to query payload: %v", err)
+	}
+	if strings.Contains(payload, "test@example.com") {
+		t.Errorf("PII was not redacted: %s", payload)
 	}
 
 	var reqBody []byte
@@ -1066,7 +1076,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected 2 synced records, got %d", syncedCount)
 	}
 
-	expectedBody := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
+	expectedBody := `[{"agent_id":"a1","email":"[REDACTED_EMAIL]","metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
 	if string(reqBody) != expectedBody {
 		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
 	}
