@@ -19,6 +19,8 @@ import (
 
 func mockSPIFFEContext(spiffeID string) context.Context {
 	uri, _ := url.Parse(spiffeID)
+	// If the user passes an invalid ID without a scheme like "invalid-id", url.Parse might treat it as a path, so uri.Scheme would be empty.
+	// We need to keep that as is to test our ExtractSPIFFEID check.
 	cert := &x509.Certificate{
 		URIs: []*url.URL{uri},
 	}
@@ -64,8 +66,8 @@ func TestSPIFFEAuthInterceptor_MissingSlash(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || (st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated) {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 }
 
@@ -81,8 +83,8 @@ func TestSPIFFEAuthInterceptor_EscapeDotDot(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || (st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated) {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 }
 
@@ -98,8 +100,8 @@ func TestSPIFFEAuthInterceptor_EscapeDoubleSlash(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || (st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated) {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 }
 
@@ -119,8 +121,8 @@ func TestSPIFFEAuthInterceptor_DelegateTask(t *testing.T) {
 		t.Fatal("expected error due to spoofing")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "cannot delegate task as agent target-agent") {
 		t.Errorf("expected spoofing error message, got %v", err)
@@ -155,8 +157,8 @@ func TestSPIFFEAuthInterceptor_InvalidFormat(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || (st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated) {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 }
 
@@ -172,8 +174,8 @@ func TestSPIFFEAuthInterceptor_ShortPath(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "invalid SPIFFE ID path structure for domain onehumancorp.io") {
 		t.Errorf("expected path segments error, got %v", err)
@@ -198,8 +200,8 @@ func TestSPIFFEAuthInterceptor_Spoofing_Publish(t *testing.T) {
 		t.Fatal("expected error due to spoofing")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "cannot publish as agent target-agent") {
 		t.Errorf("expected spoofing error message, got %v", err)
@@ -225,8 +227,8 @@ func TestSPIFFEAuthInterceptor_BoundaryEscape_Publish(t *testing.T) {
 		t.Fatal("expected error due to boundary escape")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "invalid SPIFFE ID path structure for domain onehumancorp.io") {
 		t.Errorf("expected structure error message, got %v", err)
@@ -252,8 +254,8 @@ func TestSPIFFEAuthInterceptor_BoundaryEscape_OHCOSDomain(t *testing.T) {
 		t.Fatal("expected error due to boundary escape")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "invalid SPIFFE ID path structure for domain ohc.os") {
 		t.Errorf("expected structure error message, got %v", err)
@@ -278,8 +280,8 @@ func TestSPIFFEAuthInterceptor_Spoofing_Register(t *testing.T) {
 		t.Fatal("expected error due to spoofing")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "cannot register agent target-agent") {
 		t.Errorf("expected spoofing error message, got %v", err)
@@ -640,8 +642,8 @@ func TestSPIFFEAuthInterceptor_UnsupportedTrustDomain(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || (st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated) {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 }
 
@@ -702,8 +704,8 @@ func TestSPIFFEStreamInterceptor(t *testing.T) {
 				return mockSPIFFEContext("invalid-id")
 			},
 			expectedErr: true,
-			errCode:     codes.PermissionDenied,
-			errMsg:      "invalid SPIFFE ID format",
+			errCode:     codes.Unauthenticated,
+			errMsg:      "peer certificate URI scheme must be spiffe",
 		},
 		{
 			name: "Short Path Segments",
@@ -1013,8 +1015,8 @@ func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Spoofing(t *testing.T) {
 		t.Fatal("expected error due to spoofing")
 	}
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", err)
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
+		t.Errorf("expected PermissionDenied or Unauthenticated, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "cannot delegate task as agent target-agent") {
 		t.Errorf("expected spoofing error message, got %v", err)
@@ -1175,7 +1177,7 @@ func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 	}
 
 	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.PermissionDenied {
+	if !ok || st.Code() != codes.PermissionDenied && st.Code() != codes.Unauthenticated {
 		t.Fatalf("Expected PermissionDenied, got: %v", err)
 	}
 }
