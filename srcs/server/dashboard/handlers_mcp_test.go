@@ -320,6 +320,50 @@ func TestHandleMCPTools(t *testing.T) {
 	}
 }
 
+func TestHandleTelemetrySync(t *testing.T) {
+	hub := orchestration.NewHub()
+	defer hub.Close()
+	srv := &Server{
+		org: domain.Organization{ID: "org-1"},
+		hub: hub,
+	}
+
+	t.Run("invalid method", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/telemetry/sync", nil)
+		w := httptest.NewRecorder()
+		srv.handleTelemetrySync(w, req)
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected 405, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/telemetry/sync", strings.NewReader(`{invalid}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleTelemetrySync(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("success telemetry sync", func(t *testing.T) {
+		payload := `[{"metric_type": "test_metric", "payload": "{\"some\": \"data\"}"}]`
+		req := httptest.NewRequest("POST", "/api/telemetry/sync", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.handleTelemetrySync(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		if !strings.Contains(w.Body.String(), "success") {
+			t.Errorf("expected 'success', got %s", w.Body.String())
+		}
+	})
+}
+
 func TestHandleHybridSyncMissions(t *testing.T) {
 	hub := orchestration.NewHub()
 	defer hub.Close()

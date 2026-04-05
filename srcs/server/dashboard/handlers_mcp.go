@@ -535,6 +535,39 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "success", "message": "context synced"})
 }
 
+// handleTelemetrySync handles receiving synced local metrics from Standalone OHC clients.
+func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
+	_, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleTelemetrySync")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5MB limit
+
+	var payloads []struct {
+		MetricType string `json:"metric_type"`
+		Payload    string `json:"payload"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid JSON payload array", http.StatusBadRequest)
+		return
+	}
+
+	for _, metricPayload := range payloads {
+		// Log the metric, allowing OpenTelemetry integration or manual tracking.
+		// Since this is already scrubbed locally by the client, we can ingest it directly.
+		slog.Debug("Ingested standalone metric", "metric_type", metricPayload.MetricType, "payload", metricPayload.Payload)
+		// We re-insert into the cloud metrics via standard functions if applicable,
+		// but for now logging to OTEL or standard log is acceptable per design doc.
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "metrics synced"})
+}
+
 // handleHybridSyncMissions handles receiving synced local missions from HybridMCPRAGDaemon.
 func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleHybridSyncMissions")

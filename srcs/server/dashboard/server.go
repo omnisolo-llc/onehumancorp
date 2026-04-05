@@ -556,6 +556,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", server.handleHybridSyncMissions))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
+	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
