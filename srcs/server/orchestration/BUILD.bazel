@@ -12,6 +12,7 @@ go_library(
         "centrifuge_hub.go",
         "delegation.go",
         "hub.go",
+        "health.go",
         "postgres_hub.go",
         "repository.go",
         "sanitizer.go",
@@ -42,8 +43,10 @@ go_library(
         "@org_golang_google_grpc//credentials",
         "@org_golang_google_grpc//peer",
         "@org_golang_google_grpc//status",
-        "@org_golang_google_protobuf//proto",
         "@org_modernc_sqlite//:sqlite",
+
+        "@org_golang_google_protobuf//proto",
+
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
     ],
@@ -62,6 +65,7 @@ go_test(
         "delegation_test.go",
         "eventlog_test.go",
         "hub_test.go",
+        "health_test.go",
         "minimax_client_test.go",
         "service_extra_test.go",
         "service_grpc_test.go",
@@ -89,6 +93,8 @@ go_test(
         "@org_golang_google_grpc//metadata",
         "@org_golang_google_grpc//peer",
         "@org_golang_google_grpc//status",
+        "@org_modernc_sqlite//:sqlite",
+
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
     ],

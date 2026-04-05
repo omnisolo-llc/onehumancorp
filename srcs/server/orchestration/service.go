@@ -1961,14 +1961,6 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 
 
-// CheckHealth returns a HybridHealthProbe detailing the system health.
-type HybridHealthProbe struct {
-	Mode        string        `json:"mode"`
-	Status      string        `json:"status"`
-	DBPing      time.Duration `json:"db_ping"`
-	SyncBacklog int           `json:"sync_backlog"`
-	MeshActive  bool          `json:"mesh_active"`
-}
 
 func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 	probe := HybridHealthProbe{
