@@ -144,6 +144,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 
 	_ = to.spawner.Spawn(to.workerCtx, task)
 }
+}
 
 func (to *DefaultTaskOrchestrator) Stop() {
 	if to.workerCancel != nil {
