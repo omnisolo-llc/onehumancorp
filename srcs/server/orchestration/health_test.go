@@ -25,3 +25,44 @@ func TestHybridHealthProbe(t *testing.T) {
 		t.Errorf("Expected status 'healthy', got '%s'", probe.Status)
 	}
 }
+
+func TestCheckHealth_SQLite(t *testing.T) {
+	ctx := context.Background()
+	hub := NewHub()
+
+	provider := db.NewTestSqliteProvider()
+	database := &db.DB{Provider: provider}
+
+	_, err := database.Exec(ctx, `
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT,
+			payload TEXT,
+			synced_to_cloud INTEGER
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+	_, err = database.Exec(ctx, "INSERT INTO agent_missions (id, status, synced_to_cloud) VALUES ('1', 'CLOUD_ESCALATION', 0)")
+	if err != nil {
+		t.Fatalf("Failed to insert mock mission: %v", err)
+	}
+
+	hub.SetSIPDB(&SIPDB{db: database})
+
+	probe, err := hub.CheckHealth(ctx)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if probe.Mode != "standalone" {
+		t.Errorf("Expected mode 'standalone', got '%s'", probe.Mode)
+	}
+	if probe.Status != "healthy" {
+		t.Errorf("Expected status 'healthy', got '%s'", probe.Status)
+	}
+	if probe.SyncBacklog != 1 {
+		t.Errorf("Expected SyncBacklog 1, got %d", probe.SyncBacklog)
+	}
+}
