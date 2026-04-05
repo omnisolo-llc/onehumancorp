@@ -900,8 +900,6 @@ func (h *Hub) Publish(message Message) error {
 		}
 	}
 
-	var subsToNotify []chan struct{}
-
 	if message.ToAgent != "" {
 		inbox := h.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
@@ -910,8 +908,13 @@ func (h *Hub) Publish(message Message) error {
 
 		h.inbox[message.ToAgent] = append(inbox, message)
 
-		if subs, ok := h.subs[message.ToAgent]; ok && len(subs) > 0 {
-			subsToNotify = append(subsToNotify, subs...)
+		if subs, ok := h.subs[message.ToAgent]; ok {
+			for _, sub := range subs {
+				select {
+				case sub <- struct{}{}:
+				default:
+				}
+			}
 		}
 	}
 
@@ -987,8 +990,13 @@ func (h *Hub) Publish(message Message) error {
 		sender.Status = StatusInMeeting
 
 		for _, participant := range meeting.Participants {
-			if subs, ok := h.subs[participant]; ok && len(subs) > 0 {
-				subsToNotify = append(subsToNotify, subs...)
+			if subs, ok := h.subs[participant]; ok {
+				for _, sub := range subs {
+					select {
+					case sub <- struct{}{}:
+					default:
+					}
+				}
 			}
 		}
 	} else {
@@ -999,14 +1007,6 @@ func (h *Hub) Publish(message Message) error {
 	centrifugeNode := h.centrifugeNode
 
 	h.mu.Unlock()
-
-	// Optimize notification to channels.
-	for _, sub := range subsToNotify {
-		select {
-		case sub <- struct{}{}:
-		default:
-		}
-	}
 
 	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
 	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
@@ -1093,13 +1093,7 @@ func (h *Hub) publishRepository(message Message) error {
 		slog.Error("failed to update sender status in repository", "agent_id", message.FromAgent, "status", sender.Status, "error", err)
 	}
 
-	cn, subsToNotify := h.collectRealtimeTargets(message, meetingParticipants)
-	for _, sub := range subsToNotify {
-		select {
-		case sub <- struct{}{}:
-		default:
-		}
-	}
+	cn := h.notifyRealtimeTargets(message, meetingParticipants)
 
 	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
 	if message.Type != EventStatus {
@@ -1130,31 +1124,33 @@ func (h *Hub) publishRepository(message Message) error {
 	return nil
 }
 
-func (h *Hub) collectRealtimeTargets(message Message, meetingParticipants []string) (*CentrifugeNode, []chan struct{}) {
+func (h *Hub) notifyRealtimeTargets(message Message, meetingParticipants []string) *CentrifugeNode {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	totalSubs := 0
 	if message.ToAgent != "" {
-		totalSubs += len(h.subs[message.ToAgent])
+		if subs, ok := h.subs[message.ToAgent]; ok {
+			for _, sub := range subs {
+				select {
+				case sub <- struct{}{}:
+				default:
+				}
+			}
+		}
 	}
+
 	for _, participant := range meetingParticipants {
-		totalSubs += len(h.subs[participant])
+		if subs, ok := h.subs[participant]; ok {
+			for _, sub := range subs {
+				select {
+				case sub <- struct{}{}:
+				default:
+				}
+			}
+		}
 	}
 
-	var subsToNotify []chan struct{}
-	if totalSubs > 0 {
-		subsToNotify = make([]chan struct{}, 0, totalSubs)
-	}
-
-	if message.ToAgent != "" {
-		subsToNotify = append(subsToNotify, h.subs[message.ToAgent]...)
-	}
-	for _, participant := range meetingParticipants {
-		subsToNotify = append(subsToNotify, h.subs[participant]...)
-	}
-
-	return h.centrifugeNode, subsToNotify
+	return h.centrifugeNode
 }
 
 // Subscribe returns a channel that receives real-time messages for the given agent.
@@ -1239,9 +1235,7 @@ func putMessageSlice(s []Message) {
 		return
 	}
 	// clear elements to avoid memory leaks
-	for i := range s {
-		s[i] = Message{}
-	}
+	clear(s)
 	s = s[:0]
 	messageSlicePool.Put(&s)
 }
