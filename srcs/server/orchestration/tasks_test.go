@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
@@ -55,6 +56,8 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
+	ctx = auth.ContextWithClaims(ctx, &auth.Claims{OrganizationID: "org-1"})
+
 	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -78,6 +81,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
+	ctx = auth.ContextWithClaims(ctx, &auth.Claims{OrganizationID: "org-1"})
 
 	// Claim when empty
 	task, err := tm.ClaimTask(ctx, "non-existent-task-id", "agent-1")
@@ -127,6 +131,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
+	ctx = auth.ContextWithClaims(ctx, &auth.Claims{OrganizationID: "org-1"})
 
 	// Poll when empty
 	tasks, err := tm.PollTasks(ctx, "agent-1", 5)
@@ -193,6 +198,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
+	ctx = auth.ContextWithClaims(ctx, &auth.Claims{OrganizationID: "org-1"})
 	task, _ := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
