@@ -23,6 +23,9 @@ class ApiService {
   ApiService({required this.baseUrl, required this.token, http.Client? client})
     : _client = client ?? http.Client();
 
+  // Custom timeout to ensure graceful degradation when backend is unreachable or latency spikes
+  final Duration _timeout = const Duration(seconds: 15);
+
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
@@ -34,7 +37,7 @@ class ApiService {
     final res = await _client.get(
       Uri.parse('$baseUrl/api/agents'),
       headers: _headers,
-    );
+    ).timeout(_timeout);
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => Agent.fromJson(e as Map<String, dynamic>)).toList();
@@ -193,7 +196,7 @@ class ApiService {
       Uri.parse('$baseUrl/api/users'),
       headers: _headers,
       body: jsonEncode(data),
-    );
+    ).timeout(_timeout);
     _checkStatus(res);
     return UserPublic.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -202,7 +205,7 @@ class ApiService {
     final res = await _client.delete(
       Uri.parse('$baseUrl/api/users/$userId'),
       headers: _headers,
-    );
+    ).timeout(_timeout);
     _checkStatus(res);
   }
 
@@ -269,7 +272,7 @@ class ApiService {
     final res = await _client.get(
       Uri.parse('$baseUrl/api/channels'),
       headers: _headers,
-    );
+    ).timeout(_timeout);
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list
