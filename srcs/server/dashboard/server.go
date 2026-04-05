@@ -24,7 +24,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -548,6 +549,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 5 – Autonomous SRE / Incident Management
 	mux.HandleFunc("/api/v1/scale", server.handleScale)
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
+	mux.HandleFunc("/api/v1/stream", server.handleStream)
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
@@ -832,6 +834,39 @@ const indexHTML = `<!doctype html>
 </body>
 </html>`
 
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ctx := r.Context()
+
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	_, _ = w.Write([]byte("event: connected\ndata: {}\n\n"))
+	flusher.Flush()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_, err := w.Write([]byte("event: ping\ndata: {}\n\n"))
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
 func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	if !s.serveUI {
 		http.Error(w, "frontend disabled in headless mode", http.StatusNotFound)
@@ -858,6 +893,12 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	telemetry.RecordMeshBroadcast(r.Context(), mode)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -889,7 +930,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid channel", http.StatusBadRequest)
 		return
 	}
-
 
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
@@ -962,7 +1002,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
