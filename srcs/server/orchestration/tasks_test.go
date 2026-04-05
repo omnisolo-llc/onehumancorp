@@ -10,7 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-func setupTestDB(t *testing.T) (*TaskManager, func()) {
+func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
 	prov := db.NewTestProvider(t)
@@ -52,7 +52,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	tm, cleanup := setupTestDB(t)
+	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
@@ -75,7 +75,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	tm, cleanup := setupTestDB(t)
+	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
@@ -124,7 +124,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	tm, cleanup := setupTestDB(t)
+	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
@@ -190,7 +190,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	tm, cleanup := setupTestDB(t)
+	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
