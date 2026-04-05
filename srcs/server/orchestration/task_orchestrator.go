@@ -87,16 +87,19 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 
 	var taskID string
 	var orgID string
+	var payloadStr string
 	var query string
 
 	if to.db.IsSQLite() {
+		// Use json_extract for SQLite payload querying if needed, but since we rely on priority='DELEGATED'
+		// we just grab the payload to parse sub_agent_type later.
 		selectQuery := `
-			SELECT id, organization_id FROM shared_tasks
+			SELECT id, organization_id, payload FROM shared_tasks
 			WHERE status = 'PENDING' AND priority = 'DELEGATED'
 			ORDER BY created_at ASC
 			LIMIT 1
 		`
-		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID)
+		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID, &payloadStr)
 		if err != nil {
 			return // typically sql.ErrNoRows
 		}
@@ -123,9 +126,9 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
 			)
-			RETURNING id, organization_id
+			RETURNING id, organization_id, payload
 		`
-		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
+		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID, &payloadStr)
 		if err != nil {
 			return // sql.ErrNoRows or locking issue
 		}
@@ -135,11 +138,23 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		return
 	}
 
+	// Parse payload if it's available to extract sub-agent configuration
+	var subAgentType string
+	if payloadStr != "" {
+		var payloadData map[string]interface{}
+		if err := json.Unmarshal([]byte(payloadStr), &payloadData); err == nil {
+			if sat, ok := payloadData["sub_agent_type"].(string); ok {
+				subAgentType = sat
+			}
+		}
+	}
+
 	// Spawn sub-agent
 	task := &SharedTask{
 		ID:             taskID,
 		OrganizationID: orgID,
 		Priority:       "DELEGATED",
+		Description:    subAgentType, // Using description field to pass sub agent type to spawner
 	}
 
 	_ = to.spawner.Spawn(to.workerCtx, task)
