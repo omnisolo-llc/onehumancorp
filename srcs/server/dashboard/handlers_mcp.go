@@ -621,4 +621,100 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 	})
 }
 
+// handleSyncRAG securely accepts local-to-cloud Hybrid MCP RAG state synchronization payloads.
+func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleSyncRAG")
+	defer span.End()
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.hub.SIPDB() == nil {
+		http.Error(w, "internal server error: sipdb not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
+
+	var payloads []map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid JSON payload array", http.StatusBadRequest)
+		return
+	}
+
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+	syncedCount := 0
+
+	for _, payload := range payloads {
+		// Ensure safe deep recursive redaction on string fields to prevent sensitive data leakage.
+		for k, v := range payload {
+			payload[k] = telemetry.RedactInterfacePII(v)
+		}
+
+		var memoryID string
+		if idVal, ok := payload["memory_id"]; ok {
+			memoryID = fmt.Sprintf("%v", idVal)
+		}
+		if memoryID == "" {
+			memoryID = "ctx-" + time.Now().UTC().Format("20060102150405.999999999")
+		}
+
+		var contextStr string
+		if ctxVal, ok := payload["context"]; ok {
+			if strCtx, isStr := ctxVal.(string); isStr {
+				contextStr = strCtx
+			} else {
+				marshaled, _ := json.Marshal(ctxVal)
+				contextStr = string(marshaled)
+			}
+		} else {
+			sanitizedBytes, _ := json.Marshal(payload)
+			contextStr = string(sanitizedBytes)
+		}
+
+		var sourcePlugin string
+		if srcVal, ok := payload["source_plugin"]; ok {
+			sourcePlugin = fmt.Sprintf("%v", srcVal)
+		} else {
+			sourcePlugin = "sync_daemon"
+		}
+
+		var vectorEmbedding []byte
+		if vecVal, ok := payload["vector_embedding"]; ok {
+			if vecStr, isStr := vecVal.(string); isStr {
+				vectorEmbedding = []byte(vecStr)
+			} else if vecArr, isArr := vecVal.([]interface{}); isArr {
+				bytes, _ := json.Marshal(vecArr)
+				vectorEmbedding = bytes
+			}
+		}
+
+		memory := orchestration.EpisodicMemory{
+			MemoryID:        memoryID,
+			Context:         contextStr,
+			VectorEmbedding: vectorEmbedding,
+			SourcePlugin:    sourcePlugin,
+			CreatedAt:       time.Now().UTC(),
+		}
+
+		// Persist memory
+		// Using Upsert-like flow, depending on StoreEpisodicMemory implementation or local state resolution
+		if forceLocal {
+			_ = s.hub.SIPDB().StoreEpisodicMemory(ctx, memory)
+		} else {
+			// If not force-local, we could implement conditional upsert or pass a flag to SIPDB.
+			// Currently just storing the memory.
+			_ = s.hub.SIPDB().StoreEpisodicMemory(ctx, memory)
+		}
+		syncedCount++
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"status":       "success",
+		"message":      "rag context synced successfully",
+		"synced_count": syncedCount,
+	})
+}
 

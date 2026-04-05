@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -862,6 +863,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	syncedCount := 0
 	var idsToDelete []string
 
+	var sanitizedPayloads []map[string]interface{}
+
 	for _, rec := range records {
 		// Sanitize sensitive data by explicitly deleting `rag_context` key
 		var payloadData map[string]interface{}
@@ -875,24 +878,36 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 				"context": rec.payload,
 			}
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
+		// Ensure memory_id is included so the receiving endpoint can process it
+		payloadData["memory_id"] = rec.id
 
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		// robust conflict resolution prioritising local client
-		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+		sanitizedPayloads = append(sanitizedPayloads, payloadData)
+		idsToDelete = append(idsToDelete, rec.id)
+		syncedCount++
+	}
 
-		resp, err := client.Do(req)
-		if err == nil {
-			// treat 409 Conflict as success for local parity
-			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
-				idsToDelete = append(idsToDelete, rec.id)
-				syncedCount++
-			}
-			resp.Body.Close()
+	sanitizedPayloadBytes, err := json.Marshal(sanitizedPayloads)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal sanitized context payloads: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, bytes.NewReader(sanitizedPayloadBytes))
+	if err != nil {
+		return 0, fmt.Errorf("failed to create sync request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	// robust conflict resolution prioritising local client
+	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("failed to sync context: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if resp.StatusCode != http.StatusConflict { // treat 409 Conflict as success for local parity
+			return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
 		}
 	}
 
