@@ -219,8 +219,8 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
-
   late Animation<double> _scaleAnimation;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -254,29 +254,44 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
         opacity: _fadeAnimation,
         child: ScaleTransition(
           scale: _scaleAnimation,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(<double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isHovered = true),
+              onExit: (_) => setState(() => _isHovered = false),
+              child: AnimatedScale(
+                scale: _isHovered ? 1.02 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  child: BackdropFilter(
+                    filter: ImageFilter.compose(
+                      outer: const ColorFilter.matrix(<double>[
+                        1.168, -0.153, -0.015, 0, 0,
+                        -0.046, 1.061, -0.015, 0, 0,
+                        -0.046, -0.152, 1.198, 0, 0,
+                        0, 0, 0, 1, 0,
+                      ]),
+                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _isHovered
+                            ? const Color.fromRGBO(255, 255, 255, 0.08)
+                            : const Color.fromRGBO(255, 255, 255, 0.03),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isHovered
+                              ? Colors.white.withValues(alpha: 0.3)
+                              : Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                     Text(
                       timeStr,
                       style: TextStyle(
@@ -312,6 +327,9 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
             ),
           ),
         ),

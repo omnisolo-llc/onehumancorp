@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: I am a Flutter Developer agent, these are backend Go tasks.
 agent: Implementer
 ---
 
