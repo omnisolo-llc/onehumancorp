@@ -21,6 +21,15 @@ func (m *mockCentrifugeNode) Run() error { return nil }
 func (m *mockCentrifugeNode) OnConnecting(h centrifuge.ConnectingHandler) {}
 func (m *mockCentrifugeNode) OnConnect(h centrifuge.ConnectHandler) {}
 
+type mockDBProvider struct {
+	db.Provider
+	isSQLite bool
+}
+
+func (m *mockDBProvider) IsSQLite() bool {
+	return m.isSQLite
+}
+
 
 func TestHybridHealthProbe_Struct(t *testing.T) {
 	// A simple test ensuring the struct exists and fields map correctly.
@@ -54,14 +63,22 @@ func TestCheckHealth_DegradedNoDB(t *testing.T) {
 
 func TestCheckHealth_StandaloneMode_Healthy(t *testing.T) {
 	h := NewHub()
-	sqliteProvider := db.NewSQLiteProvider(":memory:")
-	h.SetSIPDB(NewSIPDB(sqliteProvider))
+	sipdb, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sipdb: %v", err)
+	}
+	h.SetSIPDB(sipdb)
 
-	_, err := sqliteProvider.Exec(context.Background(), "CREATE TABLE agent_missions (status TEXT)")
+	// Wait a brief moment to ensure schema initialization completes
+	time.Sleep(10 * time.Millisecond)
+
+	_, err = sipdb.db.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT, payload TEXT, synced_to_cloud INTEGER)")
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
 	}
-	_, _ = sqliteProvider.Exec(context.Background(), "INSERT INTO agent_missions (status) VALUES ('PENDING'), ('PENDING'), ('COMPLETED')")
+
+	// Try creating just what the query needs: table agent_missions with a 'status' column.
+	_, _ = sipdb.db.Exec(context.Background(), "INSERT INTO agent_missions (id, status, payload) VALUES ('1', 'PENDING', '{}'), ('2', 'PENDING', '{}'), ('3', 'COMPLETED', '{}')")
 
 	probe, err := h.CheckHealth(context.Background())
 	if err != nil {
@@ -74,6 +91,9 @@ func TestCheckHealth_StandaloneMode_Healthy(t *testing.T) {
 	if probe.Mode != "standalone" {
 		t.Errorf("expected standalone mode, got %s", probe.Mode)
 	}
+
+	// We might have a race condition where the INSERT hasn't fully committed or is not immediately visible.
+	// CheckHealth expects a count of rows where status = 'PENDING'.
 	if probe.SyncBacklog != 2 {
 		t.Errorf("expected sync backlog 2, got %d", probe.SyncBacklog)
 	}
@@ -85,28 +105,23 @@ func TestCheckHealth_StandaloneMode_Healthy(t *testing.T) {
 func TestCheckHealth_CloudMode_HealthyWithMesh(t *testing.T) {
 	h := NewHub()
 
-	// Use test mock provider or create fake pg provider
-	// We just need a provider where IsSQLite returns false
-	mockProvider := &db.MockProvider{
-		ExecFn: func(ctx context.Context, sql string, args ...any) (int64, error) {
-			return 1, nil
-		},
-		QueryRowFn: func(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
-			return &db.MockRow{
-				ScanFn: func(dest ...any) error {
-					if len(dest) > 0 {
-						if count, ok := dest[0].(*int); ok {
-							*count = 5
-						}
-					}
-					return nil
-				},
-			}
-		},
-		IsSQLiteFn: func() bool { return false },
+	sipdb, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sipdb: %v", err)
 	}
 
-	h.SetSIPDB(NewSIPDB(mockProvider))
+	// Overwrite sipdb.db with the mock to make it return false for IsSQLite
+	sipdb.db = &mockDBProvider{
+		Provider: sipdb.db,
+		isSQLite: false,
+	}
+	h.SetSIPDB(sipdb)
+
+	_, err = sipdb.db.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT, payload TEXT, synced_to_cloud INTEGER)")
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+	_, _ = sipdb.db.Exec(context.Background(), "INSERT INTO agent_missions (id, status, payload) VALUES ('1', 'PENDING', '{}'), ('2', 'PENDING', '{}'), ('3', 'COMPLETED', '{}'), ('4', 'PENDING', '{}'), ('5', 'PENDING', '{}'), ('6', 'PENDING', '{}')")
 
 	cn, _ := NewCentrifugeNode()
 	if cn != nil {
@@ -136,20 +151,11 @@ func TestCheckHealth_CloudMode_HealthyWithMesh(t *testing.T) {
 func TestCheckHealth_MeshDegraded(t *testing.T) {
 	h := NewHub()
 
-	mockProvider := &db.MockProvider{
-		ExecFn: func(ctx context.Context, sql string, args ...any) (int64, error) {
-			return 1, nil
-		},
-		QueryRowFn: func(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
-			return &db.MockRow{
-				ScanFn: func(dest ...any) error {
-					return nil
-				},
-			}
-		},
-		IsSQLiteFn: func() bool { return true },
+	sipdb, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create sipdb: %v", err)
 	}
-	h.SetSIPDB(NewSIPDB(mockProvider))
+	h.SetSIPDB(sipdb)
 
 	// Create a dummy node that returns an error on publish
 	mockNode := &mockCentrifugeNode{
