@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS usage_events (
     prompt_tokens     BIGINT NOT NULL DEFAULT 0,
     completion_tokens BIGINT NOT NULL DEFAULT 0,
     cost_usd          DOUBLE PRECISION NOT NULL DEFAULT 0,
-    occurred_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    occurred_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_usage_events_org ON usage_events (organization_id);

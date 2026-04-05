@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
     active          BOOLEAN NOT NULL DEFAULT TRUE,
     organization_id TEXT NOT NULL DEFAULT '',
     oidc_subject    TEXT UNIQUE DEFAULT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS roles (
     id          TEXT PRIMARY KEY,
     name        TEXT UNIQUE NOT NULL,
     permissions TEXT[] NOT NULL DEFAULT '{}',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Seed built-in roles.

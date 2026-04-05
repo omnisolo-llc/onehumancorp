@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     expression      TEXT DEFAULT '',        -- for 'cron'
     status          TEXT NOT NULL DEFAULT 'pending',
     payload         JSONB DEFAULT '{}',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_run_at     TIMESTAMPTZ,
     next_run_at     TIMESTAMPTZ
 );
