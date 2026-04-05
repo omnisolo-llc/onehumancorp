@@ -26,6 +26,7 @@ type DefaultTaskOrchestrator struct {
 	redisClient rueidis.Client
 	hub         *CentrifugeNode
 	mesh        TeammateMesh
+	spawner     SubAgentSpawner
 	mu          sync.Mutex // For standalone mode coordination
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
@@ -42,6 +43,7 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 		workerCtx:   ctx,
 		workerCancel: cancel,
 	}
+	to.spawner = NewDefaultSubAgentSpawner(to, hub)
 	to.StartBackgroundWorker()
 	return to
 }
@@ -71,6 +73,143 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			}
 		}
 	}()
+
+	// Sub-agent spawner worker
+	to.workerWg.Add(1)
+	go func() {
+		defer to.workerWg.Done()
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		// In standalone mode, enforce concurrency limits using a semaphore
+		// to prevent CPU exhaustion on the local machine
+		var sem chan struct{}
+		if to.db.IsSQLite() {
+			sem = make(chan struct{}, 2) // limit to 2 concurrent sub-agents
+		} else {
+			sem = make(chan struct{}, 50) // higher concurrency for cloud
+		}
+
+		for {
+			select {
+			case <-to.workerCtx.Done():
+				return
+			case <-ticker.C:
+				// Eagerly drain the queue of DELEGATED tasks
+				for {
+					task, err := to.AcquireDelegatedTask(to.workerCtx)
+					if err != nil || task == nil {
+						break
+					}
+
+					sem <- struct{}{}
+					go func(t *models.Task) {
+						defer func() { <-sem }()
+						if to.spawner != nil {
+							_ = to.spawner.Spawn(to.workerCtx, t)
+						}
+					}(task)
+				}
+			}
+		}
+	}()
+}
+
+func (to *DefaultTaskOrchestrator) AcquireDelegatedTask(ctx context.Context) (*models.Task, error) {
+	if to.redisClient == nil {
+		to.mu.Lock()
+		defer to.mu.Unlock()
+	}
+
+	tx, err := to.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var task models.Task
+	var query string
+
+	agentID := "system-spawner"
+
+	if to.db.IsSQLite() {
+		selectQuery := `
+			SELECT id FROM swarm_tasks
+			WHERE status = 'READY' AND json_extract(payload, '$.priority') = 'DELEGATED'
+			ORDER BY created_at ASC
+			LIMIT 1
+		`
+		var taskID string
+		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
+		if err != nil {
+			return nil, err
+		}
+
+		updateQuery := `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2
+			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	} else {
+		query = `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM swarm_tasks
+				WHERE status = 'READY' AND payload->>'priority' = 'DELEGATED'
+				ORDER BY created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(ctx, query, agentID).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	}
+
+	if err != nil {
+		return nil, nil // No task available or sql.ErrNoRows
+	}
+
+	var payloadMap map[string]interface{}
+	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+		if desc, ok := payloadMap["description"].(string); ok {
+			task.Description = desc
+		}
+		if prio, ok := payloadMap["priority"].(string); ok {
+			task.Priority = prio
+		}
+	}
+
+	task.AssignedAgentID = agentID
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit: %w", err)
+	}
+
+	if to.mesh != nil {
+		_ = to.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "CLAIM",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if to.hub != nil {
+		payload := map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "CLAIM",
+			"agent_id": agentID,
+			"status":   task.Status,
+		}
+		to.hub.PublishTaskBroadcast(task.ID, payload)
+	}
+
+	return &task, nil
 }
 
 func (to *DefaultTaskOrchestrator) Stop() {
