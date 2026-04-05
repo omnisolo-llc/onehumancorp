@@ -495,6 +495,62 @@ func TestLogAgentExecution(t *testing.T) {
 	}
 }
 
+func TestRedactInterfacePII(t *testing.T) {
+	t.Run("String", func(t *testing.T) {
+		res := RedactInterfacePII("email is test@example.com")
+		if res != "email is [REDACTED_EMAIL]" {
+			t.Errorf("Expected 'email is [REDACTED_EMAIL]', got %v", res)
+		}
+	})
+
+	t.Run("Map", func(t *testing.T) {
+		m := map[string]interface{}{
+			"user":  "user@example.com",
+			"other": "safe text",
+		}
+		res := RedactInterfacePII(m).(map[string]interface{})
+		if res["user"] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res["user"])
+		}
+		if res["other"] != "safe text" {
+			t.Errorf("Expected 'safe text', got %v", res["other"])
+		}
+	})
+
+	t.Run("Slice of interface", func(t *testing.T) {
+		s := []interface{}{"user@example.com", "safe text"}
+		res := RedactInterfacePII(s).([]interface{})
+		if res[0] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0])
+		}
+	})
+
+	t.Run("Slice of string", func(t *testing.T) {
+		s := []string{"user@example.com", "safe text"}
+		res := RedactInterfacePII(s).([]string)
+		if res[0] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0])
+		}
+	})
+
+	t.Run("Slice of map", func(t *testing.T) {
+		s := []map[string]interface{}{
+			{"email": "user@example.com"},
+		}
+		res := RedactInterfacePII(s).([]map[string]interface{})
+		if res[0]["email"] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0]["email"])
+		}
+	})
+
+	t.Run("Default fallback", func(t *testing.T) {
+		res := RedactInterfacePII(123)
+		if res != 123 {
+			t.Errorf("Expected 123, got %v", res)
+		}
+	})
+}
+
 // A custom prometheus.Registerer that always returns an error
 type errorRegisterer struct{}
 
