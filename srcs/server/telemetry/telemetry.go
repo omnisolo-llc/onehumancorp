@@ -683,6 +683,16 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 	))
 }
 
+// RecordApiRateLimitExceeded increments the counter for API rate limits exceeded (HTTP 429).
+func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
+	if RateLimitExceededCount == nil {
+		return
+	}
+	RateLimitExceededCount.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("endpoint", endpoint),
+	))
+}
+
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
 func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	if sqliteLockContentionCounter == nil {

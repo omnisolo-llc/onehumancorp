@@ -128,17 +128,13 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	if state.Failures >= 3 {
 		s.mu.RUnlock()
-		if telemetry.RateLimitExceededCount != nil {
-			telemetry.RateLimitExceededCount.Add(r.Context(), 1)
-		}
+		telemetry.RecordApiRateLimitExceeded(r.Context(), "/api/mcp/tools/invoke")
 		http.Error(w, "Max retries exceeded. Hard failure.", http.StatusTooManyRequests)
 		return
 	}
 	if time.Since(state.LastFailure) < state.Backoff && state.Failures > 0 {
 		s.mu.RUnlock()
-		if telemetry.RateLimitExceededCount != nil {
-			telemetry.RateLimitExceededCount.Add(r.Context(), 1)
-		}
+		telemetry.RecordApiRateLimitExceeded(r.Context(), "/api/mcp/tools/invoke")
 		http.Error(w, "Rate limited. Please backoff.", http.StatusTooManyRequests)
 		return
 	}
@@ -170,9 +166,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 			}
 
 			s.mu.Unlock()
-			if telemetry.RateLimitExceededCount != nil {
-				telemetry.RateLimitExceededCount.Add(r.Context(), 1)
-			}
+			telemetry.RecordApiRateLimitExceeded(r.Context(), "/api/mcp/tools/invoke")
 			if state.Failures >= 3 {
 				http.Error(w, "Max retries exceeded. Hard failure.", http.StatusTooManyRequests)
 			} else {
