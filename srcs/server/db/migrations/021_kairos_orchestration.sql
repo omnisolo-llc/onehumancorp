@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     agent_id VARCHAR, -- Nullable until claimed
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create task_dependencies
@@ -26,5 +26,5 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     organization_id VARCHAR NOT NULL,
     content TEXT NOT NULL,
     embedding vector(1536), -- Assuming OpenAI ada-002 or similar
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
