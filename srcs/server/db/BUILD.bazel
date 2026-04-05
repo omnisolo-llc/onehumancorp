@@ -35,6 +35,7 @@ go_library(
         "migrations/021_kairos_orchestration.sql",
         "migrations/022_autodream_schema.sql",
         "migrations/023_llm_completion_cache.sql",
+        "migrations/024_autodream_memories.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
