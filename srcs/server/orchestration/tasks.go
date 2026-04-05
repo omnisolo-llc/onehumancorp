@@ -254,42 +254,66 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	var errQuery error
 
 	if tm.db.IsSQLite() {
-		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
+		// SQLite: First select the task ensuring it meets conditions, then update it.
+		// `Begin` handles the concurrent writes lock.
 		query := `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1
 		`
-		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
+		var matchedID string
+		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(&matchedID)
+		if errQuery != nil {
+			if errors.Is(errQuery, sql.ErrNoRows) {
+				return nil, nil // No task available or conditions not met
+			}
+			if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
+				return nil, fmt.Errorf("database is locked: %w", errQuery)
+			}
+			return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
+		}
+
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2
+			RETURNING id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
+		`
+		errQuery = tx.QueryRow(ctx, updateQuery, agentID, matchedID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
-		// PostgreSQL with SKIP LOCKED
-		query := `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
-			FROM shared_tasks st
-			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
-			ORDER BY st.priority ASC, st.created_at ASC
-			LIMIT 1
-			FOR UPDATE SKIP LOCKED
+		// PostgreSQL: Single query UPDATE ... RETURNING with FOR UPDATE SKIP LOCKED
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT st.id
+				FROM shared_tasks st
+				WHERE st.id = $2 AND st.organization_id = $3 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+				ORDER BY st.priority ASC, st.created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 		`
-		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
+		errQuery = tx.QueryRow(ctx, updateQuery, agentID, taskID, claims.OrganizationID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
 
 	if errQuery != nil {
 		if errors.Is(errQuery, sql.ErrNoRows) {
-			return nil, nil // No task available
+			return nil, nil // Task was likely claimed by another worker concurrently or not found
 		}
-			if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
-				return nil, fmt.Errorf("database is locked: %w", errQuery)
-			}
-		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
+		if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
+			return nil, fmt.Errorf("database is locked: %w", errQuery)
+		}
+		return nil, fmt.Errorf("failed to update task status: %w", errQuery)
 	}
 
 	// Fetch dependencies from task_dependencies table
@@ -314,27 +338,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if desc, ok := payloadMap["description"].(string); ok {
 			task.Description = desc
 		}
-	}
-
-	// Update task status to IN_PROGRESS
-	var updatedID string
-	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
-		RETURNING id
-	`
-
-	err = tx.QueryRow(ctx, updateQuery, agentID, task.ID, claims.OrganizationID).Scan(&updatedID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			// Task was likely claimed by another worker concurrently.
-			return nil, nil
-		}
-		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
-			return nil, fmt.Errorf("database is locked: %w", err)
-		}
-		return nil, fmt.Errorf("failed to update task status: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -423,6 +426,12 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 	}
 
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	query := `
 		UPDATE shared_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
@@ -430,7 +439,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		RETURNING id
 	`
 	var updatedID string
-	err = tm.db.QueryRow(ctx, query, taskID, agentID, claims.OrganizationID).Scan(&updatedID) // Use = here because err was declared above
+	err = tx.QueryRow(ctx, query, taskID, agentID, claims.OrganizationID).Scan(&updatedID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -441,9 +450,59 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
-	// Broadcast task completion
+	// Identify dependent tasks that might now be ready for broadcasting
+	// since their blocking dependency just completed.
+	depQuery := `
+		SELECT t.id
+		FROM shared_tasks t
+		JOIN task_dependencies td ON t.id = td.task_id
+		WHERE td.depends_on_task_id = $1 AND t.status = 'PENDING'
+	`
+	rows, err := tx.Query(ctx, depQuery, taskID)
+	if err != nil {
+		return fmt.Errorf("failed to query dependent tasks: %w", err)
+	}
+
+	var pendingTasks []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			pendingTasks = append(pendingTasks, id)
+		}
+	}
+	rows.Close()
+
+	var newReadyTasks []string
+	for _, pid := range pendingTasks {
+		// Check if all dependencies are completed
+		var pendingCount int
+		checkQuery := `
+			SELECT COUNT(*)
+			FROM task_dependencies td
+			JOIN shared_tasks t ON td.depends_on_task_id = t.id
+			WHERE td.task_id = $1 AND t.status != 'COMPLETED'
+		`
+		err = tx.QueryRow(ctx, checkQuery, pid).Scan(&pendingCount)
+		if err == nil && pendingCount == 0 {
+			newReadyTasks = append(newReadyTasks, pid)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Broadcast task completion and newly unblocked tasks
 	if tm.hub != nil {
 		go func() {
+			for _, rid := range newReadyTasks {
+				tm.hub.PublishTaskBroadcast(rid, map[string]interface{}{
+					"task_id": rid,
+					"action":  "UNBLOCKED",
+					"status":  "PENDING", // Stays pending, but broadcasts its readiness
+				})
+			}
+
 			payload := map[string]interface{}{
 				"task_id":  taskID,
 				"action":   "COMPLETE",

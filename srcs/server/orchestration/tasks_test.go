@@ -269,3 +269,67 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 		t.Fatalf("expected error when completing non-existent task")
 	}
 }
+
+func TestTaskManager_DAGDependencies(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+
+	// Create a parent task
+	parent, err := tm.CreateTask(ctx, "org-1", "Parent", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Create a child task
+	child, err := tm.CreateTask(ctx, "org-1", "Child", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Add dependency: Child depends on Parent
+	_, err = tm.db.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", child.ID, parent.ID)
+	if err != nil {
+		t.Fatalf("failed to insert dependency: %v", err)
+	}
+
+	// Try to claim Child, it should fail (return nil) because parent is not complete
+	claimedChild, err := tm.ClaimTask(ctx, child.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if claimedChild != nil {
+		t.Fatalf("expected child to be unclaimable, got %v", claimedChild)
+	}
+
+	// Claim Parent
+	claimedParent, err := tm.ClaimTask(ctx, parent.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if claimedParent == nil {
+		t.Fatalf("expected to claim parent, got nil")
+	}
+
+	// Complete Parent
+	err = tm.CompleteTask(ctx, parent.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error completing parent, got %v", err)
+	}
+
+	// Try to claim Child again, it should now succeed
+	claimedChild2, err := tm.ClaimTask(ctx, child.ID, "agent-2")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if claimedChild2 == nil {
+		t.Fatalf("expected child to be claimable, got nil")
+	}
+	if claimedChild2.ID != child.ID {
+		t.Fatalf("expected child ID %s, got %s", child.ID, claimedChild2.ID)
+	}
+}
