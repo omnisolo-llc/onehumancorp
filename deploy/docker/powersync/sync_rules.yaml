@@ -1,0 +1,8 @@
+bucket_definitions:
+  user_data:
+    # PowerSync automatically extracts parameters from the JWT claims payload
+    # The Go backend inserts the organization_id into the JWT payload's "parameters" claim
+    data:
+      - SELECT * FROM agent_missions WHERE organization_id = token.parameters.organization_id
+      - SELECT * FROM tenant_registry WHERE organization_id = token.parameters.organization_id
+      - SELECT * FROM swarm_memory_embeddings WHERE organization_id = token.parameters.organization_id
