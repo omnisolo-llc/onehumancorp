@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.8] - 2026-04-03
+## [0.2.8] - 2026-04-05
 
 ### Added
 - Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries.
