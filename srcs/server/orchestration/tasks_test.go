@@ -16,18 +16,24 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS swarm_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
-			mission_id TEXT NOT NULL,
-			parent_plan_id TEXT,
-			dependencies TEXT NOT NULL DEFAULT '[]',
+			organization_id TEXT NOT NULL,
 			title TEXT NOT NULL,
+			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
-			locked_until DATETIME,
+			agent_id TEXT,
+			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT NOT NULL DEFAULT '{}',
+			locked_until DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
 		);
 	`)
 	if err != nil {
@@ -49,7 +55,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	task, err := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -83,7 +89,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Create task
-	createdTask, err := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	createdTask, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -132,9 +138,9 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	}
 
 	// Create a few tasks with different priorities
-	_, _ = tm.CreateTask(ctx, "mission-1", "Task 1", "Desc", "P2")
-	_, _ = tm.CreateTask(ctx, "mission-2", "Task 2", "Desc", "P1") // Should be polled first
-	_, _ = tm.CreateTask(ctx, "mission-3", "Task 3", "Desc", "P3")
+	_, _ = tm.CreateTask(ctx, "org-1", "Task 1", "Desc", "P2")
+	_, _ = tm.CreateTask(ctx, "org-1", "Task 2", "Desc", "P1") // Should be polled first
+	_, _ = tm.CreateTask(ctx, "org-1", "Task 3", "Desc", "P3")
 
 	// Poll tasks with limit 2
 	tasks, err = tm.PollTasks(ctx, "agent-1", 2)
@@ -187,7 +193,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
+	task, _ := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
 	if claimedTask.ID != task.ID {
