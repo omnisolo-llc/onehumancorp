@@ -231,6 +231,30 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	autoDreamSyncDuration, err = m.Float64Histogram(
+		"ohc_autodream_sync_duration_seconds",
+		metric.WithDescription("Duration of the AutoDream sync operation"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	autoDreamQueryDuration, err = m.Float64Histogram(
+		"ohc_autodream_query_duration_seconds",
+		metric.WithDescription("Duration of the AutoDream query operation"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	meshBroadcastTotal, err = m.Int64Counter(
+		"ohc_mesh_broadcast_total",
+		metric.WithDescription("Total number of mesh broadcast operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),

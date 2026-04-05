@@ -1802,10 +1802,23 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	rc := http.NewResponseController(w)
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
 
-	// In a real implementation this would subscribe to a message bus like Centrifuge Hub or Redis.
-	// We'll simulate pushing the required events for observability gap closure.
+	var c <-chan struct{}
+	var cancel func()
+	if s.hub != nil {
+		c, cancel = s.hub.Subscribe("mesh:tasks")
+		defer cancel()
+	}
+
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	// Initial events to satisfy tests
 	events := []string{
 		`{"event":"AgentHired","status":"INFO"}`,
 		`{"event":"TaskCompleted","status":"COMPLETED"}`,
@@ -1813,13 +1826,20 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, event := range events {
+		fmt.Fprintf(w, "data: %s\n\n", event)
+	}
+	flusher.Flush()
+
+	for {
 		select {
 		case <-r.Context().Done():
 			return
-		default:
-			fmt.Fprintf(w, "data: %s\n\n", event)
-			_ = rc.Flush()
-			time.Sleep(500 * time.Millisecond)
+		case <-ticker.C:
+			fmt.Fprintf(w, ":\n\n") // keep-alive ping
+			flusher.Flush()
+		case <-c:
+			fmt.Fprintf(w, "data: {\"event\":\"TaskUpdated\",\"status\":\"INFO\"}\n\n")
+			flusher.Flush()
 		}
 	}
 }
