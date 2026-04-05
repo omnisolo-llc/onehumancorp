@@ -86,7 +86,7 @@ func releaseThrottle() {
 }
 
 // withRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
-func withRetry(ctx context.Context, op func() error) error {
+func withSIPRetry(ctx context.Context, op func() error) error {
 	if err := acquireThrottle(ctx); err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func initializeTables(provider db.Provider) error {
 // Has no side effects.
 func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 	var value string
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		err := s.db.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = $1", key).Scan(&value)
 		if err == sql.ErrNoRows {
 			return nil
@@ -281,7 +281,7 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO swarm_memory (key, value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
 			key, value,
@@ -297,7 +297,7 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 // Has no side effects.
 func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message, error) {
 	var missions []Message
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		missions = nil
 
 		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 500"
@@ -361,7 +361,7 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	var rowsAffected int64
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		var err error
 		rowsAffected, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1", missionID)
 		return err
@@ -382,7 +382,7 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Has side effects: Updates mission status in agent_missions table and syncs to remote.
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
 	var rowsAffected int64
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		var err error
 		rowsAffected, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1", missionID)
 		return err
@@ -427,7 +427,7 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) error {
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP",
 			agentID, role, status,
@@ -468,7 +468,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		`
 	}
 	// For database abstractions handling PostgreSQL and SQLite
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx, upsertQuery, missionID, status, payload)
 		return err
 	})
@@ -528,7 +528,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		Task: task,
 	}
 	taskBytes, _ := json.Marshal(wrapper)
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP)",
 			missionID, string(taskBytes),
@@ -544,7 +544,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table and updates stuck records.
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
@@ -576,7 +576,7 @@ type CapabilityPlugin struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts or updates a record in the capability_plugins table.
 func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityPlugin) error {
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at)
 			 VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
@@ -598,7 +598,7 @@ func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityP
 // Has no side effects.
 func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]CapabilityPlugin, error) {
 	var plugins []CapabilityPlugin
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		plugins = nil // reset slice
 		var rows db.Rows
 		var err error
@@ -642,7 +642,7 @@ type EpisodicMemory struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the swarm_memory_embeddings table.
 func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) error {
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at)
 			 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
@@ -662,7 +662,7 @@ func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) 
 // Has no side effects.
 func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) ([]EpisodicMemory, error) {
 	var memories []EpisodicMemory
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		memories = nil // reset slice
 		var rows db.Rows
 		var err error
@@ -715,7 +715,7 @@ func (s *SIPDB) SetContextRoot(path string) {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the local_metrics_buffer table.
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
-	return withRetry(ctx, func() error {
+	return withSIPRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO local_metrics_buffer (metric_type, payload, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
 			metricType, payload,
@@ -737,7 +737,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		payload    string
 	}
 
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		records = nil
 		rows, err := s.db.Query(ctx, "SELECT id, metric_type, payload FROM local_metrics_buffer ORDER BY id ASC LIMIT 500")
 		if err != nil {
@@ -808,7 +808,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	}
 
 	// Delete successfully synced records
-	err = withRetry(ctx, func() error {
+	err = withSIPRetry(ctx, func() error {
 		idList := strings.Join(idsToDelete, ",")
 		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM local_metrics_buffer WHERE id IN (%s)", idList))
 		return err
@@ -828,7 +828,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		payload string
 	}
 
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		records = nil
 		// Fetch local episodic memories that haven't been synced (or just all local RAG data).
 		// Note: The memory states the data is stored in swarm_memory_embeddings or similar
@@ -907,7 +907,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	}
 
 	if len(idsToDelete) > 0 {
-		err = withRetry(ctx, func() error {
+		err = withSIPRetry(ctx, func() error {
 			idList := "'" + strings.Join(idsToDelete, "','") + "'"
 			_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))
 			return err
@@ -935,7 +935,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		payload string
 	}
 
-	err := withRetry(ctx, func() error {
+	err := withSIPRetry(ctx, func() error {
 		missions = nil
 		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 100")
 		if err != nil {
@@ -1012,7 +1012,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		resp, err := client.Do(req)
 		if err == nil {
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
-				updateErr := withRetry(ctx, func() error {
+				updateErr := withSIPRetry(ctx, func() error {
 					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)
 					return updateErr
 				})

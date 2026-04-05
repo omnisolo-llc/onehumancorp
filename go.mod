@@ -3,6 +3,7 @@ module github.com/onehumancorp/mono
 go 1.26
 
 require (
+	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/centrifugal/centrifuge v0.38.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -55,6 +56,7 @@ require (
 	github.com/segmentio/encoding v0.5.3 // indirect
 	github.com/shadowspore/fossil-delta v0.0.0-20241213113458-1d797d70cbe3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/sdk v1.39.0 // indirect
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect

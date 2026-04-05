@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func setupTestDB(t *testing.T) db.Provider {
+func setupAutodreamTestDB(t *testing.T) db.Provider {
 	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open sqlite in-memory db: %v", err)
