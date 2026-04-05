@@ -1,0 +1,6 @@
+agent: Palette
+last_action: Implemented entry micro-animations and Glassmorphism for Chat Bubbles
+learnings:
+  - "When implementing entry micro-animations for elements in Flutter lists (like chat bubbles) to satisfy the OHC Visual Excellence Mandate, maintain a `Set<String>` of seen IDs in the parent widget to prevent re-animation on scroll, and use `TweenAnimationBuilder` or explicit `AnimationController`s with `SlideTransition`/`FadeTransition`."
+  - "To implement OHC Glassmorphism in Flutter, wrap elements in a `ClipRRect` with a `BackdropFilter` using `ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0)` and apply a translucent background color (e.g., `withValues(alpha: 0.8)`)."
+  - "Pull Requests authored by the Palette (Principal Flutter Developer & Canvas) agent must be explicitly titled '🎨 Palette: [Hybrid UX improvement]'."

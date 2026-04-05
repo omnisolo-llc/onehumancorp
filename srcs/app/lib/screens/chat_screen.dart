@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
@@ -27,6 +29,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _ctrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final Set<String> _seenMessageIds = {};
   bool _sending = false;
   StreamSubscription<CentrifugeMessage>? _sub;
   CentrifugeService? _service;
@@ -129,19 +132,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child:
-                messages.isEmpty
-                    ? const Center(child: Text('No messages yet. Say hello!'))
-                    : ListView.builder(
-                      controller: _scrollCtrl,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: messages.length,
-                      itemBuilder: (_, i) {
-                        final m = messages[i];
-                        final isMe = m.authorId == user?.id;
-                        return _MessageBubble(message: m, isMe: isMe);
-                      },
-                    ),
+            child: messages.isEmpty
+                ? const Center(child: Text('No messages yet. Say hello!'))
+                : ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (_, i) {
+                      final m = messages[i];
+                      final isMe = m.authorId == user?.id;
+                      final isNew = !_seenMessageIds.contains(m.id);
+                      if (isNew) {
+                        _seenMessageIds.add(m.id);
+                      }
+                      return _AnimatedMessageBubble(
+                        message: m,
+                        isMe: isMe,
+                        shouldAnimate: isNew,
+                      );
+                    },
+                  ),
           ),
           _InputBar(controller: _ctrl, sending: _sending, onSend: _send),
         ],
@@ -168,49 +178,130 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 // ── Widgets ────────────────────────────────────────────────────────────────
 
-class _MessageBubble extends StatelessWidget {
+class _AnimatedMessageBubble extends StatefulWidget {
   final CentrifugeMessage message;
   final bool isMe;
+  final bool shouldAnimate;
 
-  const _MessageBubble({required this.message, required this.isMe});
+  const _AnimatedMessageBubble({
+    required this.message,
+    required this.isMe,
+    required this.shouldAnimate,
+  });
+
+  @override
+  State<_AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
+}
+
+class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: widget.isMe ? const Offset(0.2, 0) : const Offset(-0.2, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    if (widget.shouldAnimate) {
+      _controller.forward();
+    } else {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final bgColor = isMe
+        ? cs.primaryContainer.withValues(alpha: 0.8)
+        : cs.surfaceContainerHighest.withValues(alpha: 0.8);
+
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft: Radius.circular(isMe ? 16 : 0),
+      bottomRight: Radius.circular(isMe ? 0 : 16),
+    );
+
     return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isMe ? 12 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 12),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+      alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: widget.isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      if (!widget.isMe)
+                        Text(
+                          widget.message.authorName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: cs.onSurfaceVariant,
+                            fontFamily: 'Outfit',
+                          ),
+                        ),
+                      Text(
+                        widget.message.body,
+                        style: TextStyle(
+                          color: cs.onSurface,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            Text(message.body),
-          ],
+            ),
+          ),
         ),
       ),
     );
   }
+
+  bool get isMe => widget.isMe;
 }
 
 class _InputBar extends StatelessWidget {
@@ -246,14 +337,13 @@ class _InputBar extends StatelessWidget {
             label: 'Send chat message',
             child: IconButton.filled(
               tooltip: 'Send message',
-              icon:
-                  sending
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.send),
+              icon: sending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
               onPressed: sending ? null : onSend,
             ),
           ),
