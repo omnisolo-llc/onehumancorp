@@ -22,24 +22,26 @@ type TaskOrchestrator interface {
 }
 
 type DefaultTaskOrchestrator struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode
-	mesh        TeammateMesh
-	mu          sync.Mutex // For standalone mode coordination
-	workerCtx   context.Context
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode
+	mesh         TeammateMesh
+	spawner      SubAgentSpawner
+	mu           sync.Mutex // For standalone mode coordination
+	workerCtx    context.Context
 	workerCancel context.CancelFunc
-	workerWg    sync.WaitGroup
+	workerWg     sync.WaitGroup
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 	to := &DefaultTaskOrchestrator{
-		db:          provider,
-		redisClient: redisClient,
-		hub:         hub,
-		mesh:        mesh,
-		workerCtx:   ctx,
+		db:           provider,
+		redisClient:  redisClient,
+		hub:          hub,
+		mesh:         mesh,
+		spawner:      NewSubAgentSpawner(provider, hub),
+		workerCtx:    ctx,
 		workerCancel: cancel,
 	}
 	to.StartBackgroundWorker()
@@ -63,14 +65,111 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+				// Try to find a delegated task
+				task, err := to.AcquireReadyDelegatedTask(to.workerCtx)
+				if err != nil || task == nil {
+					continue
+				}
+
+				if to.db.IsSQLite() {
+					sem <- struct{}{}
+					to.workerWg.Add(1)
+					go func(t *models.Task) {
+						defer to.workerWg.Done()
+						defer func() { <-sem }()
+						_ = to.spawner.Spawn(to.workerCtx, t)
+					}(task)
+				} else {
+					// In Cloud mode (Postgres), spawn normally without the local semaphore
+					// as it's assumed to be handled by a distributed orchestrator.
+					to.workerWg.Add(1)
+					go func(t *models.Task) {
+						defer to.workerWg.Done()
+						_ = to.spawner.Spawn(to.workerCtx, t)
+					}(task)
+				}
 			}
 		}
 	}()
+}
+
+func (to *DefaultTaskOrchestrator) AcquireReadyDelegatedTask(ctx context.Context) (*models.Task, error) {
+	if to.redisClient == nil {
+		to.mu.Lock()
+		defer to.mu.Unlock()
+	}
+
+	tx, err := to.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var task models.Task
+	var query string
+	if to.db.IsSQLite() {
+		selectQuery := `
+			SELECT id FROM swarm_tasks
+			WHERE status = 'READY' AND (json_extract(payload, '$.priority') = 'DELEGATED' OR payload LIKE '%"DELEGATED"%')
+			ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
+			LIMIT 1
+		`
+		var taskID string
+		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
+		if err != nil {
+			return nil, err // Could be sql.ErrNoRows if queue is empty
+		}
+
+		updateQuery := `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP
+			WHERE id = $1
+			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(ctx, updateQuery, taskID).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	} else {
+		query = `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM swarm_tasks
+				WHERE status = 'READY' AND (payload->>'priority' = 'DELEGATED' OR payload::text LIKE '%"DELEGATED"%')
+				ORDER BY payload->>'priority' ASC, created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(ctx, query).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	}
+
+	if err != nil {
+		return nil, nil // No task available
+	}
+
+	var payloadMap map[string]interface{}
+	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+		if desc, ok := payloadMap["description"].(string); ok {
+			task.Description = desc
+		}
+		if prio, ok := payloadMap["priority"].(string); ok {
+			task.Priority = prio
+		}
+	}
+
+	if task.ID == "" {
+		return nil, nil
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return &task, nil
 }
 
 func (to *DefaultTaskOrchestrator) Stop() {
