@@ -6,6 +6,8 @@ import "time"
 type Task struct {
 	ID              string
 	MissionID       string
+	ParentPlanID    string
+	Dependencies    []string
 	Title           string
 	Description     string
 	Priority        string
