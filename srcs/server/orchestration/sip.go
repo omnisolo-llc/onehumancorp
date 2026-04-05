@@ -41,11 +41,11 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db               db.Provider
-	ContextRoot      string
-	cachedGrounding  string
-	groundingOnce    *sync.Once
-	cachedGroundErr  error
+	db              db.Provider
+	ContextRoot     string
+	cachedGrounding string
+	groundingOnce   *sync.Once
+	cachedGroundErr error
 }
 
 const (
@@ -875,6 +875,15 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 				"context": rec.payload,
 			}
 		}
+
+		// Redact PII
+		for k, v := range payloadData {
+			payloadData[k] = telemetry.RedactInterfacePII(v)
+		}
+
+		// ensure memory_id is set
+		payloadData["memory_id"] = rec.id
+
 		sanitizedPayload, _ := json.Marshal(payloadData)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
