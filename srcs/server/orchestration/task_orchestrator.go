@@ -92,7 +92,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 	if to.db.IsSQLite() {
 		selectQuery := `
 			SELECT id, organization_id FROM shared_tasks
-			WHERE status = 'PENDING' AND priority = 'DELEGATED'
+				WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR json_extract(payload, '$.sub_agent_type') IS NOT NULL)
 			ORDER BY created_at ASC
 			LIMIT 1
 		`
@@ -118,7 +118,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
 			WHERE id = (
 				SELECT id FROM shared_tasks
-				WHERE status = 'PENDING' AND priority = 'DELEGATED'
+					WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL)
 				ORDER BY created_at ASC
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
