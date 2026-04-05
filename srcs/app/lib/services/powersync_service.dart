@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 
@@ -24,9 +26,6 @@ class PowerSyncService {
   Future<void> _init() async {
     final settingsAsync = _ref.read(clientSettingsProvider);
     final settings = settingsAsync.valueOrNull;
-
-    // Initialize PowerSync for Cloud Mode multi-tenant isolation,
-    // or hybrid scenarios as determined by settings.
 
     final schema = Schema((<Table>[
       Table('agents', [
@@ -77,7 +76,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings?.backendUrl ?? 'http://localhost:18789';
+    final backendUrl = settings?.backendUrl ?? 'http://localhost:8080';
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
@@ -105,14 +104,34 @@ class _BackendConnector extends PowerSyncBackendConnector {
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
     final user = ref.read(authStateProvider).valueOrNull;
-    if (user == null) {
+    if (user == null || user.token.isEmpty) {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$backendUrl/api/auth/powersync/token'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final powersyncUrlStr = data['powersync_url'] as String?;
+        final powersyncUrl = (powersyncUrlStr != null && powersyncUrlStr.isNotEmpty) ? powersyncUrlStr : 'http://localhost:8081';
+        return PowerSyncCredentials(
+          endpoint: powersyncUrl,
+          token: data['token'],
+        );
+      } else {
+        print('PowerSync fetch token failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('PowerSync fetch token exception: $e');
+      // Return null and PowerSync will retry later
+    }
+    return null;
   }
 
   @override
