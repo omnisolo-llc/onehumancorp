@@ -251,6 +251,10 @@ func newFakeHub() *fakeHub {
 	}
 }
 
+func (h *fakeHub) CheckHealth(ctx context.Context) (any, error) {
+	return nil, nil
+}
+
 func (h *fakeHub) RegisterAgent(a local.HubAgent) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

@@ -25,3 +25,23 @@ func TestHybridHealthProbe(t *testing.T) {
 		t.Errorf("Expected status 'healthy', got '%s'", probe.Status)
 	}
 }
+
+func TestHubCheckHealth_Degraded_NoDB(t *testing.T) {
+	h := &Hub{}
+	probe, err := h.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if probe.Status != "degraded" {
+		t.Errorf("Expected status 'degraded', got '%s'", probe.Status)
+	}
+	if probe.Mode != "standalone" {
+		t.Errorf("Expected mode 'standalone', got '%s'", probe.Mode)
+	}
+	if probe.MeshActive != false {
+		t.Errorf("Expected mesh active false, got true")
+	}
+}
+
+// We could add more advanced mock tests here for checking full coverage of health.go

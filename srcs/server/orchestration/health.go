@@ -1,6 +1,18 @@
 package orchestration
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+// HybridHealthProbe contains details of the system health.
+type HybridHealthProbe struct {
+	Mode        string        `json:"mode"`
+	Status      string        `json:"status"`
+	DBPing      time.Duration `json:"db_ping"`
+	SyncBacklog int           `json:"sync_backlog"`
+	MeshActive  bool          `json:"mesh_active"`
+}
 
 // CheckHealth returns a HybridHealthProbe detailing the system health.
 func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
@@ -13,7 +25,7 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 
 	start := time.Now()
 	if h.sipDB != nil && h.sipDB.db != nil {
-		err := h.sipDB.db.Ping(ctx)
+		_, err := h.sipDB.db.Exec(ctx, "SELECT 1")
 		probe.DBPing = time.Since(start)
 		if err != nil {
 			probe.Status = "degraded"
