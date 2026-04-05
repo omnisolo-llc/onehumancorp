@@ -25,3 +25,10 @@ fi
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     CREATE PUBLICATION powersync FOR ALL TABLES;
 EOSQL
+
+# Create PowerSync user and roles
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE USER powersync_user WITH PASSWORD 'powersync_password' REPLICATION;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO powersync_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO powersync_user;
+EOSQL

@@ -110,12 +110,15 @@ services:
           memory: 512M
 
   powersync:
+    volumes:
+      - ./docker/powersync/sync_rules.yaml:/config/sync_rules.yaml
     image: journeyapps/powersync-service:latest
     ports:
       - "8081:8080"
     environment:
-      PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      PS_DATA_SOURCE_URI: postgres://powersync_user:powersync_password@postgres:5432/ohc?sslmode=disable
       PS_PORT: "8080"
+      PS_JWKS_URL: "http://server:8080/api/auth/powersync/jwks"
     depends_on:
       postgres:
         condition: service_healthy

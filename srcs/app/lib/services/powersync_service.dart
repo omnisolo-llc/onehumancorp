@@ -1,3 +1,4 @@
+import 'package:ohc_app/services/api_service.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
@@ -109,10 +110,21 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      // We will define an endpoint /api/auth/powersync/token
+      final response = await apiService.get('/api/auth/powersync/token');
+      if (response != null && response['token'] != null) {
+        return PowerSyncCredentials(
+          endpoint: backendUrl,
+          token: response['token'] as String,
+        );
+      }
+    } catch (e) {
+      print('Error fetching PowerSync token: $e');
+    }
+
+    return null;
   }
 
   @override

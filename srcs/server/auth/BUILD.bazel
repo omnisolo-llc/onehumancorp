@@ -4,6 +4,7 @@ go_library(
     name = "auth",
     srcs = [
         "handlers.go",
+        "powersync.go",
         "jwt.go",
         "middleware.go",
         "oidc.go",
@@ -24,6 +25,7 @@ go_test(
     srcs = [
         "auth_extra_test.go",
         "auth_test.go",
+        "powersync_test.go",
         "jwt_extra_test.go",
         "oidc_test.go",
     ],
