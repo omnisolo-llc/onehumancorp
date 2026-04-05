@@ -93,20 +93,37 @@ class _EmptyAgents extends StatelessWidget {
 
 
 
-class _AgentList extends StatelessWidget {
+class _AgentList extends StatefulWidget {
   final List<Agent> agents;
   const _AgentList({required this.agents});
+
+  @override
+  State<_AgentList> createState() => _AgentListState();
+}
+
+class _AgentListState extends State<_AgentList> {
+  final Set<String> _seenAgentIds = {};
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: agents.length,
-      itemBuilder: (_, i) => _AnimatedAgentCard(
-        key: ValueKey(agents[i].id ?? agents[i].name),
-        agent: agents[i],
-        index: i,
-      ),
+      itemCount: widget.agents.length,
+      itemBuilder: (_, i) {
+        final agent = widget.agents[i];
+        final id = agent.id ?? agent.name;
+        final hasSeen = _seenAgentIds.contains(id);
+        if (!hasSeen) {
+          _seenAgentIds.add(id);
+        }
+
+        return _AnimatedAgentCard(
+          key: ValueKey(id),
+          agent: agent,
+          index: i,
+          animateEntrance: !hasSeen,
+        );
+      },
     );
   }
 }
@@ -114,7 +131,13 @@ class _AgentList extends StatelessWidget {
 class _AnimatedAgentCard extends StatefulWidget {
   final Agent agent;
   final int index;
-  const _AnimatedAgentCard({super.key, required this.agent, required this.index});
+  final bool animateEntrance;
+  const _AnimatedAgentCard({
+    super.key,
+    required this.agent,
+    required this.index,
+    this.animateEntrance = true,
+  });
 
   @override
   State<_AnimatedAgentCard> createState() => _AnimatedAgentCardState();
@@ -140,11 +163,15 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (widget.animateEntrance) {
+      Future.delayed(Duration(milliseconds: 100 * widget.index), () {
+        if (mounted) {
+          _controller.forward();
+        }
+      });
+    } else {
+      _controller.value = 1.0;
+    }
   }
 
   @override
