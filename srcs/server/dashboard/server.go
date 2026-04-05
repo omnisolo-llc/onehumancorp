@@ -550,6 +550,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
+	mux.HandleFunc("/api/v1/stream", server.handleStream)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
@@ -857,7 +858,46 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
 }
 
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	// In a complete implementation, this would subscribe to the event broker (Mesh or Centrifuge)
+	// and write actual events. Here we just maintain the connection and send heartbeats.
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			_, err := fmt.Fprintf(w, "event: ping\ndata: {}\n\n")
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	defer func() {
+		telemetry.RecordMeshBroadcast(r.Context(), mode)
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return

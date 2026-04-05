@@ -50,6 +50,7 @@ go_test(
         "server_missing_test.go",
         "server_rate_limit_test.go",
         "server_test.go",
+        "stream_test.go",
         "tenant_test.go",
     ],
     embed = [":dashboard"],
