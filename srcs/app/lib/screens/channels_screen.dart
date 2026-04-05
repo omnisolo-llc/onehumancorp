@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 final _channelsProvider = FutureProvider<List<ChatChannel>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -273,7 +274,7 @@ class _ChannelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
@@ -313,6 +314,7 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
   _ChannelDef _selected = _channelDefs.first;
   final _nameCtrl = TextEditingController();
   final Map<String, TextEditingController> _fieldCtrls = {};
+  final Map<String, bool> _fieldObscure = {};
   bool _loading = false;
 
   @override
@@ -326,8 +328,10 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
       c.dispose();
     }
     _fieldCtrls.clear();
+    _fieldObscure.clear();
     for (final f in _selected.fields) {
       _fieldCtrls[f.key] = TextEditingController();
+      _fieldObscure[f.key] = f.secret;
     }
   }
 
@@ -434,13 +438,27 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextField(
                     controller: _fieldCtrls[f.key],
-                    obscureText: f.secret,
+                    obscureText: _fieldObscure[f.key] ?? false,
                     decoration: InputDecoration(
                       labelText: f.label,
                       hintText: f.hint,
                       border: const OutlineInputBorder(),
                       suffixIcon:
-                          f.secret ? const Icon(Icons.lock_outline) : null,
+                          f.secret
+                              ? IconButton(
+                                icon: Icon(
+                                  _fieldObscure[f.key] == true
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
+                                tooltip: _fieldObscure[f.key] == true ? 'Show Secret' : 'Hide Secret',
+                                onPressed: () {
+                                  setState(() {
+                                    _fieldObscure[f.key] = !(_fieldObscure[f.key] ?? false);
+                                  });
+                                },
+                              )
+                              : null,
                     ),
                   ),
                 ),
