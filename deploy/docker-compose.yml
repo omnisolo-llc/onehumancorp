@@ -52,6 +52,7 @@ services:
       CHATWOOT_ADMIN_PASSWORD: changeme
       CHATWOOT_ENABLED: "true"
       MANIMAX_API_KEY: ${MANIMAX_API_KEY}
+      OHC_POWERSYNC_PRIV_KEY: ${OHC_POWERSYNC_PRIV_KEY}
       # Multi-tenant mode is disabled by default in single-docker deployment.
       # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
@@ -116,9 +117,15 @@ services:
     environment:
       PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       PS_PORT: "8080"
+      PS_SYNC_RULES_YAML_FILE: /etc/powersync/sync_rules.yaml
+      PS_JWKS_URL: http://server:8080/api/auth/powersync/jwks
+    volumes:
+      - ./docker/powersync/sync_rules.yaml:/etc/powersync/sync_rules.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy
+      server:
+        condition: service_started
     deploy:
       resources:
         limits:

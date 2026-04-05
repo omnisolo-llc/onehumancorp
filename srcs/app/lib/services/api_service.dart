@@ -492,6 +492,17 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
+  // ── General Methods ──────────────────────────────────────────────────────
+
+  Future<dynamic> get(String path) async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl$path'),
+      headers: _headers,
+    ).timeout(_timeout);
+    _checkStatus(res);
+    return jsonDecode(res.body);
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
 
