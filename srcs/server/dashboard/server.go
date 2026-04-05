@@ -23,7 +23,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-)
+
+	"github.com/onehumancorp/mono/srcs/server/utils")
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -622,7 +623,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
-	return telemetry.Middleware(auth.Middleware(store)(mux))
+	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching

@@ -32,6 +32,7 @@ go_library(
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "@io_opentelemetry_go_otel//:otel",
+        "//srcs/server/utils",
     ],
 )
 
