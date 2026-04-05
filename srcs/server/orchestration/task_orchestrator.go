@@ -19,6 +19,7 @@ type TaskOrchestrator interface {
 	EnqueueTask(ctx context.Context, task *models.Task, dependsOn []string) (*models.Task, error)
 	AcquireReadyTask(ctx context.Context, agentID string, capabilities []string) (*models.Task, error)
 	CompleteTask(ctx context.Context, taskID string, agentID string, result string) error
+	GetMesh() TeammateMesh
 }
 
 type DefaultTaskOrchestrator struct {
@@ -30,6 +31,10 @@ type DefaultTaskOrchestrator struct {
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
 	workerWg    sync.WaitGroup
+}
+
+func (dto *DefaultTaskOrchestrator) GetMesh() TeammateMesh {
+	return dto.mesh
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {

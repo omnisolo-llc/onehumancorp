@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -73,6 +74,62 @@ func RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
 			jsonError(w, "forbidden", http.StatusForbidden)
 			return
 		}
+		next(w, r)
+	}
+}
+
+// RequireSPIFFE returns a middleware that strictly enforces the presence and validity of a SPIFFE SVID
+// client certificate or a securely forwarded SPIFFE header, matching the specified trust domain and path prefix.
+func RequireSPIFFE(expectedPrefix string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			// In standalone desktop mode, local IPC or channels are used, and mutual TLS isn't mandatory
+			next(w, r)
+			return
+		}
+
+		var spiffeURI string
+
+		// Production multi-tenant environment: enforce mTLS certificates
+		if r.TLS != nil && len(r.TLS.PeerCertificates) > 0 {
+			for _, cert := range r.TLS.PeerCertificates {
+				for _, uri := range cert.URIs {
+					if uri != nil && uri.Scheme == "spiffe" {
+						spiffeURI = uri.String()
+						break
+					}
+				}
+				if spiffeURI != "" {
+					break
+				}
+			}
+		} else if xfcc := r.Header.Get("X-Forwarded-Client-Cert"); xfcc != "" {
+			// For scenarios where TLS is terminated at a strict internal proxy (e.g. Istio)
+			// we extract the URI. Ensure this is only used if proxy trust is established.
+			// XFCC format: Hash=hash;Cert="-----BEGIN...";URI=spiffe://...
+			parts := strings.Split(xfcc, ";")
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if strings.HasPrefix(p, "URI=spiffe://") {
+					spiffeURI = strings.TrimPrefix(p, "URI=")
+					break
+				}
+			}
+		}
+
+		if spiffeURI == "" {
+			jsonError(w, "forbidden: missing SPIFFE/SPIRE SVID certificate", http.StatusForbidden)
+			return
+		}
+
+		// Validate the URI explicitly matches the expected trust domain and prefix.
+		// Ensure a trailing slash or exact match to prevent sub-domain spoofing
+		// (e.g., "spiffe://onehumancorp.io.evil.com")
+		if spiffeURI != expectedPrefix && !strings.HasPrefix(spiffeURI, expectedPrefix+"/") {
+			jsonError(w, "forbidden: invalid SPIFFE ID trust domain or path", http.StatusForbidden)
+			return
+		}
+
 		next(w, r)
 	}
 }

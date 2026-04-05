@@ -1462,3 +1462,48 @@ func TestStore_AuthenticateErrorsMore(t *testing.T) {
 		t.Error("expected error for disabled user")
 	}
 }
+
+func TestMiddleware_RequireSPIFFE(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	handler := auth.RequireSPIFFE("spiffe://onehumancorp.io", inner)
+
+	// Standalone mode bypasses SPIFFE
+	t.Setenv("OHC_STANDALONE", "true")
+	req := httptest.NewRequest(http.MethodGet, "/api/mesh", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK in standalone mode, got %d", rec.Code)
+	}
+
+	// Cloud mode enforces SPIFFE
+	t.Setenv("OHC_STANDALONE", "false")
+
+	// Test missing header
+	req = httptest.NewRequest(http.MethodGet, "/api/mesh", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for missing SPIFFE, got %d", rec.Code)
+	}
+
+	// Test invalid header
+	req = httptest.NewRequest(http.MethodGet, "/api/mesh", nil)
+	req.Header.Set("X-Forwarded-Client-Cert", "URI=spiffe://bad-domain.com")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for invalid SPIFFE domain, got %d", rec.Code)
+	}
+
+	// Test valid header
+	req = httptest.NewRequest(http.MethodGet, "/api/mesh", nil)
+	req.Header.Set("X-Forwarded-Client-Cert", "Hash=xyz;URI=spiffe://onehumancorp.io/workload")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for valid SPIFFE header, got %d", rec.Code)
+	}
+}

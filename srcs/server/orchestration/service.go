@@ -269,6 +269,21 @@ type Hub struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	taskManager    *TaskManager
+	mesh           interface{}
+}
+
+// TeammateMesh returns the configured TeammateMesh instance if available.
+func (h *Hub) TeammateMesh() interface{} {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.mesh
+}
+
+// SetTeammateMesh overrides the internal TeammateMesh instance.
+func (h *Hub) SetTeammateMesh(tm interface{}) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.mesh = tm
 }
 
 func (h *Hub) TaskManager() *TaskManager {
