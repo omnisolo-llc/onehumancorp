@@ -23,6 +23,22 @@ class LocalManagerService {
 
   Future<void> saveEnvValue(String key, String value) async {}
 
+  Future<dynamic> processStart(
+    String executable,
+    List<String> arguments, {
+    bool runInShell = true,
+  }) async {
+    throw UnimplementedError(_unsupportedMessage);
+  }
+
+  Future<dynamic> processRun(
+    String executable,
+    List<String> arguments, {
+    bool runInShell = true,
+  }) async {
+    throw UnimplementedError(_unsupportedMessage);
+  }
+
   Future<String> runDoctor() async => _unsupportedMessage;
 
   Future<Map<String, dynamic>> getSystemInfo() async {
