@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
+import 'dart:ui';
 import 'package:uuid/uuid.dart';
 
 /// Default room used when no specific room is selected.
@@ -30,6 +31,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _sending = false;
   StreamSubscription<CentrifugeMessage>? _sub;
   CentrifugeService? _service;
+  final Set<String> _seenMessageIds = {};
 
   @override
   void initState() {
@@ -139,7 +141,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       itemBuilder: (_, i) {
                         final m = messages[i];
                         final isMe = m.authorId == user?.id;
-                        return _MessageBubble(message: m, isMe: isMe);
+                        final wasSeen = _seenMessageIds.contains(m.id);
+                        if (!wasSeen) {
+                          _seenMessageIds.add(m.id);
+                        }
+                        return _MessageBubble(
+                          message: m,
+                          isMe: isMe,
+                          wasSeen: wasSeen,
+                        );
                       },
                     ),
           ),
@@ -171,45 +181,93 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 class _MessageBubble extends StatelessWidget {
   final CentrifugeMessage message;
   final bool isMe;
+  final bool wasSeen;
 
-  const _MessageBubble({required this.message, required this.isMe});
+  const _MessageBubble({
+    required this.message,
+    required this.isMe,
+    this.wasSeen = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Align(
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(12),
+      topRight: const Radius.circular(12),
+      bottomLeft: Radius.circular(isMe ? 12 : 0),
+      bottomRight: Radius.circular(isMe ? 0 : 12),
+    );
+
+    Widget bubble = Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isMe ? 12 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 12),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: (isMe ? cs.primaryContainer : cs.surfaceContainerHighest).withValues(alpha: 0.8),
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
               ),
-            Text(message.body),
-          ],
+              child: Column(
+                crossAxisAlignment:
+                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isMe)
+                    Text(
+                      message.authorName,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  Text(message.body),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
+
+    if (!wasSeen) {
+      return TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+            child: Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: child,
+            ),
+          );
+        },
+        child: bubble,
+      );
+    }
+
+    return bubble;
   }
 }
 
