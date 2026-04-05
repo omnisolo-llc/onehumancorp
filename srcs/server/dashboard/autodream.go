@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type AutoDreamSyncRequest struct {
@@ -23,6 +25,7 @@ type AutoDreamQueryResult struct {
 }
 
 func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -44,8 +47,17 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mode := "cloud"
+	if s.hub.SIPDB().Provider().IsSQLite() {
+		mode = "standalone"
+	}
+
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
 	err := worker.ConsolidateEpoch(r.Context())
+
+	duration := time.Since(start).Seconds()
+	telemetry.RecordAutoDreamSyncDuration(r.Context(), duration, mode)
+
 	if err != nil {
 		http.Error(w, "failed to synchronize AutoDream: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -56,6 +68,7 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -102,8 +115,18 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mode := "cloud"
+	if s.hub.SIPDB().Provider().IsSQLite() {
+		mode = "standalone"
+	}
+
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
 	results, err := worker.SearchTruth(r.Context(), embedding, req.Limit)
+
+	duration := time.Since(start).Seconds()
+	telemetry.RecordAutoDreamQueryDuration(r.Context(), duration, mode)
+	telemetry.RecordHybridRAGLatency(r.Context(), duration, mode)
+
 	if err != nil {
 		http.Error(w, "failed to search AutoDream memories: "+err.Error(), http.StatusInternalServerError)
 		return

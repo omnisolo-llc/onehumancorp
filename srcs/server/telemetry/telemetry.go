@@ -43,6 +43,9 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
+	AutoDreamSyncDuration      metric.Float64Histogram
+	AutoDreamQueryDuration     metric.Float64Histogram
+	HybridRAGLatency           metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
@@ -359,6 +362,33 @@ func InitWithMeter(m mockableMeter) error {
 	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
 		"teammate_mesh_direct_messages_total",
 		metric.WithDescription("Total number of Teammate Mesh direct messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamSyncDuration, err = m.Float64Histogram(
+		"ohc_autodream_sync_duration_seconds",
+		metric.WithDescription("Latency of AutoDream sync operations"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamQueryDuration, err = m.Float64Histogram(
+		"ohc_autodream_query_duration_seconds",
+		metric.WithDescription("Latency of AutoDream query operations"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HybridRAGLatency, err = m.Float64Histogram(
+		"ohc_hybrid_rag_latency",
+		metric.WithDescription("Latency of Hybrid RAG operations"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -732,12 +762,43 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 }
 
 // RecordTeammateMeshBroadcast increments the global counter for Teammate Mesh broadcasts.
-func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
+func RecordTeammateMeshBroadcast(ctx context.Context, channel string, mode string) {
 	if TeammateMeshBroadcastsCounter == nil {
 		return
 	}
 	TeammateMeshBroadcastsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("channel", channel),
+		attribute.String("deployment_mode", mode),
+	))
+}
+
+// RecordAutoDreamSyncDuration records the latency of an AutoDream sync.
+func RecordAutoDreamSyncDuration(ctx context.Context, latency float64, mode string) {
+	if AutoDreamSyncDuration == nil {
+		return
+	}
+	AutoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("deployment_mode", mode),
+	))
+}
+
+// RecordAutoDreamQueryDuration records the latency of an AutoDream query.
+func RecordAutoDreamQueryDuration(ctx context.Context, latency float64, mode string) {
+	if AutoDreamQueryDuration == nil {
+		return
+	}
+	AutoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("deployment_mode", mode),
+	))
+}
+
+// RecordHybridRAGLatency records the latency of a Hybrid RAG search.
+func RecordHybridRAGLatency(ctx context.Context, latency float64, mode string) {
+	if HybridRAGLatency == nil {
+		return
+	}
+	HybridRAGLatency.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("deployment_mode", mode),
 	))
 }
 
