@@ -1,0 +1,11 @@
+# PowerSync configuration
+# This file defines the dynamic sync rules using JWT context parameters.
+
+bucket_definitions:
+  user_bucket:
+    parameters:
+      - SELECT token_parameters.organization_id AS org_id
+    data:
+      - SELECT * FROM agent_missions WHERE json_extract(payload, '$.organization_id') = bucket.org_id OR payload::json->>'organization_id' = bucket.org_id
+      - SELECT * FROM swarm_memory
+      - SELECT * FROM capability_plugins
