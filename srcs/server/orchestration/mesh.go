@@ -217,7 +217,7 @@ func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 	return &RedisTeammateMesh{client: c}, nil
 }
 
-func withRetry(ctx context.Context, maxRetries int, fn func() error) error {
+func meshWithRetry(ctx context.Context, maxRetries int, fn func() error) error {
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = fn()
@@ -241,7 +241,7 @@ func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 		return err
 	}
 	cmd := rm.client.B().Publish().Channel("mesh:tasks").Message(string(data)).Build()
-	return withRetry(ctx, 3, func() error {
+	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
 }
@@ -274,7 +274,7 @@ func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 		return err
 	}
 	cmd := rm.client.B().Publish().Channel("mesh:coordination").Message(string(data)).Build()
-	return withRetry(ctx, 3, func() error {
+	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
 }
@@ -375,7 +375,7 @@ func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 
 	// Offload persistence to worker threads within the specific shard
 	// Use backoff retry for persistence channel
-	err := withRetry(ctx, 3, func() error {
+	err := meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.persist[shardIdx] <- task:
 			return nil
@@ -389,7 +389,7 @@ func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 
 	// Broadcast locally to the specific shard
 	// Use backoff retry for broadcast channel
-	_ = withRetry(ctx, 3, func() error {
+	_ = meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.broadcast[shardIdx] <- task:
 			return nil
@@ -443,7 +443,7 @@ func (lm *LocalTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 	shardIdx := lm.getShard(msg.AgentID)
 
 	// Use backoff retry for coord broadcast channel
-	err := withRetry(ctx, 3, func() error {
+	err := meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.coordBroadcast[shardIdx] <- msg:
 			return nil
