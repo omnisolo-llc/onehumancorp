@@ -63,4 +63,52 @@ func TestUltraPlanManager(t *testing.T) {
 	if status != "EXECUTING" {
 		t.Errorf("expected EXECUTING, got %s", status)
 	}
+
+	// Create a second plan for Deliberation testing
+	plan2, err := upm.CreatePlan(ctx, "m-456", map[string]interface{}{"target_votes": 2.0})
+	if err != nil {
+		t.Fatalf("expected no error creating plan2, got %v", err)
+	}
+
+	// Submit Critique
+	err = upm.SubmitCritique(ctx, plan2.ID, "agent-1", "Needs more security")
+	if err != nil {
+		t.Fatalf("expected no error from SubmitCritique, got %v", err)
+	}
+
+	plan2Updated, err := upm.GetUltraPlan(ctx, plan2.ID)
+	if err != nil {
+		t.Fatalf("GetUltraPlan failed: %v", err)
+	}
+	if phase, _ := plan2Updated.StateMachine["phase"].(string); phase != "REVISION_REQUIRED" {
+		t.Errorf("expected REVISION_REQUIRED phase, got %v", phase)
+	}
+
+	// Approve Plan 1st time
+	err = upm.ApprovePlan(ctx, plan2.ID, "agent-2")
+	if err != nil {
+		t.Fatalf("expected no error from ApprovePlan, got %v", err)
+	}
+
+	plan2Updated, err = upm.GetUltraPlan(ctx, plan2.ID)
+	if err != nil {
+		t.Fatalf("GetUltraPlan failed: %v", err)
+	}
+	if phase, _ := plan2Updated.StateMachine["phase"].(string); phase == "APPROVED" {
+		t.Errorf("expected phase NOT to be APPROVED yet since target is 2")
+	}
+
+	// Approve Plan 2nd time
+	err = upm.ApprovePlan(ctx, plan2.ID, "agent-3")
+	if err != nil {
+		t.Fatalf("expected no error from ApprovePlan, got %v", err)
+	}
+
+	plan2Updated, err = upm.GetUltraPlan(ctx, plan2.ID)
+	if err != nil {
+		t.Fatalf("GetUltraPlan failed: %v", err)
+	}
+	if phase, _ := plan2Updated.StateMachine["phase"].(string); phase != "APPROVED" {
+		t.Errorf("expected APPROVED phase, got %v", phase)
+	}
 }

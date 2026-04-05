@@ -176,6 +176,177 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 	return nil
 }
 
+// SubmitCritique adds a critique to the deliberation phase and changes the phase to REVISION_REQUIRED.
+func (m *UltraPlanManager) SubmitCritique(ctx context.Context, planID string, agentID string, critique string) error {
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var currentStatus string
+	var stateMachineJSON []byte
+
+	query := `SELECT status, state_machine FROM swarm_ultra_plans WHERE id = $1`
+	if !m.db.IsSQLite() {
+		query += ` FOR UPDATE`
+	}
+
+	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus, &stateMachineJSON)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("ultra plan not found")
+		}
+		return fmt.Errorf("fetch plan: %w", err)
+	}
+
+	if currentStatus != "DELIBERATING" {
+		return errors.New("plan is not in DELIBERATING state")
+	}
+
+	var stateMachine map[string]interface{}
+	if err := json.Unmarshal(stateMachineJSON, &stateMachine); err != nil {
+		return fmt.Errorf("unmarshal state machine: %w", err)
+	}
+
+	stateMachine["phase"] = "REVISION_REQUIRED"
+
+	critiquesList, _ := stateMachine["critiques"].([]interface{})
+	critiquesList = append(critiquesList, map[string]interface{}{
+		"agent_id": agentID,
+		"critique": critique,
+		"time":     time.Now().Format(time.RFC3339),
+	})
+	stateMachine["critiques"] = critiquesList
+
+	updatedJSON, err := json.Marshal(stateMachine)
+	if err != nil {
+		return fmt.Errorf("marshal state machine: %w", err)
+	}
+
+	updateQuery := `
+		UPDATE swarm_ultra_plans
+		SET state_machine = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+	rowsAffected, err := tx.Exec(ctx, updateQuery, updatedJSON, planID)
+	if err != nil {
+		return fmt.Errorf("update state machine: %w", err)
+	}
+	if rowsAffected == 0 {
+		return errors.New("failed to update ultra plan")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	if m.hub != nil {
+		go func() {
+			msg := Message{
+				ID:        generateID(),
+				FromAgent: agentID,
+				ToAgent:   "system",
+				Type:      "VOTE_CAST",
+				Payload:   string(updatedJSON),
+				Status:    "DELIBERATING",
+			}
+			_ = m.hub.Publish(msg)
+		}()
+	}
+
+	return nil
+}
+
+// ApprovePlan records an agent's approval. If enough approvals are met, it changes the phase to APPROVED.
+func (m *UltraPlanManager) ApprovePlan(ctx context.Context, planID string, agentID string) error {
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var currentStatus string
+	var stateMachineJSON []byte
+
+	query := `SELECT status, state_machine FROM swarm_ultra_plans WHERE id = $1`
+	if !m.db.IsSQLite() {
+		query += ` FOR UPDATE`
+	}
+
+	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus, &stateMachineJSON)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("ultra plan not found")
+		}
+		return fmt.Errorf("fetch plan: %w", err)
+	}
+
+	if currentStatus != "DELIBERATING" {
+		return errors.New("plan is not in DELIBERATING state")
+	}
+
+	var stateMachine map[string]interface{}
+	if err := json.Unmarshal(stateMachineJSON, &stateMachine); err != nil {
+		return fmt.Errorf("unmarshal state machine: %w", err)
+	}
+
+	approvals, _ := stateMachine["approvals"].(float64)
+	approvals += 1
+	stateMachine["approvals"] = approvals
+
+	targetVotes, ok := stateMachine["target_votes"].(float64)
+	if !ok {
+		targetVotes = 1 // Default to 1 if not set
+	}
+
+	if approvals >= targetVotes {
+		stateMachine["phase"] = "APPROVED"
+	}
+
+	updatedJSON, err := json.Marshal(stateMachine)
+	if err != nil {
+		return fmt.Errorf("marshal state machine: %w", err)
+	}
+
+	updateQuery := `
+		UPDATE swarm_ultra_plans
+		SET state_machine = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+	rowsAffected, err := tx.Exec(ctx, updateQuery, updatedJSON, planID)
+	if err != nil {
+		return fmt.Errorf("update state machine: %w", err)
+	}
+	if rowsAffected == 0 {
+		return errors.New("failed to update ultra plan")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	if m.hub != nil {
+		go func() {
+			msgType := "VOTE_CAST"
+			if approvals >= targetVotes {
+				msgType = "PHASE_CHANGED"
+			}
+			msg := Message{
+				ID:        generateID(),
+				FromAgent: agentID,
+				ToAgent:   "system",
+				Type:      msgType,
+				Payload:   string(updatedJSON),
+				Status:    "DELIBERATING",
+			}
+			_ = m.hub.Publish(msg)
+		}()
+	}
+
+	return nil
+}
+
 // GetUltraPlan fetches an UltraPlan by ID.
 func (m *UltraPlanManager) GetUltraPlan(ctx context.Context, planID string) (*UltraPlan, error) {
 	var plan UltraPlan
