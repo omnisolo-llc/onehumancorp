@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _ctrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final Set<String> _animatedMessageIds = {};
   bool _sending = false;
   StreamSubscription<CentrifugeMessage>? _sub;
   CentrifugeService? _service;
@@ -139,7 +141,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       itemBuilder: (_, i) {
                         final m = messages[i];
                         final isMe = m.authorId == user?.id;
-                        return _MessageBubble(message: m, isMe: isMe);
+                        final isAlreadyAnimated = _animatedMessageIds.contains(m.id);
+                        if (!isAlreadyAnimated) {
+                          _animatedMessageIds.add(m.id);
+                        }
+                        return _MessageBubble(
+                          message: m,
+                          isMe: isMe,
+                          animate: !isAlreadyAnimated,
+                        );
                       },
                     ),
           ),
@@ -171,45 +181,105 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 class _MessageBubble extends StatelessWidget {
   final CentrifugeMessage message;
   final bool isMe;
+  final bool animate;
 
-  const _MessageBubble({required this.message, required this.isMe});
+  const _MessageBubble({
+    required this.message,
+    required this.isMe,
+    this.animate = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Align(
+    final bgColor = isMe
+        ? cs.primaryContainer.withValues(alpha: 0.6)
+        : cs.surfaceContainerHighest.withValues(alpha: 0.6);
+
+    Widget bubble = Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
+        child: ClipRRect(
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
             bottomLeft: Radius.circular(isMe ? 12 : 0),
             bottomRight: Radius.circular(isMe ? 0 : 12),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(12),
+                  topRight: const Radius.circular(12),
+                  bottomLeft: Radius.circular(isMe ? 12 : 0),
+                  bottomRight: Radius.circular(isMe ? 0 : 12),
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
               ),
-            Text(message.body),
-          ],
+              child: Column(
+                crossAxisAlignment:
+                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (!isMe)
+                    Text(
+                      message.authorName,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Outfit',
+                      ),
+                    ),
+                  Text(
+                    message.body,
+                    style: const TextStyle(fontFamily: 'Inter'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
+
+    if (animate) {
+      bubble = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: Transform.translate(
+                offset: Offset(isMe ? (20 * (1 - value)) : (-20 * (1 - value)), 0),
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: bubble,
+      );
+    }
+
+    return bubble;
   }
 }
 
