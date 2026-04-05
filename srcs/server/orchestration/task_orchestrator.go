@@ -260,27 +260,39 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var query string
 	if to.db.IsSQLite() {
 		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-			// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
-			// Instead, we use a two-step SELECT then UPDATE approach.
-			selectQuery := `
-				SELECT id FROM swarm_tasks
-				WHERE status = 'READY'
-				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
-				LIMIT 1
-			`
-			var taskID string
-			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
-			if err != nil {
-				return nil, err // Could be sql.ErrNoRows if queue is empty
+		// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
+		// Instead, we use a two-step SELECT then UPDATE approach.
+		// We should only select tasks where their dependencies are completed,
+		// or they have no dependencies. Wait, if it's READY, doesn't it mean dependencies are completed?
+		// In `EnqueueTask`, if `dependsOn` is empty, it sets status to 'READY'.
+		// If `dependsOn` is not empty, it sets status to 'PENDING'.
+		// In `CompleteTask`, it checks if all dependencies are completed and if so sets status to 'READY'.
+		// Actually, to be safe, we can enforce DAG dependencies here as well just in case.
+		// But let's check `EnqueueTask`.
+		selectQuery := `
+			SELECT st.id FROM swarm_tasks st
+			WHERE st.status = 'READY'
+			AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
+			LIMIT 1
+		`
+		var taskID string
+		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
+		if err != nil {
+			tx.Rollback(ctx)
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil // Queue is empty
 			}
+			return nil, fmt.Errorf("failed to scan task ID in SQLite: %w", err)
+		}
 
-			updateQuery := `
+		updateQuery := `
 			UPDATE swarm_tasks
 			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2
+			WHERE id = $2 AND status = 'READY'
 			RETURNING id, mission_id, COALESCE(parent_plan_id, ''), title, status, payload, created_at, updated_at
 		`
-			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+		err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
 			&task.ID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
@@ -289,9 +301,10 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			UPDATE swarm_tasks
 			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 			WHERE id = (
-				SELECT id FROM swarm_tasks
-				WHERE status = 'READY'
-				ORDER BY payload->>'priority' ASC, created_at ASC
+				SELECT st.id FROM swarm_tasks st
+				WHERE st.status = 'READY'
+				AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+				ORDER BY st.payload->>'priority' ASC, st.created_at ASC
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
 			)
@@ -303,6 +316,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	}
 
 	if err != nil {
+		tx.Rollback(ctx)
 		// sql.ErrNoRows is fine
 		return nil, nil // No task available
 	}
