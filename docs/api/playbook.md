@@ -138,6 +138,9 @@ Events emitted:
 - `TaskCompleted`
 - `QuotaExhausted`
 
+### 4.3 KAIROS Orchestration APIs
+Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines can be found in the [KAIROS Orchestration API Reference](kairos_orchestration_api.md).
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
