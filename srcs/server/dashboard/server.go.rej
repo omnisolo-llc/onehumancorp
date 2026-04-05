@@ -1,0 +1,11 @@
+--- /dev/null
++++ /dev/null
+@@ -1113,8 +1111,6 @@
+		case <-ticker.C:
+			fmt.Fprintf(w, "event: ping\ndata: {}\n\n")
+			flusher.Flush()
+		case <-eventCh:
+-			// Just broadcasting an orchestration event for now as that's what the playbook asks for.
+-			// In a real implementation this might decode the payload and send it properly.
+			fmt.Fprintf(w, "event: TaskCompleted\ndata: {}\n\n")
+			flusher.Flush()

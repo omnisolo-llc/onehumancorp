@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type AutoDreamSyncRequest struct {
@@ -25,8 +23,6 @@ type AutoDreamQueryResult struct {
 }
 
 func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -48,12 +44,6 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mode := "cloud"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
-	}
-	defer func() { telemetry.RecordAutoDreamSyncDuration(r.Context(), time.Since(start).Seconds(), mode) }()
-
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
 	err := worker.ConsolidateEpoch(r.Context())
 	if err != nil {
@@ -66,8 +56,6 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -113,12 +101,6 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "AutoDream Query requires a configured Hub and SIPDB", http.StatusServiceUnavailable)
 		return
 	}
-
-	mode := "cloud"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
-	}
-	defer func() { telemetry.RecordAutoDreamQueryDuration(r.Context(), time.Since(start).Seconds(), mode) }()
 
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
 	results, err := worker.SearchTruth(r.Context(), embedding, req.Limit)

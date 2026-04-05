@@ -1830,8 +1830,8 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 		case <-ticker.C:
 			fmt.Fprintf(w, "event: ping\ndata: {}\n\n")
 			flusher.Flush()
-		case <-eventCh:
-			fmt.Fprintf(w, "event: TaskCompleted\ndata: {}\n\n")
+		case task := <-taskCh:
+			fmt.Fprintf(w, "event: TaskCompleted\ndata: %s\n\n", task.ID)
 			flusher.Flush()
 		}
 	}
