@@ -244,6 +244,10 @@ type fakeHub struct {
 	subs     map[string][]chan struct{}
 }
 
+func (f *fakeHub) CheckHealth(ctx context.Context) (interface{}, error) {
+	return nil, nil
+}
+
 func newFakeHub() *fakeHub {
 	return &fakeHub{
 		inbox: make(map[string][]local.HubMessage),

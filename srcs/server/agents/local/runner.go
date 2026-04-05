@@ -57,6 +57,8 @@ Subscribe(agentID string) (<-chan struct{}, func())
 Inbox(agentID string) []HubMessage
 // Publish sends a message from the runner back to other agents.
 Publish(msg HubMessage) error
+	// CheckHealth returns a HybridHealthProbe detailing the system health.
+CheckHealth(ctx context.Context) (interface{}, error)
 }
 
 // TaskAssignmentPayload is the JSON structure of a TaskAssignment message.
