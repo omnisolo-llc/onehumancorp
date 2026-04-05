@@ -31,6 +31,7 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/auth",
         "//srcs/server/settings",
+        "//srcs/server/storage",
         "//srcs/server/telemetry",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@com_github_redis_rueidis//:rueidis",
