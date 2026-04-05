@@ -4,10 +4,19 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
+
+func getDeploymentMode() string {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		return "standalone"
+	}
+	return "cloud"
+}
 
 type AutoDreamSyncRequest struct {
 	ForceReindex bool `json:"force_reindex"`
@@ -23,6 +32,11 @@ type AutoDreamQueryResult struct {
 }
 
 func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordAutoDreamSync(r.Context(), time.Since(start).Seconds(), getDeploymentMode())
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -56,6 +70,11 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordAutoDreamQuery(r.Context(), time.Since(start).Seconds(), getDeploymentMode())
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

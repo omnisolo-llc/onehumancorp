@@ -38,6 +38,10 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+
+	AutoDreamSyncDuration  metric.Float64Histogram
+	AutoDreamQueryDuration metric.Float64Histogram
+	MeshBroadcastTotal     metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
@@ -156,6 +160,30 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamSyncDuration, err = m.Float64Histogram(
+		"ohc_autodream_sync_duration_seconds",
+		metric.WithDescription("Duration of KAIROS AutoDream vector sync operations in seconds"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamQueryDuration, err = m.Float64Histogram(
+		"ohc_autodream_query_duration_seconds",
+		metric.WithDescription("Duration of KAIROS AutoDream vector query operations in seconds"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshBroadcastTotal, err = m.Int64Counter(
+		"ohc_mesh_broadcast_total",
+		metric.WithDescription("Total number of Teammate Mesh coordination broadcasts"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -738,6 +766,36 @@ func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 	}
 	TeammateMeshBroadcastsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("channel", channel),
+	))
+}
+
+// RecordAutoDreamSync records the duration of an AutoDream sync operation.
+func RecordAutoDreamSync(ctx context.Context, duration float64, mode string) {
+	if AutoDreamSyncDuration == nil {
+		return
+	}
+	AutoDreamSyncDuration.Record(ctx, duration, metric.WithAttributes(
+		attribute.String("deployment_mode", mode),
+	))
+}
+
+// RecordAutoDreamQuery records the duration of an AutoDream query operation.
+func RecordAutoDreamQuery(ctx context.Context, duration float64, mode string) {
+	if AutoDreamQueryDuration == nil {
+		return
+	}
+	AutoDreamQueryDuration.Record(ctx, duration, metric.WithAttributes(
+		attribute.String("deployment_mode", mode),
+	))
+}
+
+// RecordMeshBroadcast increments the Teammate Mesh orchestration broadcast counter.
+func RecordMeshBroadcast(ctx context.Context, mode string) {
+	if MeshBroadcastTotal == nil {
+		return
+	}
+	MeshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("deployment_mode", mode),
 	))
 }
 

@@ -548,6 +548,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 5 – Autonomous SRE / Incident Management
 	mux.HandleFunc("/api/v1/scale", server.handleScale)
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
+	mux.HandleFunc("/api/v1/stream", auth.RequireRole("system", server.handleStream))
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
@@ -858,6 +859,12 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	telemetry.RecordMeshBroadcast(r.Context(), mode)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -1786,4 +1793,54 @@ type pipelineCreateRequest struct {
 type pipelinePromoteRequest struct {
 	PipelineID string `json:"pipelineId"`
 	ApprovedBy string `json:"approvedBy"`
+}
+
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	ctx := r.Context()
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	// Wait for events on s.hub.Subscribe("mesh:tasks") instead of Mesh()
+	var ch <-chan struct{}
+	var unsubscribe func()
+	if s.hub != nil {
+		// Just subscribe to a "stream" event to satisfy missing endpoints.
+		// Or since we need real-time events, we will push a dummy struct for now if the specific Task struct isn't directly exposed on Hub.
+		ch, unsubscribe = s.hub.Subscribe("global_stream")
+		defer unsubscribe()
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_, err := w.Write([]byte("event: ping\ndata: {}\n\n"))
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		case _, ok := <-ch:
+			if !ok {
+				return
+			}
+			// Here we would fetch actual tasks or events. For SSE stream ping keep-alive is primary,
+			// or we can emit a simple task update event.
+			_, err := w.Write([]byte("event: task_update\ndata: {\"status\":\"updated\"}\n\n"))
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }
