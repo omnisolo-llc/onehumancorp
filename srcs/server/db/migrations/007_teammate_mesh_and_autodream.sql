@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     assigned_agent_id TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING',
     priority TEXT NOT NULL DEFAULT 'P2',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
@@ -28,5 +28,5 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     organization_id VARCHAR NOT NULL,
     content TEXT NOT NULL,
     embedding VECTOR(1536),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

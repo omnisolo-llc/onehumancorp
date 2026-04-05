@@ -4,14 +4,14 @@
 CREATE TABLE IF NOT EXISTS swarm_memory (
     key        TEXT PRIMARY KEY,
     value      TEXT NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS agent_missions (
     id         TEXT PRIMARY KEY,
     status     TEXT NOT NULL,
     payload    TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_missions_status ON agent_missions (status);
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS agent_status (
     agent_id       TEXT PRIMARY KEY,
     role           TEXT NOT NULL,
     status         TEXT NOT NULL,
-    last_heartbeat TIMESTAMPTZ DEFAULT NOW()
+    last_heartbeat TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS capability_plugins (
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS capability_plugins (
     version       TEXT NOT NULL,
     manifest_url  TEXT NOT NULL,
     status        TEXT NOT NULL,
-    registered_at TIMESTAMPTZ DEFAULT NOW()
+    registered_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
@@ -37,5 +37,5 @@ CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
     context          TEXT NOT NULL,
     vector_embedding BYTEA,
     source_plugin    TEXT,
-    created_at       TIMESTAMPTZ DEFAULT NOW()
+    created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
