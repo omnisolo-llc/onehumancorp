@@ -1,11 +1,3 @@
 package telemetry
 
-import (
-	"context"
-	"fmt"
-	"net/http"
-	"time"
-)
-
-// The SyncBufferedMetrics functionality is already implemented in srcs/server/orchestration/sip.go (SyncBufferedMetrics on SIPDB).
-// We should set up a sync worker to periodically call it when OHC_STANDALONE is true.
+// Intentionally empty or fixing the import unused
