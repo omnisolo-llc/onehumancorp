@@ -135,3 +135,10 @@ func OrganizationIDFromContext(ctx context.Context) string {
 // Produces no errors.
 // Has no side effects.
 const ClaimsContextKeyForTest = claimsContextKey
+
+// ContextWithClaims creates a new context containing the provided claims.
+// It uses the unexported claimsContextKey under the hood, ensuring compatibility
+// with the rest of the application's auth mechanism in production.
+func ContextWithClaims(parent context.Context, claims *Claims) context.Context {
+	return context.WithValue(parent, claimsContextKey, claims)
+}

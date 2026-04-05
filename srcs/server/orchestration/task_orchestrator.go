@@ -27,6 +27,7 @@ type DefaultTaskOrchestrator struct {
 	hub         *CentrifugeNode
 	mesh        TeammateMesh
 	mu          sync.Mutex // For standalone mode coordination
+	spawner     SubAgentSpawner
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
 	workerWg    sync.WaitGroup
@@ -34,11 +35,13 @@ type DefaultTaskOrchestrator struct {
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
+	tm := &TaskManager{db: provider, hub: hub, redisClient: redisClient}
 	to := &DefaultTaskOrchestrator{
 		db:          provider,
 		redisClient: redisClient,
 		hub:         hub,
 		mesh:        mesh,
+		spawner:     NewDefaultSubAgentSpawner(provider, tm, hub),
 		workerCtx:   ctx,
 		workerCancel: cancel,
 	}
@@ -51,9 +54,6 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 	to.workerWg.Add(1)
 	go func() {
 		defer to.workerWg.Done()
-		// Capacity-managed channel for throttling
-		concurrencyLimit := 10
-		sem := make(chan struct{}, concurrencyLimit)
 
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
@@ -63,14 +63,81 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+				to.pollAndSpawnDelegatedTasks()
 			}
 		}
 	}()
+}
+
+func (to *DefaultTaskOrchestrator) pollAndSpawnDelegatedTasks() {
+	// In order to only fetch DELEGATED tasks, we need to poll them correctly.
+	// Since there is no explicit DELEGATED task type column in swarm_tasks,
+	// we will look for payload JSON containing {"sub_agent_type": "IMPLEMENTER", ...}
+	// Note: We use shared_tasks instead of swarm_tasks as mentioned in the research.
+
+	if to.redisClient == nil {
+		to.mu.Lock()
+		defer to.mu.Unlock()
+	}
+
+	tx, err := to.db.Begin(to.workerCtx)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback(to.workerCtx)
+
+	var task SharedTask
+	var query string
+
+	if to.db.IsSQLite() {
+		selectQuery := `
+			SELECT id FROM shared_tasks
+			WHERE (status = 'READY' OR status = 'PENDING')
+			AND json_extract(payload, '$.sub_agent_type') IS NOT NULL
+			ORDER BY priority ASC, created_at ASC
+			LIMIT 1
+		`
+		var taskID string
+		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID)
+		if err != nil {
+			return // no tasks
+		}
+
+		updateQuery := `
+		UPDATE shared_tasks
+		SET status = 'IN_PROGRESS', agent_id = 'sub_agent_spawner', updated_at = CURRENT_TIMESTAMP
+			WHERE id = $1
+		RETURNING id, organization_id, title, status, payload, created_at, updated_at
+	`
+		err = tx.QueryRow(to.workerCtx, updateQuery, taskID).Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	} else {
+		query = `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = 'sub_agent_spawner', updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM shared_tasks
+				WHERE (status = 'READY' OR status = 'PENDING')
+				AND payload->>'sub_agent_type' IS NOT NULL
+				ORDER BY priority ASC, created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, organization_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(to.workerCtx, query).Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	}
+
+	if err != nil {
+		return // No tasks
+	}
+
+	if err := tx.Commit(to.workerCtx); err == nil {
+		_ = to.spawner.Spawn(to.workerCtx, &task)
+	}
 }
 
 func (to *DefaultTaskOrchestrator) Stop() {
