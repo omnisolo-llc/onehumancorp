@@ -26,11 +26,11 @@ type UltraPlan struct {
 type UltraPlanManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
-	hub         *CentrifugeNode // Reusing CentrifugeNode for Mesh integration
+	hub         *Hub // Reusing Hub for Mesh integration
 }
 
 // NewUltraPlanManager initializes a new UltraPlanManager.
-func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode) *UltraPlanManager {
+func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *Hub) *UltraPlanManager {
 	return &UltraPlanManager{
 		db:          provider,
 		redisClient: redisClient,
