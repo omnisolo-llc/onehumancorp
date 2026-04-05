@@ -249,7 +249,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 
 	// We look for a READY task, update to IN_PROGRESS.
 	// In Postgres we use SKIP LOCKED.
-	// In SQLite we just rely on standard single connection or the mutex lock we added.
+	// In SQLite we use UPDATE RETURNING.
 
 	tx, err := to.db.Begin(ctx)
 	if err != nil {
@@ -260,28 +260,19 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var task models.Task
 	var query string
 	if to.db.IsSQLite() {
-		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-			// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
-			// Instead, we use a two-step SELECT then UPDATE approach.
-			selectQuery := `
+		// In SQLite, use UPDATE RETURNING with a subquery that uses LIMIT 1.
+		query = `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
 				SELECT id FROM swarm_tasks
 				WHERE status = 'READY'
 				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 				LIMIT 1
-			`
-			var taskID string
-			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
-			if err != nil {
-				return nil, err // Could be sql.ErrNoRows if queue is empty
-			}
-
-			updateQuery := `
-			UPDATE swarm_tasks
-			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2
+			)
 			RETURNING id, mission_id, COALESCE(parent_plan_id, ''), title, status, payload, created_at, updated_at
 		`
-			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+		err = tx.QueryRow(ctx, query, agentID).Scan(
 			&task.ID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
@@ -304,8 +295,10 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	}
 
 	if err != nil {
-		// sql.ErrNoRows is fine
-		return nil, nil // No task available
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
+			return nil, nil // No task available
+		}
+		return nil, fmt.Errorf("failed to acquire ready task: %w", err)
 	}
 
 	// Unmarshal payload
