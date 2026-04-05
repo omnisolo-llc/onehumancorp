@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 final powersyncProvider = Provider<PowerSyncService>((ref) {
   final service = PowerSyncService(ref);
@@ -77,10 +79,13 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings?.backendUrl ?? 'http://localhost:18789';
+    final backendUrl = settings?.backendUrl ?? 'http://localhost:8080';
+    // By default power sync backend might be on a different port like 8081 based on compose file
+    final powerSyncBackendUrl = 'http://localhost:8081';
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
+      powerSyncBackendUrl: powerSyncBackendUrl,
       ref: _ref,
     );
 
@@ -98,21 +103,38 @@ class PowerSyncService {
 
 class _BackendConnector extends PowerSyncBackendConnector {
   final String backendUrl;
+  final String powerSyncBackendUrl;
   final Ref ref;
 
-  _BackendConnector({required this.backendUrl, required this.ref});
+  _BackendConnector({required this.backendUrl, required this.powerSyncBackendUrl, required this.ref});
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
     final user = ref.read(authStateProvider).valueOrNull;
-    if (user == null) {
+    if (user == null || user.token.isEmpty) {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$backendUrl/api/auth/powersync/token'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return PowerSyncCredentials(
+          endpoint: powerSyncBackendUrl,
+          token: data['token'],
+        );
+      }
+    } catch (e) {
+      print('Error fetching PowerSync credentials: $e');
+    }
+
+    return null;
   }
 
   @override

@@ -312,3 +312,12 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
 }
+
+// Store returns the underlying auth store.
+// Accepts parameters: h *Handlers (No Constraints).
+// Returns *Store.
+// Produces no errors.
+// Has no side effects.
+func (h *Handlers) Store() *Store {
+	return h.store
+}
