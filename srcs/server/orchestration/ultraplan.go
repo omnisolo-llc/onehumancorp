@@ -38,6 +38,12 @@ func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *
 	}
 }
 
+// Critique represents an agent's critique of an UltraPlan.
+type Critique struct {
+	AgentID  string `json:"agent_id"`
+	Critique string `json:"critique"`
+}
+
 // CreatePlan creates a new UltraPlan with DELIBERATING status.
 func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, stateMachine map[string]interface{}) (*UltraPlan, error) {
 	stateMachineJSON, err := json.Marshal(stateMachine)
@@ -167,6 +173,192 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_UPDATE",
 				Payload:   string(stateMachineJSON),
+				Status:    newStatus,
+			}
+			_ = m.hub.Publish(msg)
+		}()
+	}
+
+	return nil
+}
+
+// SubmitCritique adds an agent's critique to an UltraPlan and transitions it to REVISION_REQUIRED if needed.
+func (m *UltraPlanManager) SubmitCritique(ctx context.Context, planID string, agentID string, critique string) error {
+	// Begin TX for atomicity
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var currentStatus string
+	var stateMachineJSON []byte
+	query := `SELECT status, state_machine FROM swarm_ultra_plans WHERE id = $1`
+	if !m.db.IsSQLite() {
+		query += ` FOR UPDATE SKIP LOCKED`
+	}
+
+	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus, &stateMachineJSON)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("ultra plan not found or locked")
+		}
+		return fmt.Errorf("fetch status: %w", err)
+	}
+
+	if currentStatus != "DELIBERATING" && currentStatus != "REVISION_REQUIRED" {
+		return errors.New("cannot critique plan that is not deliberating or requiring revision")
+	}
+
+	var stateMachine map[string]interface{}
+	if err := json.Unmarshal(stateMachineJSON, &stateMachine); err != nil {
+		return fmt.Errorf("failed to unmarshal state machine: %w", err)
+	}
+
+	// Append critique
+	critiquesIface, ok := stateMachine["critiques"]
+	var critiques []interface{}
+	if ok {
+		critiques, _ = critiquesIface.([]interface{})
+	}
+
+	newCritique := map[string]interface{}{
+		"agent_id": agentID,
+		"critique": critique,
+	}
+	critiques = append(critiques, newCritique)
+	stateMachine["critiques"] = critiques
+
+	// Set Phase / Sub-status within JSONB
+	stateMachine["phase"] = "REVISION_REQUIRED"
+
+	newStateMachineJSON, err := json.Marshal(stateMachine)
+	if err != nil {
+		return fmt.Errorf("failed to marshal new state machine: %w", err)
+	}
+
+	updateQuery := `
+		UPDATE swarm_ultra_plans
+		SET state_machine = $1, status = 'DELIBERATING', updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+	rowsAffected, err := tx.Exec(ctx, updateQuery, newStateMachineJSON, planID)
+	if err != nil {
+		return fmt.Errorf("update status: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("update status no rows affected")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	if m.hub != nil {
+		go func() {
+			msg := Message{
+				ID:        generateID(),
+				FromAgent: agentID,
+				ToAgent:   "system",
+				Type:      "CRITIQUE_SUBMITTED",
+				Payload:   string(newStateMachineJSON),
+				Status:    "DELIBERATING",
+			}
+			_ = m.hub.Publish(msg)
+		}()
+	}
+
+	return nil
+}
+
+// ApprovePlan increments approvals and transitions the plan if target is reached.
+func (m *UltraPlanManager) ApprovePlan(ctx context.Context, planID string, agentID string) error {
+	// Begin TX for atomicity
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var currentStatus string
+	var stateMachineJSON []byte
+	query := `SELECT status, state_machine FROM swarm_ultra_plans WHERE id = $1`
+	if !m.db.IsSQLite() {
+		query += ` FOR UPDATE SKIP LOCKED`
+	}
+
+	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus, &stateMachineJSON)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("ultra plan not found or locked")
+		}
+		return fmt.Errorf("fetch status: %w", err)
+	}
+
+	if currentStatus != "DELIBERATING" {
+		return errors.New("cannot approve plan that is not deliberating")
+	}
+
+	var stateMachine map[string]interface{}
+	if err := json.Unmarshal(stateMachineJSON, &stateMachine); err != nil {
+		return fmt.Errorf("failed to unmarshal state machine: %w", err)
+	}
+
+	approvalsIface, _ := stateMachine["approvals"]
+	var approvals int
+	if v, ok := approvalsIface.(float64); ok {
+		approvals = int(v)
+	}
+
+	targetVotesIface, _ := stateMachine["target_votes"]
+	var targetVotes int = 1 // default to 1 if not set
+	if v, ok := targetVotesIface.(float64); ok {
+		targetVotes = int(v)
+	}
+
+	approvals++
+	stateMachine["approvals"] = approvals
+
+	newStatus := currentStatus
+	eventType := "VOTE_CAST"
+	if approvals >= targetVotes {
+		newStatus = "EXECUTING"
+		stateMachine["phase"] = "APPROVED"
+		eventType = "PLAN_APPROVED"
+	}
+
+	newStateMachineJSON, err := json.Marshal(stateMachine)
+	if err != nil {
+		return fmt.Errorf("failed to marshal new state machine: %w", err)
+	}
+
+	updateQuery := `
+		UPDATE swarm_ultra_plans
+		SET state_machine = $1, status = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $3
+	`
+	rowsAffected, err := tx.Exec(ctx, updateQuery, newStateMachineJSON, newStatus, planID)
+	if err != nil {
+		return fmt.Errorf("update status: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("update status no rows affected")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	if m.hub != nil {
+		go func() {
+			msg := Message{
+				ID:        generateID(),
+				FromAgent: agentID,
+				ToAgent:   "system",
+				Type:      eventType,
+				Payload:   string(newStateMachineJSON),
 				Status:    newStatus,
 			}
 			_ = m.hub.Publish(msg)
