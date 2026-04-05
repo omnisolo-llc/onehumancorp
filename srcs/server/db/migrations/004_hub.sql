@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS agents (
     status          TEXT NOT NULL DEFAULT 'IDLE',
     provider_type   TEXT NOT NULL DEFAULT '',
     region          TEXT NOT NULL DEFAULT '',
-    registered_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    registered_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS agent_inbox (
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS agent_inbox (
     type        TEXT NOT NULL,
     content     TEXT NOT NULL DEFAULT '',
     meeting_id  TEXT NOT NULL DEFAULT '',
-    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_inbox_agent ON agent_inbox (agent_id);
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     to_agent    TEXT NOT NULL DEFAULT '',
     type        TEXT NOT NULL,
     content     TEXT NOT NULL DEFAULT '',
-    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_transcript_meeting ON meeting_transcripts (meeting_id);
