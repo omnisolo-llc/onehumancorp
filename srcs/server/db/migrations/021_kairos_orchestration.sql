@@ -2,6 +2,8 @@
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
+    mission_id TEXT,
+    parent_plan_id TEXT,
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, COMPLETED, BLOCKED
@@ -24,6 +26,8 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS agent_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
+    mission_id TEXT,
+    parent_plan_id TEXT,
     content TEXT NOT NULL,
     embedding vector(1536), -- Assuming OpenAI ada-002 or similar
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

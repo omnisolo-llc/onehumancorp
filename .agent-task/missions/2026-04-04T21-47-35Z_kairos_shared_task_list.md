@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Implementer
+status: IN_PROGRESS
+agent: Jules
 ---
 
 # Title: KAIROS Orchestration: Implement Shared Task List
