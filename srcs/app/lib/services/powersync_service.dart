@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 final powersyncProvider = Provider<PowerSyncService>((ref) {
   final service = PowerSyncService(ref);
@@ -109,9 +111,24 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
+    // Fetch the PowerSync token from the Go API using the user's current session token
+    final response = await http.get(
+      Uri.parse('$backendUrl/api/auth/powersync/token'),
+      headers: {
+        'Authorization': 'Bearer ${user.token}',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    final data = jsonDecode(response.body);
+    final String token = data['token'];
+
     return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
+      endpoint: 'http://localhost:8081', // PowerSync service endpoint
+      token: token,
     );
   }
 
