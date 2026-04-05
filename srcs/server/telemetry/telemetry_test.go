@@ -510,6 +510,48 @@ func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 	return true
 }
 
+func TestRedactInterfacePII(t *testing.T) {
+	input := []interface{}{
+		map[string]interface{}{
+			"email": "user@example.com",
+			"phone": "123-456-7890",
+		},
+		"ssn 123-45-6789 here",
+		[]interface{}{
+			"another user@example.com",
+		},
+		[]map[string]interface{}{
+			{
+				"email": "third@example.com",
+			},
+		},
+	}
+
+	result := RedactInterfacePII(input).([]interface{})
+
+	m := result[0].(map[string]interface{})
+	if m["email"] != "[REDACTED_EMAIL]" {
+		t.Errorf("Expected [REDACTED_EMAIL], got %v", m["email"])
+	}
+	if m["phone"] != "[REDACTED_PHONE]" {
+		t.Errorf("Expected [REDACTED_PHONE], got %v", m["phone"])
+	}
+
+	if result[1] != "ssn [REDACTED_SSN] here" {
+		t.Errorf("Expected ssn [REDACTED_SSN] here, got %v", result[1])
+	}
+
+	innerList := result[2].([]interface{})
+	if innerList[0] != "another [REDACTED_EMAIL]" {
+		t.Errorf("Expected another [REDACTED_EMAIL], got %v", innerList[0])
+	}
+
+	innerMapList := result[3].([]map[string]interface{})
+	if innerMapList[0]["email"] != "[REDACTED_EMAIL]" {
+		t.Errorf("Expected [REDACTED_EMAIL], got %v", innerMapList[0]["email"])
+	}
+}
+
 func TestInitTelemetry_PrometheusError(t *testing.T) {
 	originalReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = originalReg }()

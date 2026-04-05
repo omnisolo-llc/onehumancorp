@@ -78,10 +78,11 @@ func RedactInterfacePII(val interface{}) interface{} {
 		}
 		return v
 	case []interface{}:
+		res := make([]interface{}, len(v))
 		for i, val := range v {
-			v[i] = RedactInterfacePII(val)
+			res[i] = RedactInterfacePII(val)
 		}
-		return v
+		return res
 	case []string:
 		res := make([]string, len(v))
 		for i, str := range v {
@@ -89,13 +90,15 @@ func RedactInterfacePII(val interface{}) interface{} {
 		}
 		return res
 	case []map[string]interface{}:
+		res := make([]map[string]interface{}, len(v))
 		for i, m := range v {
+			newM := make(map[string]interface{}, len(m))
 			for k, val := range m {
-				m[k] = RedactInterfacePII(val)
+				newM[k] = RedactInterfacePII(val)
 			}
-			v[i] = m
+			res[i] = newM
 		}
-		return v
+		return res
 	default:
 		return val
 	}
