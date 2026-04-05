@@ -1,4 +1,4 @@
-package local_test
+package builtin_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/agents/local"
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 )
 
 // ─── Fake LLM ─────────────────────────────────────────────────────────────────
@@ -17,15 +17,15 @@ import (
 // fakeLLM drives the agent loop with scripted responses.
 type fakeLLM struct {
 	mu    sync.Mutex
-	turns []local.AssistantMessage
+	turns []builtin.AssistantMessage
 	idx   int
 }
 
-func (f *fakeLLM) Complete(_ context.Context, _ local.CompletionRequest) (*local.AssistantMessage, error) {
+func (f *fakeLLM) Complete(_ context.Context, _ builtin.CompletionRequest) (*builtin.AssistantMessage, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.idx >= len(f.turns) {
-		return &local.AssistantMessage{
+		return &builtin.AssistantMessage{
 			Text:       "Done.",
 			StopReason: "end_turn",
 		}, nil
@@ -41,12 +41,12 @@ func TestTaskStateTransitions(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	llm := &fakeLLM{turns: []local.AssistantMessage{
+	llm := &fakeLLM{turns: []builtin.AssistantMessage{
 		{Text: "Hello, I'll help.", StopReason: "end_turn", InputTokens: 100, OutputTokens: 50},
 	}}
 
 	tmpDir := t.TempDir()
-	state, err := local.SpawnTask(ctx, "test task", "Say hello", tmpDir, local.AgentConfig{LLM: llm})
+	state, err := builtin.SpawnTask(ctx, "test task", "Say hello", tmpDir, builtin.AgentConfig{LLM: llm})
 	if err != nil {
 		t.Fatalf("SpawnTask: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestTaskStateTransitions(t *testing.T) {
 	if !state.Status().IsTerminal() {
 		t.Fatalf("task did not reach terminal state; status=%s", state.Status())
 	}
-	if state.Status() != local.TaskStatusCompleted {
+	if state.Status() != builtin.TaskStatusCompleted {
 		t.Errorf("expected completed, got %s; err=%s", state.Status(), state.Err())
 	}
 }
@@ -78,7 +78,7 @@ func TestTaskKill(t *testing.T) {
 	blockLLM := &blockingLLM{}
 
 	tmpDir := t.TempDir()
-	state, err := local.SpawnTask(ctx, "block task", "block", tmpDir, local.AgentConfig{LLM: blockLLM})
+	state, err := builtin.SpawnTask(ctx, "block task", "block", tmpDir, builtin.AgentConfig{LLM: blockLLM})
 	if err != nil {
 		t.Fatalf("SpawnTask: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestTaskKill(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if state.Status() != local.TaskStatusKilled {
+	if state.Status() != builtin.TaskStatusKilled {
 		t.Errorf("expected killed, got %s", state.Status())
 	}
 }
@@ -102,7 +102,7 @@ func TestTaskKill(t *testing.T) {
 // blockingLLM waits for context cancellation before returning.
 type blockingLLM struct{}
 
-func (b *blockingLLM) Complete(ctx context.Context, _ local.CompletionRequest) (*local.AssistantMessage, error) {
+func (b *blockingLLM) Complete(ctx context.Context, _ builtin.CompletionRequest) (*builtin.AssistantMessage, error) {
 	<-ctx.Done()
 	return nil, ctx.Err()
 }
@@ -114,11 +114,11 @@ func TestAgentToolUse_BashAndFileWrite(t *testing.T) {
 	tmpDir := t.TempDir()
 	outFile := tmpDir + "/hello.txt"
 
-	llm := &fakeLLM{turns: []local.AssistantMessage{
+	llm := &fakeLLM{turns: []builtin.AssistantMessage{
 		// Turn 1: request bash tool use
 		{
 			Text: "I'll write a file.",
-			ToolUses: []local.ToolUseRequest{
+			ToolUses: []builtin.ToolUseRequest{
 				{
 					ID:   "tu1",
 					Name: "bash",
@@ -135,7 +135,7 @@ func TestAgentToolUse_BashAndFileWrite(t *testing.T) {
 		{Text: "File written.", StopReason: "end_turn", InputTokens: 300, OutputTokens: 20},
 	}}
 
-	state, err := local.SpawnTask(ctx, "write file", "Write hello to a file", tmpDir, local.AgentConfig{LLM: llm})
+	state, err := builtin.SpawnTask(ctx, "write file", "Write hello to a file", tmpDir, builtin.AgentConfig{LLM: llm})
 	if err != nil {
 		t.Fatalf("SpawnTask: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestAgentToolUse_BashAndFileWrite(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if state.Status() != local.TaskStatusCompleted {
+	if state.Status() != builtin.TaskStatusCompleted {
 		t.Errorf("expected completed, got %s (err=%s)", state.Status(), state.Err())
 	}
 
@@ -179,11 +179,11 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	llm := &fakeLLM{turns: []local.AssistantMessage{
+	llm := &fakeLLM{turns: []builtin.AssistantMessage{
 		// Turn 1: read the file
 		{
 			Text: "Reading file.",
-			ToolUses: []local.ToolUseRequest{
+			ToolUses: []builtin.ToolUseRequest{
 				{
 					ID:   "tu1",
 					Name: "file_read",
@@ -195,7 +195,7 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 		// Turn 2: edit the file
 		{
 			Text: "Editing file.",
-			ToolUses: []local.ToolUseRequest{
+			ToolUses: []builtin.ToolUseRequest{
 				{
 					ID:   "tu2",
 					Name: "file_edit",
@@ -212,7 +212,7 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 		{Text: "Done.", StopReason: "end_turn"},
 	}}
 
-	state, err := local.SpawnTask(ctx, "edit file", "Edit sample.txt", tmpDir, local.AgentConfig{LLM: llm})
+	state, err := builtin.SpawnTask(ctx, "edit file", "Edit sample.txt", tmpDir, builtin.AgentConfig{LLM: llm})
 	if err != nil {
 		t.Fatalf("SpawnTask: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if state.Status() != local.TaskStatusCompleted {
+	if state.Status() != builtin.TaskStatusCompleted {
 		t.Errorf("expected completed, got %s (err=%s)", state.Status(), state.Err())
 	}
 
@@ -238,20 +238,20 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 
 type fakeHub struct {
 	mu       sync.Mutex
-	agents   []local.HubAgent
-	inbox    map[string][]local.HubMessage
-	published []local.HubMessage
+	agents   []builtin.HubAgent
+	inbox    map[string][]builtin.HubMessage
+	published []builtin.HubMessage
 	subs     map[string][]chan struct{}
 }
 
 func newFakeHub() *fakeHub {
 	return &fakeHub{
-		inbox: make(map[string][]local.HubMessage),
+		inbox: make(map[string][]builtin.HubMessage),
 		subs:  make(map[string][]chan struct{}),
 	}
 }
 
-func (h *fakeHub) RegisterAgent(a local.HubAgent) {
+func (h *fakeHub) RegisterAgent(a builtin.HubAgent) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.agents = append(h.agents, a)
@@ -265,7 +265,7 @@ func (h *fakeHub) Subscribe(agentID string) (<-chan struct{}, func()) {
 	return ch, func() {}
 }
 
-func (h *fakeHub) Inbox(agentID string) []local.HubMessage {
+func (h *fakeHub) Inbox(agentID string) []builtin.HubMessage {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	msgs := h.inbox[agentID]
@@ -273,14 +273,14 @@ func (h *fakeHub) Inbox(agentID string) []local.HubMessage {
 	return msgs
 }
 
-func (h *fakeHub) Publish(msg local.HubMessage) error {
+func (h *fakeHub) Publish(msg builtin.HubMessage) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.published = append(h.published, msg)
 	return nil
 }
 
-func (h *fakeHub) deliver(agentID string, msg local.HubMessage) {
+func (h *fakeHub) deliver(agentID string, msg builtin.HubMessage) {
 	h.mu.Lock()
 	h.inbox[agentID] = append(h.inbox[agentID], msg)
 	chs := h.subs[agentID]
@@ -295,11 +295,11 @@ func (h *fakeHub) deliver(agentID string, msg local.HubMessage) {
 
 func TestRunner_ReceivesTaskAndPublishesResult(t *testing.T) {
 	hub := newFakeHub()
-	llm := &fakeLLM{turns: []local.AssistantMessage{
+	llm := &fakeLLM{turns: []builtin.AssistantMessage{
 		{Text: "Task complete.", StopReason: "end_turn", InputTokens: 50, OutputTokens: 20},
 	}}
 
-	runner := local.NewRunner(hub, "test-agent", "test", "SOFTWARE_ENGINEER", local.AgentConfig{LLM: llm})
+	runner := builtin.NewRunner(hub, "test-agent", "test", "SOFTWARE_ENGINEER", builtin.AgentConfig{LLM: llm})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -308,7 +308,7 @@ func TestRunner_ReceivesTaskAndPublishesResult(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // Let the runner register and start listening.
 
 	// Deliver a task assignment.
-	hub.deliver("test-agent", local.HubMessage{
+	hub.deliver("test-agent", builtin.HubMessage{
 		ID:        "msg-1",
 		FromAgent: "orchestrator",
 		ToAgent:   "test-agent",
@@ -352,12 +352,12 @@ func TestRunner_ReceivesTaskAndPublishesResult(t *testing.T) {
 
 func TestTaskOutputFile_Created(t *testing.T) {
 	ctx := context.Background()
-	llm := &fakeLLM{turns: []local.AssistantMessage{
+	llm := &fakeLLM{turns: []builtin.AssistantMessage{
 		{Text: "All done.", StopReason: "end_turn"},
 	}}
 
 	tmpDir := t.TempDir()
-	state, err := local.SpawnTask(ctx, "output test", "Output something", tmpDir, local.AgentConfig{LLM: llm})
+	state, err := builtin.SpawnTask(ctx, "output test", "Output something", tmpDir, builtin.AgentConfig{LLM: llm})
 	if err != nil {
 		t.Fatalf("SpawnTask: %v", err)
 	}
@@ -380,14 +380,14 @@ func TestTaskOutputFile_Created(t *testing.T) {
 
 func TestSpawnTask_UniqueIDs(t *testing.T) {
 	ctx := context.Background()
-	llm := &fakeLLM{turns: []local.AssistantMessage{
+	llm := &fakeLLM{turns: []builtin.AssistantMessage{
 		{Text: "ok", StopReason: "end_turn"},
 	}}
 
 	ids := make(map[string]bool)
 	for i := 0; i < 10; i++ {
 		tmpDir := t.TempDir()
-		s, err := local.SpawnTask(ctx, "t", "p", tmpDir, local.AgentConfig{LLM: llm})
+		s, err := builtin.SpawnTask(ctx, "t", "p", tmpDir, builtin.AgentConfig{LLM: llm})
 		if err != nil {
 			t.Fatalf("SpawnTask: %v", err)
 		}

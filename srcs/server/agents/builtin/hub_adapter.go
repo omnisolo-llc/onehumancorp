@@ -1,6 +1,6 @@
 //go:build bazel
 
-package local
+package builtin
 
 import (
 	"fmt"

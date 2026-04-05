@@ -13,7 +13,7 @@
 // The LocalAgent uses a configurable LLM backend (Anthropic Messages API,
 // OpenAI-compatible, or Ollama) and exposes the standard tool set:
 // Bash, FileRead, FileWrite, FileEdit, Grep, Glob, WebFetch, TodoWrite.
-package local
+package builtin
 
 import (
 	"crypto/rand"
