@@ -19,7 +19,6 @@ require (
 	google.golang.org/grpc v1.79.3
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.6.2-0.20260327093101-b71c26202050
 	google.golang.org/protobuf v1.36.11
-	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.48.0
 )

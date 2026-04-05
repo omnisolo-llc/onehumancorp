@@ -8,7 +8,6 @@ go_library(
         "middleware.go",
         "oidc.go",
         "postgres_store.go",
-        "powersync.go",
         "repository.go",
         "store.go",
     ],
@@ -16,8 +15,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "@in_gopkg_square_go_jose_v2//:go-jose_v2",
-        "@in_gopkg_square_go_jose_v2//jwt",
         "@org_golang_x_crypto//bcrypt",
     ],
 )

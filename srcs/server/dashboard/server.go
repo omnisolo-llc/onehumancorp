@@ -570,8 +570,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
-	mux.HandleFunc("/api/auth/powersync/jwks", server.authHandlers.HandlePowerSyncJwks)
-	mux.HandleFunc("/api/auth/powersync/token", server.authHandlers.HandlePowerSyncToken)
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
