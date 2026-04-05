@@ -63,4 +63,54 @@ func TestUltraPlanManager(t *testing.T) {
 	if status != "EXECUTING" {
 		t.Errorf("expected EXECUTING, got %s", status)
 	}
+
+	// Submit Critique
+	err = upm.SubmitCritique(ctx, plan.ID, "agent-1", "Needs more research")
+	if err != nil {
+		t.Fatalf("expected no error on SubmitCritique, got %v", err)
+	}
+
+	planResult, err := upm.GetUltraPlan(ctx, plan.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if planResult.StateMachine["phase"] != "REVISION_REQUIRED" {
+		t.Errorf("expected phase REVISION_REQUIRED, got %v", planResult.StateMachine["phase"])
+	}
+
+	// Approve Plan
+	// Update state machine to set target_votes = 2
+	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", map[string]interface{}{
+		"target_votes": float64(2),
+		"phase":        "DELIBERATING",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	err = upm.ApprovePlan(ctx, plan.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	planResult, err = upm.GetUltraPlan(ctx, plan.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if planResult.StateMachine["phase"] == "APPROVED" {
+		t.Errorf("expected phase to not be APPROVED yet (only 1 vote), got %v", planResult.StateMachine["phase"])
+	}
+
+	err = upm.ApprovePlan(ctx, plan.ID, "agent-2")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	planResult, err = upm.GetUltraPlan(ctx, plan.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if planResult.StateMachine["phase"] != "APPROVED" {
+		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
+	}
 }
