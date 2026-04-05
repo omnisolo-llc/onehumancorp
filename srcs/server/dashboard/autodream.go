@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type AutoDreamSyncRequest struct {
@@ -44,8 +48,20 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start := time.Now()
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
 	err := worker.ConsolidateEpoch(r.Context())
+	duration := time.Since(start).Seconds()
+
+	deploymentMode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		deploymentMode = "standalone"
+	}
+
+	if telemetry.AutoDreamSyncDuration != nil {
+		telemetry.AutoDreamSyncDuration.Record(r.Context(), duration, metric.WithAttributes(attribute.String("deployment_mode", deploymentMode)))
+	}
+
 	if err != nil {
 		http.Error(w, "failed to synchronize AutoDream: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -102,8 +118,20 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start := time.Now()
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
 	results, err := worker.SearchTruth(r.Context(), embedding, req.Limit)
+	duration := time.Since(start).Seconds()
+
+	deploymentMode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		deploymentMode = "standalone"
+	}
+
+	if telemetry.AutoDreamQueryDuration != nil {
+		telemetry.AutoDreamQueryDuration.Record(r.Context(), duration, metric.WithAttributes(attribute.String("deployment_mode", deploymentMode)))
+	}
+
 	if err != nil {
 		http.Error(w, "failed to search AutoDream memories: "+err.Error(), http.StatusInternalServerError)
 		return

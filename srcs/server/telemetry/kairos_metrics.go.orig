@@ -1,0 +1,40 @@
+package telemetry
+
+import (
+	"context"
+	"go.opentelemetry.io/otel/metric"
+)
+
+var (
+	AutoDreamSyncDuration  metric.Float64Histogram
+	AutoDreamQueryDuration metric.Float64Histogram
+	MeshBroadcastTotal     metric.Int64Counter
+)
+
+func initKairosMetrics(meter metric.Meter) {
+	var err error
+
+	AutoDreamSyncDuration, err = meter.Float64Histogram(
+		"ohc_autodream_sync_duration_seconds",
+		metric.WithDescription("Duration of AutoDream RAG sync operations"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	AutoDreamQueryDuration, err = meter.Float64Histogram(
+		"ohc_autodream_query_duration_seconds",
+		metric.WithDescription("Duration of AutoDream RAG query operations"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	MeshBroadcastTotal, err = meter.Int64Counter(
+		"ohc_mesh_broadcast_total",
+		metric.WithDescription("Total number of Teammate Mesh broadcast operations"),
+	)
+	if err != nil {
+		panic(err)
+	}
+}
