@@ -207,44 +207,40 @@ func (q *SQLiteTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTa
 		return nil, err
 	}
 
-	tx, err := q.db.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-
 	var id, payloadStr string
 	var query string
 
 	if q.db.IsSQLite() {
+		// SQLite lacks UPDATE ... RETURNING with a LIMIT, but we can do an atomic UPDATE with a subquery
+		// that does RETURNING.
 		query = `
-			SELECT id, payload FROM local_queue_jobs
-			WHERE queue_name = $1 AND status = 'PENDING' AND execute_at <= CURRENT_TIMESTAMP
-			ORDER BY execute_at ASC LIMIT 1
+			UPDATE local_queue_jobs
+			SET status = 'PROCESSING'
+			WHERE id IN (
+				SELECT id FROM local_queue_jobs
+				WHERE queue_name = $1 AND status = 'PENDING' AND execute_at <= CURRENT_TIMESTAMP
+				ORDER BY execute_at ASC LIMIT 1
+			)
+			RETURNING id, payload
 		`
-		err = tx.QueryRow(ctx, query, queueName).Scan(&id, &payloadStr)
 	} else {
+		// Postgres with SKIP LOCKED
 		query = `
-			SELECT id, payload FROM local_queue_jobs
-			WHERE queue_name = $1 AND status = 'PENDING' AND execute_at <= CURRENT_TIMESTAMP
-			ORDER BY execute_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+			UPDATE local_queue_jobs
+			SET status = 'PROCESSING'
+			WHERE id IN (
+				SELECT id FROM local_queue_jobs
+				WHERE queue_name = $1 AND status = 'PENDING' AND execute_at <= CURRENT_TIMESTAMP
+				ORDER BY execute_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, payload
 		`
-		err = tx.QueryRow(ctx, query, queueName).Scan(&id, &payloadStr)
 	}
 
+	err := q.db.QueryRow(ctx, query, queueName).Scan(&id, &payloadStr)
 	if err != nil {
 		// sql.ErrNoRows is fine, just means no jobs
 		return nil, nil
-	}
-
-	// Update status
-	_, err = tx.Exec(ctx, "UPDATE local_queue_jobs SET status = 'PROCESSING' WHERE id = $1", id)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
 	}
 
 	var payload map[string]interface{}
