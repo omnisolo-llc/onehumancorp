@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -22,6 +23,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     'DESIGNER',
     'SECURITY_ENGINEER',
     'PRODUCT_MANAGER',
+    'AI_NEWS_COLLECTOR',
   ];
 
   Future<void> _handleScale() async {
@@ -119,63 +121,76 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   // Step 2: Capacity
                   _SectionHeader(number: 2, title: 'Define Target Capacity'),
                   const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colors.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
                             children: [
-                              const Text(
-                                'Target Count',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Target Count',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    '${_targetCount.toInt()}',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '${_targetCount.toInt()}',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: colors.primary,
-                                ),
+                              Slider(
+                                value: _targetCount,
+                                min: 1,
+                                max: 10,
+                                divisions: 9,
+                                onChanged:
+                                    _isProvisioning
+                                        ? null
+                                        : (val) =>
+                                            setState(() => _targetCount = val),
+                              ),
+                              const Divider(height: 32),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Estimated Cost Impact:',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '\$${(_targetCount * 0.45).toStringAsFixed(2)} / hr',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          Slider(
-                            value: _targetCount,
-                            min: 1,
-                            max: 10,
-                            divisions: 9,
-                            onChanged:
-                                _isProvisioning
-                                    ? null
-                                    : (val) =>
-                                        setState(() => _targetCount = val),
-                          ),
-                          const Divider(height: 32),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Estimated Cost Impact:',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              const Spacer(),
-                              Text(
-                                '\$${(_targetCount * 0.45).toStringAsFixed(2)} / hr',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
