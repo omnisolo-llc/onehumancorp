@@ -24,6 +24,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -268,6 +269,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	storage        storage.Provider
 	ctx            context.Context
 	cancel         context.CancelFunc
 	taskManager    *TaskManager
@@ -322,6 +324,13 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 		ctx:           ctx,
 		cancel:        cancel,
+	}
+
+
+	// Default to a stub S3 provider if we can't initialize a local one
+	h.storage = storage.NewS3Provider("ohc-blobs")
+	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
+		h.storage = local
 	}
 
 	// Create a dummy/empty taskManager. Real deployment will set a DB provider.
@@ -613,6 +622,16 @@ func (h *Hub) SetSIPDB(sipDB *SIPDB) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.sipDB = sipDB
+}
+
+func (h *Hub) Storage() storage.Provider {
+	return h.storage
+}
+
+func (h *Hub) SetStorage(provider storage.Provider) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.storage = provider
 }
 
 // SIPDB returns the configured database-driven Swarm Intelligence Protocol interface.
