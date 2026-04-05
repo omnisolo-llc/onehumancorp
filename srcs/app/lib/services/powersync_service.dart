@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
@@ -96,6 +98,7 @@ class PowerSyncService {
   }
 }
 
+
 class _BackendConnector extends PowerSyncBackendConnector {
   final String backendUrl;
   final Ref ref;
@@ -109,10 +112,25 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final uri = Uri.parse('$backendUrl/api/auth/powersync/token');
+      final response = await http.get(uri, headers: {
+        'Authorization': 'Bearer ${user.token}',
+        'Content-Type': 'application/json',
+      });
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return PowerSyncCredentials(
+          endpoint: body['powersync_url'] ?? backendUrl,
+          token: body['token'],
+        );
+      }
+    } catch (e) {
+      // Ignore network errors or fallback
+    }
+
+    return null;
   }
 
   @override
