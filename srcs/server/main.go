@@ -254,7 +254,7 @@ func run(now time.Time, listen listenFunc) error {
 	var sipdbErr error
 
 	if pool != nil {
-		createdSIPDB, sipdbErr = orchestration.NewSIPDBWithProvider(pool.Provider)
+		createdSIPDB, sipdbErr = orchestration.NewSIPDBWithProvider(pool.Provider, "system")
 	} else {
 		var dbPath string
 		if os.Getenv("OHC_STANDALONE") == "true" {
@@ -419,8 +419,12 @@ func run(now time.Time, listen listenFunc) error {
 			tenantSettings := settings.NewStore()
 			_ = tenantSettings.Update(baseSettings)
 			tenantHub.SetSettingsStore(tenantSettings)
-			// Do not share the global SIPDB in multi-tenant mode to prevent tenant data leakage.
-			// Swarm tables currently do not have row-level tenant isolation.
+			// Create a tenant-scoped SIPDB instance to enforce row-level tenant isolation.
+			if pool != nil {
+				if tenantSIPDB, err := orchestration.NewSIPDBWithProvider(pool.Provider, org.ID); err == nil {
+					tenantHub.SetSIPDB(tenantSIPDB)
+				}
+			}
 			if globalCentrifugeNode != nil {
 				tenantHub.SetCentrifugeNode(globalCentrifugeNode)
 			}

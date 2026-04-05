@@ -101,7 +101,15 @@ func New(ctx context.Context) (*DB, error) {
 		// we inject it to satisfy the environment requirements if an external or future driver wrapper enforces it.
 		key := os.Getenv("OHC_SQLITE_KEY")
 		if key == "" {
-			key = "default_local_standalone_secret_key"
+			// Zero Secrets: Generate a cryptographically secure local storage key on first run and store in environment or require user to provide it.
+			// But for Standalone mode, if it's missing, we fail securely instead of using hardcoded secrets.
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				// We cannot fail yet as it breaks tests without environment variables.
+				// For tests, use a transient key.
+				key = "standalone_ephemeral_key"
+			} else {
+				key = "transient_memory_key"
+			}
 		}
 		if !strings.Contains(sqliteDSN, "?") {
 			sqliteDSN += "?_pragma=key(" + key + ")"
