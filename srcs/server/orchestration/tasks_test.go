@@ -190,7 +190,7 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	tm, cleanup := setupTestDB(t)
+	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
