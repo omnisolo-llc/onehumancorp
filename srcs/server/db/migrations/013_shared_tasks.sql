@@ -1,5 +1,7 @@
 CREATE TABLE IF NOT EXISTS shared_tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
+    mission_id TEXT,
+    parent_plan_id TEXT,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
@@ -8,6 +10,6 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload JSONB,
     locked_until TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

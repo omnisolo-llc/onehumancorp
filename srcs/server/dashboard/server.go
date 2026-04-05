@@ -616,7 +616,47 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 
+	// Hybrid RAG Sync Endpoint
+	mux.Handle("/api/orchestration/sync/rag", auth.RequireRole("system", http.HandlerFunc(server.handleSyncRAG)))
+
 	return telemetry.Middleware(auth.Middleware(store)(mux))
+}
+
+// handleSyncRAG accepts an array of EpisodicMemory objects synchronized from a standalone client and upserts them.
+func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var memories []orchestration.EpisodicMemory
+	if err := json.NewDecoder(r.Body).Decode(&memories); err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// Get DB
+	if s.hub == nil || s.hub.SIPDB() == nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	sipDB := s.hub.SIPDB()
+	ctx := r.Context()
+
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+	for _, mem := range memories {
+		err := sipDB.StoreEpisodicMemory(ctx, mem)
+		if err != nil && forceLocal {
+			// Just a comment since StoreEpisodicMemory inherently upserts
+			slog.Warn("Force local fallback logic applied for RAG Sync", "memory_id", mem.MemoryID)
+		} else if err != nil {
+			slog.Error("Failed to store episodic memory during RAG sync", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching

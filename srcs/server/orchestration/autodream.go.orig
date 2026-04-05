@@ -127,11 +127,11 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 			memID := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (gen_random_uuid(), $1, $2::vector, $3, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
 			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr, task.ID)
 		}
 
@@ -380,11 +380,11 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		}
 
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (gen_random_uuid(), $1, $2::vector, $3, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
 			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr, missionID)
 		}
 		if err != nil {
@@ -473,11 +473,11 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr, memoryID)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (gen_random_uuid(), $1, $2::vector, $3, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
 			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr, memoryID)
 		}
 

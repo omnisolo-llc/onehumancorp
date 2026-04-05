@@ -1,0 +1,15 @@
+--- srcs/server/orchestration/autodream.go
++++ srcs/server/orchestration/autodream.go
+@@ -381,11 +381,11 @@
+		}
+
+		if w.pool.IsSQLite() {
+-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
++			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
+		} else {
+-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
++			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (gen_random_uuid(), $1, $2::vector, $3, CURRENT_TIMESTAMP)"
+			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr, missionID)
+		}

@@ -1,0 +1,13 @@
+--- tasks.go
++++ tasks.go
+@@ -262,8 +267,8 @@
+		query := `
+			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
++			WHERE id = $1 AND organization_id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY priority ASC, created_at ASC
+			LIMIT 1
+		`
+-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
++		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(

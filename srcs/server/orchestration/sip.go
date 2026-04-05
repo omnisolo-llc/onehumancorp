@@ -875,7 +875,10 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 				"context": rec.payload,
 			}
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
+
+			// Unconditionally apply redaction
+			redactedData := telemetry.RedactInterfacePII(payloadData)
+			sanitizedPayload, _ := json.Marshal(redactedData)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"encoding/json"
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
@@ -374,11 +373,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 // ReviewTask marks a task for review.
 func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return errors.New("unauthorized: missing claims")
-	}
-
 	query := `
 		UPDATE shared_tasks
 		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
@@ -417,11 +411,6 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return errors.New("unauthorized: missing claims")
-	}
-
 	var createdAt time.Time
 	err := tm.db.QueryRow(ctx, "SELECT created_at FROM shared_tasks WHERE id = $1", taskID).Scan(&createdAt)
 	if err == nil {
@@ -432,9 +421,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	query := `
 		UPDATE shared_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status IN ('IN_PROGRESS', 'REVIEW')
+		WHERE id = $1 AND agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
-	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID, claims.OrganizationID)
+	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to complete task: %w", err)
 	}

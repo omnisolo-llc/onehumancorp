@@ -131,7 +131,17 @@ verify_dependencies() {
 }
 
 check_system() {
+    echo -e "${BOLD}${CYAN}Running Full System Diagnostics...${RESET}"
     verify_dependencies
+
+    # Further diagnostics as specified
+    echo -e "${DIM}[Checking specific onboarding dependencies...]${RESET}"
+    if command -v redis-cli >/dev/null 2>&1 && command -v sqlite3 >/dev/null 2>&1 && command -v docker >/dev/null 2>&1; then
+        echo -e "  ${GREEN}✓ All core dependencies (redis-cli, sqlite3, docker) are verified.${RESET}"
+    else
+        echo -e "  ${PURPLE}✗ Some core dependencies are missing. Please check the output above.${RESET}"
+    fi
+    echo -e "${GREEN}Diagnostics complete.${RESET}\n"
 }
 
 if [ "$1" == "--non-interactive" ]; then

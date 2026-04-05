@@ -1,0 +1,55 @@
+--- srcs/server/orchestration/tasks.go
++++ srcs/server/orchestration/tasks.go
+@@ -231,6 +231,11 @@
+ // to prevent race conditions.
+ // In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
+ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*SharedTask, error) {
++	claims := auth.ClaimsFromContext(ctx)
++	if claims == nil {
++		return nil, errors.New("unauthorized: missing claims")
++	}
++
+	if tm.redisClient != nil {
+		// Acquire Redis-backed distributed lock with 30s TTL
+		lockKey := "lock:task:" + taskID
+@@ -257,8 +262,8 @@
+		query := `
+			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
++			WHERE id = $1 AND organization_id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY priority ASC, created_at ASC
+			LIMIT 1
+		`
+-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
++		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		)
+	} else {
+		// PostgreSQL with SKIP LOCKED
+		query := `
+			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
++			WHERE id = $1 AND organization_id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			ORDER BY priority ASC, created_at ASC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		`
+-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
++		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
+			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		)
+	}
+@@ -324,8 +329,8 @@
+	updateQuery := `
+		UPDATE shared_tasks
+		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+-		WHERE id = $2 AND status = 'PENDING'
++		WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
+	`
+-	rowsAffected, err := tx.Exec(ctx, updateQuery, agentID, task.ID)
++	rowsAffected, err := tx.Exec(ctx, updateQuery, agentID, task.ID, claims.OrganizationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update task status: %w", err)
+	}
