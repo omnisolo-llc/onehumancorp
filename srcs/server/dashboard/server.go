@@ -856,6 +856,23 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "mTLS required", http.StatusForbidden)
+		return
+	}
+
+	// Enforce SPIFFE identity. True implementation would parse URIs from the SANs
+	hasSpiffe := false
+	for _, uri := range r.TLS.PeerCertificates[0].URIs {
+		if uri.Scheme == "spiffe" {
+			hasSpiffe = true
+			break
+		}
+	}
+	if !hasSpiffe {
+		http.Error(w, "valid SPIFFE SVID required", http.StatusForbidden)
+		return
+	}
 
 	var req struct {
 		Channel string `json:"channel"`
@@ -907,6 +924,22 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "mTLS required", http.StatusForbidden)
+		return
+	}
+
+	hasSpiffe := false
+	for _, uri := range r.TLS.PeerCertificates[0].URIs {
+		if uri.Scheme == "spiffe" {
+			hasSpiffe = true
+			break
+		}
+	}
+	if !hasSpiffe {
+		http.Error(w, "valid SPIFFE SVID required", http.StatusForbidden)
+		return
+	}
 
 	var req struct {
 		ToAgent string `json:"toAgent"`
@@ -939,6 +972,22 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "mTLS required", http.StatusForbidden)
+		return
+	}
+
+	hasSpiffe := false
+	for _, uri := range r.TLS.PeerCertificates[0].URIs {
+		if uri.Scheme == "spiffe" {
+			hasSpiffe = true
+			break
+		}
+	}
+	if !hasSpiffe {
+		http.Error(w, "valid SPIFFE SVID required", http.StatusForbidden)
 		return
 	}
 

@@ -60,3 +60,9 @@ go_test(
         "//srcs/server/settings",
     ],
 )
+
+go_test(
+    name = "dashboard_mesh_test",
+    srcs = ["server_mesh_test.go"],
+    embed = [":dashboard"],
+)
