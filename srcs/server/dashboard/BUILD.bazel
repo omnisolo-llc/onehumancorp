@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "dashboard",
     srcs = [
+        "autodream.go",
         "handlers_agent.go",
         "handlers_b2b.go",
         "handlers_chat.go",
@@ -37,6 +38,7 @@ go_library(
 go_test(
     name = "dashboard_test",
     srcs = [
+        "autodream_test.go",
         "handlers_b2b_extra_test.go",
         "handlers_mcp_test.go",
         "handlers_ops_extra_test.go",
