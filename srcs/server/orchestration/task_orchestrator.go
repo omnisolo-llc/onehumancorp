@@ -189,13 +189,13 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 
 	// Insert task
 	query := `
-		INSERT INTO swarm_tasks (id, mission_id, title, payload, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title, payload, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	if to.db.IsSQLite() {
-		_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.Title, payload, task.Status)
+		_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.ParentPlanID, task.Title, payload, task.Status)
 	} else {
-		_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.Title, payload, task.Status)
+		_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.ParentPlanID, task.Title, payload, task.Status)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert task: %w", err)
@@ -204,7 +204,7 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 	// Insert dependencies
 	if len(dependsOn) > 0 {
 		for _, depID := range dependsOn {
-			_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, depID)
+			_, err = tx.Exec(ctx, "INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, depID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to insert dependency: %w", err)
 			}
@@ -278,10 +278,10 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			UPDATE swarm_tasks
 			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 				WHERE id = $2
-			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+			RETURNING id, mission_id, COALESCE(parent_plan_id, ''), title, status, payload, created_at, updated_at
 		`
 			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
 		// In Postgres, use UPDATE RETURNING with a subquery that uses FOR UPDATE SKIP LOCKED.
@@ -295,10 +295,10 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
 			)
-			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+			RETURNING id, mission_id, COALESCE(parent_plan_id, ''), title, status, payload, created_at, updated_at
 		`
 		err = tx.QueryRow(ctx, query, agentID).Scan(
-			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
 
@@ -379,7 +379,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	query := `
 		SELECT t.id
 		FROM swarm_tasks t
-		JOIN task_dependencies td ON t.id = td.task_id
+		JOIN swarm_task_dependencies td ON t.id = td.task_id
 		WHERE td.depends_on_task_id = $1 AND t.status = 'PENDING'
 	`
 	rows, err := tx.Query(ctx, query, taskID)
@@ -402,7 +402,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		var pendingCount int
 		checkQuery := `
 			SELECT COUNT(*)
-			FROM task_dependencies td
+			FROM swarm_task_dependencies td
 			JOIN swarm_tasks t ON td.depends_on_task_id = t.id
 			WHERE td.task_id = $1 AND t.status != 'COMPLETED'
 		`
