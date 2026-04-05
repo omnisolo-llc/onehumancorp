@@ -37,6 +37,7 @@ go_library(
         "migrations/023_llm_completion_cache.sql",
         "migrations/024_autodream_memories.sql",
         "migrations/025_kairos_dag_deps.sql",
+        "migrations/026_telemetry_buffer.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
