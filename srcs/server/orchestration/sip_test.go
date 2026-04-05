@@ -1046,7 +1046,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	}
 
 	var count int
-	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
 	if err != nil || count != 2 {
 		t.Fatalf("Expected 2 metrics, got %d, err: %v", count, err)
 	}
@@ -1071,7 +1071,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
 	}
 
-	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_metrics_buffer").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
 	}
