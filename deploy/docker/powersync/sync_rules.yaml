@@ -1,0 +1,14 @@
+bucket_definitions:
+  user_scoped:
+    parameters:
+      - select: token.parameters.organization_id
+    data:
+      - select: *
+        from: agent_missions
+        where: organization_id = bucket.organization_id
+      - select: *
+        from: tenant_registry
+        where: organization_id = bucket.organization_id
+      - select: *
+        from: sip_memory
+        where: organization_id = bucket.organization_id

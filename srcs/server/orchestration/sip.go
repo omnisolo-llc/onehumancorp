@@ -978,7 +978,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 
 		if payloadData, ok := rawData.(map[string]interface{}); ok {
-			// Delete sensitive RAG context
+			// Delete sensitive RAG context explicitly to prevent transmission of local standlone RAG contexts
 			delete(payloadData, "rag_context")
 
 			// Add ID to payload for synchronization endpoint

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
@@ -101,6 +102,48 @@ class _BackendConnector extends PowerSyncBackendConnector {
   final Ref ref;
 
   _BackendConnector({required this.backendUrl, required this.ref});
+
+  @override
+  Future<PowerSyncCredentials?> fetchCredentials() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) {
+      return null;
+    }
+
+    try {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse('$backendUrl/api/auth/powersync/token'));
+      request.headers.add('Authorization', 'Bearer ${user.token}');
+      final response = await request.close();
+
+      if (response.statusCode == 200) {
+        final body = await response.transform(utf8.decoder).join();
+        final data = json.decode(body);
+        return PowerSyncCredentials(
+          endpoint: backendUrl,
+          token: data['token'],
+        );
+      }
+    } catch (e) {
+      // Fallback
+    }
+
+    return PowerSyncCredentials(
+      endpoint: backendUrl,
+      token: user.token,
+    );
+  }
+
+  @override
+  Future<void> uploadData(PowerSyncDatabase database) async {
+    final batch = await database.getCrudBatch();
+    if (batch == null) return;
+
+    // Implement upload logic to cloud API if needed.
+    await batch.complete();
+  }
+}
+);
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
