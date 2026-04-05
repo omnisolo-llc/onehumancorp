@@ -22,6 +22,7 @@ import (
 type SharedTask struct {
 	ID              string
 	OrganizationID  string
+	ParentPlanID    sql.NullString
 	Dependencies    []string
 	Title           string
 	Description     string
@@ -91,19 +92,13 @@ func (tm *TaskManager) StopWorkerLoop() {
 
 // evaluatePendingDependencies finds tasks whose dependencies have just been met and broadcasts them.
 func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
-	// A simple check to find PENDING tasks without active locks and met dependencies
-	// and trigger a broadcast to awake idle agents.
-	tasks, err := tm.PeekTasks(ctx, 1) // Peek if we have at least one to possibly notify agents
-	if err != nil {
-		return
-	}
-	_ = tasks // Ignore if using PeekTasks, but let's implement a real check
-
+	// Query ready tasks and broadcast them in a single pass to awake idle agents.
 	query := `
 		SELECT st.id, st.status
 		FROM shared_tasks st
 		WHERE st.status = 'PENDING'
 		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+		LIMIT 1000
 	`
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
@@ -136,11 +131,11 @@ func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
 func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, description, priority string) (*SharedTask, error) {
-	return tm.CreateTaskWithPlan(ctx, organizationID, nil, title, description, priority)
+	return tm.CreateTaskWithPlan(ctx, organizationID, nil, nil, title, description, priority)
 }
 
 // CreateTaskWithPlan creates a new pending task with plan association.
-func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, parentPlanID *string, dependencies []string, title, description, priority string) (*SharedTask, error) {
 	var task SharedTask
 
 	id := generateID()
@@ -161,23 +156,29 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	}
 	defer tx.Rollback(ctx)
 
+	var ppid sql.NullString
+	if parentPlanID != nil {
+		ppid.String = *parentPlanID
+		ppid.Valid = true
+	}
+
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6)
-			RETURNING id, organization_id, title, payload, status, priority, created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority)
+			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7)
+			RETURNING id, organization_id, parent_plan_id, title, payload, status, priority, created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6)
-			RETURNING id, organization_id, title, payload, status, priority, created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority)
+			VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7)
+			RETURNING id, organization_id, parent_plan_id, title, payload, status, priority, created_at, updated_at
 		`
 	}
 
-	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority).Scan(
-		&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.CreatedAt, &task.UpdatedAt,
+	err = tx.QueryRow(ctx, query, id, organizationID, ppid, title, description, payload, priority).Scan(
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.CreatedAt, &task.UpdatedAt,
 	)
 
 	if err != nil {
@@ -254,22 +255,27 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	var errQuery error
 
 	if tm.db.IsSQLite() {
-		// SQLite doesn't support FOR UPDATE, but `Begin` handles concurrent writes lock.
-		query := `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
-			FROM shared_tasks st
-			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
-			ORDER BY st.priority ASC, st.created_at ASC
-			LIMIT 1
+		// SQLite doesn't support FOR UPDATE, but we use UPDATE ... RETURNING to ensure atomicity and lock safely.
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT st.id
+				FROM shared_tasks st
+				WHERE st.id = $2 AND st.organization_id = $3 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+				ORDER BY st.priority ASC, st.created_at ASC
+				LIMIT 1
+			)
+			RETURNING id, organization_id, parent_plan_id, title, payload, status, priority, locked_until, created_at, updated_at
 		`
-		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
-			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		errQuery = tx.QueryRow(ctx, updateQuery, agentID, taskID, claims.OrganizationID).Scan(
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, parent_plan_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -278,18 +284,39 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			FOR UPDATE SKIP LOCKED
 		`
 		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
-			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
 
 	if errQuery != nil {
 		if errors.Is(errQuery, sql.ErrNoRows) {
-			return nil, nil // No task available
+			return nil, nil // No task available or claimed by another worker
 		}
-			if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
-				return nil, fmt.Errorf("database is locked: %w", errQuery)
+		if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
+			return nil, fmt.Errorf("database is locked: %w", errQuery)
+		}
+		return nil, fmt.Errorf("failed to claim task: %w", errQuery)
+	}
+
+	if !tm.db.IsSQLite() {
+		// Update task status to IN_PROGRESS in Postgres
+		var updatedID string
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
+			RETURNING id
+		`
+		err = tx.QueryRow(ctx, updateQuery, agentID, task.ID, claims.OrganizationID).Scan(&updatedID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil // Task was likely claimed by another worker concurrently.
 			}
-		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
+			if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
+				return nil, fmt.Errorf("database is locked: %w", err)
+			}
+			return nil, fmt.Errorf("failed to update task status: %w", err)
+		}
 	}
 
 	// Fetch dependencies from task_dependencies table
@@ -307,34 +334,12 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		}
 	}
 
-
 	// Reconstruct Description from JSON payload
 	var payloadMap map[string]interface{}
 	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
 		if desc, ok := payloadMap["description"].(string); ok {
 			task.Description = desc
 		}
-	}
-
-	// Update task status to IN_PROGRESS
-	var updatedID string
-	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
-		RETURNING id
-	`
-
-	err = tx.QueryRow(ctx, updateQuery, agentID, task.ID, claims.OrganizationID).Scan(&updatedID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			// Task was likely claimed by another worker concurrently.
-			return nil, nil
-		}
-		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
-			return nil, fmt.Errorf("database is locked: %w", err)
-		}
-		return nil, fmt.Errorf("failed to update task status: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -470,7 +475,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 
 	if tm.db.IsSQLite() {
 		query = `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -481,7 +486,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		}
 	} else {
 		query = `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -502,7 +507,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	for rows.Next() {
 		task := &SharedTask{}
 		if err := rows.Scan(
-			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
@@ -538,8 +543,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	// Fetch slightly more tasks initially in case some are filtered out by dependency checks
 	fetchLimit := limit * 3
 	if tm.db.IsSQLite() {
+		// SQLite: While we cannot do UPDATE ... LIMIT directly, we are inside a transaction.
+		// However, to ensure atomicity for a bulk fetch, we just SELECT within the transaction,
+		// and the database lock will prevent other agents from taking it.
 		query = `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -549,7 +557,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query = `
-			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -570,7 +578,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	for rows.Next() {
 		task := &SharedTask{}
 		if err := rows.Scan(
-			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
