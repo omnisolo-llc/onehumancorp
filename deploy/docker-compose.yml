@@ -116,6 +116,10 @@ services:
     environment:
       PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       PS_PORT: "8080"
+      PS_SYNC_RULES_DIR: "/etc/powersync"
+      PS_JWKS_URL: "http://server:8080/api/auth/powersync/jwks"
+    volumes:
+      - ./docker/powersync:/etc/powersync
     depends_on:
       postgres:
         condition: service_healthy

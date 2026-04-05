@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
@@ -78,9 +79,13 @@ class PowerSyncService {
     await _db!.initialize();
 
     final backendUrl = settings?.backendUrl ?? 'http://localhost:18789';
+    // The default local backend API is on 8080 (or 18789 for core),
+    // PowerSync service itself runs on 8081 locally by default.
+    final powerSyncUrl = backendUrl.replaceAll(RegExp(r':(8080|18789)$'), ':8081');
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,
+      powerSyncUrl: powerSyncUrl,
       ref: _ref,
     );
 
@@ -98,9 +103,10 @@ class PowerSyncService {
 
 class _BackendConnector extends PowerSyncBackendConnector {
   final String backendUrl;
+  final String powerSyncUrl;
   final Ref ref;
 
-  _BackendConnector({required this.backendUrl, required this.ref});
+  _BackendConnector({required this.backendUrl, required this.powerSyncUrl, required this.ref});
 
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
@@ -109,8 +115,33 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
+    // Fetch the PowerSync specific token from our backend
+    try {
+      final uri = Uri.parse('$backendUrl/api/auth/powersync/token');
+      final response = await HttpClient().getUrl(uri)
+          .then((req) {
+            req.headers.add('Authorization', 'Bearer ${user.token}');
+            return req.close();
+          });
+
+      if (response.statusCode == 200) {
+        final body = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(body);
+        if (json['token'] != null) {
+          return PowerSyncCredentials(
+            endpoint: powerSyncUrl,
+            token: json['token'],
+          );
+        }
+      }
+    } catch (e) {
+      // Log error during PowerSync token fetch
+      // ignore: avoid_print
+      print('Failed to fetch PowerSync token: $e');
+    }
+
     return PowerSyncCredentials(
-      endpoint: backendUrl,
+      endpoint: powerSyncUrl,
       token: user.token,
     );
   }

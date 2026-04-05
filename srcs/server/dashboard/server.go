@@ -581,6 +581,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
+	mux.HandleFunc("/api/auth/powersync/jwks", auth.PowerSyncJWKSHandler())
+	// In OHC, users usually don't have multiple roles dynamically. But we can require "user" role or default.
+	// `RequireRole` only takes a single role string. Since this can be accessed by regular users:
+	mux.HandleFunc("/api/auth/powersync/token", auth.RequireRole("user", auth.PowerSyncTokenHandler()))
 	// User management (admin only)
 	mux.HandleFunc("/api/users", server.authHandlers.HandleUsers)
 	mux.HandleFunc("/api/users/", server.authHandlers.HandleUser)

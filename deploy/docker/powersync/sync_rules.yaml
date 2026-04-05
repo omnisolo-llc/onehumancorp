@@ -1,0 +1,10 @@
+bucket_definitions:
+  user_data:
+    parameters:
+      - select: token.parameters.organization_id
+    data:
+      - SELECT * FROM agent_missions WHERE payload::json->>'organization_id' = bucket.parameters.organization_id OR bucket.parameters.organization_id = 'default'
+      - SELECT * FROM swarm_memory
+      - SELECT * FROM swarm_memory_embeddings
+      - SELECT * FROM capability_plugins
+      - SELECT * FROM agent_status
