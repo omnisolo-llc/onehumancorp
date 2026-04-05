@@ -87,16 +87,17 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 
 	var taskID string
 	var orgID string
+	var payload *string
 	var query string
 
 	if to.db.IsSQLite() {
 		selectQuery := `
-			SELECT id, organization_id FROM shared_tasks
+			SELECT id, organization_id, payload FROM shared_tasks
 			WHERE status = 'PENDING' AND priority = 'DELEGATED'
 			ORDER BY created_at ASC
 			LIMIT 1
 		`
-		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID)
+		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID, &payload)
 		if err != nil {
 			return // typically sql.ErrNoRows
 		}
@@ -123,12 +124,17 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
 			)
-			RETURNING id, organization_id
+			RETURNING id, organization_id, payload
 		`
-		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
+		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID, &payload)
 		if err != nil {
 			return // sql.ErrNoRows or locking issue
 		}
+	}
+
+	var payloadStr string
+	if payload != nil {
+		payloadStr = *payload
 	}
 
 	if err := tx.Commit(to.workerCtx); err != nil {
@@ -140,6 +146,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		ID:             taskID,
 		OrganizationID: orgID,
 		Priority:       "DELEGATED",
+		Payload:        payloadStr,
 	}
 
 	_ = to.spawner.Spawn(to.workerCtx, task)

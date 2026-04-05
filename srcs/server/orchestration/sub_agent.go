@@ -42,13 +42,21 @@ func NewDefaultSubAgentSpawner(provider db.Provider, tm *TaskManager, hub *Centr
 
 // Spawn spawns a new sub-agent for the given task.
 func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) error {
+	subAgentType, parentTaskID := extractSubAgentMetadata(task.Payload)
+
 	// Emit SUB_AGENT_SPAWNED event
 	if s.hub != nil {
 		payload := map[string]interface{}{
-			"task_id":  task.ID,
-			"action":   "SUB_AGENT_SPAWNED",
-			"agent_id": "sub-agent-spawner",
-			"status":   "IN_PROGRESS",
+			"task_id":        task.ID,
+			"action":         "SUB_AGENT_SPAWNED",
+			"agent_id":       "sub-agent-spawner",
+			"status":         "IN_PROGRESS",
+		}
+		if subAgentType != "" {
+			payload["sub_agent_type"] = subAgentType
+		}
+		if parentTaskID != "" {
+			payload["parent_task_id"] = parentTaskID
 		}
 		s.hub.PublishTaskBroadcast(task.ID, payload)
 	}
@@ -104,6 +112,20 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 	return nil
 }
 
+// extractSubAgentMetadata parses the sub_agent payload details.
+func extractSubAgentMetadata(payload string) (subAgentType, parentTaskID string) {
+	var payloadData map[string]interface{}
+	if err := json.Unmarshal([]byte(payload), &payloadData); err == nil {
+		if t, ok := payloadData["sub_agent_type"].(string); ok {
+			subAgentType = t
+		}
+		if p, ok := payloadData["parent_task_id"].(string); ok {
+			parentTaskID = p
+		}
+	}
+	return
+}
+
 func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 	// Create an admin context for task completion since this is a system worker
 	// Use an explicit background context with necessary claims if needed
@@ -117,11 +139,19 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 
 	// Emit SUB_AGENT_COMPLETED event
 	if s.hub != nil {
+		subAgentType, parentTaskID := extractSubAgentMetadata(task.Payload)
+
 		payload := map[string]interface{}{
 			"task_id":  task.ID,
 			"action":   "SUB_AGENT_COMPLETED",
 			"agent_id": "sub-agent-spawner",
 			"status":   "COMPLETED",
+		}
+		if subAgentType != "" {
+			payload["sub_agent_type"] = subAgentType
+		}
+		if parentTaskID != "" {
+			payload["parent_task_id"] = parentTaskID
 		}
 		s.hub.PublishTaskBroadcast(task.ID, payload)
 	}
