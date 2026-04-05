@@ -8,6 +8,7 @@ go_library(
         "middleware.go",
         "oidc.go",
         "postgres_store.go",
+        "powersync.go",
         "repository.go",
         "store.go",
     ],
@@ -26,6 +27,10 @@ go_test(
         "auth_test.go",
         "jwt_extra_test.go",
         "oidc_test.go",
+        "powersync_test.go",
     ],
     embed = [":auth"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+    ],
 )

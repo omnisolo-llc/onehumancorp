@@ -1,0 +1,14 @@
+bucket_definitions:
+  user_data:
+    # Filter data by the organization_id present in the JWT
+    parameters:
+      - SELECT request.jwt()->>'organization_id' AS org_id
+    data:
+      - SELECT * FROM agent_missions WHERE organization_id = bucket.org_id
+      - SELECT * FROM rag_context WHERE organization_id = bucket.org_id
+      - SELECT * FROM tenant_registry WHERE organization_id = bucket.org_id
+      - SELECT * FROM agent_workers WHERE organization_id = bucket.org_id
+      - SELECT * FROM chat_messages WHERE organization_id = bucket.org_id
+      - SELECT * FROM agent_skills WHERE organization_id = bucket.org_id
+      - SELECT * FROM agents WHERE organization_id = bucket.org_id
+      - SELECT * FROM agent_approvals WHERE organization_id = bucket.org_id

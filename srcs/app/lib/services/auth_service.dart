@@ -141,4 +141,23 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     await prefs.remove(_tokenKey);
     state = const AsyncData(null);
   }
+
+  Future<Map<String, dynamic>?> fetchPowerSyncToken() async {
+    final user = state.valueOrNull;
+    if (user == null) return null;
+
+    final url = ref.read(backendUrlProvider);
+    try {
+      final res = await http.get(
+        Uri.parse('$url/api/auth/powersync/token'),
+        headers: {'Authorization': 'Bearer ${user.token}'},
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print('Failed to fetch powersync token: $e');
+    }
+    return null;
+  }
 }

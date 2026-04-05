@@ -21,7 +21,10 @@ if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
     done
 fi
 
-# Create publication for PowerSync
+# Create user and publication for PowerSync
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE powersync WITH LOGIN REPLICATION PASSWORD 'powersync';
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO powersync;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO powersync;
     CREATE PUBLICATION powersync FOR ALL TABLES;
 EOSQL

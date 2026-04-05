@@ -882,6 +882,11 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 			payloadData[k] = telemetry.RedactInterfacePII(v)
 		}
 
+		// Strip rag_context when originating from a local Standalone instance
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			delete(payloadData, "rag_context")
+		}
+
 		// ensure memory_id is set
 		payloadData["memory_id"] = rec.id
 
@@ -987,6 +992,13 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 		// Unconditionally apply redaction and remove private markers
 		rawData = telemetry.RedactInterfacePII(SanitizePayloadMap(rawData))
+
+		// Strip rag_context when originating from a local Standalone instance
+		if rawMap, ok := rawData.(map[string]interface{}); ok {
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				delete(rawMap, "rag_context")
+			}
+		}
 
 		// Re-marshal sanitized payload
 		sanitizedBytes, err := json.Marshal(rawData)

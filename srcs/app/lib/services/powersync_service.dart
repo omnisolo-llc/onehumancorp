@@ -109,10 +109,20 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    // Fetch the PowerSync specific token from our new backend endpoint.
+    try {
+      final response = await ref.read(authStateProvider.notifier).fetchPowerSyncToken();
+      if (response != null) {
+        return PowerSyncCredentials(
+          endpoint: backendUrl.replaceAll(':8080', ':8081'), // Point to PowerSync service
+          token: response['token'] as String,
+        );
+      }
+    } catch (e) {
+      print('Error fetching PowerSync token: $e');
+    }
+
+    return null;
   }
 
   @override
