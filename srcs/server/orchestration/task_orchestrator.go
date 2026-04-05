@@ -26,6 +26,7 @@ type DefaultTaskOrchestrator struct {
 	redisClient rueidis.Client
 	hub         *CentrifugeNode
 	mesh        TeammateMesh
+	spawner     SubAgentSpawner
 	mu          sync.Mutex // For standalone mode coordination
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
@@ -39,6 +40,7 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 		redisClient: redisClient,
 		hub:         hub,
 		mesh:        mesh,
+		spawner:     NewSubAgentSpawner(provider, mesh, hub),
 		workerCtx:   ctx,
 		workerCancel: cancel,
 	}
@@ -63,11 +65,10 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+				// Poll for DELEGATED sub-agent tasks
+				if to.spawner != nil {
+					to.pollSubAgentTasks(to.workerCtx, sem)
+				}
 			}
 		}
 	}()
@@ -424,4 +425,80 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	}()
 
 	return nil
+}
+
+func (to *DefaultTaskOrchestrator) pollSubAgentTasks(ctx context.Context, sem chan struct{}) {
+	tx, err := to.db.Begin(ctx)
+	if err != nil {
+		slog.Error("Failed to begin transaction for sub-agent polling", "error", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var task models.Task
+	var query string
+	if to.db.IsSQLite() {
+		// Acquire token to limit concurrency on SQLite
+		select {
+		case sem <- struct{}{}:
+			defer func() { <-sem }()
+		default:
+			// Reached concurrency limit, skip polling
+			return
+		}
+
+		selectQuery := `
+			SELECT id FROM swarm_tasks
+			WHERE status = 'READY' AND json_extract(payload, '$.priority') = 'DELEGATED'
+			ORDER BY created_at ASC
+			LIMIT 1
+		`
+		var taskID string
+		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
+		if err != nil {
+			return // no tasks
+		}
+
+		updateQuery := `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-system', updated_at = CURRENT_TIMESTAMP
+			WHERE id = $1
+			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(ctx, updateQuery, taskID).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	} else {
+		// Postgres: FOR UPDATE SKIP LOCKED
+		query = `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-system', updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM swarm_tasks
+				WHERE status = 'READY' AND payload->>'priority' = 'DELEGATED'
+				ORDER BY created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, mission_id, title, status, payload, created_at, updated_at
+		`
+		err = tx.QueryRow(ctx, query).Scan(
+			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+		)
+	}
+
+	if err != nil {
+		return // no tasks or error
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("Failed to commit task claim", "error", err)
+		return
+	}
+
+	// Spawn the sub-agent
+	if err := to.spawner.Spawn(ctx, &task); err != nil {
+		slog.Error("Failed to spawn sub-agent", "taskID", task.ID, "error", err)
+		// We could mark it FAILED here if needed
+	}
 }
