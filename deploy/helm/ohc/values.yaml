@@ -7,16 +7,16 @@ backend:
   autoscaling:
     enabled: true
     minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
+      cpu: "250m"
+      memory: "256Mi"
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "1"
+      memory: "1Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -39,16 +39,16 @@ backend:
 ohcCore:
   enabled: true
   image: onehumancorp/mono-core:latest
-  replicas: 1
+  replicas: 2
   service:
     port: 18789
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
+      cpu: "100m"
+      memory: "128Mi"
     limits:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:

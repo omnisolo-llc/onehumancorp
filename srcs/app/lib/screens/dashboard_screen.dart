@@ -170,9 +170,9 @@ class _ObservabilityWidget extends StatelessWidget {
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
@@ -421,13 +421,13 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                     duration: const Duration(milliseconds: 300),
                     decoration: BoxDecoration(
                       color: _isHovered
-                          ? const Color.fromRGBO(255, 255, 255, 0.08)
-                          : const Color.fromRGBO(255, 255, 255, 0.03),
+                          ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8)
+                          : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _isHovered
-                            ? Colors.white.withValues(alpha: 0.3)
-                            : Colors.white.withValues(alpha: 0.1),
+                            ? Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.8)
+                            : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                       ),
                     ),
                     child: Padding(
@@ -634,13 +634,13 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                         duration: const Duration(milliseconds: 300),
                         decoration: BoxDecoration(
                           color: _isHovered
-                              ? const Color.fromRGBO(255, 255, 255, 0.08)
-                              : const Color.fromRGBO(255, 255, 255, 0.03),
+                              ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8)
+                              : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: _isHovered
-                                ? Colors.white.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.1),
+                                ? Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.8)
+                                : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                           ),
                         ),
                         child: Material(

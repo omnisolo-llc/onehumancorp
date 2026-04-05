@@ -84,9 +84,16 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
           child: Container(
             height: 350,
             decoration: BoxDecoration(
-              color: const Color.fromRGBO(255, 255, 255, 0.03),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+              ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -104,13 +111,13 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                         child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Teammate Mesh Live Feed',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Outfit',
-                          color: Colors.white,
+                          color: colors.onSurface,
                         ),
                       ),
                       const Spacer(),
@@ -124,7 +131,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                             child: Text(
                               'Listening for swarm activity...',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
+                                color: colors.onSurfaceVariant.withValues(alpha: 0.5),
                                 fontFamily: 'Inter',
                               ),
                             ),
@@ -270,9 +277,9 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +287,7 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                     Text(
                       timeStr,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                         fontSize: 12,
                         fontFamily: 'monospace',
                       ),
@@ -292,8 +299,8 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                         children: [
                           Text(
                             widget.message.agentName,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'Outfit',
                             ),
@@ -302,7 +309,7 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                           Text(
                             widget.message.action,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                               fontFamily: 'Inter',
                             ),
                           ),
