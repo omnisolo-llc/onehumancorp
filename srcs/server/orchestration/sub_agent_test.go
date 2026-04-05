@@ -11,7 +11,6 @@ import (
 )
 
 func TestSubAgentSpawner(t *testing.T) {
-	// 1. Setup in-memory SQLite DB
 	pool, err := db.NewPool("sqlite://file::memory:?cache=shared", 1)
 	require.NoError(t, err)
 	defer pool.Close()
@@ -22,12 +21,14 @@ func TestSubAgentSpawner(t *testing.T) {
 	err = db.RunMigrations(pool, "../db/migrations")
 	require.NoError(t, err)
 
-	// 2. Initialize SubAgentSpawner
-	// Using concurrency = 2 for standalone mode throttle testing
 	spawner := NewDefaultSubAgentSpawner(pool, nil, nil, 2)
 	defer spawner.Stop()
 
-	// 3. Create a DELEGATED task
+	// Test Monitor routine coverage
+	go func() {
+		_ = spawner.Monitor(ctx)
+	}()
+
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks (id, organization_id, title, priority, status)
 		VALUES ('task-123', 'org-1', 'SubAgent Task', 'DELEGATED', 'PENDING')
@@ -40,26 +41,63 @@ func TestSubAgentSpawner(t *testing.T) {
 		Priority:       "DELEGATED",
 	}
 
-	// 4. Spawn it
 	err = spawner.Spawn(ctx, task)
 	require.NoError(t, err)
 
-	// 5. Wait for it to complete
 	// In standalone mode, it sleeps for 100ms.
 	time.Sleep(200 * time.Millisecond)
 
-	// 6. Verify status updated to COMPLETED
 	var status string
 	err = pool.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'task-123'").Scan(&status)
 	require.NoError(t, err)
 	assert.Equal(t, "COMPLETED", status)
 }
 
-func TestSubAgentSpawner_CloudModeMock(t *testing.T) {
-	// Testing Cloud mode behavior via a dummy PostgreSQL provider interface
-	// For simplicity here, we simulate it by tweaking the DB.IsSQLite() check implicitly if possible,
-	// or we just trust the existing Spawn logic since we lack a full pgxmock here without adding heavy dependencies.
+// mockProvider overrides IsSQLite to false for testing the else branch.
+type mockProvider struct {
+	db.Provider
+}
 
-	// We will rely on our `TestSubAgentSpawner` above to hit >90% coverage on `sub_agent.go`
-	// because `Spawn`, `Monitor`, `completeTask` are all hit, achieving coverage.
+func (m *mockProvider) IsSQLite() bool {
+	return false
+}
+
+func TestSubAgentSpawner_CloudMode(t *testing.T) {
+	pool, err := db.NewPool("sqlite://file::memory:?cache=shared", 1)
+	require.NoError(t, err)
+	defer pool.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = db.RunMigrations(pool, "../db/migrations")
+	require.NoError(t, err)
+
+	mockDB := &mockProvider{Provider: pool}
+
+	spawner := NewDefaultSubAgentSpawner(mockDB, nil, nil, 2)
+	defer spawner.Stop()
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO shared_tasks (id, organization_id, title, priority, status)
+		VALUES ('task-456', 'org-1', 'SubAgent Task Cloud', 'DELEGATED', 'PENDING')
+	`)
+	require.NoError(t, err)
+
+	task := &SharedTask{
+		ID:             "task-456",
+		OrganizationID: "org-1",
+		Priority:       "DELEGATED",
+	}
+
+	err = spawner.Spawn(ctx, task)
+	require.NoError(t, err)
+
+	// Wait for goroutine to execute CompleteTask
+	time.Sleep(200 * time.Millisecond)
+
+	var status string
+	err = pool.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'task-456'").Scan(&status)
+	require.NoError(t, err)
+	assert.Equal(t, "COMPLETED", status)
 }
