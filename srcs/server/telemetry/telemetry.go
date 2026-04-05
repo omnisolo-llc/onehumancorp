@@ -659,7 +659,16 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 }
 
 // Global buffer function pointer to inject dependency without circular imports.
-var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error = nil
+
+// SetBufferMetricFunc sets the global buffer metric function if OHC_STANDALONE and OHC_TELEMETRY_ENABLED are true
+func SetBufferMetricFunc(fn func(ctx context.Context, metricType string, payload string) error) {
+	if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") == "true" {
+		BufferMetricFunc = fn
+	} else {
+		BufferMetricFunc = nil
+	}
+}
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {

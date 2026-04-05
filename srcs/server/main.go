@@ -294,6 +294,16 @@ func run(now time.Time, listen listenFunc) error {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
 
+			// Set up telemetry sync worker using SQLiteBufferMetric logic
+			telemetry.SetBufferMetricFunc(telemetry.SQLiteBufferMetric(pool))
+
+			telemetrySyncEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
+			if telemetrySyncEndpoint == "" {
+				telemetrySyncEndpoint = "https://api.onehumancorp.com/telemetry/sync"
+			}
+			syncWorker := telemetry.NewSyncWorker(pool, telemetrySyncEndpoint)
+			syncWorker.Start(ctx)
+
 			// Setup AutoDreamSyncEngine
 			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
 			if syncCloudAPI != "" && pool != nil {
