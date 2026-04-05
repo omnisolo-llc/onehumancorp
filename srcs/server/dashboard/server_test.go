@@ -4067,3 +4067,66 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleSyncRAG(t *testing.T) {
+	// Memory says tests require: Verify that the POST /api/orchestration/sync/rag route handles payload correctly and header conflicts
+	provider, err := orchestration.NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer provider.Close()
+
+	hub := orchestration.NewHub()
+	hub.SetSIPDB(provider)
+	srv := &Server{
+		hub: hub,
+	}
+
+	payload := map[string]interface{}{
+		"memory_id": "test-memory-123",
+		"context":   "test sensitive context",
+	}
+	body, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", "/api/orchestration/sync/rag", strings.NewReader(string(body)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Ensure conflict resolution is tested
+	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(srv.handleSyncRAG)
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusConflict {
+		t.Errorf("Expected StatusConflict due to force-local header, got %d", rr.Code)
+	}
+
+	var resp map[string]interface{}
+	err = json.Unmarshal(rr.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp["status"] != "conflict_resolved" {
+		t.Errorf("Expected 'conflict_resolved', got '%v'", resp["status"])
+	}
+
+	// verify DB was updated
+	memories, err := hub.SIPDB().GetEpisodicMemoriesByPlugin(context.Background(), "hybrid-sync")
+	if err != nil {
+		t.Fatalf("failed to get memories: %v", err)
+	}
+	if len(memories) != 1 {
+		t.Fatalf("Expected 1 memory, got %d", len(memories))
+	}
+	if memories[0].MemoryID != "test-memory-123" {
+		t.Errorf("Expected memory ID 'test-memory-123', got '%s'", memories[0].MemoryID)
+	}
+	if !strings.Contains(memories[0].Context, "test sensitive context") {
+		t.Errorf("Expected context to contain 'test sensitive context', got '%s'", memories[0].Context)
+	}
+}
