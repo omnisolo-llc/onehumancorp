@@ -26,6 +26,7 @@ type DefaultTaskOrchestrator struct {
 	redisClient rueidis.Client
 	hub         *CentrifugeNode
 	mesh        TeammateMesh
+	spawner     SubAgentSpawner
 	mu          sync.Mutex // For standalone mode coordination
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
@@ -34,11 +35,15 @@ type DefaultTaskOrchestrator struct {
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, 10)
+
 	to := &DefaultTaskOrchestrator{
 		db:          provider,
 		redisClient: redisClient,
 		hub:         hub,
 		mesh:        mesh,
+		spawner:     spawner,
 		workerCtx:   ctx,
 		workerCancel: cancel,
 	}
@@ -49,13 +54,16 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 // StartBackgroundWorker starts the background loop that queries the queue and dispatches jobs.
 func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 	to.workerWg.Add(1)
+
+	// Start the SubAgentSpawner monitor
+	go func() {
+		_ = to.spawner.Monitor(to.workerCtx)
+	}()
+
 	go func() {
 		defer to.workerWg.Done()
-		// Capacity-managed channel for throttling
-		concurrencyLimit := 10
-		sem := make(chan struct{}, concurrencyLimit)
 
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 
 		for {
@@ -63,14 +71,78 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+				to.pollAndDelegateTasks()
 			}
 		}
 	}()
+}
+
+// pollAndDelegateTasks queries for DELEGATED priority tasks and spawns sub-agents.
+func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
+	tx, err := to.db.Begin(to.workerCtx)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback(to.workerCtx)
+
+	var taskID string
+	var orgID string
+	var query string
+
+	if to.db.IsSQLite() {
+		selectQuery := `
+			SELECT id, organization_id FROM shared_tasks
+			WHERE status = 'PENDING' AND priority = 'DELEGATED'
+			ORDER BY created_at ASC
+			LIMIT 1
+		`
+		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID)
+		if err != nil {
+			return // typically sql.ErrNoRows
+		}
+
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND status = 'PENDING'
+		`
+		_, err = tx.Exec(to.workerCtx, updateQuery, taskID)
+		if err != nil {
+			return
+		}
+
+	} else {
+		// Postgres mode: use FOR UPDATE SKIP LOCKED
+		query = `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM shared_tasks
+				WHERE status = 'PENDING' AND priority = 'DELEGATED'
+				ORDER BY created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, organization_id
+		`
+		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
+		if err != nil {
+			return // sql.ErrNoRows or locking issue
+		}
+	}
+
+	if err := tx.Commit(to.workerCtx); err != nil {
+		return
+	}
+
+	// Spawn sub-agent
+	task := &SharedTask{
+		ID:             taskID,
+		OrganizationID: orgID,
+		Priority:       "DELEGATED",
+	}
+
+	_ = to.spawner.Spawn(to.workerCtx, task)
 }
 
 func (to *DefaultTaskOrchestrator) Stop() {
