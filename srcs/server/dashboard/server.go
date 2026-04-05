@@ -857,6 +857,12 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enforce mTLS checks
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "forbidden: missing mTLS certificate", http.StatusForbidden)
+		return
+	}
+
 	var req struct {
 		Channel string `json:"channel"`
 		AgentID string `json:"agent_id"`
@@ -873,11 +879,13 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payloadBytes, err := json.Marshal(map[string]interface{}{
+	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
 		"status":   req.Status,
-	})
+	}
+
+	payloadBytes, err := json.Marshal(payloadMap)
 	if err != nil {
 		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
 		return
@@ -893,6 +901,21 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
+
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			if req.Channel == "mesh:tasks" {
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payloadMap)
+			} else if req.Channel == "mesh:coordination" {
+				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: req.AgentID,
+					ToAgent:   "system",
+					Type:      req.Channel,
+					Content:   string(payloadBytes),
+				})
+			}
+		}
 	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return
@@ -905,6 +928,12 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Enforce mTLS checks
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "forbidden: missing mTLS certificate", http.StatusForbidden)
 		return
 	}
 
@@ -927,6 +956,7 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 
 	if err == nil {
 		telemetry.RecordTeammateMeshDirectMessage(r.Context())
+
 	} else {
 		http.Error(w, "failed to send direct message", http.StatusInternalServerError)
 		return
@@ -939,6 +969,12 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Enforce mTLS checks
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "forbidden: missing mTLS certificate", http.StatusForbidden)
 		return
 	}
 
