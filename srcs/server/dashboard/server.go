@@ -864,7 +864,12 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce mTLS checks
 	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "forbidden: missing mTLS certificate", http.StatusForbidden)
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+	cert := r.TLS.PeerCertificates[0]
+	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
 
@@ -881,16 +886,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
 		http.Error(w, "invalid channel", http.StatusBadRequest)
-		return
-	}
-	// Ensure SPIFFE/SPIRE authentication by checking TLS Peer Certificates
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
 
@@ -949,7 +944,12 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce mTLS checks
 	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "forbidden: missing mTLS certificate", http.StatusForbidden)
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+	cert := r.TLS.PeerCertificates[0]
+	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
 
@@ -959,16 +959,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-	// Enforce mTLS checks on incoming A2A calls
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert2 := r.TLS.PeerCertificates[0]
-	if len(cert2.URIs) == 0 || cert2.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
 
@@ -1001,7 +991,12 @@ func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce mTLS checks
 	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "forbidden: missing mTLS certificate", http.StatusForbidden)
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+	cert := r.TLS.PeerCertificates[0]
+	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
 

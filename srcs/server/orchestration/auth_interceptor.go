@@ -33,6 +33,9 @@ func ExtractSPIFFEID(ctx context.Context) (string, error) {
 		if len(tlsInfo.State.PeerCertificates) > 0 {
 			cert := tlsInfo.State.PeerCertificates[0]
 			if len(cert.URIs) > 0 {
+				if cert.URIs[0].Scheme != "spiffe" {
+					return "", fmt.Errorf("peer certificate URI scheme must be spiffe")
+				}
 				return cert.URIs[0].String(), nil
 			}
 		}

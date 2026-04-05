@@ -141,9 +141,7 @@ func (cn *CentrifugeNode) PublishMeetingMessage(meetingID string, msg Message) {
 		slog.Error("[centrifuge] marshal meeting message", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish meeting message", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // PublishChatMessage fans a chat message out to all subscribers of the
@@ -155,9 +153,7 @@ func (cn *CentrifugeNode) PublishChatMessage(roomID string, msg Message) {
 		slog.Error("[centrifuge] marshal chat message", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish chat message", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // PublishAgentNotification sends a lightweight inbox-notification to a specific
@@ -169,9 +165,7 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 		slog.Error("[centrifuge] marshal agent notification", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish agent notification", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // PublishCoordinationMessage fans out a coordination message to the coordination channel.
@@ -182,9 +176,7 @@ func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
 		slog.Error("[centrifuge] marshal coordination message", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish coordination message", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // PublishTaskBroadcast fans out a task update to all subscribers of the
@@ -222,9 +214,7 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 		slog.Error("[centrifuge] marshal task broadcast", "error", err)
 		return
 	}
-	if _, err := cn.node.Publish(channel, data); err != nil {
-		slog.Debug("[centrifuge] publish task broadcast", "channel", channel, "error", err)
-	}
+	_, _ = cn.node.Publish(channel, data)
 }
 
 // MeshHealthCheck performs a deep check of the underlying Teammate Mesh layer (Centrifuge).
