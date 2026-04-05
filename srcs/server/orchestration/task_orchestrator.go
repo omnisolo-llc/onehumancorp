@@ -260,28 +260,19 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var task models.Task
 	var query string
 	if to.db.IsSQLite() {
-		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-			// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
-			// Instead, we use a two-step SELECT then UPDATE approach.
-			selectQuery := `
-				SELECT id FROM swarm_tasks
-				WHERE status = 'READY'
-				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
-				LIMIT 1
-			`
-			var taskID string
-			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
-			if err != nil {
-				return nil, err // Could be sql.ErrNoRows if queue is empty
-			}
-
-			updateQuery := `
+		// In SQLite, use UPDATE RETURNING with a subquery (IN with LIMIT) to avoid TOCTOU races.
+		updateQuery := `
 			UPDATE swarm_tasks
 			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2
+			WHERE id IN (
+				SELECT id FROM swarm_tasks
+				WHERE status = 'READY'
+				ORDER BY CAST(json_extract(payload, '$.priority') AS NUMERIC) ASC, created_at ASC
+				LIMIT 1
+			)
 			RETURNING id, mission_id, COALESCE(parent_plan_id, ''), title, status, payload, created_at, updated_at
 		`
-			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+		err = tx.QueryRow(ctx, updateQuery, agentID).Scan(
 			&task.ID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
@@ -292,7 +283,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			WHERE id = (
 				SELECT id FROM swarm_tasks
 				WHERE status = 'READY'
-				ORDER BY payload->>'priority' ASC, created_at ASC
+				ORDER BY (payload->>'priority')::numeric ASC, created_at ASC
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
 			)

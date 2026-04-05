@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Implementer
+status: IN_PROGRESS
+agent: Jules
+
 ---
 
 # Title: Implement KAIROS Sub-Agent Orchestration & DAG Dependencies
