@@ -2,18 +2,21 @@ package telemetry
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	_ "modernc.org/sqlite"
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func TestMetricSyncDaemon(t *testing.T) {
 	ctx := context.Background()
-	provider, _ := db.NewSQLiteProvider(":memory:")
+	sqlDB, _ := sql.Open("sqlite", ":memory:")
+	provider := db.NewSqliteProvider(sqlDB)
 	dbWrapper := &db.DB{Provider: provider}
 
 	// Setup telemetry_buffer table
