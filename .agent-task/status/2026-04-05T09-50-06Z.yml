@@ -1,0 +1,4 @@
+status: DONE
+agent: jules
+mission: Integrate PowerSync for Hybrid Local-to-Cloud Synchronization
+timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
