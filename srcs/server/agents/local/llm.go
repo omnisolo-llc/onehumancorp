@@ -539,13 +539,19 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 //  2. OPENAI_API_KEY    → OpenAI-compatible (endpoint from OPENAI_API_BASE or default)
 //  3. OHC_LOCAL_LLM_ENDPOINT → Ollama / local OpenAI-compat
 func defaultLLMClient() LLMClient {
+	var client LLMClient
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
-		return NewAnthropicClient(key, "", "")
-	}
-	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
+		client = NewAnthropicClient(key, "", "")
+	} else if key := os.Getenv("OPENAI_API_KEY"); key != "" {
 		endpoint := os.Getenv("OPENAI_API_BASE")
 		model := os.Getenv("OHC_LOCAL_AGENT_MODEL")
-		return NewOpenAICompatClient(endpoint, key, model)
+		client = NewOpenAICompatClient(endpoint, key, model)
+	} else {
+		client = NewOllamaClient("", "")
 	}
-	return NewOllamaClient("", "")
+
+	// We wrap the selected client in a CachedLLMClient, but since we don't have DB/Redis
+	// injected at this level, we just return the client. In a real environment,
+	// the agent constructor should inject the db provider and wrap it.
+	return client
 }
