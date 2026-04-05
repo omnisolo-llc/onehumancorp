@@ -3,7 +3,6 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"

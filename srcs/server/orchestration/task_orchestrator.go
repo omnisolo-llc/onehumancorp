@@ -215,9 +215,6 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
-	// Metrics
-	telemetry.RecordTaskEnqueued(ctx, task.ID)
-
 	// Broadcast
 	if to.mesh != nil {
 		_ = to.mesh.BroadcastTask(ctx, Task{
@@ -280,7 +277,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
 		if err != nil {
 			tx.Rollback(ctx)
-			if errors.Is(err, sql.ErrNoRows) {
+			if err.Error() == "sql: no rows in result set" {
 				return nil, nil // Queue is empty
 			}
 			return nil, fmt.Errorf("failed to scan task ID in SQLite: %w", err)
@@ -380,7 +377,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	var returnedID string
 	err = tx.QueryRow(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS' RETURNING id", taskID, agentID).Scan(&returnedID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
+		if err.Error() == "sql: no rows in result set" {
 			return fmt.Errorf("task not found or not assigned to agent")
 		}
 		return fmt.Errorf("failed to complete task: %w", err)
@@ -433,9 +430,6 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit: %w", err)
 	}
-
-	// Metrics
-	telemetry.RecordSwarmTaskCompleted(ctx, taskID)
 
 	// Fetch task payload for AutoDream
 	var taskPayload string

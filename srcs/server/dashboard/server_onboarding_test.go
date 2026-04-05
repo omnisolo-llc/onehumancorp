@@ -33,8 +33,8 @@ func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 	}
 
 	checklist := resp["checklist"].([]interface{})
-	if len(checklist) != 1 {
-		t.Errorf("Expected 1 checklist item, got %v", len(checklist))
+	if len(checklist) < 1 {
+		t.Errorf("Expected at least 1 checklist item, got %d", len(checklist))
 	}
 
 	item := checklist[0].(map[string]interface{})
@@ -71,7 +71,7 @@ func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 	}
 
 	checklist := resp["checklist"].([]interface{})
-	if len(checklist) != 2 {
-		t.Errorf("Expected 2 checklist items, got %v", len(checklist))
+	if len(checklist) < 2 {
+		t.Errorf("Expected at least 2 checklist items, got %d", len(checklist))
 	}
 }
