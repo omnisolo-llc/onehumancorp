@@ -20,6 +20,8 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies JSONB NOT NULL DEFAULT '[]',
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',

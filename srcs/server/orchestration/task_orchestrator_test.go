@@ -24,6 +24,8 @@ func TestTaskOrchestrator(t *testing.T) {
 		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies JSONB NOT NULL DEFAULT '[]',
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			assigned_agent_id TEXT,
@@ -34,7 +36,7 @@ func TestTaskOrchestrator(t *testing.T) {
 	`)
 
 	_, _ = prov.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS task_dependencies (
+		CREATE TABLE IF NOT EXISTS swarm_task_dependencies (
 			task_id TEXT NOT NULL,
 			depends_on_task_id TEXT NOT NULL,
 			PRIMARY KEY (task_id, depends_on_task_id)
@@ -144,6 +146,8 @@ func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
 		CREATE TABLE IF NOT EXISTS swarm_tasks (
 			id TEXT PRIMARY KEY,
 			mission_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies JSONB NOT NULL DEFAULT '[]',
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			assigned_agent_id TEXT,
