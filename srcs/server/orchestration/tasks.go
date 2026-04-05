@@ -489,6 +489,11 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
 			WHERE organization_id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND (
+				SELECT COUNT(*) FROM task_dependencies td
+				JOIN shared_tasks st ON td.depends_on_task_id = st.id
+				WHERE td.task_id = shared_tasks.id AND st.status != 'COMPLETED'
+			) = 0
 			ORDER BY priority ASC, created_at ASC
 		`
 		if limit > 0 {
@@ -499,6 +504,11 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
 			WHERE organization_id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND (
+				SELECT COUNT(*) FROM task_dependencies td
+				JOIN shared_tasks st ON td.depends_on_task_id = st.id
+				WHERE td.task_id = shared_tasks.id AND st.status != 'COMPLETED'
+			) = 0
 			ORDER BY priority ASC, created_at ASC
 		`
 		if limit > 0 {
@@ -549,13 +559,18 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	defer tx.Rollback(ctx)
 
 	var query string
-	// Fetch slightly more tasks initially in case some are filtered out by dependency checks
-	fetchLimit := limit * 3
+	// We no longer need fetchLimit = limit * 3 since we filter out dependencies in the query
+	fetchLimit := limit
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
 			WHERE organization_id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND (
+				SELECT COUNT(*) FROM task_dependencies td
+				JOIN shared_tasks st ON td.depends_on_task_id = st.id
+				WHERE td.task_id = shared_tasks.id AND st.status != 'COMPLETED'
+			) = 0
 			ORDER BY priority ASC, created_at ASC
 			LIMIT $2
 		`
@@ -565,6 +580,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
 			WHERE organization_id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND (
+				SELECT COUNT(*) FROM task_dependencies td
+				JOIN shared_tasks st ON td.depends_on_task_id = st.id
+				WHERE td.task_id = shared_tasks.id AND st.status != 'COMPLETED'
+			) = 0
 			ORDER BY priority ASC, created_at ASC
 			LIMIT $2
 			FOR UPDATE SKIP LOCKED
@@ -606,6 +626,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for _, task := range candidateTasks {
 		// Fetch dependencies from task_dependencies table
+		// We still fetch them to populate the task.Dependencies field
 		depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
 		depRows, err := tx.Query(ctx, depQuery, task.ID)
 		if err != nil {
@@ -620,28 +641,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		}
 		depRows.Close()
 
-		// Check DAG dependencies: Task is only available if all dependencies are COMPLETED
-		depsSatisfied := true
-
-		if len(task.Dependencies) > 0 {
-			var pendingDeps int
-			checkQuery := `
-				SELECT COUNT(*)
-				FROM shared_tasks
-				WHERE id IN (SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1) AND status != 'COMPLETED'
-			`
-			err = tx.QueryRow(ctx, checkQuery, task.ID).Scan(&pendingDeps)
-			if err != nil || pendingDeps > 0 {
-				depsSatisfied = false
-			}
-		}
-
-		if depsSatisfied {
-			tasks = append(tasks, task)
-			taskIDs = append(taskIDs, task.ID)
-			if len(tasks) >= limit {
-				break
-			}
+		// Dependencies are already verified complete by the query
+		tasks = append(tasks, task)
+		taskIDs = append(taskIDs, task.ID)
+		if len(tasks) >= limit {
+			break
 		}
 	}
 
