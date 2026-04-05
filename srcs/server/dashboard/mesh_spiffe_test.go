@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -16,12 +17,34 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
+type contextKey string
+const claimsContextKey contextKey = "auth_claims"
+
+func contextWithClaims(ctx context.Context, claims *auth.Claims) context.Context {
+	return context.WithValue(ctx, claimsContextKey, claims)
+}
+
 func TestTeammateMeshSPIFFEAuth(t *testing.T) {
-	// Initialize minimal server state
-	hub := orchestration.NewHub(orchestration.HubConfig{})
-	tracker := billing.NewTracker()
+	hub := orchestration.NewHub()
+	tracker := billing.NewTracker(map[string]billing.Price{})
 	org := domain.Organization{ID: "test-org"}
-	server := NewServer(org, hub, tracker).(*Server)
+	server := &Server{hub: hub, tracker: tracker, org: org}
+
+	hub.RegisterAgent(orchestration.Agent{
+		ID:             "system",
+		Name:           "System",
+		Role:           "SYSTEM",
+		OrganizationID: "test-org",
+		Status:         orchestration.StatusIdle,
+	})
+	hub.RegisterAgent(orchestration.Agent{
+		ID:             "agent-2",
+		Name:           "Agent 2",
+		Role:           "SOFTWARE_ENGINEER",
+		OrganizationID: "test-org",
+		Status:         orchestration.StatusIdle,
+	})
+
 
 	testCases := []struct {
 		name           string
@@ -72,7 +95,7 @@ func TestTeammateMeshSPIFFEAuth(t *testing.T) {
 			setupTLS: func() *tls.ConnectionState {
 				cert := &x509.Certificate{
 					URIs: []*url.URL{
-						{Scheme: "spiffe", Host: "evil.com", Path: "/workload/mesh"},
+						&url.URL{Scheme: "spiffe", Host: "evil.com", Path: "/workload/mesh"},
 					},
 				}
 				return &tls.ConnectionState{
@@ -94,7 +117,7 @@ func TestTeammateMeshSPIFFEAuth(t *testing.T) {
 			setupTLS: func() *tls.ConnectionState {
 				cert := &x509.Certificate{
 					URIs: []*url.URL{
-						{Scheme: "spiffe", Host: "onehumancorp.io", Path: "/invalid/"},
+						&url.URL{Scheme: "spiffe", Host: "onehumancorp.io", Path: "/invalid/"},
 					},
 				}
 				return &tls.ConnectionState{
@@ -116,7 +139,7 @@ func TestTeammateMeshSPIFFEAuth(t *testing.T) {
 			setupTLS: func() *tls.ConnectionState {
 				cert := &x509.Certificate{
 					URIs: []*url.URL{
-						{Scheme: "spiffe", Host: "onehumancorp.io", Path: "/workload/teammate-mesh"},
+						&url.URL{Scheme: "spiffe", Host: "onehumancorp.io", Path: "/workload/teammate-mesh"},
 					},
 				}
 				return &tls.ConnectionState{
@@ -136,7 +159,7 @@ func TestTeammateMeshSPIFFEAuth(t *testing.T) {
 			setupTLS: func() *tls.ConnectionState {
 				cert := &x509.Certificate{
 					URIs: []*url.URL{
-						{Scheme: "spiffe", Host: "onehumancorp.io", Path: "/workload/direct"},
+						&url.URL{Scheme: "spiffe", Host: "onehumancorp.io", Path: "/workload/direct"},
 					},
 				}
 				return &tls.ConnectionState{
@@ -152,9 +175,7 @@ func TestTeammateMeshSPIFFEAuth(t *testing.T) {
 			body, _ := json.Marshal(tc.payload)
 			req := httptest.NewRequest(tc.method, tc.endpoint, bytes.NewReader(body))
 
-			// Auth middleware mock injects 'system' role
-			ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
-				Role:           "system",
+			ctx := contextWithClaims(req.Context(), &auth.Claims{
 				OrganizationID: "test-org",
 			})
 			req = req.WithContext(ctx)
@@ -163,7 +184,6 @@ func TestTeammateMeshSPIFFEAuth(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			// Call handler directly, bypassing router for precise unit testing
 			if tc.endpoint == "/api/mesh/broadcast" {
 				server.handleMeshBroadcast(rr, req)
 			} else if tc.endpoint == "/api/mesh/direct" {
