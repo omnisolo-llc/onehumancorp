@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -13,9 +14,57 @@ class LandingScreen extends ConsumerStatefulWidget {
 
 class _LandingScreenState extends ConsumerState<LandingScreen> {
   bool _showVariantB = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchExperimentData();
+  }
+
+  Future<void> _fetchExperimentData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      bool? storedVariantB = prefs.getBool('ab_test_variant_b');
+
+      final experiments = await ref.read(apiServiceProvider)!.listLandingPageExperiments();
+      if (!mounted) return;
+
+      if (experiments.isNotEmpty) {
+        final exp = experiments.first;
+        final split = exp['trafficSplit'] as double? ?? 0.5;
+
+        if (storedVariantB == null) {
+           storedVariantB = DateTime.now().millisecondsSinceEpoch % 100 < (split * 100);
+           await prefs.setBool('ab_test_variant_b', storedVariantB);
+        }
+
+        setState(() {
+          _showVariantB = storedVariantB!;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
