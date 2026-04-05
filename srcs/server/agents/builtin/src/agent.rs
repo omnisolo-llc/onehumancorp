@@ -159,3 +159,16 @@ pub async fn run_agent(
 
     Ok(final_text)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agent_config_defaults() {
+        let config = AgentConfig::default();
+        assert_eq!(config.max_turns, MAX_AGENT_TURNS);
+        assert_eq!(config.max_tokens, DEFAULT_MAX_TOKENS);
+        assert!(config.system_prompt.is_none());
+    }
+}

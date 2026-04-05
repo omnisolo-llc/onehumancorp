@@ -1,4 +1,18 @@
-# The builtin agent is implemented in Rust.
-# Build with: cargo build --release
-# (No Bazel targets - use cargo for Rust builds)
+load("@crates//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+
 package(default_visibility = ["//visibility:public"])
+
+rust_binary(
+    name = "ohc-builtin-agent",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2021",
+    deps = all_crate_deps(normal = True),
+)
+
+rust_test(
+    name = "ohc-builtin-agent-test",
+    edition = "2021",
+    srcs = glob(["src/**/*.rs"]),
+    deps = all_crate_deps(normal = True),
+)
