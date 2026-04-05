@@ -2,14 +2,46 @@ package checkpointer
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"time"
 )
+
+// compressData compresses the given byte slice using gzip and encodes it to base64 string.
+func compressData(data []byte) (string, error) {
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	_, err := w.Write(data)
+	if err != nil {
+		return "", err
+	}
+	err = w.Close()
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
+}
+
+// decompressData decodes the base64 string and decompresses the underlying byte slice using gzip.
+func decompressData(base64Str string) ([]byte, error) {
+	decodedBytes, err := base64.StdEncoding.DecodeString(base64Str)
+	if err != nil {
+		return nil, err
+	}
+	r, err := gzip.NewReader(bytes.NewReader(decodedBytes))
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return io.ReadAll(r)
+}
 
 // Checkpoint represents a single state snapshot for a given LangGraph thread.
 // Accepts no parameters.
@@ -81,6 +113,20 @@ func (p *PGCheckpointer) SaveCheckpoint(ctx context.Context, threadID string, st
 		return fmt.Errorf("failed to marshal state: %w", err)
 	}
 
+	compressedBase64, err := compressData(stateBytes)
+	if err != nil {
+		return fmt.Errorf("failed to compress state: %w", err)
+	}
+
+	// Wrap the base64 string in a valid JSON object.
+	wrapper := map[string]string{
+		"_compressed_base64": compressedBase64,
+	}
+	wrapperBytes, err := json.Marshal(wrapper)
+	if err != nil {
+		return fmt.Errorf("failed to marshal compressed wrapper: %w", err)
+	}
+
 	// Use an upsert strategy. The specific syntax here works for both SQLite (for tests) and PostgreSQL
 	// Postgres uses ON CONFLICT. SQLite uses ON CONFLICT (from 3.24.0+).
 	query := `
@@ -89,7 +135,7 @@ func (p *PGCheckpointer) SaveCheckpoint(ctx context.Context, threadID string, st
 	ON CONFLICT (thread_id) DO UPDATE SET state = excluded.state;
 	`
 	return p.withRetry(func() error {
-		_, err := p.db.ExecContext(ctx, query, threadID, stateBytes)
+		_, err := p.db.ExecContext(ctx, query, threadID, wrapperBytes)
 		return err
 	})
 }
@@ -117,6 +163,20 @@ func (p *PGCheckpointer) LoadCheckpoint(ctx context.Context, threadID string) (*
 			return nil, sql.ErrNoRows
 		}
 		return nil, fmt.Errorf("failed to query checkpoint: %w", err)
+	}
+
+	// Check if this is a compressed wrapper or raw state
+	var wrapper struct {
+		CompressedBase64 string `json:"_compressed_base64"`
+	}
+	if err := json.Unmarshal(stateBytes, &wrapper); err == nil {
+		if wrapper.CompressedBase64 != "" {
+			decompressedBytes, err := decompressData(wrapper.CompressedBase64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decompress state: %w", err)
+			}
+			stateBytes = decompressedBytes
+		}
 	}
 
 	// Strictly decode JSON as required by memory.
