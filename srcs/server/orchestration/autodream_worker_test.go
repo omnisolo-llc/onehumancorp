@@ -26,7 +26,7 @@ func setupTestDB(t *testing.T) db.Provider {
 		content TEXT NOT NULL,
 		embedding TEXT,
 		source_mission_id TEXT,
-		consolidated_at TEXT DEFAULT CURRENT_TIMESTAMP
+		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
 	if err != nil {
