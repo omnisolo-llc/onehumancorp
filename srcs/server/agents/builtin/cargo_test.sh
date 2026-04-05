@@ -4,11 +4,15 @@
 # `bazelisk test //...` exercises the Rust crate alongside the Go tests.
 set -euo pipefail
 
-# Resolve the real source directory by following symlinks.
+# Resolve the real source directory by following symlinks portably.
 # In a Bazel execroot the script file is a symlink into the workspace;
-# readlink -f gives us the actual on-disk path where Cargo.toml lives.
-REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$REAL_SCRIPT")"
+# resolving it gives us the actual on-disk path where Cargo.toml lives.
+# (readlink -f is GNU-only; this loop works on both macOS and Linux.)
+SCRIPT="${BASH_SOURCE[0]}"
+while [[ -L "$SCRIPT" ]]; do
+    SCRIPT="$(readlink "$SCRIPT")"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
 
 cd "$SCRIPT_DIR"
 exec cargo test
