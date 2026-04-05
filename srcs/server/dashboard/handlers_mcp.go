@@ -634,6 +634,11 @@ func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure safe deep recursive redaction on string fields to prevent sensitive data leakage.
+	for k, v := range payload {
+		payload[k] = telemetry.RedactInterfacePII(v)
+	}
+
 	var memoryID string
 	if idVal, ok := payload["memory_id"]; ok {
 		memoryID = fmt.Sprintf("%v", idVal)

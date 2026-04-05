@@ -530,3 +530,37 @@ func TestInitTelemetry_PrometheusError(t *testing.T) {
 		t.Errorf("Expected error from InitTelemetry due to registerer failure")
 	}
 }
+
+func TestInitTelemetry_StandaloneOptOut(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "false")
+
+	// Since we mock the actual metrics if initialized in other tests,
+	// here we just ensure InitTelemetry returns quickly without error.
+	cleanup, err := InitTelemetry()
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cleanup == nil {
+		t.Fatal("expected dummy cleanup function, got nil")
+	}
+}
+
+func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
+
+	originalReg := prometheus.DefaultRegisterer
+	defer func() { prometheus.DefaultRegisterer = originalReg }()
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+
+	cleanup, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cleanup == nil {
+		t.Fatal("expected cleanup function, got nil")
+	}
+	cleanup()
+}
