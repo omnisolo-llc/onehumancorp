@@ -526,9 +526,11 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:       time.Now().UTC(),
 	}
 
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
 	// Persist memory
 	if s.hub.SIPDB() != nil {
-		if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err != nil {
+		if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory, forceLocal); err != nil {
 			slog.Error("failed to sync context memory", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return

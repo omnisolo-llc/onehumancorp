@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -440,14 +441,14 @@ func TestSIPDB_StoreAndGetEpisodicMemories(t *testing.T) {
 		SourcePlugin:    "plugin-1",
 	}
 
-	err = db.StoreEpisodicMemory(ctx, memory)
+	err = db.StoreEpisodicMemory(ctx, memory, true)
 	if err != nil {
 		t.Fatalf("StoreEpisodicMemory failed: %v", err)
 	}
 
 	// Update memory
 	memory.Context = "User likes light mode"
-	err = db.StoreEpisodicMemory(ctx, memory)
+	err = db.StoreEpisodicMemory(ctx, memory, true)
 	if err != nil {
 		t.Fatalf("StoreEpisodicMemory update failed: %v", err)
 	}
@@ -540,7 +541,7 @@ func TestSIPDB_StoreEpisodicMemory_DBError(t *testing.T) {
 	}
 	db.Close()
 
-	err = db.StoreEpisodicMemory(context.Background(), EpisodicMemory{})
+	err = db.StoreEpisodicMemory(context.Background(), EpisodicMemory{}, true)
 	if err == nil {
 		t.Fatal("Expected error querying closed DB")
 	}
@@ -983,6 +984,62 @@ func TestSIPDB_GetPendingMissions_Fallbacks(t *testing.T) {
 	}
 	if missions2[0].Content != "some string" && missions2[0].Content != "\"some string\"" {
 		t.Fatalf("expected \"some string\", got %q", missions2[0].Content)
+	}
+}
+
+func TestSIPDB_SyncContextSync(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_context.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	memory := EpisodicMemory{
+		MemoryID:        "mem-sync-1",
+		Context:         `{"rag_context": "sensitive data", "other": "ok data"}`,
+		VectorEmbedding: []byte("[0.1, 0.2]"),
+		SourcePlugin:    "test-plugin",
+	}
+	err = db.StoreEpisodicMemory(ctx, memory, false)
+	if err != nil {
+		t.Fatalf("StoreEpisodicMemory failed: %v", err)
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-OHC-Conflict-Resolution") != "force-local" {
+			t.Errorf("expected X-OHC-Conflict-Resolution to be force-local")
+		}
+
+		var payload map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&payload)
+		if err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+
+		if _, ok := payload["rag_context"]; ok {
+			t.Errorf("expected rag_context to be stripped, got %v", payload["rag_context"])
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	synced, err := db.SyncContextSync(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncContextSync failed: %v", err)
+	}
+
+	if synced != 1 {
+		t.Fatalf("expected 1 memory to be synced, got %d", synced)
+	}
+
+	// Ensure memory was deleted locally
+	memories, _ := db.GetEpisodicMemoriesByPlugin(ctx, "test-plugin")
+	if len(memories) != 0 {
+		t.Fatalf("expected 0 memories after sync, got %d", len(memories))
 	}
 }
 

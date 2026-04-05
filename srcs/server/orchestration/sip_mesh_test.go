@@ -94,7 +94,7 @@ func TestSIPDB_EpisodicMemory(t *testing.T) {
 		SourcePlugin:    "mcp-github",
 	}
 
-	err = db.StoreEpisodicMemory(ctx, memory)
+	err = db.StoreEpisodicMemory(ctx, memory, true)
 	if err != nil {
 		t.Fatalf("StoreEpisodicMemory failed: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestSIPDB_EpisodicMemory(t *testing.T) {
 
 	// Update memory
 	memory.Context = "Updated context."
-	err = db.StoreEpisodicMemory(ctx, memory)
+	err = db.StoreEpisodicMemory(ctx, memory, true)
 	if err != nil {
 		t.Fatalf("StoreEpisodicMemory (update) failed: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestSIPDB_EpisodicMemory_DBError(t *testing.T) {
 	}
 	db.Close() // close immediately to cause errors
 
-	err = db.StoreEpisodicMemory(context.Background(), EpisodicMemory{})
+	err = db.StoreEpisodicMemory(context.Background(), EpisodicMemory{}, true)
 	if err == nil {
 		t.Fatal("Expected error querying closed DB")
 	}

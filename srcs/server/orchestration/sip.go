@@ -637,18 +637,24 @@ type EpisodicMemory struct {
 }
 
 // StoreEpisodicMemory stores a new long-term episodic memory.
-// Accepts parameters: ctx context.Context, memory EpisodicMemory.
+// Accepts parameters: ctx context.Context, memory EpisodicMemory, forceLocal bool.
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the swarm_memory_embeddings table.
-func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) error {
-	return withRetry(ctx, func() error {
-		_, err := s.db.Exec(ctx,
-			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at)
-			 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-			 ON CONFLICT(memory_id) DO UPDATE SET
+func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory, forceLocal bool) error {
+	query := `INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at)
+			 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
+
+	if forceLocal {
+		query += ` ON CONFLICT(memory_id) DO UPDATE SET
 			 context=excluded.context, vector_embedding=excluded.vector_embedding,
-			 source_plugin=excluded.source_plugin`,
+			 source_plugin=excluded.source_plugin`
+	} else {
+		query += ` ON CONFLICT(memory_id) DO NOTHING`
+	}
+
+	return withRetry(ctx, func() error {
+		_, err := s.db.Exec(ctx, query,
 			memory.MemoryID, memory.Context, memory.VectorEmbedding, memory.SourcePlugin,
 		)
 		return err
@@ -863,19 +869,24 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	var idsToDelete []string
 
 	for _, rec := range records {
-		// Sanitize sensitive data by explicitly deleting `rag_context` key
-		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
-			delete(payloadData, "rag_context")
+		var rawData interface{}
+		var sanitizedPayload []byte
+
+		if err := json.Unmarshal([]byte(rec.payload), &rawData); err == nil {
+			if payloadMap, ok := rawData.(map[string]interface{}); ok {
+				delete(payloadMap, "rag_context")
+			}
+			// Unconditionally apply redaction
+			rawData = telemetry.RedactInterfacePII(rawData)
+			sanitizedPayload, _ = json.Marshal(rawData)
 		} else {
-			// If not JSON, we assume it's raw text but the memory states
-			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
-			// Let's create a generic JSON payload
-			payloadData = map[string]interface{}{
+			// If not JSON, we assume it's raw text
+			payloadData := map[string]interface{}{
 				"context": rec.payload,
 			}
+			payloadData = telemetry.RedactInterfacePII(payloadData).(map[string]interface{})
+			sanitizedPayload, _ = json.Marshal(payloadData)
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {
