@@ -1,0 +1,5 @@
+status: healthy
+last_run: 2026-04-05T14:03:15Z
+metrics:
+  observability_audit_completed: true
+  missions_generated: 1
