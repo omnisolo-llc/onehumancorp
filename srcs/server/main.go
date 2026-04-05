@@ -198,6 +198,8 @@ func run(now time.Time, listen listenFunc) error {
 		if err := pool.RunMigrations(ctx); err != nil {
 			return err
 		}
+		telemetry.InitBufferMetricFunc(pool)
+		telemetry.StartSyncWorker(ctx, pool)
 		slog.Info("using Postgres-backed repositories")
 	} else {
 		slog.Info("DATABASE_URL not set, using in-memory repositories")
