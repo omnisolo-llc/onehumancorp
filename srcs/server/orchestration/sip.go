@@ -709,6 +709,11 @@ func (s *SIPDB) SetContextRoot(path string) {
 	s.groundingOnce = new(sync.Once)
 }
 
+// Provider returns the underlying db.Provider.
+func (s *SIPDB) Provider() db.Provider {
+	return s.db
+}
+
 // BufferMetric inserts a telemetry metric into the local metric buffer.
 // Accepts parameters: ctx context.Context, metricType string, payload string.
 // Returns error.
