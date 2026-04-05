@@ -17,7 +17,6 @@ import (
 type TeammateMesh interface {
 	Publish(ctx context.Context, channel string, data []byte) error
 	Subscribe(ctx context.Context, channel string) (<-chan []byte, error)
-	GetLock() DistributedLock
 }
 
 // NewTeammateMesh returns a new TeammateMesh depending on the execution mode.
@@ -35,13 +34,12 @@ func NewTeammateMesh() (TeammateMesh, error) {
 			return nil, fmt.Errorf("failed to connect to redis: %w", err)
 		}
 		slog.Info("TeammateMesh initialized in Cloud mode (Redis)")
-		return &cloudMesh{client: c, lock: &redisLock{client: c}}, nil
+		return &cloudMesh{client: c}, nil
 	}
 
 	slog.Info("TeammateMesh initialized in Standalone mode (In-Memory)")
 	return &memoryMesh{
 		channels: make(map[string][]chan []byte),
-		lock:     &memoryLock{locks: make(map[string]memoryLockItem)},
 	}, nil
 }
 
@@ -49,11 +47,10 @@ func NewTeammateMesh() (TeammateMesh, error) {
 // Useful for dependency injection in testing or sharing clients.
 func NewTeammateMeshWithClient(c rueidis.Client) TeammateMesh {
 	if c != nil {
-		return &cloudMesh{client: c, lock: &redisLock{client: c}}
+		return &cloudMesh{client: c}
 	}
 	return &memoryMesh{
 		channels: make(map[string][]chan []byte),
-		lock:     &memoryLock{locks: make(map[string]memoryLockItem)},
 	}
 }
 
@@ -61,11 +58,6 @@ func NewTeammateMeshWithClient(c rueidis.Client) TeammateMesh {
 type memoryMesh struct {
 	mu       sync.RWMutex
 	channels map[string][]chan []byte
-	lock     DistributedLock
-}
-
-func (m *memoryMesh) GetLock() DistributedLock {
-	return m.lock
 }
 
 func (m *memoryMesh) Publish(ctx context.Context, channel string, data []byte) error {
@@ -145,11 +137,6 @@ func (m *memoryMesh) Subscribe(ctx context.Context, channel string) (<-chan []by
 // cloudMesh provides a Redis pub/sub backed mesh using rueidis.
 type cloudMesh struct {
 	client rueidis.Client
-	lock   DistributedLock
-}
-
-func (c *cloudMesh) GetLock() DistributedLock {
-	return c.lock
 }
 
 func (c *cloudMesh) Publish(ctx context.Context, channel string, data []byte) error {
