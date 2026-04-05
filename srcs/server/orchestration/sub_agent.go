@@ -4,11 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
+
+func writeHeartbeatFile(taskID string, content string) error {
+	dir := filepath.Join(".agent-task", "status")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	path := filepath.Join(dir, fmt.Sprintf("%s.yml", taskID))
+	return os.WriteFile(path, []byte(content), 0644)
+}
 
 // SubAgentSpawner defines the interface for spawning and monitoring sub-agents.
 type SubAgentSpawner interface {
@@ -67,18 +78,7 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 		go func() {
 			defer s.wg.Done()
 			defer func() { <-s.sem }()
-
-			// Simulate work
-			select {
-			case <-ctx.Done():
-				return
-			case <-s.ctx.Done():
-				return
-			case <-time.After(100 * time.Millisecond):
-			}
-
-			// Complete task
-			_ = s.completeTask(task)
+			s.executeWithRetry(task)
 		}()
 	} else {
 		// Cloud mode: Here we would request a new K8s pod or use a distributed worker.
@@ -86,21 +86,105 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-
-			// Simulate work
-			select {
-			case <-ctx.Done():
-				return
-			case <-s.ctx.Done():
-				return
-			case <-time.After(100 * time.Millisecond):
-			}
-
-			// Complete task
-			_ = s.completeTask(task)
+			s.executeWithRetry(task)
 		}()
 	}
 
+	return nil
+}
+
+func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
+	maxRetries := 3
+	backoff := 100 * time.Millisecond
+
+	for i := 0; i < maxRetries; i++ {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+		}
+
+		err := s.executeTask(task)
+		if err == nil {
+			_ = s.completeTask(task)
+			return
+		}
+
+		time.Sleep(backoff)
+		backoff *= 2
+	}
+
+	_ = s.failTask(task)
+}
+
+func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
+	_, err := s.db.Exec(context.Background(), "UPDATE shared_tasks SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fail sub-agent task: %w", err)
+	}
+
+	// Emit SUB_AGENT_FAILED event
+	if s.hub != nil {
+		payload := map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "SUB_AGENT_FAILED",
+			"agent_id": "sub-agent-spawner",
+			"status":   "FAILED",
+		}
+		s.hub.PublishTaskBroadcast(task.ID, payload)
+	}
+
+	return nil
+}
+
+func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
+	// Extract payload configuration
+	var subAgentType string
+	var parentTaskID string
+	var isolatedContext bool
+
+	if len(task.Payload) > 0 {
+		var payload map[string]interface{}
+		if err := json.Unmarshal(task.Payload, &payload); err == nil {
+			if v, ok := payload["sub_agent_type"].(string); ok {
+				subAgentType = v
+			}
+			if v, ok := payload["parent_task_id"].(string); ok {
+				parentTaskID = v
+			}
+			if v, ok := payload["isolated_context"].(bool); ok {
+				isolatedContext = v
+			}
+		}
+	}
+
+	// Just checking these values to silence compiler and log intention
+	_ = subAgentType
+	_ = parentTaskID
+	_ = isolatedContext
+
+	// Emit heartbeat to .agent-task/status/{taskID}.yml
+	heartbeatContent := fmt.Sprintf(`---
+task_id: %s
+status: IN_PROGRESS
+timestamp: %d
+sub_agent_type: %s
+parent_task_id: %s
+isolated_context: %t
+---`, task.ID, time.Now().Unix(), subAgentType, parentTaskID, isolatedContext)
+
+	err := writeHeartbeatFile(task.ID, heartbeatContent)
+	if err != nil {
+		// Just log or ignore since heartbeats are non-critical
+		fmt.Printf("failed to write heartbeat: %v\n", err)
+	}
+
+	// Simulate real work that might fail
+	select {
+	case <-s.ctx.Done():
+		return s.ctx.Err()
+	case <-time.After(100 * time.Millisecond):
+	}
 	return nil
 }
 
