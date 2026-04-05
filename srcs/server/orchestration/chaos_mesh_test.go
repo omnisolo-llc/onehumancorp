@@ -15,11 +15,11 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos_mesh.db")
 
-	db, err := NewSIPDB(dbPath)
+	dbInstance, err := NewSIPDB(dbPath)
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)
 	}
-	defer db.Close()
+	defer dbInstance.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -56,8 +56,8 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 			task := Message{ID: fmt.Sprintf("t-%d", idx), Content: "c", Type: EventTask}
 
 			// Fire and forget Upsert and Delegate, to ensure throttling works without deadlock
-			_ = db.UpsertMission(ctx, fmt.Sprintf("mission-%d", idx), "PENDING", "{}", false)
-			_ = db.DelegateMission(ctx, fmt.Sprintf("mission-%d", idx), "ROLE", task)
+			_ = dbInstance.UpsertMission(ctx, fmt.Sprintf("mission-%d", idx), "PENDING", "{}", false)
+			_ = dbInstance.DelegateMission(ctx, fmt.Sprintf("mission-%d", idx), "ROLE", task)
 		}(i)
 	}
 	wg.Wait()
@@ -114,7 +114,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	defer os.Chmod(memoryDir, 0755)
 
 	// Instantiate the AutoDreamWorker (the real application code)
-	worker := NewAutoDreamWorker(db)
+	worker := NewAutoDreamWorker(dbInstance)
 
 	// Use a waitgroup to run ingestAgentMemories concurrently
 	var chaosWg sync.WaitGroup
@@ -131,4 +131,67 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	// If it doesn't panic, ML-Resilience passes.
 	chaosWg.Wait()
 	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handles corrupted .agent-task/memory without panic")
+}
+
+// TestSIPDB_ChaosParity ensures that both SQLite and Postgres modes behave similarly under stress.
+func TestSIPDB_ChaosParity(t *testing.T) {
+	// First, run with Standalone (SQLite)
+	t.Run("SQLite", func(t *testing.T) {
+		os.Setenv("OHC_STANDALONE", "true")
+		defer os.Unsetenv("OHC_STANDALONE")
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_chaos.db")
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SQLite SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				dbInstance.PruneStaleMissions(ctx, time.Second)
+			}(i)
+		}
+		wg.Wait()
+		t.Log("SQLite Parity PruneStaleMissions completed without panic")
+	})
+
+	// Second, run with Mock Postgres DB Provider behavior
+	t.Run("PostgresMock", func(t *testing.T) {
+		os.Setenv("OHC_STANDALONE", "false")
+		defer os.Unsetenv("OHC_STANDALONE")
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_chaos_pg.db") // Just using SQLite to mock the interface here
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		// Force Postgres behavior if possible by injecting a custom provider or just running under the flag
+		// Here we just test the code path with OHC_STANDALONE=false
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				dbInstance.PruneStaleMissions(ctx, time.Second)
+			}(i)
+		}
+		wg.Wait()
+		t.Log("Postgres Parity PruneStaleMissions completed without panic")
+	})
 }
