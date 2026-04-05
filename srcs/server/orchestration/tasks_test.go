@@ -16,18 +16,23 @@ func setupTestDB(t *testing.T) (*TaskManager, func()) {
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS swarm_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
-			mission_id TEXT NOT NULL,
-			parent_plan_id TEXT,
-			dependencies TEXT NOT NULL DEFAULT '[]',
+			organization_id TEXT NOT NULL,
 			title TEXT NOT NULL,
+			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
+			agent_id TEXT,
+			priority TEXT NOT NULL DEFAULT 'P2',
+			payload TEXT,
 			locked_until DATETIME,
-			payload TEXT NOT NULL DEFAULT '{}',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
 		);
 	`)
 	if err != nil {
@@ -74,7 +79,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	ctx := context.Background()
 
 	// Claim when empty
-	task, err := tm.ClaimTask(ctx, "non-existent-task-id", "agent-1")
+	task, err := tm.ClaimTask(ctx, "mission-1", "non-existent-task-id", "agent-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -89,7 +94,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Claim task
-	claimedTask, err := tm.ClaimTask(ctx, createdTask.ID, "agent-1")
+	claimedTask, err := tm.ClaimTask(ctx, "mission-1", createdTask.ID, "agent-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -104,7 +109,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Claim another (should be empty)
-	task3, err := tm.ClaimTask(ctx, "another-non-existent-id", "agent-2")
+	task3, err := tm.ClaimTask(ctx, "mission-1", "another-non-existent-id", "agent-2")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -123,7 +128,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	ctx := context.Background()
 
 	// Poll when empty
-	tasks, err := tm.PollTasks(ctx, "agent-1", 5)
+	tasks, err := tm.PollTasks(ctx, "mission-1", "agent-1", 5)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -137,7 +142,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	_, _ = tm.CreateTask(ctx, "mission-3", "Task 3", "Desc", "P3")
 
 	// Poll tasks with limit 2
-	tasks, err = tm.PollTasks(ctx, "agent-1", 2)
+	tasks, err = tm.PollTasks(ctx, "mission-1", "agent-1", 2)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -164,7 +169,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	}
 
 	// Poll remaining tasks
-	tasks2, err := tm.PollTasks(ctx, "agent-2", 5)
+	tasks2, err := tm.PollTasks(ctx, "mission-1", "agent-2", 5)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -188,26 +193,26 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 
 	ctx := context.Background()
 	task, _ := tm.CreateTask(ctx, "mission-1", "Test Task", "Desc", "P1")
-	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
+	claimedTask, _ := tm.ClaimTask(ctx, "mission-1", task.ID, "agent-1")
 
 	if claimedTask.ID != task.ID {
 		t.Fatalf("claimed task id mismatch")
 	}
 
 	// Complete task
-	err := tm.CompleteTask(ctx, claimedTask.ID, "agent-1")
+	err := tm.CompleteTask(ctx, "mission-1", claimedTask.ID, "agent-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Try completing again
-	err = tm.CompleteTask(ctx, claimedTask.ID, "agent-1")
+	err = tm.CompleteTask(ctx, "mission-1", claimedTask.ID, "agent-1")
 	if err == nil {
 		t.Fatalf("expected error when completing an already completed task")
 	}
 
 	// Complete non-existent task
-	err = tm.CompleteTask(ctx, "non-existent", "agent-1")
+	err = tm.CompleteTask(ctx, "mission-1", "non-existent", "agent-1")
 	if err == nil {
 		t.Fatalf("expected error when completing non-existent task")
 	}

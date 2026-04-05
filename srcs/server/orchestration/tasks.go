@@ -89,11 +89,8 @@ func (tm *TaskManager) StopWorkerLoop() {
 func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	// A simple check to find PENDING tasks without active locks and met dependencies
 	// and trigger a broadcast to awake idle agents.
-	tasks, err := tm.PeekTasks(ctx, 1) // Peek if we have at least one to possibly notify agents
-	if err != nil {
-		return
-	}
-	_ = tasks // Ignore if using PeekTasks, but let's implement a real check
+	// Since evaluate is global worker loop, we don't have organization context easily unless we peek generally or globally.
+	// In production, we'd iterate over organizations or use a system role. For now, we skip PeekTasks here to fix the signature error.
 
 	query := `
 		SELECT id, status FROM shared_tasks WHERE status = 'PENDING'
@@ -231,7 +228,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, and relies on SQLite's lock mechanism
 // to prevent race conditions.
 // In Multi-tenant cloud mode, it attempts to acquire a distributed Redis lock.
-func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*SharedTask, error) {
+func (tm *TaskManager) ClaimTask(ctx context.Context, organizationID, taskID, agentID string) (*SharedTask, error) {
 	if tm.redisClient != nil {
 		// Acquire Redis-backed distributed lock with 30s TTL
 		lockKey := "lock:task:" + taskID
@@ -259,11 +256,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		query := `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			WHERE id = $1 AND organization_id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY priority ASC, created_at ASC
 			LIMIT 1
 		`
-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
+		errQuery = tx.QueryRow(ctx, query, taskID, organizationID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
@@ -271,12 +268,12 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		query := `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
-			WHERE id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			WHERE id = $1 AND organization_id = $2 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY priority ASC, created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		`
-		errQuery = tx.QueryRow(ctx, query, taskID).Scan(
+		errQuery = tx.QueryRow(ctx, query, taskID, organizationID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 	}
@@ -330,9 +327,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	updateQuery := `
 		UPDATE shared_tasks
 		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2 AND status = 'PENDING'
+		WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, agentID, task.ID)
+	rowsAffected, err := tx.Exec(ctx, updateQuery, agentID, task.ID, organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update task status: %w", err)
 	}
@@ -367,13 +364,13 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 }
 
 // ReviewTask marks a task for review.
-func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
+func (tm *TaskManager) ReviewTask(ctx context.Context, organizationID, taskID, agentID string) error {
 	query := `
 		UPDATE shared_tasks
 		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND agent_id = $2 AND status = 'IN_PROGRESS'
+		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status = 'IN_PROGRESS'
 	`
-	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID)
+	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID, organizationID)
 	if err != nil {
 		return fmt.Errorf("failed to move task to review: %w", err)
 	}
@@ -405,9 +402,9 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 }
 
 // CompleteTask marks a task as completed.
-func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
+func (tm *TaskManager) CompleteTask(ctx context.Context, organizationID, taskID, agentID string) error {
 	var createdAt time.Time
-	err := tm.db.QueryRow(ctx, "SELECT created_at FROM shared_tasks WHERE id = $1", taskID).Scan(&createdAt)
+	err := tm.db.QueryRow(ctx, "SELECT created_at FROM shared_tasks WHERE id = $1 AND organization_id = $2", taskID, organizationID).Scan(&createdAt)
 	if err == nil {
 		latencyMS := float64(time.Since(createdAt).Milliseconds())
 		telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
@@ -416,9 +413,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	query := `
 		UPDATE shared_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND agent_id = $2 AND status IN ('IN_PROGRESS', 'REVIEW')
+		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status IN ('IN_PROGRESS', 'REVIEW')
 	`
-	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID)
+	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID, organizationID)
 	if err != nil {
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
@@ -444,13 +441,13 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 }
 
 // PeekTasks returns up to `limit` PENDING tasks without claiming them. Used for read-only dashboards.
-func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask, error) {
+func (tm *TaskManager) PeekTasks(ctx context.Context, organizationID string, limit int) ([]*SharedTask, error) {
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			WHERE status = 'PENDING' AND organization_id = $1 AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY priority ASC, created_at ASC
 		`
 		if limit > 0 {
@@ -460,7 +457,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		query = `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			WHERE status = 'PENDING' AND organization_id = $1 AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY priority ASC, created_at ASC
 		`
 		if limit > 0 {
@@ -468,7 +465,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		}
 	}
 
-	rows, err := tm.db.Query(ctx, query)
+	rows, err := tm.db.Query(ctx, query, organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}
@@ -498,7 +495,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
 // SQLite's concurrent writes lock for safe queue picking.
-func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int) ([]*SharedTask, error) {
+func (tm *TaskManager) PollTasks(ctx context.Context, organizationID, agentID string, limit int) ([]*SharedTask, error) {
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -512,7 +509,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		query = `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			WHERE status = 'PENDING' AND organization_id = $2 AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY priority ASC, created_at ASC
 			LIMIT $1
 		`
@@ -521,14 +518,14 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		query = `
 			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
 			FROM shared_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			WHERE status = 'PENDING' AND organization_id = $2 AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 			ORDER BY priority ASC, created_at ASC
 			LIMIT $1
 			FOR UPDATE SKIP LOCKED
 		`
 	}
 
-	rows, err := tx.Query(ctx, query, fetchLimit)
+	rows, err := tx.Query(ctx, query, fetchLimit, organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}
@@ -616,8 +613,8 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		rowsAffected, err := tx.Exec(ctx, `
 			UPDATE shared_tasks
 			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id = $2 AND status = 'PENDING'
-		`, agentID, task.ID)
+			WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
+		`, agentID, task.ID, organizationID)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
