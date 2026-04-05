@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -128,7 +129,7 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		var insertQuery string
 		if w.pool.IsSQLite() {
 			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
-			memID := fmt.Sprintf("%d", time.Now().UnixNano())
+			memID := uuid.New().String()
 			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		} else {
 			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
@@ -381,7 +382,7 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 
 		if w.pool.IsSQLite() {
 			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
-			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			id := uuid.New().String()
 			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
 		} else {
 			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
@@ -474,7 +475,7 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		var insertQuery string
 		if w.pool.IsSQLite() {
 			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
-			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			id := uuid.New().String()
 			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr, memoryID)
 		} else {
 			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
