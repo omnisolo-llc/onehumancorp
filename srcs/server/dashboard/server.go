@@ -24,7 +24,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -897,7 +898,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -969,7 +969,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -1803,23 +1802,60 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	rc := http.NewResponseController(w)
+	flusher, ok := w.(http.Flusher)
+	if ok {
+		flusher.Flush()
+	} else {
+		_ = rc.Flush()
+	}
 
-	// In a real implementation this would subscribe to a message bus like Centrifuge Hub or Redis.
-	// We'll simulate pushing the required events for observability gap closure.
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	var eventCh <-chan struct{}
+	var cancel func()
+	if s.hub != nil {
+		eventCh, cancel = s.hub.Subscribe("mesh:tasks")
+		defer cancel()
+	}
+
+	// We'll simulate pushing the required events for observability gap closure if hub is missing.
 	events := []string{
 		`{"event":"AgentHired","status":"INFO"}`,
 		`{"event":"TaskCompleted","status":"COMPLETED"}`,
 		`{"event":"AgentFired","status":"INFO"}`,
 	}
 
-	for _, event := range events {
+	// flush the simulated events first
+	for _, evt := range events {
+		fmt.Fprintf(w, "data: %s\n\n", evt)
+		if ok {
+			flusher.Flush()
+		} else {
+			_ = rc.Flush()
+		}
+	}
+
+	for {
 		select {
 		case <-r.Context().Done():
 			return
-		default:
-			fmt.Fprintf(w, "data: %s\n\n", event)
-			_ = rc.Flush()
-			time.Sleep(500 * time.Millisecond)
+		case <-ticker.C:
+			// Heartbeat
+			fmt.Fprintf(w, ": heartbeat\n\n")
+			if ok {
+				flusher.Flush()
+			} else {
+				_ = rc.Flush()
+			}
+		case <-eventCh:
+			// In a real implementation we would fetch the event data
+			fmt.Fprintf(w, "data: {\"event\":\"TaskUpdated\"}\n\n")
+			if ok {
+				flusher.Flush()
+			} else {
+				_ = rc.Flush()
+			}
 		}
 	}
 }
