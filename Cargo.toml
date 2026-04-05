@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "srcs/server/agents/builtin",
+]
+resolver = "2"

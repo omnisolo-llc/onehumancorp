@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -466,7 +467,11 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	})
 
+	// 5. Start the builtin agent process (Rust binary).
+	// The Rust binary connects to the gRPC server and self-registers.
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
+	grpcEndpoint := "http://localhost" + grpcAddress
+	startBuiltinAgentProcess(ctx, grpcEndpoint)
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Start gRPC server
@@ -507,4 +512,49 @@ func main() {
 	if err := run(nowUTC().UTC(), listenForMain); err != nil {
 		fatalForMain(err)
 	}
+}
+
+// startBuiltinAgentProcess spawns the Rust builtin agent binary as a subprocess.
+// The Rust binary connects back to the gRPC server and self-registers.
+// It is restarted automatically if it exits unexpectedly.
+func startBuiltinAgentProcess(ctx context.Context, grpcEndpoint string) {
+	binaryPath := os.Getenv("OHC_BUILTIN_AGENT_BINARY")
+	if binaryPath == "" {
+		exe, err := os.Executable()
+		if err == nil {
+			binaryPath = filepath.Join(filepath.Dir(exe), "ohc-builtin-agent")
+		}
+	}
+	if binaryPath == "" {
+		binaryPath = "ohc-builtin-agent"
+	}
+
+	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+		slog.Warn("builtin agent binary not found, agent subprocess will not start", "path", binaryPath)
+		return
+	}
+
+	go func() {
+		for {
+			cmd := exec.CommandContext(ctx, binaryPath)
+			cmd.Env = append(os.Environ(),
+				"OHC_GRPC_ENDPOINT="+grpcEndpoint,
+			)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			slog.Info("starting builtin agent process", "path", binaryPath)
+			if err := cmd.Run(); err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				slog.Error("builtin agent process exited unexpectedly, restarting in 5s", "err", err)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
+			}
+		}
+	}()
 }
