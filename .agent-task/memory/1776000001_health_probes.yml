@@ -1,0 +1,6 @@
+title: "Hybrid Mode Switch and Local-to-Cloud Health Probes"
+timestamp: "2026-04-05T20:50:00Z"
+context: "Extracted Health probes into their own file in orchestration to ensure accurate mode monitoring."
+learnings:
+  - "When extracting structs and functions in Go, verify import usage across the local package (e.g., in `health.go` and `service.go`)."
+  - "When adding health probes, ensure both Standalone (SQLite) and Cloud modes are appropriately tested for degraded states and sync backlog checks."
