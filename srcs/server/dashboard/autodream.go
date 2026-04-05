@@ -2,8 +2,10 @@ package dashboard
 
 import (
 	"encoding/json"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
@@ -23,6 +25,15 @@ type AutoDreamQueryResult struct {
 }
 
 func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	mode := "standalone"
+	if os.Getenv("OHC_STANDALONE") != "true" {
+		mode = "cloud"
+	}
+	defer func() {
+		telemetry.RecordAutoDreamSyncDuration(r.Context(), time.Since(start).Seconds(), mode)
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -56,6 +67,15 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	mode := "standalone"
+	if os.Getenv("OHC_STANDALONE") != "true" {
+		mode = "cloud"
+	}
+	defer func() {
+		telemetry.RecordAutoDreamQueryDuration(r.Context(), time.Since(start).Seconds(), mode)
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

@@ -24,7 +24,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -574,6 +575,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 
+	mux.HandleFunc("/api/v1/stream", auth.RequireRole("user", server.handleStream))
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
@@ -858,6 +860,12 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+	mode := "standalone"
+	if os.Getenv("OHC_STANDALONE") != "true" {
+		mode = "cloud"
+	}
+	telemetry.IncMeshBroadcastTotal(r.Context(), mode)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -889,7 +897,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid channel", http.StatusBadRequest)
 		return
 	}
-
 
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
@@ -962,7 +969,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -1786,4 +1792,46 @@ type pipelineCreateRequest struct {
 type pipelinePromoteRequest struct {
 	PipelineID string `json:"pipelineId"`
 	ApprovedBy string `json:"approvedBy"`
+}
+
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	ch, unsubscribe := s.hub.Subscribe("mesh:tasks")
+	defer unsubscribe()
+
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			_, err := w.Write([]byte("event: ping\ndata: {}\n\n"))
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		case <-ch:
+			_, err := w.Write([]byte("event: update\ndata: {}\n\n"))
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }
