@@ -30,10 +30,15 @@ type DefaultTaskOrchestrator struct {
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
 	workerWg    sync.WaitGroup
+	spawner     SubAgentSpawner
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Create the spawner (SIPDB uses the main db provider by default unless specified otherwise)
+	spawner := NewSubAgentSpawner(provider, hub, mesh, provider)
+
 	to := &DefaultTaskOrchestrator{
 		db:          provider,
 		redisClient: redisClient,
@@ -51,10 +56,6 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 	to.workerWg.Add(1)
 	go func() {
 		defer to.workerWg.Done()
-		// Capacity-managed channel for throttling
-		concurrencyLimit := 10
-		sem := make(chan struct{}, concurrencyLimit)
-
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -63,11 +64,99 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+			fetchLoop:
+				for {
+					// Only fetch delegated tasks for sub-agents here.
+					// Other agents will acquire tasks via AcquireReadyTask or PollTasks.
+
+					tx, err := to.db.Begin(to.workerCtx)
+					if err != nil {
+						slog.Error("TaskOrchestrator: failed to begin tx for background worker", "error", err)
+						break fetchLoop
+					}
+
+					var query string
+					if to.db.IsSQLite() {
+						// SQLite: Select one then update
+						selectQuery := `
+							SELECT id, mission_id, title, payload, status, created_at, updated_at
+							FROM swarm_tasks
+							WHERE status = 'READY' AND (payload LIKE '%"priority":"DELEGATED"%' OR payload LIKE '%"sub_agent_type"%')
+							ORDER BY created_at ASC
+							LIMIT 1
+						`
+						var task models.Task
+						err = tx.QueryRow(to.workerCtx, selectQuery).Scan(
+							&task.ID, &task.MissionID, &task.Title, &task.Payload, &task.Status, &task.CreatedAt, &task.UpdatedAt,
+						)
+
+						if err == nil {
+							updateQuery := `
+								UPDATE swarm_tasks
+								SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+								WHERE id = $1
+							`
+							_, updateErr := tx.Exec(to.workerCtx, updateQuery, task.ID)
+							if updateErr == nil {
+								_ = tx.Commit(to.workerCtx)
+
+								// Map to SharedTask for spawner
+								sharedTask := &SharedTask{
+									ID:              task.ID,
+									Title:           task.Title,
+									Status:          "IN_PROGRESS",
+									Payload:         task.Payload,
+									AssignedAgentID: "sub-agent-spawner",
+								}
+
+								// Spawn using workerCtx
+								_ = to.spawner.Spawn(to.workerCtx, sharedTask)
+								continue fetchLoop
+							}
+						}
+						_ = tx.Rollback(to.workerCtx)
+						break fetchLoop
+
+					} else {
+						// PostgreSQL: Use SKIP LOCKED
+						query = `
+							UPDATE swarm_tasks
+							SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+							WHERE id = (
+								SELECT id FROM swarm_tasks
+								WHERE status = 'READY' AND (payload->>'priority' = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL)
+								ORDER BY created_at ASC
+								LIMIT 1
+								FOR UPDATE SKIP LOCKED
+							)
+							RETURNING id, mission_id, title, status, payload, created_at, updated_at
+						`
+						var task models.Task
+						err = tx.QueryRow(to.workerCtx, query).Scan(
+							&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+						)
+
+						if err == nil {
+							_ = tx.Commit(to.workerCtx)
+
+							// Map to SharedTask for spawner
+							sharedTask := &SharedTask{
+								ID:              task.ID,
+								Title:           task.Title,
+								Status:          "IN_PROGRESS",
+								Payload:         task.Payload,
+								AssignedAgentID: "sub-agent-spawner",
+							}
+
+							// Spawn using workerCtx
+							_ = to.spawner.Spawn(to.workerCtx, sharedTask)
+							continue fetchLoop
+						} else {
+							_ = tx.Rollback(to.workerCtx)
+							break fetchLoop
+						}
+					}
+				}
 			}
 		}
 	}()
@@ -76,6 +165,9 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 func (to *DefaultTaskOrchestrator) Stop() {
 	if to.workerCancel != nil {
 		to.workerCancel()
+	}
+	if to.spawner != nil {
+		_ = to.spawner.Monitor(context.Background())
 	}
 	to.workerWg.Wait()
 }
