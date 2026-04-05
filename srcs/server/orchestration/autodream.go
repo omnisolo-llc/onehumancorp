@@ -127,7 +127,8 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			// Ensure manually generated UUID for SQLite fallback
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 			memID := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		} else {
@@ -230,8 +231,8 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 		var insertQuery string
 		if w.pool.IsSQLite() {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, content, source_mission_id)
-				VALUES (?, ?, ?)
+				INSERT INTO autodream_memories (id, content, source_mission_id, created_at)
+				VALUES (?, ?, ?, CURRENT_TIMESTAMP)
 			`
 		} else {
 			insertQuery = `
@@ -380,7 +381,7 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		}
 
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
 		} else {
@@ -473,7 +474,7 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr, memoryID)
 		} else {

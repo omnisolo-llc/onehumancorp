@@ -143,7 +143,8 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		CREATE TABLE IF NOT EXISTS autodream_memories (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
-			source_mission_id TEXT
+			source_mission_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
