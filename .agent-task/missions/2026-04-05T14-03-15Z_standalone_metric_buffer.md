@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: DONE
 ---
 
 # Implement Standalone Local Metric Buffer & Cloud Synchronization
