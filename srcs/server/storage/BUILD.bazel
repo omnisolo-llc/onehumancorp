@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "storage",
+    srcs = [
+        "local_provider.go",
+        "provider.go",
+        "s3_provider.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/storage",
+    visibility = ["//visibility:public"],
+)
