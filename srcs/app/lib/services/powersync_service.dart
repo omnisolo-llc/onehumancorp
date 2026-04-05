@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 
@@ -109,10 +111,31 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$backendUrl/api/auth/powersync/token'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+        final endpoint = data['endpoint'] ?? backendUrl;
+
+        if (token != null) {
+          return PowerSyncCredentials(
+            endpoint: endpoint,
+            token: token,
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback or handle error
+    }
+
+    return null;
   }
 
   @override
