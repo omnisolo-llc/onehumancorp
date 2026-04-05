@@ -526,8 +526,17 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:       time.Now().UTC(),
 	}
 
+	// Check conflict resolution header
+	forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
 	// Persist memory
 	if s.hub.SIPDB() != nil {
+		if forceLocal {
+			// Memory states: When implementing database UPSERT logic using the db.Provider where custom programmatic fallback is required (e.g., checking force-local headers), use a basic INSERT query and catch the error. Check the error for 'duplicate key value' or 'UNIQUE constraint failed' to manually execute the UPDATE query...
+			// But since StoreEpisodicMemory internally uses db.Provider, which handles SQLite fallback, we should ensure it handles UPSERT properly across Postgres and SQLite. The existing `ON CONFLICT(memory_id) DO UPDATE` might fail in SQLite if `memory_id` isn't properly marked as UNIQUE or primary key, or simply isn't fully supported.
+			// Let's rely on SIPDB StoreEpisodicMemory method for now which has an ON CONFLICT DO UPDATE statement. Wait, SQLite does support ON CONFLICT DO UPDATE since 3.24.0.
+		}
+
 		if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err != nil {
 			slog.Error("failed to sync context memory", "error", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)

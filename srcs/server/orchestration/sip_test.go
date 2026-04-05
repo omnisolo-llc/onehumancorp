@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,72 @@ import (
 // ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
 func ClearSemaphore() {
 	// Replaced by standaloneThrottle
+}
+
+func TestSIPDB_SyncContextSync(t *testing.T) {
+	db, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert test data with rag_context to ensure it is stripped
+	_, err = db.db.Exec(ctx, `
+		INSERT INTO swarm_memory_embeddings (memory_id, context, source_plugin, created_at)
+		VALUES ('test-mem-1', '{"rag_context": "sensitive data", "safe_key": "safe_value", "pii_email": "test@example.com"}', 'test_plugin', CURRENT_TIMESTAMP)
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	var syncedPayload map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			body, _ := io.ReadAll(r.Body)
+			if err := json.Unmarshal(body, &syncedPayload); err != nil {
+				t.Errorf("failed to unmarshal request body: %v", err)
+			}
+			// Simulate success response
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	syncedCount, err := db.SyncContextSync(ctx, srv.URL)
+	if err != nil {
+		t.Fatalf("SyncContextSync failed: %v", err)
+	}
+	if syncedCount != 1 {
+		t.Errorf("expected 1 record to be synced, got %d", syncedCount)
+	}
+
+	// Verify the payload sent to the remote endpoint
+	if _, ok := syncedPayload["rag_context"]; ok {
+		t.Error("expected rag_context to be stripped, but it was present")
+	}
+	if syncedPayload["safe_key"] != "safe_value" {
+		t.Errorf("expected safe_key to be 'safe_value', got %v", syncedPayload["safe_key"])
+	}
+	if syncedPayload["memory_id"] != "test-mem-1" {
+		t.Errorf("expected memory_id to be 'test-mem-1', got %v", syncedPayload["memory_id"])
+	}
+	if syncedPayload["pii_email"] != "[REDACTED_EMAIL]" {
+		t.Errorf("expected pii_email to be '[REDACTED_EMAIL]', got %v", syncedPayload["pii_email"])
+	}
+
+	// Verify that the local copy is deleted after successful sync
+	var count int
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM swarm_memory_embeddings").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count records: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected local records to be deleted, found %d", count)
+	}
 }
 
 func TestSIPDB_Init(t *testing.T) {

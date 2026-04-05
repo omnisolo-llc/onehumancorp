@@ -865,8 +865,16 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	for _, rec := range records {
 		// Sanitize sensitive data by explicitly deleting `rag_context` key
 		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
-			delete(payloadData, "rag_context")
+		var rawData interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &rawData); err == nil {
+			if parsedMap, ok := rawData.(map[string]interface{}); ok {
+				payloadData = parsedMap
+				delete(payloadData, "rag_context")
+			} else {
+				payloadData = map[string]interface{}{
+					"context": rawData,
+				}
+			}
 		} else {
 			// If not JSON, we assume it's raw text but the memory states
 			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
@@ -875,7 +883,14 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 				"context": rec.payload,
 			}
 		}
-		sanitizedPayload, _ := json.Marshal(payloadData)
+
+		// Add memory_id to the payload
+		payloadData["memory_id"] = rec.id
+
+		// Unconditionally apply redaction and remove private markers
+		redactedData := telemetry.RedactInterfacePII(SanitizePayloadMap(payloadData))
+
+		sanitizedPayload, _ := json.Marshal(redactedData)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
 		if err != nil {
