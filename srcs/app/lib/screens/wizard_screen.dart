@@ -612,9 +612,9 @@ class _CentrifugeStep extends StatelessWidget {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.03),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.08),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),

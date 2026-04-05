@@ -338,7 +338,7 @@ class _GrowthReferralWidgetState extends State<GrowthReferralWidget> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.03),
                 border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
                 borderRadius: BorderRadius.circular(16),
               ),
