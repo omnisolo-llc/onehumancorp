@@ -116,6 +116,14 @@ services:
     environment:
       PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       PS_PORT: "8080"
+      PS_SYNC_RULES_FILE: /etc/powersync/sync_rules.yaml
+      PS_JWT_ISSUER: ohc-issuer
+      PS_JWT_AUDIENCE: powersync
+      # For demo/local we use a symmetric HS256 secret.
+      # In prod, PS_JWKS_URL would be used.
+      PS_JWT_SECRET: "powersync-secret-12345678901234567890"
+    volumes:
+      - ./docker/powersync_sync_rules.yaml:/etc/powersync/sync_rules.yaml
     depends_on:
       postgres:
         condition: service_healthy

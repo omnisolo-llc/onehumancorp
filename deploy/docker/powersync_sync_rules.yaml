@@ -1,0 +1,18 @@
+bucket_data:
+  organization_id: token.organization_id
+
+sync_rules:
+  - table: agents
+    filter: "organization_id = bucket.organization_id OR organization_id IS NULL"
+  - table: agent_missions
+    filter: "1=1"
+  - table: capability_plugins
+    filter: "1=1"
+  - table: swarm_memory
+    filter: "1=1"
+  - table: swarm_memory_embeddings
+    filter: "1=1"
+  - table: agent_status
+    filter: "1=1"
+  - table: meeting_rooms
+    filter: "1=1"
