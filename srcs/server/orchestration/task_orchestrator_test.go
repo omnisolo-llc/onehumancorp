@@ -130,6 +130,71 @@ func TestTaskOrchestrator(t *testing.T) {
 	}
 }
 
+func TestTaskOrchestrator_PollAndDelegateTasks(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	ctx := context.Background()
+
+	// Ensure tables exist
+	_, _ = prov.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			priority TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			agent_id TEXT,
+			payload TEXT NOT NULL DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	orchestrator := NewTaskOrchestrator(prov, nil, nil, nil)
+	impl := orchestrator.(*DefaultTaskOrchestrator)
+
+	// Create 3 DELEGATED tasks
+	for i := 0; i < 3; i++ {
+		_, _ = prov.Exec(ctx, `
+			INSERT INTO shared_tasks (id, organization_id, title, priority, status)
+			VALUES ($1, 'org-1', 'Test Task', 'DELEGATED', 'PENDING')
+		`, "task-del-"+string(rune('A'+i)))
+	}
+
+	// Create a sub_agent_type task
+	_, _ = prov.Exec(ctx, `
+		INSERT INTO shared_tasks (id, organization_id, title, priority, status, payload)
+		VALUES ('task-sub-A', 'org-1', 'Test Task', 'NORMAL', 'PENDING', '{"sub_agent_type": "IMPLEMENTER"}')
+	`)
+
+	// Create a non-delegated task
+	_, _ = prov.Exec(ctx, `
+		INSERT INTO shared_tasks (id, organization_id, title, priority, status)
+		VALUES ('task-norm-A', 'org-1', 'Test Task', 'NORMAL', 'PENDING')
+	`)
+
+	// Manually trigger pollAndDelegateTasks
+	impl.pollAndDelegateTasks()
+
+	// Verify all DELEGATED tasks and the sub_agent_type task are IN_PROGRESS
+	var count int
+	_ = prov.QueryRow(ctx, "SELECT COUNT(*) FROM shared_tasks WHERE status = 'IN_PROGRESS' AND agent_id = 'sub-agent-spawner'").Scan(&count)
+	if count != 4 {
+		t.Fatalf("expected 4 tasks to be IN_PROGRESS, got %d", count)
+	}
+
+	// Verify the non-delegated task is still PENDING
+	var status string
+	_ = prov.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'task-norm-A'").Scan(&status)
+	if status != "PENDING" {
+		t.Fatalf("expected non-delegated task to be PENDING, got %s", status)
+	}
+}
+
 func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")

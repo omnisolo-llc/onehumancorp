@@ -79,70 +79,67 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 
 // pollAndDelegateTasks queries for DELEGATED priority tasks and spawns sub-agents.
 func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
-	tx, err := to.db.Begin(to.workerCtx)
-	if err != nil {
-		return
-	}
-	defer tx.Rollback(to.workerCtx)
-
-	var taskID string
-	var orgID string
-	var query string
-
-	if to.db.IsSQLite() {
-		selectQuery := `
-			SELECT id, organization_id FROM shared_tasks
-			WHERE status = 'PENDING' AND priority = 'DELEGATED'
-			ORDER BY created_at ASC
-			LIMIT 1
-		`
-		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID)
-		if err != nil {
-			return // typically sql.ErrNoRows
-		}
-
-		updateQuery := `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
-			WHERE id = $1 AND status = 'PENDING'
-		`
-		_, err = tx.Exec(to.workerCtx, updateQuery, taskID)
+	for {
+		tx, err := to.db.Begin(to.workerCtx)
 		if err != nil {
 			return
 		}
 
-	} else {
-		// Postgres mode: use FOR UPDATE SKIP LOCKED
-		query = `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
-			WHERE id = (
-				SELECT id FROM shared_tasks
-				WHERE status = 'PENDING' AND priority = 'DELEGATED'
-				ORDER BY created_at ASC
-				LIMIT 1
-				FOR UPDATE SKIP LOCKED
-			)
-			RETURNING id, organization_id
-		`
-		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
-		if err != nil {
-			return // sql.ErrNoRows or locking issue
+		var taskID string
+		var orgID string
+		var query string
+
+		if to.db.IsSQLite() {
+			updateQuery := `
+				UPDATE shared_tasks
+				SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+				WHERE id = (
+					SELECT id FROM shared_tasks
+					WHERE status = 'PENDING'
+					  AND (priority = 'DELEGATED' OR json_extract(payload, '$.sub_agent_type') IS NOT NULL)
+					ORDER BY created_at ASC
+					LIMIT 1
+				)
+				RETURNING id, organization_id
+			`
+			err = tx.QueryRow(to.workerCtx, updateQuery).Scan(&taskID, &orgID)
+		} else {
+			// Postgres mode: use FOR UPDATE SKIP LOCKED
+			query = `
+				UPDATE shared_tasks
+				SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+				WHERE id = (
+					SELECT id FROM shared_tasks
+					WHERE status = 'PENDING'
+					  AND (priority = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL)
+					ORDER BY created_at ASC
+					LIMIT 1
+					FOR UPDATE SKIP LOCKED
+				)
+				RETURNING id, organization_id
+			`
+			err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
 		}
-	}
 
-	if err := tx.Commit(to.workerCtx); err != nil {
-		return
-	}
+		if err != nil {
+			tx.Rollback(to.workerCtx)
+			// sql.ErrNoRows or locking issue, we're done draining
+			return
+		}
 
-	// Spawn sub-agent
-	task := &SharedTask{
-		ID:             taskID,
-		OrganizationID: orgID,
-		Priority:       "DELEGATED",
-	}
+		if err := tx.Commit(to.workerCtx); err != nil {
+			return
+		}
 
-	_ = to.spawner.Spawn(to.workerCtx, task)
+		// Spawn sub-agent
+		task := &SharedTask{
+			ID:             taskID,
+			OrganizationID: orgID,
+			Priority:       "DELEGATED",
+		}
+
+		_ = to.spawner.Spawn(to.workerCtx, task)
+	}
 }
 
 func (to *DefaultTaskOrchestrator) Stop() {
@@ -259,28 +256,19 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var task models.Task
 	var query string
 	if to.db.IsSQLite() {
-		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-			// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
-			// Instead, we use a two-step SELECT then UPDATE approach.
-			selectQuery := `
+		// In SQLite, use atomic UPDATE RETURNING with a subquery
+		updateQuery := `
+			UPDATE swarm_tasks
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
 				SELECT id FROM swarm_tasks
 				WHERE status = 'READY'
 				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 				LIMIT 1
-			`
-			var taskID string
-			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
-			if err != nil {
-				return nil, err // Could be sql.ErrNoRows if queue is empty
-			}
-
-			updateQuery := `
-			UPDATE swarm_tasks
-			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2
+			)
 			RETURNING id, mission_id, title, status, payload, created_at, updated_at
 		`
-			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+		err = tx.QueryRow(ctx, updateQuery, agentID).Scan(
 			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
