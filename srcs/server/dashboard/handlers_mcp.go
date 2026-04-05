@@ -621,4 +621,90 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 	})
 }
 
+// handleSyncRAG handles receiving synced local MCP RAG contexts from the standalone sync daemon.
+// Resolves conflicts using the X-OHC-Conflict-Resolution header.
+func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleSyncRAG")
+	defer span.End()
 
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 5<<20) // 5MB limit
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	var memoryID string
+	if idVal, ok := payload["memory_id"]; ok {
+		memoryID = fmt.Sprintf("%v", idVal)
+	}
+
+	if memoryID == "" {
+		http.Error(w, "missing memory_id", http.StatusBadRequest)
+		return
+	}
+
+	var contextStr string
+	if ctxVal, ok := payload["context"]; ok {
+		if strCtx, isStr := ctxVal.(string); isStr {
+			contextStr = strCtx
+		} else {
+			marshaled, _ := json.Marshal(ctxVal)
+			contextStr = string(marshaled)
+		}
+	} else {
+		sanitizedBytes, _ := json.Marshal(payload)
+		contextStr = string(sanitizedBytes)
+	}
+
+	var sourcePlugin string
+	if srcVal, ok := payload["source_plugin"]; ok {
+		sourcePlugin = fmt.Sprintf("%v", srcVal)
+	} else {
+		sourcePlugin = "hybrid-sync"
+	}
+
+	var vectorEmbedding []byte
+	if vecVal, ok := payload["vector_embedding"]; ok {
+		if vecStr, isStr := vecVal.(string); isStr {
+			vectorEmbedding = []byte(vecStr)
+		} else if vecArr, isArr := vecVal.([]interface{}); isArr {
+			bytes, _ := json.Marshal(vecArr)
+			vectorEmbedding = bytes
+		}
+	}
+
+	memory := orchestration.EpisodicMemory{
+		MemoryID:        memoryID,
+		Context:         contextStr,
+		VectorEmbedding: vectorEmbedding,
+		SourcePlugin:    sourcePlugin,
+		CreatedAt:       time.Now().UTC(),
+	}
+
+	if s.hub.SIPDB() != nil {
+		if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err != nil {
+			slog.Error("failed to sync context memory", "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "internal server error: sipdb not initialized", http.StatusInternalServerError)
+		return
+	}
+
+	// Respect local parity if conflict resolution is explicitly force-local
+	if r.Header.Get("X-OHC-Conflict-Resolution") == "force-local" {
+		w.WriteHeader(http.StatusConflict) // Acknowledgement of local state priority
+		writeJSON(w, map[string]string{"status": "conflict_resolved", "message": "rag sync accepted via local priority"})
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "success", "message": "rag sync accepted"})
+}
