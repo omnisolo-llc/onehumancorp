@@ -56,6 +56,7 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 	to.workerWg.Add(1)
 	go func() {
 		defer to.workerWg.Done()
+
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -275,10 +276,10 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			var taskID string
 			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
 			if err != nil {
-				// return nil, nil rather than returning error for sql.ErrNoRows
-				if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
-					return nil, nil
-				}
+					// return nil, nil rather than returning error for sql.ErrNoRows
+					if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
+						return nil, nil
+					}
 				return nil, err // Could be sql.ErrNoRows if queue is empty
 			}
 
