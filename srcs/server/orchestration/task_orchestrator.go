@@ -2,7 +2,9 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -26,6 +29,7 @@ type DefaultTaskOrchestrator struct {
 	redisClient rueidis.Client
 	hub         *CentrifugeNode
 	mesh        TeammateMesh
+	subAgentSpawner SubAgentSpawner
 	mu          sync.Mutex // For standalone mode coordination
 	workerCtx   context.Context
 	workerCancel context.CancelFunc
@@ -35,12 +39,13 @@ type DefaultTaskOrchestrator struct {
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 	to := &DefaultTaskOrchestrator{
-		db:          provider,
-		redisClient: redisClient,
-		hub:         hub,
-		mesh:        mesh,
-		workerCtx:   ctx,
-		workerCancel: cancel,
+		db:              provider,
+		redisClient:     redisClient,
+		hub:             hub,
+		mesh:            mesh,
+		subAgentSpawner: NewDefaultSubAgentSpawner(provider, hub, mesh),
+		workerCtx:       ctx,
+		workerCancel:    cancel,
 	}
 	to.StartBackgroundWorker()
 	return to
@@ -51,23 +56,94 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 	to.workerWg.Add(1)
 	go func() {
 		defer to.workerWg.Done()
-		// Capacity-managed channel for throttling
-		concurrencyLimit := 10
-		sem := make(chan struct{}, concurrencyLimit)
-
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
+
+		// Capacity-managed channel for throttling Standalone mode
+		concurrencyLimit := 10
+		sem := make(chan struct{}, concurrencyLimit)
 
 		for {
 			select {
 			case <-to.workerCtx.Done():
 				return
 			case <-ticker.C:
-				// We don't auto-claim here because this breaks the flow.
-				// This worker loop should just dispatch tasks to external agents
-				// or wait for them. Let's make it a no-op loop to pass tests
-				// while maintaining the structure as requested.
-				continue
+				// Only query for sub-agent DELEGATED tasks
+				if to.redisClient == nil {
+					to.mu.Lock()
+				}
+
+				tx, err := to.db.Begin(context.Background())
+				if err != nil {
+					if to.redisClient == nil {
+						to.mu.Unlock()
+					}
+					continue
+				}
+
+				var task models.Task
+				var query string
+
+				if to.db.IsSQLite() {
+					// Standalone Mode (SQLite)
+					selectQuery := `
+						SELECT id FROM swarm_tasks
+						WHERE status = 'READY' AND json_extract(payload, '$.priority') = 'DELEGATED'
+						ORDER BY created_at ASC
+						LIMIT 1
+					`
+					var taskID string
+					err = tx.QueryRow(context.Background(), selectQuery).Scan(&taskID)
+					if err == nil {
+						updateQuery := `
+							UPDATE swarm_tasks
+							SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+							WHERE id = $1
+							RETURNING id, mission_id, title, status, payload, created_at, updated_at
+						`
+						err = tx.QueryRow(context.Background(), updateQuery, taskID).Scan(
+							&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+						)
+					}
+				} else {
+					// Cloud Mode (PostgreSQL) FOR UPDATE SKIP LOCKED
+					query = `
+						UPDATE swarm_tasks
+						SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+						WHERE id = (
+							SELECT id FROM swarm_tasks
+							WHERE status = 'READY' AND payload->>'priority' = 'DELEGATED'
+							ORDER BY created_at ASC
+							LIMIT 1
+							FOR UPDATE SKIP LOCKED
+						)
+						RETURNING id, mission_id, title, status, payload, created_at, updated_at
+					`
+					err = tx.QueryRow(context.Background(), query).Scan(
+						&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
+					)
+				}
+
+				tx.Commit(context.Background())
+
+				if to.redisClient == nil {
+					to.mu.Unlock()
+				}
+
+				if err == nil && task.ID != "" {
+					// Sub-agent task acquired, dispatch it
+					if to.db.IsSQLite() {
+						// Throttle concurrency
+						sem <- struct{}{}
+						go func(t *models.Task) {
+							defer func() { <-sem }()
+							_ = to.subAgentSpawner.Spawn(context.Background(), t)
+						}(&task)
+					} else {
+						// Cloud mode scales automatically
+						_ = to.subAgentSpawner.Spawn(context.Background(), &task)
+					}
+				}
 			}
 		}
 	}()
@@ -199,6 +275,10 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 			var taskID string
 			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
 			if err != nil {
+				// return nil, nil rather than returning error for sql.ErrNoRows
+				if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
+					return nil, nil
+				}
 				return nil, err // Could be sql.ErrNoRows if queue is empty
 			}
 

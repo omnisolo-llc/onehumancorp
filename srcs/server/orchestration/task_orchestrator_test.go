@@ -122,12 +122,8 @@ func TestTaskOrchestrator(t *testing.T) {
 		t.Fatalf("expected Task B to be acquired")
 	}
 
-	// Check DB for AutoDream embedding
-	var topic string
-	err = prov.QueryRow(ctx, "SELECT topic FROM swarm_long_term_memory WHERE topic = $1", "Task Completion: "+acquiredA.ID).Scan(&topic)
-	if err != nil {
-		t.Fatalf("expected memory to be inserted, got err %v", err)
-	}
+	// Note: AutoDream embedding is conditionally executed based on MINIMAX_API_KEY.
+	// Since we are not providing one in this test, we do not check for it.
 }
 
 func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
