@@ -174,6 +174,10 @@ func (r *SqliteRows) Scan(dest ...any) error {
 	return r.rows.Scan(dest...)
 }
 
+func (r *SqliteRows) Columns() ([]string, error) {
+	return r.rows.Columns()
+}
+
 func (r *SqliteRows) Close() {
 	r.rows.Close()
 }
