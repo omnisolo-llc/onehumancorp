@@ -296,7 +296,7 @@ void main() {
 
       // Type and send a message
       await tester.enterText(find.byType(TextField), 'Hello World');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump(const Duration(milliseconds: 100));
 
       verify(() => mockClient.publish(any(), any())).called(1);
@@ -375,7 +375,7 @@ void main() {
         find.widgetWithText(TextField, 'Room ID'),
         'support',
       );
-      await tester.tap(find.text('Switch'));
+      await tester.tap(find.text('Switch Room'));
       await tester.pumpAndSettle();
 
       // Dialog should be closed after switching
