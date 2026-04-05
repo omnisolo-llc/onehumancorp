@@ -28,6 +28,7 @@ go_library(
         "//srcs/server/billing",
         "//srcs/server/db",
         "//srcs/server/scheduler",
+        "//srcs/server/auth",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "@com_github_centrifugal_centrifuge//:centrifuge",
