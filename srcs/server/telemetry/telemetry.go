@@ -23,34 +23,34 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 
-	tokenUsageCounter          metric.Int64Counter
-	tokenBurnRateGauge         metric.Float64Gauge
-	agentApiCallsCounter       metric.Int64Counter
-	agentApiErrorsCounter      metric.Int64Counter
-	humanInteractionsCounter   metric.Int64Counter
-	meetingEventsCounter       metric.Int64Counter
-	swarmTasksCompletedCounter metric.Int64Counter
-	swarmTaskTransitionsCounter metric.Int64Counter
-	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
-	swarmTaskProcessingLatency  metric.Float64Histogram
-	taskEnqueuedCounter metric.Int64Counter
-	taskFailedCounter metric.Int64Counter
-	cacheHitsCounter           metric.Int64Counter
-	cacheMissesCounter         metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	tokenUsageCounter                  metric.Int64Counter
+	tokenBurnRateGauge                 metric.Float64Gauge
+	agentApiCallsCounter               metric.Int64Counter
+	agentApiErrorsCounter              metric.Int64Counter
+	humanInteractionsCounter           metric.Int64Counter
+	meetingEventsCounter               metric.Int64Counter
+	swarmTasksCompletedCounter         metric.Int64Counter
+	swarmTaskTransitionsCounter        metric.Int64Counter
+	swarmTaskQueueLengthGauge          metric.Int64UpDownCounter
+	swarmTaskProcessingLatency         metric.Float64Histogram
+	taskEnqueuedCounter                metric.Int64Counter
+	taskFailedCounter                  metric.Int64Counter
+	cacheHitsCounter                   metric.Int64Counter
+	cacheMissesCounter                 metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	TeammateMeshBroadcastsCounter    metric.Int64Counter
-	TeammateMeshDirectMessagesCounter metric.Int64Counter
-	TaskQueueLengthGauge       metric.Int64UpDownCounter
-	TaskProcessingLatency      metric.Float64Histogram
+	TeammateMeshBroadcastsCounter      metric.Int64Counter
+	TeammateMeshDirectMessagesCounter  metric.Int64Counter
+	TaskQueueLengthGauge               metric.Int64UpDownCounter
+	TaskProcessingLatency              metric.Float64Histogram
 
-	SyncCompletedCount metric.Int64Counter
-	SyncFailedCount    metric.Int64Counter
-	SyncEscalationsCount metric.Int64Counter
-	SyncLatency metric.Float64Histogram
-	SyncPayloadSize metric.Int64Histogram
+	SyncCompletedCount     metric.Int64Counter
+	SyncFailedCount        metric.Int64Counter
+	SyncEscalationsCount   metric.Int64Counter
+	SyncLatency            metric.Float64Histogram
+	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
-	syncDaemonBatchSize metric.Int64Histogram
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter

@@ -304,26 +304,26 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 const numShards = 16
 
 type LocalTeammateMesh struct {
-	db                  db.Provider
-	broadcast           []chan Task
-	persist             []chan Task
-	mu                  []sync.RWMutex
-	subs                []map[chan Task]struct{}
-	coordBroadcast      []chan MeshMessage
-	coordSubs           []map[chan MeshMessage]struct{}
-	coordMu             []sync.RWMutex
+	db             db.Provider
+	broadcast      []chan Task
+	persist        []chan Task
+	mu             []sync.RWMutex
+	subs           []map[chan Task]struct{}
+	coordBroadcast []chan MeshMessage
+	coordSubs      []map[chan MeshMessage]struct{}
+	coordMu        []sync.RWMutex
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 	lm := &LocalTeammateMesh{
-		db:                  provider,
-		broadcast:           make([]chan Task, numShards),
-		persist:             make([]chan Task, numShards),
-		mu:                  make([]sync.RWMutex, numShards),
-		subs:                make([]map[chan Task]struct{}, numShards),
-		coordBroadcast:      make([]chan MeshMessage, numShards),
-		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
-		coordMu:             make([]sync.RWMutex, numShards),
+		db:             provider,
+		broadcast:      make([]chan Task, numShards),
+		persist:        make([]chan Task, numShards),
+		mu:             make([]sync.RWMutex, numShards),
+		subs:           make([]map[chan Task]struct{}, numShards),
+		coordBroadcast: make([]chan MeshMessage, numShards),
+		coordSubs:      make([]map[chan MeshMessage]struct{}, numShards),
+		coordMu:        make([]sync.RWMutex, numShards),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"

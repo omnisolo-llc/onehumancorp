@@ -570,6 +570,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
+	mux.HandleFunc("/api/auth/powersync/token", auth.RequireRole("viewer", server.authHandlers.HandlePowerSyncToken))
+	mux.HandleFunc("/api/auth/powersync/jwks", server.authHandlers.HandlePowerSyncJWKS)
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
@@ -889,7 +891,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -966,7 +967,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),

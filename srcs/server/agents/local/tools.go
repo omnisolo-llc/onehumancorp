@@ -592,9 +592,9 @@ func (t *todoTool) Definition() ToolDefinition {
 					"items": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
-							"id":      map[string]interface{}{"type": "string"},
-							"content": map[string]interface{}{"type": "string"},
-							"status":  map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed"}},
+							"id":       map[string]interface{}{"type": "string"},
+							"content":  map[string]interface{}{"type": "string"},
+							"status":   map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed"}},
 							"priority": map[string]interface{}{"type": "string", "enum": []string{"high", "medium", "low"}},
 						},
 						"required": []string{"id", "content", "status"},

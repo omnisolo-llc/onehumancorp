@@ -132,16 +132,16 @@ type anthropicSystem struct {
 }
 
 type anthropicRequest struct {
-	Model     string               `json:"model"`
-	MaxTokens int                  `json:"max_tokens"`
-	System    []anthropicSystem    `json:"system,omitempty"`
-	Messages  []anthropicMessage   `json:"messages"`
-	Tools     []anthropicToolDef   `json:"tools,omitempty"`
+	Model     string             `json:"model"`
+	MaxTokens int                `json:"max_tokens"`
+	System    []anthropicSystem  `json:"system,omitempty"`
+	Messages  []anthropicMessage `json:"messages"`
+	Tools     []anthropicToolDef `json:"tools,omitempty"`
 }
 
 type anthropicMessage struct {
-	Role    string               `json:"role"`
-	Content []anthropicContent   `json:"content"`
+	Role    string             `json:"role"`
+	Content []anthropicContent `json:"content"`
 }
 
 type anthropicContent struct {
@@ -374,10 +374,10 @@ type openAIRequest struct {
 }
 
 type openAIMessage struct {
-	Role       string            `json:"role"`
-	Content    interface{}       `json:"content"`
-	ToolCallID string            `json:"tool_call_id,omitempty"`
-	ToolCalls  []openAIToolCall  `json:"tool_calls,omitempty"`
+	Role       string           `json:"role"`
+	Content    interface{}      `json:"content"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+	ToolCalls  []openAIToolCall `json:"tool_calls,omitempty"`
 }
 
 type openAIToolCall struct {
@@ -400,8 +400,8 @@ type openAITool struct {
 
 type openAIResponse struct {
 	Choices []struct {
-		Message    openAIMessage `json:"message"`
-		FinishReason string      `json:"finish_reason"`
+		Message      openAIMessage `json:"message"`
+		FinishReason string        `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int64 `json:"prompt_tokens"`

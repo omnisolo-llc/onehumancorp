@@ -15,7 +15,8 @@ var publicPaths = []string{
 	"/healthz",
 	"/readyz",
 	"/api/auth/login",
-	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
+	"/api/auth/powersync/jwks", // PowerSync needs unauthenticated access to fetch public keys
+	"/api/v1/scale/stream",     // Manually authenticated inside handler for SSE query token bypass
 }
 
 // Middleware returns an HTTP middleware that enforces JWT authentication. Requests to public paths pass through unauthenticated. All other requests must carry a valid Bearer token in the Authorization header or an "ohc_token" cookie.

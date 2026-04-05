@@ -1,0 +1,9 @@
+# PowerSync sync rules
+# The token parameters contain the JWT claims, such as organization_id.
+bucket_definitions:
+  user_data:
+    # Example table bucket mapping. Adjust to real tables later if needed, but the prompt says to filter data like agent_missions, tenant_registry by organization_id
+    data:
+      - SELECT * FROM agent_missions WHERE organization_id = token.parameters.organization_id
+      - SELECT * FROM tenant_registry WHERE id = token.parameters.organization_id
+      - SELECT * FROM meeting_rooms WHERE organization_id = token.parameters.organization_id

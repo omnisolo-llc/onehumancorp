@@ -1,0 +1,8 @@
+timestamp: "2026-04-05T12:00:00Z"
+author: "Jules"
+type: "LEARNING"
+context: "PowerSync integration"
+content: |
+  When configuring PowerSync for Hybrid Local-to-Cloud sync, we must ensure that the JWT token endpoint (`/api/auth/powersync/token`) is protected by authentication middleware to extract the user claims securely.
+  Conversely, the JWKS endpoint (`/api/auth/powersync/jwks`) must be public (`publicPaths`) so that the PowerSync service can dynamically fetch the public keys to verify the token without credentials.
+  In a multi-pod K8s deployment, Ed25519 signing keys for JWTs cannot be generated purely in memory upon startup. We must seed the key from a deterministic environment variable (e.g., `OHC_POWERSYNC_PRIV_KEY`) to ensure all nodes sign and verify JWTs consistently.

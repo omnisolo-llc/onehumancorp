@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -286,9 +286,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if errors.Is(errQuery, sql.ErrNoRows) {
 			return nil, nil // No task available
 		}
-			if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
-				return nil, fmt.Errorf("database is locked: %w", errQuery)
-			}
+		if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
+			return nil, fmt.Errorf("database is locked: %w", errQuery)
+		}
 		return nil, fmt.Errorf("failed to find pending task: %w", errQuery)
 	}
 
@@ -306,7 +306,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			task.Dependencies = append(task.Dependencies, depID)
 		}
 	}
-
 
 	// Reconstruct Description from JSON payload
 	var payloadMap map[string]interface{}

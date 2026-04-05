@@ -22,24 +22,24 @@ type TaskOrchestrator interface {
 }
 
 type DefaultTaskOrchestrator struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode
-	mesh        TeammateMesh
-	mu          sync.Mutex // For standalone mode coordination
-	workerCtx   context.Context
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode
+	mesh         TeammateMesh
+	mu           sync.Mutex // For standalone mode coordination
+	workerCtx    context.Context
 	workerCancel context.CancelFunc
-	workerWg    sync.WaitGroup
+	workerWg     sync.WaitGroup
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 	to := &DefaultTaskOrchestrator{
-		db:          provider,
-		redisClient: redisClient,
-		hub:         hub,
-		mesh:        mesh,
-		workerCtx:   ctx,
+		db:           provider,
+		redisClient:  redisClient,
+		hub:          hub,
+		mesh:         mesh,
+		workerCtx:    ctx,
 		workerCancel: cancel,
 	}
 	to.StartBackgroundWorker()
@@ -188,27 +188,27 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	var query string
 	if to.db.IsSQLite() {
 		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
-			// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
-			// Instead, we use a two-step SELECT then UPDATE approach.
-			selectQuery := `
+		// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
+		// Instead, we use a two-step SELECT then UPDATE approach.
+		selectQuery := `
 				SELECT id FROM swarm_tasks
 				WHERE status = 'READY'
 				ORDER BY json_extract(payload, '$.priority') ASC, created_at ASC
 				LIMIT 1
 			`
-			var taskID string
-			err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
-			if err != nil {
-				return nil, err // Could be sql.ErrNoRows if queue is empty
-			}
+		var taskID string
+		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
+		if err != nil {
+			return nil, err // Could be sql.ErrNoRows if queue is empty
+		}
 
-			updateQuery := `
+		updateQuery := `
 			UPDATE swarm_tasks
 			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 				WHERE id = $2
 			RETURNING id, mission_id, title, status, payload, created_at, updated_at
 		`
-			err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+		err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
 			&task.ID, &task.MissionID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {

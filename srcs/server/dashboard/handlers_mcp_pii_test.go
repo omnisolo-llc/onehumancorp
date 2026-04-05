@@ -28,8 +28,8 @@ func TestHandleMissionsSync_PIIRedaction(t *testing.T) {
 	srv := NewServer(org, hub, nil, nil)
 
 	payload := map[string]interface{}{
-		"id": "mission-pii-1",
-		"status": "PENDING",
+		"id":      "mission-pii-1",
+		"status":  "PENDING",
 		"details": "My email is user@example.com and phone is 555-123-4567.",
 	}
 	body, _ := json.Marshal(payload)
@@ -77,14 +77,14 @@ func TestHandleHybridSyncMissions_PIIRedaction(t *testing.T) {
 
 	internalPayload := map[string]interface{}{
 		"contact": "alice@acme.com",
-		"notes": "ssn 123-45-6789",
+		"notes":   "ssn 123-45-6789",
 	}
 	internalBytes, _ := json.Marshal(internalPayload)
 
 	payloads := []map[string]interface{}{
 		{
-			"id": "mission-pii-2",
-			"status": "COMPLETED",
+			"id":      "mission-pii-2",
+			"status":  "COMPLETED",
 			"payload": string(internalBytes),
 		},
 	}

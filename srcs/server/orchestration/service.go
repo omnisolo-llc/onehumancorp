@@ -1,7 +1,6 @@
 package orchestration
 
 import (
-	"strings"
 	"bufio"
 	"bytes"
 	"context"
@@ -15,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,7 +31,6 @@ import (
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -1852,10 +1851,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action": "sync",
-			"status": payload.Status,
+			"action":   "sync",
+			"status":   payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload": payload.Payload,
+			"payload":  payload.Payload,
 		})
 	}
 

@@ -880,6 +880,10 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		// ensure memory_id is set
 		payloadData["memory_id"] = rec.id
 
+		// PowerSync Hybrid RAG Context Sync Redaction
+		// Strip heavy RAG context if syncing locally to cloud, prioritizing local state overwrite via X-OHC-Conflict-Resolution.
+		delete(payloadData, "rag_context")
+
 		sanitizedPayload, _ := json.Marshal(payloadData)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
