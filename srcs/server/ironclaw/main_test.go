@@ -278,7 +278,7 @@ func TestAnalyseFile_Unreadable(t *testing.T) {
 
 func TestPerformScan_MultipleFindingsSummary(t *testing.T) {
 	dir := t.TempDir()
-	content := "TO" + "DO: fix security\npass" + "word = \"secret\"\n"
+	content := "os.Setenv(\"AWS_SE" + "CRET\")\npass" + "word = \"secret\"\n"
 	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte(content), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestPerformScan_MultipleFindingsSummary(t *testing.T) {
 
 func TestPerformScan_ExactlyOneFinding(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "one.go"), []byte("TO"+"DO: fix security"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "one.go"), []byte("pass"+"word = \"test\""), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 	result, err := performScan(dir)

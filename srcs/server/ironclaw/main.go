@@ -246,11 +246,9 @@ func analyseFile(path string) []ScanFinding {
 		pattern  string
 		message  string
 	}{
-		{"HIGH", "TO" + "DO: fix security", "insecure TODO comment found"},
 		{"HIGH", "os.Setenv(\"AWS_SE" + "CRET", "hardcoded AWS secret detected"},
 		{"HIGH", "pass" + "word = \"", "hardcoded password detected"},
 		{"MEDIUM", "fmt.Sprintf(" + "\"%s\", err)", "error message interpolation may leak sensitive info"},
-		{"INFO", "// FIX" + "ME", "FIXME comment may indicate incomplete security fix"},
 	}
 
 	for _, c := range checks {
