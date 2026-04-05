@@ -1,8 +1,9 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 
@@ -109,10 +110,27 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    // Fetch the short-lived PowerSync JWT token from the Go backend.
+    final tokenUrl = Uri.parse('$backendUrl/api/auth/powersync/token');
+    try {
+      final response = await http.get(
+        tokenUrl,
+        headers: {'Authorization': 'Bearer ${user.token}'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return PowerSyncCredentials(
+          endpoint: backendUrl,
+          token: data['token'] ?? '',
+        );
+      }
+    } catch (e) {
+      // Graceful fallback if not available
+      print('PowerSync token fetch failed: $e');
+    }
+
+    return null;
   }
 
   @override
