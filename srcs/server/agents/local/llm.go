@@ -84,7 +84,6 @@ type ToolUseRequest struct {
 // ─── Anthropic Messages API client ───────────────────────────────────────────
 
 const defaultAnthropicModel = "claude-sonnet-4-5"
-const defaultMaxTokens = 8192
 
 type anthropicClient struct {
 	apiKey   string
@@ -177,7 +176,9 @@ type anthropicResponse struct {
 func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (*AssistantMessage, error) {
 	maxTok := req.MaxTokens
 	if maxTok <= 0 {
-		maxTok = defaultMaxTokens
+		maxTok = 2048
+	} else if maxTok > 4096 {
+		maxTok = 4096
 	}
 
 	msgs := make([]anthropicMessage, 0, len(req.Messages))
@@ -371,6 +372,7 @@ type openAIRequest struct {
 	Model    string          `json:"model"`
 	Messages []openAIMessage `json:"messages"`
 	Tools    []openAITool    `json:"tools,omitempty"`
+	MaxTokens int            `json:"max_tokens,omitempty"`
 }
 
 type openAIMessage struct {
@@ -410,6 +412,13 @@ type openAIResponse struct {
 }
 
 func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest) (*AssistantMessage, error) {
+	maxTok := req.MaxTokens
+	if maxTok <= 0 {
+		maxTok = 2048
+	} else if maxTok > 4096 {
+		maxTok = 4096
+	}
+
 	var msgs []openAIMessage
 	if req.SystemPrompt != "" {
 		msgs = append(msgs, openAIMessage{Role: "system", Content: utils.MinifyJSONString(req.SystemPrompt)})
@@ -474,7 +483,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 		tools = append(tools, ot)
 	}
 
-	body := openAIRequest{Model: c.model, Messages: msgs, Tools: tools}
+	body := openAIRequest{Model: c.model, Messages: msgs, Tools: tools, MaxTokens: maxTok}
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("openai-compat: marshal: %w", err)
