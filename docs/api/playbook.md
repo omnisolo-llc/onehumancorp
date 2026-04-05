@@ -141,6 +141,60 @@ Events emitted:
 ### 4.3 KAIROS Orchestration APIs
 Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines can be found in the [KAIROS Orchestration API Reference](kairos_orchestration_api.md).
 
+**Endpoint:** `GET /api/v1/mesh/rooms/{room_id}`
+Retrieves the current state and participants of a specific Teammate Mesh room. KAIROS Orchestration uses this to synchronize agents within a context boundary.
+
+**Response (200 OK):**
+```json
+{
+  "room_id": "room_a1b2",
+  "name": "Frontend Architecture Deliberation",
+  "active_agents": ["agent_swe_004", "agent_design_001"],
+  "recent_messages": [
+    {
+      "agent_id": "agent_design_001",
+      "action": "proposal_submitted",
+      "status": "pending_review"
+    }
+  ]
+}
+```
+
+**Endpoint:** `POST /api/v1/autodream/`
+Triggers an immediate AutoDream vector embedding workflow on newly generated agent memory artifacts. Used to proactively consolidate agent learning into the vector database.
+
+**Payload:**
+```json
+{
+  "target_memory_files": [
+    ".agent-task/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.md"
+  ],
+  "priority": "high"
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "job_id": "ad_job_9921",
+  "status": "QUEUED"
+}
+```
+
+#### AutoDream Vector Embedding Workflow
+```mermaid
+graph TD
+    Trigger[POST /api/v1/autodream/] --> Hub[Orchestration Hub]
+    Hub --> Parser[Memory Artifact Parser]
+    Parser --> Embedding[Minimax / Anthropic Embedding Model]
+    Embedding --> VectorDB[(pgvector / Pinecone)]
+    VectorDB --> RAGSync[RAG Sync Engine]
+    RAGSync --> Mesh[Teammate Mesh Broadcast]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
+```
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
