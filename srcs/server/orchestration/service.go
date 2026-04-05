@@ -19,6 +19,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -1863,6 +1864,12 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 }
 
 func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil || claims.OrganizationID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req struct {
 		MissionID   string `json:"mission_id"`
 		Title       string `json:"title"`
@@ -1874,7 +1881,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 		return
 	}
 
-	task, err := tm.CreateTask(r.Context(), req.MissionID, req.Title, req.Description, req.Priority)
+	task, err := tm.CreateTask(r.Context(), claims.OrganizationID, req.Title, req.Description, req.Priority)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1886,6 +1893,12 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 }
 
 func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil || claims.OrganizationID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	agentID := r.URL.Query().Get("agent_id")
 	if agentID == "" {
 		http.Error(w, "agent_id query parameter is required", http.StatusBadRequest)
@@ -1894,7 +1907,7 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 
 	limit := 10 // Default limit
 
-	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	tasks, err := tm.PollTasks(r.Context(), claims.OrganizationID, agentID, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1909,6 +1922,12 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 }
 
 func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil || claims.OrganizationID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) != 5 || parts[4] != "status" {
 		http.Error(w, "invalid path", http.StatusBadRequest)
@@ -1928,9 +1947,9 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	var err error
 	switch req.Status {
 	case "REVIEW":
-		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
+		err = tm.ReviewTask(r.Context(), claims.OrganizationID, taskID, req.AgentID)
 	case "COMPLETED":
-		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
+		err = tm.CompleteTask(r.Context(), claims.OrganizationID, taskID, req.AgentID)
 	default:
 		http.Error(w, "invalid status transition", http.StatusBadRequest)
 		return

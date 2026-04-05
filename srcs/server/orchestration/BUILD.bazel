@@ -27,6 +27,7 @@ go_library(
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
         "//srcs/server/db",
+        "//srcs/server/auth",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
