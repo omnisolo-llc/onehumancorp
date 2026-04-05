@@ -47,8 +47,15 @@ void main() {
     expect(find.text('Viral Loop Dashboard'), findsOneWidget);
     expect(find.text('Ref: JULES2026'), findsOneWidget);
     expect(find.text('User: jules'), findsOneWidget);
-    expect(find.text('42'), findsOneWidget);
-    expect(find.text('10'), findsOneWidget);
+    // Expect total clicks, total conversions, and conversion rate in the summary
+    expect(find.text('Total Clicks'), findsOneWidget);
+    expect(find.text('Total Conversions'), findsOneWidget);
+    expect(find.text('Global Conversion Rate'), findsOneWidget);
+    expect(find.text('23.8%'), findsOneWidget);
+
+    // Expect the original card texts (which might now be found multiple times because of the summary, so we use findsWidgets or findsAtLeastNWidgets)
+    expect(find.text('42'), findsWidgets);
+    expect(find.text('10'), findsWidgets);
     expect(find.text('Clicks'), findsOneWidget);
     expect(find.text('Conversions'), findsOneWidget);
   });
