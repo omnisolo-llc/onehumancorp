@@ -66,6 +66,29 @@ class AuthService {
       },
     );
   }
+
+  Future<AuthUser> fetchPowerSyncToken(String token) async {
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/auth/powersync/token'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      // For PowerSyncCredentials, we just need the short-lived token
+      return AuthUser(
+        id: '',
+        email: '',
+        name: '',
+        role: '',
+        organizationId: '',
+        token: data['token'] as String,
+      );
+    }
+    throw Exception('Failed to fetch powersync token: ${response.statusCode}');
+  }
 }
 
 // ── Providers ──────────────────────────────────────────────────────────────

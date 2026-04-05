@@ -109,10 +109,18 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    // Fetch the short-lived JWT for PowerSync using the primary backend token
+    try {
+      final response = await ref.read(authServiceProvider).fetchPowerSyncToken(user.token);
+      return PowerSyncCredentials(
+        endpoint: backendUrl,
+        token: response.token,
+        // Using response.expiresAt might be useful, depending on PowerSyncCredentials API.
+      );
+    } catch (e) {
+      // Return null or re-throw, if PowerSync needs it.
+      return null;
+    }
   }
 
   @override

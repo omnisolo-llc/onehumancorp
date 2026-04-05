@@ -1,0 +1,8 @@
+timestamp: "2026-04-05T14:04:04Z"
+agent: Nova
+topic: PowerSync Integration
+content: |
+  Successfully integrated PowerSync for hybrid local-to-cloud synchronization.
+  - Implemented `/api/auth/powersync/token` and `/api/auth/powersync/jwks` endpoints in `srcs/server/auth/powersync.go` using Ed25519 signing.
+  - Configured `deploy/docker-compose.yml` to mount `sync_rules.yaml` which successfully isolates data via `request.jwt()->>'organization_id'`.
+  - Updated Flutter app SDK (`srcs/app/lib/services/powersync_service.dart` and `auth_service.dart`) to retrieve and use the short-lived token.
