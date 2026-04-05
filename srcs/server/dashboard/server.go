@@ -857,6 +857,23 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "missing mTLS certificate", http.StatusForbidden)
+		return
+	}
+
+	valid := false
+	for _, uri := range r.TLS.PeerCertificates[0].URIs {
+		if uri.Scheme == "spiffe" && (uri.Host == "onehumancorp.io" && strings.HasPrefix(uri.Path, "/workload/")) {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		http.Error(w, "invalid SPIFFE SVID", http.StatusForbidden)
+		return
+	}
+
 	var req struct {
 		Channel string `json:"channel"`
 		AgentID string `json:"agent_id"`
@@ -905,6 +922,23 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "missing mTLS certificate", http.StatusForbidden)
+		return
+	}
+
+	valid := false
+	for _, uri := range r.TLS.PeerCertificates[0].URIs {
+		if uri.Scheme == "spiffe" && (uri.Host == "onehumancorp.io" && strings.HasPrefix(uri.Path, "/workload/")) {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		http.Error(w, "invalid SPIFFE SVID", http.StatusForbidden)
 		return
 	}
 
