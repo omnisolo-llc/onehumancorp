@@ -186,6 +186,56 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	}
 }
 
+func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	tm, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+
+	// Create a parent task and a dependent task
+	parentTask, _ := tm.CreateTask(ctx, "org-1", "Parent Task", "Desc", "P1")
+	dependentTask, _ := tm.CreateTask(ctx, "org-1", "Dependent Task", "Desc", "P1")
+
+	// Add dependency
+	_, err := tm.db.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", dependentTask.ID, parentTask.ID)
+	if err != nil {
+		t.Fatalf("failed to insert dependency: %v", err)
+	}
+
+	// Poll should only return the parent task because dependent is blocked
+	tasks, err := tm.PollTasks(ctx, "agent-1", 5)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+	if tasks[0].ID != parentTask.ID {
+		t.Fatalf("expected to poll parent task, got %s", tasks[0].ID)
+	}
+
+	// Complete the parent task
+	err = tm.CompleteTask(ctx, parentTask.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("failed to complete parent task: %v", err)
+	}
+
+	// Now poll should return the dependent task
+	tasks2, err := tm.PollTasks(ctx, "agent-1", 5)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(tasks2) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks2))
+	}
+	if tasks2[0].ID != dependentTask.ID {
+		t.Fatalf("expected to poll dependent task, got %s", tasks2[0].ID)
+	}
+}
+
 func TestTaskManager_CompleteTask(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
