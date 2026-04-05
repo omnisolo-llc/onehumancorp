@@ -100,7 +100,10 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	_ = tasks // Ignore if using PeekTasks, but let's implement a real check
 
 	query := `
-		SELECT id, status FROM shared_tasks WHERE status = 'PENDING'
+		SELECT st.id, st.status
+		FROM shared_tasks st
+		WHERE st.status = 'PENDING'
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 	`
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
@@ -111,27 +114,15 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	for rows.Next() {
 		var id, status string
 		if err := rows.Scan(&id, &status); err == nil {
-			// For each task, check dependencies
-			var pendingDeps int
-			checkQuery := `
-				SELECT COUNT(*)
-				FROM shared_tasks
-				WHERE id IN (SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1) AND status != 'COMPLETED'
-			`
-			err = tm.db.QueryRow(ctx, checkQuery, id).Scan(&pendingDeps)
-
-			if err == nil && pendingDeps == 0 {
-				// All dependencies met
-				if tm.hub != nil {
-					// Broadcast that task is now ready
-					go func(taskID string) {
-						tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
-							"action":   "READY",
-							"agent_id": "",
-							"status":   "PENDING",
-						})
-					}(id)
-				}
+			if tm.hub != nil {
+				// Broadcast that task is now ready
+				go func(taskID string) {
+					tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+						"action":   "READY",
+						"agent_id": "",
+						"status":   "PENDING",
+					})
+				}(id)
 			}
 		}
 	}
@@ -316,20 +307,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		}
 	}
 
-	// Check DAG dependencies
-	if len(task.Dependencies) > 0 {
-		var pendingDeps int
-		checkQuery := `
-			SELECT COUNT(*)
-			FROM shared_tasks
-			WHERE id IN (SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1) AND status != 'COMPLETED'
-		`
-		err = tx.QueryRow(ctx, checkQuery, task.ID).Scan(&pendingDeps)
-		if err != nil || pendingDeps > 0 {
-			// Dependencies not satisfied
-			return nil, nil // Cannot claim yet
-		}
-	}
 
 	// Reconstruct Description from JSON payload
 	var payloadMap map[string]interface{}
@@ -493,20 +470,22 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 
 	if tm.db.IsSQLite() {
 		query = `
-			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
-			FROM shared_tasks
-			WHERE organization_id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY priority ASC, created_at ASC
+			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			FROM shared_tasks st
+			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
 			query += fmt.Sprintf(" LIMIT %d", limit)
 		}
 	} else {
 		query = `
-			SELECT id, organization_id, title, payload, status, priority, locked_until, created_at, updated_at
-			FROM shared_tasks
-			WHERE organization_id = $1 AND status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			ORDER BY priority ASC, created_at ASC
+			SELECT st.id, st.organization_id, st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			FROM shared_tasks st
+			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
 			query += fmt.Sprintf(" LIMIT %d", limit)
@@ -629,28 +608,10 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		}
 		depRows.Close()
 
-		// Check DAG dependencies: Task is only available if all dependencies are COMPLETED
-		depsSatisfied := true
-
-		if len(task.Dependencies) > 0 {
-			var pendingDeps int
-			checkQuery := `
-				SELECT COUNT(*)
-				FROM shared_tasks
-				WHERE id IN (SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1) AND status != 'COMPLETED'
-			`
-			err = tx.QueryRow(ctx, checkQuery, task.ID).Scan(&pendingDeps)
-			if err != nil || pendingDeps > 0 {
-				depsSatisfied = false
-			}
-		}
-
-		if depsSatisfied {
-			tasks = append(tasks, task)
-			taskIDs = append(taskIDs, task.ID)
-			if len(tasks) >= limit {
-				break
-			}
+		tasks = append(tasks, task)
+		taskIDs = append(taskIDs, task.ID)
+		if len(tasks) >= limit {
+			break
 		}
 	}
 
