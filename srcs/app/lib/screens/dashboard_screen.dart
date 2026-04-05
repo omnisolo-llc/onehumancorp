@@ -339,9 +339,39 @@ class _RoleScaleCard extends StatefulWidget {
   State<_RoleScaleCard> createState() => _RoleScaleCardState();
 }
 
-class _RoleScaleCardState extends State<_RoleScaleCard> {
+class _RoleScaleCardState extends State<_RoleScaleCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
   bool _isScaling = false;
   bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   Future<void> _scaleTo(int newCount) async {
     if (_isScaling || newCount < 0) return;
@@ -382,7 +412,11 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
         message: 'Manage $formattedRole Allocation',
         child: SizedBox(
           width: 320,
-          child: MouseRegion(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: MouseRegion(
             onEnter: (_) => setState(() => _isHovered = true),
             onExit: (_) => setState(() => _isHovered = false),
             child: AnimatedScale(
@@ -518,6 +552,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                   ),
                 ),
               ),
+            ),
+            ),
             ),
           ),
         ),
