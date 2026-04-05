@@ -1,0 +1,21 @@
+# PowerSync sync rules
+# This filters data synced to clients based on JWT claims.
+
+bucket_definitions:
+  # The global bucket is for public data (if any) or data synced for all users.
+  global:
+    data:
+      - SELECT * FROM capability_plugins
+
+  # The tenant bucket partitions data by organization_id from the JWT token.
+  tenant:
+    parameters:
+      - select: token.organization_id
+        as: organization_id
+    data:
+      - SELECT * FROM agents WHERE organization_id = bucket.organization_id
+      - SELECT * FROM agent_missions
+      - SELECT * FROM swarm_memory
+      - SELECT * FROM swarm_memory_embeddings
+      - SELECT * FROM agent_status
+      - SELECT * FROM meeting_rooms

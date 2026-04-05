@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/api_service.dart';
 
 final powersyncProvider = Provider<PowerSyncService>((ref) {
   final service = PowerSyncService(ref);
@@ -109,10 +110,29 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final tokenResponse = await ref.read(apiClientProvider).get('/api/auth/powersync/token');
+      final powersyncToken = tokenResponse['token'] as String;
+
+      // In production/cloud mode, powersync is typically routed via the main ingress
+      // or provided via a specific settings flag.
+      // If none is provided, we infer it from the backend URL for local dev.
+      final settings = ref.read(clientSettingsProvider).valueOrNull;
+      var powersyncUrl = backendUrl;
+
+      if (settings?.backendUrl == 'http://localhost:18789' || settings?.backendUrl == 'http://localhost:8080') {
+        final uri = Uri.parse(backendUrl);
+        powersyncUrl = uri.replace(port: 8081).toString();
+      }
+
+      return PowerSyncCredentials(
+        endpoint: powersyncUrl,
+        token: powersyncToken,
+      );
+    } catch (e) {
+      // Fallback or error handling
+      return null;
+    }
   }
 
   @override

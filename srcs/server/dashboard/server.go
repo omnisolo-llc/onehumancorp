@@ -581,6 +581,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
+
+	// PowerSync Auth
+	mux.HandleFunc("/api/auth/powersync/jwks", server.authHandlers.HandlePowerSyncJWKS)
+	mux.HandleFunc("/api/auth/powersync/token", auth.RequireRole("viewer", server.authHandlers.HandlePowerSyncToken)) // Base role is fine, token contains org
 	// User management (admin only)
 	mux.HandleFunc("/api/users", server.authHandlers.HandleUsers)
 	mux.HandleFunc("/api/users/", server.authHandlers.HandleUser)
@@ -891,7 +895,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -968,7 +971,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
