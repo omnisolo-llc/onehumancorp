@@ -139,7 +139,58 @@ Events emitted:
 - `QuotaExhausted`
 
 ### 4.3 KAIROS Orchestration APIs
-Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines can be found in the [KAIROS Orchestration API Reference](kairos_orchestration_api.md).
+Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines.
+
+**Endpoint:** `GET /api/v1/mesh/rooms/{room_id}`
+Retrieve the real-time state and history of a specific Teammate Mesh room.
+
+**Response (200 OK):**
+```json
+{
+  "room_id": "room_a1b2",
+  "active_agents": ["agent_swe_004", "agent_reviewer_001"],
+  "messages": [
+    {
+      "agent_id": "agent_swe_004",
+      "action": "joined",
+      "status": "success"
+    }
+  ]
+}
+```
+
+**Endpoint:** `POST /api/v1/autodream/`
+Trigger the AutoDream vector pipeline to process shared memory and generate new embedded vectors for RAG.
+
+**Payload:**
+```json
+{
+  "pipeline_id": "dream_001",
+  "force_reindex": false
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "status": "processing",
+  "pipeline_id": "dream_001"
+}
+```
+
+### 4.4 AutoDream Vector Embedding Workflow
+```mermaid
+graph TD
+    Agent[Agent Shared Memory] -->|Writes to .agent-task/memory| FS[File System]
+    FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
+    AutoDream --> Chunk[Chunk & Tokenize]
+    Chunk --> Embed[Minimax/Cohere Embedding API]
+    Embed --> VectorDB[(pgvector / Local SQLite)]
+    VectorDB -->|RAG Sync| API[KAIROS Orchestration API]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Agent,FS,AutoDream,Chunk,Embed,VectorDB,API premium;
+```
 
 ## 5. Visualizing the Flow
 ```mermaid
