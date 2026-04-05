@@ -240,7 +240,7 @@ func run(now time.Time, listen listenFunc) error {
 	baseSettings := store.Get()
 
 	if chatwoot.IsEnabled() {
-		go func() {
+		telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 			c := chatwoot.NewClientFromEnv()
 			if err := chatwootSetup(c); err != nil {
 				slog.Error("chatwoot setup", "error", err)
@@ -305,35 +305,12 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for standalone metrics to cloud
 			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
 			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
-				go func() {
-					ticker := time.NewTicker(5 * time.Minute)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ctx.Done():
-							return
-						case <-ticker.C:
-							for {
-								syncedCount, err := sipdb.SyncBufferedMetrics(ctx, cloudEndpoint)
-								if err != nil {
-									slog.Warn("Failed to sync standalone metrics", "error", err)
-									break
-								}
-								if syncedCount > 0 {
-									slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
-								}
-								if syncedCount < 500 {
-									break // No more batches
-								}
-							}
-						}
-					}
-				}()
+				telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
 			if missionsEndpoint != "" {
-				go func() {
+				telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 					ticker := time.NewTicker(2 * time.Second)
 					defer ticker.Stop()
 					for {
@@ -355,7 +332,7 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
 			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
 			if contextEndpoint != "" {
-				go func() {
+				telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 					ticker := time.NewTicker(5 * time.Second)
 					defer ticker.Stop()
 					for {
@@ -376,7 +353,7 @@ func run(now time.Time, listen listenFunc) error {
 		}
 
 		// Hygiene: Prune stale missions in the agent_missions table periodically
-		go func() {
+		telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 			ticker := time.NewTicker(1 * time.Hour)
 			defer ticker.Stop()
 			for {
@@ -475,7 +452,7 @@ func run(now time.Time, listen listenFunc) error {
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Start gRPC server
-	go func() {
+	telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 		lis, err := netListen("tcp", grpcAddress)
 		if err != nil {
 			slog.Error("failed to listen for gRPC", "error", err)
@@ -534,7 +511,7 @@ func startBuiltinAgentProcess(ctx context.Context, grpcEndpoint string) {
 		return
 	}
 
-	go func() {
+	telemetry.StartSyncDaemon(context.WithoutCancel(ctx), sipdb.SyncBufferedMetrics, cloudEndpoint, 5 * time.Minute)
 		for {
 			cmd := exec.CommandContext(ctx, binaryPath)
 			cmd.Env = append(os.Environ(),

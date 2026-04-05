@@ -549,6 +549,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/v1/scale", server.handleScale)
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
+	mux.HandleFunc("/api/telemetry/sync", server.handleTelemetrySync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)

@@ -143,9 +143,9 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 	var parentTaskID string
 	var isolatedContext bool
 
-	if len(task.Payload) > 0 {
+	if len([]byte(task.Payload)) > 0 {
 		var payload map[string]interface{}
-		if err := json.Unmarshal(task.Payload, &payload); err == nil {
+		if err := json.Unmarshal([]byte(task.Payload), &payload); err == nil {
 			if v, ok := payload["sub_agent_type"].(string); ok {
 				subAgentType = v
 			}

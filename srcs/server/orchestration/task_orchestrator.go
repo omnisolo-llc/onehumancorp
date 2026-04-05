@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"database/sql"
+	"errors"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/redis/rueidis"
