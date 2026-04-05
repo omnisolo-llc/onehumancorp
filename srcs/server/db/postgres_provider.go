@@ -128,6 +128,14 @@ func (r *PgRows) Err() error {
 	return r.rows.Err()
 }
 
+func (r *PgRows) Columns() ([]string, error) {
+	var cols []string
+	for _, field := range r.rows.FieldDescriptions() {
+		cols = append(cols, string(field.Name))
+	}
+	return cols, nil
+}
+
 // PgRow implements Row using pgx.Row.
 type PgRow struct {
 	row pgx.Row

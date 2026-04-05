@@ -182,6 +182,10 @@ func (r *SqliteRows) Err() error {
 	return r.rows.Err()
 }
 
+func (r *SqliteRows) Columns() ([]string, error) {
+	return r.rows.Columns()
+}
+
 // SqliteRow implements Row using sql.Row.
 type SqliteRow struct {
 	row *sql.Row

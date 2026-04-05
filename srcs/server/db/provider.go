@@ -63,6 +63,7 @@ type Rows interface {
 	Scan(dest ...any) error
 	Close()
 	Err() error
+	Columns() ([]string, error)
 }
 
 // Row abstracts a single row returned from a query.
