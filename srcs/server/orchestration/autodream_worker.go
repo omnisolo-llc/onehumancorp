@@ -32,6 +32,9 @@ type MemoryFile struct {
 
 // ProcessMemories parses memory files and stores them as vectorized truth.
 func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
+	// First process COMPLETED tasks
+	w.processCompletedTasks(ctx)
+
 	matches, err := filepath.Glob(".agent-task/memory/*.yml")
 	if err != nil {
 		return fmt.Errorf("failed to glob memory files: %w", err)
@@ -134,4 +137,102 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (w *AutoDreamWorker) processCompletedTasks(ctx context.Context) {
+	// Fetch COMPLETED tasks that haven't been embedded yet (we can check by a status flag or joining with autodream_memories, but here we just select COMPLETED tasks not in autodream_memories)
+	query := `
+		SELECT id, description, payload
+		FROM shared_tasks
+		WHERE status IN ('COMPLETED', 'DONE')
+		  AND CAST(id AS TEXT) NOT IN (SELECT source_mission_id FROM autodream_memories)
+		LIMIT 100
+	`
+
+	rows, err := w.pool.Query(ctx, query)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch COMPLETED tasks", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	var client MinimaxClient
+	if minimaxKey != "" {
+		client = NewMinimaxClient(minimaxKey)
+	}
+
+	type Task struct {
+		ID          string
+		Description string
+		Payload     string
+	}
+	var tasks []Task
+
+	for rows.Next() {
+		var t Task
+		if err := rows.Scan(&t.ID, &t.Description, &t.Payload); err == nil {
+			tasks = append(tasks, t)
+		}
+	}
+	rows.Close()
+
+	for _, t := range tasks {
+		contentToEmbed := t.Description
+		if contentToEmbed == "" {
+			contentToEmbed = "Task " + t.ID
+		}
+		if t.Payload != "" && t.Payload != "{}" {
+			contentToEmbed += " - Payload: " + t.Payload
+		}
+
+		embedding := make([]float32, 1536)
+		if client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, err := client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			cancel()
+			if err == nil && len(resp) == 1536 {
+				embedding = resp
+			} else {
+				slog.Warn("AutoDream: failed to embed with Minimax for task", "error", err)
+			}
+		}
+
+		tx, err := w.pool.Begin(ctx)
+		if err != nil {
+			continue
+		}
+
+		if !w.pool.IsSQLite() {
+			_, lockErr := tx.Exec(ctx, "SELECT 1 FROM shared_tasks WHERE id = $1 AND status IN ('COMPLETED', 'DONE') FOR UPDATE SKIP LOCKED", t.ID)
+			if lockErr != nil {
+				tx.Rollback(ctx)
+				continue
+			}
+		}
+
+		memID := uuid.New().String()
+		embStr := formatFloat32SliceForVector(embedding)
+
+		var insertQuery string
+		var args []interface{}
+		if w.pool.IsSQLite() {
+			insertQuery = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
+		} else {
+			insertQuery = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES ($1, $2, $3::vector, $4, CURRENT_TIMESTAMP)`
+		}
+		args = []interface{}{memID, contentToEmbed, embStr, t.ID}
+
+		_, err = tx.Exec(ctx, insertQuery, args...)
+		if err != nil {
+			tx.Rollback(ctx)
+			continue
+		}
+
+		if err := tx.Commit(ctx); err == nil {
+			slog.Info("AutoDream: processed completed task", "task_id", t.ID)
+		} else {
+			slog.Error("AutoDream: failed to commit tx for task", "error", err)
+		}
+	}
 }
