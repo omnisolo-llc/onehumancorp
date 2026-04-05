@@ -338,22 +338,24 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	// Update task status to IN_PROGRESS
+	var updatedID string
 	updateQuery := `
 		UPDATE shared_tasks
 		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
+		RETURNING id
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, agentID, task.ID, claims.OrganizationID)
+
+	err = tx.QueryRow(ctx, updateQuery, agentID, task.ID, claims.OrganizationID).Scan(&updatedID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Task was likely claimed by another worker concurrently.
+			return nil, nil
+		}
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return nil, fmt.Errorf("database is locked: %w", err)
 		}
 		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		// Task was likely claimed by another worker concurrently.
-		return nil, nil
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -391,17 +393,19 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		UPDATE shared_tasks
 		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status = 'IN_PROGRESS'
+		RETURNING id
 	`
-	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID, claims.OrganizationID)
+	var updatedID string
+	var err error
+	err = tm.db.QueryRow(ctx, query, taskID, agentID, claims.OrganizationID).Scan(&updatedID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("task not found, not assigned to agent, or not in progress")
+		}
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
 		}
 		return fmt.Errorf("failed to move task to review: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return errors.New("task not found, not assigned to agent, or not in progress")
 	}
 
 	var orgID string
@@ -444,17 +448,18 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		UPDATE shared_tasks
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status IN ('IN_PROGRESS', 'REVIEW')
+		RETURNING id
 	`
-	rowsAffected, err := tm.db.Exec(ctx, query, taskID, agentID, claims.OrganizationID)
+	var updatedID string
+	err = tm.db.QueryRow(ctx, query, taskID, agentID, claims.OrganizationID).Scan(&updatedID) // Use = here because err was declared above
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("task not found or not assigned to agent")
+		}
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
 		}
 		return fmt.Errorf("failed to complete task: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return errors.New("task not found or not assigned to agent")
 	}
 
 	// Broadcast task completion
@@ -656,24 +661,27 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	var claimedTasks []*SharedTask
 
 	for _, task := range tasks {
-		rowsAffected, err := tx.Exec(ctx, `
+		var updatedID string
+		err := tx.QueryRow(ctx, `
 			UPDATE shared_tasks
 			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
-			`, agentID, task.ID, claims.OrganizationID)
+			WHERE id = $2 AND organization_id = $3 AND status = 'PENDING'
+			RETURNING id
+		`, agentID, task.ID, claims.OrganizationID).Scan(&updatedID)
 
 		if err != nil {
-				if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
-					return nil, fmt.Errorf("database is locked: %w", err)
-				}
+			if errors.Is(err, sql.ErrNoRows) {
+				continue // Task was likely claimed by another worker concurrently.
+			}
+			if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
+				return nil, fmt.Errorf("database is locked: %w", err)
+			}
 			return nil, fmt.Errorf("failed to update task %s: %w", task.ID, err)
 		}
 
-		if rowsAffected > 0 {
-			task.Status = "IN_PROGRESS"
-			task.AssignedAgentID = agentID
-			claimedTasks = append(claimedTasks, task)
-		}
+		task.Status = "IN_PROGRESS"
+		task.AssignedAgentID = agentID
+		claimedTasks = append(claimedTasks, task)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
