@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/api_service.dart';
 
 final powersyncProvider = Provider<PowerSyncService>((ref) {
   final service = PowerSyncService(ref);
@@ -109,10 +110,20 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    try {
+      final response = await ref.read(apiServiceProvider).get('/api/auth/powersync/token');
+      if (response != null && response.containsKey('token')) {
+        return PowerSyncCredentials(
+          endpoint: response['powerSyncUrl'] ?? 'http://localhost:8081',
+          token: response['token'],
+        );
+      }
+    } catch (e) {
+      // Fallback or handle error
+      print('Failed to fetch powersync token: $e');
+    }
+
+    return null;
   }
 
   @override

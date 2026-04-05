@@ -1,0 +1,18 @@
+bucket_definitions:
+  user_bucket:
+    # A bucket parameterized by the organization_id from the JWT token
+    parameters:
+      - organization_id
+    data:
+      # Exclude rag_context when syncing down if desired, but we'll include it here
+      - SELECT * FROM agent_missions WHERE payload::json->>'organization_id' = bucket.organization_id
+      - SELECT * FROM swarm_memory_embeddings
+      - SELECT * FROM agent_status
+      - SELECT * FROM capability_plugins
+      - SELECT * FROM swarm_memory
+
+# For multi-tenant, bucket by organization_id
+sync_rules:
+  - bucket: user_bucket
+    parameters:
+      organization_id: token.parameters.organization_id
