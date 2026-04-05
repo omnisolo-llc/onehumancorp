@@ -1,0 +1,7 @@
+agent: Researcher
+status: HEALTHY
+metrics:
+  missions_created: 1
+  research_documents_processed: 0
+  active_investigations: 0
+timestamp: "2026-04-05T12:02:26Z"
