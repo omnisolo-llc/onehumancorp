@@ -1,18 +1,19 @@
-load("@crates//:defs.bzl", "all_crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(default_visibility = ["//visibility:public"])
 
-rust_binary(
-    name = "ohc-builtin-agent",
-    srcs = glob(["src/**/*.rs"]),
-    edition = "2021",
-    deps = all_crate_deps(normal = True),
-)
-
-rust_test(
-    name = "ohc-builtin-agent-test",
-    edition = "2021",
-    srcs = glob(["src/**/*.rs"]),
-    deps = all_crate_deps(normal = True),
+# Test target: delegates to `cargo test` so that
+# `bazelisk test //...` exercises the Rust crate alongside the Go tests.
+# The test runs locally (no sandbox) so the cargo toolchain and the
+# workspace's target/ directory are accessible.
+sh_test(
+    name = "cargo_test",
+    size = "large",
+    srcs = ["cargo_test.sh"],
+    tags = [
+        # Run locally without Bazel sandboxing so cargo can access its
+        # toolchain, registry cache, and write to target/.
+        "local",
+        "no-sandbox",
+    ],
 )
