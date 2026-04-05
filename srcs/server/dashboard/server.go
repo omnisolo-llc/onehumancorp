@@ -548,6 +548,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 5 – Autonomous SRE / Incident Management
 	mux.HandleFunc("/api/v1/scale", server.handleScale)
 	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
+	mux.HandleFunc("/api/v1/stream", server.handleStream)
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
@@ -862,6 +863,12 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	telemetry.RecordMeshBroadcastTotal(r.Context(), mode)
 
 	// Enforce mTLS checks
 	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
@@ -1786,4 +1793,39 @@ type pipelineCreateRequest struct {
 type pipelinePromoteRequest struct {
 	PipelineID string `json:"pipelineId"`
 	ApprovedBy string `json:"approvedBy"`
+}
+
+// handleStream implements a Server-Sent Events (SSE) endpoint to stream real-time orchestration events.
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	// Flush headers immediately.
+	flusher.Flush()
+
+	ctx := r.Context()
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	// Simple loop to send a ping or mock events.
+	// In a real implementation, you would subscribe to an event broker here.
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Send heartbeat/keep-alive ping
+			_, err := io.WriteString(w, "event: ping\ndata: {}\n\n")
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }
