@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:ohc_app/services/auth_service.dart';
+import 'dart:math';
+import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -168,14 +171,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 // ── Widgets ────────────────────────────────────────────────────────────────
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends ConsumerWidget {
   final CentrifugeMessage message;
   final bool isMe;
 
   const _MessageBubble({required this.message, required this.isMe});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -199,11 +202,63 @@ class _MessageBubble extends StatelessWidget {
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    message.authorName,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () async {
+                      try {
+                        final user = ref.read(authStateProvider).valueOrNull;
+                        final token = "xYz8vQ_share_output_${message.id.substring(0, min(8, message.id.length))}";
+                        await ref.read(apiServiceProvider)!.createReferral(
+                          user?.name ?? "anonymous",
+                          token,
+                        );
+                        final link = "https://cloud.ohc.io/invite?token=$token";
+                        await Clipboard.setData(ClipboardData(text: link));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Cloud-Bridge link copied: $link',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error generating link: $e'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Icon(
+                        Icons.share,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             Text(message.body),
           ],
