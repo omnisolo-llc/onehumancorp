@@ -580,7 +580,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
 	mux.HandleFunc("/api/auth/powersync/jwks", server.authHandlers.HandlePowerSyncJWKS)
-	mux.HandleFunc("/api/auth/powersync/token", auth.RequireAnyRole(server.authHandlers.HandlePowerSyncToken))
+	mux.HandleFunc("/api/auth/powersync/token", server.authHandlers.HandlePowerSyncToken)
 	// User management (admin only)
 	mux.HandleFunc("/api/users", server.authHandlers.HandleUsers)
 	mux.HandleFunc("/api/users/", server.authHandlers.HandleUser)
