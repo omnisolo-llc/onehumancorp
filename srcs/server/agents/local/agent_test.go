@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/agents/local"
 )
 
@@ -235,6 +236,10 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 }
 
 // ─── Hub interface tests ──────────────────────────────────────────────────────
+
+func (f *fakeHub) CheckHealth(ctx context.Context) (orchestration.HybridHealthProbe, error) {
+	return orchestration.HybridHealthProbe{Status: "healthy", Mode: "standalone"}, nil
+}
 
 type fakeHub struct {
 	mu       sync.Mutex

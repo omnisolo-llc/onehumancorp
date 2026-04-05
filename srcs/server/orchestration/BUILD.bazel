@@ -21,6 +21,7 @@ go_library(
         "sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
+        "health.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -73,6 +74,7 @@ go_test(
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
+        "health_test.go",
     ],
     embed = [":orchestration"],
     deps = [
