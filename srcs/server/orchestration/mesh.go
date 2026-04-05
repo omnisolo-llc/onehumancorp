@@ -217,13 +217,33 @@ func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 	return &RedisTeammateMesh{client: c}, nil
 }
 
+func withRetry(ctx context.Context, maxRetries int, fn func() error) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(1<<i) * 50 * time.Millisecond):
+			// Exponential backoff: 50ms, 100ms, 200ms...
+		}
+	}
+	return err
+}
+
 func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
 	data, err := json.Marshal(task)
 	if err != nil {
 		return err
 	}
 	cmd := rm.client.B().Publish().Channel("mesh:tasks").Message(string(data)).Build()
-	return rm.client.Do(ctx, cmd).Error()
+	return withRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
 }
 
 func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
@@ -254,7 +274,9 @@ func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 		return err
 	}
 	cmd := rm.client.B().Publish().Channel("mesh:coordination").Message(string(data)).Build()
-	return rm.client.Do(ctx, cmd).Error()
+	return withRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
 }
 
 func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
@@ -352,17 +374,30 @@ func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 	shardIdx := lm.getShard(task.TaskID)
 
 	// Offload persistence to worker threads within the specific shard
-	select {
-	case lm.persist[shardIdx] <- task:
-	default:
-		slog.Warn("LocalTeammateMesh persist channel full, dropping persistence for task", "taskID", task.TaskID)
+	// Use backoff retry for persistence channel
+	err := withRetry(ctx, 3, func() error {
+		select {
+		case lm.persist[shardIdx] <- task:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh persist channel full")
+		}
+	})
+	if err != nil {
+		slog.Warn("LocalTeammateMesh persist channel full, dropping persistence for task after retries", "taskID", task.TaskID)
 	}
 
 	// Broadcast locally to the specific shard
-	select {
-	case lm.broadcast[shardIdx] <- task:
-	default:
-	}
+	// Use backoff retry for broadcast channel
+	_ = withRetry(ctx, 3, func() error {
+		select {
+		case lm.broadcast[shardIdx] <- task:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh broadcast channel full")
+		}
+	})
+
 	return nil
 }
 
@@ -406,10 +441,19 @@ func (lm *LocalTeammateMesh) run(shardIdx int) {
 
 func (lm *LocalTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	shardIdx := lm.getShard(msg.AgentID)
-	select {
-	case lm.coordBroadcast[shardIdx] <- msg:
-	default:
-		slog.Warn("LocalTeammateMesh coord broadcast channel full, dropping message")
+
+	// Use backoff retry for coord broadcast channel
+	err := withRetry(ctx, 3, func() error {
+		select {
+		case lm.coordBroadcast[shardIdx] <- msg:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh coord broadcast channel full")
+		}
+	})
+
+	if err != nil {
+		slog.Warn("LocalTeammateMesh coord broadcast channel full, dropping message after retries")
 	}
 	return nil
 }
