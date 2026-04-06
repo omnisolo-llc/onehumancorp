@@ -256,6 +256,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		err := tm.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
+				telemetry.RecordDistributedLockContention(ctx, "tasks")
 				return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
@@ -288,6 +289,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 				return nil, nil // No task available or blocked
 			}
 			if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
+				telemetry.RecordDistributedLockContention(ctx, "tasks_sqlite")
 				return nil, fmt.Errorf("database is locked: %w", err)
 			}
 			return nil, fmt.Errorf("failed to check pending task: %w", err)
@@ -327,6 +329,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			return nil, nil // No task available or locked
 		}
 		if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
+			telemetry.RecordDistributedLockContention(ctx, "tasks_sqlite")
 			return nil, fmt.Errorf("database is locked: %w", errQuery)
 		}
 		return nil, fmt.Errorf("failed to claim pending task: %w", errQuery)

@@ -382,6 +382,10 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordDistributedLockContention", func(t *testing.T) {
+		RecordDistributedLockContention(ctx, "tasks_test")
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -450,6 +454,10 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordDistributedLockContention Uninitialized", func(t *testing.T) {
+		RecordDistributedLockContention(ctx, "tasks_test")
 	})
 }
 

@@ -35,6 +35,7 @@ var (
 	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
 	swarmTaskProcessingLatency  metric.Float64Histogram
 	taskEnqueuedCounter metric.Int64Counter
+	lockContentionCounter metric.Int64Counter
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
@@ -165,6 +166,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	lockContentionCounter, err = m.Int64Counter(
+		"ohc_distributed_lock_contention_total",
+		metric.WithDescription("Total number of times a distributed lock could not be acquired due to contention"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -887,6 +896,19 @@ func RecordTaskEnqueued(ctx context.Context, taskID string) {
 	}
 	taskEnqueuedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("task_id", taskID),
+	))
+}
+
+// RecordDistributedLockContention increments the counter for lock contention events.
+func RecordDistributedLockContention(ctx context.Context, resourceType string) {
+	if lockContentionCounter == nil {
+		if BufferMetricFunc != nil {
+			BufferMetricFunc(ctx, "distributed_lock_contention_"+resourceType, "1")
+		}
+		return
+	}
+	lockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("resource_type", resourceType),
 	))
 }
 
