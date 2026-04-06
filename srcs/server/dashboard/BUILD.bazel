@@ -14,6 +14,7 @@ go_library(
         "handlers_scheduler.go",
         "handlers_growth.go",
         "handlers_wizard.go",
+        "handlers_telemetry.go",
         "seeder.go",
         "server.go",
         "tenant.go",

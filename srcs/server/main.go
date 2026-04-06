@@ -303,31 +303,11 @@ func run(now time.Time, listen listenFunc) error {
 			}
 
 			// Background sync for standalone metrics to cloud
-			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
-			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
-				go func() {
-					ticker := time.NewTicker(5 * time.Minute)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ctx.Done():
-							return
-						case <-ticker.C:
-							for {
-								syncedCount, err := sipdb.SyncBufferedMetrics(ctx, cloudEndpoint)
-								if err != nil {
-									slog.Warn("Failed to sync standalone metrics", "error", err)
-									break
-								}
-								if syncedCount > 0 {
-									slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
-								}
-								if syncedCount < 500 {
-									break // No more batches
-								}
-							}
-						}
-					}
+			telemetrySyncCloudAPI := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
+			if telemetrySyncCloudAPI != "" {
+				slog.Info("starting standalone metrics sync daemon", "endpoint", telemetrySyncCloudAPI)
+				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, telemetrySyncCloudAPI, 1*time.Minute)
+			}
 				}()
 			}
 			// Background sync for standalone missions to cloud
