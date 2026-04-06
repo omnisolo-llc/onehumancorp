@@ -39,12 +39,13 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode // For Teammate Mesh broadcast
-	stopChan    chan struct{}
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode // For Teammate Mesh broadcast
+	stopChan     chan struct{}
 	stateMachine *statemachine.StateMachine
-	taskQueue   queue.TaskQueue
+	taskQueue    queue.TaskQueue
+	meshTransport MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.

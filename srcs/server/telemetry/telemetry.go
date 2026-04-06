@@ -24,6 +24,7 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
+	MeshMessageThroughputCounter metric.Int64Counter
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -166,6 +167,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshMessageThroughputCounter, err = m.Int64Counter(
+		"ohc_mesh_message_throughput",
+		metric.WithDescription("Total number of messages processed by the mesh"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -762,6 +771,16 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 		return
 	}
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordMeshMessageThroughput increments the global counter for mesh message throughput.
+func RecordMeshMessageThroughput(ctx context.Context, operation string) {
+	if MeshMessageThroughputCounter == nil {
+		return
+	}
+	MeshMessageThroughputCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
 }
