@@ -236,6 +236,8 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
 			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
+			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+hnsw[^;]*;`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_consolidated_memory_embedding\s+ON\s+consolidated_memory\s+USING\s+hnsw\s*\([^;]+\);`).ReplaceAllString(sqlStr, "")
 			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
