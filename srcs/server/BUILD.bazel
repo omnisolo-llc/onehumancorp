@@ -19,6 +19,7 @@ go_library(
         "//srcs/server/sync",
         "//srcs/server/telemetry",
         "@org_golang_google_grpc//:grpc",
+        "@com_github_redis_rueidis//:rueidis",
     ],
 )
 
