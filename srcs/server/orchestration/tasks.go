@@ -15,6 +15,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/redis/rueidis"
 )
 
@@ -40,6 +41,7 @@ type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
+	queue       queue.TaskQueue
 	stopChan    chan struct{}
 }
 
@@ -58,12 +60,47 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 				c, err := rueidis.NewClient(opts)
 				if err == nil {
 					tm.redisClient = c
+					tm.queue = queue.NewRedisTaskQueue(c)
 				}
 			}
 		}
 	}
+
+	if tm.queue == nil {
+	    tm.queue = queue.NewSQLiteTaskQueue(provider)
+	}
+
 	tm.stopChan = make(chan struct{})
 	return tm
+}
+
+// DelegateSubTask enqueues a sub-agent task into the TaskQueue.
+func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID string, role string, payload map[string]interface{}) (string, error) {
+    if tm.queue == nil {
+        return "", errors.New("task queue is not initialized")
+    }
+
+    payloadBytes, err := json.Marshal(payload)
+    if err != nil {
+        return "", err
+    }
+
+    job := &queue.Job{
+        ID:           generateID(),
+        ParentTaskID: parentTaskID,
+        AgentRole:    role,
+        Payload:      string(payloadBytes),
+        Status:       "QUEUED",
+        MaxAttempts:  3,
+        RunAfter:     time.Now(),
+    }
+
+    err = tm.queue.Enqueue(ctx, job)
+    if err != nil {
+        return "", err
+    }
+
+    return job.ID, nil
 }
 
 // StartWorkerLoop periodically checks for satisfied PENDING tasks and ensures they are broadcasted
