@@ -100,4 +100,6 @@ sequenceDiagram
 
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
+*For a detailed look at the internal orchestration mechanisms, see the [KAIROS Architecture Walkthrough](kairos_architecture.md).*
+
 </div>
