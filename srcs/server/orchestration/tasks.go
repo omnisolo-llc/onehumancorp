@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -189,11 +189,23 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	task.Priority = priority
 
 	for _, dep := range dependencies {
-		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
-		if err != nil {
-			return nil, fmt.Errorf("failed to insert dependency: %w", err)
-		}
 		task.Dependencies = append(task.Dependencies, dep)
+	}
+
+	// Compress and save JSON dependencies array
+	if len(task.Dependencies) > 0 {
+		depBytes, err := json.Marshal(task.Dependencies)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal dependencies: %w", err)
+		}
+		compressedDeps, err := compressJSON(depBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compress dependencies: %w", err)
+		}
+		_, err = tx.Exec(ctx, "UPDATE shared_tasks SET dependencies = $1 WHERE id = $2", compressedDeps, task.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update dependencies: %w", err)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -301,18 +313,17 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to claim pending task: %w", errQuery)
 	}
 
-	// Fetch dependencies from task_dependencies table
-	depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
-	depRows, err := tx.Query(ctx, depQuery, task.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get dependencies: %w", err)
-	}
-	defer depRows.Close()
-
-	for depRows.Next() {
-		var depID string
-		if err := depRows.Scan(&depID); err == nil {
-			task.Dependencies = append(task.Dependencies, depID)
+	// Fetch dependencies from shared_tasks (compressed)
+	var depsJSON sql.NullString
+	depQuery := `SELECT dependencies FROM shared_tasks WHERE id = $1`
+	errDep := tx.QueryRow(ctx, depQuery, task.ID).Scan(&depsJSON)
+	if errDep == nil && depsJSON.Valid && depsJSON.String != "" && depsJSON.String != "[]" {
+		decompressedDeps, err := decompressJSON([]byte(depsJSON.String))
+		if err == nil {
+			var deps []string
+			if err := json.Unmarshal(decompressedDeps, &deps); err == nil {
+				task.Dependencies = append(task.Dependencies, deps...)
+			}
 		}
 	}
 
@@ -587,20 +598,19 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	for _, task := range claimedTasks {
-		// Fetch dependencies from task_dependencies table
-		depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
-		depRows, err := tx.Query(ctx, depQuery, task.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get dependencies: %w", err)
-		}
-
-		for depRows.Next() {
-			var depID string
-			if err := depRows.Scan(&depID); err == nil {
-				task.Dependencies = append(task.Dependencies, depID)
+		// Fetch dependencies from shared_tasks (compressed)
+		var depsJSON sql.NullString
+		depQuery := `SELECT dependencies FROM shared_tasks WHERE id = $1`
+		errDep := tx.QueryRow(ctx, depQuery, task.ID).Scan(&depsJSON)
+		if errDep == nil && depsJSON.Valid && depsJSON.String != "" && depsJSON.String != "[]" {
+			decompressedDeps, err := decompressJSON([]byte(depsJSON.String))
+			if err == nil {
+				var deps []string
+				if err := json.Unmarshal(decompressedDeps, &deps); err == nil {
+					task.Dependencies = append(task.Dependencies, deps...)
+				}
 			}
 		}
-		depRows.Close()
 	}
 
 	if len(claimedTasks) == 0 {

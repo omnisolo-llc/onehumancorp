@@ -16,60 +16,6 @@ import (
 	"github.com/redis/rueidis"
 )
 
-// compressUltraPlanData compresses the given byte slice using gzip and encodes it to base64 string.
-func compressUltraPlanData(data []byte) (string, error) {
-	var b bytes.Buffer
-	w := gzip.NewWriter(&b)
-	if _, err := w.Write(data); err != nil {
-		return "", err
-	}
-	if err := w.Close(); err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
-}
-
-// decompressUltraPlanData decodes the base64 string and decompresses the underlying byte slice using gzip.
-func decompressUltraPlanData(base64Str string) ([]byte, error) {
-	decodedBytes, err := base64.StdEncoding.DecodeString(base64Str)
-	if err != nil {
-		return nil, err
-	}
-	r, err := gzip.NewReader(bytes.NewReader(decodedBytes))
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	return io.ReadAll(r)
-}
-
-// compressStateMachine helper to compress the state machine json payload
-func compressStateMachine(stateMachineJSON []byte) ([]byte, error) {
-	compressedBase64, err := compressUltraPlanData(stateMachineJSON)
-	if err != nil {
-		return nil, err
-	}
-	wrapper := map[string]string{
-		"_compressed_base64": compressedBase64,
-	}
-	return json.Marshal(wrapper)
-}
-
-// decompressStateMachine helper to optionally decompress the state machine json payload
-func decompressStateMachine(stateMachineJSON []byte) ([]byte, error) {
-	var wrapper struct {
-		CompressedBase64 string `json:"_compressed_base64"`
-	}
-	if err := json.Unmarshal(stateMachineJSON, &wrapper); err == nil && wrapper.CompressedBase64 != "" {
-		decompressedBytes, err := decompressUltraPlanData(wrapper.CompressedBase64)
-		if err != nil {
-			return nil, err
-		}
-		return decompressedBytes, nil
-	}
-	return stateMachineJSON, nil
-}
-
 // UltraPlan represents a deep-deliberation multi-step plan.
 type UltraPlan struct {
 	ID           string
@@ -109,7 +55,7 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 		return nil, fmt.Errorf("failed to marshal state_machine: %w", err)
 	}
 
-	compressedStateMachineJSON, err := compressStateMachine(stateMachineJSON)
+	compressedStateMachineJSON, err := compressJSON(stateMachineJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compress state_machine: %w", err)
 	}
@@ -141,7 +87,7 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 		return nil, fmt.Errorf("failed to create ultra plan: %w", err)
 	}
 
-	stateMachineJSON, err = decompressStateMachine(compressedStateMachineJSON)
+	stateMachineJSON, err = decompressJSON(compressedStateMachineJSON)
 	if err == nil {
 		_ = json.Unmarshal(stateMachineJSON, &plan.StateMachine)
 	}
@@ -243,7 +189,7 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 		return fmt.Errorf("fetch ultra plan: %w", err)
 	}
 
-	stateMachineJSON, err = decompressStateMachine(stateMachineJSON)
+	stateMachineJSON, err = decompressJSON(stateMachineJSON)
 	if err != nil {
 		return fmt.Errorf("decompress state machine: %w", err)
 	}
@@ -268,7 +214,7 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 		return fmt.Errorf("marshal state machine: %w", err)
 	}
 
-	compressedUpdatedJSON, err := compressStateMachine(updatedJSON)
+	compressedUpdatedJSON, err := compressJSON(updatedJSON)
 	if err != nil {
 		return fmt.Errorf("compress state machine: %w", err)
 	}
@@ -318,7 +264,7 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		return fmt.Errorf("failed to marshal state_machine: %w", err)
 	}
 
-	compressedStateMachineJSON, err := compressStateMachine(stateMachineJSON)
+	compressedStateMachineJSON, err := compressJSON(stateMachineJSON)
 	if err != nil {
 		return fmt.Errorf("failed to compress state_machine: %w", err)
 	}
@@ -412,7 +358,7 @@ func (m *UltraPlanManager) GetUltraPlan(ctx context.Context, planID string) (*Ul
 		return nil, fmt.Errorf("failed to fetch ultra plan: %w", err)
 	}
 
-	stateMachineJSON, err = decompressStateMachine(stateMachineJSON)
+	stateMachineJSON, err = decompressJSON(stateMachineJSON)
 	if err == nil {
 		_ = json.Unmarshal(stateMachineJSON, &plan.StateMachine)
 	}

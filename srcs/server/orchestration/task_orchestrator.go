@@ -201,13 +201,19 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 		return nil, fmt.Errorf("failed to insert task: %w", err)
 	}
 
-	// Insert dependencies
+	// Compress and save JSON dependencies array
 	if len(dependsOn) > 0 {
-		for _, depID := range dependsOn {
-			_, err = tx.Exec(ctx, "INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, depID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to insert dependency: %w", err)
-			}
+		depBytes, err := json.Marshal(dependsOn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal dependencies: %w", err)
+		}
+		compressedDeps, err := compressJSON(depBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compress dependencies: %w", err)
+		}
+		_, err = tx.Exec(ctx, "UPDATE swarm_tasks SET dependencies = $1 WHERE id = $2", compressedDeps, task.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save compressed dependencies: %w", err)
 		}
 	}
 

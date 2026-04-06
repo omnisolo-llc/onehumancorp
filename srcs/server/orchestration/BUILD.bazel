@@ -10,6 +10,7 @@ go_library(
         "autodream_worker.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",
+        "compression.go",
         "delegation.go",
         "hub.go",
         "postgres_hub.go",
