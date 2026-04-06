@@ -1,0 +1,26 @@
+--- srcs/server/dashboard/server.go
++++ srcs/server/dashboard/server.go
+@@ -60,6 +60,7 @@
+	experiments           []LandingPageExperiment
+	referrals             []Referral
+	downloads             []Download
++	invites               []TeamInvite
+	rateLimiter           *rateLimiter
+ }
+
+@@ -456,6 +457,7 @@
+		experiments:           []LandingPageExperiment{},
+		referrals:             []Referral{},
+		downloads:             []Download{},
++		invites:               []TeamInvite{},
+		rateLimiter:           newRateLimiter(rate.Limit(reqPerSec), burst),
+	}
+
+@@ -574,6 +576,7 @@
+	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
+	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
+	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
++	mux.HandleFunc("/api/growth/invites", server.handleTeamInvites)
+
+	// Start the background ticker to enforce rate limits on missing assets
+	go server.rateLimiter.cleanup()

@@ -62,6 +62,62 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 	}
 }
 
+func TestHandleTeamInvites(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"organizationId": "org-1", "invitedBy": "user-1", "role": "admin"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/invites", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleTeamInvites(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created TeamInvite
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.OrganizationID != "org-1" {
+		t.Errorf("expected organizationId 'org-1', got '%s'", created.OrganizationID)
+	}
+	if created.InvitedBy != "user-1" {
+		t.Errorf("expected invitedBy 'user-1', got '%s'", created.InvitedBy)
+	}
+	if created.Role != "admin" {
+		t.Errorf("expected role 'admin', got '%s'", created.Role)
+	}
+	if created.Status != "PENDING" {
+		t.Errorf("expected status 'PENDING', got '%s'", created.Status)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/invites", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleTeamInvites(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []TeamInvite
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 invite, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
 func TestHandleReferrals(t *testing.T) {
 	s := &Server{}
 

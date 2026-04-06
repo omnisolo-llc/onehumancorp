@@ -68,6 +68,56 @@ func (s *Server) handleLandingPageExperiments(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// TeamInvite defines an invite link for onboarding new team members to drive growth loops.
+type TeamInvite struct {
+	ID             string    `json:"id"`
+	OrganizationID string    `json:"organizationId"`
+	InvitedBy      string    `json:"invitedBy"`
+	Role           string    `json:"role"`
+	Status         string    `json:"status"` // PENDING, ACCEPTED, EXPIRED
+	CreatedAt      time.Time `json:"createdAt"`
+}
+
+type teamInviteCreateRequest struct {
+	OrganizationID string `json:"organizationId"`
+	InvitedBy      string `json:"invitedBy"`
+	Role           string `json:"role"`
+}
+
+func (s *Server) handleTeamInvites(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		invites := append([]TeamInvite(nil), s.invites...)
+		s.mu.RUnlock()
+		writeJSON(w, invites)
+	case http.MethodPost:
+		var req teamInviteCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.OrganizationID == "" || req.InvitedBy == "" || req.Role == "" {
+			http.Error(w, "organizationId, invitedBy, and role are required", http.StatusBadRequest)
+			return
+		}
+		invite := TeamInvite{
+			ID:             "inv-" + time.Now().UTC().Format("20060102150405"),
+			OrganizationID: req.OrganizationID,
+			InvitedBy:      req.InvitedBy,
+			Role:           req.Role,
+			Status:         "PENDING",
+			CreatedAt:      time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.invites = append(s.invites, invite)
+		s.mu.Unlock()
+		writeJSON(w, invite)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func (s *Server) handleReferrals(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:

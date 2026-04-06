@@ -1,0 +1,17 @@
+--- server.go
++++ server.go
+@@ -60,6 +60,7 @@
+	experiments           []LandingPageExperiment
+	referrals             []Referral
+	downloads             []Download
++	invites               []TeamInvite
+	rateLimiter           *rateLimiter
+ }
+
+@@ -456,6 +457,7 @@
+		experiments:           []LandingPageExperiment{},
+		referrals:             []Referral{},
+		downloads:             []Download{},
++		invites:               []TeamInvite{},
+		rateLimiter:           newRateLimiter(rate.Limit(reqPerSec), burst),
+	}
