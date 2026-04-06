@@ -273,6 +273,7 @@ type Hub struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	taskManager    *TaskManager
+	MeshTransport  MeshTransport
 }
 
 func (h *Hub) TaskManager() *TaskManager {
@@ -1961,3 +1962,102 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 
 
+
+// AdvertiseCapabilities functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.PublishMessageResponse, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordAgentMessageReceived(ctx, "capabilities", time.Since(start).Milliseconds())
+	}()
+
+	if s.hub.MeshTransport != nil {
+		err := s.hub.MeshTransport.AdvertiseCapabilities(ctx, *req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to advertise capabilities: %v", err)
+		}
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	start := time.Now()
+	ctx := stream.Context()
+	defer func() {
+		telemetry.RecordAgentMessageReceived(ctx, "discover", time.Since(start).Milliseconds())
+	}()
+
+	if s.hub.MeshTransport == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not initialized")
+	}
+
+	capsChan, err := s.hub.MeshTransport.SubscribeCapabilities(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to capabilities: %v", err)
+	}
+
+	for caps := range capsChan {
+        // Need to copy the struct since we can't take address of loop variable directly in some go versions safely,
+        // but here it's fine as we are sending value
+        c := caps
+		if err := stream.Send(&c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// StreamMeshEvents functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	start := time.Now()
+	ctx := stream.Context()
+	defer func() {
+		telemetry.RecordAgentMessageReceived(ctx, "stream_events", time.Since(start).Milliseconds())
+	}()
+
+	if s.hub.MeshTransport == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not initialized")
+	}
+
+	eventsChan, err := s.hub.MeshTransport.SubscribeMeshEvents(ctx, req.GetTopic())
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to mesh events: %v", err)
+	}
+
+	for payload := range eventsChan {
+		event := pb.MeshEvent_builder{
+			EventId: proto.String(fmt.Sprintf("evt-%d", time.Now().UnixNano())),
+			Topic:   proto.String(req.GetTopic()),
+			Payload: payload,
+			Timestamp: proto.Int64(time.Now().UnixNano()),
+		}.Build()
+		if err := stream.Send(event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
+// SetMeshTransport allows setting the mesh transport layer for the Hub.
+// Accepts parameters: mt MeshTransport (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) SetMeshTransport(mt MeshTransport) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.MeshTransport = mt
+}

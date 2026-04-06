@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	agentMessageReceivedDuration metric.Float64Histogram
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -162,6 +163,14 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+
+	agentMessageReceivedDuration, err = m.Float64Histogram(
+		"ohc_agent_message_received_duration_ms",
+		metric.WithDescription("Latency for receiving mesh messages"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -955,5 +964,14 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordAgentMessageReceived records the latency for processing agent messages in the mesh
+func RecordAgentMessageReceived(ctx context.Context, messageType string, latencyMS int64) {
+	if agentMessageReceivedDuration != nil {
+		agentMessageReceivedDuration.Record(ctx, float64(latencyMS), metric.WithAttributes(
+			attribute.String("message_type", messageType),
+		))
 	}
 }
