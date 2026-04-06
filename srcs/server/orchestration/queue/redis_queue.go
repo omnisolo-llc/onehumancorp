@@ -36,7 +36,7 @@ func (q *RedisTaskQueue) runningKey() string {
 
 func (q *RedisTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	defer func() {
-		telemetry.RecordQueueLength(ctx, 1) // Approximation
+		telemetry.RecordTaskQueueLength(ctx, 1) // Approximation
 	}()
 
 	if job.RunAfter.IsZero() {
@@ -159,7 +159,7 @@ func (q *RedisTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, err
 		zaddRunningCmd := q.client.B().Zadd().Key(q.runningKey()).ScoreMember().ScoreMember(float64(lt.UnixMilli()), jobID).Build()
 		q.client.Do(ctx, zaddRunningCmd)
 
-		telemetry.RecordQueueLength(ctx, -1) // Job removed from queued state
+		telemetry.RecordTaskQueueLength(ctx, -1) // Job removed from queued state
 
 		return &job, nil
 	}
@@ -244,7 +244,7 @@ func (q *RedisTaskQueue) Fail(ctx context.Context, jobID string, reason string) 
 		zaddCmd := q.client.B().Zadd().Key(q.queueKey()).ScoreMember().ScoreMember(float64(job.RunAfter.UnixMilli()), job.ID).Build()
 		err = q.client.Do(ctx, zaddCmd).Error()
 		if err == nil {
-			telemetry.RecordQueueLength(ctx, 1) // Job returned to queue
+			telemetry.RecordTaskQueueLength(ctx, 1) // Job returned to queue
 		}
 		return err
 	}

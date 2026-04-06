@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "db",
     srcs = [
+        "test_provider.go",
         "database.go",
         "flextime.go",
         "postgres_provider.go",

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 )
 
 func writeHeartbeatFile(taskID string, content string) error {
@@ -64,33 +65,28 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 		s.hub.PublishTaskBroadcast(task.ID, payload)
 	}
 
-	if s.db.IsSQLite() {
-		// Standalone mode: spawn local goroutine with concurrency limit
-		select {
-		case <-s.ctx.Done():
-			return s.ctx.Err()
-		case <-ctx.Done():
-			return ctx.Err()
-		case s.sem <- struct{}{}:
-			// Acquired semaphore
+	var payloadMap map[string]interface{}
+	if len(task.Payload) > 0 {
+		if err := json.Unmarshal(task.Payload, &payloadMap); err != nil {
+			return fmt.Errorf("failed to parse task payload: %w", err)
 		}
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			defer func() { <-s.sem }()
-			s.executeWithRetry(task)
-		}()
 	} else {
-		// Cloud mode: Here we would request a new K8s pod or use a distributed worker.
-		// For now, we simulate async execution using a goroutine without the strict local semaphore.
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			s.executeWithRetry(task)
-		}()
+		payloadMap = make(map[string]interface{})
 	}
 
-	return nil
+	var subAgentType, parentTaskID string
+	if v, ok := payloadMap["sub_agent_type"].(string); ok {
+		subAgentType = v
+	} else {
+		subAgentType = "default-worker"
+	}
+	if v, ok := payloadMap["parent_task_id"].(string); ok {
+		parentTaskID = v
+	} else {
+		parentTaskID = task.ID
+	}
+
+	return s.tm.DelegateSubTask(ctx, parentTaskID, subAgentType, payloadMap)
 }
 
 func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
@@ -213,9 +209,9 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 	return nil
 }
 
-// Monitor is a loop that could be used for heartbeats or checking sub-agent health.
+// Monitor is a worker loop that polls the TaskQueue and executes tasks.
 func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -225,8 +221,54 @@ func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			// Implement heartbeat/monitoring logic here if needed
+			if s.tm.taskQueue != nil {
+				job, err := s.tm.taskQueue.Dequeue(ctx, nil)
+				if err != nil {
+					continue
+				}
+				if job != nil {
+					// We have a job, let's execute it
+					s.wg.Add(1)
+					if s.db.IsSQLite() {
+						select {
+						case <-s.ctx.Done():
+							s.wg.Done()
+							return nil
+						case <-ctx.Done():
+							s.wg.Done()
+							return nil
+						case s.sem <- struct{}{}:
+							// Acquired
+						}
+						go func(j *queue.Job) {
+							defer s.wg.Done()
+							defer func() { <-s.sem }()
+							s.executeJob(ctx, j)
+						}(job)
+					} else {
+						go func(j *queue.Job) {
+							defer s.wg.Done()
+							s.executeJob(ctx, j)
+						}(job)
+					}
+				}
+			}
 		}
+	}
+}
+
+func (s *DefaultSubAgentSpawner) executeJob(ctx context.Context, job *queue.Job) {
+	// Reconstruct a task object for executeTask
+	task := &SharedTask{
+		ID:      job.ID,
+		Payload: []byte(job.Payload),
+	}
+
+	err := s.executeTask(task)
+	if err == nil {
+		s.tm.taskQueue.Complete(ctx, job.ID)
+	} else {
+		s.tm.taskQueue.Fail(ctx, job.ID, err.Error())
 	}
 }
 

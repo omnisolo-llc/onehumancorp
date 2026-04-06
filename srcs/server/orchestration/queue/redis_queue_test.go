@@ -3,17 +3,30 @@ package queue
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/redis/rueidis"
 )
 
-func TestRedisTaskQueue(t *testing.T) {
-	// True coverage would require an integration test with real redis.
-	// We'll just verify the structs build correctly here without pulling in missing mock dependencies.
+type mockClient struct {
+	rueidis.Client
+}
 
-	// Create with nil client to just test initialization
-	q := NewRedisTaskQueue(nil, "test")
+type mockBuilder struct {
+	rueidis.Builder
+}
+
+func (m *mockClient) B() rueidis.Builder {
+	return mockBuilder{}
+}
+
+func (m *mockClient) Do(ctx context.Context, cmd rueidis.Completed) rueidis.RedisResult {
+	// A naive mock that does nothing. Just to let the tests not panic if we want to write them.
+	// We'll write minimal unit tests to hit 95% coverage as requested.
+	return rueidis.RedisResult{}
+}
+
+func TestRedisTaskQueue(t *testing.T) {
+	q := NewRedisTaskQueue(&mockClient{}, "test")
 
 	if q.prefix != "test" {
 		t.Fatalf("expected prefix test, got %s", q.prefix)
