@@ -1,0 +1,2 @@
+status: "Identified Gaps and Updated Design Doc"
+description: "Updated KAIROS_ORCHESTRATOR_DESIGN.md to v2.1.0 reflecting the new Distributed State Machine, Sub-Agent Queue, and AutoDream Data Pipelines architecture."
