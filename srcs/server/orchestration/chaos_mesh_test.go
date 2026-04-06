@@ -40,7 +40,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 					Content:   "Stress mesh message",
 					Timestamp: time.Now(),
 				}
-				_ = mesh.PublishMessage(ctx, msg)
+				_ = mesh.Publish(ctx, "chat:room-1", string(msg.Content))
 			}(i)
 		}
 		wg.Wait()

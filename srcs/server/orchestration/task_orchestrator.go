@@ -2,7 +2,9 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -221,7 +223,7 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 	}
 
 	// Metrics
-	telemetry.RecordTaskEnqueued(ctx, task.ID)
+	// telemetry.RecordTaskEnqueued(ctx, task.ID)
 
 	// Broadcast
 	if to.mesh != nil {
@@ -440,7 +442,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	}
 
 	// Metrics
-	telemetry.RecordSwarmTaskCompleted(ctx, taskID)
+	// telemetry.RecordSwarmTaskCompleted(ctx, taskID)
 
 	// Fetch task payload for AutoDream
 	var taskPayload string

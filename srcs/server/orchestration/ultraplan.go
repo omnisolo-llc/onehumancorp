@@ -154,10 +154,9 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_CREATE",
-				Payload:   string(stateMachineJSON),
-				Status:    plan.Status,
+				Content:   string(stateMachineJSON),
 			}
-			_ = m.hub.Publish(msg)
+			m.hub.PublishCoordinationMessage(msg)
 		}()
 	}
 
@@ -297,10 +296,9 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      eventType,
-				Payload:   string(updatedJSON),
-				Status:    plan.Status,
+				Content:   string(updatedJSON),
 			}
-			_ = m.hub.Publish(msg)
+			m.hub.PublishCoordinationMessage(msg)
 		}()
 	}
 
@@ -386,10 +384,9 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_UPDATE",
-				Payload:   string(stateMachineJSON),
-				Status:    newStatus,
+				Content:   string(stateMachineJSON),
 			}
-			_ = m.hub.Publish(msg)
+			m.hub.PublishCoordinationMessage(msg)
 		}()
 	}
 

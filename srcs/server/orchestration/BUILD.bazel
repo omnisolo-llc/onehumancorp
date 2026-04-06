@@ -21,6 +21,11 @@ go_library(
         "sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
+        "mesh.go",
+        "sub_agent.go",
+        "task_orchestrator.go",
+        "ultraplan.go",
+        "health.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -46,6 +51,9 @@ go_library(
         "@org_modernc_sqlite//:sqlite",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "//srcs/server/models",
     ],
 )
 
@@ -91,5 +99,7 @@ go_test(
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

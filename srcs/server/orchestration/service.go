@@ -1523,6 +1523,66 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
 }
 
+// AdvertiseCapabilities advertises the capabilities of an agent to the mesh.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.AdvertiseCapabilitiesResponse, error) {
+	tm := s.hub.TaskManager()
+	if tm == nil || tm.meshTransport == nil {
+		return nil, status.Errorf(codes.Internal, "mesh transport not configured")
+	}
+
+	payload, err := proto.Marshal(req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to marshal payload: %v", err)
+	}
+
+	event := &pb.MeshEvent{}
+	event.SetEventId(fmt.Sprintf("evt-%d", time.Now().UnixNano()))
+	event.SetTopic("mesh:capabilities")
+	event.SetPayload(payload)
+	event.SetTimestamp(time.Now().Unix())
+
+	err = tm.meshTransport.PublishEvent(ctx, "mesh:capabilities", event)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to publish event: %v", err)
+	}
+
+	return pb.AdvertiseCapabilitiesResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents handles the DiscoverAgents RPC.
+// (In a real implementation, this would query a registry populated by capabilities events).
+func (s *HubServiceServer) DiscoverAgents(ctx context.Context, req *pb.DiscoverAgentsRequest) (*pb.DiscoverAgentsResponse, error) {
+	// Dummy implementation for now to satisfy the interface.
+	return pb.DiscoverAgentsResponse_builder{}.Build(), nil
+}
+
+// StreamMeshEvents handles the StreamMeshEvents RPC.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	tm := s.hub.TaskManager()
+	if tm == nil || tm.meshTransport == nil {
+		return status.Errorf(codes.Internal, "mesh transport not configured")
+	}
+
+	ch, err := tm.meshTransport.SubscribeEvents(stream.Context(), "mesh:tasks") // we could subscribe to multiple, or "mesh:*"
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case event, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // MinimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
 var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"

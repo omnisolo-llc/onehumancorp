@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
+	"google.golang.org/protobuf/proto"
 )
 
 // MeshMessage represents a realtime message sent over the mesh.
@@ -199,6 +201,110 @@ type TeammateMesh interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+}
+
+type MeshTransport interface {
+	PublishEvent(ctx context.Context, topic string, event *pb.MeshEvent) error
+	SubscribeEvents(ctx context.Context, topic string) (<-chan *pb.MeshEvent, error)
+}
+
+type RedisMeshTransport struct {
+	client rueidis.Client
+}
+
+func NewRedisMeshTransport(redisURL string) (*RedisMeshTransport, error) {
+	opt, err := rueidis.ParseURL(redisURL)
+	if err != nil {
+		return nil, err
+	}
+	c, err := rueidis.NewClient(opt)
+	if err != nil {
+		return nil, err
+	}
+	return &RedisMeshTransport{client: c}, nil
+}
+
+func (rm *RedisMeshTransport) PublishEvent(ctx context.Context, topic string, event *pb.MeshEvent) error {
+	data, err := proto.Marshal(event)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel(topic).Message(string(data)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
+
+func (rm *RedisMeshTransport) SubscribeEvents(ctx context.Context, topic string) (<-chan *pb.MeshEvent, error) {
+	ch := make(chan *pb.MeshEvent, 100)
+
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(topic).Build(), func(msg rueidis.PubSubMessage) {
+			var event pb.MeshEvent
+			if err := proto.Unmarshal([]byte(msg.Message), &event); err == nil {
+				select {
+				case ch <- &event:
+				default:
+					slog.Warn("RedisMeshTransport.SubscribeEvents channel full, dropping message")
+				}
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.SubscribeEvents error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+type MemoryMeshTransport struct {
+	mu   sync.RWMutex
+	subs map[string]map[chan *pb.MeshEvent]struct{}
+}
+
+func NewMemoryMeshTransport() *MemoryMeshTransport {
+	return &MemoryMeshTransport{
+		subs: make(map[string]map[chan *pb.MeshEvent]struct{}),
+	}
+}
+
+func (mm *MemoryMeshTransport) PublishEvent(ctx context.Context, topic string, event *pb.MeshEvent) error {
+	mm.mu.RLock()
+	defer mm.mu.RUnlock()
+
+	subs := mm.subs[topic]
+	for ch := range subs {
+		select {
+		case ch <- event:
+		default:
+			slog.Warn("MemoryMeshTransport.PublishEvent channel full, dropping message")
+		}
+	}
+	return nil
+}
+
+func (mm *MemoryMeshTransport) SubscribeEvents(ctx context.Context, topic string) (<-chan *pb.MeshEvent, error) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+
+	ch := make(chan *pb.MeshEvent, 100)
+	if mm.subs[topic] == nil {
+		mm.subs[topic] = make(map[chan *pb.MeshEvent]struct{})
+	}
+	mm.subs[topic][ch] = struct{}{}
+
+	go func() {
+		<-ctx.Done()
+		mm.mu.Lock()
+		defer mm.mu.Unlock()
+		delete(mm.subs[topic], ch)
+		if len(mm.subs[topic]) == 0 {
+			delete(mm.subs, topic)
+		}
+		close(ch)
+	}()
+
+	return ch, nil
 }
 
 type RedisTeammateMesh struct {
