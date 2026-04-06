@@ -78,7 +78,7 @@ func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
 		}
 	}
 	if cfg.MaxTokensPerTurn <= 0 {
-		cfg.MaxTokensPerTurn = defaultMaxTokens
+		cfg.MaxTokensPerTurn = 4096
 	}
 	return &Agent{cfg: cfg, state: state}
 }
