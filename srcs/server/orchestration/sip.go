@@ -86,6 +86,16 @@ func releaseThrottle() {
 	}
 }
 
+func ClearSemaphore() {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		select {
+		case <-standaloneThrottle:
+		default:
+		}
+	}
+}
+
+
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
 	if err := acquireThrottle(ctx); err != nil {
