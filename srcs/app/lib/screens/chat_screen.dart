@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/services.dart';
+import 'package:ohc_app/services/api_service.dart';
+import 'dart:ui';
 
 /// Default room used when no specific room is selected.
 const _kDefaultRoom = 'general';
@@ -124,6 +127,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onPressed: () => _showRoomPicker(context),
             ),
           ),
+          Semantics(
+            label: 'Share Cloud Link',
+            child: IconButton(
+              icon: const Icon(Icons.ios_share),
+              tooltip: 'Share via Cloud Link',
+              onPressed: () => _handleShare(context),
+            ),
+          ),
         ],
       ),
       body: Column(
@@ -147,6 +158,73 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleShare(BuildContext context) async {
+    final colors = Theme.of(context).colorScheme;
+    try {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final agentId = user?.id ?? 'anonymous';
+
+      final apiService = ref.read(apiServiceProvider);
+      if (apiService == null) return;
+      final response = await apiService.createShareLink(agentId);
+      final shareCode = response['shareCode'];
+      final link = 'https://cloud.ohc.io/share?code=$shareCode';
+
+      await Clipboard.setData(ClipboardData(text: link));
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: colors.primaryContainer.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colors.onPrimaryContainer.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: colors.onPrimaryContainer),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Cloud Bridge Link copied to clipboard!\n$link',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: colors.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate share link: $e'),
+            backgroundColor: colors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showRoomPicker(BuildContext context) {

@@ -512,6 +512,18 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> createShareLink(String agentId) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/growth/shares'),
+      headers: _headers,
+      body: jsonEncode({
+        'agentId': agentId,
+      }),
+    );
+    _checkStatus(response);
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   Future<void> createReferral(String userId, String referralCode) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/referrals'),

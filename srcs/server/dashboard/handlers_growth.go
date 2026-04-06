@@ -102,6 +102,51 @@ func (s *Server) handleReferrals(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ShareLink defines a viral share link bridging Standalone to Cloud.
+type ShareLink struct {
+	ID        string    `json:"id"`
+	AgentID   string    `json:"agentId"`
+	ShareCode string    `json:"shareCode"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type shareCreateRequest struct {
+	AgentID string `json:"agentId"`
+}
+
+func (s *Server) handleShares(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		links := append([]ShareLink(nil), s.shareLinks...)
+		s.mu.RUnlock()
+		writeJSON(w, links)
+	case http.MethodPost:
+		var req shareCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.AgentID == "" {
+			http.Error(w, "agentId is required", http.StatusBadRequest)
+			return
+		}
+		shareCode := "sh-" + time.Now().UTC().Format("20060102150405")
+		link := ShareLink{
+			ID:        shareCode,
+			AgentID:   req.AgentID,
+			ShareCode: shareCode,
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.shareLinks = append(s.shareLinks, link)
+		s.mu.Unlock()
+		writeJSON(w, link)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // Download defines a tracked desktop app download.
 type Download struct {
 	ID        string    `json:"id"`
