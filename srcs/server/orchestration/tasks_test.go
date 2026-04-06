@@ -51,8 +51,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 }
 
 func TestTaskManager_CreateTask(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -74,8 +73,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 }
 
 func TestTaskManager_ClaimTask(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -123,8 +121,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 }
 
 func TestTaskManager_PollTasks(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -189,8 +186,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 }
 
 func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -239,8 +235,7 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 }
 
 func TestTaskManager_CompleteTask(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
