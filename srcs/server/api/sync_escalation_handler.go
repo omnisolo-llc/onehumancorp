@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
@@ -35,10 +36,22 @@ func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
 		}
 
 		syncedCount := 0
-		if hub.TaskManager() != nil {
+		if hub.TaskManager() != nil && hub.SIPDB() != nil {
+			dbProvider := hub.SIPDB().Provider()
+			q := queue.NewPostgresTaskQueue(dbProvider)
+
 			for _, p := range payloads {
 				if p.MemoryID == "" {
 					continue
+				}
+
+				// Append payload to agent_missions table per OHC Hybrid Architecture
+				_, err := dbProvider.Exec(ctx,
+					"INSERT INTO agent_missions (id, status, payload, created_at, organization_id, synced_to_cloud) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING",
+					p.MemoryID, "PENDING", p.Context, time.Now(), "system", true)
+				if err != nil {
+					slog.Error("failed to insert agent mission", "memory_id", p.MemoryID, "error", err)
+					// Proceeding anyway to try enqueuing
 				}
 
 				job := &queue.Job{
@@ -48,18 +61,10 @@ func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
 					Payload:      p.Context,
 				}
 
-				// We need to enqueue this to the TaskQueue which we get from the provider if we can't directly.
-				// However, if we don't have access to tm.taskQueue directly because it's unexported:
-				// we could use a custom postgres_queue or enqueue directly to the database here, since we have the DB.
-
-				// Let's create a Postgres queue right here with hub.SIPDB().Provider() if available.
-				if hub.SIPDB() != nil {
-					q := queue.NewPostgresTaskQueue(hub.SIPDB().Provider())
-					if err := q.Enqueue(ctx, job); err != nil {
-						slog.Error("failed to enqueue escalation job", "memory_id", p.MemoryID, "error", err)
-					} else {
-						syncedCount++
-					}
+				if err := q.Enqueue(ctx, job); err != nil {
+					slog.Error("failed to enqueue escalation job", "memory_id", p.MemoryID, "error", err)
+				} else {
+					syncedCount++
 				}
 			}
 		}

@@ -132,7 +132,7 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 	}
 
 	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Error("hybrid_sync: failed to send escalations to cloud", "error", err)
+		slog.Warn("hybrid_sync: cloud unreachable, degrading gracefully. Will retry.", "error", err)
 		return
 	}
 
