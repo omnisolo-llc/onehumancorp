@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Palette
+---
+title: "🎨 Palette: [Hybrid UX improvement] Refactor Integrations and Security Screens to use Glassmorphism"
+description: |
+  Discovered a UX pattern violation in `srcs/app/lib/screens/integrations_screen.dart` and `srcs/app/lib/screens/security_screen.dart` where items were using flat `Card` widgets.
+  Refactored `_IntegrationCard`, `_MCPToolTile`, and `_IssueCard` to use a `StatefulWidget` with hover effects and OHC Glassmorphism tokens (`BackdropFilter`, `ImageFilter.compose`, blur, and OHC typography).
+priority: P1
+scope: Small
