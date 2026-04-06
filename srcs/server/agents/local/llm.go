@@ -236,6 +236,7 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 		tools = append(tools, toolDef)
 	}
 
+	req.Messages = TrimMessageHistory(req.Messages, 10)
 	var systemBlocks []anthropicSystem
 	if req.SystemPrompt != "" {
 		systemBlocks = append(systemBlocks, anthropicSystem{
@@ -419,6 +420,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 		maxTok = 4096
 	}
 
+	req.Messages = TrimMessageHistory(req.Messages, 10)
 	var msgs []openAIMessage
 	if req.SystemPrompt != "" {
 		msgs = append(msgs, openAIMessage{Role: "system", Content: utils.MinifyJSONString(req.SystemPrompt)})
@@ -563,4 +565,22 @@ func defaultLLMClient() LLMClient {
 	// injected at this level, we just return the client. In a real environment,
 	// the agent constructor should inject the db provider and wrap it.
 	return client
+}
+
+// TrimMessageHistory caps the conversation history to maxPreserved messages.
+// It ensures that the resulting message array always begins with a "user" message,
+// which is required by Anthropic API.
+func TrimMessageHistory(messages []ConversationMessage, maxPreserved int) []ConversationMessage {
+	if len(messages) <= maxPreserved {
+		return messages
+	}
+
+	trimmed := messages[len(messages)-maxPreserved:]
+
+	// Ensure the first message is from a user
+	for len(trimmed) > 0 && trimmed[0].Role != "user" {
+		trimmed = trimmed[1:]
+	}
+
+	return trimmed
 }
