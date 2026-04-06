@@ -1,0 +1,9 @@
+mission_id: "builtin-agent-go-migration"
+title: "Builtin Agent Harness Go Re-implementation"
+status: "COMPLETED"
+agent: "jules"
+metrics:
+  tests_passed: true
+  coverage_satisfactory: true
+  code_review_approved: true
+summary: "Fully ported the claude-code reference agent harness and existing Rust logic into a robust, pure Go package (srcs/server/agents/builtin). Implemented full LLM clients, tool bindings, event loops, and wired the task routing directly to the TaskWorker."

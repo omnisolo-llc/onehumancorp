@@ -1,4 +1,42 @@
-# The builtin agent is implemented in Rust.
-# Build with: cargo build --release
-# (No Bazel targets - use cargo for Rust builds)
-package(default_visibility = ["//visibility:public"])
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "builtin",
+    srcs = [
+        "agent.go",
+        "llm_anthropic.go",
+        "llm_ollama.go",
+        "llm_openai.go",
+        "loop.go",
+        "prompt.go",
+        "tools.go",
+        "types.go",
+        "tools/bash.go",
+        "tools/glob.go",
+        "tools/grep.go",
+        "tools/read.go",
+        "tools/sendmessage.go",
+        "tools/todowrite.go",
+        "tools/toolsearch.go",
+        "tools/webfetch.go",
+        "tools/websearch.go",
+        "tools/write.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
+    visibility = ["//visibility:public"],
+    deps = [
+        # "//srcs/server/db",
+        # "//srcs/server/orchestration",
+    ],
+)
+
+go_test(
+    name = "builtin_test",
+    srcs = [
+        "agent_test.go",
+    ],
+    embed = [":builtin"],
+    deps = [
+        # "//srcs/server/db",
+    ],
+)

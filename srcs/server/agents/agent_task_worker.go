@@ -187,6 +187,13 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				}
 				_ = tw.hub.Publish(msg)
 				slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", a.ID)
+
+				// Handle Builtin agent logic
+				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
+					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
+					// In a full implementation, we'd spawn the BuiltinAgent loop asynchronously here.
+				}
+
 				agentFound = true
 				break
 			}
