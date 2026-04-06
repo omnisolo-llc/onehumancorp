@@ -467,6 +467,29 @@ func run(now time.Time, listen listenFunc) error {
 	startBuiltinAgentProcess(ctx, grpcEndpoint)
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
+		// Mesh integration
+		var mesh orchestration.MeshTransport
+		if multiTenant {
+			redisURL := getEnvOrDefault("REDIS_URL", "localhost:6379")
+			redisMesh, err := orchestration.NewRedisMeshTransport(redisURL)
+			if err == nil {
+				mesh = redisMesh
+			} else {
+				slog.Error("failed to initialize redis mesh transport, falling back to memory", "error", err)
+				mesh = orchestration.NewMemoryMeshTransport(pool.Provider)
+			}
+		} else {
+			mesh = orchestration.NewMemoryMeshTransport(pool.Provider)
+		}
+
+		// Wire mesh to global components if possible
+		if hub.CentrifugeNode() != nil {
+			hub.CentrifugeNode().SetMeshTransport(mesh)
+		}
+		if hub.TaskManager() != nil {
+			hub.TaskManager().SetMeshTransport(mesh)
+		}
+
 	// Start gRPC server
 	go func() {
 		lis, err := netListen("tcp", grpcAddress)
@@ -478,7 +501,7 @@ func run(now time.Time, listen listenFunc) error {
 			grpc.UnaryInterceptor(orchestration.SPIFFEAuthInterceptor()),
 			grpc.StreamInterceptor(orchestration.SPIFFEStreamInterceptor()),
 		)
-		orchestration.RegisterHubService(s, hub)
+			orchestration.RegisterHubService(s, hub, mesh)
 		slog.Info("serving gRPC", "address", grpcAddress)
 		if err := s.Serve(lis); err != nil {
 			slog.Error("failed to serve gRPC", "error", err)

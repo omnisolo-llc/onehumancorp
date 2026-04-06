@@ -1354,8 +1354,8 @@ func (h *Hub) Agents() []Agent {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
-func RegisterHubService(s *grpc.Server, hub *Hub) {
-	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub})
+func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
+	pb.RegisterHubServiceServer(s, NewHubServiceServer(hub, mesh))
 }
 
 // HubServiceServer implements the gRPC interface for the orchestration Hub, facilitating remote agent registration and message streaming.
@@ -1365,7 +1365,8 @@ func RegisterHubService(s *grpc.Server, hub *Hub) {
 // Has no side effects.
 type HubServiceServer struct {
 	pb.UnimplementedHubServiceServer
-	hub *Hub
+	hub  *Hub
+	mesh MeshTransport
 }
 
 // NewHubServiceServer functionality.
@@ -1373,8 +1374,96 @@ type HubServiceServer struct {
 // Returns *HubServiceServer.
 // Produces no errors.
 // Has no side effects.
-func NewHubServiceServer(hub *Hub) *HubServiceServer {
-	return &HubServiceServer{hub: hub}
+func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
+	return &HubServiceServer{hub: hub, mesh: mesh}
+}
+
+// AdvertiseCapabilities advertises the agent's capabilities to the mesh.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.mesh == nil {
+		return nil, status.Errorf(codes.Unimplemented, "mesh transport not initialized")
+	}
+	err := s.mesh.AdvertiseCapabilities(ctx, *req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to advertise capabilities: %v", err)
+	}
+	// Return the response object manually since proto generation might have changed.
+	// We'll use the builder or initialize basic fields based on the protoc gen.
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents discovers agents with capabilities matching the query.
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.mesh == nil {
+		return status.Errorf(codes.Unimplemented, "mesh transport not initialized")
+	}
+
+	ctx := stream.Context()
+	ch, err := s.mesh.SubscribeCapabilities(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to capabilities: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case cap, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			// Basic filtering logic. If no filter or matches the ID.
+			filter := req.GetFilter()
+			if filter == "" || strings.Contains(cap.GetAgentId(), filter) || containsSkill(cap.GetSupportedSkills(), filter) {
+				if err := stream.Send(&cap); err != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
+func containsSkill(skills []string, filter string) bool {
+	for _, s := range skills {
+		if strings.Contains(s, filter) {
+			return true
+		}
+	}
+	return false
+}
+
+// StreamMeshEvents streams mesh events for a given topic.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.mesh == nil {
+		return status.Errorf(codes.Unimplemented, "mesh transport not initialized")
+	}
+
+	ctx := stream.Context()
+	topic := req.GetTopic()
+	ch, err := s.mesh.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to mesh events: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case payload, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			event := pb.MeshEvent_builder{
+				EventId:   proto.String(""), // To be generated or extracted if needed
+				Topic:     proto.String(topic),
+				Payload:   payload,
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 // RegisterAgent functionality.

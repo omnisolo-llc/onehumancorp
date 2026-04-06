@@ -162,7 +162,7 @@ func TestStreamMessages_SendErrorOnInitialSend(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 
 	_ = hub.Publish(Message{
 		ID:         "msg-1",
@@ -192,7 +192,7 @@ func TestStreamMessages_ErrorOnLaterSend(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
