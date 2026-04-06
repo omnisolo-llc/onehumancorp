@@ -32,6 +32,7 @@ type DefaultSubAgentSpawner struct {
 	db       db.Provider
 	tm       *TaskManager
 	hub      *CentrifugeNode // For teammate mesh broadcasts
+	queue    SubAgentQueue
 	sem      chan struct{} // For concurrency limits in standalone mode
 	wg       sync.WaitGroup
 	ctx      context.Context
@@ -39,12 +40,13 @@ type DefaultSubAgentSpawner struct {
 }
 
 // NewDefaultSubAgentSpawner creates a new DefaultSubAgentSpawner.
-func NewDefaultSubAgentSpawner(provider db.Provider, tm *TaskManager, hub *CentrifugeNode, concurrency int) *DefaultSubAgentSpawner {
+func NewDefaultSubAgentSpawner(provider db.Provider, tm *TaskManager, hub *CentrifugeNode, queue SubAgentQueue, concurrency int) *DefaultSubAgentSpawner {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &DefaultSubAgentSpawner{
 		db:     provider,
 		tm:     tm,
 		hub:    hub,
+		queue:  queue,
 		sem:    make(chan struct{}, concurrency),
 		ctx:    ctx,
 		cancel: cancel,
@@ -53,6 +55,16 @@ func NewDefaultSubAgentSpawner(provider db.Provider, tm *TaskManager, hub *Centr
 
 // Spawn spawns a new sub-agent for the given task.
 func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) error {
+	// Parse payload map
+	var payloadMap map[string]interface{}
+	_ = json.Unmarshal([]byte(task.Payload), &payloadMap)
+
+	// Enqueue to distributed queue
+	id, err := s.queue.Enqueue(ctx, task.ID, payloadMap)
+	if err != nil {
+		return fmt.Errorf("failed to enqueue sub-agent task: %w", err)
+	}
+
 	// Emit SUB_AGENT_SPAWNED event
 	if s.hub != nil {
 		payload := map[string]interface{}{
@@ -60,39 +72,12 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 			"action":   "SUB_AGENT_SPAWNED",
 			"agent_id": "sub-agent-spawner",
 			"status":   "IN_PROGRESS",
+			"queue_id": id,
 		}
 		s.hub.PublishTaskBroadcast(task.ID, payload)
 	}
-
-	if s.db.IsSQLite() {
-		// Standalone mode: spawn local goroutine with concurrency limit
-		select {
-		case <-s.ctx.Done():
-			return s.ctx.Err()
-		case <-ctx.Done():
-			return ctx.Err()
-		case s.sem <- struct{}{}:
-			// Acquired semaphore
-		}
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			defer func() { <-s.sem }()
-			s.executeWithRetry(task)
-		}()
-	} else {
-		// Cloud mode: Here we would request a new K8s pod or use a distributed worker.
-		// For now, we simulate async execution using a goroutine without the strict local semaphore.
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			s.executeWithRetry(task)
-		}()
-	}
-
 	return nil
 }
-
 func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
 	maxRetries := 3
 	backoff := 100 * time.Millisecond
@@ -213,9 +198,9 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 	return nil
 }
 
-// Monitor is a loop that could be used for heartbeats or checking sub-agent health.
+// Monitor is a loop that checks sub-agent health and dequeues tasks.
 func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -225,11 +210,48 @@ func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			// Implement heartbeat/monitoring logic here if needed
+			// Drain queue
+			for {
+				queuedTask, err := s.queue.Dequeue(ctx)
+				if err != nil {
+					// Real error, log and break
+					fmt.Printf("dequeue error: %v\n", err)
+					break
+				}
+
+				if queuedTask == nil {
+					// Empty queue, wait for next tick
+					break
+				}
+
+				// Reconstruct SharedTask for execution
+				taskPayload, _ := json.Marshal(queuedTask.Payload)
+				task := &SharedTask{
+					ID:      queuedTask.ParentTaskID,
+					Payload: string(taskPayload),
+				}
+
+				if s.db.IsSQLite() {
+					s.sem <- struct{}{}
+					s.wg.Add(1)
+					go func(t *SharedTask, qID string) {
+						defer s.wg.Done()
+						defer func() { <-s.sem }()
+						s.executeWithRetry(t)
+						_ = s.queue.Complete(context.Background(), qID)
+					}(task, queuedTask.ID)
+				} else {
+					s.wg.Add(1)
+					go func(t *SharedTask, qID string) {
+						defer s.wg.Done()
+						s.executeWithRetry(t)
+						_ = s.queue.Complete(context.Background(), qID)
+					}(task, queuedTask.ID)
+				}
+			}
 		}
 	}
 }
-
 // Stop gracefully shuts down the spawner.
 func (s *DefaultSubAgentSpawner) Stop() {
 	s.cancel()

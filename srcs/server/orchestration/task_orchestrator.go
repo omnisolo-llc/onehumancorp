@@ -36,7 +36,13 @@ type DefaultTaskOrchestrator struct {
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh MeshTransport) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, 10)
+	var sq SubAgentQueue
+	if redisClient != nil {
+		sq = NewPgRedisQueue(redisClient)
+	} else {
+		sq = NewSqliteQueue(provider)
+	}
+	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, sq, 10)
 
 	to := &DefaultTaskOrchestrator{
 		db:           provider,

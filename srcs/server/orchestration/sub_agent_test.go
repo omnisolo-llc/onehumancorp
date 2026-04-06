@@ -24,7 +24,7 @@ func TestSubAgentSpawner(t *testing.T) {
 
 	// 2. Initialize SubAgentSpawner
 	// Using concurrency = 2 for standalone mode throttle testing
-	spawner := NewDefaultSubAgentSpawner(pool, nil, nil, 2)
+	spawner := NewDefaultSubAgentSpawner(pool, nil, nil, NewSqliteQueue(pool), 2)
 	defer spawner.Stop()
 
 	// 3. Create a DELEGATED task

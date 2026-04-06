@@ -628,6 +628,19 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					"status":   t.Status,
 				}
 				tm.hub.PublishTaskBroadcast(t.ID, payload)
+
+				// V2 Teammate Mesh state machine durable dispatch
+				if tm.hub != nil {
+					v2Mesh := NewV2TeammateMesh(tm.hub)
+					if v2Mesh != nil {
+						_ = v2Mesh.Broadcast(context.Background(), MeshMessage{
+							TaskID:  t.ID,
+							AgentID: agentID,
+							Action:  "CLAIM",
+							Status:  t.Status,
+						})
+					}
+				}
 			}(task)
 		}
 	}

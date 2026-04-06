@@ -20,6 +20,7 @@ import (
 // OHC-SIP requires agent_id, action, status at root.
 type MeshMessage struct {
 	AgentID   string    `json:"agent_id"`
+	TaskID    string    `json:"task_id,omitempty"`
 	Action    string    `json:"action"`
 	Status    string    `json:"status"`
 	SenderID  string    `json:"sender_id,omitempty"`
@@ -988,4 +989,28 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 		}
 		lm.coordMu[shardIdx].RUnlock()
 	}
+}
+
+// V2TeammateMesh wraps CentrifugeNode to implement the Teammate Mesh API Layer (v2).
+type V2TeammateMesh struct {
+	cn *CentrifugeNode
+}
+
+// NewV2TeammateMesh creates a new V2 mesh instance.
+func NewV2TeammateMesh(cn *CentrifugeNode) *V2TeammateMesh {
+	return &V2TeammateMesh{
+		cn: cn,
+	}
+}
+
+// Broadcast sends a MeshMessage via Centrifuge.
+func (v2 *V2TeammateMesh) Broadcast(ctx context.Context, msg MeshMessage) error {
+	payload := map[string]interface{}{
+		"agent_id": msg.AgentID,
+		"task_id":  msg.TaskID,
+		"action":   msg.Action,
+		"status":   msg.Status,
+	}
+	v2.cn.PublishTaskBroadcast(msg.TaskID, payload)
+	return nil
 }
