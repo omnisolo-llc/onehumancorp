@@ -2,51 +2,58 @@
 
 # AutoDream Data Pipelines
 
-**Component:** Memory & Context Layer | **Target Audience:** Intelligence & Infrastructure Engineers
+The AutoDream Data Pipeline is the long-term memory consolidation engine of the KAIROS Orchestrator. It fulfills the Swarm Intelligence Protocol (OHC-SIP) mandate that all agents share memory by asynchronously processing ephemeral session data into queryable vector embeddings.
 
-## 1. Overview
-The **AutoDream Data Pipeline** is responsible for Long-term Memory Consolidation within the Swarm Intelligence Protocol (OHC-SIP). Agents generate vast amounts of episodic memory (`agent_session_data` and `.agent-task/memory/*.yml` files) during execution. Left unchecked, this causes context window overflows and performance degradation.
+## 1. The Need for AutoDream
 
-AutoDream is an asynchronous background stream processor that consolidates these memories, prunes redundancies, resolves conflicting data points, and injects the synthesized "truth" into a vector database for semantic search (Retrieval-Augmented Generation / RAG).
+During task execution, agents generate significant amounts of context (`agent_session_data` and `.agent-task/memory/*.yml` files). To prevent context window overflow and enable long-term reasoning, AutoDream sweeps this data, prunes redundancies, and injects the consolidated "truth" into a durable vector database.
 
-## 2. Pipeline Workflow
+## 2. Architecture and Storage
 
-The continuous stream processing architecture operates as follows:
+AutoDream adapts its storage mechanism based on the OHC operating mode:
+
+- **Cloud-Native Mode:** Utilizes PostgreSQL with the `pgvector` extension for exact Nearest Neighbor search on 1536-dimensional embeddings.
+- **Standalone Mode:** Degrades gracefully to SQLite. Embeddings are stored as JSON text blobs, with fallback search mechanisms if vector extensions are unavailable in the local SQLite distribution.
+
+### Pipeline Workflow
 
 ```mermaid
 graph TD
-    Agent[Agent Execution] -->|Writes Episodic Memory| Store[SQLite / Filesystem]
-    Store -->|Watches/Polls| Worker[AutoDream Pipeline Worker]
-    Worker --> Dedupe[Prune & Deduplicate]
-    Dedupe --> Summarize[LLM Summarization & Conflict Resolution]
-    Summarize --> Chunk[Chunking & Tokenization]
-    Chunk --> Embed[Embedding Model API]
-    Embed -->|1536-dim Vector| VectorDB[(pgvector / Local DB)]
-    VectorDB -->|Semantic Search| RAG[RAG Sync Engine]
-    RAG --> Mesh[Teammate Mesh / Agents]
+    A[Agent Session Data / Memory Files] -->|Periodic Sweep| B(AutoDream Worker)
+    B -->|Chunking & Tokenization| C[Minimax / Cohere Embedding API]
+    C -->|Generate 1536-dim Vector| D{Storage Engine}
+    D -->|Cloud| E[(pgvector: autodream_memories)]
+    D -->|Standalone| F[(SQLite: JSON Blobs)]
+
+    E -->|Semantic Search| G[Agent Context Window]
+    F -->|Semantic Search| G
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Agent,Store,Worker,Dedupe,Summarize,Chunk,Embed,VectorDB,RAG,Mesh premium;
+    class A,B,C,D,E,F,G premium;
 ```
 
-## 3. Core Stages
+## 3. Database Schema
 
-1. **Ingestion & Pruning:** The orchestrator reads raw memory dumps and eliminates exact duplicates and immediate transient states.
-2. **Conflict Resolution:** If Agent A claims a specific architectural constraint while Agent B claims a conflicting one, a specialized LLM deliberation prompt resolves the dispute to extract the ground truth.
-3. **Embedding Generation:** The clean, consolidated text is chunked and sent to an embedding model (e.g., Anthropic, Cohere, or Minimax) to generate high-quality vector embeddings.
-4. **Vector Storage:** In Cloud-Native mode, embeddings are stored natively in PostgreSQL using `pgvector`. In Standalone mode, they are stored locally to minimize dependencies.
+The persistent vector database schema (Cloud mode) is structured as follows:
 
-## 4. API Invocation
-The AutoDream pipeline can run continuously as a background daemon or be invoked proactively via the Orchestration API:
-
-**Endpoint:** `POST /api/v1/autodream/`
-```json
-{
-  "target_memory_files": [
-    ".agent-task/memory/2026-04-06T12-00-00Z_insight.md"
-  ],
-  "priority": "high"
-}
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE IF NOT EXISTS autodream_memories (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
+    agent_id TEXT,
+    content TEXT NOT NULL,
+    embedding vector(1536),
+    source_type TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);
 ```
+
+## 4. Implementation Details
+
+- **Batch Processing:** The `AutoDreamWorker` daemon processes data in batches (e.g., `LIMIT 500`) to prevent unbound queue growth and ensure stable memory utilization.
+- **LLM Integration:** Utilizes existing LLM clients (`srcs/server/agents/local/llm.go`) to generate embeddings for the consolidated memory chunks.
+- **Graceful Degradation:** Conditional logic (`dbWrapper.Provider().IsSQLite()`) disables PostgreSQL-specific locks or exact-neighbor queries when operating in Standalone mode.
 
 </div>
