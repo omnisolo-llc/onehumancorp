@@ -34,7 +34,7 @@ func (m *benchStreamMessagesServer) Send(msg *pb.Message) error {
 func BenchmarkStreamLatency(b *testing.B) {
 	hub := NewHub()
 	defer hub.Close()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	hub.RegisterAgent(Agent{ID: "agent1", Status: StatusIdle})
 	hub.RegisterAgent(Agent{ID: "agent2", Status: StatusIdle})

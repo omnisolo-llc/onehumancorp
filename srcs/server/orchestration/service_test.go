@@ -379,7 +379,7 @@ func TestHubServiceServer_StreamMessages(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 
 	// Publish a message to the receiver's inbox
 	_ = hub.Publish(Message{
@@ -427,7 +427,7 @@ func TestHubServiceServer_StreamMessages_SendError(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 
 	// Publish a message that triggers a send error
 	_ = hub.Publish(Message{
@@ -458,7 +458,7 @@ func TestHubServiceServer_StreamMessages_ContextDone(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 
 	// Context is cancelled before StreamMessages handles the infinite loop
 	ctx, cancel := context.WithCancel(context.Background())
@@ -480,7 +480,7 @@ func TestHubServiceServer_StreamMessages_SendErrorOnWait(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -591,7 +591,7 @@ func TestHubServiceServer_Reason_And_MinimaxClient(t *testing.T) {
 			hub := NewHub()
 			defer hub.Close()
 			hub.SetMinimaxAPIKey(tt.apiKey)
-			server := NewHubServiceServer(hub)
+			server := NewHubServiceServer(hub, nil)
 			ctx := context.Background()
 
 			req := pb.ReasonRequest_builder{
@@ -623,7 +623,7 @@ func TestRegisterHubService(t *testing.T) {
 
 	// Since we cannot easily introspect the server to see if it's registered without a client,
 	// verifying it doesn't panic and testing NewHubServiceServer covers the logic.
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	if server == nil {
 		t.Fatalf("expected NewHubServiceServer to return non-nil server")
 	}
@@ -635,7 +635,7 @@ func TestRegisterHubService(t *testing.T) {
 func TestHubServiceServer_RegisterAgent(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	req := pb.RegisterAgentRequest_builder{
@@ -670,7 +670,7 @@ func TestHubServiceServer_OpenMeeting(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "p1", Name: "P1", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "p2", Name: "P2", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	req := pb.OpenMeetingRequest_builder{
@@ -704,7 +704,7 @@ func TestHubServiceServer_DelegateTask(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "delegate", Name: "Delegate", Role: "ROUTER", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "specialist", Name: "Specialist", Role: "SWE", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -937,7 +937,7 @@ func TestHubServiceServer_Publish(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender", Name: "Sender", Role: "R1", OrganizationID: "O1"})
 	hub.RegisterAgent(Agent{ID: "receiver", Name: "Receiver", Role: "R2", OrganizationID: "O1"})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	tests := []struct {

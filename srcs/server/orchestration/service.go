@@ -359,6 +359,60 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 	}
 }
 
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.mesh == nil {
+		return fmt.Errorf("mesh transport not configured")
+	}
+
+	ctx := stream.Context()
+	capsCh, err := s.mesh.SubscribeCapabilities(ctx)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case cap := <-capsCh:
+			if err := stream.Send(&cap); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.mesh == nil {
+		return fmt.Errorf("mesh transport not configured")
+	}
+
+	ctx := stream.Context()
+	topic := req.GetTopic()
+
+	eventsCh, err := s.mesh.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case payload := <-eventsCh:
+			timestamp := time.Now().UnixNano()
+			event := pb.MeshEvent_builder{
+				Topic:     &topic,
+				Payload:   payload,
+				Timestamp: &timestamp,
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
 	if h.GetTokenUsage == nil {
 		return
@@ -1365,7 +1419,8 @@ func RegisterHubService(s *grpc.Server, hub *Hub) {
 // Has no side effects.
 type HubServiceServer struct {
 	pb.UnimplementedHubServiceServer
-	hub *Hub
+	hub  *Hub
+	mesh MeshTransport
 }
 
 // NewHubServiceServer functionality.
@@ -1373,8 +1428,8 @@ type HubServiceServer struct {
 // Returns *HubServiceServer.
 // Produces no errors.
 // Has no side effects.
-func NewHubServiceServer(hub *Hub) *HubServiceServer {
-	return &HubServiceServer{hub: hub}
+func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
+	return &HubServiceServer{hub: hub, mesh: mesh}
 }
 
 // RegisterAgent functionality.
