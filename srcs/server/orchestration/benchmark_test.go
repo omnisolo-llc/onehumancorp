@@ -51,8 +51,17 @@ func BenchmarkStreamLatency(b *testing.B) {
 		_ = srv.StreamMessages(pb.StreamMessagesRequest_builder{AgentId: proto.String("agent2")}.Build(), stream)
 	}()
 
-	// wait for stream to start
-	time.Sleep(10 * time.Millisecond)
+	// Poll until the subscriber is registered to avoid sleep flakiness
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		hub.mu.RLock()
+		subs := hub.subs["agent2"]
+		hub.mu.RUnlock()
+		if len(subs) > 0 {
+			break
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
 
 	msg := Message{
 		ID:         "msg1",

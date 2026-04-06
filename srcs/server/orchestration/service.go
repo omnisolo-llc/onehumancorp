@@ -984,15 +984,6 @@ func (h *Hub) Publish(message Message) error {
 		}
 
 		h.inbox[message.ToAgent] = append(inbox, message)
-
-		if subs, ok := h.subs[message.ToAgent]; ok {
-			for _, sub := range subs {
-				select {
-				case sub <- struct{}{}:
-				default:
-				}
-			}
-		}
 	}
 
 	if message.MeetingID != "" {
@@ -1066,16 +1057,6 @@ func (h *Hub) Publish(message Message) error {
 		h.meetings[message.MeetingID] = meeting
 		sender.Status = StatusInMeeting
 
-		for _, participant := range meeting.Participants {
-			if subs, ok := h.subs[participant]; ok {
-				for _, sub := range subs {
-					select {
-					case sub <- struct{}{}:
-					default:
-					}
-				}
-			}
-		}
 	} else {
 		sender.Status = StatusActive
 	}
@@ -1083,7 +1064,32 @@ func (h *Hub) Publish(message Message) error {
 	h.agents[message.FromAgent] = sender
 	centrifugeNode := h.centrifugeNode
 
+	// Collect subs while holding the lock
+	var notifyChs []chan struct{}
+	if message.ToAgent != "" {
+		if subs, ok := h.subs[message.ToAgent]; ok {
+			notifyChs = append(notifyChs, subs...)
+		}
+	}
+	if message.MeetingID != "" {
+		if meeting, ok := h.meetings[message.MeetingID]; ok {
+			for _, participant := range meeting.Participants {
+				if subs, ok := h.subs[participant]; ok {
+					notifyChs = append(notifyChs, subs...)
+				}
+			}
+		}
+	}
+
 	h.mu.Unlock()
+
+	// Notify outside the lock
+	for _, sub := range notifyChs {
+		select {
+		case sub <- struct{}{}:
+		default:
+		}
+	}
 
 	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
 	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
@@ -1259,6 +1265,10 @@ func (h *Hub) Subscribe(agentID string) (<-chan struct{}, func()) {
 		if len(h.subs[agentID]) == 0 {
 			delete(h.subs, agentID)
 		}
+		// NOTE: We do not close the channel here to prevent a race condition with
+		// publishers who might have already gathered this channel in a slice outside
+		// of the mutex lock and are about to send to it. By relying on garbage
+		// collection instead of an explicit close, we ensure safe concurrent use.
 	}
 
 	return ch, unsubscribe
