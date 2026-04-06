@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Palette
+---
+title: "🎨 Palette: [Hybrid UX improvement] Refactor ChannelsScreen to use Glassmorphism"
+description: |
+  Discovered a UX pattern violation in `srcs/app/lib/screens/channels_screen.dart` where `_ChannelCard` was using a flat `Card` widget without animations.
+  Refactored `_ChannelCard` to use an `_AnimatedChannelCard` StatefulWidget with hover effects and OHC Glassmorphism tokens (`BackdropFilter`, `ImageFilter.compose`, blur).
+priority: P1
+scope: Small
