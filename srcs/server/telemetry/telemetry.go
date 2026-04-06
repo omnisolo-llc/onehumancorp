@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -935,5 +936,24 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
 		))
+	}
+}
+
+// RecordQueueLength adds a delta to the current queue length gauge.
+func RecordQueueLength(ctx context.Context, delta int) {
+	if BufferMetricFunc != nil {
+		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		return
+	}
+	if meter == nil {
+		return
+	}
+	// Note: We use an UpDownCounter to act as a gauge delta in OpenTelemetry
+	gauge, err := meter.Int64UpDownCounter(
+		"ohc.sub_agent.queue_length",
+		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
+	)
+	if err == nil {
+		gauge.Add(ctx, int64(delta))
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/redis/rueidis"
 )
 
@@ -43,6 +44,7 @@ type TaskManager struct {
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
 	stopChan    chan struct{}
 	stateMachine *statemachine.StateMachine
+	taskQueue   queue.TaskQueue
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -66,10 +68,17 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 				c, err := rueidis.NewClient(opts)
 				if err == nil {
 					tm.redisClient = c
+					tm.taskQueue = queue.NewRedisTaskQueue(c, "")
 				}
 			}
 		}
 	}
+
+	// Fallback to SQLite queue if not using Redis
+	if tm.taskQueue == nil {
+		tm.taskQueue = queue.NewSQLiteTaskQueue(provider)
+	}
+
 	tm.stopChan = make(chan struct{})
 	return tm
 }
@@ -703,6 +712,23 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	return claimedTasks, nil
+}
+
+
+// DelegateSubTask queues a task to an isolated sub-agent worker
+func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {
+	payloadBytes, err := json.Marshal(payloadMap)
+	if err != nil {
+		return err
+	}
+	job := &queue.Job{
+		ID:           generateID(),
+		ParentTaskID: parentTaskID,
+		AgentRole:    agentRole,
+		Payload:      string(payloadBytes),
+		MaxAttempts:  3,
+	}
+	return tm.taskQueue.Enqueue(ctx, job)
 }
 
 // generateID generates a pseudo-uuid for SQLite compatibility.
