@@ -308,8 +308,6 @@ func run(now time.Time, listen listenFunc) error {
 				slog.Info("starting standalone metrics sync daemon", "endpoint", telemetrySyncCloudAPI)
 				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, telemetrySyncCloudAPI, 1*time.Minute)
 			}
-				}()
-			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
 			if missionsEndpoint != "" {
