@@ -121,3 +121,82 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		t.Fatalf("Expected 1 attempt, got %d", attempts)
 	}
 }
+
+func TestSQLiteTaskQueue_DequeueMiss(t *testing.T) {
+	provider := newTestProvider(t)
+	ctx := context.Background()
+
+	schema := `
+	CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+		id TEXT PRIMARY KEY,
+		parent_task_id TEXT,
+		agent_role TEXT NOT NULL,
+		payload TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'QUEUED',
+		attempts INTEGER DEFAULT 0,
+		max_attempts INTEGER DEFAULT 3,
+		run_after DATETIME DEFAULT CURRENT_TIMESTAMP,
+		locked_until DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	provider.Exec(ctx, schema)
+	q := NewSQLiteTaskQueue(provider)
+
+	// Dequeue from empty queue
+	dequeued, err := q.Dequeue(ctx, []string{"tester"})
+	if err != nil {
+		t.Fatalf("Expected nil err, got %v", err)
+	}
+	if dequeued != nil {
+		t.Fatal("Expected nil job")
+	}
+}
+
+func TestSQLiteTaskQueue_FailMaxAttempts(t *testing.T) {
+	provider := newTestProvider(t)
+	ctx := context.Background()
+
+	schema := `
+	CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+		id TEXT PRIMARY KEY,
+		parent_task_id TEXT,
+		agent_role TEXT NOT NULL,
+		payload TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'QUEUED',
+		attempts INTEGER DEFAULT 0,
+		max_attempts INTEGER DEFAULT 3,
+		run_after DATETIME DEFAULT CURRENT_TIMESTAMP,
+		locked_until DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	provider.Exec(ctx, schema)
+	q := NewSQLiteTaskQueue(provider)
+
+	job := &Job{
+		ID:           "test-job-fail-max",
+		ParentTaskID: "task-1",
+		AgentRole:    "tester",
+		Payload:      "{}",
+		MaxAttempts:  1,
+	}
+	q.Enqueue(ctx, job)
+	q.Dequeue(ctx, []string{"tester"})
+
+	if err := q.Fail(ctx, "test-job-fail-max", "final error"); err != nil {
+		t.Fatalf("Fail failed: %v", err)
+	}
+
+	var status string
+	var attempts int
+	err := provider.QueryRow(ctx, "SELECT status, attempts FROM sub_agent_jobs WHERE id = 'test-job-fail-max'").Scan(&status, &attempts)
+	if err != nil {
+		t.Fatalf("Failed to query job: %v", err)
+	}
+	if status != "FAILED" {
+		t.Fatalf("Expected status FAILED, got %s", status)
+	}
+}
