@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/sync"
 	"log/slog"
 	"net"
@@ -273,12 +274,19 @@ func run(now time.Time, listen listenFunc) error {
 		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
 	}
 
-	// AutoDream Worker and Pipeline
+	// Initialize Rueidis client if REDIS_URL is provided
+	var redisClient rueidis.Client
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		if opts, err := rueidis.ParseURL(redisURL); err == nil {
+			redisClient, _ = rueidis.NewClient(opts)
+		}
+	}
+
 	if pool != nil {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
 	}
 
