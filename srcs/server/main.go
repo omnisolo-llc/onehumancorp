@@ -21,6 +21,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -272,10 +273,13 @@ func run(now time.Time, listen listenFunc) error {
 		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
 	}
 
-	// AutoDream Worker
+	// AutoDream Worker and Pipeline
 	if pool != nil {
-		autodream := orchestration.NewAutoDreamWorker(pool.Provider)
-		autodream.Start(ctx)
+		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
+		autodreamWorker.Start(ctx)
+
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		go autodreamPipeline.Start(ctx)
 	}
 
 	// Run Token Burn Rate Forecasting Engine
