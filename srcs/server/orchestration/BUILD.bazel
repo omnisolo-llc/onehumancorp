@@ -11,7 +11,7 @@ go_library(
         "cached_minimax_client.go",
         "centrifuge_hub.go",
         "delegation.go",
-        "hub.go",
+        "forecast.go",
         "postgres_hub.go",
         "repository.go",
         "sanitizer.go",

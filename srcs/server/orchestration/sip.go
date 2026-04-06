@@ -551,13 +551,49 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	})
 }
 
+
+var delegateConcurrencyLimiter chan struct{}
+var delegateLimiterOnce sync.Once
+
+func getDelegateLimiter() chan struct{} {
+	delegateLimiterOnce.Do(func() {
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			delegateConcurrencyLimiter = make(chan struct{}, 1)
+		}
+	})
+	return delegateConcurrencyLimiter
+}
+
+
+// ClearDelegateLimiterForTest prevents deadlocks
+func ClearDelegateLimiterForTest() {
+	if delegateConcurrencyLimiter != nil {
+		select {
+		case <-delegateConcurrencyLimiter:
+		default:
+		}
+	}
+}
+
 // DelegateMission delegates specialized tasks via the agent_missions table.
+
 // Accepts parameters: s *SIPDB (No Constraints).
 // Returns DelegateMission(ctx context.Context, missionID, role string, task Message) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	limiter := getDelegateLimiter()
+	if limiter != nil {
+		select {
+		case limiter <- struct{}{}:
+			defer func() { <-limiter }()
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	_ = CheckDocumentationGate(task.Content)
+
 
 	if s.ContextRoot != "" {
 		s.groundingOnce.Do(func() {

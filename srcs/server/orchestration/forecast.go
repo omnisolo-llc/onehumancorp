@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -9,7 +10,6 @@ import (
 
 // StartTokenBurnForecaster starts a background worker that extrapolates token usage.
 func StartTokenBurnForecaster(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
-	// Expose ticker duration to allow overriding in tests.
 	StartTokenBurnForecasterWithTicker(ctx, getActiveOrgs, getTokens, 1*time.Minute)
 }
 
@@ -18,8 +18,7 @@ func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(
 	ticker := time.NewTicker(tickDuration)
 	defer ticker.Stop()
 
-	// Store history of usage for calculating moving average (e.g. over the last 5 ticks)
-	// Map of organizationID to a slice of totalTokens recorded each tick
+	// Store history of usage for calculating moving average
 	history := make(map[string][]int64)
 
 	for {
@@ -56,6 +55,11 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 				// Calculate moving average burn rate (tokens per tick)
 				rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
 				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
+
+				// Predictive Alerts Logic: Emit a log warning if the burn rate is excessively high
+				if rate > 50000 {
+					slog.Warn("High Token Burn Rate Forecast detected", "organization_id", orgID, "burn_rate", rate)
+				}
 			}
 		} else {
 			delete(history, orgID)

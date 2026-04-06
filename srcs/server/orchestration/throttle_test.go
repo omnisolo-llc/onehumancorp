@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+func Test_ClearThrottleDelegateLimiterForTest(t *testing.T) {
+	ClearDelegateLimiterForTest()
+}
+
 func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	// Clear the package-level semaphore after the test.
 	defer ClearSemaphore()
