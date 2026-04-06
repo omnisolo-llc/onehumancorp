@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"log/slog"
 	"net"
 	"net/http"
@@ -475,7 +476,7 @@ func run(now time.Time, listen listenFunc) error {
 	// The Rust binary connects to the gRPC server and self-registers.
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	grpcEndpoint := "http://localhost" + grpcAddress
-	startBuiltinAgentProcess(ctx, grpcEndpoint)
+	startBuiltinAgentProcess(ctx, hub)
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Start gRPC server
@@ -518,47 +519,15 @@ func main() {
 	}
 }
 
-// startBuiltinAgentProcess spawns the Rust builtin agent binary as a subprocess.
-// The Rust binary connects back to the gRPC server and self-registers.
-// It is restarted automatically if it exits unexpectedly.
-func startBuiltinAgentProcess(ctx context.Context, grpcEndpoint string) {
-	binaryPath := os.Getenv("OHC_BUILTIN_AGENT_BINARY")
-	if binaryPath == "" {
-		exe, err := os.Executable()
-		if err == nil {
-			binaryPath = filepath.Join(filepath.Dir(exe), "ohc-builtin-agent")
-		}
-	}
-	if binaryPath == "" {
-		binaryPath = "ohc-builtin-agent"
-	}
-
-	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		slog.Warn("builtin agent binary not found, agent subprocess will not start", "path", binaryPath)
-		return
-	}
-
-	go func() {
-		for {
-			cmd := exec.CommandContext(ctx, binaryPath)
-			cmd.Env = append(os.Environ(),
-				"OHC_GRPC_ENDPOINT="+grpcEndpoint,
-			)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-
-			slog.Info("starting builtin agent process", "path", binaryPath)
-			if err := cmd.Run(); err != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				slog.Error("builtin agent process exited unexpectedly, restarting in 5s", "err", err)
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(5 * time.Second):
-				}
-			}
-		}
-	}()
+// startBuiltinAgentProcess spawns the Go builtin agent as a native goroutine runner.
+// It acts as the default background worker for tasks routed to 'builtin'.
+func startBuiltinAgentProcess(ctx context.Context, hub *orchestration.Hub) {
+    // Instead of spawning a Rust binary, we launch the built-in Go agent runner.
+    // The orchestration server automatically routes tasks with ProviderType "builtin" here.
+    runner, err := builtin.StartDefaultRunner(hub, nil)
+    if err != nil {
+        slog.Error("failed to start default builtin runner", "error", err)
+        return
+    }
+    go runner.Start(ctx)
 }

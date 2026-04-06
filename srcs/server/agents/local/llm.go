@@ -538,7 +538,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 //  1. ANTHROPIC_API_KEY → Anthropic Messages API
 //  2. OPENAI_API_KEY    → OpenAI-compatible (endpoint from OPENAI_API_BASE or default)
 //  3. OHC_LOCAL_LLM_ENDPOINT → Ollama / local OpenAI-compat
-func defaultLLMClient() LLMClient {
+func DefaultLLMClient() LLMClient {
 	var client LLMClient
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
 		client = NewAnthropicClient(key, "", "")

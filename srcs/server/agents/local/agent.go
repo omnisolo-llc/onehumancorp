@@ -61,7 +61,7 @@ func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
 		// Attempt to wrap with cache if environment DB is available (e.g. from state context)
 		// Since NewAgent doesn't take DB directly, it will just use default base LLM.
 		// However, callers that want caching should provide it in cfg.LLM.
-		cfg.LLM = defaultLLMClient()
+		cfg.LLM = DefaultLLMClient()
 	}
 	if cfg.Tools == nil {
 		cfg.Tools = DefaultTools()

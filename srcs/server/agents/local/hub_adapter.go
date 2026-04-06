@@ -71,7 +71,7 @@ func StartDefaultRunner(hub *orchestration.Hub, cfg AgentConfig) (*Runner, error
 
 	// Attempt to wrap LLM with CachedLLMClient if DB is available in Hub
 	if cfg.LLM == nil {
-		baseLLM := defaultLLMClient()
+		baseLLM := DefaultLLMClient()
 		if hub.DB() != nil {
 			cfg.LLM = NewCachedLLMClient(baseLLM, hub.DB(), hub.Redis())
 		} else {
