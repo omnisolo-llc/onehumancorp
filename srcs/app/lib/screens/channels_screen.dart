@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/channel.dart';
@@ -192,17 +193,18 @@ class ChannelsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data:
-            (channels) =>
-                channels.isEmpty
-                    ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
-                    : _ChannelList(channels: channels),
+        data: (channels) => channels.isEmpty
+            ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
+            : _ChannelList(channels: channels),
       ),
     );
   }
 
   void _showAddDialog(BuildContext context, WidgetRef ref) {
-    showDialog(context: context, builder: (_) => _AddChannelDialog(ref: ref));
+    showDialog(
+      context: context,
+      builder: (_) => _AddChannelDialog(ref: ref),
+    );
   }
 }
 
@@ -260,39 +262,146 @@ class _ChannelList extends StatelessWidget {
   }
 }
 
-class _ChannelCard extends StatelessWidget {
+class _ChannelCard extends StatefulWidget {
   final ChatChannel channel;
   const _ChannelCard({required this.channel});
 
+  @override
+  State<_ChannelCard> createState() => _ChannelCardState();
+}
+
+class _ChannelCardState extends State<_ChannelCard> {
+  bool _isHovered = false;
+
   String _icon() {
     for (final def in _channelDefs) {
-      if (def.type == channel.backend.type) return def.icon;
+      if (def.type == widget.channel.backend.type) return def.icon;
     }
     return '💬';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
-        title: Text(
-          channel.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(channel.backend.displayName),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Chip(
-              label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
-              backgroundColor:
-                  channel.enabled
-                      ? Theme.of(context).colorScheme.secondaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+    final colorScheme = Theme.of(context).colorScheme;
+    final enabled = widget.channel.enabled;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(const <double>[
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.3,
+                        )
+                      : colorScheme.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered
+                        ? colorScheme.outlineVariant
+                        : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colorScheme.secondaryContainer.withValues(
+                        alpha: 0.8,
+                      ),
+                    ),
+                    child: Text(_icon(), style: const TextStyle(fontSize: 24)),
+                  ),
+                  title: Text(
+                    widget.channel.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: colorScheme.onSurface,
+                      fontFamily: 'Outfit',
+                    ),
+                  ),
+                  subtitle: Text(
+                    widget.channel.backend.displayName,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                    ),
+                  ),
+                  trailing: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          (enabled
+                                  ? colorScheme.secondaryContainer
+                                  : colorScheme.surfaceContainerHighest)
+                              .withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      enabled ? 'Enabled' : 'Disabled',
+                      style: TextStyle(
+                        color: enabled
+                            ? colorScheme.onSecondaryContainer
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -385,26 +494,25 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                   labelText: 'Backend',
                   border: OutlineInputBorder(),
                 ),
-                items:
-                    _channelDefs
-                        .map(
-                          (d) => DropdownMenuItem(
-                            value: d,
-                            child: Row(
-                              children: [
-                                Text(d.icon),
-                                const SizedBox(width: 8),
-                                Text(
-                                  d.type.name == 'centrifuge'
-                                      ? 'Native (Centrifuge)'
-                                      : d.type.name[0].toUpperCase() +
-                                          d.type.name.substring(1),
-                                ),
-                              ],
+                items: _channelDefs
+                    .map(
+                      (d) => DropdownMenuItem(
+                        value: d,
+                        child: Row(
+                          children: [
+                            Text(d.icon),
+                            const SizedBox(width: 8),
+                            Text(
+                              d.type.name == 'centrifuge'
+                                  ? 'Native (Centrifuge)'
+                                  : d.type.name[0].toUpperCase() +
+                                        d.type.name.substring(1),
                             ),
-                          ),
-                        )
-                        .toList(),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (val) {
                   if (val == null) return;
                   setState(() {
@@ -439,8 +547,9 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                       labelText: f.label,
                       hintText: f.hint,
                       border: const OutlineInputBorder(),
-                      suffixIcon:
-                          f.secret ? const Icon(Icons.lock_outline) : null,
+                      suffixIcon: f.secret
+                          ? const Icon(Icons.lock_outline)
+                          : null,
                     ),
                   ),
                 ),
@@ -456,14 +565,13 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Add'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
         ),
       ],
     );
