@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart' hide Column, Row;
-// import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:ohc_app/widgets/hybrid_sync_panel.dart';
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
   const SwarmMemoryScreen({super.key});
@@ -62,8 +62,20 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                   const SizedBox(height: 8),
                   const Text('Offline-to-Cloud State Sync (PowerSync)', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
                   const SizedBox(height: 16),
-                  const Expanded(
-                    child: _DurableMemoryWidget(),
+                  const Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          HybridSyncPanelWidget(),
+                          SizedBox(height: 16),
+                          SizedBox(
+                            height: 300,
+                            child: _DurableMemoryWidget(),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
