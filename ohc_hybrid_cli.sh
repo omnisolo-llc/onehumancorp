@@ -29,6 +29,7 @@ show_menu() {
     echo -e "  ${PURPLE}5)${RESET} Run All Tests"
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
+    echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -158,6 +159,15 @@ check_system() {
     verify_dependencies
 }
 
+seed_mock_data() {
+    echo -e "${DIM}[Executing deploy/scripts/ohc-seed-data.sh...]${RESET}"
+    if bash deploy/scripts/ohc-seed-data.sh; then
+        echo -e "${GREEN}Mock data seeding attempt finished.${RESET}\n"
+    else
+        echo -e "${PURPLE}Mock data seeding failed.${RESET}\n"
+    fi
+}
+
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
     DB_FILE="local_standalone.db"
@@ -201,6 +211,7 @@ else
             5) run_tests ;;
             6) check_system ;;
             7) standalone_db_check ;;
+            8) seed_mock_data ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
