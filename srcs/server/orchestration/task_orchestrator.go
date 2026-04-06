@@ -197,11 +197,7 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 		INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title, payload, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
-	if to.db.IsSQLite() {
-		_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.ParentPlanID, task.Title, payload, task.Status)
-	} else {
-		_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.ParentPlanID, task.Title, payload, task.Status)
-	}
+	_, err = tx.Exec(ctx, query, task.ID, task.MissionID, task.ParentPlanID, task.Title, payload, task.Status)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert task: %w", err)
 	}
