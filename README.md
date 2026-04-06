@@ -40,6 +40,12 @@ graph TD;
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
+### KAIROS Orchestration Documentation
+The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
+- **[Distributed State Machine](docs/features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
+- **[Sub-Agent Queue](docs/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
+- **[AutoDream Pipeline](docs/features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
+
 ### Remote clients and standalone mode
 
 The Flutter app already supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
