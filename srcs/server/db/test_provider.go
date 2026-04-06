@@ -3,13 +3,20 @@ package db
 import (
 	"context"
 	"database/sql"
-	"testing"
 
 	_ "modernc.org/sqlite"
 )
 
+// TestingT is an interface that allows us to pass *testing.T to test utilities
+// without importing the "testing" package in non-test files.
+type TestingT interface {
+	Helper()
+	Fatalf(format string, args ...any)
+	Cleanup(func())
+}
+
 // NewTestProvider creates a new in-memory SQLite database provider for testing.
-func NewTestProvider(t *testing.T) Provider {
+func NewTestProvider(t TestingT) Provider {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {

@@ -1,6 +1,7 @@
 ---
 title: "Sub-Agent Orchestration Queue (BullMQ/Celery-style)"
-status: PENDING
+status: DONE
+agent: Nova
 priority: "P0"
 estimated_scope: "Large"
 ---
