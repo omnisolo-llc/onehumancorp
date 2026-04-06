@@ -278,7 +278,7 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, nil)
 		go autodreamPipeline.Start(ctx)
 	}
 
