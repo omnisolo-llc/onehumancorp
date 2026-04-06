@@ -556,6 +556,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", server.handleHybridSyncMissions))
+	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
@@ -1855,4 +1856,62 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+// handleTelemetrySync receives buffered standalone metrics and ingests them into the cloud DB.
+func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var metrics []map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&metrics); err != nil {
+		http.Error(w, "Bad Request: invalid json", http.StatusBadRequest)
+		return
+	}
+
+	// Store into SIPDB which wraps the DB provider
+	if s.hub == nil || s.hub.SIPDB() == nil {
+		http.Error(w, "Internal Server Error: hub or sipdb not available", http.StatusInternalServerError)
+		return
+	}
+	dbProvider := s.hub.SIPDB().Provider()
+	if dbProvider == nil {
+		http.Error(w, "Internal Server Error: db provider not available", http.StatusInternalServerError)
+		return
+	}
+
+	tx, err := dbProvider.Begin(r.Context())
+	if err != nil {
+		http.Error(w, "Internal Server Error: database error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	for _, m := range metrics {
+		metricType, _ := m["metric_type"].(string)
+		delete(m, "metric_type")
+		payloadBytes, _ := json.Marshal(m)
+		// We ingest directly into the cloud's telemetry_buffer, which could act as the central store
+		_, err = tx.Exec(r.Context(), "INSERT INTO telemetry_buffer (metric_type, payload, organization_id) VALUES ($1, $2, $3)", metricType, string(payloadBytes), claims.OrganizationID)
+		if err != nil {
+			http.Error(w, "Internal Server Error: failed to insert metric", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		http.Error(w, "Internal Server Error: failed to commit", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "synced": len(metrics)})
 }

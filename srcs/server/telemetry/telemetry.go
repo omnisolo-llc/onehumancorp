@@ -564,6 +564,16 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
 	}
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id": agentID,
+			"role":     role,
+			"api":      api,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
+	}
 }
 
 // RecordAgentApiError increments the global counter for external tool or API invocations errors made by agents.
@@ -597,6 +607,16 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
 	}
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id": agentID,
+			"role":     role,
+			"api":      api,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
+	}
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.
@@ -616,6 +636,14 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 		attribute.String("type", interactionType),
 	))
 
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"type": interactionType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
+	}
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"type": interactionType,
@@ -729,6 +757,15 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":  operation,
+			"cache_type": cacheType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "cache_hit", string(payloadBytes))
+	}
 }
 
 // RecordApiRateLimitExceeded increments the counter for API rate limits exceeded (HTTP 429).
@@ -739,6 +776,14 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 	RateLimitExceededCount.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("endpoint", endpoint),
 	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"endpoint": endpoint,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "api_rate_limit_exceeded", string(payloadBytes))
+	}
 }
 
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
@@ -749,6 +794,14 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sqlite_lock_contention", string(payloadBytes))
+	}
 }
 
 // RecordSQLiteRetryExhausted increments the global counter for SQLite transaction failed after exhausting retries.
@@ -759,6 +812,14 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sqlite_retry_exhausted", string(payloadBytes))
+	}
 }
 
 // RecordTeammateMeshBroadcast increments the global counter for Teammate Mesh broadcasts.
@@ -769,6 +830,14 @@ func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 	TeammateMeshBroadcastsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("channel", channel),
 	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"channel": channel,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "teammate_mesh_broadcast", string(payloadBytes))
+	}
 }
 
 // RecordTeammateMeshDirectMessage increments the global counter for Teammate Mesh direct messages.
@@ -813,6 +882,14 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 		return
 	}
 	TaskProcessingLatency.Record(ctx, latency.Seconds())
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency.Seconds(),
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "task_processed", string(payloadBytes))
+	}
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
@@ -829,6 +906,14 @@ func RecordSyncLatency(ctx context.Context, latency float64) {
 		return
 	}
 	SyncLatency.Record(ctx, latency)
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sync_latency", string(payloadBytes))
+	}
 }
 
 // RecordSyncPayloadSize records the size of the sync payload.
@@ -905,6 +990,15 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":  operation,
+			"cache_type": cacheType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "cache_miss", string(payloadBytes))
+	}
 }
 
 // RecordAutoDreamSyncLatency records the duration of the AutoDream sync operation.
