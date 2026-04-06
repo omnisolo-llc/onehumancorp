@@ -814,17 +814,17 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 	if w.pool.IsSQLite() {
 		// SQLite fallback using recency
 		rows, errQuery = w.pool.Query(ctx, `
-			SELECT 'session-' || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
+			SELECT * FROM (SELECT .session-. || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25)
 			UNION ALL
-			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT * FROM (SELECT .task-. || id, COALESCE(payload, .{}.) FROM shared_tasks WHERE status = .COMPLETED. ORDER BY updated_at DESC LIMIT 25)
 		`)
 	} else {
 		// Postgres mode
 		// Ensure context_data is cast to TEXT to prevent UNION ALL type mismatch with JSONB payloads
 		rows, errQuery = w.pool.Query(ctx, `
-			SELECT 'session-' || session_id, CAST(context_data AS TEXT) FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
+			SELECT * FROM (SELECT .session-. || session_id, CAST(context_data AS TEXT) FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25)
 			UNION ALL
-			SELECT 'task-' || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT * FROM (SELECT .task-. || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), .{}.) FROM shared_tasks WHERE status = .COMPLETED. ORDER BY updated_at DESC LIMIT 25)
 		`)
 	}
 
