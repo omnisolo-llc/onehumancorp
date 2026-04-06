@@ -60,7 +60,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	pipeline := NewAutoDreamPipeline(provider)
+	pipeline := NewAutoDreamPipeline(provider, nil)
 
 	// Run process
 	pipeline.process(ctx)
@@ -97,7 +97,7 @@ func TestAutoDreamPipeline_StartStop(t *testing.T) {
 	provider, err := db.NewSQLiteProvider(":memory:")
 	require.NoError(t, err)
 
-	pipeline := NewAutoDreamPipeline(provider)
+	pipeline := NewAutoDreamPipeline(provider, nil)
 
 	go pipeline.Start(context.Background())
 
