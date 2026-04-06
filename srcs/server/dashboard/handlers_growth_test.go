@@ -62,6 +62,47 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 	}
 }
 
+func TestHandleViralCoefficient(t *testing.T) {
+	s := &Server{
+		referrals: []Referral{
+			{UserID: "user-1", Conversions: 2},
+			{UserID: "user-1", Conversions: 1},
+			{UserID: "user-2", Conversions: 0},
+			{UserID: "user-3", Conversions: 3},
+		},
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/viral-coefficient", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleViralCoefficient(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var res ViralCoefficientResponse
+	if err := json.NewDecoder(wGet.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.TotalReferrals != 4 {
+		t.Errorf("expected 4 referrals, got %d", res.TotalReferrals)
+	}
+	// user-1: 3, user-2: 0, user-3: 3 -> Total Conversions = 6
+	if res.TotalConversions != 6 {
+		t.Errorf("expected 6 conversions, got %d", res.TotalConversions)
+	}
+	// unique inviters: user-1, user-2, user-3 -> 3
+	if res.UniqueInviters != 3 {
+		t.Errorf("expected 3 unique inviters, got %d", res.UniqueInviters)
+	}
+	// KFactor = 6 / 3 = 2.0
+	if res.KFactor != 2.0 {
+		t.Errorf("expected kFactor 2.0, got %f", res.KFactor)
+	}
+}
+
 func TestHandleReferrals(t *testing.T) {
 	s := &Server{}
 

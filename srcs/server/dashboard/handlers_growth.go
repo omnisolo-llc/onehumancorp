@@ -115,6 +115,14 @@ type downloadCreateRequest struct {
 	Version string `json:"version"`
 }
 
+// ViralCoefficientResponse represents the computed K-factor for growth.
+type ViralCoefficientResponse struct {
+	TotalReferrals   int     `json:"totalReferrals"`
+	TotalConversions int     `json:"totalConversions"`
+	UniqueInviters   int     `json:"uniqueInviters"`
+	KFactor          float64 `json:"kFactor"` // conversions per unique inviter
+}
+
 func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -145,4 +153,38 @@ func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	refs := append([]Referral(nil), s.referrals...)
+	s.mu.RUnlock()
+
+	var totalConversions int
+	var totalReferrals = len(refs)
+	inviters := make(map[string]bool)
+
+	for _, ref := range refs {
+		totalConversions += ref.Conversions
+		inviters[ref.UserID] = true
+	}
+
+	uniqueInviters := len(inviters)
+	kFactor := 0.0
+	if uniqueInviters > 0 {
+		kFactor = float64(totalConversions) / float64(uniqueInviters)
+	}
+
+	res := ViralCoefficientResponse{
+		TotalReferrals:   totalReferrals,
+		TotalConversions: totalConversions,
+		UniqueInviters:   uniqueInviters,
+		KFactor:          kFactor,
+	}
+	writeJSON(w, res)
 }
