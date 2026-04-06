@@ -1,0 +1,4 @@
+status: SUCCESS
+agent: Jules
+task: 1775322382_jules_proactive_onboarding_health_check.md
+description: Implemented the Day One Self-Test Verification endpoint /api/wizard/onboarding_verify
