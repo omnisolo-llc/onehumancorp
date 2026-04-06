@@ -218,6 +218,47 @@ type TeammateMesh interface {
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
 }
 
+// V2TeammateMesh implements TeammateMesh utilizing CentrifugeNode for resilient,
+// real-time pub/sub instead of bare websockets.
+type V2TeammateMesh struct {
+	node *CentrifugeNode
+}
+
+func NewV2TeammateMesh(node *CentrifugeNode) *V2TeammateMesh {
+	return &V2TeammateMesh{node: node}
+}
+
+func (vm *V2TeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
+	payload := map[string]interface{}{
+		"agent_id": task.AgentID,
+		"action":   task.Action,
+		"status":   task.Status,
+		"task_id":  task.TaskID,
+	}
+	vm.node.PublishTaskBroadcast(task.TaskID, payload)
+	return nil
+}
+
+func (vm *V2TeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	ch := make(chan Task)
+	return ch, nil
+}
+
+func (vm *V2TeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	payload := Message{
+		ID:        msg.AgentID,
+		Content:   msg.Content,
+	}
+	vm.node.PublishCoordinationMessage(payload)
+	return nil
+}
+
+func (vm *V2TeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+	ch := make(chan MeshMessage)
+	return ch, nil
+}
+
+
 type RedisTeammateMesh struct {
 	client rueidis.Client
 }

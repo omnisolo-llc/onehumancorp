@@ -618,14 +618,23 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	for _, task := range claimedTasks {
-		// Broadcast task claim
+		// Broadcast task claim using State Machine tracking (V2)
 		if tm.hub != nil {
 			go func(t *SharedTask) {
+				msg := MeshMessage{
+					AgentID:   agentID,
+					Action:    "CLAIM",
+					Status:    t.Status,
+					Timestamp: time.Now(),
+					Content:   t.ID,
+				}
+
 				payload := map[string]interface{}{
+					"agent_id": msg.AgentID,
+					"action":   msg.Action,
+					"status":   msg.Status,
 					"task_id":  t.ID,
-					"action":   "CLAIM",
-					"agent_id": agentID,
-					"status":   t.Status,
+					"timestamp": msg.Timestamp,
 				}
 				tm.hub.PublishTaskBroadcast(t.ID, payload)
 			}(task)

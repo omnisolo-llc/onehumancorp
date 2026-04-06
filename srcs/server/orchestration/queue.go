@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"sync"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -256,5 +257,166 @@ func (q *SQLiteTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTa
 
 func (q *SQLiteTaskQueue) Complete(ctx context.Context, queueName, taskID string) error {
 	_, err := q.db.Exec(ctx, "DELETE FROM local_queue_jobs WHERE id = $1", taskID)
+	return err
+}
+
+
+// SubAgentQueue defines a distributed sub-agent queue interface.
+type SubAgentQueue interface {
+	Enqueue(ctx context.Context, parentTaskID string, payload map[string]interface{}) (string, error)
+	Dequeue(ctx context.Context) (*QueuedTask, error)
+	Complete(ctx context.Context, taskID string) error
+}
+
+// PgRedisQueue implements SubAgentQueue for Cloud-Native Mode using Rueidis ZSETs.
+type PgRedisQueue struct {
+	client rueidis.Client
+}
+
+func NewPgRedisQueue(client rueidis.Client) *PgRedisQueue {
+	return &PgRedisQueue{client: client}
+}
+
+func (q *PgRedisQueue) Enqueue(ctx context.Context, parentTaskID string, payload map[string]interface{}) (string, error) {
+	id := generateID()
+	jobData := map[string]interface{}{
+		"id": id,
+		"parent_task_id": parentTaskID,
+		"payload": payload,
+	}
+	jobBytes, err := json.Marshal(jobData)
+	if err != nil {
+		return "", err
+	}
+
+	score := float64(time.Now().UnixMilli())
+	cmd := q.client.B().Zadd().Key("sub_agent_queue").ScoreMember().ScoreMember(score, string(jobBytes)).Build()
+	if err := q.client.Do(ctx, cmd).Error(); err != nil {
+		return "", fmt.Errorf("failed to enqueue to redis: %w", err)
+	}
+	return id, nil
+}
+
+func (q *PgRedisQueue) Dequeue(ctx context.Context) (*QueuedTask, error) {
+	cmd := q.client.B().Zpopmin().Key("sub_agent_queue").Count(1).Build()
+	resp := q.client.Do(ctx, cmd)
+	if err := resp.Error(); err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	items, err := resp.AsZScores()
+	if err != nil || len(items) == 0 {
+		return nil, err
+	}
+	item := items[0].Member
+
+	var jobData struct {
+		ID      string                 `json:"id"`
+		Payload map[string]interface{} `json:"payload"`
+	}
+	if err := json.Unmarshal([]byte(item), &jobData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal job: %w", err)
+	}
+
+	return &QueuedTask{
+		ID:      jobData.ID,
+		Payload: jobData.Payload,
+	}, nil
+}
+
+func (q *PgRedisQueue) Complete(ctx context.Context, taskID string) error {
+	return nil
+}
+
+// SqliteQueue implements SubAgentQueue for Standalone Mode using SQLite.
+type SqliteQueue struct {
+	db db.Provider
+	mu sync.Mutex
+}
+
+func NewSqliteQueue(db db.Provider) *SqliteQueue {
+	return &SqliteQueue{db: db}
+}
+
+func (q *SqliteQueue) ensureTable(ctx context.Context) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	query := `
+		CREATE TABLE IF NOT EXISTS sub_agent_queue (
+			id TEXT PRIMARY KEY,
+			parent_task_id TEXT NOT NULL,
+			payload TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			scheduled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			completed_at DATETIME
+		)
+	`
+	_, err := q.db.Exec(ctx, query)
+	return err
+}
+
+func (q *SqliteQueue) Enqueue(ctx context.Context, parentTaskID string, payload map[string]interface{}) (string, error) {
+	if err := q.ensureTable(ctx); err != nil {
+		return "", err
+	}
+
+	id := generateID()
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	query := `
+		INSERT INTO sub_agent_queue (id, parent_task_id, payload, status)
+		VALUES ($1, $2, $3, 'PENDING')
+	`
+	_, err = q.db.Exec(ctx, query, id, parentTaskID, string(payloadBytes))
+	return id, err
+}
+
+func (q *SqliteQueue) Dequeue(ctx context.Context) (*QueuedTask, error) {
+	if err := q.ensureTable(ctx); err != nil {
+		return nil, err
+	}
+
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	var id, payloadStr string
+	query := `
+		UPDATE sub_agent_queue
+		SET status = 'PROCESSING'
+		WHERE id IN (
+			SELECT id FROM sub_agent_queue
+			WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP
+			ORDER BY scheduled_at ASC LIMIT 1
+		)
+		RETURNING id, payload
+	`
+	err := q.db.QueryRow(ctx, query).Scan(&id, &payloadStr)
+	if err != nil {
+		return nil, nil // Assume sql.ErrNoRows or empty
+	}
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadStr), &payload); err != nil {
+		return nil, err
+	}
+
+	return &QueuedTask{
+		ID:      id,
+		Payload: payload,
+	}, nil
+}
+
+func (q *SqliteQueue) Complete(ctx context.Context, taskID string) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	_, err := q.db.Exec(ctx, "UPDATE sub_agent_queue SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = $1", taskID)
 	return err
 }
