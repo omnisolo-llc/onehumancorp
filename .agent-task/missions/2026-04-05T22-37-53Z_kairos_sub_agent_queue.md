@@ -1,6 +1,7 @@
 ---
+status: IN_PROGRESS
+agent: KAIROS Orchestrator (L7)
 title: "Sub-Agent Orchestration Queue (BullMQ/Celery-style)"
-status: PENDING
 priority: "P0"
 estimated_scope: "Large"
 ---

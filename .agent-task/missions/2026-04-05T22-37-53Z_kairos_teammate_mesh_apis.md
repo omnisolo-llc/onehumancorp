@@ -1,6 +1,7 @@
 ---
+status: IN_PROGRESS
+agent: KAIROS Orchestrator (L7)
 title: "Realtime Teammate Mesh APIs (gRPC/WebSockets/Redis)"
-status: PENDING
 priority: "P0"
 estimated_scope: "Large"
 ---
