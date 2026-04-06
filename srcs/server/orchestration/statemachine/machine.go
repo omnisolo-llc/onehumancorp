@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 // State constants
@@ -37,15 +39,17 @@ var ValidTransitions = map[string][]string{
 
 // StateMachine manages state transitions for entities
 type StateMachine struct {
-	dbProvider db.Provider
-	broadcast  func(string, map[string]interface{})
+	dbProvider  db.Provider
+	redisClient rueidis.Client
+	broadcast   func(string, map[string]interface{})
 }
 
 // NewStateMachine creates a new state machine
-func NewStateMachine(dbProvider db.Provider, broadcast func(string, map[string]interface{})) *StateMachine {
+func NewStateMachine(dbProvider db.Provider, redisClient rueidis.Client, broadcast func(string, map[string]interface{})) *StateMachine {
 	return &StateMachine{
-		dbProvider: dbProvider,
-		broadcast:  broadcast,
+		dbProvider:  dbProvider,
+		redisClient: redisClient,
+		broadcast:   broadcast,
 	}
 }
 
@@ -66,15 +70,33 @@ func IsValidTransition(fromState, toState string) bool {
 	return false
 }
 
-// Transition performs a state transition for the given entity
-func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
-	tx, err := sm.dbProvider.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
+// TransitionTx performs a state transition using an existing transaction
+func (sm *StateMachine) TransitionTx(ctx context.Context, tx db.Tx, entityID, entityType, toState, agentID, reason string) error {
+	if sm.redisClient != nil && !sm.dbProvider.IsSQLite() {
+		// Acquire distributed lock in Cloud Mode using Redis
+		lockKey := fmt.Sprintf("lock:statemachine:%s:%s", entityType, entityID)
+		cmd := sm.redisClient.B().Set().Key(lockKey).Value(agentID).Nx().Ex(10 * time.Second).Build()
+		resp := sm.redisClient.Do(ctx, cmd)
+		if resp.Error() != nil {
+			if rueidis.IsRedisNil(resp.Error()) {
+				return fmt.Errorf("failed to acquire distributed lock for entity %s", entityID)
+			}
+			return fmt.Errorf("redis error acquiring lock: %w", resp.Error())
+		}
 
-	// Acquire lock and read current state
+		defer func() {
+			script := rueidis.NewLuaScript(`
+				if redis.call("get", KEYS[1]) == ARGV[1] then
+					return redis.call("del", KEYS[1])
+				else
+					return 0
+				end
+			`)
+			_ = script.Exec(context.Background(), sm.redisClient, []string{lockKey}, []string{agentID})
+		}()
+	}
+
+	// Acquire DB row lock if not SQLite
 	var currentState string
 	var query string
 
@@ -85,16 +107,15 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
 		}
 
-		err = tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return fmt.Errorf("entity not found: %s", entityID)
+			}
+			return fmt.Errorf("failed to read current state: %w", err)
+		}
 	} else {
 		return fmt.Errorf("unsupported entity type: %s", entityType)
-	}
-
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			return fmt.Errorf("entity not found: %s", entityID)
-		}
-		return fmt.Errorf("failed to read current state: %w", err)
 	}
 
 	// Validate transition
@@ -108,8 +129,8 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 
 	// Update entity state
 	if entityType == "SHARED_TASK" {
-		updateQuery := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, toState, entityID)
+		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+		_, err := tx.Exec(ctx, updateQuery, toState, entityID, agentID)
 		if err != nil {
 			return fmt.Errorf("failed to update entity state: %w", err)
 		}
@@ -121,13 +142,9 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err = tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
+	_, err := tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
 	if err != nil {
 		return fmt.Errorf("failed to record transition audit log: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Broadcast transition
@@ -141,6 +158,26 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 			"reason":      reason,
 		}
 		sm.broadcast(entityID, payload)
+	}
+
+	return nil
+}
+
+// Transition performs a state transition for the given entity
+func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
+	tx, err := sm.dbProvider.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	err = sm.TransitionTx(ctx, tx, entityID, entityType, toState, agentID, reason)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

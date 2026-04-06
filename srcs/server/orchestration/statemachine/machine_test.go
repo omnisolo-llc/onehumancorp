@@ -77,7 +77,7 @@ func TestStateMachine_Transition(t *testing.T) {
 		t.Fatalf("Failed to insert task: %v", err)
 	}
 
-	sm := NewStateMachine(dbProvider, nil) // Passing nil Hub for tests
+	sm := NewStateMachine(dbProvider, nil, nil) // Passing nil Hub and nil Redis for tests
 
 	// 1. Test Valid Transition: PENDING -> IN_PROGRESS
 	err = sm.Transition(ctx, taskID, "SHARED_TASK", StateInProgress, "agent1", "Starting task")
