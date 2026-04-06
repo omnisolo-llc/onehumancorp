@@ -130,11 +130,45 @@ verify_dependencies() {
     echo ""
 }
 
-check_system() {
-    verify_dependencies
+
+verify_ports() {
+    echo -e "${DIM}[Verifying Required Ports]${RESET}"
+    local ports=(8080 5432 6379 3002 9090 3000)
+    local all_free=true
+
+    # We use nc if available, or lsof, or fallback to true if neither is available
+    if command -v nc >/dev/null 2>&1; then
+        for port in "${ports[@]}"; do
+            if nc -z localhost $port >/dev/null 2>&1; then
+                echo -e "  ${PURPLE}✗ Port $port is already in use${RESET}"
+                all_free=false
+            else
+                echo -e "  ${GREEN}✓ Port $port is free${RESET}"
+            fi
+        done
+    elif command -v lsof >/dev/null 2>&1; then
+        for port in "${ports[@]}"; do
+            if lsof -i :$port >/dev/null 2>&1; then
+                echo -e "  ${PURPLE}✗ Port $port is already in use${RESET}"
+                all_free=false
+            else
+                echo -e "  ${GREEN}✓ Port $port is free${RESET}"
+            fi
+        done
+    else
+        echo -e "  ${DIM}⚠ 'nc' or 'lsof' not found. Skipping port checks.${RESET}"
+    fi
+    echo ""
 }
 
-if [ "$1" == "--non-interactive" ]; then
+check_system() {
+    verify_dependencies
+    verify_ports
+}
+
+if [ "$1" == "--test-mode" ]; then
+    echo "Test mode"
+elif [ "$1" == "--non-interactive" ]; then
     echo "Running in non-interactive verification mode."
     run_setup
     # run_tests

@@ -64,6 +64,21 @@ observations:
   - ohc-setup.sh completed successfully.
 STAT
 
+
+echo "[5/4] System Setup Audit..."
+if [ ! -d ".agent-task/memory" ] || [ ! -d ".agent-task/status" ]; then
+    echo "  [ERROR] SIP memory directories not created properly."
+else
+    echo "  [OK] SIP memory directories verified."
+fi
+
+# We don't fail the build here, just warn
+if command -v sqlite3 >/dev/null 2>&1; then
+    echo "  [OK] sqlite3 available."
+else
+    echo "  [WARN] sqlite3 missing, Standalone Desktop DB viewing may be limited."
+fi
+
 echo "==============================================="
 echo "   ✅ Setup Complete!                          "
 echo "   Use 'source deploy/scripts/ohc-mode.sh' to switch contexts."
