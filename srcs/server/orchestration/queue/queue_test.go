@@ -1,123 +1,109 @@
-package queue
+package queue_test
 
 import (
 	"context"
-	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	_ "modernc.org/sqlite"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 )
 
-func newTestProvider(t *testing.T) db.Provider {
-	t.Helper()
-	d, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open test sqlite db: %v", err)
-	}
-	if err := d.PingContext(context.Background()); err != nil {
-		t.Fatalf("failed to ping test sqlite db: %v", err)
-	}
-	t.Cleanup(func() {
-		d.Close()
-	})
-	return db.NewSqliteProvider(d)
-}
-
-func TestSQLiteTaskQueue(t *testing.T) {
-	provider := newTestProvider(t)
+// TestSQLiteQueue tests the SQLite implementation of the TaskQueue.
+func TestSQLiteQueue(t *testing.T) {
+	provider := db.NewTestProvider(t)
 
 	ctx := context.Background()
 
-	// Apply migrations or schema
-	schema := `
-	CREATE TABLE IF NOT EXISTS sub_agent_jobs (
-		id TEXT PRIMARY KEY,
-		parent_task_id TEXT,
-		agent_role TEXT NOT NULL,
-		payload TEXT NOT NULL,
-		status TEXT NOT NULL DEFAULT 'QUEUED',
-		attempts INTEGER DEFAULT 0,
-		max_attempts INTEGER DEFAULT 3,
-		run_after DATETIME DEFAULT CURRENT_TIMESTAMP,
-		locked_until DATETIME,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-	CREATE INDEX IF NOT EXISTS idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';
-	`
-	_, err := provider.Exec(ctx, schema)
+	// Ensure table exists for tests using the provider
+	_, err := provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+			id TEXT PRIMARY KEY,
+			parent_task_id TEXT,
+			agent_role TEXT NOT NULL,
+			payload TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'QUEUED',
+			attempts INTEGER DEFAULT 0,
+			max_attempts INTEGER DEFAULT 3,
+			run_after DATETIME DEFAULT CURRENT_TIMESTAMP,
+			locked_until DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
 	if err != nil {
-		t.Fatalf("failed to create schema: %v", err)
+		t.Fatalf("failed to create table: %v", err)
 	}
 
-	q := NewSQLiteTaskQueue(provider)
+	q := queue.NewSQLiteTaskQueue(provider)
 
-	job := &Job{
-		ID:           "test-job-1",
+	// 1. Test Enqueue
+	job := &queue.Job{
+		ID:           "job-1",
 		ParentTaskID: "task-1",
-		AgentRole:    "tester",
-		Payload:      "{}",
+		AgentRole:    "cost-engineer",
+		Payload:      `{"action": "optimize"}`,
 		MaxAttempts:  3,
+		RunAfter:     time.Now().Add(-1 * time.Minute), // Run immediately
 	}
 
-	if err := q.Enqueue(ctx, job); err != nil {
-		t.Fatalf("Enqueue failed: %v", err)
-	}
-
-	dequeued, err := q.Dequeue(ctx, []string{"tester"})
+	err = q.Enqueue(ctx, job)
 	if err != nil {
-		t.Fatalf("Dequeue failed: %v", err)
+		t.Fatalf("failed to enqueue: %v", err)
+	}
+
+	// 2. Test Dequeue
+	dequeued, err := q.Dequeue(ctx, []string{"cost-engineer"})
+	if err != nil {
+		t.Fatalf("failed to dequeue: %v", err)
 	}
 	if dequeued == nil {
-		t.Fatal("Expected to dequeue job, got nil")
+		t.Fatalf("expected job, got nil")
 	}
-	if dequeued.ID != "test-job-1" {
-		t.Fatalf("Expected job ID test-job-1, got %s", dequeued.ID)
+	if dequeued.ID != "job-1" {
+		t.Errorf("expected job ID job-1, got %s", dequeued.ID)
 	}
 	if dequeued.Status != "RUNNING" {
-		t.Fatalf("Expected job status RUNNING, got %s", dequeued.Status)
+		t.Errorf("expected status RUNNING, got %s", dequeued.Status)
 	}
 
-	// Test Complete
-	if err := q.Complete(ctx, "test-job-1"); err != nil {
-		t.Fatalf("Complete failed: %v", err)
-	}
-
-	// Verify completion
-	var status string
-	err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_jobs WHERE id = 'test-job-1'").Scan(&status)
+	// 3. Test Fail (requeue)
+	err = q.Fail(ctx, "job-1", "temp error")
 	if err != nil {
-		t.Fatalf("Failed to query status: %v", err)
-	}
-	if status != "COMPLETED" {
-		t.Fatalf("Expected status COMPLETED, got %s", status)
+		t.Fatalf("failed to fail job: %v", err)
 	}
 
-	// Test Fail
-	job2 := &Job{
-		ID:           "test-job-2",
-		ParentTaskID: "task-1",
-		AgentRole:    "tester",
-		Payload:      "{}",
-		MaxAttempts:  3,
-	}
-	q.Enqueue(ctx, job2)
-	q.Dequeue(ctx, []string{"tester"})
-
-	if err := q.Fail(ctx, "test-job-2", "some error"); err != nil {
-		t.Fatalf("Fail failed: %v", err)
-	}
-
-	var attempts int
-	err = provider.QueryRow(ctx, "SELECT status, attempts FROM sub_agent_jobs WHERE id = 'test-job-2'").Scan(&status, &attempts)
+	// Wait a moment for backoff? Backoff is 1 minute, so it shouldn't be immediately available
+	dequeued2, err := q.Dequeue(ctx, []string{"cost-engineer"})
 	if err != nil {
-		t.Fatalf("Failed to query job: %v", err)
+		t.Fatalf("failed to dequeue: %v", err)
 	}
-	if status != "QUEUED" { // Should be requeued
-		t.Fatalf("Expected status QUEUED, got %s", status)
+	if dequeued2 != nil {
+		t.Errorf("expected nil job due to backoff, got %v", dequeued2.ID)
 	}
-	if attempts != 1 {
-		t.Fatalf("Expected 1 attempt, got %d", attempts)
+
+	// Force it to be available again
+	_, _ = provider.Exec(ctx, "UPDATE sub_agent_jobs SET run_after = datetime(CURRENT_TIMESTAMP, '-1 minute') WHERE id = 'job-1'")
+	dequeued3, err := q.Dequeue(ctx, []string{"cost-engineer"})
+	if err != nil {
+		t.Fatalf("failed to dequeue: %v", err)
+	}
+	if dequeued3 == nil {
+		t.Fatalf("expected job after forced backoff reset")
+	}
+
+	// 4. Test Complete
+	err = q.Complete(ctx, "job-1")
+	if err != nil {
+		t.Fatalf("failed to complete job: %v", err)
+	}
+
+	// Ensure no jobs available
+	dequeued4, err := q.Dequeue(ctx, []string{"cost-engineer"})
+	if err != nil {
+		t.Fatalf("failed to dequeue: %v", err)
+	}
+	if dequeued4 != nil {
+		t.Errorf("expected no jobs after completion")
 	}
 }

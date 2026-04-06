@@ -4,248 +4,236 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/redis/rueidis"
 )
 
+// RedisTaskQueue implements TaskQueue using Redis via rueidis.
 type RedisTaskQueue struct {
 	client rueidis.Client
 	prefix string
 }
 
+// NewRedisTaskQueue creates a new RedisTaskQueue.
 func NewRedisTaskQueue(client rueidis.Client, prefix string) *RedisTaskQueue {
 	if prefix == "" {
-		prefix = "ohc:subagent:jobs"
+		prefix = "ohc:queue:"
 	}
 	return &RedisTaskQueue{client: client, prefix: prefix}
 }
 
-func (q *RedisTaskQueue) jobKey(id string) string {
-	return fmt.Sprintf("%s:data:%s", q.prefix, id)
+// jobKey returns the Redis key for a specific job payload
+func (q *RedisTaskQueue) jobKey(jobID string) string {
+	return q.prefix + "job:" + jobID
 }
 
-func (q *RedisTaskQueue) queueKey() string {
-	return fmt.Sprintf("%s:queued", q.prefix) // ZSET for run_after sorting
+// queueKey returns the Redis key for a specific role's queue (using Sorted Sets for scheduling)
+func (q *RedisTaskQueue) queueKey(role string) string {
+	return q.prefix + "pending:" + role
 }
 
-func (q *RedisTaskQueue) runningKey() string {
-	return fmt.Sprintf("%s:running", q.prefix) // ZSET for locked_until sorting
+// activeKey returns the Redis key for active (running) jobs
+func (q *RedisTaskQueue) activeKey() string {
+	return q.prefix + "active"
 }
 
+// Enqueue adds a job to Redis.
 func (q *RedisTaskQueue) Enqueue(ctx context.Context, job *Job) error {
-	defer func() {
-		telemetry.RecordQueueLength(ctx, 1) // Approximation
-	}()
-
 	if job.RunAfter.IsZero() {
 		job.RunAfter = time.Now()
 	}
 
-	job.Status = "QUEUED"
-
-	jobData, err := json.Marshal(job)
+	jobBytes, err := json.Marshal(job)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal job: %w", err)
 	}
 
-	// Save job data
-	setCmd := q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(jobData)).Build()
-	if err := q.client.Do(ctx, setCmd).Error(); err != nil {
-		return err
+	cmds := make(rueidis.Commands, 0, 2)
+
+	// 1. Store the job payload
+	cmds = append(cmds, q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(jobBytes)).Build())
+
+	// 2. Add to sorted set for scheduling
+	cmds = append(cmds, q.client.B().Zadd().Key(q.queueKey(job.AgentRole)).ScoreMember().ScoreMember(
+		float64(job.RunAfter.UnixMilli()), job.ID,
+	).Build())
+
+	for _, res := range q.client.DoMulti(ctx, cmds...) {
+		if err := res.Error(); err != nil {
+			return fmt.Errorf("redis enqueue failed: %w", err)
+		}
 	}
 
-	// Add to queue sorted by run_after
-	zaddCmd := q.client.B().Zadd().Key(q.queueKey()).ScoreMember().ScoreMember(float64(job.RunAfter.UnixMilli()), job.ID).Build()
-	if err := q.client.Do(ctx, zaddCmd).Error(); err != nil {
-		return err
-	}
-
+	telemetry.RecordTaskQueueLength(ctx, 1)
 	return nil
 }
 
-// recoverStaleJobs finds jobs in RUNNING state whose locked_until has expired, and moves them back to QUEUED.
-func (q *RedisTaskQueue) recoverStaleJobs(ctx context.Context, now int64) {
-	zrangeCmd := q.client.B().Zrange().Key(q.runningKey()).Min("-inf").Max(fmt.Sprintf("%d", now)).Byscore().Limit(0, 10).Build()
-	res, err := q.client.Do(ctx, zrangeCmd).AsStrSlice()
-	if err != nil || len(res) == 0 {
-		return
-	}
-
-	for _, jobID := range res {
-		zremCmd := q.client.B().Zrem().Key(q.runningKey()).Member(jobID).Build()
-		removed, _ := q.client.Do(ctx, zremCmd).AsInt64()
-		if removed > 0 {
-			// Successfully claimed the stale job, put it back in queued
-			zaddCmd := q.client.B().Zadd().Key(q.queueKey()).ScoreMember().ScoreMember(float64(now), jobID).Build()
-			q.client.Do(ctx, zaddCmd)
-		}
-	}
-}
-
+// Dequeue attempts to fetch a job for the specified roles.
 func (q *RedisTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
-	now := time.Now().UnixMilli()
-
-	q.recoverStaleJobs(ctx, now)
-
-	// Simple implementation: pull one job that's ready, regardless of role.
-	// In a real robust system, we might maintain separate queues per role,
-	// but to match the SQLite semantics and requirements, we iterate/Lua script or just pull one and check.
-	// We will use ZPOPMIN or equivalent.
-	// Since ZPOPMIN might pop something we can't process (wrong role), and Redis 6.2+ has ZRANGE ... BYSCORE LIMIT ...
-	// Let's use a simpler approach: get the first job ready, check role, if role matches, take it.
-	// We'll use a transaction/Lua script to do this atomically if possible.
-
-	// For simplicity in this implementation without a complex Lua script:
-	// Find jobs <= now.
-	zrangeCmd := q.client.B().Zrange().Key(q.queueKey()).Min("-inf").Max(fmt.Sprintf("%d", now)).Byscore().Limit(0, 10).Build()
-	res, err := q.client.Do(ctx, zrangeCmd).AsStrSlice()
-	if err != nil {
-		return nil, err
+	if len(roles) == 0 {
+		return nil, nil // We require roles to know which queues to poll
 	}
 
-	if len(res) == 0 {
-		return nil, nil // No jobs ready
-	}
+	now := float64(time.Now().UnixMilli())
 
-	// Attempt to claim one of the ready jobs
-	for _, jobID := range res {
-		// Read job data
-		getCmd := q.client.B().Get().Key(q.jobKey(jobID)).Build()
-		jobDataStr, err := q.client.Do(ctx, getCmd).ToString()
+	// Simple polling across roles. A more robust implementation might use ZPOPMIN with Lua scripts
+	// but for simplicity we iterate roles.
+	for _, role := range roles {
+		// Use a Lua script for atomic fetch-and-move-to-active
+		script := `
+			local queue_key = KEYS[1]
+			local active_key = KEYS[2]
+			local now = tonumber(ARGV[1])
+			local lock_until = tonumber(ARGV[2])
+
+			local items = redis.call('ZRANGEBYSCORE', queue_key, '-inf', now, 'LIMIT', 0, 1)
+			if #items == 0 then
+				return nil
+			end
+
+			local job_id = items[1]
+			redis.call('ZREM', queue_key, job_id)
+			redis.call('ZADD', active_key, lock_until, job_id)
+			return job_id
+		`
+
+		lockUntil := float64(time.Now().Add(5 * time.Minute).UnixMilli())
+
+		cmd := q.client.B().Eval().Script(script).Numkeys(2).Key(q.queueKey(role), q.activeKey()).Arg(
+			strconv.FormatFloat(now, 'f', -1, 64),
+			strconv.FormatFloat(lockUntil, 'f', -1, 64),
+		).Build()
+
+		res := q.client.Do(ctx, cmd)
+		if res.Error() != nil {
+			if rueidis.IsRedisNil(res.Error()) {
+				continue // Try next role
+			}
+			return nil, fmt.Errorf("redis script failed: %w", res.Error())
+		}
+
+		jobID, err := res.ToString()
 		if err != nil {
-			continue
+			if rueidis.IsRedisNil(err) {
+				continue // Try next role
+			}
+			return nil, fmt.Errorf("failed to parse job ID: %w", err)
+		}
+
+		if jobID == "" {
+			continue // No job found, try next role
+		}
+
+		// We claimed a job ID, fetch its payload
+		payloadRes := q.client.Do(ctx, q.client.B().Get().Key(q.jobKey(jobID)).Build())
+		if payloadRes.Error() != nil {
+			return nil, fmt.Errorf("failed to fetch job payload: %w", payloadRes.Error())
+		}
+
+		payloadStr, err := payloadRes.ToString()
+		if err != nil {
+			return nil, fmt.Errorf("failed to stringify payload: %w", err)
 		}
 
 		var job Job
-		if err := json.Unmarshal([]byte(jobDataStr), &job); err != nil {
-			continue
+		if err := json.Unmarshal([]byte(payloadStr), &job); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal job: %w", err)
 		}
 
-		// Check role
-		roleMatches := len(roles) == 0
-		for _, role := range roles {
-			if job.AgentRole == role {
-				roleMatches = true
-				break
-			}
-		}
-
-		if !roleMatches {
-			continue
-		}
-
-		// Try to claim it by removing from ZSET
-		zremCmd := q.client.B().Zrem().Key(q.queueKey()).Member(jobID).Build()
-		removed, err := q.client.Do(ctx, zremCmd).AsInt64()
-		if err != nil || removed == 0 {
-			// Someone else got it
-			continue
-		}
-
-		// Claimed successfully! Update status.
 		job.Status = "RUNNING"
-		job.Attempts++
-		job.UpdatedAt = time.Now()
-		lt := time.Now().Add(5 * time.Minute)
-		job.LockedUntil = &lt
+		lockTime := time.UnixMilli(int64(lockUntil))
+		job.LockedUntil = &lockTime
 
-		newData, _ := json.Marshal(job)
-		setCmd := q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(newData)).Build()
-		q.client.Do(ctx, setCmd) // Best effort update data
+		// Update job state in Redis
+		updatedBytes, _ := json.Marshal(job)
+		q.client.Do(ctx, q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(updatedBytes)).Build())
 
-		// Add to running ZSET to track locked_until
-		zaddRunningCmd := q.client.B().Zadd().Key(q.runningKey()).ScoreMember().ScoreMember(float64(lt.UnixMilli()), jobID).Build()
-		q.client.Do(ctx, zaddRunningCmd)
-
-		telemetry.RecordQueueLength(ctx, -1) // Job removed from queued state
-
+		telemetry.RecordTaskQueueLength(ctx, -1)
 		return &job, nil
 	}
 
-	return nil, nil
+	return nil, nil // No jobs found across specified roles
 }
 
+// Complete marks a job as successfully completed.
 func (q *RedisTaskQueue) Complete(ctx context.Context, jobID string) error {
-	getCmd := q.client.B().Get().Key(q.jobKey(jobID)).Build()
-	jobDataStr, err := q.client.Do(ctx, getCmd).ToString()
-	if err != nil {
-		return err
+	cmds := make(rueidis.Commands, 0, 2)
+	cmds = append(cmds, q.client.B().Zrem().Key(q.activeKey()).Member(jobID).Build())
+	cmds = append(cmds, q.client.B().Del().Key(q.jobKey(jobID)).Build()) // Cleanup completed jobs
+
+	for _, res := range q.client.DoMulti(ctx, cmds...) {
+		if err := res.Error(); err != nil {
+			return fmt.Errorf("failed to complete job in redis: %w", err)
+		}
 	}
-
-	var job Job
-	if err := json.Unmarshal([]byte(jobDataStr), &job); err != nil {
-		return err
-	}
-
-	job.Status = "COMPLETED"
-	job.UpdatedAt = time.Now()
-	job.LockedUntil = nil
-
-	newData, _ := json.Marshal(job)
-	setCmd := q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(newData)).Build()
-	err = q.client.Do(ctx, setCmd).Error()
-
-	// Remove from running tracking
-	zremRunningCmd := q.client.B().Zrem().Key(q.runningKey()).Member(jobID).Build()
-	q.client.Do(ctx, zremRunningCmd)
-
-	return err
+	return nil
 }
 
+// Fail marks a job as failed, potentially requeuing it.
 func (q *RedisTaskQueue) Fail(ctx context.Context, jobID string, reason string) error {
-	getCmd := q.client.B().Get().Key(q.jobKey(jobID)).Build()
-	jobDataStr, err := q.client.Do(ctx, getCmd).ToString()
+	// 1. Fetch job
+	payloadRes := q.client.Do(ctx, q.client.B().Get().Key(q.jobKey(jobID)).Build())
+	if payloadRes.Error() != nil {
+		return fmt.Errorf("failed to fetch job for failing: %w", payloadRes.Error())
+	}
+
+	payloadStr, err := payloadRes.ToString()
 	if err != nil {
 		return err
 	}
 
 	var job Job
-	if err := json.Unmarshal([]byte(jobDataStr), &job); err != nil {
+	if err := json.Unmarshal([]byte(payloadStr), &job); err != nil {
 		return err
 	}
 
-	var payload map[string]interface{}
-	json.Unmarshal([]byte(job.Payload), &payload)
-	if payload == nil {
-		payload = make(map[string]interface{})
-	}
-	payload["last_error"] = reason
-	newPayload, _ := json.Marshal(payload)
-	job.Payload = string(newPayload)
+	job.Attempts++
 
-	// Remove from running tracking
-	zremRunningCmd := q.client.B().Zrem().Key(q.runningKey()).Member(jobID).Build()
-	q.client.Do(ctx, zremRunningCmd)
+	// Remove from active queue
+	remCmd := q.client.B().Zrem().Key(q.activeKey()).Member(jobID).Build()
+	if err := q.client.Do(ctx, remCmd).Error(); err != nil {
+		return fmt.Errorf("failed to remove from active: %w", err)
+	}
 
 	if job.Attempts >= job.MaxAttempts {
+		// Permanently fail, move to a failed queue for dead lettering
 		job.Status = "FAILED"
 		job.LockedUntil = nil
-		job.UpdatedAt = time.Now()
+		updatedBytes, _ := json.Marshal(job)
 
-		newData, _ := json.Marshal(job)
-		setCmd := q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(newData)).Build()
-		return q.client.Do(ctx, setCmd).Error()
+		cmds := make(rueidis.Commands, 0, 2)
+		cmds = append(cmds, q.client.B().Set().Key(q.jobKey(jobID)).Value(string(updatedBytes)).Build())
+		cmds = append(cmds, q.client.B().Sadd().Key(q.prefix+"failed").Member(jobID).Build())
+
+		for _, res := range q.client.DoMulti(ctx, cmds...) {
+			if err := res.Error(); err != nil {
+				return err
+			}
+		}
 	} else {
 		// Requeue with backoff
-		job.Status = "QUEUED"
-		backoff := time.Duration(1<<job.Attempts) * time.Second
+		backoff := time.Duration(job.Attempts) * time.Minute
 		job.RunAfter = time.Now().Add(backoff)
+		job.Status = "QUEUED"
 		job.LockedUntil = nil
-		job.UpdatedAt = time.Now()
+		updatedBytes, _ := json.Marshal(job)
 
-		newData, _ := json.Marshal(job)
-		setCmd := q.client.B().Set().Key(q.jobKey(job.ID)).Value(string(newData)).Build()
-		if err := q.client.Do(ctx, setCmd).Error(); err != nil {
-			return err
-		}
+		cmds := make(rueidis.Commands, 0, 2)
+		cmds = append(cmds, q.client.B().Set().Key(q.jobKey(jobID)).Value(string(updatedBytes)).Build())
+		cmds = append(cmds, q.client.B().Zadd().Key(q.queueKey(job.AgentRole)).ScoreMember().ScoreMember(
+			float64(job.RunAfter.UnixMilli()), job.ID,
+		).Build())
 
-		zaddCmd := q.client.B().Zadd().Key(q.queueKey()).ScoreMember().ScoreMember(float64(job.RunAfter.UnixMilli()), job.ID).Build()
-		err = q.client.Do(ctx, zaddCmd).Error()
-		if err == nil {
-			telemetry.RecordQueueLength(ctx, 1) // Job returned to queue
+		for _, res := range q.client.DoMulti(ctx, cmds...) {
+			if err := res.Error(); err != nil {
+				return err
+			}
 		}
-		return err
+		telemetry.RecordTaskQueueLength(ctx, 1)
 	}
+
+	return nil
 }

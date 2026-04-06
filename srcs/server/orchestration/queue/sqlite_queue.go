@@ -3,7 +3,6 @@ package queue
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,191 +12,220 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
+// SQLiteTaskQueue implements TaskQueue using SQLite (or generic SQL via db.Provider).
 type SQLiteTaskQueue struct {
-	provider db.Provider
+	db db.Provider
 }
 
+// NewSQLiteTaskQueue creates a new SQLiteTaskQueue.
 func NewSQLiteTaskQueue(provider db.Provider) *SQLiteTaskQueue {
-	return &SQLiteTaskQueue{provider: provider}
+	return &SQLiteTaskQueue{db: provider}
 }
 
+// Enqueue adds a new job to the database.
 func (q *SQLiteTaskQueue) Enqueue(ctx context.Context, job *Job) error {
-	defer func() {
-		telemetry.RecordQueueLength(ctx, 1) // Approximation
-	}()
-
-	if job.RunAfter.IsZero() {
-		job.RunAfter = time.Now()
-	}
-
 	query := `
 		INSERT INTO sub_agent_jobs (
-			id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8
-		)
+			id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6, COALESCE($7, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
-	_, err := q.provider.Exec(ctx, query,
-		job.ID, job.ParentTaskID, job.AgentRole, job.Payload,
-		"QUEUED", job.Attempts, job.MaxAttempts, job.RunAfter.Format(time.RFC3339Nano),
-	)
-	return err
+
+	var runAfter interface{}
+	if !job.RunAfter.IsZero() {
+		runAfter = job.RunAfter
+	}
+
+	_, err := q.db.Exec(ctx, query, job.ID, job.ParentTaskID, job.AgentRole, job.Payload, job.Attempts, job.MaxAttempts, runAfter)
+	if err != nil {
+		return fmt.Errorf("failed to enqueue job: %w", err)
+	}
+
+	telemetry.RecordTaskQueueLength(ctx, 1)
+	return nil
 }
 
+// Dequeue attempts to fetch and lock an available job.
 func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
-	// In SQLite, we don't have FOR UPDATE SKIP LOCKED.
-	// We'll use a transaction with a quick UPDATE to acquire.
-	tx, err := q.provider.Begin(ctx)
+	tx, err := q.db.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	var rolePlaceholders []string
-	var args []any
-	for i, role := range roles {
-		rolePlaceholders = append(rolePlaceholders, fmt.Sprintf("$%d", i+1))
-		args = append(args, role)
+	var jobID string
+	var query string
+	var args []interface{}
+
+	if q.db.IsSQLite() {
+		// SQLite logic: SELECT then UPDATE
+		query = `
+			SELECT id
+			FROM sub_agent_jobs
+			WHERE status = 'QUEUED'
+			  AND run_after <= CURRENT_TIMESTAMP
+			  AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+		`
+
+		if len(roles) > 0 {
+			placeholders := make([]string, len(roles))
+			for i, role := range roles {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+				args = append(args, role)
+			}
+			query += fmt.Sprintf(" AND agent_role IN (%s)", strings.Join(placeholders, ", "))
+		}
+
+		query += " ORDER BY run_after ASC, created_at ASC LIMIT 1"
+
+		err = tx.QueryRow(ctx, query, args...).Scan(&jobID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil // No jobs available
+			}
+			return nil, fmt.Errorf("failed to find runnable job: %w", err)
+		}
+
+		// Lock the job for 5 minutes
+		updateQuery := `
+			UPDATE sub_agent_jobs
+			SET status = 'RUNNING', locked_until = datetime(CURRENT_TIMESTAMP, '+5 minutes'), updated_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND status = 'QUEUED'
+			RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
+		`
+		job := &Job{}
+		var lockedUntil sql.NullTime
+		err = tx.QueryRow(ctx, updateQuery, jobID).Scan(
+			&job.ID, &job.ParentTaskID, &job.AgentRole, &job.Payload, &job.Status,
+			&job.Attempts, &job.MaxAttempts, &job.RunAfter, &lockedUntil,
+			&job.CreatedAt, &job.UpdatedAt,
+		)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil // Another worker grabbed it
+			}
+			return nil, fmt.Errorf("failed to lock job: %w", err)
+		}
+
+		if lockedUntil.Valid {
+			job.LockedUntil = &lockedUntil.Time
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("failed to commit dequeue: %w", err)
+		}
+
+		telemetry.RecordTaskQueueLength(ctx, -1)
+		return job, nil
 	}
 
-	rolesCondition := ""
-	if len(roles) > 0 {
-		rolesCondition = fmt.Sprintf("AND agent_role IN (%s)", strings.Join(rolePlaceholders, ", "))
-	}
-
-	now := time.Now().Format(time.RFC3339Nano)
-	args = append(args, now)
-	nowPlaceholder := fmt.Sprintf("$%d", len(args))
-
-	// We check for both QUEUED jobs, and RUNNING jobs that have crashed (locked_until has passed)
-	query := fmt.Sprintf(`
-		SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
-		FROM sub_agent_jobs
-		WHERE (status = 'QUEUED' AND run_after <= %s %s)
-		   OR (status = 'RUNNING' AND locked_until IS NOT NULL AND locked_until <= %s %s)
-		ORDER BY run_after ASC
-		LIMIT 1
-	`, nowPlaceholder, rolesCondition, nowPlaceholder, rolesCondition)
-
-	row := tx.QueryRow(ctx, query, args...)
-
-	var j Job
-	var lockedUntil sql.NullString
-	var runAfterStr, createdAtStr, updatedAtStr string
-	err = row.Scan(&j.ID, &j.ParentTaskID, &j.AgentRole, &j.Payload, &j.Status, &j.Attempts, &j.MaxAttempts, &runAfterStr, &lockedUntil, &createdAtStr, &updatedAtStr)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil // No jobs available
-	} else if err != nil {
-		return nil, err
-	}
-
-	// Update the job to mark it as RUNNING (simulate acquiring lock)
-	lockTime := time.Now().Add(5 * time.Minute)
-	updateQuery := `
+	// PostgreSQL logic: FOR UPDATE SKIP LOCKED
+	query = `
 		UPDATE sub_agent_jobs
-		SET status = 'RUNNING', locked_until = $1, attempts = attempts + 1, updated_at = $2
-		WHERE id = $3 AND (status = 'QUEUED' OR status = 'RUNNING')
+		SET status = 'RUNNING', locked_until = CURRENT_TIMESTAMP + interval '5 minutes', updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT id
+			FROM sub_agent_jobs
+			WHERE status = 'QUEUED'
+			  AND run_after <= CURRENT_TIMESTAMP
+			  AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
 	`
-	res, err := tx.Exec(ctx, updateQuery, lockTime.Format(time.RFC3339Nano), time.Now().Format(time.RFC3339Nano), j.ID)
-	if err != nil {
-		return nil, err
+
+	if len(roles) > 0 {
+		placeholders := make([]string, len(roles))
+		for i, role := range roles {
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			args = append(args, role)
+		}
+		query += fmt.Sprintf(" AND agent_role IN (%s)", strings.Join(placeholders, ", "))
 	}
 
-	rowsAffected := res
-	if rowsAffected == 0 {
-		// Someone else grabbed it between our SELECT and UPDATE
-		return nil, nil
+	query += `
+			ORDER BY run_after ASC, created_at ASC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+		RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
+	`
+
+	job := &Job{}
+	var lockedUntil sql.NullTime
+	err = tx.QueryRow(ctx, query, args...).Scan(
+		&job.ID, &job.ParentTaskID, &job.AgentRole, &job.Payload, &job.Status,
+		&job.Attempts, &job.MaxAttempts, &job.RunAfter, &lockedUntil,
+		&job.CreatedAt, &job.UpdatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No jobs available
+		}
+		return nil, fmt.Errorf("failed to dequeue job: %w", err)
+	}
+
+	if lockedUntil.Valid {
+		job.LockedUntil = &lockedUntil.Time
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to commit dequeue: %w", err)
 	}
 
-	telemetry.RecordQueueLength(ctx, -1) // Job removed from queued state
-
-	parseTime := func(s string) time.Time {
-		t, err := time.Parse(time.RFC3339Nano, s)
-		if err == nil {
-			return t
-		}
-		// Fallback for SQLite CURRENT_TIMESTAMP format
-		t, err = time.Parse(time.DateTime, s)
-		if err == nil {
-			return t
-		}
-		return time.Time{}
-	}
-
-	j.RunAfter = parseTime(runAfterStr)
-	j.CreatedAt = parseTime(createdAtStr)
-	j.UpdatedAt = parseTime(updatedAtStr)
-	if lockedUntil.Valid && lockedUntil.String != "" {
-		lt := parseTime(lockedUntil.String)
-		j.LockedUntil = &lt
-	}
-
-	j.Status = "RUNNING"
-	j.Attempts++
-
-	return &j, nil
+	telemetry.RecordTaskQueueLength(ctx, -1)
+	return job, nil
 }
 
+// Complete marks a job as COMPLETED.
 func (q *SQLiteTaskQueue) Complete(ctx context.Context, jobID string) error {
 	query := `
 		UPDATE sub_agent_jobs
-		SET status = 'COMPLETED', updated_at = $1, locked_until = NULL
-		WHERE id = $2
+		SET status = 'COMPLETED', locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
 	`
-	_, err := q.provider.Exec(ctx, query, time.Now().Format(time.RFC3339Nano), jobID)
-	return err
+	_, err := q.db.Exec(ctx, query, jobID)
+	if err != nil {
+		return fmt.Errorf("failed to complete job: %w", err)
+	}
+	return nil
 }
 
+// Fail marks a job as FAILED or requeues it if max attempts are not reached.
 func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string) error {
-	// First fetch the job to check attempts
-	query := `SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = $1`
-	var attempts, maxAttempts int
-	err := q.provider.QueryRow(ctx, query, jobID).Scan(&attempts, &maxAttempts)
+	tx, err := q.db.Begin(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var attempts, maxAttempts int
+	err = tx.QueryRow(ctx, "SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = $1", jobID).Scan(&attempts, &maxAttempts)
+	if err != nil {
+		return fmt.Errorf("failed to find job: %w", err)
 	}
 
-	var status string
-	var nextRunAfter string
-	var lockUntil interface{}
+	attempts++
 
 	if attempts >= maxAttempts {
-		status = "FAILED"
-		nextRunAfter = time.Now().Format(time.RFC3339Nano)
-		lockUntil = nil
+		// Permanently fail
+		_, err = tx.Exec(ctx, "UPDATE sub_agent_jobs SET status = 'FAILED', attempts = $1, locked_until = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $2", attempts, jobID)
 	} else {
-		status = "QUEUED"
-		// Exponential backoff
-		backoff := time.Duration(1<<attempts) * time.Second
-		nextRunAfter = time.Now().Add(backoff).Format(time.RFC3339Nano)
-		lockUntil = nil
-		telemetry.RecordQueueLength(ctx, 1) // Job returned to queue
-	}
-
-	// Add reason to payload ideally, but for now just update status
-	var payload map[string]interface{}
-	payloadQuery := `SELECT payload FROM sub_agent_jobs WHERE id = $1`
-	var payloadStr string
-	if err := q.provider.QueryRow(ctx, payloadQuery, jobID).Scan(&payloadStr); err == nil {
-		json.Unmarshal([]byte(payloadStr), &payload)
-		if payload == nil {
-			payload = make(map[string]interface{})
+		// Requeue with backoff (e.g., 1 minute * attempt)
+		backoff := time.Duration(attempts) * time.Minute
+		if q.db.IsSQLite() {
+			_, err = tx.Exec(ctx, fmt.Sprintf("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = $1, run_after = datetime(CURRENT_TIMESTAMP, '+%d seconds'), locked_until = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $2", int(backoff.Seconds())), attempts, jobID)
+		} else {
+			_, err = tx.Exec(ctx, fmt.Sprintf("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = $1, run_after = CURRENT_TIMESTAMP + interval '%d seconds', locked_until = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $2", int(backoff.Seconds())), attempts, jobID)
 		}
-		payload["last_error"] = reason
-		newPayload, _ := json.Marshal(payload)
-		payloadStr = string(newPayload)
+		// If requeued, increment length since we decremented it on dequeue
+		telemetry.RecordTaskQueueLength(ctx, 1)
 	}
 
-	updateQuery := `
-		UPDATE sub_agent_jobs
-		SET status = $1, run_after = $2, locked_until = $3, updated_at = $4, payload = $5
-		WHERE id = $6
-	`
-	_, err = q.provider.Exec(ctx, updateQuery, status, nextRunAfter, lockUntil, time.Now().Format(time.RFC3339Nano), payloadStr, jobID)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to fail job: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit fail: %w", err)
+	}
+
+	return nil
 }
