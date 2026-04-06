@@ -160,7 +160,7 @@ check_system() {
 
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
-    DB_FILE="local_standalone.db"
+    DB_FILE="$HOME/.ohc-local-data/standalone.db"
     if [ ! -f "$DB_FILE" ]; then
         echo -e "  ${PURPLE}✗ Database file $DB_FILE not found!${RESET}"
         echo -e "    Migrations have not been executed or db path is incorrect."
