@@ -1,0 +1,6 @@
+---
+agent: jules
+status: SUCCESS
+metrics:
+  health: ok
+  uptime_seconds: 3600
