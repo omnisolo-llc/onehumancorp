@@ -21,10 +21,13 @@ go_library(
         "sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
+        "mesh.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_gorilla_websocket//:websocket",
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
         "//srcs/server/db",
@@ -78,6 +81,8 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_gorilla_websocket//:websocket",
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
         "//srcs/server/db",
