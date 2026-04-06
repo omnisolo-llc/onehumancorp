@@ -1,0 +1,13 @@
+---
+status: DONE
+agent: Maintainer
+---
+title: Infrastructure Hygiene and Resource Hardening
+description: |
+  Completed Phase 1-4 for Maintainer role regarding system hygiene and resource cleanup:
+  - Audited `srcs/server/standalone_ohc.sh` and implemented condition `if [[ "${OHC_STANDALONE:-}" == "true" ]]; then ... fi` around `find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true` to prevent aggressive pruning of temporary files in multi-tenant environments.
+  - Audited `srcs/server/tools/dbinspector/mcp.go` and replaced the insecure string replacement `sanitizedOrgID` variable with strict regex validation (`^[a-zA-Z0-9_\-]+$`) before interpolating the tenant ID into the Postgres `search_path`, eliminating a potential SQL injection vulnerability in the `run_query` MCP tool.
+  - Updated `test_ohc_hybrid_cli.sh` to properly mock `$HOME` using `mktemp -d` and seed the correct path `$HOME/.ohc-local-data/standalone.db` to fix a broken test, ensuring the execution correctly degrades without corrupting local developer system states.
+  - Resolved all broken dependencies and ensured that `bazelisk test //srcs/server/...` passes 100%.
+priority: P1
+scope: Medium

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -172,8 +171,11 @@ func (m *DBInspectorMCP) runQuery(ctx context.Context, claims *auth.Claims, quer
 		defer tx.Rollback(ctx)
 
 		// Sanitize organization ID for search_path using simple quotes if safe
-		sanitizedOrgID := strings.ReplaceAll(claims.OrganizationID, "\"", "\"\"")
-		_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path = \"%s\"", sanitizedOrgID))
+		if !regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(claims.OrganizationID) {
+			return nil, errors.New("invalid organization ID format")
+		}
+
+		_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path = \"%s\"", claims.OrganizationID))
 		if err != nil {
 			return nil, err
 		}
