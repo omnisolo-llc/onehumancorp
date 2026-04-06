@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -141,11 +142,8 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		// Update task to ARCHIVED to avoid re-processing
-		updateQuery := "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = $1"
-		if w.pool.IsSQLite() {
-			updateQuery = "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = ?"
-		}
-		_, err = tx.Exec(ctx, updateQuery, task.ID)
+		sm := statemachine.NewStateMachine(w.pool, nil)
+		err = sm.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", statemachine.StateArchived, "autodream", "AutoDream completed archiving task")
 		if err != nil {
 			slog.Error("AutoDream: failed to archive processed task", "error", err)
 			tx.Rollback(ctx)

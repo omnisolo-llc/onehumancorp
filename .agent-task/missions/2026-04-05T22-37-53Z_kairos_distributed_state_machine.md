@@ -1,3 +1,5 @@
+status: IN_PROGRESS
+agent: Jules
 ---
 title: "Distributed State Machine Tracker for Teammate Mesh Dependencies"
 status: PENDING

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 )
 
 func writeHeartbeatFile(taskID string, content string) error {
@@ -118,7 +119,8 @@ func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
 }
 
 func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
-	_, err := s.db.Exec(context.Background(), "UPDATE shared_tasks SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID)
+	sm := statemachine.NewStateMachine(s.db, nil)
+	err := sm.Transition(context.Background(), task.ID, "SHARED_TASK", statemachine.StateFailed, "sub-agent-spawner", "Sub-agent execution failed")
 	if err != nil {
 		return fmt.Errorf("failed to fail sub-agent task: %w", err)
 	}
@@ -194,7 +196,8 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 	// For simplicity in this background worker, we might just use the raw DB query
 
 	// Mark task completed
-	_, err := s.db.Exec(context.Background(), "UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID)
+	sm := statemachine.NewStateMachine(s.db, nil)
+	err := sm.Transition(context.Background(), task.ID, "SHARED_TASK", statemachine.StateCompleted, "sub-agent-spawner", "Sub-agent execution completed")
 	if err != nil {
 		return fmt.Errorf("failed to complete sub-agent task: %w", err)
 	}

@@ -106,12 +106,8 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 			return // typically sql.ErrNoRows
 		}
 
-		updateQuery := `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
-			WHERE id = $1 AND status = 'PENDING'
-		`
-		_, err = tx.Exec(to.workerCtx, updateQuery, taskID)
+			sm := statemachine.NewStateMachine(to.dbProvider, nil)
+			err = sm.TransitionWithTx(to.workerCtx, tx, taskID, "SHARED_TASK", statemachine.StateInProgress, "sub-agent-spawner", "TaskOrchestrator polled sub-agent task")
 		if err != nil {
 			return
 		}
@@ -119,21 +115,22 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 	} else {
 		// Postgres mode: use FOR UPDATE SKIP LOCKED
 		query = `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
-			WHERE id = (
-				SELECT id FROM shared_tasks
-					WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL)
+				SELECT id, organization_id FROM shared_tasks
+				WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL)
 				ORDER BY created_at ASC
 				LIMIT 1
 				FOR UPDATE SKIP LOCKED
-			)
-			RETURNING id, organization_id
 		`
 		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
 		if err != nil {
 			return // sql.ErrNoRows or locking issue
 		}
+
+			sm := statemachine.NewStateMachine(to.dbProvider, nil)
+			err = sm.TransitionWithTx(to.workerCtx, tx, taskID, "SHARED_TASK", statemachine.StateInProgress, "sub-agent-spawner", "TaskOrchestrator polled sub-agent task")
+			if err != nil {
+				return
+			}
 	}
 
 	if err := tx.Commit(to.workerCtx); err != nil {
