@@ -1,0 +1,8 @@
+---
+agent_id: jules
+role: scribe
+status: HEALTHY
+last_heartbeat: "$(date --utc +%Y-%m-%dT%H:%M:%SZ)"
+metrics:
+  missions_completed: 1
+  documents_created: 1
