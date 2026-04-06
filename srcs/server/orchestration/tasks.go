@@ -416,6 +416,69 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	return nil
 }
 
+// CancelTask cancels an existing task and transitions it to FAILED (or TERMINATED_ERROR).
+func (tm *TaskManager) CancelTask(ctx context.Context, taskID string, agentID string, reason string) error {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return errors.New("unauthorized: missing claims")
+	}
+
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify task exists and belongs to the org
+	var currentStatus string
+	query := "SELECT status FROM shared_tasks WHERE id = $1 AND organization_id = $2"
+	if !tm.db.IsSQLite() {
+		query += " FOR UPDATE"
+	}
+	err = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(&currentStatus)
+	if err != nil {
+		return fmt.Errorf("failed to get task: %w", err)
+	}
+
+	if currentStatus == statemachine.StateFailed || currentStatus == statemachine.StateCompleted || currentStatus == statemachine.StateTerminatedError {
+		return fmt.Errorf("task already in terminal state: %s", currentStatus)
+	}
+
+	if reason == "" {
+		reason = "Task cancelled by user or agent"
+	}
+
+	_, err = tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateFailed, agentID, reason)
+	if err != nil {
+		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
+			return fmt.Errorf("database is locked: %w", err)
+		}
+		return fmt.Errorf("failed to transition task to failed state: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "FAILED")
+
+	// Broadcast task cancellation
+	if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  taskID,
+				"action":   "CANCEL",
+				"agent_id": agentID,
+				"status":   "FAILED",
+				"reason":   reason,
+			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+
+	return nil
+}
+
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
 	claims := auth.ClaimsFromContext(ctx)

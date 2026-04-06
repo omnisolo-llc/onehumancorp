@@ -266,3 +266,37 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 		t.Fatalf("expected error when completing non-existent task")
 	}
 }
+
+func TestTaskManager_CancelTask(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	task, _ := tm.CreateTask(ctx, "org-1", "Task to Cancel", "Desc", "P1")
+
+	err := tm.CancelTask(ctx, task.ID, "agent-1", "user requested abort")
+	if err != nil {
+		t.Fatalf("expected no error cancelling task, got %v", err)
+	}
+
+	// Verify task is now FAILED
+	tx, _ := tm.db.Begin(ctx)
+	var status string
+	err = tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", task.ID).Scan(&status)
+	tx.Commit(ctx)
+
+	if err != nil {
+		t.Fatalf("failed to query task status: %v", err)
+	}
+	if status != "FAILED" {
+		t.Fatalf("expected task status to be FAILED, got %s", status)
+	}
+
+	// Test cancelling an already terminal task
+	err = tm.CancelTask(ctx, task.ID, "agent-1", "")
+	if err == nil {
+		t.Fatalf("expected error cancelling an already failed task")
+	}
+}
