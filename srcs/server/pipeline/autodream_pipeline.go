@@ -13,6 +13,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/redis/rueidis"
 )
 
 // AutoDreamPipeline orchestrates the background processing of agent memories.
@@ -25,7 +26,7 @@ type AutoDreamPipeline struct {
 }
 
 // NewAutoDreamPipeline creates a new AutoDreamPipeline instance.
-func NewAutoDreamPipeline(pool db.Provider) *AutoDreamPipeline {
+func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDreamPipeline {
 	worker := orchestration.NewAutoDreamWorker(pool)
 
 	// Determine LLM client based on env vars
@@ -42,7 +43,7 @@ func NewAutoDreamPipeline(pool db.Provider) *AutoDreamPipeline {
 
 	var mClient orchestration.MinimaxClient
 	if minimaxKey := os.Getenv("MINIMAX_API_KEY"); minimaxKey != "" {
-		mClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool, nil)
+		mClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool, redisClient)
 	}
 
 	return &AutoDreamPipeline{
