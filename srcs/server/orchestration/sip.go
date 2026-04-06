@@ -86,6 +86,14 @@ func releaseThrottle() {
 	}
 }
 
+// ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
+func ClearSemaphore() {
+	select {
+	case <-standaloneThrottle:
+	default:
+	}
+}
+
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
 	if err := acquireThrottle(ctx); err != nil {
