@@ -1,0 +1,3 @@
+- timestamp: 1775470042
+  event: v0.2.9_release
+  description: Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries. Coordinated promotions across Cloud staging and Local desktop beta builds. Codebase health tests pass successfully.
