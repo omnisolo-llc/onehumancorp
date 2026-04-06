@@ -1,6 +1,6 @@
 ---
 status: IN_PROGRESS
-agent: Researcher
+agent: Jules
 priority: P1
 ---
 

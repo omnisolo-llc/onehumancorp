@@ -9,10 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"context"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
 	"go.opentelemetry.io/otel"
 )
 
@@ -358,6 +361,36 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}
 		return map[string]any{
 			"issue":            issue,
+			"HybridEscalation": true,
+		}, nil
+
+	// ── Hybrid Blob Storage tool ──────────────────────────────────────────────
+	case "blob-mcp":
+		if s.hub.Storage() == nil {
+			return nil, errors.New("storage provider not configured")
+		}
+
+		inspector := blobinspector.NewBlobInspectorMCP(s.hub.Storage())
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid blob-mcp parameters: %w", err)
+		}
+
+		// In a real execution environment, the HTTP middleware sets context values for auth.
+		// However, for MCP tool invocation inside the server loop, we recreate claims if known.
+		// For simplicity we create a dummy claim just for testing out the cloud mode scoping.
+		claims := &auth.Claims{
+			OrganizationID: s.org.ID,
+		}
+
+		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+		res, err := inspector.CallTool(ctx, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]any{
+			"result":           res,
 			"HybridEscalation": true,
 		}, nil
 
