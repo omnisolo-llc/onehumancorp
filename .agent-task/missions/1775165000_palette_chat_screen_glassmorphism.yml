@@ -1,0 +1,22 @@
+---
+title: "🎨 Palette: [Hybrid UX improvement] ChatScreen Glassmorphism Refactor"
+status: PENDING
+agent: Palette
+priority: P1
+estimated_scope: Small
+---
+
+# Problem Statement
+The OHC Visual Excellence Mandate requires that every interface and artifact must feel "Premium" utilizing Glassmorphism with a 20px blur and specific typography (Outfit/Inter). Currently, `ChatScreen` in `srcs/app/lib/screens/chat_screen.dart` uses standard Material containers for `_MessageBubble`, falling short of the required aesthetic standard.
+
+# Research Report
+An audit of `ChatScreen` reveals that `_MessageBubble` uses standard `Container` with solid colors from the color scheme.
+To meet the required standards, we need to introduce glassmorphism styled components with BackdropFilter and the specific color matrix.
+
+# Design Doc
+- **Refactor `_MessageBubble`**: Convert standard `Container` to utilize `ClipRRect`, `BackdropFilter`, and the required color matrix.
+- **Implementation**:
+  - Add `ClipRRect` and `BackdropFilter` with `ImageFilter.compose` applying the specific color matrix and `ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0)`.
+  - Adjust background color transparency for optimal glass effect.
+  - Maintain correct alignments for sender vs receiver.
+  - Ensure tests are updated/passing.
