@@ -21,7 +21,7 @@ required_files=(
   "lib/screens/BUILD.bazel"
   "lib/screens/dashboard_screen.dart"
   "lib/screens/widget_test.dart"
-  "lib/screens/advanced_widget_test.dart"
+  "test/screens/advanced_widget_test.dart"
   "e2e/playwright.config.ts"
   "e2e/web.spec.ts"
   "e2e/capture_screenshots.mjs"
