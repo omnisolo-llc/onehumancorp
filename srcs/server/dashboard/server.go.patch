@@ -1,0 +1,8 @@
+<<<<<<< SEARCH
+	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
+	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
+=======
+	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
+	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
+	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
+>>>>>>> REPLACE
