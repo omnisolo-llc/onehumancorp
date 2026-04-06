@@ -23,6 +23,7 @@ const (
 	StateInProgress = "IN_PROGRESS"
 	StateCompleted  = "COMPLETED"
 	StateFailed     = "FAILED"
+	StateArchived   = "ARCHIVED"
 )
 
 // Valid transitions
@@ -33,6 +34,9 @@ var ValidTransitions = map[string][]string{
 	StateExecuting:         {StateReview, StateSuccess, StateTerminatedError},
 	StateWaitingDelegation: {StateExecuting, StateTerminatedError},
 	StateReview:            {StateCompleted, StateSuccess, StateTerminatedError, StateExecuting, StateInProgress},
+	StateCompleted:         {StateArchived},
+	StateFailed:            {StateArchived},
+	StateSuccess:           {StateArchived},
 }
 
 // StateMachine manages state transitions for entities
@@ -66,7 +70,7 @@ func IsValidTransition(fromState, toState string) bool {
 	return false
 }
 
-// Transition performs a state transition for the given entity
+// Transition performs a state transition for the given entity, creating a new transaction.
 func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
 	tx, err := sm.dbProvider.Begin(ctx)
 	if err != nil {
@@ -74,64 +78,17 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 	}
 	defer tx.Rollback(ctx)
 
-	// Acquire lock and read current state
-	var currentState string
-	var query string
-
-	if entityType == "SHARED_TASK" {
-		if sm.dbProvider.IsSQLite() {
-			query = `SELECT status FROM shared_tasks WHERE id = $1`
-		} else {
-			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
-		}
-
-		err = tx.QueryRow(ctx, query, entityID).Scan(&currentState)
-	} else {
-		return fmt.Errorf("unsupported entity type: %s", entityType)
-	}
-
+	currentState, err := sm.TransitionWithTx(ctx, tx, entityID, entityType, toState, agentID, reason)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			return fmt.Errorf("entity not found: %s", entityID)
-		}
-		return fmt.Errorf("failed to read current state: %w", err)
-	}
-
-	// Validate transition
-	if !IsValidTransition(currentState, toState) {
-		return fmt.Errorf("invalid transition from %s to %s", currentState, toState)
-	}
-
-	if currentState == toState {
-		return nil // No change needed
-	}
-
-	// Update entity state
-	if entityType == "SHARED_TASK" {
-		updateQuery := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, toState, entityID)
-		if err != nil {
-			return fmt.Errorf("failed to update entity state: %w", err)
-		}
-	}
-
-	// Record audit log
-	transitionID := generateID()
-	auditQuery := `
-		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
-	_, err = tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
-	if err != nil {
-		return fmt.Errorf("failed to record transition audit log: %w", err)
+		return err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Broadcast transition
-	if sm.broadcast != nil {
+	// Broadcast transition after successful commit
+	if sm.broadcast != nil && currentState != toState {
 		payload := map[string]interface{}{
 			"entity_id":   entityID,
 			"entity_type": entityType,
@@ -144,6 +101,68 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 	}
 
 	return nil
+}
+
+// TransitionWithTx performs a state transition using an existing database transaction.
+// It modifies the database state but does not commit or broadcast the transition.
+// It returns the state of the entity before the transition.
+func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID, entityType, toState, agentID, reason string) (string, error) {
+	// Acquire lock and read current state
+	var currentState string
+	var query string
+	var err error
+
+	if entityType == "SHARED_TASK" {
+		if sm.dbProvider.IsSQLite() {
+			query = `SELECT status FROM shared_tasks WHERE id = $1`
+		} else {
+			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
+		}
+
+		err = tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+	} else {
+		return "", fmt.Errorf("unsupported entity type: %s", entityType)
+	}
+
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return "", fmt.Errorf("entity not found: %s", entityID)
+		}
+		return "", fmt.Errorf("failed to read current state: %w", err)
+	}
+
+	// Validate transition
+	if !IsValidTransition(currentState, toState) {
+		return "", fmt.Errorf("invalid transition from %s to %s", currentState, toState)
+	}
+
+	if currentState == toState {
+		return currentState, nil // No change needed
+	}
+
+	// Update entity state
+	if entityType == "SHARED_TASK" {
+		updateQuery := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+		_, err = tx.Exec(ctx, updateQuery, toState, entityID)
+		if err != nil {
+			return "", fmt.Errorf("failed to update entity state: %w", err)
+		}
+	}
+
+	// Record audit log
+	transitionID := generateID()
+	auditQuery := `
+		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err = tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
+	if err != nil {
+		return "", fmt.Errorf("failed to record transition audit log: %w", err)
+	}
+
+	// Note: TransitionWithTx does NOT broadcast. Callers are responsible for broadcasting
+	// after their surrounding transaction commits, or rely on `Transition` which handles it.
+	return currentState, nil
 }
 
 // generateID generates a pseudo-uuid for SQLite compatibility.

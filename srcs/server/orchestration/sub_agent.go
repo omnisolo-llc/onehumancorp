@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 )
 
 func writeHeartbeatFile(taskID string, content string) error {
@@ -118,9 +119,15 @@ func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
 }
 
 func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
-	_, err := s.db.Exec(context.Background(), "UPDATE shared_tasks SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID)
+	ctx := context.Background()
+	// Create an admin context for task completion since this is a system worker
+	// Use an explicit background context with necessary claims if needed
+	sm := statemachine.NewStateMachine(s.db, nil)
+
+	// Use StateMachine for transition
+	err := sm.Transition(ctx, task.ID, "SHARED_TASK", statemachine.StateFailed, "sub-agent-spawner", "Task failed after retries")
 	if err != nil {
-		return fmt.Errorf("failed to fail sub-agent task: %w", err)
+		return fmt.Errorf("failed to fail sub-agent task via state machine: %w", err)
 	}
 
 	// Emit SUB_AGENT_FAILED event
@@ -189,14 +196,15 @@ isolated_context: %t
 }
 
 func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
+	ctx := context.Background()
 	// Create an admin context for task completion since this is a system worker
 	// Use an explicit background context with necessary claims if needed
-	// For simplicity in this background worker, we might just use the raw DB query
+	sm := statemachine.NewStateMachine(s.db, nil)
 
-	// Mark task completed
-	_, err := s.db.Exec(context.Background(), "UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID)
+	// Mark task completed via StateMachine
+	err := sm.Transition(ctx, task.ID, "SHARED_TASK", statemachine.StateCompleted, "sub-agent-spawner", "Sub-agent task completed successfully")
 	if err != nil {
-		return fmt.Errorf("failed to complete sub-agent task: %w", err)
+		return fmt.Errorf("failed to complete sub-agent task via state machine: %w", err)
 	}
 
 	// Emit SUB_AGENT_COMPLETED event

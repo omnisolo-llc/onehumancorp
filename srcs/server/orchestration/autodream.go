@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -141,11 +142,15 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		// Update task to ARCHIVED to avoid re-processing
-		updateQuery := "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = $1"
-		if w.pool.IsSQLite() {
-			updateQuery = "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = ?"
-		}
-		_, err = tx.Exec(ctx, updateQuery, task.ID)
+		// We use the db.Tx with StateMachine via a manual update instead if we don't have StateMachine,
+		// but since we want to enforce it across the board, let's create an instance or use manual logic
+		// that aligns. However, autodream operates as a background worker and doesn't explicitly have the
+		// task manager state machine instance. Let's do a direct state transition query to avoid cyclic deps,
+		// or initialize a new state machine. For now, since `autodream` doesn't have access to `TaskManager`'s
+		// `stateMachine`, we will manually emulate the transition to ARCHIVED with transition audit log, or
+		// instantiate a local StateMachine.
+		sm := statemachine.NewStateMachine(w.pool, nil)
+		_, err = sm.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", statemachine.StateArchived, "autodream", "Archived after memory consolidation")
 		if err != nil {
 			slog.Error("AutoDream: failed to archive processed task", "error", err)
 			tx.Rollback(ctx)
