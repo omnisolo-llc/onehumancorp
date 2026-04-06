@@ -81,20 +81,25 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   final _dbPathCtrl = TextEditingController(text: 'ohc.db');
 
   // Step 2 – AI Provider
-  final _minimaxKeyCtrl = TextEditingController();
-  final _modelCtrl = TextEditingController(text: 'abab6.5s');
+  final _aiKeyCtrl = TextEditingController();
+  final _aiModelCtrl = TextEditingController(text: 'abab6.5s');
+  final _openaiKeyCtrl = TextEditingController();
+  final _anthropicKeyCtrl = TextEditingController();
 
   // Step 3 – Centrifuge
   final _centrifugeUrlCtrl = TextEditingController(
     text: 'ws://localhost:8000/connection/websocket',
   );
+  bool _mcpEnabled = false;
 
   @override
   void dispose() {
     _listenAddrCtrl.dispose();
     _dbPathCtrl.dispose();
-    _minimaxKeyCtrl.dispose();
-    _modelCtrl.dispose();
+    _aiKeyCtrl.dispose();
+    _aiModelCtrl.dispose();
+    _openaiKeyCtrl.dispose();
+    _anthropicKeyCtrl.dispose();
     _centrifugeUrlCtrl.dispose();
     super.dispose();
   }
@@ -114,17 +119,26 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
       'db_path': _dbPathCtrl.text.trim(),
       'centrifuge_url': _centrifugeUrlCtrl.text.trim(),
     };
-    if (_minimaxKeyCtrl.text.trim().isNotEmpty) {
-      body['minimax_api_key'] = _minimaxKeyCtrl.text.trim();
+    if (_aiKeyCtrl.text.trim().isNotEmpty) {
+      body['minimax_api_key'] = _aiKeyCtrl.text.trim();
       body['ai_providers'] = [
         {
           'name': 'minimax',
-          'api_key': _minimaxKeyCtrl.text.trim(),
-          'model': _modelCtrl.text.trim(),
+          'api_key': _aiKeyCtrl.text.trim(),
+          'model': _aiModelCtrl.text.trim(),
           'enabled': true,
         },
       ];
     }
+
+    if (_openaiKeyCtrl.text.trim().isNotEmpty) {
+      body['openai_api_key'] = _openaiKeyCtrl.text.trim();
+    }
+    if (_anthropicKeyCtrl.text.trim().isNotEmpty) {
+      body['anthropic_api_key'] = _anthropicKeyCtrl.text.trim();
+    }
+    body['mcp_enabled'] = _mcpEnabled;
+
 
     try {
       final resp = await http.post(
@@ -209,10 +223,20 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                     dbPathCtrl: _dbPathCtrl,
                   ),
                   _AiProviderStep(
-                    keyCtrl: _minimaxKeyCtrl,
-                    modelCtrl: _modelCtrl,
+                    keyCtrl: _aiKeyCtrl,
+                    modelCtrl: _aiModelCtrl,
+                    openaiKeyCtrl: _openaiKeyCtrl,
+                    anthropicKeyCtrl: _anthropicKeyCtrl,
                   ),
-                  _CentrifugeStep(urlCtrl: _centrifugeUrlCtrl),
+                  _CentrifugeStep(
+                    urlCtrl: _centrifugeUrlCtrl,
+                    mcpEnabled: _mcpEnabled,
+                    onMcpChanged: (val) {
+                      setState(() {
+                        _mcpEnabled = val;
+                      });
+                    },
+                  ),
                 ],
               ),
             ),
@@ -494,7 +518,14 @@ class _ServerStep extends StatelessWidget {
 class _AiProviderStep extends StatefulWidget {
   final TextEditingController keyCtrl;
   final TextEditingController modelCtrl;
-  const _AiProviderStep({required this.keyCtrl, required this.modelCtrl});
+  final TextEditingController openaiKeyCtrl;
+  final TextEditingController anthropicKeyCtrl;
+  const _AiProviderStep({
+    required this.keyCtrl,
+    required this.modelCtrl,
+    required this.openaiKeyCtrl,
+    required this.anthropicKeyCtrl,
+  });
 
   @override
   State<_AiProviderStep> createState() => _AiProviderStepState();
@@ -558,6 +589,48 @@ class _AiProviderStepState extends State<_AiProviderStep> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 16),
+        Semantics(
+          label: 'OpenAI API Key Input',
+          textField: true,
+          child: TextField(
+            controller: widget.openaiKeyCtrl,
+            obscureText: _obscureKey,
+            decoration: InputDecoration(
+              labelText: 'OpenAI API Key (Optional)',
+              hintText: 'sk-...',
+              helperText: 'Required for OpenAI models',
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(_obscureKey ? Icons.visibility : Icons.visibility_off),
+                tooltip: _obscureKey ? 'Show API Key' : 'Hide API Key',
+                onPressed: () => setState(() => _obscureKey = !_obscureKey),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Semantics(
+          label: 'Anthropic API Key Input',
+          textField: true,
+          child: TextField(
+            controller: widget.anthropicKeyCtrl,
+            obscureText: _obscureKey,
+            decoration: InputDecoration(
+              labelText: 'Anthropic API Key (Optional)',
+              hintText: 'sk-ant-...',
+              helperText: 'Required for Anthropic Claude models',
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(_obscureKey ? Icons.visibility : Icons.visibility_off),
+                tooltip: _obscureKey ? 'Show API Key' : 'Hide API Key',
+                onPressed: () => setState(() => _obscureKey = !_obscureKey),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -567,7 +640,13 @@ class _AiProviderStepState extends State<_AiProviderStep> {
 
 class _CentrifugeStep extends StatelessWidget {
   final TextEditingController urlCtrl;
-  const _CentrifugeStep({required this.urlCtrl});
+  final bool mcpEnabled;
+  final ValueChanged<bool> onMcpChanged;
+  const _CentrifugeStep({
+    required this.urlCtrl,
+    required this.mcpEnabled,
+    required this.onMcpChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -594,6 +673,13 @@ class _CentrifugeStep extends StatelessWidget {
             helperText: 'WebSocket endpoint of the Centrifuge server',
             border: OutlineInputBorder(),
           ),
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text('Enable Model Context Protocol (MCP)'),
+          subtitle: const Text('Enables OHC agents to interact with MCP-compatible external databases and tools.'),
+          value: mcpEnabled,
+          onChanged: onMcpChanged,
         ),
         const SizedBox(height: 16),
         Semantics(

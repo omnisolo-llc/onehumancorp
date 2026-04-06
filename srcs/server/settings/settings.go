@@ -25,6 +25,9 @@ type AppSettings struct {
 	RedisURL      string            `json:"redis_url,omitempty"`
 	CentrifugeURL string            `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string            `json:"minimax_api_key,omitempty"`
+	OpenAIAPIKey  string            `json:"openai_api_key,omitempty"`
+	AnthropicAPIKey string          `json:"anthropic_api_key,omitempty"`
+	MCPEnabled    bool              `json:"mcp_enabled"`
 	AiProviders   []AiProvider      `json:"ai_providers"`
 	Extras        map[string]string `json:"extras,omitempty"`
 }

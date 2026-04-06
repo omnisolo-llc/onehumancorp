@@ -31,6 +31,9 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
+	OpenAIAPIKey  string                `json:"openai_api_key,omitempty"`
+	AnthropicAPIKey string              `json:"anthropic_api_key,omitempty"`
+	MCPEnabled    bool                  `json:"mcp_enabled,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
 
@@ -93,6 +96,16 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 		cfg.MinimaxAPIKey = req.MinimaxAPIKey
 		s.hub.SetMinimaxAPIKey(req.MinimaxAPIKey)
 	}
+	if req.OpenAIAPIKey != "" {
+		cfg.OpenAIAPIKey = req.OpenAIAPIKey
+	}
+	if req.AnthropicAPIKey != "" {
+		cfg.AnthropicAPIKey = req.AnthropicAPIKey
+	}
+	// Note: We use req.MCPEnabled to just update it directly,
+	// assuming it can be explicitly toggled in wizard.
+	cfg.MCPEnabled = req.MCPEnabled
+
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders
 	}

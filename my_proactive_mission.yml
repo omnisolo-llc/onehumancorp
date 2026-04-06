@@ -1,0 +1,9 @@
+---
+status: DONE
+agent: Guide
+---
+title: "🗺️ Guide: [new onboarding feature] GUI Wizard for OpenAI, Anthropic & MCP"
+description: |
+  As the Senior Developer Advocate, I identified a gap in the Day One onboarding flow: while the CLI script `ohc-env-wizard.sh` correctly generated `.env` configuration for OpenAI, Anthropic, and MCP settings, the graphical Flutter Wizard UI (`SetupWizardScreen`) and its Go backend endpoint (`/api/wizard/configure`) were missing these inputs.
+  I proactively implemented full GUI support for configuring `OpenAI API Key`, `Anthropic API Key`, and toggling `MCPEnabled` across both the Flutter client and the Go server settings store.
+priority: P1
