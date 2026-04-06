@@ -113,7 +113,7 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		var embeddingStr *string
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			embedding, embedErr := client.GenerateEmbedding(ctxTimeout, content)
 			cancel()
@@ -351,7 +351,7 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		embeddingStr := "[0.0]" // fallback embedding
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			embedding, embedErr := client.GenerateEmbedding(ctxTimeout, summary)
 			cancel()
@@ -457,7 +457,7 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		var embeddingStr *string
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			embedding, err := client.GenerateEmbedding(ctxTimeout, content)
 			cancel()
@@ -565,7 +565,7 @@ func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
 		compressedContext := s.data
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 			prompt := "Summarize and compress this agent session memory into its most crucial factual elements:\n" + s.data
 			if response, err := client.Reason(ctxTimeout, prompt); err == nil {
@@ -677,7 +677,7 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		resolvedContext := ""
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			response, err := client.Reason(ctxTimeout, prompt)
 			cancel()
@@ -854,7 +854,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 
 		minimaxKey := os.Getenv("MINIMAX_API_KEY")
 		if minimaxKey != "" {
-			client := NewMinimaxClient(minimaxKey)
+			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 			response, err := client.Reason(ctxTimeout, prompt)
 			cancel()
