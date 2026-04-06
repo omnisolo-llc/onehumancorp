@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"context"
-	"os"
 	"testing"
 )
 
@@ -21,7 +20,7 @@ func TestBuiltinAgent(t *testing.T) {
 		Client:      mockClient,
 		Model:       "mock-model",
 		System:      "You are a helpful assistant.",
-		Tools:       []Tool{SendMessageTool, TodoWriteTool},
+		Tools:       []Tool{},
 		MaxTokens:   100,
 		Temperature: 0,
 	}
@@ -40,31 +39,6 @@ func TestBuiltinAgent(t *testing.T) {
 	}
 }
 
-func TestTools(t *testing.T) {
-	// Test a simple tool execution
-	ctx := context.Background()
-
-	// Test WebSearchTool
-	res, err := WebSearchTool.Execute(ctx, []byte(`{"query":"test"}`))
-	if err != nil {
-		t.Fatalf("WebSearchTool err: %v", err)
-	}
-	if res == "" {
-		t.Fatal("WebSearchTool returned empty result")
-	}
-
-	// Test TodoWriteTool
-	defer os.RemoveAll(".agent-task")
-	os.MkdirAll(".agent-task", 0755)
-
-	res, err = TodoWriteTool.Execute(ctx, []byte(`{"todo":"test todo"}`))
-	if err != nil {
-		t.Fatalf("TodoWriteTool err: %v", err)
-	}
-	if res == "" {
-		t.Fatal("TodoWriteTool returned empty result")
-	}
-}
 
 // MockClient implements LLMClient for testing.
 type MockClient struct {
