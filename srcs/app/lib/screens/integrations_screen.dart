@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -100,27 +101,66 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
               final tools = snapshot.data ?? [];
               if (tools.isEmpty) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.construction,
-                            size: 48,
-                            color: colors.onSurfaceVariant.withValues(alpha: 0.3),
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.compose(
+                      outer: ColorFilter.matrix(const <double>[
+                        1.168,
+                        -0.153,
+                        -0.015,
+                        0,
+                        0,
+                        -0.046,
+                        1.061,
+                        -0.015,
+                        0,
+                        0,
+                        -0.046,
+                        -0.152,
+                        1.198,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                      ]),
+                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.surface.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colors.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.construction,
+                                size: 48,
+                                color: colors.onSurfaceVariant.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text('No MCP tools active'),
+                              Tooltip(
+                                message: 'Refresh MCP tools list',
+                                child: TextButton(
+                                  onPressed: _refresh,
+                                  child: const Text('Refresh'),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          const Text('No MCP tools active'),
-                          Tooltip(
-                            message: 'Refresh MCP tools list',
-                            child: TextButton(
-                              onPressed: _refresh,
-                              child: const Text('Refresh'),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -128,8 +168,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               }
 
               return Column(
-                children:
-                    tools.map((tool) => _MCPToolTile(tool: tool)).toList(),
+                children: tools
+                    .map((tool) => _MCPToolTile(tool: tool))
+                    .toList(),
               );
             },
           ),
@@ -141,38 +182,37 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   void _showConnectionDialog(String platform) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Connect to $platform'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: '$platform Bot Token',
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Channel ID / Chat ID',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: Text('Connect to $platform'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                labelText: '$platform Bot Token',
+                border: const OutlineInputBorder(),
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Channel ID / Chat ID',
+                border: OutlineInputBorder(),
               ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Save Integration'),
-              ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Save Integration'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -198,7 +238,7 @@ class _IntegrationCard extends StatefulWidget {
 }
 
 class _IntegrationCardState extends State<_IntegrationCard> {
-  bool _hovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -207,62 +247,127 @@ class _IntegrationCardState extends State<_IntegrationCard> {
     return Semantics(
       label: 'Connect to ${widget.title}. ${widget.subtitle}',
       button: true,
-      child: Card(
-        child: InkWell(
-          onTap: widget.onConnect,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: widget.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(widget.icon, color: widget.color, size: 24),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(const <double>[
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? colors.surfaceContainerHighest.withValues(alpha: 0.3)
+                      : colors.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered
+                        ? colors.outlineVariant
+                        : colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: InkWell(
+                  onTap: widget.onConnect,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: widget.color.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                widget.icon,
+                                color: widget.color,
+                                size: 24,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Inactive',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          widget.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Outfit',
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.onSurfaceVariant,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: widget.onConnect,
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: colors.outlineVariant.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
+                            ),
+                            child: const Text('Configure'),
+                          ),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    Text(
-                      'Inactive',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: widget.onConnect,
-                    child: const Text('Configure'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -271,36 +376,101 @@ class _IntegrationCardState extends State<_IntegrationCard> {
   }
 }
 
-class _MCPToolTile extends StatelessWidget {
+class _MCPToolTile extends StatefulWidget {
   final Map<String, dynamic> tool;
 
   const _MCPToolTile({required this.tool});
 
   @override
+  State<_MCPToolTile> createState() => _MCPToolTileState();
+}
+
+class _MCPToolTileState extends State<_MCPToolTile> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final name = tool['name'] as String? ?? 'Unknown Tool';
-    final description = tool['description'] as String? ?? '';
+    final colors = Theme.of(context).colorScheme;
+    final name = widget.tool['name'] as String? ?? 'Unknown Tool';
+    final description = widget.tool['description'] as String? ?? '';
 
     return Semantics(
       label: 'Invoke MCP Tool: $name. $description',
       button: true,
       excludeSemantics: true,
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {},
-          child: ListTile(
-            leading: const Icon(Icons.build_circle_outlined),
-            title: Text(name),
-            subtitle: Text(
-              description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: OutlinedButton(
-              onPressed: () {}, // Invoke dialog
-              child: const Text('Invoke'),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedScale(
+            scale: _isHovered ? 1.02 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.compose(
+                  outer: ColorFilter.matrix(const <double>[
+                    1.168,
+                    -0.153,
+                    -0.015,
+                    0,
+                    0,
+                    -0.046,
+                    1.061,
+                    -0.015,
+                    0,
+                    0,
+                    -0.046,
+                    -0.152,
+                    1.198,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
+                  ]),
+                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  decoration: BoxDecoration(
+                    color: _isHovered
+                        ? colors.surfaceContainerHighest.withValues(alpha: 0.3)
+                        : colors.surface.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isHovered
+                          ? colors.outlineVariant
+                          : colors.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {},
+                    child: ListTile(
+                      leading: const Icon(Icons.build_circle_outlined),
+                      title: Text(
+                        name,
+                        style: const TextStyle(fontFamily: 'Outfit'),
+                      ),
+                      subtitle: Text(
+                        description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Inter'),
+                      ),
+                      trailing: OutlinedButton(
+                        onPressed: () {}, // Invoke dialog
+                        child: const Text('Invoke'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),

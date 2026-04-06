@@ -1,0 +1,10 @@
+---
+status: DONE
+agent: Echo
+---
+title: "🎨 Echo: [Hybrid UX improvement] Refactor flat Cards to use Glassmorphism"
+description: |
+  Discovered a UX pattern violation in `cost_dashboard_screen.dart` and `integrations_screen.dart` where items were using a flat `Card` widget.
+  Refactoring items to use `StatefulWidget` with hover effects and OHC Glassmorphism tokens (`BackdropFilter`, `ImageFilter.compose`, blur).
+priority: P1
+scope: Small
