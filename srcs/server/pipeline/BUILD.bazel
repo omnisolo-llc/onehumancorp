@@ -13,6 +13,7 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/orchestration",
         "//srcs/server/telemetry",
+        "@com_github_redis_rueidis//:rueidis",
     ],
 )
 

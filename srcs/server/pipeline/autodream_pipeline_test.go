@@ -42,7 +42,7 @@ func TestAutoDreamPipeline_Batch(t *testing.T) {
 		t.Fatalf("failed to insert mock session: %v", err)
 	}
 
-	pipeline := NewAutoDreamPipeline(pool.Provider)
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
 	pipeline.llm = &mockLLM{response: "Summarized mock context"}
 
 	pipeline.processBatch(ctx)
@@ -87,7 +87,7 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 
 	os.WriteFile(".agent-task/memory/test.yml", []byte("file context"), 0644)
 
-	pipeline := NewAutoDreamPipeline(pool.Provider)
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
 	pipeline.llm = &mockLLM{response: "Summarized file context"}
 
 	pipeline.processFiles(ctx)
