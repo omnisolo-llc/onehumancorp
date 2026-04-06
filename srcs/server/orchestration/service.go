@@ -2,6 +2,7 @@ package orchestration
 
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 
 	"strings"
 	"bufio"
@@ -264,6 +265,7 @@ type Hub struct {
 	tokenTrackers  map[string]struct{}
 	GetTokenUsage  func(ctx context.Context) map[string]int64
 	autoCorTrack   map[string]struct{}
+	TaskQueue      queue.TaskQueue
 	eventLogChan   chan interface{}
 	repo           HubRepository
 	scheduler      *scheduler.Scheduler

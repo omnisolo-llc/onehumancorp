@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"encoding/json"
 	"context"
 	"fmt"
 	"strings"
@@ -79,20 +81,47 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		return nil, status.Errorf(codes.InvalidArgument, "parent_thread_id contains forbidden prompt injection sequences")
 	}
 
-	msg := Message{
-		ID:         fmt.Sprintf("msg-%s-%d", req.GetTaskId(), time.Now().UnixNano()),
-		FromAgent:  req.GetFromAgentId(),
-		ToAgent:    subAgentID,
-		Type:       "TaskDelegation",
-		Content:    fmt.Sprintf("Execute Task: %s\nContext: %s", instruction, parentThreadID),
-		OccurredAt: time.Now().UTC(),
+	// 3. Execution (trigger via task queue)
+	payload := map[string]interface{}{
+		"instruction":      instruction,
+		"parent_thread_id": parentThreadID,
+		"from_agent":       req.GetFromAgentId(),
 	}
-	err := s.hub.Publish(msg)
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		if strings.Contains(err.Error(), "sender agent is not registered") {
-			return nil, status.Errorf(codes.PermissionDenied, "sender agent is not registered: %s", req.GetFromAgentId())
+		return nil, status.Errorf(codes.Internal, "failed to marshal payload: %v", err)
+	}
+
+	job := &queue.Job{
+		ID:           fmt.Sprintf("job-%s-%d", req.GetTaskId(), time.Now().UnixNano()),
+		ParentTaskID: req.GetTaskId(),
+		AgentRole:    req.GetTargetRole(),
+		Payload:      string(payloadBytes),
+		MaxAttempts:  3,
+	}
+
+	if s.hub.TaskQueue != nil {
+		err = s.hub.TaskQueue.Enqueue(ctx, job)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to enqueue sub-agent job: %v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to publish task to sub-agent: %v", err)
+	} else {
+		// Fallback to direct publish if queue not configured
+		msg := Message{
+			ID:         fmt.Sprintf("msg-%s-%d", req.GetTaskId(), time.Now().UnixNano()),
+			FromAgent:  req.GetFromAgentId(),
+			ToAgent:    subAgentID,
+			Type:       "TaskDelegation",
+			Content:    fmt.Sprintf("Execute Task: %s\nContext: %s", instruction, parentThreadID),
+			OccurredAt: time.Now().UTC(),
+		}
+		err := s.hub.Publish(msg)
+		if err != nil {
+			if strings.Contains(err.Error(), "sender agent is not registered") {
+				return nil, status.Errorf(codes.PermissionDenied, "sender agent is not registered: %s", req.GetFromAgentId())
+			}
+			return nil, status.Errorf(codes.Internal, "failed to publish task to sub-agent: %v", err)
+		}
 	}
 
 	// Return success acknowledging that the sub-agent is spawned and task assigned.
