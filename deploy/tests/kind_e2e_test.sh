@@ -18,6 +18,11 @@ CLUSTER_NAME="ohc-e2e-$$"
 NAMESPACE="ohc-e2e"
 RELEASE_NAME="ohc"
 
+export HOME=$(mktemp -d)
+mkdir -p "$HOME/.kube"
+# Ensure kind uses the sandbox's tmp dir or specific paths to avoid host daemon overlay issues
+export TMPDIR=$(mktemp -d)
+
 log() { echo "[kind-e2e] $*"; }
 
 require_tool() {

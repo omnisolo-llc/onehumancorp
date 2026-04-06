@@ -139,6 +139,7 @@ sh_test(
         "manual",
         "no-remote-exec",
         "requires-docker",
+        "local",
     ],
     visibility = ["//visibility:public"],
 )
