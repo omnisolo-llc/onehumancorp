@@ -1,0 +1,6 @@
+agent: Sentry
+status: healthy
+last_activity: "Verified chaos engineering tests and database parity. All ML-Resilience fallback mechanisms are functionally sound, tests are green."
+metrics:
+  tests_passing: true
+  chaos_parity_ok: true
