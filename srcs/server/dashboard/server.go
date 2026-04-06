@@ -1014,10 +1014,45 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	for _, p := range payloads {
-		// Just re-ingest directly into the cloud DB telemetry buffer or relevant storage via telemetry package
-		// If cloud is handling it via BufferMetricFunc, we can just call it
-		if telemetry.BufferMetricFunc != nil {
-			_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(p.Payload), &data); err != nil {
+			continue // Skip malformed payloads
+		}
+
+		switch p.MetricType {
+		case "token_usage":
+			agentID, _ := data["agent_id"].(string)
+			role, _ := data["role"].(string)
+			model, _ := data["model"].(string)
+			tokenType, _ := data["type"].(string)
+			var count int64
+			if c, ok := data["count"].(float64); ok {
+				count = int64(c)
+			}
+			telemetry.RecordTokenUsage(ctx, agentID, role, model, tokenType, count)
+		case "agent_api_call":
+			agentID, _ := data["agent_id"].(string)
+			role, _ := data["role"].(string)
+			api, _ := data["api"].(string)
+			telemetry.RecordAgentApiCall(ctx, agentID, role, api)
+		case "agent_api_error":
+			agentID, _ := data["agent_id"].(string)
+			role, _ := data["role"].(string)
+			api, _ := data["api"].(string)
+			telemetry.RecordAgentApiError(ctx, agentID, role, api)
+		case "human_interaction":
+			interactionType, _ := data["type"].(string)
+			telemetry.RecordHumanInteraction(ctx, interactionType)
+		case "meeting_event":
+			eventType, _ := data["type"].(string)
+			telemetry.RecordMeetingEvent(ctx, eventType)
+		case "swarm_task_completed":
+			missionID, _ := data["mission_id"].(string)
+			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
+		default:
+			if telemetry.BufferMetricFunc != nil {
+				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
+			}
 		}
 	}
 
