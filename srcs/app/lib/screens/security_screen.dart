@@ -282,7 +282,7 @@ class _IssueCardState extends State<_IssueCard> {
                                         ),
                                       )
                                       : const Icon(Icons.build),
-                              label: const Text('Auto-Fix'),
+                              label: const Text('Auto-fix'),
                             ),
                           ),
                         ],
