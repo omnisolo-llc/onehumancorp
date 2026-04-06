@@ -1961,3 +1961,101 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 
 
+
+func (h *Hub) AdvertiseCapabilities(ctx context.Context, caps *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if h.centrifugeNode == nil || h.centrifugeNode.MeshTransport() == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Mesh transport not configured")
+	}
+	if caps == nil || caps.GetAgentId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "Agent ID is required")
+	}
+
+	err := h.centrifugeNode.MeshTransport().AdvertiseCapabilities(ctx, *caps)
+	if err != nil {
+		slog.Error("Failed to advertise capabilities", "agent_id", caps.GetAgentId(), "error", err)
+		return nil, status.Errorf(codes.Internal, "Failed to advertise capabilities: %v", err)
+	}
+
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+func (h *Hub) DiscoverAgents(query *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if h.centrifugeNode == nil || h.centrifugeNode.MeshTransport() == nil {
+		return status.Error(codes.FailedPrecondition, "Mesh transport not configured")
+	}
+
+	ctx := stream.Context()
+	ch, err := h.centrifugeNode.MeshTransport().SubscribeCapabilities(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Failed to subscribe to capabilities: %v", err)
+	}
+
+	filter := query.GetFilter()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case caps, ok := <-ch:
+			if !ok {
+				return nil
+			}
+
+			if filter != "" {
+				matched := false
+				for _, skill := range caps.GetSupportedSkills() {
+					if strings.Contains(skill, filter) {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+			}
+
+			if err := stream.Send(&caps); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (h *Hub) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if h.centrifugeNode == nil || h.centrifugeNode.MeshTransport() == nil {
+		return status.Error(codes.FailedPrecondition, "Mesh transport not configured")
+	}
+
+	topic := req.GetTopic()
+	if topic == "" {
+		return status.Error(codes.InvalidArgument, "Topic is required")
+	}
+
+	ctx := stream.Context()
+	ch, err := h.centrifugeNode.MeshTransport().SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Failed to subscribe to mesh events: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case payload, ok := <-ch:
+			if !ok {
+				return nil
+			}
+
+			event := pb.MeshEvent_builder{
+				EventId: proto.String(fmt.Sprintf("%d", time.Now().UnixNano())),
+				Topic: proto.String(topic),
+				Payload:   payload,
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+			}.Build()
+
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}

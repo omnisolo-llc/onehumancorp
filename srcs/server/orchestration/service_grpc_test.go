@@ -297,3 +297,45 @@ func TestMinimaxClientReasonInvalidRequest(t *testing.T) {
 		t.Fatalf("expected error on cancelled context")
 	}
 }
+
+func TestHubService_AdvertiseCapabilities(t *testing.T) {
+	meshTransport := NewMemoryMeshTransport(nil)
+	cn, _ := NewCentrifugeNode()
+	cn.SetMeshTransport(meshTransport)
+	hub := NewHub()
+	hub.SetCentrifugeNode(cn)
+
+	ctx := context.Background()
+	caps := pb.AgentCapabilities_builder{
+		AgentId: proto.String("agent-123"),
+		SupportedSkills: []string{"skill-a", "skill-b"},
+		MaxConcurrentTasks: proto.Int32(5),
+	}.Build()
+
+	resp, err := hub.AdvertiseCapabilities(ctx, caps)
+	if err != nil {
+		t.Fatalf("expected no err, got %v", err)
+	}
+	if !resp.GetSuccess() {
+		t.Fatalf("expected success")
+	}
+
+	ch, err := meshTransport.SubscribeCapabilities(ctx)
+	if err != nil {
+		t.Fatalf("expected no err, got %v", err)
+	}
+
+	err = hub.centrifugeNode.MeshTransport().AdvertiseCapabilities(ctx, *caps)
+	if err != nil {
+		t.Fatalf("expected no err, got %v", err)
+	}
+
+	select {
+	case receivedCaps := <-ch:
+		if receivedCaps.GetAgentId() != "agent-123" {
+			t.Fatalf("expected agent-123, got %v", receivedCaps.GetAgentId())
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Timeout waiting for capabilities")
+	}
+}

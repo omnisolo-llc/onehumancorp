@@ -142,6 +142,12 @@ func (cn *CentrifugeNode) Handler() http.Handler {
 // PublishMeetingMessage fans a transcript entry out to all subscribers of the
 // "meeting:<meetingID>" Centrifuge channel.
 func (cn *CentrifugeNode) PublishMeetingMessage(meetingID string, msg Message) {
+	if cn.meshTransport != nil {
+		data, err := json.Marshal(msg)
+		if err == nil {
+			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "meetings", data)
+		}
+	}
 	channel := "meeting:" + meetingID
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -154,6 +160,12 @@ func (cn *CentrifugeNode) PublishMeetingMessage(meetingID string, msg Message) {
 // PublishChatMessage fans a chat message out to all subscribers of the
 // "chat:<roomID>" Centrifuge channel.
 func (cn *CentrifugeNode) PublishChatMessage(roomID string, msg Message) {
+	if cn.meshTransport != nil {
+		data, err := json.Marshal(msg)
+		if err == nil {
+			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "chats", data)
+		}
+	}
 	channel := "chat:" + roomID
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -166,6 +178,12 @@ func (cn *CentrifugeNode) PublishChatMessage(roomID string, msg Message) {
 // PublishAgentNotification sends a lightweight inbox-notification to a specific
 // agent's Centrifuge channel.
 func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) {
+	if cn.meshTransport != nil {
+		data, err := json.Marshal(msg)
+		if err == nil {
+			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "notifications", data)
+		}
+	}
 	channel := "agent:" + agentID
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -177,6 +195,12 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 
 // PublishCoordinationMessage fans out a coordination message to the coordination channel.
 func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
+	if cn.meshTransport != nil {
+		data, err := json.Marshal(msg)
+		if err == nil {
+			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "coordination", data)
+		}
+	}
 	channel := "mesh:coordination"
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -260,4 +284,8 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 // Close shuts down the Centrifuge node gracefully.
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
+}
+
+func (cn *CentrifugeNode) MeshTransport() MeshTransport {
+	return cn.meshTransport
 }
