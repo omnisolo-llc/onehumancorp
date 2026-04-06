@@ -17,6 +17,7 @@ go_library(
         "sanitizer.go",
         "service.go",
         "sip.go",
+        "sip_testing.go",
         "sqlite_hub.go",
         "sync_daemon.go",
         "telemetry_minimax_client.go",
