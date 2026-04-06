@@ -1,0 +1,14 @@
+<<<<<<< SEARCH
+// ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
+func ClearSemaphore() {
+	// Replaced by standaloneThrottle
+}
+=======
+// ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
+func ClearSemaphore() {
+	select {
+	case <-standaloneThrottle:
+	default:
+	}
+}
+>>>>>>> REPLACE
