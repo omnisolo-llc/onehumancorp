@@ -24,19 +24,19 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 	}
 
 	start := time.Now()
-	if h.sipDB != nil && h.sipDB.db != nil {
-		_, err := h.sipDB.db.Exec(ctx, "SELECT 1")
+	if h.sipDB != nil && h.sipDB.Provider() != nil {
+		_, err := h.sipDB.Provider().Exec(ctx, "SELECT 1")
 		probe.DBPing = time.Since(start)
 		if err != nil {
 			probe.Status = "degraded"
 		} else {
-			if !h.sipDB.db.IsSQLite() {
+			if !h.sipDB.Provider().IsSQLite() {
 				probe.Mode = "cloud"
 			}
 
 			// Get sync backlog
 			var count int
-			err = h.sipDB.db.QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING'").Scan(&count)
+			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING'").Scan(&count)
 			if err == nil {
 				probe.SyncBacklog = count
 			}
