@@ -104,6 +104,10 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Sub-Agent Queue](../features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
 - **[AutoDream Pipeline](../features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
+## 6. Deep Dive Walkthroughs
+- **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
+- **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
+
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
 </div>
