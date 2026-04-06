@@ -62,6 +62,56 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 	}
 }
 
+func TestHandleDownloads(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"os": "Mac", "version": "1.0.0"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/downloads", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleDownloads(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created Download
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.OS != "Mac" {
+		t.Errorf("expected os 'Mac', got '%s'", created.OS)
+	}
+	if created.Version != "1.0.0" {
+		t.Errorf("expected version '1.0.0', got '%s'", created.Version)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/downloads", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleDownloads(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []Download
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 download, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
 func TestHandleReferrals(t *testing.T) {
 	s := &Server{}
 
