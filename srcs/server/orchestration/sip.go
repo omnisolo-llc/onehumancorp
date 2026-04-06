@@ -246,12 +246,11 @@ func initializeTables(provider db.Provider) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system'
 		);`,
-		`CREATE TABLE IF NOT EXISTS telemetry_buffer (
+		`CREATE TABLE IF NOT EXISTS local_metrics_buffer (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			metric_type TEXT NOT NULL,
 			payload TEXT NOT NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			organization_id TEXT DEFAULT 'system'
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 	}
 
@@ -726,12 +725,12 @@ func (s *SIPDB) Provider() db.Provider {
 // Accepts parameters: ctx context.Context, metricType string, payload string.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Inserts a record into the telemetry_buffer table.
+// Has side effects: Inserts a record into the local_metrics_buffer table.
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3)",
-			metricType, payload, s.orgID,
+			"INSERT INTO local_metrics_buffer (metric_type, payload, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
+			metricType, payload,
 		)
 		return err
 	})
@@ -741,7 +740,7 @@ func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload str
 // Accepts parameters: ctx context.Context, remoteEndpoint string.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from telemetry_buffer.
+// Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from local_metrics_buffer.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) (int, error) {
 	var records []struct {
@@ -752,7 +751,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 
 	err := withSipRetry(ctx, func() error {
 		records = nil
-		rows, err := s.db.Query(ctx, "SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT 500", s.orgID)
+		rows, err := s.db.Query(ctx, "SELECT id, metric_type, payload FROM local_metrics_buffer ORDER BY id ASC LIMIT 500")
 		if err != nil {
 			return err
 		}
@@ -824,7 +823,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
 		idList := strings.Join(idsToDelete, ",")
-		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM telemetry_buffer WHERE id IN (%s)", idList))
+		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM local_metrics_buffer WHERE id IN (%s)", idList))
 		return err
 	})
 	return len(records), err

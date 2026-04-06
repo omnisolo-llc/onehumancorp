@@ -10,6 +10,7 @@ go_library(
         "handlers_integration.go",
         "handlers_mcp.go",
         "handlers_ops.go",
+        "handlers_ops_extra_metrics.go",
         "handlers_org.go",
         "handlers_scheduler.go",
         "handlers_growth.go",
