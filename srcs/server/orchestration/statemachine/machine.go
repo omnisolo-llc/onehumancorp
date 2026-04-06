@@ -74,56 +74,9 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 	}
 	defer tx.Rollback(ctx)
 
-	// Acquire lock and read current state
-	var currentState string
-	var query string
-
-	if entityType == "SHARED_TASK" {
-		if sm.dbProvider.IsSQLite() {
-			query = `SELECT status FROM shared_tasks WHERE id = $1`
-		} else {
-			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
-		}
-
-		err = tx.QueryRow(ctx, query, entityID).Scan(&currentState)
-	} else {
-		return fmt.Errorf("unsupported entity type: %s", entityType)
-	}
-
+	currentState, err := sm.TransitionWithTx(ctx, tx, entityID, entityType, toState, agentID, reason)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			return fmt.Errorf("entity not found: %s", entityID)
-		}
-		return fmt.Errorf("failed to read current state: %w", err)
-	}
-
-	// Validate transition
-	if !IsValidTransition(currentState, toState) {
-		return fmt.Errorf("invalid transition from %s to %s", currentState, toState)
-	}
-
-	if currentState == toState {
-		return nil // No change needed
-	}
-
-	// Update entity state
-	if entityType == "SHARED_TASK" {
-		updateQuery := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, toState, entityID)
-		if err != nil {
-			return fmt.Errorf("failed to update entity state: %w", err)
-		}
-	}
-
-	// Record audit log
-	transitionID := generateID()
-	auditQuery := `
-		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
-	_, err = tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
-	if err != nil {
-		return fmt.Errorf("failed to record transition audit log: %w", err)
+		return err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -144,6 +97,62 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 	}
 
 	return nil
+}
+
+// TransitionWithTx performs a state transition using an existing transaction and returns the original state
+func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID, entityType, toState, agentID, reason string) (string, error) {
+	// Acquire lock and read current state
+	var currentState string
+	var query string
+
+	if entityType == "SHARED_TASK" {
+		if sm.dbProvider.IsSQLite() {
+			query = `SELECT status FROM shared_tasks WHERE id = $1`
+		} else {
+			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
+		}
+
+		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return "", fmt.Errorf("entity not found: %s", entityID)
+			}
+			return "", fmt.Errorf("failed to read current state: %w", err)
+		}
+	} else {
+		return "", fmt.Errorf("unsupported entity type: %s", entityType)
+	}
+
+	// Validate transition
+	if !IsValidTransition(currentState, toState) {
+		return "", fmt.Errorf("invalid transition from %s to %s", currentState, toState)
+	}
+
+	if currentState == toState {
+		return currentState, nil // No change needed
+	}
+
+	// Update entity state
+	if entityType == "SHARED_TASK" {
+		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
+		if err != nil {
+			return "", fmt.Errorf("failed to update entity state: %w", err)
+		}
+	}
+
+	// Record audit log
+	transitionID := generateID()
+	auditQuery := `
+		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err := tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
+	if err != nil {
+		return "", fmt.Errorf("failed to record transition audit log: %w", err)
+	}
+
+	return currentState, nil
 }
 
 // generateID generates a pseudo-uuid for SQLite compatibility.
