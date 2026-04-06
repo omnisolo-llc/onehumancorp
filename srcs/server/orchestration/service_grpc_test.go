@@ -1,6 +1,9 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
 	"context"
 	"errors"
 	"net/http"
@@ -295,5 +298,169 @@ func TestMinimaxClientReasonInvalidRequest(t *testing.T) {
 	_, err := client.Reason(ctx, "test")
 	if err == nil {
 		t.Fatalf("expected error on cancelled context")
+	}
+}
+
+
+
+func TestHubServiceServer_AdvertiseCapabilities_NoTransport(t *testing.T) {
+	hub := &Hub{} // No centrifuge node attached => MeshTransport == nil
+	srv := NewHubServiceServer(hub)
+
+	req := pb.AgentCapabilities_builder{AgentId: proto.String("agent-1")}.Build()
+
+	_, err := srv.AdvertiseCapabilities(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error when MeshTransport is not configured")
+	}
+	if status.Code(err) != codes.Unimplemented {
+		t.Fatalf("expected Unimplemented code, got %v", status.Code(err))
+	}
+}
+
+func TestHubServiceServer_DiscoverAgents_NoTransport(t *testing.T) {
+	hub := &Hub{}
+	srv := NewHubServiceServer(hub)
+
+	err := srv.DiscoverAgents(&pb.Query{}, &mockDiscoverAgentsServer{ctx: context.Background()})
+	if err == nil {
+		t.Fatal("expected error when MeshTransport is not configured")
+	}
+	if status.Code(err) != codes.Unimplemented {
+		t.Fatalf("expected Unimplemented code, got %v", status.Code(err))
+	}
+}
+
+func TestHubServiceServer_StreamMeshEvents_NoTransport(t *testing.T) {
+	hub := &Hub{}
+	srv := NewHubServiceServer(hub)
+
+	err := srv.StreamMeshEvents(&pb.EventStreamRequest{}, &mockStreamMeshEventsServer{ctx: context.Background()})
+	if err == nil {
+		t.Fatal("expected error when MeshTransport is not configured")
+	}
+	if status.Code(err) != codes.Unimplemented {
+		t.Fatalf("expected Unimplemented code, got %v", status.Code(err))
+	}
+}
+
+
+// Mock for DiscoverAgents
+type mockDiscoverAgentsServer struct {
+	grpc.ServerStream
+	ctx     context.Context
+	results []*pb.AgentCapabilities
+}
+
+func (m *mockDiscoverAgentsServer) Send(c *pb.AgentCapabilities) error {
+	m.results = append(m.results, c)
+	return nil
+}
+
+func (m *mockDiscoverAgentsServer) Context() context.Context {
+	return m.ctx
+}
+
+// Mock for StreamMeshEvents
+type mockStreamMeshEventsServer struct {
+	grpc.ServerStream
+	ctx     context.Context
+	results []*pb.MeshEvent
+}
+
+func (m *mockStreamMeshEventsServer) Send(e *pb.MeshEvent) error {
+	m.results = append(m.results, e)
+	return nil
+}
+
+func (m *mockStreamMeshEventsServer) Context() context.Context {
+	return m.ctx
+}
+
+func TestHubServiceServer_MeshTransport_Success(t *testing.T) {
+	var provider db.Provider = nil
+	// defer provider.Close()
+
+	// Create memory mesh transport
+	mt := NewMemoryMeshTransport(provider)
+
+	hub := &Hub{
+		centrifugeNode: &CentrifugeNode{
+			meshTransport: mt,
+		},
+	}
+	srv := NewHubServiceServer(hub)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Test AdvertiseCapabilities
+	req := pb.AgentCapabilities_builder{AgentId: proto.String("agent-1"), SupportedSkills: []string{"skill1"}}.Build()
+	resp, err := srv.AdvertiseCapabilities(ctx, req)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !resp.GetSuccess() {
+		t.Fatal("expected success=true")
+	}
+
+	// Test DiscoverAgents
+	stream := &mockDiscoverAgentsServer{ctx: ctx}
+
+	// Start DiscoverAgents in a goroutine because it blocks
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.DiscoverAgents(pb.Query_builder{Filter: proto.String("skill1")}.Build(), stream)
+	}()
+
+	// Give it a moment to subscribe
+	time.Sleep(50 * time.Millisecond)
+
+	// Advertise again to trigger stream
+	_, err = srv.AdvertiseCapabilities(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to advertise capabilities: %v", err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+	cancel() // Unblock stream
+
+	if err := <-errCh; err != context.Canceled && err != nil {
+		t.Fatalf("DiscoverAgents error: %v", err)
+	}
+
+	if len(stream.results) == 0 {
+		t.Fatal("expected to discover agent-1")
+	}
+	if stream.results[0].GetAgentId() != "agent-1" {
+		t.Fatalf("expected agent-1, got %v", stream.results[0].GetAgentId())
+	}
+
+	// Test StreamMeshEvents
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	defer cancel2()
+
+	evtStream := &mockStreamMeshEventsServer{ctx: ctx2}
+	errCh2 := make(chan error, 1)
+	go func() {
+		errCh2 <- srv.StreamMeshEvents(pb.EventStreamRequest_builder{Topic: proto.String("test-topic")}.Build(), evtStream)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	mt.BroadcastMeshEvent(ctx2, "test-topic", []byte("hello"))
+
+	time.Sleep(50 * time.Millisecond)
+	cancel2()
+
+	if err := <-errCh2; err != context.Canceled && err != nil {
+		t.Fatalf("StreamMeshEvents error: %v", err)
+	}
+
+	if len(evtStream.results) == 0 {
+		t.Fatal("expected to stream event")
+	}
+	if string(evtStream.results[0].GetPayload()) != "hello" {
+		t.Fatalf("expected payload hello, got %v", string(evtStream.results[0].GetPayload()))
 	}
 }

@@ -957,3 +957,37 @@ func RecordQueueLength(ctx context.Context, delta int) {
 		gauge.Add(ctx, int64(delta))
 	}
 }
+
+var meshLatency *prometheus.HistogramVec
+var meshThroughput *prometheus.CounterVec
+
+func init() {
+	meshLatency = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "ohc_mesh_latency_seconds",
+			Help: "Latency of mesh operations in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"operation"},
+	)
+	meshThroughput = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_mesh_throughput_total",
+			Help: "Total number of messages processed by the mesh",
+		},
+		[]string{"operation", "topic"},
+	)
+	prometheus.MustRegister(meshLatency, meshThroughput)
+}
+
+func RecordMeshLatency(ctx context.Context, operation string, durationSeconds float64) {
+	if meshLatency != nil {
+		meshLatency.WithLabelValues(operation).Observe(durationSeconds)
+	}
+}
+
+func RecordMeshThroughput(ctx context.Context, operation string, topic string) {
+	if meshThroughput != nil {
+		meshThroughput.WithLabelValues(operation, topic).Inc()
+	}
+}

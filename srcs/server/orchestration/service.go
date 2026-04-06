@@ -696,6 +696,15 @@ func (h *Hub) RegisterAgent(agent Agent) {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+
+// MeshTransport exposes the underlying MeshTransport for this Hub instance
+func (h *Hub) MeshTransport() MeshTransport {
+	if h.centrifugeNode != nil {
+		return h.centrifugeNode.meshTransport
+	}
+	return nil
+}
+
 func (h *Hub) SetMinimaxAPIKey(key string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -1514,6 +1523,119 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 // Returns (*pb.ReasonResponse, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
+// AdvertiseCapabilities functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.PublishMessageResponse, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start).Seconds()) }()
+	telemetry.RecordMeshThroughput(ctx, "AdvertiseCapabilities", "")
+
+	if s.hub.MeshTransport() == nil {
+		return nil, status.Errorf(codes.Unimplemented, "MeshTransport is not configured")
+	}
+	if err := s.hub.MeshTransport().AdvertiseCapabilities(ctx, *req); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to advertise capabilities: %v", err)
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(stream.Context(), "DiscoverAgents", time.Since(start).Seconds()) }()
+	telemetry.RecordMeshThroughput(stream.Context(), "DiscoverAgents", "")
+
+	if s.hub.MeshTransport() == nil {
+		return status.Errorf(codes.Unimplemented, "MeshTransport is not configured")
+	}
+
+	ctx := stream.Context()
+	ch, err := s.hub.MeshTransport().SubscribeCapabilities(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to capabilities: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case cap, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			// Apply filter if specified
+			if req.GetFilter() != "" {
+				matched := false
+				for _, skill := range cap.GetSupportedSkills() {
+					if skill == req.GetFilter() {
+						matched = true
+						break
+					}
+				}
+				if !matched && cap.GetAgentId() != req.GetFilter() {
+					continue
+				}
+			}
+
+			if err := stream.Send(&cap); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// StreamMeshEvents functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(stream.Context(), "StreamMeshEvents", time.Since(start).Seconds()) }()
+	telemetry.RecordMeshThroughput(stream.Context(), "StreamMeshEvents", req.GetTopic())
+
+	if s.hub.MeshTransport() == nil {
+		return status.Errorf(codes.Unimplemented, "MeshTransport is not configured")
+	}
+
+	ctx := stream.Context()
+	topic := req.GetTopic()
+	if topic == "" {
+		return status.Errorf(codes.InvalidArgument, "topic is required")
+	}
+
+	ch, err := s.hub.MeshTransport().SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to mesh events: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case payload, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			event := pb.MeshEvent_builder{
+				Topic:     proto.String(topic),
+				Payload:   payload,
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*pb.ReasonResponse, error) {
 	client := NewMinimaxClient(s.hub.MinimaxAPIKey())
 	content, err := client.Reason(ctx, req.GetPrompt())
