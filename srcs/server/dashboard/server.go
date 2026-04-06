@@ -575,6 +575,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 
+	// Standalone Cloud Sync Endpoints
+	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
+
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
@@ -986,6 +989,35 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "failed to send direct message", http.StatusInternalServerError)
 		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payloads []struct {
+		MetricType string `json:"metric_type"`
+		Payload    string `json:"payload"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	for _, p := range payloads {
+		// Just re-ingest directly into the cloud DB telemetry buffer or relevant storage via telemetry package
+		// If cloud is handling it via BufferMetricFunc, we can just call it
+		if telemetry.BufferMetricFunc != nil {
+			_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
