@@ -328,6 +328,13 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
+	// Create SQLite queue by default for local execution
+	// DB injection typically overwrites this in main
+	if repo == nil {
+		// Just omit queue fallback here and rely on caller passing it in or the fallback logic in delegate
+		// To avoid test initialization issues
+	}
+
 
 	// Default to a stub S3 provider if we can't initialize a local one
 	h.storage = storage.NewS3Provider("ohc-blobs")
