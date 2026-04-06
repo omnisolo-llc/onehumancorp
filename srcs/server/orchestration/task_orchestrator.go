@@ -25,7 +25,7 @@ type DefaultTaskOrchestrator struct {
 	db           db.Provider
 	redisClient  rueidis.Client
 	hub          *CentrifugeNode
-	mesh         TeammateMesh
+	mesh         MeshTransport
 	spawner      SubAgentSpawner
 	mu           sync.Mutex // For standalone mode coordination
 	workerCtx    context.Context
@@ -33,7 +33,7 @@ type DefaultTaskOrchestrator struct {
 	workerWg     sync.WaitGroup
 }
 
-func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
+func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh MeshTransport) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, 10)
