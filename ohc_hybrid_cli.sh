@@ -68,8 +68,31 @@ switch_mode() {
 
 launch_desktop() {
     echo -e "${DIM}[Launching Standalone Desktop...]${RESET}"
+    export OHC_STANDALONE=true
+
+    echo -e "${DIM}[Starting Local SQLite Database]${RESET}"
+    # Ensure the standalone local database path exists
+    mkdir -p "$HOME/.ohc-local-data"
+    export DATABASE_URL="file:$HOME/.ohc-local-data/standalone.db"
+
+    # In standalone mode, we optionally run Prometheus locally
+    echo -e "${DIM}[Starting local Prometheus Agent if available]${RESET}"
+    if command -v prometheus >/dev/null 2>&1; then
+        prometheus --config.file=deploy/docker/prometheus/prometheus-agent.yml \
+                   --storage.tsdb.path="$HOME/.ohc-local-data/prometheus" \
+                   --web.listen-address="127.0.0.1:9091" > /dev/null 2>&1 &
+        PROMETHEUS_PID=$!
+    else
+         echo -e "${DIM}Local Prometheus not found, skipping standalone observability agent...${RESET}"
+    fi
+
     if ! bazelisk run //:desktop; then
         echo -e "${PURPLE}Failed to launch Standalone Desktop.${RESET}\n"
+    fi
+
+    if [ -n "$PROMETHEUS_PID" ]; then
+        echo -e "${DIM}[Shutting down local Prometheus Agent]${RESET}"
+        kill $PROMETHEUS_PID 2>/dev/null || true
     fi
 }
 
