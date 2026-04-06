@@ -37,10 +37,11 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode // For Teammate Mesh broadcast
-	stopChan    chan struct{}
+	db            db.Provider
+	redisClient   rueidis.Client
+	hub           *CentrifugeNode // For Teammate Mesh broadcast
+	meshTransport MeshTransport   // Realtime Mesh broadcast
+	stopChan      chan struct{}
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -64,6 +65,11 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 	}
 	tm.stopChan = make(chan struct{})
 	return tm
+}
+
+// SetMeshTransport injects the MeshTransport dependency into the TaskManager.
+func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
+	tm.meshTransport = mt
 }
 
 // StartWorkerLoop periodically checks for satisfied PENDING tasks and ensures they are broadcasted
@@ -123,6 +129,17 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 						"agent_id": "",
 						"status":   "PENDING",
 					})
+				}(id)
+			}
+			if tm.meshTransport != nil {
+				go func(taskID string) {
+					payloadBytes, _ := json.Marshal(map[string]interface{}{
+						"task_id":  taskID,
+						"action":   "READY",
+						"agent_id": "",
+						"status":   "PENDING",
+					})
+					_ = tm.meshTransport.Publish(context.Background(), "mesh:tasks", payloadBytes)
 				}(id)
 			}
 		}
@@ -217,6 +234,22 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 				"priority":        task.Priority,
 			}
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
+		}()
+	}
+	if tm.meshTransport != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":         task.ID,
+				"action":          "CREATE",
+				"agent_id":        task.AssignedAgentID,
+				"status":          task.Status,
+				"organization_id": task.OrganizationID,
+				"title":           task.Title,
+				"description":     task.Description,
+				"priority":        task.Priority,
+			}
+			payloadBytes, _ := json.Marshal(payload)
+			_ = tm.meshTransport.Publish(context.Background(), "mesh:tasks", payloadBytes)
 		}()
 	}
 
@@ -344,6 +377,18 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
+	if tm.meshTransport != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  task.ID,
+				"action":   "CLAIM",
+				"agent_id": agentID,
+				"status":   task.Status,
+			}
+			payloadBytes, _ := json.Marshal(payload)
+			_ = tm.meshTransport.Publish(context.Background(), "mesh:tasks", payloadBytes)
+		}()
+	}
 
 	return &task, nil
 }
@@ -392,6 +437,18 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
+	if tm.meshTransport != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  taskID,
+				"action":   "REVIEW",
+				"agent_id": agentID,
+				"status":   "REVIEW",
+			}
+			payloadBytes, _ := json.Marshal(payload)
+			_ = tm.meshTransport.Publish(context.Background(), "mesh:tasks", payloadBytes)
+		}()
+	}
 
 	return nil
 }
@@ -438,6 +495,18 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+	if tm.meshTransport != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  taskID,
+				"action":   "COMPLETE",
+				"agent_id": agentID,
+				"status":   "COMPLETED",
+			}
+			payloadBytes, _ := json.Marshal(payload)
+			_ = tm.meshTransport.Publish(context.Background(), "mesh:tasks", payloadBytes)
 		}()
 	}
 
@@ -627,6 +696,18 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					"status":   t.Status,
 				}
 				tm.hub.PublishTaskBroadcast(t.ID, payload)
+			}(task)
+		}
+		if tm.meshTransport != nil {
+			go func(t *SharedTask) {
+				payload := map[string]interface{}{
+					"task_id":  t.ID,
+					"action":   "CLAIM",
+					"agent_id": agentID,
+					"status":   t.Status,
+				}
+				payloadBytes, _ := json.Marshal(payload)
+				_ = tm.meshTransport.Publish(context.Background(), "mesh:tasks", payloadBytes)
 			}(task)
 		}
 	}

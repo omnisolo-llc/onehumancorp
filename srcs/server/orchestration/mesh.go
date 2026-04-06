@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 )
@@ -201,8 +202,118 @@ type TeammateMesh interface {
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
 }
 
+type MeshTransport interface {
+	Publish(ctx context.Context, topic string, payload []byte) error
+	Subscribe(ctx context.Context, topic string) (<-chan []byte, error)
+}
+
 type RedisTeammateMesh struct {
 	client rueidis.Client
+}
+
+type RedisMeshTransport struct {
+	client rueidis.Client
+}
+
+func NewRedisMeshTransport(redisURL string) (*RedisMeshTransport, error) {
+	opt, err := rueidis.ParseURL(redisURL)
+	if err != nil {
+		return nil, err
+	}
+	c, err := rueidis.NewClient(opt)
+	if err != nil {
+		return nil, err
+	}
+	return &RedisMeshTransport{client: c}, nil
+}
+
+func (rm *RedisMeshTransport) Publish(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshTransportLatency(ctx, "publish", "redis", float64(time.Since(start).Milliseconds()))
+		telemetry.RecordMeshTransportMessage(ctx, "publish", "redis", len(payload))
+	}()
+	cmd := rm.client.B().Publish().Channel(topic).Message(string(payload)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
+
+func (rm *RedisMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+	ch := make(chan []byte, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(topic).Build(), func(msg rueidis.PubSubMessage) {
+			telemetry.RecordMeshTransportMessage(ctx, "subscribe", "redis", len(msg.Message))
+			select {
+			case ch <- []byte(msg.Message):
+			default:
+				slog.Warn("RedisMeshTransport.Subscribe channel full, dropping message")
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.Subscribe error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+type MemoryMeshTransport struct {
+	mu   sync.RWMutex
+	subs map[string][]chan []byte
+}
+
+func NewMemoryMeshTransport() *MemoryMeshTransport {
+	return &MemoryMeshTransport{
+		subs: make(map[string][]chan []byte),
+	}
+}
+
+func (mm *MemoryMeshTransport) Publish(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshTransportLatency(ctx, "publish", "memory", float64(time.Since(start).Milliseconds()))
+		telemetry.RecordMeshTransportMessage(ctx, "publish", "memory", len(payload))
+	}()
+	mm.mu.RLock()
+	defer mm.mu.RUnlock()
+	if subs, ok := mm.subs[topic]; ok {
+		for _, ch := range subs {
+			select {
+			case ch <- payload:
+			default:
+			}
+		}
+	}
+	return nil
+}
+
+func (mm *MemoryMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+
+	ch := make(chan []byte, 100)
+	mm.subs[topic] = append(mm.subs[topic], ch)
+
+	go func() {
+		<-ctx.Done()
+		mm.mu.Lock()
+		defer mm.mu.Unlock()
+		if subs, ok := mm.subs[topic]; ok {
+			for i, sub := range subs {
+				if sub == ch {
+					mm.subs[topic] = append(subs[:i], subs[i+1:]...)
+					break
+				}
+			}
+			if len(mm.subs[topic]) == 0 {
+				delete(mm.subs, topic)
+			}
+		}
+		close(ch)
+	}()
+
+	return ch, nil
 }
 
 func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {

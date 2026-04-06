@@ -41,6 +41,9 @@ var (
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
+	MeshTransportLatencyHistogram     metric.Float64Histogram
+	MeshTransportMessageCounter       metric.Int64Counter
+	MeshTransportMessageSizeHistogram metric.Float64Histogram
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 
@@ -330,6 +333,32 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshTransportLatencyHistogram, err = m.Float64Histogram(
+		"mesh_transport_latency_ms",
+		metric.WithDescription("Latency of mesh transport operations"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshTransportMessageCounter, err = m.Int64Counter(
+		"mesh_transport_messages_total",
+		metric.WithDescription("Total number of messages processed by mesh transport"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshTransportMessageSizeHistogram, err = m.Float64Histogram(
+		"mesh_transport_message_size_bytes",
+		metric.WithDescription("Size of messages processed by mesh transport"),
+		metric.WithUnit("bytes"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -777,6 +806,34 @@ func RecordTeammateMeshDirectMessage(ctx context.Context) {
 		return
 	}
 	TeammateMeshDirectMessagesCounter.Add(ctx, 1)
+}
+
+// RecordMeshTransportLatency records the latency of a mesh transport operation.
+func RecordMeshTransportLatency(ctx context.Context, operation string, transport string, latency float64) {
+	if MeshTransportLatencyHistogram == nil {
+		return
+	}
+	MeshTransportLatencyHistogram.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("transport", transport),
+	))
+}
+
+// RecordMeshTransportMessage increments the global counter for mesh transport messages.
+func RecordMeshTransportMessage(ctx context.Context, operation string, transport string, size int) {
+	if MeshTransportMessageCounter == nil {
+		return
+	}
+	MeshTransportMessageCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("transport", transport),
+	))
+	if MeshTransportMessageSizeHistogram != nil {
+		MeshTransportMessageSizeHistogram.Record(ctx, float64(size), metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("transport", transport),
+		))
+	}
 }
 
 // RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.
