@@ -22,15 +22,15 @@ type TaskOrchestrator interface {
 }
 
 type DefaultTaskOrchestrator struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode
-	mesh        TeammateMesh
-	spawner     SubAgentSpawner
-	mu          sync.Mutex // For standalone mode coordination
-	workerCtx   context.Context
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode
+	mesh         TeammateMesh
+	spawner      SubAgentSpawner
+	mu           sync.Mutex // For standalone mode coordination
+	workerCtx    context.Context
 	workerCancel context.CancelFunc
-	workerWg    sync.WaitGroup
+	workerWg     sync.WaitGroup
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh TeammateMesh) TaskOrchestrator {
@@ -39,12 +39,12 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, 10)
 
 	to := &DefaultTaskOrchestrator{
-		db:          provider,
-		redisClient: redisClient,
-		hub:         hub,
-		mesh:        mesh,
-		spawner:     spawner,
-		workerCtx:   ctx,
+		db:           provider,
+		redisClient:  redisClient,
+		hub:          hub,
+		mesh:         mesh,
+		spawner:      spawner,
+		workerCtx:    ctx,
 		workerCancel: cancel,
 	}
 	to.StartBackgroundWorker()
@@ -79,6 +79,11 @@ func (to *DefaultTaskOrchestrator) StartBackgroundWorker() {
 
 // pollAndDelegateTasks queries for DELEGATED priority tasks and spawns sub-agents.
 func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
+	if to.redisClient == nil {
+		to.mu.Lock()
+		defer to.mu.Unlock()
+	}
+
 	tx, err := to.db.Begin(to.workerCtx)
 	if err != nil {
 		return
