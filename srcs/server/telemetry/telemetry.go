@@ -59,6 +59,7 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
+	viralReferralCount          metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -927,6 +928,12 @@ func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode stri
 		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
 		))
+	}
+}
+
+func RecordViralReferral(ctx context.Context, organizationID string) {
+	if viralReferralCount != nil {
+		viralReferralCount.Add(ctx, 1, metric.WithAttributes(attribute.String("organization_id", organizationID)))
 	}
 }
 
