@@ -66,14 +66,9 @@ func IsValidTransition(fromState, toState string) bool {
 	return false
 }
 
-// Transition performs a state transition for the given entity
-func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
-	tx, err := sm.dbProvider.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
+// TransitionWithTx performs a state transition for the given entity, using an existing transaction.
+// It returns a broadcast payload function which MUST be called after the transaction is successfully committed.
+func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID, entityType, toState, agentID, reason string) (func(), error) {
 	// Acquire lock and read current state
 	var currentState string
 	var query string
@@ -85,33 +80,32 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
 		}
 
-		err = tx.QueryRow(ctx, query, entityID).Scan(&currentState)
-	} else {
-		return fmt.Errorf("unsupported entity type: %s", entityType)
-	}
-
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			return fmt.Errorf("entity not found: %s", entityID)
+		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, fmt.Errorf("entity not found: %s", entityID)
+			}
+			return nil, fmt.Errorf("failed to read current state: %w", err)
 		}
-		return fmt.Errorf("failed to read current state: %w", err)
+	} else {
+		return nil, fmt.Errorf("unsupported entity type: %s", entityType)
 	}
 
 	// Validate transition
 	if !IsValidTransition(currentState, toState) {
-		return fmt.Errorf("invalid transition from %s to %s", currentState, toState)
+		return nil, fmt.Errorf("invalid transition from %s to %s", currentState, toState)
 	}
 
 	if currentState == toState {
-		return nil // No change needed
+		return func() {}, nil // No change needed
 	}
 
 	// Update entity state
 	if entityType == "SHARED_TASK" {
-		updateQuery := `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, toState, entityID)
+		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
 		if err != nil {
-			return fmt.Errorf("failed to update entity state: %w", err)
+			return nil, fmt.Errorf("failed to update entity state: %w", err)
 		}
 	}
 
@@ -121,27 +115,47 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err = tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
+	_, err := tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)
 	if err != nil {
-		return fmt.Errorf("failed to record transition audit log: %w", err)
+		return nil, fmt.Errorf("failed to record transition audit log: %w", err)
+	}
+
+	// Broadcast transition
+	broadcastFunc := func() {
+		if sm.broadcast != nil {
+			payload := map[string]interface{}{
+				"entity_id":   entityID,
+				"entity_type": entityType,
+				"from_state":  currentState,
+				"to_state":    toState,
+				"agent_id":    agentID,
+				"reason":      reason,
+			}
+			sm.broadcast(entityID, payload)
+		}
+	}
+
+	return broadcastFunc, nil
+}
+
+// Transition performs a state transition for the given entity
+func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
+	tx, err := sm.dbProvider.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	broadcastFunc, err := sm.TransitionWithTx(ctx, tx, entityID, entityType, toState, agentID, reason)
+	if err != nil {
+		return err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Broadcast transition
-	if sm.broadcast != nil {
-		payload := map[string]interface{}{
-			"entity_id":   entityID,
-			"entity_type": entityType,
-			"from_state":  currentState,
-			"to_state":    toState,
-			"agent_id":    agentID,
-			"reason":      reason,
-		}
-		sm.broadcast(entityID, payload)
-	}
+	broadcastFunc()
 
 	return nil
 }

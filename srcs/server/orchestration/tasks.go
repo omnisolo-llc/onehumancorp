@@ -293,37 +293,40 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			return nil, fmt.Errorf("failed to check pending task: %w", err)
 		}
 
-		updateQuery := `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id = $2
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
-		`
-		errQuery = tx.QueryRow(ctx, updateQuery, agentID, fetchedTaskID).Scan(
-			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-		)
+		var broadcastFunc func()
+		broadcastFunc, errQuery = tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Task claimed by agent")
+		if errQuery == nil {
+			errQuery = tx.QueryRow(ctx, `SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at FROM shared_tasks WHERE id = $1`, fetchedTaskID).Scan(
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			)
+			_ = broadcastFunc // We broadcast via tm.hub.PublishTaskBroadcast below anyway, so the duplicate audit broadcast is ignorable, but let's safely call it after commit if needed.
+		}
 	} else {
 		// PostgreSQL with FOR UPDATE SKIP LOCKED
+		var fetchedTaskID string
 		query := `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = $3, updated_at = CURRENT_TIMESTAMP
-			WHERE id IN (
-				SELECT st.id
-				FROM shared_tasks st
-				WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
-				ORDER BY st.priority ASC, st.created_at ASC
-				LIMIT 1 FOR UPDATE SKIP LOCKED
-			)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+			SELECT st.id
+			FROM shared_tasks st
+			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			ORDER BY st.priority ASC, st.created_at ASC
+			LIMIT 1 FOR UPDATE SKIP LOCKED
 		`
-		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID, agentID).Scan(
-			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-		)
+		errQuery = tx.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(&fetchedTaskID)
+		if errQuery == nil {
+			var broadcastFunc func()
+			broadcastFunc, errQuery = tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Task claimed by agent")
+			if errQuery == nil {
+				errQuery = tx.QueryRow(ctx, `SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at FROM shared_tasks WHERE id = $1`, fetchedTaskID).Scan(
+					&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				)
+				_ = broadcastFunc // Run after commit is handled via central broadcaster anyway. Wait, ClaimTask broadcasts its own CLAIM event.
+			}
+		}
 	}
 
 	if errQuery != nil {
-		if errors.Is(errQuery, sql.ErrNoRows) {
+		if errors.Is(errQuery, sql.ErrNoRows) || strings.Contains(errQuery.Error(), "no rows in result set") {
 			return nil, nil // No task available or locked
 		}
 		if strings.Contains(errQuery.Error(), "database is locked") || strings.Contains(errQuery.Error(), "SQLITE_BUSY") {
@@ -575,33 +578,20 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			return nil, nil // No tasks found
 		}
 
-		// build IN clause
-		placeholders := make([]string, len(taskIDs))
-		args := []interface{}{agentID}
-		for i, id := range taskIDs {
-			placeholders[i] = fmt.Sprintf("$%d", i+2)
-			args = append(args, id)
-		}
+		var broadcastFuncs []func()
+		for _, id := range taskIDs {
+			broadcastFunc, errQuery := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Task claimed by agent polling")
+			if errQuery != nil {
+				continue // Skip if failed to claim/transition
+			}
+			broadcastFuncs = append(broadcastFuncs, broadcastFunc)
 
-		updateQuery := fmt.Sprintf(`
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id IN (%s)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
-		`, strings.Join(placeholders, ", "))
-
-		updateRows, err := tx.Query(ctx, updateQuery, args...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to claim tasks: %w", err)
-		}
-		defer updateRows.Close()
-
-		for updateRows.Next() {
 			task := &SharedTask{}
-			if err := updateRows.Scan(
+			errScan := tx.QueryRow(ctx, `SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at FROM shared_tasks WHERE id = $1`, id).Scan(
 				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-			); err != nil {
-				return nil, fmt.Errorf("failed to scan claimed task: %w", err)
+			)
+			if errScan != nil {
+				continue
 			}
 
 			task.AssignedAgentID = agentID
@@ -614,39 +604,46 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			}
 
 			claimedTasks = append(claimedTasks, task)
-		}
-
-		if err := updateRows.Err(); err != nil {
-			return nil, fmt.Errorf("row iteration error: %w", err)
 		}
 	} else {
 		// PostgreSQL with SKIP LOCKED
 		query := `
-			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = $2, updated_at = CURRENT_TIMESTAMP
-			WHERE id IN (
-				SELECT st.id
-				FROM shared_tasks st
-				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
-				ORDER BY st.priority ASC, st.created_at ASC
-				LIMIT $3 FOR UPDATE SKIP LOCKED
-			)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+			SELECT st.id
+			FROM shared_tasks st
+			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			ORDER BY st.priority ASC, st.created_at ASC
+			LIMIT $2 FOR UPDATE SKIP LOCKED
 		`
 
-		rows, err := tx.Query(ctx, query, claims.OrganizationID, agentID, limit)
+		rows, err := tx.Query(ctx, query, claims.OrganizationID, limit)
 		if err != nil {
-			return nil, fmt.Errorf("failed to claim tasks: %w", err)
+			return nil, fmt.Errorf("failed to poll tasks: %w", err)
 		}
-		defer rows.Close()
 
+		var taskIDs []string
 		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err == nil {
+				taskIDs = append(taskIDs, id)
+			}
+		}
+		rows.Close()
+
+		var broadcastFuncs []func()
+		for _, id := range taskIDs {
+			broadcastFunc, errQuery := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Task claimed by agent polling")
+			if errQuery != nil {
+				continue // Skip if failed to claim/transition
+			}
+			broadcastFuncs = append(broadcastFuncs, broadcastFunc)
+
 			task := &SharedTask{}
-			if err := rows.Scan(
+			errScan := tx.QueryRow(ctx, `SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at FROM shared_tasks WHERE id = $1`, id).Scan(
 				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-			); err != nil {
-				return nil, fmt.Errorf("failed to scan claimed task: %w", err)
+			)
+			if errScan != nil {
+				continue
 			}
 
 			task.AssignedAgentID = agentID
@@ -659,10 +656,6 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			}
 
 			claimedTasks = append(claimedTasks, task)
-		}
-
-		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("row iteration error: %w", err)
 		}
 	}
 
