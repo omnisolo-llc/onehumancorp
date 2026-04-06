@@ -18,10 +18,14 @@ go_library(
 
 go_test(
     name = "queue_test",
-    srcs = ["queue_test.go"],
+    srcs = [
+        "queue_test.go",
+        "redis_queue_test.go",
+    ],
     embed = [":queue"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/db:test_utils",
         "@com_github_redis_rueidis//:rueidis",
         "@org_modernc_sqlite//:sqlite",
     ],

@@ -1,25 +1,21 @@
 package queue
 
 import (
-	"context"
 	"testing"
-	"time"
-
-	"github.com/redis/rueidis"
 )
 
-func TestRedisTaskQueue(t *testing.T) {
-	// True coverage would require an integration test with real redis.
-	// We'll just verify the structs build correctly here without pulling in missing mock dependencies.
+func TestNewRedisTaskQueue(t *testing.T) {
+	// Fallback to basic initialization checks as per reviewer instructions.
+	// Since we cannot easily mock rueidis.Client and its Builder without gomock/rueidis-mock targets in Bazel,
+	// we just verify initialization sets the default prefix correctly.
 
-	// Create with nil client to just test initialization
-	q := NewRedisTaskQueue(nil, "test")
-
-	if q.prefix != "test" {
-		t.Fatalf("expected prefix test, got %s", q.prefix)
+	q := NewRedisTaskQueue(nil, "")
+	if q.prefix != "ohc:subagent:jobs" {
+		t.Fatalf("expected default prefix 'ohc:subagent:jobs', got '%s'", q.prefix)
 	}
 
-	if q.queueKey() != "test:queued" {
-		t.Fatalf("expected test:queued, got %s", q.queueKey())
+	q2 := NewRedisTaskQueue(nil, "custom")
+	if q2.prefix != "custom" {
+		t.Fatalf("expected custom prefix 'custom', got '%s'", q2.prefix)
 	}
 }

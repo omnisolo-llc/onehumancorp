@@ -52,12 +52,28 @@ go_library(
     ],
 )
 
+go_library(
+    name = "test_utils",
+    testonly = True,
+    srcs = [
+        "test_utils/test_provider.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/db/test_utils",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
+
 go_test(
     name = "db_test",
     srcs = [
         "provider_test.go",
-        "test_provider_test.go",
     ],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
+    deps = [
+        ":test_utils",
+        "@org_modernc_sqlite//:sqlite",
+    ],
 )
