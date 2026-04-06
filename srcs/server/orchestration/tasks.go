@@ -733,6 +733,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 }
 
 
+// Queue returns the underlying TaskQueue
+func (tm *TaskManager) Queue() queue.TaskQueue {
+	return tm.taskQueue
+}
+
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {
 	payloadBytes, err := json.Marshal(payloadMap)

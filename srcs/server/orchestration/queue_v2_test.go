@@ -17,7 +17,7 @@ func TestSqliteQueue_EnqueueDequeue(t *testing.T) {
 
 	// Ensure table created for test
 	_, err := provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS sub_agent_queue (
+		CREATE TABLE IF NOT EXISTS sub_agent_jobs (
 			id TEXT PRIMARY KEY,
 			parent_task_id TEXT,
 			payload TEXT NOT NULL,
@@ -54,7 +54,7 @@ func TestSqliteQueue_EnqueueDequeue(t *testing.T) {
 
 	// Check completion status
 	var status string
-	err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_queue WHERE id = $1", id).Scan(&status)
+	err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_jobs WHERE id = $1", id).Scan(&status)
 	require.NoError(t, err)
 	assert.Equal(t, "COMPLETED", status)
 }

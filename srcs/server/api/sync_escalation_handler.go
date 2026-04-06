@@ -52,10 +52,8 @@ func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
 				// However, if we don't have access to tm.taskQueue directly because it's unexported:
 				// we could use a custom postgres_queue or enqueue directly to the database here, since we have the DB.
 
-				// Let's create a Postgres queue right here with hub.SIPDB().Provider() if available.
-				if hub.SIPDB() != nil {
-					q := queue.NewPostgresTaskQueue(hub.SIPDB().Provider())
-					if err := q.Enqueue(ctx, job); err != nil {
+				if hub.TaskManager().Queue() != nil {
+					if err := hub.TaskManager().Queue().Enqueue(ctx, job); err != nil {
 						slog.Error("failed to enqueue escalation job", "memory_id", p.MemoryID, "error", err)
 					} else {
 						syncedCount++
