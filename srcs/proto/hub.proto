@@ -96,6 +96,27 @@ message ReasonResponse {
   string content = 1;
 }
 
+message AgentCapabilities {
+  string agent_id = 1;
+  repeated string supported_skills = 2;
+  int32 max_concurrent_tasks = 3;
+}
+
+message Query {
+  string filter = 1;
+}
+
+message EventStreamRequest {
+  string topic = 1;
+}
+
+message MeshEvent {
+  string event_id = 1;
+  string topic = 2;
+  bytes payload = 3;
+  int64 timestamp = 4;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -104,6 +125,9 @@ service HubService {
   rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
   rpc Reason(ReasonRequest) returns (ReasonResponse);
   rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
+  rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
+  rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
+  rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
 }
 
 message WizardField {
