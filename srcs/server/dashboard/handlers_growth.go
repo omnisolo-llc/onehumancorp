@@ -146,3 +146,46 @@ func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// LeaderboardEntry represents an aggregated user score.
+type LeaderboardEntry struct {
+	UserID      string `json:"userId"`
+	TotalClicks int    `json:"totalClicks"`
+	Conversions int    `json:"conversions"`
+}
+
+func (s *Server) handleReferralLeaderboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	agg := make(map[string]*LeaderboardEntry)
+	for _, ref := range s.referrals {
+		if _, ok := agg[ref.UserID]; !ok {
+			agg[ref.UserID] = &LeaderboardEntry{UserID: ref.UserID}
+		}
+		agg[ref.UserID].TotalClicks += ref.Clicks
+		agg[ref.UserID].Conversions += ref.Conversions
+	}
+
+	var leaderboard []LeaderboardEntry
+	for _, entry := range agg {
+		leaderboard = append(leaderboard, *entry)
+	}
+
+	// Simple bubble sort by conversions descending, then clicks
+	for i := 0; i < len(leaderboard); i++ {
+		for j := i + 1; j < len(leaderboard); j++ {
+			if leaderboard[j].Conversions > leaderboard[i].Conversions ||
+				(leaderboard[j].Conversions == leaderboard[i].Conversions && leaderboard[j].TotalClicks > leaderboard[i].TotalClicks) {
+				leaderboard[i], leaderboard[j] = leaderboard[j], leaderboard[i]
+			}
+		}
+	}
+
+	writeJSON(w, leaderboard)
+}

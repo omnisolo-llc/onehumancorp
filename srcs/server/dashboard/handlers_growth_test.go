@@ -117,3 +117,48 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleReferralLeaderboard(t *testing.T) {
+	s := &Server{}
+
+	// Add some mock referrals
+	s.mu.Lock()
+	s.referrals = []Referral{
+		{UserID: "user1", Clicks: 10, Conversions: 2},
+		{UserID: "user2", Clicks: 50, Conversions: 5},
+		{UserID: "user1", Clicks: 20, Conversions: 1}, // user1 total: 30 clicks, 3 convs
+		{UserID: "user3", Clicks: 5, Conversions: 0},
+	}
+	s.mu.Unlock()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/growth/leaderboard", nil)
+	w := httptest.NewRecorder()
+	s.handleReferralLeaderboard(w, req)
+
+	res := w.Result()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", res.StatusCode)
+	}
+
+	var leaderboard []LeaderboardEntry
+	if err := json.NewDecoder(res.Body).Decode(&leaderboard); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(leaderboard) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(leaderboard))
+	}
+
+	// First should be user2 (5 convs)
+	if leaderboard[0].UserID != "user2" {
+		t.Errorf("expected user2 to be first, got %s", leaderboard[0].UserID)
+	}
+
+	// Second should be user1 (3 convs)
+	if leaderboard[1].UserID != "user1" {
+		t.Errorf("expected user1 to be second, got %s", leaderboard[1].UserID)
+	}
+	if leaderboard[1].TotalClicks != 30 || leaderboard[1].Conversions != 3 {
+		t.Errorf("expected user1 stats to be aggregated properly")
+	}
+}

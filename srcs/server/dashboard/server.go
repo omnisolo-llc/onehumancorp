@@ -573,6 +573,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
 	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
+	mux.HandleFunc("/api/growth/leaderboard", server.handleReferralLeaderboard)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
