@@ -35,6 +35,7 @@ type Node interface {
 // channel-permission rules that map directly to the Hub's meeting/chat model.
 type CentrifugeNode struct {
 	node Node
+	meshTransport MeshTransport
 }
 
 // createNode is a package-level hook to allow mocking centrifuge.New in tests.
@@ -118,6 +119,12 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	return &CentrifugeNode{node: node}, nil
 }
 
+
+// SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
+func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
+	cn.meshTransport = mt
+}
+
 // Handler returns an http.Handler that serves the Centrifuge WebSocket endpoint.
 // Mount this at /connection/websocket in your HTTP mux.
 func (cn *CentrifugeNode) Handler() http.Handler {
@@ -182,6 +189,12 @@ func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
 // PublishTaskBroadcast fans out a task update to all subscribers of the
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	if cn.meshTransport != nil {
+		data, err := json.Marshal(payload)
+		if err == nil {
+			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", data)
+		}
+	}
 	channel := "mesh:tasks"
 
 	// Ensure we map payload correctly to the required UI keys:
