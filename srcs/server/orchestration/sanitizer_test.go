@@ -49,3 +49,34 @@ func TestSanitizePayload(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizePayloadMap(t *testing.T) {
+	t.Run("Map", func(t *testing.T) {
+		m := map[string]interface{}{
+			"user":  "user@example.com",
+			"other": "safe text",
+		}
+		res := SanitizePayloadMap(m).(map[string]interface{})
+		if res["user"] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res["user"])
+		}
+		if res["other"] != "safe text" {
+			t.Errorf("Expected 'safe text', got %v", res["other"])
+		}
+		// ensure original map is not mutated
+		if m["user"] != "user@example.com" {
+			t.Errorf("Expected original map to be unchanged, got %v", m["user"])
+		}
+	})
+
+	t.Run("Slice of interface", func(t *testing.T) {
+		s := []interface{}{"user@example.com", "safe text"}
+		res := SanitizePayloadMap(s).([]interface{})
+		if res[0] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0])
+		}
+		if s[0] != "user@example.com" {
+			t.Errorf("Expected original slice to be unchanged, got %v", s[0])
+		}
+	})
+}
