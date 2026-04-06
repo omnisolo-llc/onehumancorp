@@ -1,51 +1,53 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# KAIROS Sub-Agent Queue
+# Sub-Agent Orchestration Queue
 
-**Component:** Orchestration Layer | **Target Audience:** Orchestration Engineers & Architects
+The Sub-Agent Orchestration Queue is a vital component of the KAIROS Orchestration layer, designed to handle the massive concurrency of sub-tasks delegated by primary agents within the One Human Corp (OHC) Swarm.
 
 ## 1. Overview
-As the OHC Swarm scales, delegating work requires a robust distributed execution framework. The **KAIROS Sub-Agent Queue** serves as a high-throughput, Celery/BullMQ-style background job queuing system that spawns, manages, and monitors isolated sub-agents.
 
-It handles routing, retries, exponential backoffs, and execution timeouts natively in Go, adapting its backing store based on the active OHC Hybrid Architecture mode.
+When a primary agent (e.g., an Architect) delegates work, the tasks are enqueued into a distributed queue. This queue handles routing, retries, exponential backoffs, and execution timeouts, ensuring at-least-once delivery and resilient task execution.
 
-## 2. Queue Architecture Modes
+## 2. Hybrid Architecture Support
 
-Depending on the deployment, the Queue Interface routes tasks to the appropriate backend:
+The queue seamlessly transitions between different storage backends depending on the operating mode:
 
-- **Cloud-Native Mode:** Relies on highly available **Redis ZSETs (Rueidis)** for distributed job scheduling and atomic dequeueing across horizontal pods.
-- **Standalone Mode:** Relies on an application-level mutexed **SQLite** table to handle local background tasks, eliminating the need for a heavy Redis dependency on a desktop client.
+- **Cloud-Native Mode:** Uses Redis (via `rueidis`) Lists (`RPUSH`/`LPOP`) and Sorted Sets (ZSETs) for delayed execution, allowing for horizontal scalability across Kubernetes pods.
+- **Standalone Mode:** Uses an internal SQLite table (`sub_agent_jobs`). Dequeuing relies on explicit transactions with concurrent read/write locks (simulating `FOR UPDATE SKIP LOCKED`) to prevent `SQLITE_BUSY` contention during parallel local processing.
 
-## 3. Sub-Agent Execution Flow
+### Architecture Flow
 
 ```mermaid
 graph TD
-    Manager[Manager Task] -->|api/queue/subagent| API[Queue API Gateway]
-    API --> Interface{SubAgent Queue Interface}
+    subgraph KAIROS Orchestrator
+        A[Task Manager] -->|Enqueue| Q{Sub-Agent Queue Interface}
+    end
 
-    Interface -->|Cloud-Native| Redis[(Redis ZSET Queue)]
-    Interface -->|Standalone| SQLite[(SQLite Jobs Table)]
+    Q -->|Cloud| Redis[(Redis ZSETs)]
+    Q -->|Standalone| DB[(SQLite Mutexed Table)]
 
-    Redis -->|Dequeue / Claim| WorkerPool[K8s Worker Pods]
-    SQLite -->|Dequeue / Claim| WorkerLocal[Local Goroutine Pool]
+    Redis -->|Dequeue| W1[Worker Pod]
+    DB -->|Dequeue| W2[Local Worker]
 
-    WorkerPool --> Execute[Spawn Sub-Agent]
-    WorkerLocal --> Execute
-
-    Execute --> Success[Complete Task]
-    Execute --> Fail[Fail Task / Throw Exception]
-
-    Fail --> Retry{Retry Limit Reached?}
-    Retry -->|No| Backoff[Exponential Backoff Queue]
-    Retry -->|Yes| DLQ[Dead Letter Queue]
+    W1 -->|Transition Event| M[Teammate Mesh / Centrifuge]
+    W2 -->|Transition Event| M
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Manager,API,Interface,Redis,SQLite,WorkerPool,WorkerLocal,Execute,Success,Fail,Retry,Backoff,DLQ premium;
+    class A,Q,Redis,DB,W1,W2,M premium;
 ```
 
-## 4. Key Capabilities
-- **At-Least-Once Delivery:** Tasks are guaranteed to be picked up. If a worker crashes before completion, the task lock expires and it is re-queued.
-- **Observability:** Granular task metrics are emitted via OpenTelemetry, tracking `ohc_task_queue_length`, `ohc_task_processing_latency_seconds`, and `ohc_task_failed_total`.
-- **Poison Pill Handling:** Tasks that consistently fail and exhaust retry limits are routed to a Dead-Letter Queue (DLQ) to prevent infinite processing loops.
+## 3. Queue Lifecycle and Resiliency
+
+The queue implements robust error handling and retry mechanisms:
+
+1.  **Enqueue:** A `Job` record is created with `status='QUEUED'`.
+2.  **Dequeue:** Worker sub-agents poll the queue for jobs matching their role.
+3.  **Execution:** The worker executes the task. If successful, it transitions to `COMPLETED`.
+4.  **Failure & Retry:** If the task fails, it is retried up to a configurable `max_attempts`.
+5.  **Poison Pill:** If `max_attempts` is reached, the job is marked as `FAILED` (dead-letter).
+
+## 4. Observability
+
+Both Redis and SQLite queue implementations natively integrate with OpenTelemetry. Metrics such as queue length, processing time, and failure rates are emitted for visualization in Grafana dashboards, adhering to OHC's Full-Spectrum Observability mandate.
 
 </div>
