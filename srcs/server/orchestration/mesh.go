@@ -336,11 +336,19 @@ func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic stri
 }
 
 func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	return rm.SubscribeMeshEventsWithFilter(ctx, topic, nil)
+}
+
+func (rm *RedisMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error) {
 	ch := make(chan []byte, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:" + topic).Build(), func(msg rueidis.PubSubMessage) {
+			payload := []byte(msg.Message)
+			if filter != nil && !filter.Evaluate(payload) {
+				return
+			}
 			select {
-			case ch <- []byte(msg.Message):
+			case ch <- payload:
 			default:
 				slog.Warn("RedisMeshTransport.SubscribeMeshEvents channel full, dropping message")
 			}
@@ -454,6 +462,10 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 
 
 
+type MeshFilter interface {
+	Evaluate(payload []byte) bool
+}
+
 type MeshTransport interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
@@ -463,6 +475,7 @@ type MeshTransport interface {
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
+	SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error)
 }
 
 const numShards = 16
@@ -754,15 +767,42 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 }
 
 func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	return lm.SubscribeMeshEventsWithFilter(ctx, topic, nil)
+}
+
+func (lm *MemoryMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error) {
 	lm.initTopic(topic)
 	ch := make(chan []byte, 100)
 
 	lm.eventsGlobalMu.RLock()
 	muArray := lm.eventsMu[topic]
 	subsArray := lm.eventsSubs[topic]
+
+	// If a filter is provided, wrap the channel with a filtering goroutine
+	var destCh chan []byte
+	var subCh chan []byte
+	if filter != nil {
+		destCh = make(chan []byte, 100)
+		subCh = destCh
+		go func() {
+			defer close(ch)
+			for msg := range destCh {
+				if filter.Evaluate(msg) {
+					select {
+					case ch <- msg:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}()
+	} else {
+		subCh = ch
+	}
+
 	for i := 0; i < numShards; i++ {
 		muArray[i].Lock()
-		subsArray[i][ch] = struct{}{}
+		subsArray[i][subCh] = struct{}{}
 		muArray[i].Unlock()
 	}
 	lm.eventsGlobalMu.RUnlock()
@@ -774,12 +814,16 @@ func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic st
 			subsArray := lm.eventsSubs[topic]
 			for i := 0; i < numShards; i++ {
 				muArray[i].Lock()
-				delete(subsArray[i], ch)
+				delete(subsArray[i], subCh)
 				muArray[i].Unlock()
 			}
 		}
 		lm.eventsGlobalMu.RUnlock()
-		close(ch)
+		if filter != nil {
+			close(destCh)
+		} else {
+			close(ch)
+		}
 	}()
 
 	return ch, nil
@@ -1012,5 +1056,9 @@ func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic strin
 }
 
 func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	return make(chan []byte, 100), nil
+}
+
+func (lm *LocalTeammateMesh) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error) {
 	return make(chan []byte, 100), nil
 }
