@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
@@ -115,5 +116,65 @@ func TestHandleWizardConfigure_WrongMethod(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	server := &Server{}
+	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardOnboardingVerify(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp["mode"] != "standalone" {
+		t.Errorf("Expected mode standalone, got %v", resp["mode"])
+	}
+
+	if resp["status"] != "healthy" {
+		t.Errorf("Expected status healthy, got %v", resp["status"])
+	}
+}
+
+func TestHandleWizardOnboardingVerify_Cloud_MissingVars(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "false")
+	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("DATABASE_URL", "")
+	defer os.Unsetenv("DATABASE_URL")
+	os.Setenv("REDIS_URL", "")
+	defer os.Unsetenv("REDIS_URL")
+
+	server := &Server{}
+	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardOnboardingVerify(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp["mode"] != "cloud" {
+		t.Errorf("Expected mode cloud, got %v", resp["mode"])
+	}
+
+	if resp["status"] != "degraded" {
+		t.Errorf("Expected status degraded, got %v", resp["status"])
 	}
 }

@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/settings"
 )
@@ -119,4 +120,73 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 		}
 	}
 	return false
+}
+
+// handleWizardOnboardingVerify performs a diagnostic verification of the environment variables
+// and connection requirements for Day One onboarding.
+func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+
+	var diagnostics []map[string]interface{}
+	allHealthy := true
+
+	if mode == "cloud" {
+		dbUrl := os.Getenv("DATABASE_URL")
+		if dbUrl == "" {
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DATABASE_URL",
+				"status":  "missing",
+				"message": "DATABASE_URL is required in cloud mode",
+			})
+		} else {
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DATABASE_URL",
+				"status":  "ok",
+				"message": "DATABASE_URL is configured",
+			})
+		}
+
+		redisUrl := os.Getenv("REDIS_URL")
+		if redisUrl == "" {
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "REDIS_URL",
+				"status":  "missing",
+				"message": "REDIS_URL is required in cloud mode",
+			})
+		} else {
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "REDIS_URL",
+				"status":  "ok",
+				"message": "REDIS_URL is configured",
+			})
+		}
+	} else {
+		diagnostics = append(diagnostics, map[string]interface{}{
+			"check":   "OHC_STANDALONE",
+			"status":  "ok",
+			"message": "Standalone mode active",
+		})
+	}
+
+	respStatus := "healthy"
+	if !allHealthy {
+		respStatus = "degraded"
+	}
+
+	resp := map[string]interface{}{
+		"status":      respStatus,
+		"mode":        mode,
+		"diagnostics": diagnostics,
+	}
+	writeJSON(w, resp)
 }
