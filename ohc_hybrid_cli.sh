@@ -28,6 +28,7 @@ show_menu() {
     echo -e "  ${PURPLE}4)${RESET} Launch Cloud Backend"
     echo -e "  ${PURPLE}5)${RESET} Run All Tests"
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
+    echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -157,6 +158,31 @@ check_system() {
     verify_dependencies
 }
 
+standalone_db_check() {
+    echo -e "${DIM}[Standalone DB Health Check]${RESET}"
+    DB_FILE="local_standalone.db"
+    if [ ! -f "$DB_FILE" ]; then
+        echo -e "  ${PURPLE}✗ Database file $DB_FILE not found!${RESET}"
+        echo -e "    Migrations have not been executed or db path is incorrect."
+        return
+    fi
+    echo -e "  ${GREEN}✓ Database file $DB_FILE exists.${RESET}"
+
+    if ! command -v sqlite3 >/dev/null 2>&1; then
+        echo -e "  ${PURPLE}✗ sqlite3 not found! Cannot verify internal tables.${RESET}"
+        return
+    fi
+
+    echo -e "${DIM}Checking internal tables...${RESET}"
+    TABLES=$(sqlite3 "$DB_FILE" ".tables")
+    if echo "$TABLES" | grep -q "agent_missions" && echo "$TABLES" | grep -q "meeting_rooms"; then
+         echo -e "  ${GREEN}✓ Migrations appear successful (found agent_missions and meeting_rooms).${RESET}\n"
+    else
+         echo -e "  ${PURPLE}✗ Critical tables missing. Migrations might have failed.${RESET}\n"
+    fi
+}
+
+
 if [ "$1" == "--non-interactive" ]; then
     echo "Running in non-interactive verification mode."
     run_setup
@@ -174,6 +200,7 @@ else
             4) launch_cloud ;;
             5) run_tests ;;
             6) check_system ;;
+            7) standalone_db_check ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
