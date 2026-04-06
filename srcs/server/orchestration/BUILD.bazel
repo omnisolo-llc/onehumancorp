@@ -73,7 +73,7 @@ go_test(
         "service_test.go",
         "sip_extra_test.go",
         "sip_mesh_test.go",
-        "sip_test.go",
+        "sip_test.go", "sip_semaphore_test.go",
         "throttle_test.go",
         "sanitizer_test.go",
         "sync_daemon_test.go",

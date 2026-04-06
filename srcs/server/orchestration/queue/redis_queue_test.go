@@ -8,11 +8,21 @@ import (
 	"github.com/redis/rueidis"
 )
 
-func TestRedisTaskQueue(t *testing.T) {
-	// True coverage would require an integration test with real redis.
-	// We'll just verify the structs build correctly here without pulling in missing mock dependencies.
+type CustomMockBuilder struct {
+	rueidis.Builder
+}
 
-	// Create with nil client to just test initialization
+type SafeMockClient struct {
+	rueidis.Client
+	cmds []rueidis.Completed
+}
+
+func (s *SafeMockClient) Do(ctx context.Context, cmd rueidis.Completed) rueidis.RedisResult {
+	s.cmds = append(s.cmds, cmd)
+	return rueidis.RedisResult{}
+}
+
+func TestRedisTaskQueue(t *testing.T) {
 	q := NewRedisTaskQueue(nil, "test")
 
 	if q.prefix != "test" {
@@ -21,5 +31,8 @@ func TestRedisTaskQueue(t *testing.T) {
 
 	if q.queueKey() != "test:queued" {
 		t.Fatalf("expected test:queued, got %s", q.queueKey())
+	}
+	if q.runningKey() != "test:running" {
+		t.Fatalf("expected test:running, got %s", q.runningKey())
 	}
 }
