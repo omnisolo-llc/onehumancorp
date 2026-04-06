@@ -140,8 +140,12 @@ func (m *DBInspectorMCP) inspectSchema(ctx context.Context, tableName string) (i
 	}
 }
 
+var (
+	unsafeRegex = regexp.MustCompile(`(?i)\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|REPLACE|UPSERT)\b`)
+	orgIDRegex  = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
+)
+
 func (m *DBInspectorMCP) runQuery(ctx context.Context, claims *auth.Claims, query string, override bool) (interface{}, error) {
-	unsafeRegex := regexp.MustCompile(`(?i)\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|REPLACE|UPSERT)\b`)
 	unsafe := unsafeRegex.MatchString(query)
 
 	if unsafe {
@@ -172,7 +176,12 @@ func (m *DBInspectorMCP) runQuery(ctx context.Context, claims *auth.Claims, quer
 		defer tx.Rollback(ctx)
 
 		// Sanitize organization ID for search_path using simple quotes if safe
+		if !orgIDRegex.MatchString(claims.OrganizationID) {
+			return nil, errors.New("invalid organization ID format")
+		}
+
 		sanitizedOrgID := strings.ReplaceAll(claims.OrganizationID, "\"", "\"\"")
+		// Postgres mode: Set local search path safely avoiding SQL injection
 		_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL search_path = \"%s\"", sanitizedOrgID))
 		if err != nil {
 			return nil, err

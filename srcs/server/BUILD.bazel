@@ -36,3 +36,9 @@ genrule(
     cmd = "cp $< $@ && chmod 0755 $@",
     visibility = ["//visibility:public"],
 )
+
+sh_test(
+    name = "standalone_ohc_test",
+    srcs = ["standalone_ohc_test.sh"],
+    data = ["standalone_ohc.sh"],
+)
