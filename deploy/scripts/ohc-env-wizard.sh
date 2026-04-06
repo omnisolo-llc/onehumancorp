@@ -89,6 +89,12 @@ if [ "$multitenant" = "true" ]; then
     fi
 fi
 
+# 6. Advanced Features
+echo -e "\n${BOLD}Advanced Features:${RESET}"
+read -p "Enable MCP (Model Context Protocol) features? (true/false) (default: false): " mcp_enabled
+mcp_enabled=${mcp_enabled:-false}
+update_env "MCP_ENABLED" "$mcp_enabled"
+
 # Apply secure permissions to .env
 chmod 0600 "$ENV_FILE"
 
