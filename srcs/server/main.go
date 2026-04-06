@@ -25,6 +25,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/redis/rueidis"
 )
 
 const defaultAddress = ":8080"
@@ -278,7 +279,18 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		var rClient rueidis.Client
+		if os.Getenv("OHC_MULTITENANT") == "true" {
+			redisURL := os.Getenv("REDIS_URL")
+			if redisURL != "" {
+				opts, err := rueidis.ParseURL(redisURL)
+				if err == nil {
+					rClient, _ = rueidis.NewClient(opts)
+				}
+			}
+		}
+
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, rClient)
 		go autodreamPipeline.Start(ctx)
 	}
 

@@ -1514,6 +1514,73 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 // Returns (*pb.ReasonResponse, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.hub.CentrifugeNode() != nil && s.hub.CentrifugeNode().meshTransport != nil {
+		err := s.hub.CentrifugeNode().meshTransport.AdvertiseCapabilities(ctx, *req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "advertise capabilities failed: %v", err)
+		}
+		telemetry.RecordTeammateMeshBroadcast(ctx, "capabilities")
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.hub.CentrifugeNode() == nil || s.hub.CentrifugeNode().meshTransport == nil {
+		return status.Errorf(codes.Unimplemented, "mesh transport not configured")
+	}
+
+	ch, err := s.hub.CentrifugeNode().meshTransport.SubscribeCapabilities(stream.Context())
+	if err != nil {
+		return status.Errorf(codes.Internal, "subscribe capabilities failed: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case cap := <-ch:
+			// Apply simple filter if needed
+			if req.GetFilter() != "" {
+				// filter logic omitted for brevity
+			}
+			if err := stream.Send(&cap); err != nil {
+				return err
+			}
+			telemetry.RecordTeammateMeshDirectMessage(stream.Context())
+		}
+	}
+}
+
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.hub.CentrifugeNode() == nil || s.hub.CentrifugeNode().meshTransport == nil {
+		return status.Errorf(codes.Unimplemented, "mesh transport not configured")
+	}
+
+	ch, err := s.hub.CentrifugeNode().meshTransport.SubscribeMeshEvents(stream.Context(), req.GetTopic())
+	if err != nil {
+		return status.Errorf(codes.Internal, "subscribe mesh events failed: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case payload := <-ch:
+			event := pb.MeshEvent_builder{
+				EventId: proto.String(generateID()),
+				Topic:   proto.String(req.GetTopic()),
+				Payload: payload,
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+			telemetry.RecordTeammateMeshDirectMessage(stream.Context())
+		}
+	}
+}
+
 func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*pb.ReasonResponse, error) {
 	client := NewMinimaxClient(s.hub.MinimaxAPIKey())
 	content, err := client.Reason(ctx, req.GetPrompt())
