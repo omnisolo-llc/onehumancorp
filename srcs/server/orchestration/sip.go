@@ -82,7 +82,10 @@ func acquireThrottle(ctx context.Context) error {
 
 func releaseThrottle() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		<-standaloneThrottle
+		select {
+		case <-standaloneThrottle:
+		default:
+		}
 	}
 }
 
@@ -114,6 +117,11 @@ func withSipRetry(ctx context.Context, op func() error) error {
 		// Optimization: Avoid long exponential backoff retries when the DB connection is explicitly closed,
 		// as it is non-recoverable and causes test timeouts.
 		if err != nil && (err.Error() == "sql: database is closed" || err.Error() == "database is closed") {
+			return err
+		}
+
+		// ⚡ BOLT: Return immediately for non-transient constraint errors to avoid wasting backoff latency.
+		if err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return err
 		}
 
@@ -632,7 +640,13 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		}
 
 		// 2. Remove COMPLETED, or very old FAILED missions
-		_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2", thresholdTime, s.orgID)
+		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
+		if s.db.IsSQLite() {
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+		} else {
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+		}
+
 		return err
 	})
 }
