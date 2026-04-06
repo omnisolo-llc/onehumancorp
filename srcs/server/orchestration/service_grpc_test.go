@@ -221,7 +221,7 @@ func TestRegisterHubServiceCoverage(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 	srv := grpc.NewServer()
-	RegisterHubService(srv, hub)
+	RegisterHubService(srv, hub, nil)
 }
 
 func TestPublishViaGRPCError(t *testing.T) {

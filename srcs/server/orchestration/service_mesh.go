@@ -34,6 +34,8 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 		return nil, fmt.Errorf("failed to broadcast capabilities: %w", err)
 	}
 
+	telemetry.RecordMeshBroadcast(ctx, "capabilities")
+
 	return &pb.PublishMessageResponse{Success: true}, nil
 }
 
@@ -120,6 +122,8 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			if err := stream.Send(event); err != nil {
 				return err
 			}
+
+			telemetry.RecordMeshBroadcast(ctx, "events")
 		}
 	}
 }
