@@ -18,7 +18,7 @@ func TestDelegateSubTask_Success(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	req := pb.SubTask_builder{
@@ -71,7 +71,7 @@ func TestDelegateSubTask_Success(t *testing.T) {
 func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	// Fill the hub to reach the quota limit (10)
@@ -106,7 +106,7 @@ func TestDelegateSubTask_QuotaExhaustion(t *testing.T) {
 func TestDelegateSubTask_MissingFields(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -148,7 +148,7 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender-1", Name: "Sender", Role: "PM", Status: StatusIdle})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	req := pb.SubTask_builder{
@@ -306,7 +306,7 @@ func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "sender-fail", Name: "Sender", Role: "PM", Status: StatusIdle})
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	req := pb.SubTask_builder{
@@ -343,7 +343,7 @@ func TestDelegateSubTask_MissingSenderCover(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 	// Deliberately DO NOT register sender
-	server := NewHubServiceServer(hub)
+	server := NewHubServiceServer(hub, nil)
 	ctx := context.Background()
 
 	req := pb.SubTask_builder{
