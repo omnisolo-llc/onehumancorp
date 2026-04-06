@@ -42,6 +42,12 @@ ohcCore:
   replicas: 1
   service:
     port: 18789
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
