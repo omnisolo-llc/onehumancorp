@@ -15,7 +15,7 @@ class _CommandTestService extends LocalManagerService {
   Future<bool> isServiceRunning() async => running;
 
   @override
-  Future<Process> processStart(
+  Future<Process> processStartImpl(
     String executable,
     List<String> arguments, {
     bool runInShell = true,
@@ -29,7 +29,7 @@ class _CommandTestService extends LocalManagerService {
   }
 
   @override
-  Future<ProcessResult> processRun(
+  Future<ProcessResult> processRunImpl(
     String executable,
     List<String> arguments, {
     bool runInShell = true,
@@ -163,9 +163,9 @@ void main() {
     ProcessResult result;
 
     if (Platform.isWindows) {
-      result = await defaultService.processRun('cmd', ['/c', 'echo', 'ok']);
+      result = await defaultService.processRunImpl('cmd', ['/c', 'echo', 'ok']);
     } else {
-      result = await defaultService.processRun('sh', ['-c', 'echo ok']);
+      result = await defaultService.processRunImpl('sh', ['-c', 'echo ok']);
     }
 
     expect(result.stdout.toString().toLowerCase(), contains('ok'));
@@ -176,9 +176,9 @@ void main() {
     Process process;
 
     if (Platform.isWindows) {
-      process = await defaultService.processStart('cmd', ['/c', 'exit', '0']);
+      process = await defaultService.processStartImpl('cmd', ['/c', 'exit', '0']);
     } else {
-      process = await defaultService.processStart('sh', ['-c', 'exit 0']);
+      process = await defaultService.processStartImpl('sh', ['-c', 'exit 0']);
     }
 
     expect(await process.exitCode, 0);

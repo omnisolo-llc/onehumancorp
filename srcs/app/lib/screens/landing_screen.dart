@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/cloud_bridge_referral_widget.dart';
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -57,6 +58,8 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         onPressed: () => context.go('/login'),
                         child: const Text('Or continue to Cloud Dashboard'),
                       ),
+                      const SizedBox(height: 48),
+                      const CloudBridgeReferralWidget(),
                     ],
                   ),
                 ),

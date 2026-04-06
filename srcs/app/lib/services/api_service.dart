@@ -304,6 +304,24 @@ class ApiService {
 
   // ── Settings ─────────────────────────────────────────────────────────────
 
+  Future<void> sendReferral(String email, String source) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/growth/referrals'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'source': source,
+        'campaign_id': 'default',
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send referral');
+    }
+  }
+
   Future<Settings> getSettings() async {
     final res = await _client.get(
       Uri.parse('$baseUrl/api/settings'),
