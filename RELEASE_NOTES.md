@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
+- Scaling (Cloud): Optimized multi-tenant PostgreSQL queries and background synchronization queues.
+- Privacy/Offline (Standalone): Improved SQLite file locking configurations and buffered telemetry syncing.
+
+## v0.2.8 (Cloud) / v0.2.8+1 (Standalone)
+- Scaling (Cloud): Synchronized version configurations across `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
+- Privacy/Offline (Standalone): Stabilized hybrid test scenarios ensuring both PostgreSQL (Cloud) and SQLite (Standalone) compatibilities.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.

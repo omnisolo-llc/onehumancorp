@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.9] - 2026-04-06
+
+### Added
+- Cloud Scaling: Optimized multi-tenant PostgreSQL queries and background synchronization queues.
+- Standalone Privacy/Offline: Improved SQLite file locking configurations and buffered telemetry syncing.
+
+### Changed
+- Refined multi-environment promotion CI/CD workflow testing for hybrid deployments.
+
 ## [0.2.8] - 2026-04-03
 
 ### Added
