@@ -10,10 +10,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
 
+	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -278,7 +280,19 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		var redisClient rueidis.Client
+		if !pool.Provider.IsSQLite() && os.Getenv("REDIS_ADDR") != "" {
+			opt := rueidis.ClientOption{
+				InitAddress: strings.Split(os.Getenv("REDIS_ADDR"), ","),
+			}
+			if c, err := rueidis.NewClient(opt); err == nil {
+				redisClient = c
+			} else {
+				slog.Warn("Failed to connect to Redis for AutoDreamPipeline", "error", err)
+			}
+		}
+
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
 	}
 
