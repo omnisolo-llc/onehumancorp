@@ -1,6 +1,6 @@
 ---
 title: "Realtime Teammate Mesh APIs (gRPC/WebSockets/Redis)"
-status: "PENDING"
+status: PENDING
 priority: "P0"
 estimated_scope: "Large"
 ---

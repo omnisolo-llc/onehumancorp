@@ -1,6 +1,6 @@
 ---
 title: "Distributed State Machine Tracker for Teammate Mesh Dependencies"
-status: "PENDING"
+status: PENDING
 priority: "P0"
 estimated_scope: "Medium"
 ---
