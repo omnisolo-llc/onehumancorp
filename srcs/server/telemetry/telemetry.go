@@ -23,6 +23,7 @@ var (
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
+	MeshLatencyRecorder metric.Float64Histogram
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -165,6 +166,15 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshLatencyRecorder, err = m.Float64Histogram(
+		"ohc_mesh_latency",
+		metric.WithDescription("Latency of Teammate Mesh RPC operations"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -940,6 +950,15 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 }
 
 // RecordQueueLength adds a delta to the current queue length gauge.
+func RecordMeshLatency(ctx context.Context, operation string, latency time.Duration) {
+	if MeshLatencyRecorder == nil {
+		return
+	}
+	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
 		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
