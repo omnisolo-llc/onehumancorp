@@ -797,6 +797,14 @@ func RecordTeammateMeshDirectMessage(ctx context.Context) {
 // RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.
 func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 	if AutoDreamMemoriesIngestedCounter == nil {
+		if BufferMetricFunc != nil {
+			payloadMap := map[string]interface{}{
+				"agent_id": agentID,
+			}
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
+			_ = BufferMetricFunc(ctx, "autodream_memory_ingested", string(payloadBytes))
+		}
 		return
 	}
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
@@ -807,6 +815,14 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 // RecordAutoDreamMemoryCompressed increments the counter when an agent session is compressed.
 func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 	if AutoDreamMemoriesCompressedCounter == nil {
+		if BufferMetricFunc != nil {
+			payloadMap := map[string]interface{}{
+				"agent_id": agentID,
+			}
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
+			_ = BufferMetricFunc(ctx, "autodream_memory_compressed", string(payloadBytes))
+		}
 		return
 	}
 	AutoDreamMemoriesCompressedCounter.Add(ctx, 1, metric.WithAttributes(
