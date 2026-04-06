@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -200,16 +201,7 @@ type AgentCapabilities struct {
 	MaxConcurrentTasks   int32    `json:"max_concurrent_tasks"`
 }
 
-type MeshTransport interface {
-	BroadcastTask(ctx context.Context, task Task) error
-	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error)
-	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
-	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
-}
+
 
 type TeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
@@ -304,7 +296,7 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 	return ch, nil
 }
 
-func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error {
+func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
 	data, err := json.Marshal(caps)
 	if err != nil {
 		return err
@@ -315,11 +307,11 @@ func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps Ag
 	})
 }
 
-func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error) {
-	ch := make(chan AgentCapabilities, 100)
+func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	ch := make(chan pb.AgentCapabilities, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:capabilities").Build(), func(msg rueidis.PubSubMessage) {
-			var c AgentCapabilities
+			var c pb.AgentCapabilities
 			if err := json.Unmarshal([]byte(msg.Message), &c); err == nil {
 				select {
 				case ch <- c:
@@ -458,6 +450,21 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 	return ch, nil
 }
 
+
+
+
+
+type MeshTransport interface {
+	BroadcastTask(ctx context.Context, task Task) error
+	SubscribeTasks(ctx context.Context) (<-chan Task, error)
+	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
+	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
+	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
+	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
+	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
+}
+
 const numShards = 16
 
 type MemoryMeshTransport struct {
@@ -469,8 +476,8 @@ type MemoryMeshTransport struct {
 	coordBroadcast      []chan MeshMessage
 	coordSubs           []map[chan MeshMessage]struct{}
 	coordMu             []sync.RWMutex
-	capsBroadcast       []chan AgentCapabilities
-	capsSubs            []map[chan AgentCapabilities]struct{}
+	capsBroadcast       []chan pb.AgentCapabilities
+	capsSubs            []map[chan pb.AgentCapabilities]struct{}
 	capsMu              []sync.RWMutex
 	eventsBroadcast     map[string][]chan []byte
 	eventsSubs          map[string][]map[chan []byte]struct{}
@@ -488,8 +495,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		coordBroadcast:      make([]chan MeshMessage, numShards),
 		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:             make([]sync.RWMutex, numShards),
-		capsBroadcast:       make([]chan AgentCapabilities, numShards),
-		capsSubs:            make([]map[chan AgentCapabilities]struct{}, numShards),
+		capsBroadcast:       make([]chan pb.AgentCapabilities, numShards),
+		capsSubs:            make([]map[chan pb.AgentCapabilities]struct{}, numShards),
 		capsMu:              make([]sync.RWMutex, numShards),
 		eventsBroadcast:     make(map[string][]chan []byte),
 		eventsSubs:          make(map[string][]map[chan []byte]struct{}),
@@ -502,8 +509,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.subs[i] = make(map[chan Task]struct{})
 		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
-		lm.capsBroadcast[i] = make(chan AgentCapabilities, 10000)
-		lm.capsSubs[i] = make(map[chan AgentCapabilities]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		for j := 0; j < 4; j++ {
 			go lm.run(i)
@@ -655,8 +662,8 @@ func (lm *MemoryMeshTransport) runCoord(shardIdx int) {
 	}
 }
 
-func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error {
-	shardIdx := lm.getShard(caps.AgentID)
+func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {
 		select {
@@ -673,8 +680,8 @@ func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps A
 	return nil
 }
 
-func (lm *MemoryMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error) {
-	ch := make(chan AgentCapabilities, 100)
+func (lm *MemoryMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	ch := make(chan pb.AgentCapabilities, 100)
 
 	for i := 0; i < numShards; i++ {
 		lm.capsMu[i].Lock()
@@ -799,6 +806,7 @@ func (lm *MemoryMeshTransport) runEvents(topic string, shardIdx int) {
 		lm.eventsGlobalMu.RUnlock()
 	}
 }
+
 
 type LocalTeammateMesh struct {
 	db                  db.Provider
@@ -988,4 +996,21 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 		}
 		lm.coordMu[shardIdx].RUnlock()
 	}
+}
+
+
+func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	return nil
+}
+
+func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	return make(chan pb.AgentCapabilities, 100), nil
+}
+
+func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	return nil
+}
+
+func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	return make(chan []byte, 100), nil
 }
