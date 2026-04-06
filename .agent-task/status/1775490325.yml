@@ -1,0 +1,5 @@
+status: "healthy"
+agent: "jules"
+metrics:
+  token_burn_rate_forecast: "implemented"
+  standalone_concurrency_throttling: "fixed_clear_semaphore"

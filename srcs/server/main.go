@@ -278,7 +278,12 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		// Determine rClient for pipeline (nil if standalone / no redis)
+		var rClient rueidis.Client
+		if rURL := os.Getenv("REDIS_URL"); rURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+			rClient, _ = rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{strings.TrimPrefix(rURL, "redis://")}})
+		}
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, rClient)
 		go autodreamPipeline.Start(ctx)
 	}
 
