@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -136,7 +137,9 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Icon(
                     Icons.check_circle_outline,
                     size: 64,
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -146,7 +149,9 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Text(
                     'Your agents are operating autonomously.',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -164,80 +169,137 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               return Semantics(
                 label: 'Handoff from agent to human. Intent: ${handoff.intent}',
                 excludeSemantics: true,
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.compose(
+                        outer: ColorFilter.matrix(const <double>[
+                          1.168,
+                          -0.153,
+                          -0.015,
+                          0,
+                          0,
+                          -0.046,
+                          1.061,
+                          -0.015,
+                          0,
+                          0,
+                          -0.046,
+                          -0.152,
+                          1.198,
+                          0,
+                          0,
+                          0,
+                          0,
+                          0,
+                          1,
+                          0,
+                        ]),
+                        inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surface.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outlineVariant.withOpacity(0.5),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Intent: ${handoff.intent.toUpperCase()}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    DateFormat.yMMMd().add_jm().format(
+                                      handoff.createdAt,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Intent: ${handoff.intent.toUpperCase()}',
-                                style: TextStyle(
-                                  fontSize: 10,
+                              const SizedBox(height: 16),
+                              Text(
+                                'Escalated by Agent: ${handoff.fromAgentId}',
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                                 ),
                               ),
-                            ),
-                            Text(
-                              DateFormat.yMMMd().add_jm().format(
-                                handoff.createdAt,
+                              const SizedBox(height: 8),
+                              Text(
+                                handoff.currentState,
+                                style: const TextStyle(fontSize: 16),
                               ),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              if (handoff.visualGroundTruth != null) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  height: 200,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.image_outlined,
+                                      size: 48,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 24),
+                              SlideToApprove(
+                                disabled: isProcessing,
+                                onApprove: () => _handleApprove(handoff.id),
+                                onReject: () => _handleReject(handoff.id),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Escalated by Agent: ${handoff.fromAgentId}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          handoff.currentState,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        if (handoff.visualGroundTruth != null) ...[
-                          const SizedBox(height: 16),
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: 48,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
-                        const SizedBox(height: 24),
-                        SlideToApprove(
-                          disabled: isProcessing,
-                          onApprove: () => _handleApprove(handoff.id),
-                          onReject: () => _handleReject(handoff.id),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

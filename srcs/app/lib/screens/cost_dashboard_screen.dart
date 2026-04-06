@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -45,14 +47,13 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                   snapshot.connectionState == ConnectionState.waiting;
               return IconButton(
                 onPressed: isRefreshing ? null : _refresh,
-                icon:
-                    isRefreshing
-                        ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                        : const Icon(Icons.refresh),
+                icon: isRefreshing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
                 tooltip: 'Refresh costs',
               );
             },
@@ -112,29 +113,65 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children:
-                        costs.agents.map((agentCost) {
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(const <double>[
+                      1.168,
+                      -0.153,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      1.061,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      -0.152,
+                      1.198,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      1,
+                      0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surface.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: costs.agents.map((agentCost) {
                           final agent = data.agents.firstWhere(
                             (a) => a.id == agentCost.agentId,
-                            orElse:
-                                () => Agent(
-                                  id: agentCost.agentId,
-                                  name: 'Unknown Agent',
-                                  role: '',
-                                  status: '',
-                                  organizationId: '',
-                                  createdAt: DateTime.now(),
-                                ),
+                            orElse: () => Agent(
+                              id: agentCost.agentId,
+                              name: 'Unknown Agent',
+                              role: '',
+                              status: '',
+                              organizationId: '',
+                              createdAt: DateTime.now(),
+                            ),
                           );
 
-                          final ratio =
-                              costs.totalCostUSD > 0
-                                  ? agentCost.costUSD / costs.totalCostUSD
-                                  : 0.0;
+                          final ratio = costs.totalCostUSD > 0
+                              ? agentCost.costUSD / costs.totalCostUSD
+                              : 0.0;
 
                           return Semantics(
                             label:
@@ -201,6 +238,8 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                             ),
                           );
                         }).toList(),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -214,46 +253,89 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.compose(
+                    outer: ColorFilter.matrix(const <double>[
+                      1.168,
+                      -0.153,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      1.061,
+                      -0.015,
+                      0,
+                      0,
+                      -0.046,
+                      -0.152,
+                      1.198,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      1,
+                      0,
+                    ]),
+                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surface.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.business, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            data.organization.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              const Icon(Icons.business, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                data.organization.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(data.organization.domain),
+                            ],
                           ),
-                          const Spacer(),
-                          Text(data.organization.domain),
+                          const Divider(height: 32),
+                          ...data.organization.members
+                              .take(3)
+                              .map(
+                                (m) => ListTile(
+                                  leading: Icon(
+                                    m.isHuman ? Icons.person : Icons.smart_toy,
+                                    size: 20,
+                                  ),
+                                  title: Text(m.name),
+                                  subtitle: Text(m.role),
+                                  dense: true,
+                                ),
+                              ),
+                          if (data.organization.members.length > 3)
+                            Center(
+                              child: TextButton(
+                                onPressed: () {},
+                                child: const Text('View Full Org Tree'),
+                              ),
+                            ),
                         ],
                       ),
-                      const Divider(height: 32),
-                      ...data.organization.members
-                          .take(3)
-                          .map(
-                            (m) => ListTile(
-                              leading: Icon(
-                                m.isHuman ? Icons.person : Icons.smart_toy,
-                                size: 20,
-                              ),
-                              title: Text(m.name),
-                              subtitle: Text(m.role),
-                              dense: true,
-                            ),
-                          ),
-                      if (data.organization.members.length > 3)
-                        Center(
-                          child: TextButton(
-                            onPressed: () {},
-                            child: const Text('View Full Org Tree'),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -284,31 +366,70 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(const <double>[
+              1.168,
+              -0.153,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              1.061,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              -0.152,
+              1.198,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withOpacity(0.5),
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, color: color, size: 24),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

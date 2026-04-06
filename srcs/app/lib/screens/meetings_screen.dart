@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -31,19 +33,18 @@ class MeetingsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data:
-            (rooms) =>
-                rooms.isEmpty
-                    ? _EmptyRooms(
-                      onCreate: () => _showCreateDialog(context, ref),
-                    )
-                    : _RoomList(rooms: rooms, ref: ref),
+        data: (rooms) => rooms.isEmpty
+            ? _EmptyRooms(onCreate: () => _showCreateDialog(context, ref))
+            : _RoomList(rooms: rooms, ref: ref),
       ),
     );
   }
 
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    showDialog(context: context, builder: (_) => _CreateRoomDialog(ref: ref));
+    showDialog(
+      context: context,
+      builder: (_) => _CreateRoomDialog(ref: ref),
+    );
   }
 }
 
@@ -115,6 +116,7 @@ class _RoomCard extends StatefulWidget {
 
 class _RoomCardState extends State<_RoomCard> {
   bool _joining = false;
+  bool _isHovered = false;
 
   Color _statusColor(BuildContext context) {
     switch (widget.room['status'] as String? ?? '') {
@@ -151,45 +153,41 @@ class _RoomCardState extends State<_RoomCard> {
   void _showJoinInfo(BuildContext context, Map<String, dynamic> info) {
     showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Join Meeting'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (info['join_url'] != null) ...[
-                  const Text(
-                    'Join URL:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  SelectableText(info['join_url'] as String),
-                ],
-                if (info['token'] != null) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Token:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  SelectableText(
-                    info['token'] as String,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
+      builder: (_) => AlertDialog(
+        title: const Text('Join Meeting'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (info['join_url'] != null) ...[
+              const Text(
+                'Join URL:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(info['join_url'] as String),
+            ],
+            if (info['token'] != null) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Token:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(
+                info['token'] as String,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
               ),
             ],
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
           ),
+        ],
+      ),
     );
   }
 
@@ -197,81 +195,139 @@ class _RoomCardState extends State<_RoomCard> {
   Widget build(BuildContext context) {
     final room = widget.room;
     final participantCount = room['participant_count'] as int? ?? 0;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.video_call,
-              color: Theme.of(context).colorScheme.primary,
-              size: 36,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room['name'] as String? ?? 'Meeting Room',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: ColorFilter.matrix(const <double>[
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  color: _isHovered
+                      ? colors.surfaceContainerHighest.withOpacity(0.3)
+                      : colors.surface.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered
+                        ? colors.outlineVariant
+                        : colors.outlineVariant.withOpacity(0.5),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(
-                          color: _statusColor(context),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      Text(
-                        room['status'] as String? ?? '',
-                        style: TextStyle(
-                          color: _statusColor(context),
-                          fontSize: 12,
-                        ),
+                      Icon(
+                        Icons.video_call,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 36,
                       ),
                       const SizedBox(width: 12),
-                      if (participantCount > 0) ...[
-                        Icon(
-                          Icons.people,
-                          size: 14,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              room['name'] as String? ?? 'Meeting Room',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(right: 4),
+                                  decoration: BoxDecoration(
+                                    color: _statusColor(context),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Text(
+                                  room['status'] as String? ?? '',
+                                  style: TextStyle(
+                                    color: _statusColor(context),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                if (participantCount > 0) ...[
+                                  Icon(
+                                    Icons.people,
+                                    size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.7),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$participantCount',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$participantCount',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                      ),
+                      FilledButton.icon(
+                        icon: _joining
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.login, size: 18),
+                        label: const Text('Join'),
+                        onPressed: _joining ? null : _join,
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
-            FilledButton.icon(
-              icon:
-                  _joining
-                      ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.login, size: 18),
-              label: const Text('Join'),
-              onPressed: _joining ? null : _join,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -338,14 +394,13 @@ class _CreateRoomDialogState extends State<_CreateRoomDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Create'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Create'),
         ),
       ],
     );
