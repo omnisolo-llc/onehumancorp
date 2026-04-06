@@ -1,42 +1,33 @@
 package hybrid_sync
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"os"
 	"time"
+	"github.com/google/uuid"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // HybridSyncDaemon bridges the local SQLite single-user instance
 // and the Postgres multi-tenant database for Omni-Context synchronization.
 type HybridSyncDaemon struct {
-	dbWrapper   *db.DB
-	ticker      *time.Ticker
-	quit        chan struct{}
-	cloudAPIURL string
+	dbWrapper  *db.DB
+	cloudQueue queue.TaskQueue
+	ticker     *time.Ticker
+	quit       chan struct{}
 }
 
-func NewHybridSyncDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAPIURL string) *HybridSyncDaemon {
-	if cloudAPIURL == "" {
-		cloudAPIURL = os.Getenv("OHC_CORE_URL")
-	}
-	if cloudAPIURL == "" {
-		cloudAPIURL = "http://localhost:8080"
-	}
-
+func NewHybridSyncDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudQueue queue.TaskQueue) *HybridSyncDaemon {
 	return &HybridSyncDaemon{
-		dbWrapper:   dbWrapper,
-		ticker:      time.NewTicker(pollInterval),
-		quit:        make(chan struct{}),
-		cloudAPIURL: cloudAPIURL,
+		dbWrapper:  dbWrapper,
+		cloudQueue: cloudQueue,
+		ticker:     time.NewTicker(pollInterval),
+		quit:       make(chan struct{}),
 	}
 }
 
@@ -131,8 +122,8 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Error("hybrid_sync: failed to send escalations to cloud", "error", err)
+	if err := d.sendToCloudQueue(ctx, payloads); err != nil {
+		slog.Error("hybrid_sync: failed to enqueue escalations to cloud", "error", err)
 		return
 	}
 
@@ -157,35 +148,26 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 	slog.Debug("hybrid_sync: successfully synced and escalated RAG vectors", "count", len(payloads))
 }
 
-func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPayload) error {
-	jsonData, err := json.Marshal(payloads)
-	if err != nil {
-		return fmt.Errorf("marshal payloads: %w", err)
+func (d *HybridSyncDaemon) sendToCloudQueue(ctx context.Context, payloads []SyncPayload) error {
+	for _, p := range payloads {
+		payloadBytes, err := json.Marshal(p)
+		if err != nil {
+			return fmt.Errorf("failed to marshal payload: %w", err)
+		}
+
+		job := &queue.Job{
+			ID:           uuid.New().String(),
+			ParentTaskID: p.MemoryID,
+			AgentRole:    "RAG_SYNC",
+			Payload:      string(payloadBytes),
+			Status:       "PENDING",
+			MaxAttempts:  3,
+			RunAfter:     time.Now(),
+		}
+
+		if err := d.cloudQueue.Enqueue(ctx, job); err != nil {
+			return fmt.Errorf("failed to enqueue job: %w", err)
+		}
 	}
-
-	syncEndpoint := fmt.Sprintf("%s/api/sync/escalation", d.cloudAPIURL)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
-		req.Header.Set("Authorization", "Bearer "+spiffeToken)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("do request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
-	}
-
 	return nil
 }
