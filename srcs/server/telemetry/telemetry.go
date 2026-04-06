@@ -24,6 +24,7 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
+	MeshThroughputRecorder metric.Int64Counter
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -974,5 +975,12 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+
+func RecordMeshThroughput(ctx context.Context, bytes int64) {
+	if MeshThroughputRecorder != nil {
+		MeshThroughputRecorder.Add(ctx, bytes)
 	}
 }

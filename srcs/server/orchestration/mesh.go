@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"context"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"encoding/json"
@@ -329,6 +330,11 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast", time.Since(start))
+		telemetry.RecordMeshThroughput(ctx, int64(len(payload)))
+	}()
 	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
