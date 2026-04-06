@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 )
 
 // DelegateSubTask handles Hierarchical Task Delegation by provisioning temporary
@@ -64,9 +65,25 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 	}
 	s.hub.mu.Unlock()
 
+
+
 	if s.hub.sipDB != nil {
 		s.hub.LogEvent(subAgent)
 	}
+
+	// Enqueue sub-agent task using the Hub's TaskManager queue if available.
+	if s.hub.taskManager != nil && s.hub.taskManager.subAgentQueue != nil {
+		job := &queue.Job{
+			ParentTaskID: req.GetTaskId(),
+			AgentRole:    req.GetTargetRole(),
+			Payload:      req.GetInstruction(),
+		}
+
+		if err := s.hub.taskManager.subAgentQueue.Enqueue(ctx, job); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to enqueue sub-agent task: %v", err)
+		}
+	}
+
 
 	// 3. Execution (trigger via task message)
 	instruction := req.GetInstruction()

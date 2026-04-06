@@ -937,3 +937,12 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 		))
 	}
 }
+
+// RecordQueueLength adds a delta to a generic queue length metric.
+func RecordQueueLength(ctx context.Context, queueName string, delta int) {
+	if swarmTaskQueueLengthGauge != nil {
+		swarmTaskQueueLengthGauge.Add(ctx, int64(delta), metric.WithAttributes(
+			attribute.String("queue", queueName),
+		))
+	}
+}

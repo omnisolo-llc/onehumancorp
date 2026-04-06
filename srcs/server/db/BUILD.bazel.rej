@@ -1,0 +1,10 @@
+--- BUILD.bazel
++++ BUILD.bazel
+@@ -10,6 +10,7 @@
+         "sipdb.go",
+         "sqlite_provider.go",
+         "sqlite_schema.go",
++        "test_helpers.go",
+         "telemetry_buffer.go",
+     ],
+     importpath = "github.com/onehumancorp/mono/srcs/server/db",

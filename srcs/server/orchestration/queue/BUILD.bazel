@@ -1,0 +1,29 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "queue",
+    srcs = [
+        "queue.go",
+        "sqlite_queue.go",
+        "redis_queue.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/queue",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/telemetry",
+        "@com_github_redis_rueidis//:rueidis",
+    ],
+)
+
+go_test(
+    name = "queue_test",
+    srcs = [
+        "queue_test.go",
+    ],
+    embed = [":queue"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
+    ],
+)

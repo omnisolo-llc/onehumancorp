@@ -261,6 +261,7 @@ type Hub struct {
 	minimaxAPIKey  string
 	subs           map[string][]chan struct{}
 	sipDB          *SIPDB
+	taskManager    *TaskManager
 	tokenTrackers  map[string]struct{}
 	GetTokenUsage  func(ctx context.Context) map[string]int64
 	autoCorTrack   map[string]struct{}
@@ -272,7 +273,6 @@ type Hub struct {
 	storage        storage.Provider
 	ctx            context.Context
 	cancel         context.CancelFunc
-	taskManager    *TaskManager
 }
 
 func (h *Hub) TaskManager() *TaskManager {

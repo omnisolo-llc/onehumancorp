@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/redis/rueidis"
 )
 
@@ -43,6 +44,7 @@ type TaskManager struct {
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
 	stopChan    chan struct{}
 	stateMachine *statemachine.StateMachine
+	subAgentQueue queue.TaskQueue
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -52,12 +54,13 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 		broadcast = hub.PublishTaskBroadcast
 	}
 
-	tm := &TaskManager{
+		tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
 		stateMachine: statemachine.NewStateMachine(provider, broadcast),
 	}
 
+	var redisClient rueidis.Client
 	if os.Getenv("OHC_MULTITENANT") == "true" {
 		redisURL := os.Getenv("REDIS_URL")
 		if redisURL != "" {
@@ -65,11 +68,14 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 			if err == nil {
 				c, err := rueidis.NewClient(opts)
 				if err == nil {
+					redisClient = c
 					tm.redisClient = c
 				}
 			}
 		}
 	}
+
+	tm.subAgentQueue = queue.NewTaskQueue(provider, redisClient)
 	tm.stopChan = make(chan struct{})
 	return tm
 }
