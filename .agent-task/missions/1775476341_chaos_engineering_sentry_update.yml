@@ -1,0 +1,12 @@
+---
+status: IN_PROGRESS
+agent: Sentry
+---
+title: Chaos Engineering - SQLite Concurrency Parity
+description: >
+  Performing a Parity Audit and Chaos Test on the orchestration package.
+  Found that standalone tests fail due to concurrency locks, so we are fixing
+  the throttling mechanism (`standaloneThrottle`) and database interactions
+  in `SIPDB`.
+priority: P0
+scope: Medium

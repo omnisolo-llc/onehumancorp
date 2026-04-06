@@ -66,6 +66,8 @@ func acquireThrottle(ctx context.Context) error {
 			// already initialized to 1
 		} else {
 			// If not standalone, make channel large enough or just ignore
+			// We can increase capacity or just not use it, but to prevent blocks, we'll
+			// drain it if someone mistakenly blocks on it.
 		}
 	})
 
@@ -82,9 +84,15 @@ func acquireThrottle(ctx context.Context) error {
 
 func releaseThrottle() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		<-standaloneThrottle
+		select {
+		case <-standaloneThrottle:
+			// released
+		default:
+			// already empty
+		}
 	}
 }
+
 
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
