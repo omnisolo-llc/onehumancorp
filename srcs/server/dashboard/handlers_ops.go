@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -430,4 +431,25 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var batch []map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&batch); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Just log the synced metrics for now, as Prometheus ingestion typically
+	// happens by recording them in the server's metrics registry or saving to DB
+	slog.InfoContext(r.Context(), "received telemetry sync batch from standalone", "count", len(batch))
+
+	// Future: Write these directly to Postgres or emit as Prometheus metrics.
+
+	w.WriteHeader(http.StatusOK)
 }
