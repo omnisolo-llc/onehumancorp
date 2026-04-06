@@ -1,6 +1,6 @@
 ---
 title: "autoDream Data Pipelines (Long-term Memory Consolidation)"
-status: "PENDING"
+status: PENDING
 priority: "P0"
 estimated_scope: "Large"
 ---
