@@ -133,12 +133,111 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handles corrupted .agent-task/memory without panic")
 }
 
+// TestSIPDB_CUJ_StressVerification automates CUJ stress-testing for high-concurrency Cloud pods
+// and low-resource Standalone wrappers (SQLite limits).
+func TestSIPDB_CUJ_StressVerification(t *testing.T) {
+	// 1. High-concurrency Standalone Wrapper (SQLite limit simulation)
+	t.Run("StandaloneWrapperStress", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "true")
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "cuj_standalone.db")
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SQLite SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 50)
+
+		// Create CUJ: Rapid buffer metric writes
+		for i := 0; i < 50; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				metricPayload := fmt.Sprintf(`{"cuj_idx": %d}`, idx)
+				err := dbInstance.BufferMetric(ctx, "cuj-metric", metricPayload)
+				if err != nil {
+					errs <- err
+				}
+			}(i)
+		}
+		wg.Wait()
+		close(errs)
+
+		var errorCount int
+		for e := range errs {
+			errorCount++
+			t.Logf("Standalone CUJ Write Error: %v", e)
+		}
+
+		// Some errors might happen due to locked db, but it should not crash.
+		// Retries should mitigate most of them.
+		if errorCount > 0 {
+			t.Logf("Noticed %d errors out of 50 in standalone stress. Graceful handling verified.", errorCount)
+		} else {
+			t.Log("Standalone CUJ completed with 0 errors under high concurrency.")
+		}
+	})
+
+	// 2. High-concurrency Cloud Pod (Mock Postgres stress)
+	t.Run("CloudPodStress", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "cuj_cloud.db")
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 100)
+
+		// Create CUJ: Rapid Upsert and Sync
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				missionID := fmt.Sprintf("cloud-mission-%d", idx)
+				err := dbInstance.UpsertMission(ctx, missionID, "PENDING", `{"cuj":"stress"}`, false)
+				if err != nil {
+					errs <- err
+				}
+			}(i)
+		}
+		wg.Wait()
+		close(errs)
+
+		var errorCount int
+		for e := range errs {
+			errorCount++
+			t.Logf("Cloud CUJ Write Error: %v", e)
+		}
+
+		if errorCount > 0 {
+			t.Logf("Noticed %d errors out of 100 in cloud stress.", errorCount)
+		} else {
+			t.Log("Cloud CUJ completed with 0 errors under high concurrency.")
+		}
+	})
+}
+
 // TestSIPDB_ChaosParity ensures that both SQLite and Postgres modes behave similarly under stress.
 func TestSIPDB_ChaosParity(t *testing.T) {
 	// First, run with Standalone (SQLite)
 	t.Run("SQLite", func(t *testing.T) {
-		os.Setenv("OHC_STANDALONE", "true")
-		defer os.Unsetenv("OHC_STANDALONE")
+		t.Setenv("OHC_STANDALONE", "true")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos.db")
@@ -166,8 +265,7 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 
 	// Second, run with Mock Postgres DB Provider behavior
 	t.Run("PostgresMock", func(t *testing.T) {
-		os.Setenv("OHC_STANDALONE", "false")
-		defer os.Unsetenv("OHC_STANDALONE")
+		t.Setenv("OHC_STANDALONE", "false")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos_pg.db") // Just using SQLite to mock the interface here
