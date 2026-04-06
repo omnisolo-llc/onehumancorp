@@ -294,6 +294,13 @@ func run(now time.Time, listen listenFunc) error {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
 
+			// Ensure sync daemon starts syncing local metric buffer in background
+			syncEndpoint := os.Getenv("OHC_CLOUD_SYNC_ENDPOINT")
+			if syncEndpoint == "" {
+				syncEndpoint = "https://cloud.onehumancorp.com/api/telemetry/sync"
+			}
+			telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, syncEndpoint, 5*time.Minute)
+
 			// Setup AutoDreamSyncEngine
 			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
 			if syncCloudAPI != "" && pool != nil {

@@ -19,6 +19,7 @@ func TestBufferMetricFunc(t *testing.T) {
 	// Capture originals
 	origTokenUsage := tokenUsageCounter
 	origAgentCalls := agentApiCallsCounter
+	origRateLimit := RateLimitExceededCount
 	origAgentErrors := agentApiErrorsCounter
 	origHuman := humanInteractionsCounter
 	origMeeting := meetingEventsCounter
@@ -52,9 +53,14 @@ func TestBufferMetricFunc(t *testing.T) {
 	if !called { t.Errorf("expected buffer call") }
 	called = false
 
+	RecordApiRateLimitExceeded(ctx, "test_endpoint")
+	if called { t.Errorf("did not expect buffer call for api rate limit") }
+	called = false
+
 	// Restore
 	tokenUsageCounter = origTokenUsage
 	agentApiCallsCounter = origAgentCalls
+	RateLimitExceededCount = origRateLimit
 	agentApiErrorsCounter = origAgentErrors
 	humanInteractionsCounter = origHuman
 	meetingEventsCounter = origMeeting

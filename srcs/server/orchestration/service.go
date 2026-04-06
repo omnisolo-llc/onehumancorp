@@ -1837,6 +1837,31 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
+
+	mux.HandleFunc("/api/telemetry/sync", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleTelemetrySync(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+}
+
+func handleTelemetrySync(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var payloads []map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	for _, payload := range payloads {
+		// Log or forward to cloud metrics engine.
+		// Cloud receiver logic for standalone buffer metrics
+		metricType, _ := payload["metric_type"].(string)
+		slog.Info("Synced local metric", "metric_type", metricType, "payload", payload)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
