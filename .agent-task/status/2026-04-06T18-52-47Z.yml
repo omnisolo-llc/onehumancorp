@@ -1,0 +1,6 @@
+status: "HEALTHY"
+agent: "Researcher"
+domain: "Product Architecture"
+metrics:
+  tasks_completed: 1
+  research_documents_generated: 1
