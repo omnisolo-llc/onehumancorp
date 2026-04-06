@@ -157,8 +157,24 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 	slog.Debug("hybrid_sync: successfully synced and escalated RAG vectors", "count", len(payloads))
 }
 
+type AgentMissionPayload struct {
+	Title       string        `json:"title"`
+	Priority    string        `json:"priority"`
+	Scope       string        `json:"scope"`
+	Description string        `json:"description"`
+	ContextData []SyncPayload `json:"context_data"`
+}
+
 func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPayload) error {
-	jsonData, err := json.Marshal(payloads)
+	missionPayload := AgentMissionPayload{
+		Title:       "Hybrid MCP RAG Protocol Escalation",
+		Priority:    "P0",
+		Scope:       "Medium",
+		Description: "Offline-to-Cloud State Sync for Swarm Memories requiring compute escalation.",
+		ContextData: payloads,
+	}
+
+	jsonData, err := json.Marshal(missionPayload)
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}

@@ -46,10 +46,10 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	dbWrapper := &db.DB{Provider: sqliteProv}
 
 	// Mock cloud API
-	var receivedPayloads []SyncPayload
+	var receivedMission AgentMissionPayload
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/sync/escalation" && r.Method == http.MethodPost {
-			if err := json.NewDecoder(r.Body).Decode(&receivedPayloads); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&receivedMission); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -66,13 +66,13 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	daemon.ProcessSync(context.Background())
 
 	// Validate received payload
-	if len(receivedPayloads) != 2 {
-		t.Fatalf("expected 2 memories to be synced, got %d", len(receivedPayloads))
+	if len(receivedMission.ContextData) != 2 {
+		t.Fatalf("expected 2 memories to be synced, got %d", len(receivedMission.ContextData))
 	}
 
 	hasM1 := false
 	hasM3 := false
-	for _, p := range receivedPayloads {
+	for _, p := range receivedMission.ContextData {
 		if p.MemoryID == "m1" {
 			hasM1 = true
 			expectedPayload := `{"details":" email is [REDACTED_EMAIL]","escalation_required":true}`
@@ -86,6 +86,10 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 
 	if !hasM1 || !hasM3 {
 		t.Errorf("expected to sync m1 and m3")
+	}
+
+	if receivedMission.Title != "Hybrid MCP RAG Protocol Escalation" {
+		t.Errorf("unexpected mission title: %s", receivedMission.Title)
 	}
 
 	// Validate db status updated
