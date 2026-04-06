@@ -47,49 +47,53 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 const _SectionHeader(title: 'Communication'),
-                Card(
-                  child: ListTile(
-                    leading: Icon(
-                      settings.standaloneMode
-                          ? Icons.laptop_windows
-                          : Icons.cloud_queue,
-                    ),
-                    title: Text(
-                      settings.standaloneMode
-                          ? 'Desktop Standalone Mode'
-                          : 'Remote Client Mode',
-                    ),
-                    subtitle: Text(
-                      settings.standaloneMode
-                          ? 'This device manages a local backend and lightweight local services.'
-                          : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
-                    ),
+                _AnimatedGlassCard(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(
+                          settings.standaloneMode
+                              ? Icons.laptop_windows
+                              : Icons.cloud_queue,
+                        ),
+                        title: Text(
+                          settings.standaloneMode
+                              ? 'Desktop Standalone Mode'
+                              : 'Remote Client Mode',
+                        ),
+                        subtitle: Text(
+                          settings.standaloneMode
+                              ? 'This device manages a local backend and lightweight local services.'
+                              : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ListTile(
+                        leading: const Icon(Icons.link),
+                        title: const Text('Backend URL'),
+                        subtitle: Text(settings.backendUrl),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit),
+                          tooltip: 'Edit Backend URL',
+                          onPressed:
+                              () =>
+                                  _editBackendUrl(context, ref, settings.backendUrl),
+                        ),
+                      ),
+                      SwitchListTile(
+                        secondary: const Icon(Icons.computer),
+                        title: const Text('Standalone Mode'),
+                        subtitle: const Text(
+                          'Run a local desktop backend. Disable this to use the app as a remote client.',
+                        ),
+                        value: settings.standaloneMode,
+                        onChanged:
+                            (value) => ref
+                                .read(clientSettingsProvider.notifier)
+                                .updateStandaloneMode(value),
+                      ),
+                    ],
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('Backend URL'),
-                  subtitle: Text(settings.backendUrl),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Edit Backend URL',
-                    onPressed:
-                        () =>
-                            _editBackendUrl(context, ref, settings.backendUrl),
-                  ),
-                ),
-
-                SwitchListTile(
-                  secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
-                  subtitle: const Text(
-                    'Run a local desktop backend. Disable this to use the app as a remote client.',
-                  ),
-                  value: settings.standaloneMode,
-                  onChanged:
-                      (value) => ref
-                          .read(clientSettingsProvider.notifier)
-                          .updateStandaloneMode(value),
                 ),
 
                 if (settings.standaloneMode) ...[
@@ -392,6 +396,57 @@ class _LocalBackendStatusCardState
   ),
 );
       },
+    );
+  }
+}
+
+class _AnimatedGlassCard extends StatefulWidget {
+  final Widget child;
+
+  const _AnimatedGlassCard({Key? key, required this.child}) : super(key: key);
+
+  @override
+  State<_AnimatedGlassCard> createState() => _AnimatedGlassCardState();
+}
+
+class _AnimatedGlassCardState extends State<_AnimatedGlassCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(255, 255, 255, 0.03),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: widget.child,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
