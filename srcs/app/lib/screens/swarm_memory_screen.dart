@@ -140,11 +140,19 @@ class _GlassMessageCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        filter: ImageFilter.compose(
+          outer: const ColorFilter.matrix(<double>[
+            1.168, -0.153, -0.015, 0, 0,
+            -0.046, 1.061, -0.015, 0, 0,
+            -0.046, -0.152, 1.198, 0, 0,
+            0, 0, 0, 1, 0,
+          ]),
+          inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        ),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
+            color: const Color.fromRGBO(255, 255, 255, 0.03),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
             boxShadow: [
@@ -251,11 +259,19 @@ class _MemoryCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        filter: ImageFilter.compose(
+          outer: const ColorFilter.matrix(<double>[
+            1.168, -0.153, -0.015, 0, 0,
+            -0.046, 1.061, -0.015, 0, 0,
+            -0.046, -0.152, 1.198, 0, 0,
+            0, 0, 0, 1, 0,
+          ]),
+          inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        ),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: colors.secondaryContainer.withValues(alpha: 0.1),
+            color: const Color.fromRGBO(255, 255, 255, 0.03),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.3)),
           ),
