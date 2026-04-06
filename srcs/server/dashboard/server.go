@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/agents"
+	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -556,7 +557,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
-	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", server.handleHybridSyncMissions))
+	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
