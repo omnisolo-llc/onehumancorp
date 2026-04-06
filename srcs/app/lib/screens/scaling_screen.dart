@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:ui';
 import 'package:ohc_app/services/api_service.dart';
 
 /// Screen for scaling the agent workforce dynamically.
@@ -119,65 +120,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   // Step 2: Capacity
                   _SectionHeader(number: 2, title: 'Define Target Capacity'),
                   const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Target Count',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '${_targetCount.toInt()}',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: colors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Slider(
-                            value: _targetCount,
-                            min: 1,
-                            max: 10,
-                            divisions: 9,
-                            onChanged:
-                                _isProvisioning
-                                    ? null
-                                    : (val) =>
-                                        setState(() => _targetCount = val),
-                          ),
-                          const Divider(height: 32),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Estimated Cost Impact:',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              const Spacer(),
-                              Text(
-                                '\$${(_targetCount * 0.45).toStringAsFixed(2)} / hr',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                  _ScalingCard(
+                    targetCount: _targetCount,
+                    isProvisioning: _isProvisioning,
+                    onChanged: (val) => setState(() => _targetCount = val),
                   ),
                   const SizedBox(height: 48),
 
@@ -274,6 +220,122 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ScalingCard extends StatefulWidget {
+  final double targetCount;
+  final bool isProvisioning;
+  final ValueChanged<double> onChanged;
+
+  const _ScalingCard({
+    required this.targetCount,
+    required this.isProvisioning,
+    required this.onChanged,
+  });
+
+  @override
+  State<_ScalingCard> createState() => _ScalingCardState();
+}
+
+class _ScalingCardState extends State<_ScalingCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: _isHovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              decoration: BoxDecoration(
+                color: _isHovered
+                    ? const Color.fromRGBO(255, 255, 255, 0.08)
+                    : const Color.fromRGBO(255, 255, 255, 0.03),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isHovered
+                      ? Colors.white.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.1),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Target Count',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${widget.targetCount.toInt()}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: colors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: widget.targetCount,
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      onChanged: widget.isProvisioning ? null : widget.onChanged,
+                    ),
+                    const Divider(height: 32),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Estimated Cost Impact:',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '\$${(widget.targetCount * 0.45).toStringAsFixed(2)} / hr',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

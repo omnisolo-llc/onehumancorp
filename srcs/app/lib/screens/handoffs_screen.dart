@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/slide_to_approve.dart';
@@ -161,11 +162,79 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               final handoff = handoffs[index];
               final isProcessing = _processingIds.contains(handoff.id);
 
-              return Semantics(
-                label: 'Handoff from agent to human. Intent: ${handoff.intent}',
-                excludeSemantics: true,
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
+              return _HandoffCard(
+                handoff: handoff,
+                isProcessing: isProcessing,
+                onApprove: () => _handleApprove(handoff.id),
+                onReject: () => _handleReject(handoff.id),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HandoffCard extends StatefulWidget {
+  final HandoffPackage handoff;
+  final bool isProcessing;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  const _HandoffCard({
+    required this.handoff,
+    required this.isProcessing,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  State<_HandoffCard> createState() => _HandoffCardState();
+}
+
+class _HandoffCardState extends State<_HandoffCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Handoff from agent to human. Intent: ${widget.handoff.intent}',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedScale(
+            scale: _isHovered ? 1.02 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.compose(
+                  outer: ColorFilter.matrix(const <double>[
+                    1.168, -0.153, -0.015, 0, 0,
+                    -0.046, 1.061, -0.015, 0, 0,
+                    -0.046, -0.152, 1.198, 0, 0,
+                    0, 0, 0, 1, 0,
+                  ]),
+                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  decoration: BoxDecoration(
+                    color: _isHovered
+                        ? const Color.fromRGBO(255, 255, 255, 0.08)
+                        : const Color.fromRGBO(255, 255, 255, 0.03),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isHovered
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -184,7 +253,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'Intent: ${handoff.intent.toUpperCase()}',
+                                'Intent: ${widget.handoff.intent.toUpperCase()}',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -194,7 +263,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                             ),
                             Text(
                               DateFormat.yMMMd().add_jm().format(
-                                handoff.createdAt,
+                                widget.handoff.createdAt,
                               ),
                               style: TextStyle(
                                 fontSize: 12,
@@ -205,46 +274,46 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Escalated by Agent: ${handoff.fromAgentId}',
+                          'Escalated by Agent: ${widget.handoff.fromAgentId}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          handoff.currentState,
+                          widget.handoff.currentState,
                           style: const TextStyle(fontSize: 16),
                         ),
-                        if (handoff.visualGroundTruth != null) ...[
+                        if (widget.handoff.visualGroundTruth != null) ...[
                           const SizedBox(height: 16),
                           Container(
                             height: 200,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
                               child: Icon(
                                 Icons.image_outlined,
                                 size: 48,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                               ),
                             ),
                           ),
                         ],
                         const SizedBox(height: 24),
                         SlideToApprove(
-                          disabled: isProcessing,
-                          onApprove: () => _handleApprove(handoff.id),
-                          onReject: () => _handleReject(handoff.id),
+                          disabled: widget.isProcessing,
+                          onApprove: widget.onApprove,
+                          onReject: widget.onReject,
                         ),
                       ],
                     ),
                   ),
                 ),
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
