@@ -38,12 +38,26 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			depends_on_task_id TEXT NOT NULL,
 			PRIMARY KEY (task_id, depends_on_task_id)
 		);
+
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY,
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
 	`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
 	tm := NewTaskManager(prov, nil)
+	// We need stateMachine for CompleteTask test
+	// But it uses provider which must be injected, let's leave it as is if it creates stateMachine implicitly.
+	// Oh wait, NewTaskManager does: tm.stateMachine = statemachine.NewStateMachine(provider, hub)
 
 	return tm, func() {
 		prov.Close()
@@ -56,7 +70,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -78,7 +92,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 
 	// Claim when empty
 	task, err := tm.ClaimTask(ctx, "non-existent-task-id", "agent-1")
@@ -126,7 +140,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 
 	// Poll when empty
 	tasks, err := tm.PollTasks(ctx, "agent-1", 5)
@@ -191,7 +205,7 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 
 	// Create a parent task and a dependent task
 	parentTask, _ := tm.CreateTask(ctx, "org-1", "Parent Task", "Desc", "P1")
@@ -240,7 +254,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 	task, _ := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 

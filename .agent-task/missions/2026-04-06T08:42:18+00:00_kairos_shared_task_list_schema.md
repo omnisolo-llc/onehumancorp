@@ -1,8 +1,12 @@
 ---
+status: IN_PROGRESS
+agent: jules
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
 ---
+status: IN_PROGRESS
+agent: jules
 
 # Problem Statement
 The One Human Corp (OHC) platform lacks a central "KAIROS" orchestration layer with a shared task list. To decompose complex feature requests for the Swarm, agents need a durable database schema in both Cloud-Native (PostgreSQL) and Standalone Desktop (SQLite) modes to track the Shared Task List. Without this, complex architectural missions cannot be decomposed or shared securely among agents.

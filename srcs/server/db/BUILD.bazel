@@ -39,6 +39,7 @@ go_library(
         "migrations/025_kairos_dag_deps.sql",
         "migrations/026_telemetry_buffer.sql",
         "migrations/027_consolidated_memory.sql",
+        "migrations/029_shared_tasks_schema.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

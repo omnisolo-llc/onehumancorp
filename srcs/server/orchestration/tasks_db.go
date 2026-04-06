@@ -574,16 +574,49 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			args = append(args, id)
 		}
 
+		// SQLite UPDATE ... RETURNING with an IN clause does not guarantee the returned rows are ordered correctly.
+		// Since we want `PollTasks` to return tasks in order, we will perform standard UPDATEs and re-fetch,
+		// or fetch fully and then update, or just fetch them correctly ordered. We've already fetched the IDs in order.
+		// So we can map them back in order.
 		updateQuery := fmt.Sprintf(`
 			UPDATE shared_tasks
 			SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 			WHERE id IN (%s)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
 		`, strings.Join(placeholders, ", "))
 
-		updateRows, err := tx.Query(ctx, updateQuery, args...)
+		_, err = tx.Exec(ctx, updateQuery, args...)
 		if err != nil {
-			return nil, fmt.Errorf("failed to claim tasks: %w", err)
+			return nil, fmt.Errorf("failed to update tasks: %w", err)
+		}
+
+		// Re-fetch the updated rows in the desired order
+		fetchQuery := fmt.Sprintf(`
+			SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+			WHERE id IN (%s)
+			ORDER BY priority ASC, created_at ASC
+		`, strings.Join(placeholders, ", "))
+
+		// the args for fetching are just the ids, so we need to build that args list
+		fetchArgs := []interface{}{}
+		for _, id := range taskIDs {
+			fetchArgs = append(fetchArgs, id)
+		}
+		// Adjust placeholders for fetch query
+		fetchPlaceholders := make([]string, len(taskIDs))
+		for i := range taskIDs {
+			fetchPlaceholders[i] = fmt.Sprintf("$%d", i+1)
+		}
+		fetchQuery = fmt.Sprintf(`
+			SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+			FROM shared_tasks
+			WHERE id IN (%s)
+			ORDER BY priority ASC, created_at ASC
+		`, strings.Join(fetchPlaceholders, ", "))
+
+		updateRows, err := tx.Query(ctx, fetchQuery, fetchArgs...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to refetch claimed tasks: %w", err)
 		}
 		defer updateRows.Close()
 
