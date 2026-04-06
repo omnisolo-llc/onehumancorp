@@ -10,12 +10,21 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
+// RedisClient defines the subset of rueidis.Client needed by the queue.
+type RedisClient interface {
+	Do(ctx context.Context, cmd rueidis.Completed) rueidis.RedisResult
+	B() rueidis.Builder
+}
+
 type RedisTaskQueue struct {
-	client rueidis.Client
+	client RedisClient
 	prefix string
 }
 
-func NewRedisTaskQueue(client rueidis.Client, prefix string) *RedisTaskQueue {
+// Ensure the real rueidis.Client satisfies our RedisClient interface
+var _ RedisClient = (rueidis.Client)(nil)
+
+func NewRedisTaskQueue(client RedisClient, prefix string) *RedisTaskQueue {
 	if prefix == "" {
 		prefix = "ohc:subagent:jobs"
 	}
@@ -89,16 +98,6 @@ func (q *RedisTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, err
 
 	q.recoverStaleJobs(ctx, now)
 
-	// Simple implementation: pull one job that's ready, regardless of role.
-	// In a real robust system, we might maintain separate queues per role,
-	// but to match the SQLite semantics and requirements, we iterate/Lua script or just pull one and check.
-	// We will use ZPOPMIN or equivalent.
-	// Since ZPOPMIN might pop something we can't process (wrong role), and Redis 6.2+ has ZRANGE ... BYSCORE LIMIT ...
-	// Let's use a simpler approach: get the first job ready, check role, if role matches, take it.
-	// We'll use a transaction/Lua script to do this atomically if possible.
-
-	// For simplicity in this implementation without a complex Lua script:
-	// Find jobs <= now.
 	zrangeCmd := q.client.B().Zrange().Key(q.queueKey()).Min("-inf").Max(fmt.Sprintf("%d", now)).Byscore().Limit(0, 10).Build()
 	res, err := q.client.Do(ctx, zrangeCmd).AsStrSlice()
 	if err != nil {
