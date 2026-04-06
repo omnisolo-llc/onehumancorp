@@ -45,6 +45,7 @@ type TaskManager struct {
 	stopChan    chan struct{}
 	stateMachine *statemachine.StateMachine
 	taskQueue   queue.TaskQueue
+	meshTransport MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -69,6 +70,11 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 				if err == nil {
 					tm.redisClient = c
 					tm.taskQueue = queue.NewRedisTaskQueue(c, "")
+
+					mesh, err := NewRedisMeshTransport(redisURL)
+					if err == nil {
+						tm.meshTransport = mesh
+					}
 				}
 			}
 		}
@@ -77,6 +83,9 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 	// Fallback to SQLite queue if not using Redis
 	if tm.taskQueue == nil {
 		tm.taskQueue = queue.NewSQLiteTaskQueue(provider)
+	}
+	if tm.meshTransport == nil {
+		tm.meshTransport = NewMemoryMeshTransport(provider)
 	}
 
 	tm.stopChan = make(chan struct{})

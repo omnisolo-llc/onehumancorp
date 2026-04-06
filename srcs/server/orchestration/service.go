@@ -1523,6 +1523,82 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
 }
 
+// AdvertiseCapabilities functionality.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	tm := s.hub.TaskManager()
+	if tm == nil || tm.meshTransport == nil {
+		return nil, status.Errorf(codes.Internal, "mesh transport is not initialized")
+	}
+	if err := tm.meshTransport.AdvertiseCapabilities(ctx, *req); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to advertise capabilities: %v", err)
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents functionality.
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	tm := s.hub.TaskManager()
+	if tm == nil || tm.meshTransport == nil {
+		return status.Errorf(codes.Internal, "mesh transport is not initialized")
+	}
+
+	capsCh, err := tm.meshTransport.SubscribeCapabilities(stream.Context())
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to capabilities: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case capData, ok := <-capsCh:
+			if !ok {
+				return nil
+			}
+			// Apply filter logic if necessary (for now we send all)
+			if req.GetFilter() != "" {
+				// We could filter here but for simple discovery we just send.
+			}
+			if err := stream.Send(&capData); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// StreamMeshEvents functionality.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	tm := s.hub.TaskManager()
+	if tm == nil || tm.meshTransport == nil {
+		return status.Errorf(codes.Internal, "mesh transport is not initialized")
+	}
+
+	eventsCh, err := tm.meshTransport.SubscribeMeshEvents(stream.Context(), req.GetTopic())
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to mesh events: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case payload, ok := <-eventsCh:
+			if !ok {
+				return nil
+			}
+			event := pb.MeshEvent_builder{
+				Topic:     proto.String(req.GetTopic()),
+				Payload:   payload,
+				Timestamp: proto.Int64(time.Now().Unix()),
+				EventId:   proto.String(fmt.Sprintf("%d", time.Now().UnixNano())),
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // MinimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
 var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
