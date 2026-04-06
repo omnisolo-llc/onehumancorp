@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -425,9 +426,15 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Execute pruning task
+	// Execute pruning task: sanitize and prioritize the agent_missions queue
 	if s.hub.SIPDB() != nil {
-		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
+		// Prune all completed or stale missions immediately (0 threshold for immediate action)
+		err := s.hub.SIPDB().PruneStaleMissions(r.Context(), 0)
+		if err != nil {
+			slog.Error("failed to prune stale missions", "error", err)
+			http.Error(w, "internal server error during pruning", http.StatusInternalServerError)
+			return
+		}
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
 }

@@ -701,72 +701,18 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mode := "local"
-	isStandalone := true
-	if os.Getenv("DATABASE_URL") != "" {
-		mode = "cloud"
-		isStandalone = false
-	}
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		isStandalone = true
-		mode = "standalone"
+	// Call the new centralized Hub health probe mechanism
+	probe, err := s.hub.CheckHealth(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{"status": "error", "error": err.Error()})
+		return
 	}
 
-	var checklist []map[string]interface{}
-	if isStandalone {
-		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local standalone data storage",
-		})
-		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_standalone", "label": "SQLite Standalone Enabled", "status": "ok", "description": "Standalone Desktop Mode Active",
-		})
-	} else {
-		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Multi-tenant", "status": "ok", "description": "Cloud-native persistent data storage",
-		})
-		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_connected", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud DB connectivity verified",
-		})
-		if os.Getenv("REDIS_URL") != "" {
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_cache", "label": "Redis Distributed Cache", "status": "ok", "description": "High-throughput Pub/Sub mesh",
-			})
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_available", "label": "Redis Available", "status": "ok", "description": "Redis Cache connectivity verified",
-			})
-		}
-	}
-
-	// Check for stuck agent_missions specifically for Hybrid metric insights
-	var stuckMissionsCount int
-	var missionsProbeStatus = "ok"
-	if s.hub != nil && s.hub.SIPDB() != nil {
-		ctx := r.Context()
-		missions, err := s.hub.SIPDB().GetPendingMissions(ctx, "ANY")
-		if err == nil {
-			stuckMissionsCount = len(missions)
-		}
-	}
-	if stuckMissionsCount > 10 {
-		missionsProbeStatus = "degraded"
-	}
-
-	checklist = append(checklist, map[string]interface{}{
-		"id":          "stuck_missions_probe",
-		"label":       "Stagnant Missions Backlog",
-		"status":      missionsProbeStatus,
-		"description": "Count of stuck or pending agent missions across cloud/local boundary",
-		"count":       stuckMissionsCount,
-	})
-
-	resp := map[string]interface{}{
-		"status":     "healthy",
-		"mode":       mode,
-		"sync_ready": true,
-		"checklist":  checklist,
-	}
-	_ = json.NewEncoder(w).Encode(resp)
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, probe)
 }
+
 
 func (s *Server) bootstrapInternalDefaultAgent() {
 	if s == nil || s.hub == nil {

@@ -1,6 +1,0 @@
----
-status: DONE
-agent: Miser
----
-title: "💰 Miser: [new cost feature] Proactive Optimization of AutoDream Cost Efficiency"
-description: "Update AutoDream logic to utilize the CachedMinimaxClient to save tokens for identical operations."

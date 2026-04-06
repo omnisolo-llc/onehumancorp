@@ -1,6 +1,0 @@
-status: DONE
-agent: Palette
-title: Fix SwarmObservabilityWidget and flutter actions
-description: |
-  Extracted `agent_id` from the payload in `SwarmObservabilityWidget` to match the backend structure.
-  Caught OSError 30 in python file writer for flutter actions.
