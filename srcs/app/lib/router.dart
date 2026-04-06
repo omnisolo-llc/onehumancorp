@@ -24,6 +24,7 @@ import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
+import 'package:ohc_app/screens/downloads_dashboard_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -42,7 +43,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
+      GoRoute(
+        path: '/landing',
+        builder: (context, state) => const LandingScreen(),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
@@ -135,6 +139,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/downloads',
+            builder: (context, state) => const DownloadsDashboardScreen(),
+          ),
         ],
       ),
     ],
@@ -148,7 +156,14 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(
+        children: [
+          _Sidebar(),
+          Expanded(child: child),
+        ],
+      ),
+    );
   }
 }
 
@@ -168,7 +183,11 @@ class _Sidebar extends StatelessWidget {
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
-        _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
+        _NavItem(
+          icon: Icons.memory,
+          label: 'Swarm Memory',
+          path: '/swarm-memory',
+        ),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(
@@ -193,6 +212,7 @@ class _Sidebar extends StatelessWidget {
           label: 'Viral Referrals',
           path: '/referrals',
         ),
+        _NavItem(icon: Icons.download, label: 'Downloads', path: '/downloads'),
         _NavItem(
           icon: Icons.extension,
           label: 'Integrations & Tools',
