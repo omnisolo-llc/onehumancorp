@@ -1,8 +1,3 @@
 #!/bin/bash
-for file in .agent-task/missions/*.md .agent-task/missions/*.yml; do
-  if [ -f "$file" ]; then
-    if grep -q 'status: "PENDING"' "$file"; then
-      sed -i 's/status: "PENDING"/status: PENDING/' "$file"
-    fi
-  fi
-done
+file=".agent-task/missions/2026-04-05T22-37-53Z_kairos_teammate_mesh_apis.md"
+sed -i 's/status: PENDING/status: DONE\nagent: Jules/g' "$file"
