@@ -2,30 +2,16 @@ package queue
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "modernc.org/sqlite"
 )
 
-func newTestProvider(t *testing.T) db.Provider {
-	t.Helper()
-	d, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open test sqlite db: %v", err)
-	}
-	if err := d.PingContext(context.Background()); err != nil {
-		t.Fatalf("failed to ping test sqlite db: %v", err)
-	}
-	t.Cleanup(func() {
-		d.Close()
-	})
-	return db.NewSqliteProvider(d)
-}
+
 
 func TestSQLiteTaskQueue(t *testing.T) {
-	provider := newTestProvider(t)
+	provider := db.NewTestProvider(t)
 
 	ctx := context.Background()
 

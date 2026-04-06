@@ -3,13 +3,19 @@ package db
 import (
 	"context"
 	"database/sql"
-	"testing"
 
 	_ "modernc.org/sqlite"
 )
 
 // NewTestProvider creates a new in-memory SQLite database provider for testing.
-func NewTestProvider(t *testing.T) Provider {
+type TestingT interface {
+	Helper()
+	Fatalf(format string, args ...any)
+	Cleanup(f func())
+}
+
+// NewTestProvider creates a new in-memory SQLite database provider for testing.
+func NewTestProvider(t TestingT) Provider {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
