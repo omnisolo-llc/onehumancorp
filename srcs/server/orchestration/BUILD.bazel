@@ -33,6 +33,7 @@ go_library(
         "//srcs/server/settings",
         "//srcs/server/storage",
         "//srcs/server/telemetry",
+        "//srcs/server/orchestration/statemachine",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",

@@ -15,6 +15,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/redis/rueidis"
 )
 
@@ -41,13 +42,20 @@ type TaskManager struct {
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
 	stopChan    chan struct{}
+	stateMachine *statemachine.StateMachine
 }
 
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
+	var broadcast func(string, map[string]interface{})
+	if hub != nil {
+		broadcast = hub.PublishTaskBroadcast
+	}
+
 	tm := &TaskManager{
-		db:  provider,
-		hub: hub,
+		db:           provider,
+		hub:          hub,
+		stateMachine: statemachine.NewStateMachine(provider, broadcast),
 	}
 
 	if os.Getenv("OHC_MULTITENANT") == "true" {
@@ -355,30 +363,25 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return errors.New("unauthorized: missing claims")
 	}
 
-	query := `
-		UPDATE shared_tasks
-		SET status = 'REVIEW', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status = 'IN_PROGRESS'
-		RETURNING id
-	`
-	var updatedID string
-	var err error
-	err = tm.db.QueryRow(ctx, query, taskID, agentID, claims.OrganizationID).Scan(&updatedID)
+	// Verify ownership first
+	var currentStatus string
+	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("task not found, not assigned to agent, or not in progress")
+			return errors.New("task not found or not assigned to agent")
 		}
+		return fmt.Errorf("failed to verify task ownership: %w", err)
+	}
+
+	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")
+	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
 		}
 		return fmt.Errorf("failed to move task to review: %w", err)
 	}
 
-	var orgID string
-	err = tm.db.QueryRow(ctx, "SELECT organization_id FROM shared_tasks WHERE id = $1", taskID).Scan(&orgID)
-	if err == nil {
-		telemetry.RecordSwarmTaskTransition(ctx, orgID, "IN_PROGRESS", "REVIEW")
-	}
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
 
 	// Broadcast task review
 	if tm.hub != nil {
@@ -404,29 +407,27 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	var createdAt time.Time
-	err := tm.db.QueryRow(ctx, "SELECT created_at FROM shared_tasks WHERE id = $1 AND organization_id = $2", taskID, claims.OrganizationID).Scan(&createdAt)
-	if err == nil {
-		latencyMS := float64(time.Since(createdAt).Milliseconds())
-		telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
-	}
-
-	query := `
-		UPDATE shared_tasks
-		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND agent_id = $2 AND organization_id = $3 AND status IN ('IN_PROGRESS', 'REVIEW')
-		RETURNING id
-	`
-	var updatedID string
-	err = tm.db.QueryRow(ctx, query, taskID, agentID, claims.OrganizationID).Scan(&updatedID) // Use = here because err was declared above
+	var currentStatus string
+	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
 		}
+		return fmt.Errorf("failed to verify task ownership: %w", err)
+	}
+
+	latencyMS := float64(time.Since(createdAt).Milliseconds())
+	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+
+	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
+	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
 		}
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
+
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
 	// Broadcast task completion
 	if tm.hub != nil {
