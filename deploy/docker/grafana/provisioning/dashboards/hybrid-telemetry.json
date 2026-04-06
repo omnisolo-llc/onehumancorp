@@ -315,6 +315,108 @@
       ],
       "title": "SQLite Lock Contention Rate",
       "type": "timeseries"
+    },
+    {
+      "id": 101,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "type": "timeseries",
+      "title": "Task Queue Length",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "ohc_task_queue_length",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "type": "timeseries",
+      "title": "Task Processing Latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 43
+      },
+      "type": "timeseries",
+      "title": "Task Failed Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(ohc_task_failed_total[5m])) by (error)",
+          "legendFormat": "{{error}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 43
+      },
+      "type": "timeseries",
+      "title": "SQLite Retry Exhaustion",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(ohc_sqlite_retry_exhausted_total[5m])) by (operation)",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",
