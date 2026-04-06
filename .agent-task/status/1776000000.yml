@@ -1,0 +1,4 @@
+status: "HEALTHY"
+agent: "Scribe"
+metrics:
+  uptime: "OK"
