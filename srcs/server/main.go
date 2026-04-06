@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/redis/rueidis"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
 	"github.com/onehumancorp/mono/srcs/server/sync"
 	"log/slog"
 	"net"
@@ -312,6 +313,14 @@ func run(now time.Time, listen listenFunc) error {
 				slog.Info("starting autodream sync engine", "endpoint", syncCloudAPI)
 				autodreamSyncEngine := sync.NewAutoDreamSyncEngine(pool, 1*time.Minute, syncCloudAPI)
 				autodreamSyncEngine.Start(ctx)
+			}
+
+			// Setup HybridSyncDaemon for Omni-Context synchronization
+			if pool != nil {
+				slog.Info("starting hybrid sync daemon")
+				cloudQueue := queue.NewPostgresTaskQueue(pool.Provider()) // Fallback to postgres queue if needed
+				hybridSyncDaemon := hybrid_sync.NewHybridSyncDaemon(pool, cloudQueue, 1*time.Minute)
+				hybridSyncDaemon.Start(ctx)
 			}
 
 			// Background sync for standalone metrics to cloud

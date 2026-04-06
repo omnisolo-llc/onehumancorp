@@ -4,14 +4,35 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	_ "modernc.org/sqlite"
 )
+
+// mockQueue implements queue.TaskQueue for testing
+type mockQueue struct {
+	enqueuedJobs []*queue.Job
+}
+
+func (m *mockQueue) Enqueue(ctx context.Context, job *queue.Job) error {
+	m.enqueuedJobs = append(m.enqueuedJobs, job)
+	return nil
+}
+
+func (m *mockQueue) Dequeue(ctx context.Context, roles []string) (*queue.Job, error) {
+	return nil, nil
+}
+
+func (m *mockQueue) Complete(ctx context.Context, jobID string) error {
+	return nil
+}
+
+func (m *mockQueue) Fail(ctx context.Context, jobID string, reason string) error {
+	return nil
+}
 
 func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	// Setup SQLite in-memory db
@@ -45,41 +66,32 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	sqliteProv := db.NewSqliteProvider(sqlDB)
 	dbWrapper := &db.DB{Provider: sqliteProv}
 
-	// Mock cloud API
-	var receivedPayloads []SyncPayload
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/sync/escalation" && r.Method == http.MethodPost {
-			if err := json.NewDecoder(r.Body).Decode(&receivedPayloads); err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer srv.Close()
+	// Mock cloud queue
+	mq := &mockQueue{}
 
-	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL)
+	daemon := NewHybridSyncDaemon(dbWrapper, mq, 1*time.Minute)
 
 	// Process sync manually for testing
 	daemon.ProcessSync(context.Background())
 
 	// Validate received payload
-	if len(receivedPayloads) != 2 {
-		t.Fatalf("expected 2 memories to be synced, got %d", len(receivedPayloads))
+	if len(mq.enqueuedJobs) != 2 {
+		t.Fatalf("expected 2 memories to be synced, got %d", len(mq.enqueuedJobs))
 	}
 
 	hasM1 := false
 	hasM3 := false
-	for _, p := range receivedPayloads {
-		if p.MemoryID == "m1" {
+	for _, job := range mq.enqueuedJobs {
+		if job.ParentTaskID == "m1" {
 			hasM1 = true
 			expectedPayload := `{"details":" email is [REDACTED_EMAIL]","escalation_required":true}`
-			if p.Context != expectedPayload {
-				t.Errorf("expected sanitized context %q, got %q", expectedPayload, p.Context)
+			if job.Payload != expectedPayload {
+				t.Errorf("expected sanitized context %q, got %q", expectedPayload, job.Payload)
 			}
-		} else if p.MemoryID == "m3" {
+			if job.AgentRole != "RAG_ESCALATION" {
+				t.Errorf("expected agent role RAG_ESCALATION, got %q", job.AgentRole)
+			}
+		} else if job.ParentTaskID == "m3" {
 			hasM3 = true
 		}
 	}
