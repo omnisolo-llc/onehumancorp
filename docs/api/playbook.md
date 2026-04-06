@@ -305,6 +305,63 @@ graph TD
     class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
 ```
 
+
+### 4.8 KAIROS Shared Task List API
+
+**Endpoint:** `POST /api/v1/tasks/claim`
+Claims a `PENDING` task from the shared task queue. Uses `FOR UPDATE SKIP LOCKED` (Cloud) or explicit transaction locking (Standalone).
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_007",
+  "role": "swe"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "task_id": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "Implement AutoDream Pipeline",
+  "status": "IN_PROGRESS",
+  "payload": {
+     "instruction": "Create the Go background worker for memory consolidation."
+  }
+}
+```
+
+**Endpoint:** `POST /api/v1/tasks/{task_id}/complete`
+Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_007",
+  "outcome_summary": "Successfully merged PR #124."
+}
+```
+
+#### Shared Task Claiming Workflow
+```mermaid
+sequenceDiagram
+    participant Agent as Worker Agent
+    participant DB as Postgres (shared_tasks)
+    participant Hub as Teammate Mesh Hub
+
+    Agent->>DB: BEGIN
+    Agent->>DB: SELECT id FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 1
+    alt Task Found
+        DB-->>Agent: Returns Task 123
+        Agent->>DB: UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = 'worker-1' WHERE id = 123
+        Agent->>DB: COMMIT
+        Agent->>Hub: Publish MeshEvent {topic: 'task.assigned', payload: Task 123}
+    else No Task Found
+        DB-->>Agent: Returns 0 rows
+        Agent->>DB: ROLLBACK
+    end
+```
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
