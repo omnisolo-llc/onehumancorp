@@ -6,6 +6,7 @@ go_library(
         "queue.go",
         "redis_queue.go",
         "sqlite_queue.go",
+        "postgres_queue.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/queue",
     visibility = ["//visibility:public"],
