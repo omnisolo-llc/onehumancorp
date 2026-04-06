@@ -49,6 +49,11 @@ graph TD;
 - [Roadmap](roadmap.md)
 - [UI Testing Guidelines](developer/ui_testing_guidelines.md)
 
+### KAIROS Orchestration Layer
+- [Distributed State Machine](features/kairos/state_machine.md)
+- [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
+- [AutoDream Pipeline](features/kairos/autodream_pipeline.md)
+
 ## Quick Start
 1. Ensure you have `bazelisk` and `npm` installed.
 2. Build the backend:
