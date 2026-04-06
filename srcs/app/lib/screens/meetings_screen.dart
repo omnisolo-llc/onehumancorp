@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -193,85 +194,126 @@ class _RoomCardState extends State<_RoomCard> {
     );
   }
 
+  bool _isHovered = false;
+
   @override
   Widget build(BuildContext context) {
     final room = widget.room;
     final participantCount = room['participant_count'] as int? ?? 0;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.video_call,
-              color: Theme.of(context).colorScheme.primary,
-              size: 36,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room['name'] as String? ?? 'Meeting Room',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                decoration: BoxDecoration(
+                  color:
+                      _isHovered
+                          ? colors.surfaceContainerHighest.withValues(
+                            alpha: 0.3,
+                          )
+                          : colors.surface.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color:
+                        _isHovered
+                            ? colors.outlineVariant
+                            : colors.outlineVariant.withValues(alpha: 0.5),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(
-                          color: _statusColor(context),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      Text(
-                        room['status'] as String? ?? '',
-                        style: TextStyle(
-                          color: _statusColor(context),
-                          fontSize: 12,
-                        ),
+                      Icon(
+                        Icons.video_call,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 36,
                       ),
                       const SizedBox(width: 12),
-                      if (participantCount > 0) ...[
-                        Icon(
-                          Icons.people,
-                          size: 14,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              room['name'] as String? ?? 'Meeting Room',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(right: 4),
+                                  decoration: BoxDecoration(
+                                    color: _statusColor(context),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Text(
+                                  room['status'] as String? ?? '',
+                                  style: TextStyle(
+                                    color: _statusColor(context),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                if (participantCount > 0) ...[
+                                  Icon(
+                                    Icons.people,
+                                    size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.7),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$participantCount',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$participantCount',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                      ),
+                      FilledButton.icon(
+                        icon:
+                            _joining
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Icon(Icons.login, size: 18),
+                        label: const Text('Join'),
+                        onPressed: _joining ? null : _join,
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
-            FilledButton.icon(
-              icon:
-                  _joining
-                      ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Icon(Icons.login, size: 18),
-              label: const Text('Join'),
-              onPressed: _joining ? null : _join,
-            ),
-          ],
+          ),
         ),
       ),
     );

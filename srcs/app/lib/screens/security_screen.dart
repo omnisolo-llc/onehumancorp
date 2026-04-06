@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/security_issue.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -166,79 +167,131 @@ class _IssueCardState extends State<_IssueCard> {
     }
   }
 
+  bool _isHovered = false;
+
   @override
   Widget build(BuildContext context) {
     final issue = widget.issue;
+    final colors = Theme.of(context).colorScheme;
+
     return Semantics(
       label: 'Security issue: ${issue.title}, Severity: ${issue.severity}',
       excludeSemantics: true,
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 10),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    _fixed ? Icons.check_circle : Icons.warning_amber,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedScale(
+            scale: _isHovered ? 1.02 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  decoration: BoxDecoration(
                     color:
-                        _fixed
-                            ? Theme.of(context).colorScheme.secondary
-                            : _severityColor(context),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      issue.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                        _isHovered
+                            ? colors.surfaceContainerHighest.withValues(
+                              alpha: 0.3,
+                            )
+                            : colors.surface.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color:
+                          _isHovered
+                              ? colors.outlineVariant
+                              : colors.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
-                  Chip(
-                    label: Text(issue.severity.toUpperCase()),
-                    backgroundColor: _severityColor(context).withAlpha(30),
-                    labelStyle: TextStyle(
-                      color: _severityColor(context),
-                      fontWeight: FontWeight.bold,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _fixed ? Icons.check_circle : Icons.warning_amber,
+                              color:
+                                  _fixed
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : _severityColor(context),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                issue.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Chip(
+                              label: Text(issue.severity.toUpperCase()),
+                              backgroundColor: _severityColor(
+                                context,
+                              ).withAlpha(30),
+                              labelStyle: TextStyle(
+                                color: _severityColor(context),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          issue.description,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (issue.detail != null &&
+                            issue.detail!.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            issue.detail!,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                        if (issue.fixable && !_fixed) ...[
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.tonalIcon(
+                              onPressed: _busy ? null : _fix,
+                              icon:
+                                  _busy
+                                      ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                      : const Icon(Icons.build),
+                              label: const Text('Auto-Fix'),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                issue.description,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              if (issue.detail != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  issue.detail!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
-              ],
-              if (issue.fixable && !_fixed) ...[
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  icon:
-                      _busy
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Icon(Icons.build, size: 16),
-                  label: const Text('Auto-fix'),
-                  onPressed: _busy ? null : _fix,
-                ),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ),
