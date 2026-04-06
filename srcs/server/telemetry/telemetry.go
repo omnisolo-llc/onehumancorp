@@ -957,3 +957,24 @@ func RecordQueueLength(ctx context.Context, delta int) {
 		gauge.Add(ctx, int64(delta))
 	}
 }
+
+
+// RecordMeshEventCount increments the mesh event counter for a specific event type
+func RecordMeshEventCount(ctx context.Context, eventType string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"event_type": eventType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "mesh_event_count", string(payloadBytes))
+		return
+	}
+	if meter == nil {
+		return
+	}
+	counter, err := meter.Int64Counter("mesh_event_count")
+	if err == nil {
+		counter.Add(ctx, 1, metric.WithAttributes(attribute.String("event_type", eventType)))
+	}
+}

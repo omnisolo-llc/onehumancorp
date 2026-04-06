@@ -261,3 +261,8 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
 }
+
+// MeshTransport returns the underlying MeshTransport used by the node.
+func (cn *CentrifugeNode) MeshTransport() MeshTransport {
+	return cn.meshTransport
+}

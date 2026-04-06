@@ -275,6 +275,13 @@ type Hub struct {
 	taskManager    *TaskManager
 }
 
+
+func (h *Hub) MeshTransport() MeshTransport {
+	if h.centrifugeNode != nil {
+		return h.centrifugeNode.MeshTransport()
+	}
+	return nil
+}
 func (h *Hub) TaskManager() *TaskManager {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -1961,3 +1968,84 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 
 
+
+
+// AdvertiseCapabilities handles AgentCapabilities advertising via MeshTransport.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.hub == nil || s.hub.MeshTransport() == nil {
+		return nil, fmt.Errorf("MeshTransport not available")
+	}
+
+	err := s.hub.MeshTransport().AdvertiseCapabilities(ctx, *req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to advertise capabilities: %w", err)
+	}
+
+	telemetry.RecordMeshEventCount(ctx, "mesh.capabilities.advertised")
+
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents handles AgentCapabilities discovery via MeshTransport.
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	ctx := stream.Context()
+	if s.hub == nil || s.hub.MeshTransport() == nil {
+		return fmt.Errorf("MeshTransport not available")
+	}
+
+	ch, err := s.hub.MeshTransport().SubscribeCapabilities(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to capabilities: %w", err)
+	}
+
+	telemetry.RecordMeshEventCount(ctx, "mesh.agents.discovery_active")
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case cap := <-ch:
+			// Optionally apply req.GetFilter() filtering here.
+			if err := stream.Send(&cap); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// StreamMeshEvents handles mesh event streaming via MeshTransport.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	ctx := stream.Context()
+	if s.hub == nil || s.hub.MeshTransport() == nil {
+		return fmt.Errorf("MeshTransport not available")
+	}
+
+	topic := req.GetTopic()
+	if topic == "" {
+		topic = "*" // or whatever wildcard / default
+	}
+
+	ch, err := s.hub.MeshTransport().SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to mesh events: %w", err)
+	}
+
+	telemetry.RecordMeshEventCount(ctx, "mesh.events.stream_active")
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case payload := <-ch:
+			event := pb.MeshEvent_builder{
+				EventId:   proto.String(fmt.Sprintf("%d", time.Now().UnixNano())),
+				Topic:     proto.String(topic),
+				Payload:   payload,
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
