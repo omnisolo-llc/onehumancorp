@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 	"log/slog"
 	"net"
 	"net/http"
@@ -278,7 +279,22 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+		var rClient rueidis.Client
+		if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+			opts, err := rueidis.ParseURL(redisURL)
+			if err == nil {
+				c, err := rueidis.NewClient(opts)
+				if err == nil {
+					rClient = c
+				} else {
+					slog.Warn("Failed to initialize rueidis client for AutoDreamPipeline", "error", err)
+				}
+			} else {
+				slog.Warn("Failed to parse REDIS_URL for AutoDreamPipeline", "error", err)
+			}
+		}
+
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, rClient)
 		go autodreamPipeline.Start(ctx)
 	}
 

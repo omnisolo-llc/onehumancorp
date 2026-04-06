@@ -23,7 +23,7 @@ func NewSQLiteTaskQueue(provider db.Provider) *SQLiteTaskQueue {
 
 func (q *SQLiteTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	defer func() {
-		telemetry.RecordQueueLength(ctx, 1) // Approximation
+		telemetry.RecordTaskQueueLength(ctx, 1) // Approximation
 	}()
 
 	if job.RunAfter.IsZero() {
@@ -114,7 +114,7 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 		return nil, err
 	}
 
-	telemetry.RecordQueueLength(ctx, -1) // Job removed from queued state
+	telemetry.RecordTaskQueueLength(ctx, -1) // Job removed from queued state
 
 	parseTime := func(s string) time.Time {
 		t, err := time.Parse(time.RFC3339Nano, s)
@@ -176,7 +176,7 @@ func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string)
 		backoff := time.Duration(1<<attempts) * time.Second
 		nextRunAfter = time.Now().Add(backoff).Format(time.RFC3339Nano)
 		lockUntil = nil
-		telemetry.RecordQueueLength(ctx, 1) // Job returned to queue
+		telemetry.RecordTaskQueueLength(ctx, 1) // Job returned to queue
 	}
 
 	// Add reason to payload ideally, but for now just update status

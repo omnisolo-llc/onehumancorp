@@ -10,6 +10,7 @@ go_library(
         "//srcs/server/billing",
         "//srcs/server/dashboard",
         "//srcs/server/db",
+        "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
