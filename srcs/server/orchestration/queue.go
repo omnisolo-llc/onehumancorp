@@ -218,7 +218,7 @@ func (q *SQLiteTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTa
 			SET status = 'PROCESSING'
 			WHERE id IN (
 				SELECT id FROM local_queue_jobs
-				WHERE queue_name = $1 AND status = 'PENDING' AND execute_at <= CURRENT_TIMESTAMP
+				WHERE queue_name = $1 AND status = 'PENDING'
 				ORDER BY execute_at ASC LIMIT 1
 			)
 			RETURNING id, payload
@@ -230,7 +230,7 @@ func (q *SQLiteTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTa
 			SET status = 'PROCESSING'
 			WHERE id IN (
 				SELECT id FROM local_queue_jobs
-				WHERE queue_name = $1 AND status = 'PENDING' AND execute_at <= CURRENT_TIMESTAMP
+				WHERE queue_name = $1 AND status = 'PENDING'
 				ORDER BY execute_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED
 			)
 			RETURNING id, payload
