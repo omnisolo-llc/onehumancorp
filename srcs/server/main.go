@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 	"log/slog"
 	"net"
 	"net/http"
@@ -278,7 +279,15 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
-		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider)
+
+		var rc rueidis.Client
+		if redisUrl := os.Getenv("OHC_REDIS_URL"); redisUrl != "" {
+			if rClient, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{redisUrl}}); err == nil {
+				rc = rClient
+			}
+		}
+		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, rc)
+
 		go autodreamPipeline.Start(ctx)
 	}
 
