@@ -241,7 +241,7 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			"component", "telemetry",
 			"api", "invokeMCPTool",
 			"tool_id", req.ToolID,
-			"action", req.Action,
+			"action", telemetry.RedactPII(req.Action),
 		)
 	}
 
