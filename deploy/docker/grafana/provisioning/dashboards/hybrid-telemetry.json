@@ -417,6 +417,36 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "type": "text",
+      "title": "Token Forecast Notice",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 9999,
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; color: white;\"><h3>Token Burn Rate Forecast</h3><p>Predictive moving average token burn rate per minute per tenant.</p></div>"
+      }
+    },
+    {
+      "type": "text",
+      "title": "Token Forecast Notice",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 9999,
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; color: white;\"><h3>Token Burn Rate Forecast</h3><p>Predictive moving average token burn rate per minute per tenant.</p></div>"
+      }
     }
   ],
   "refresh": "",
