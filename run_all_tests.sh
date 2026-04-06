@@ -1,0 +1,3 @@
+#!/bin/bash
+export PATH="/home/jules/go/bin:$PATH"
+bazelisk test //...
