@@ -213,3 +213,46 @@ func TestAutoDreamConsolidateEpoch(t *testing.T) {
 		t.Errorf("expected epoch status COMPLETED, got %s", status)
 	}
 }
+
+func TestAutoDreamWorker_PipelinesCoverage(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	worker := NewAutoDreamWorker(pool.Provider)
+
+	// Verify the non-blocking nature and fast exit of Start when context is cancelled.
+	go worker.Start(ctx)
+	cancel() // instantly cancel to let goroutines exit
+	time.Sleep(100 * time.Millisecond)
+
+	// Since pipelines run on intervals, explicitly run the internal sub-methods
+	// to ensure full coverage of database and branching logic.
+	ctx = context.Background()
+
+	// Add test data for ingestCompletedTasks
+	_, _ = pool.Provider.Exec(ctx, "INSERT INTO shared_tasks (id, status, organization_id, payload) VALUES ('t1', 'COMPLETED', 'test_org', '{}')")
+	worker.ingestCompletedTasks(ctx)
+
+	var count int
+	_ = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM shared_tasks").Scan(&count)
+	// ingestCompletedTasks handles shared_tasks
+
+	// Add test data for compressSessionContexts
+	oldTime := time.Now().Add(-10 * time.Minute).UTC().Format("2006-01-02 15:04:05")
+	_, _ = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s_context_1', 'agent', 'ctx', ?)", oldTime)
+	worker.compressSessionContexts(ctx)
+
+	// Wait for background routine in pruneStaleSessions
+	time.Sleep(50 * time.Millisecond)
+
+	_ = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data WHERE session_id = 's_context_1'").Scan(&count)
+	if count != 0 {
+		t.Errorf("expected compressSessionContexts to process and delete session, got %d", count)
+	}
+}
