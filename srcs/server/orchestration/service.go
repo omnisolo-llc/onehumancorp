@@ -1408,12 +1408,12 @@ func (h *Hub) Agents() []Agent {
 }
 
 // RegisterHubService HubServiceServer implements the gRPC HubService defined in hub.proto.
-// Accepts parameters: s *grpc.Server (No Constraints), hub *Hub (No Constraints).
+// Accepts parameters: s *grpc.Server (No Constraints), hub *Hub (No Constraints), mesh MeshTransport.
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
-func RegisterHubService(s *grpc.Server, hub *Hub) {
-	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub})
+func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
+	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub, mesh: mesh})
 }
 
 // HubServiceServer implements the gRPC interface for the orchestration Hub, facilitating remote agent registration and message streaming.

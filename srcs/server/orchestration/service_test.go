@@ -619,7 +619,7 @@ func TestRegisterHubService(t *testing.T) {
 	s := grpc.NewServer()
 	hub := NewHub()
 	defer hub.Close()
-	RegisterHubService(s, hub)
+	RegisterHubService(s, hub, nil)
 
 	// Since we cannot easily introspect the server to see if it's registered without a client,
 	// verifying it doesn't panic and testing NewHubServiceServer covers the logic.
