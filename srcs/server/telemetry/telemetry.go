@@ -43,6 +43,8 @@ var (
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
+	MeshLatencyHistogram        metric.Float64Histogram
+	MeshMessageThroughputCounter metric.Int64Counter
 	TaskProcessingLatency      metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
@@ -165,6 +167,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshLatencyHistogram, err = m.Float64Histogram(
+		"ohc_mesh_latency_seconds",
+		metric.WithDescription("Latency of Teammate Mesh events"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshMessageThroughputCounter, err = m.Int64Counter(
+		"ohc_mesh_throughput_total",
+		metric.WithDescription("Total number of messages processed by Teammate Mesh"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -955,5 +973,19 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordMeshLatency records the latency of a Teammate Mesh event.
+func RecordMeshLatency(ctx context.Context, duration time.Duration, topic string) {
+	if MeshLatencyHistogram != nil {
+		MeshLatencyHistogram.Record(ctx, duration.Seconds(), metric.WithAttributes(attribute.String("topic", topic)))
+	}
+}
+
+// RecordMeshMessageThroughput increments the throughput counter for Teammate Mesh events.
+func RecordMeshMessageThroughput(ctx context.Context, topic string) {
+	if MeshMessageThroughputCounter != nil {
+		MeshMessageThroughputCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("topic", topic)))
 	}
 }

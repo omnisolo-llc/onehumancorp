@@ -1523,6 +1523,112 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
 }
 
+// AdvertiseCapabilities streams agent capabilities to the mesh.
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	startTime := time.Now()
+	// Telemetry instrumentation
+	telemetry.RecordAgentApiCall(ctx, req.GetAgentId(), "unknown", "AdvertiseCapabilities")
+
+	h := s.hub
+	cn := h.CentrifugeNode()
+	if cn != nil && cn.meshTransport != nil {
+		err := cn.meshTransport.AdvertiseCapabilities(ctx, *req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to advertise capabilities: %v", err)
+		}
+		telemetry.RecordMeshLatency(ctx, time.Since(startTime), "capabilities")
+		telemetry.RecordMeshMessageThroughput(ctx, "capabilities")
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DiscoverAgents handles query requests to discover other agents' capabilities.
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	// Start subscribing to capabilities on the mesh transport.
+	h := s.hub
+	cn := h.CentrifugeNode()
+	if cn == nil || cn.meshTransport == nil {
+		return status.Errorf(codes.Internal, "mesh transport is not configured")
+	}
+
+	ch, err := cn.meshTransport.SubscribeCapabilities(stream.Context())
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to capabilities: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case capData, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			// Only stream capabilities that match the requested filter if any.
+			// Basic substring check for skills or empty filter for all.
+			filter := req.GetFilter()
+			matches := false
+			if filter == "" {
+				matches = true
+			} else {
+				for _, skill := range capData.GetSupportedSkills() {
+					if strings.Contains(strings.ToLower(skill), strings.ToLower(filter)) {
+						matches = true
+						break
+					}
+				}
+				if strings.Contains(strings.ToLower(capData.GetAgentId()), strings.ToLower(filter)) {
+					matches = true
+				}
+			}
+
+			if matches {
+				telemetry.RecordMeshMessageThroughput(stream.Context(), "capabilities_discovery")
+				if err := stream.Send(&capData); err != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
+// StreamMeshEvents streams arbitrary events over the teammate mesh.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	topic := req.GetTopic()
+	h := s.hub
+	cn := h.CentrifugeNode()
+	if cn == nil || cn.meshTransport == nil {
+		return status.Errorf(codes.Internal, "mesh transport is not configured")
+	}
+
+	ch, err := cn.meshTransport.SubscribeMeshEvents(stream.Context(), topic)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to subscribe to mesh events: %v", err)
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case payload, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			event := pb.MeshEvent_builder{
+				Topic: proto.String(topic),
+				Payload: payload,
+				Timestamp: proto.Int64(time.Now().Unix()),
+				EventId: proto.String(fmt.Sprintf("%d", time.Now().UnixNano())),
+			}.Build()
+
+			telemetry.RecordMeshMessageThroughput(stream.Context(), topic)
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // MinimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
 var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
