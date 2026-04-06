@@ -515,6 +515,10 @@ func TestRedactInterfacePII(t *testing.T) {
 		if res["other"] != "safe text" {
 			t.Errorf("Expected 'safe text', got %v", res["other"])
 		}
+		// ensure original map is not mutated
+		if m["user"] != "user@example.com" {
+			t.Errorf("Expected original map to be unchanged, got %v", m["user"])
+		}
 	})
 
 	t.Run("Slice of interface", func(t *testing.T) {
@@ -522,6 +526,9 @@ func TestRedactInterfacePII(t *testing.T) {
 		res := RedactInterfacePII(s).([]interface{})
 		if res[0] != "[REDACTED_EMAIL]" {
 			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0])
+		}
+		if s[0] != "user@example.com" {
+			t.Errorf("Expected original slice to be unchanged, got %v", s[0])
 		}
 	})
 
@@ -540,6 +547,9 @@ func TestRedactInterfacePII(t *testing.T) {
 		res := RedactInterfacePII(s).([]map[string]interface{})
 		if res[0]["email"] != "[REDACTED_EMAIL]" {
 			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0]["email"])
+		}
+		if s[0]["email"] != "user@example.com" {
+			t.Errorf("Expected original map inside slice to be unchanged, got %v", s[0]["email"])
 		}
 	})
 

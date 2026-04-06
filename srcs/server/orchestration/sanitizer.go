@@ -27,15 +27,17 @@ func SanitizePayloadMap(data interface{}) interface{} {
 		sanitized, _ := SanitizePayload(v)
 		return sanitized
 	case map[string]interface{}:
+		res := make(map[string]interface{}, len(v))
 		for key, val := range v {
-			v[key] = SanitizePayloadMap(val)
+			res[key] = SanitizePayloadMap(val)
 		}
-		return v
+		return res
 	case []interface{}:
+		res := make([]interface{}, len(v))
 		for i, val := range v {
-			v[i] = SanitizePayloadMap(val)
+			res[i] = SanitizePayloadMap(val)
 		}
-		return v
+		return res
 	default:
 		return v
 	}
