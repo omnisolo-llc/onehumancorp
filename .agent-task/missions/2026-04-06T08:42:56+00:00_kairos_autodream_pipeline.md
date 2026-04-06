@@ -2,6 +2,8 @@
 Title: "KAIROS Phase 3: AutoDream Data Pipelines for Memory Consolidation"
 Priority: "P0"
 Estimated Scope: "Medium"
+status: DONE
+agent: Maintainer
 ---
 
 # Problem Statement

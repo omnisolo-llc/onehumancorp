@@ -40,6 +40,12 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		return nil // No files to process
 	}
 
+	// Limit to process batches and prevent unbound queue growth
+	limit := 500
+	if len(matches) > limit {
+		matches = matches[:limit]
+	}
+
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var client MinimaxClient
 	if minimaxKey != "" {
