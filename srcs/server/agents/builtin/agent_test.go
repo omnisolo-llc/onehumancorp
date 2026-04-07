@@ -72,6 +72,6 @@ type MockClient struct {
 	Err      error
 }
 
-func (m *MockClient) Chat(req ChatRequest) (ChatResponse, error) {
+func (m *MockClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	return m.Response, m.Err
 }

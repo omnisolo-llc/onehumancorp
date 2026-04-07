@@ -3,7 +3,8 @@ package builtin
 import (
 	"context"
 	"encoding/json"
-	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 // GlobTool definition
@@ -28,8 +29,13 @@ var GlobTool = Tool{
 			return "", err
 		}
 
-		cmd := exec.CommandContext(ctx, "sh", "-c", "ls -la "+input.Pattern)
-		out, _ := cmd.CombinedOutput()
-		return string(out), nil
+		matches, err := filepath.Glob(input.Pattern)
+		if err != nil {
+			return "", err
+		}
+		if len(matches) == 0 {
+			return "No files found matching pattern.", nil
+		}
+		return strings.Join(matches, "\n"), nil
 	},
 }
