@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 // Simulate Teammate Mesh messages from Redis/WebSockets
 class MeshMessage {
@@ -69,82 +70,62 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
 
     return Semantics(
       label: 'Swarm Observability Dashboard',
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.compose(
-            outer: const ColorFilter.matrix(<double>[
-              1.168, -0.153, -0.015, 0, 0,
-              -0.046, 1.061, -0.015, 0, 0,
-              -0.046, -0.152, 1.198, 0, 0,
-              0, 0, 0, 1, 0,
-            ]),
-            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          ),
-          child: Container(
-            height: 350,
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(255, 255, 255, 0.03),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      child: GlassCard(
+        height: 350,
+        borderRadius: 24.0,
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Teammate Mesh Live Feed',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                _PulsingStatusIndicator(),
+              ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: colors.primary.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Teammate Mesh Live Feed',
+            const SizedBox(height: 16),
+            Expanded(
+              child: _messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Listening for swarm activity...',
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
-                          color: Colors.white,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontFamily: 'Inter',
                         ),
                       ),
-                      const Spacer(),
-                      _PulsingStatusIndicator(),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: _messages.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Listening for swarm activity...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            itemCount: _messages.length,
-                            itemBuilder: (context, index) {
-                              final msg = _messages[index];
-                              return _AnimatedMessageItem(
-                                key: ValueKey(msg.timestamp.millisecondsSinceEpoch),
-                                message: msg,
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[index];
+                        return _AnimatedMessageItem(
+                          key: ValueKey(msg.timestamp.millisecondsSinceEpoch),
+                          message: msg,
+                        );
+                      },
+                    ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -254,64 +235,46 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
         opacity: _fadeAnimation,
         child: ScaleTransition(
           scale: _scaleAnimation,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(<double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          child: GlassCard(
+            borderRadius: 12.0,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  timeStr,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      timeStr,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        fontSize: 12,
-                        fontFamily: 'monospace',
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.message.agentName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Outfit',
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.message.agentName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Outfit',
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.message.action,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.message.action,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontFamily: 'Inter',
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
