@@ -23,10 +23,14 @@ func setupTestDB(t *testing.T) db.Provider {
 	// Create required tables
 	query := `CREATE TABLE IF NOT EXISTS autodream_memories (
 		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL DEFAULT 'default',
+		agent_id TEXT,
 		content TEXT NOT NULL,
 		embedding TEXT,
+		source_type TEXT NOT NULL DEFAULT 'unknown',
 		source_mission_id TEXT,
-		created_at TEXT DEFAULT CURRENT_TIMESTAMP
+		created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+		consolidated_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
 	if err != nil {
