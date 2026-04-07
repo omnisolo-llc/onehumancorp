@@ -3,11 +3,14 @@ package statemachine
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // State constants
@@ -97,16 +100,17 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID, entityType, toState, agentID, reason string) (func(), error) {
 	// Acquire lock and read current state
 	var currentState string
+	var updatedAt sql.NullTime
 	var query string
 
 	if entityType == "SHARED_TASK" {
 		if sm.dbProvider.IsSQLite() {
-			query = `SELECT status FROM shared_tasks WHERE id = $1`
+			query = `SELECT status, updated_at FROM shared_tasks WHERE id = $1`
 		} else {
-			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
+			query = `SELECT status, updated_at FROM shared_tasks WHERE id = $1 FOR UPDATE`
 		}
 
-		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState, &updatedAt)
 		if err != nil {
 			if strings.Contains(err.Error(), "no rows in result set") {
 				return nil, fmt.Errorf("entity not found: %s", entityID)
@@ -115,6 +119,13 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 		}
 	} else {
 		return nil, fmt.Errorf("unsupported entity type: %s", entityType)
+	}
+
+	// Calculate and record transition latency
+	if updatedAt.Valid && !updatedAt.Time.IsZero() {
+		latency := time.Since(updatedAt.Time)
+		transitionName := strings.ToLower(currentState + "_to_" + toState)
+		telemetry.RecordAgentTransitionLatency(ctx, transitionName, latency)
 	}
 
 	// Validate transition

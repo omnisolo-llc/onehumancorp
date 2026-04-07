@@ -379,6 +379,10 @@ func TestRecordFunctions(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
 	})
 
+	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		RecordAgentTransitionLatency(ctx, "pending_to_running", 1500 * time.Millisecond)
+	})
+
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})

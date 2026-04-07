@@ -384,7 +384,15 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		var currentStatus string
+		var updatedAt sql.NullTime
+		errCheck := s.db.QueryRow(ctx, "SELECT status, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&currentStatus, &updatedAt)
+		if errCheck == nil && currentStatus != "COMPLETED" && updatedAt.Valid {
+			latency := time.Since(updatedAt.Time)
+			telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(currentStatus+"_to_completed"), latency)
+		}
+
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
@@ -401,7 +409,15 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		var currentStatus string
+		var updatedAt sql.NullTime
+		errCheck := s.db.QueryRow(ctx, "SELECT status, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&currentStatus, &updatedAt)
+		if errCheck == nil && currentStatus != "BURSTING" && updatedAt.Valid {
+			latency := time.Since(updatedAt.Time)
+			telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(currentStatus+"_to_bursting"), latency)
+		}
+
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
@@ -1110,7 +1126,15 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		if err == nil {
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withSipRetry(ctx, func() error {
-					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)
+					var currentStatus string
+					var updatedAt sql.NullTime
+					errCheck := s.db.QueryRow(ctx, "SELECT status, updated_at FROM agent_missions WHERE id = $1", m.id).Scan(&currentStatus, &updatedAt)
+					if errCheck == nil && currentStatus != "SYNCED" && updatedAt.Valid {
+						latency := time.Since(updatedAt.Time)
+						telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(currentStatus+"_to_synced"), latency)
+					}
+
+					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", m.id)
 					return updateErr
 				})
 				if updateErr == nil {
