@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -629,4 +630,31 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
+}
+
+func TestRecordAgentTransitionLatency(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+
+	_, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("Failed to initialize telemetry: %v", err)
+	}
+
+	RecordAgentTransitionLatency(context.Background(), "pending_to_running", 1.5)
+
+	time.Sleep(50 * time.Millisecond)
+
+	req, _ := http.NewRequest("GET", "/metrics", nil)
+	rr := httptest.NewRecorder()
+	MetricsHandler().ServeHTTP(rr, req)
+
+	metricsOutput := rr.Body.String()
+	if !strings.Contains(metricsOutput, "ohc_agent_transition_latency_seconds_bucket") {
+		t.Errorf("Expected transition latency metric, got: %s", metricsOutput)
+	}
+	if !strings.Contains(metricsOutput, "transition=\"pending_to_running\"") {
+		t.Errorf("Expected transition label, got: %s", metricsOutput)
+	}
 }

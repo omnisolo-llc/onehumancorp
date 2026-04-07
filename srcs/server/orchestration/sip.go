@@ -229,7 +229,8 @@ func initializeTables(provider db.Provider) error {
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
-			synced_to_cloud BOOLEAN DEFAULT FALSE
+			synced_to_cloud BOOLEAN DEFAULT FALSE,
+			updated_at DATETIME
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,
@@ -382,9 +383,10 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
+	s.recordTransitionLatency(ctx, missionID, "COMPLETED")
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
@@ -399,9 +401,10 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Produces errors: Explicit error handling.
 // Has side effects: Updates mission status in agent_missions table and syncs to remote.
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
+	s.recordTransitionLatency(ctx, missionID, "BURSTING")
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
@@ -468,8 +471,38 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 }
 
+
+// recordTransitionLatency safely reads the last update time, calculates latency, and records the metric
+func (s *SIPDB) recordTransitionLatency(ctx context.Context, missionID string, newStatus string) {
+	var oldStatus string
+	var updatedAt sql.NullTime
+	var createdAt time.Time
+
+	err := s.db.QueryRow(ctx, "SELECT status, updated_at, created_at FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&oldStatus, &updatedAt, &createdAt)
+	if err != nil {
+		// Mission might not exist yet, ignore
+		return
+	}
+
+	if oldStatus == newStatus {
+		return
+	}
+
+	var startTime time.Time
+	if updatedAt.Valid {
+		startTime = updatedAt.Time
+	} else {
+		startTime = createdAt
+	}
+
+	latency := time.Since(startTime).Seconds()
+	transition := strings.ToLower(oldStatus) + "_to_" + strings.ToLower(newStatus)
+	telemetry.RecordAgentTransitionLatency(ctx, transition, latency)
+}
+
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
+	s.recordTransitionLatency(ctx, missionID, status)
 	return withSipRetry(ctx, func() error {
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
@@ -490,6 +523,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO UPDATE SET
 						status=EXCLUDED.status,
+						updated_at=CURRENT_TIMESTAMP,
 						payload=EXCLUDED.payload
 				`
 			}
@@ -524,7 +558,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			if forceLocal && existingID != "" {
 				updateQuery := `
 					UPDATE agent_missions
-					SET status = $1, payload = $2
+					SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP
 					WHERE id = $3 AND organization_id = $4
 				`
 				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)

@@ -45,6 +45,7 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
+	agentTransitionLatency metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
@@ -353,6 +354,16 @@ func InitWithMeter(m mockableMeter) error {
 	TaskQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_task_queue_length",
 		metric.WithDescription("Current length of the shared task queue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+
+	agentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -990,5 +1001,14 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordAgentTransitionLatency records the latency of an agent state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transitionType string, latency float64) {
+	if agentTransitionLatency != nil {
+		agentTransitionLatency.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("transition", transitionType),
+		))
 	}
 }

@@ -10,7 +10,7 @@
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
+        "name": "Annotations \u0026 Alerts",
         "type": "dashboard"
       }
     ]
@@ -31,7 +31,7 @@
       },
       "id": 100,
       "options": {
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  * {\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div style=\"font-size: 24px; font-weight: bold; text-align: center; color: white;\">\n  OHC Premium Telemetry\n</div>",
+        "content": "\u003cstyle\u003e\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  * {\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n\u003c/style\u003e\n\u003cdiv style=\"font-size: 24px; font-weight: bold; text-align: center; color: white;\"\u003e\n  OHC Premium Telemetry\n\u003c/div\u003e",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -268,8 +268,6 @@
       "type": "timeseries"
     },
     {
-      "title": "Teammate Mesh Broadcasts",
-      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -281,7 +279,9 @@
           "expr": "rate(teammate_mesh_broadcasts_total[1m])",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Teammate Mesh Broadcasts",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -317,19 +317,17 @@
       "type": "timeseries"
     },
     {
-      "id": 101,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 35
       },
-      "type": "timeseries",
-      "title": "Task Queue Length",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 101,
       "targets": [
         {
           "datasource": {
@@ -339,22 +337,22 @@
           "expr": "ohc_task_queue_length",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Task Queue Length",
+      "type": "timeseries"
     },
     {
-      "id": 102,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
         "y": 35
       },
-      "type": "timeseries",
-      "title": "Task Processing Latency",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 102,
       "targets": [
         {
           "datasource": {
@@ -364,22 +362,22 @@
           "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Task Processing Latency",
+      "type": "timeseries"
     },
     {
-      "id": 103,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 43
       },
-      "type": "timeseries",
-      "title": "Task Failed Rate",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 103,
       "targets": [
         {
           "datasource": {
@@ -390,22 +388,22 @@
           "legendFormat": "{{error}}",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Task Failed Rate",
+      "type": "timeseries"
     },
     {
-      "id": 104,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
         "y": 43
       },
-      "type": "timeseries",
-      "title": "SQLite Retry Exhaustion",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 104,
       "targets": [
         {
           "datasource": {
@@ -416,7 +414,9 @@
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "SQLite Retry Exhaustion",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -443,6 +443,69 @@
         }
       ],
       "title": "Token Burn Rate Forecast",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Latency (s)",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "id": 9999,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, transition) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
+          "legendFormat": "{{transition}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Agent State Transition Latency",
       "type": "timeseries"
     }
   ],
