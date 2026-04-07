@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
 CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
 
 -- The pgvector extension logic must degrade cleanly in SQLite
-CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS autodream_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
