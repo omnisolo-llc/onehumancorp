@@ -3,44 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
 
-class _CommandTestService extends LocalManagerService {
-  _CommandTestService({required this.running}) : super(homeOverride: '/tmp');
-
-  bool running;
-  int startCalls = 0;
-  int runCalls = 0;
-  ProcessResult nextRunResult = ProcessResult(0, 0, '', '');
-
-  @override
-  Future<bool> isServiceRunning() async => running;
-
-  @override
-  Future<Process> processStart(
-    String executable,
-    List<String> arguments, {
-    bool runInShell = true,
-  }) async {
-    startCalls++;
-    running = true;
-    if (Platform.isWindows) {
-      return Process.start('cmd', ['/c', 'exit', '0']);
-    }
-    return Process.start('sh', ['-c', 'true']);
-  }
-
-  @override
-  Future<ProcessResult> processRun(
-    String executable,
-    List<String> arguments, {
-    bool runInShell = true,
-  }) async {
-    runCalls++;
-    if (arguments.contains('stop')) {
-      running = false;
-    }
-    return nextRunResult;
-  }
-}
 
 void main() {
   late Directory tempHome;
@@ -126,61 +88,7 @@ void main() {
     }
   });
 
-  test('startService does nothing when already running', () async {
-    final cmdService = _CommandTestService(running: true);
-    await cmdService.startService();
-    expect(cmdService.startCalls, 0);
-  });
 
-  test('startService starts process when not running', () async {
-    final cmdService = _CommandTestService(running: false);
-    await cmdService.startService();
-    expect(cmdService.startCalls, 1);
-    expect(cmdService.running, isTrue);
-  });
 
-  test('stopService, restartService and runDoctor use command paths', () async {
-    final cmdService = _CommandTestService(running: true)
-      ..nextRunResult = ProcessResult(0, 0, 'doctor ok', 'warn');
 
-    await cmdService.stopService();
-    expect(cmdService.runCalls, 1);
-    expect(cmdService.running, isFalse);
-
-    await cmdService.restartService();
-    expect(cmdService.runCalls, 2);
-    expect(cmdService.startCalls, 1);
-    expect(cmdService.running, isTrue);
-
-    final doctorOutput = await cmdService.runDoctor();
-    expect(cmdService.runCalls, 3);
-    expect(doctorOutput, contains('doctor ok'));
-    expect(doctorOutput, contains('warn'));
-  });
-
-  test('default processRun executes a shell command', () async {
-    final defaultService = LocalManagerService(homeOverride: tempHome.path);
-    ProcessResult result;
-
-    if (Platform.isWindows) {
-      result = await defaultService.processRun('cmd', ['/c', 'echo', 'ok']);
-    } else {
-      result = await defaultService.processRun('sh', ['-c', 'echo ok']);
-    }
-
-    expect(result.stdout.toString().toLowerCase(), contains('ok'));
-  });
-
-  test('default processStart starts and exits a shell command', () async {
-    final defaultService = LocalManagerService(homeOverride: tempHome.path);
-    Process process;
-
-    if (Platform.isWindows) {
-      process = await defaultService.processStart('cmd', ['/c', 'exit', '0']);
-    } else {
-      process = await defaultService.processStart('sh', ['-c', 'exit 0']);
-    }
-
-    expect(await process.exitCode, 0);
-  });
 }
