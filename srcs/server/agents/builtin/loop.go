@@ -21,7 +21,7 @@ func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Me
 		}
 
 		// Call LLM
-		resp, err := a.Client.Chat(req)
+		resp, err := a.Client.Chat(ctx, req)
 		if err != nil {
 			return messages, fmt.Errorf("llm chat error: %w", err)
 		}
