@@ -36,13 +36,13 @@ class BackendConnector extends PowerSyncBackendConnector {
     // Call our newly created endpoint
     final response = await http.get(
       Uri.parse('$backendUrl/api/auth/powersync/token'),
-      headers: {
-        'Authorization': 'Bearer $sessionToken',
-      },
+      headers: {'Authorization': 'Bearer $sessionToken'},
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to fetch PowerSync token: ${response.statusCode}');
+      throw Exception(
+        'Failed to fetch PowerSync token: ${response.statusCode}',
+      );
     }
 
     final data = jsonDecode(response.body);
