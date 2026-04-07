@@ -382,10 +382,6 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
-
-	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
-		RecordAgentTransitionLatency(ctx, "pending_to_running", 1500.0)
-	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -438,15 +434,6 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		// Reset gauge
 		tokenBurnRateGauge = nil
 		RecordTokenBurnRate(ctx, "org-1", 15.5)
-	})
-
-	t.Run("RecordAgentTransitionLatency Uninitialized", func(t *testing.T) {
-		originalAgentTransitionLatency := agentTransitionLatency
-		agentTransitionLatency = nil
-		defer func() {
-			agentTransitionLatency = originalAgentTransitionLatency
-		}()
-		RecordAgentTransitionLatency(ctx, "pending_to_running", 1500.0)
 	})
 
 	t.Run("RecordAgentApiCall Uninitialized", func(t *testing.T) {

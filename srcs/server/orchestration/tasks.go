@@ -371,6 +371,10 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	task.Status = "IN_PROGRESS"
 	telemetry.RecordSwarmTaskTransition(ctx, task.OrganizationID, "PENDING", "IN_PROGRESS")
+
+	pendingLatencyMS := float64(time.Since(task.CreatedAt).Milliseconds())
+	telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", pendingLatencyMS)
+
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
@@ -449,9 +453,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		defer tm.mu.Unlock()
 	}
 
-	var createdAt time.Time
+	var createdAt, updatedAt time.Time
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, updated_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &updatedAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -461,6 +465,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+
+	executionLatencyMS := float64(time.Since(updatedAt).Milliseconds())
+	telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", executionLatencyMS)
 
 	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {

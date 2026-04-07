@@ -1,0 +1,42 @@
+--- srcs/server/telemetry/telemetry_test.go
++++ srcs/server/telemetry/telemetry_test.go
+@@ -370,6 +370,7 @@
+	RecordQueueLength(ctx, 1)
+	RecordTaskQueueLength(ctx, 1)
+	RecordTaskProcessed(ctx, time.Second)
++	RecordAgentTransitionLatency(ctx, "pending_to_running", 1234.5)
+ }
+
+ func TestRecordFunctionsUninitialized(t *testing.T) {
+@@ -402,6 +403,7 @@
+	originalTaskQueueLengthGauge := TaskQueueLengthGauge
+	originalTaskProcessingLatency := TaskProcessingLatency
+	originalSyncLatency := SyncLatency
++	originalAgentTransitionLatency := agentTransitionLatency
+
+	defer func() {
+		tokenUsageCounter = originalTokenUsageCounter
+@@ -420,6 +422,7 @@
+		TaskQueueLengthGauge = originalTaskQueueLengthGauge
+		TaskProcessingLatency = originalTaskProcessingLatency
+		SyncLatency = originalSyncLatency
++		agentTransitionLatency = originalAgentTransitionLatency
+	}()
+
+	tokenUsageCounter = nil
+@@ -439,6 +442,7 @@
+	TaskQueueLengthGauge = nil
+	TaskProcessingLatency = nil
+	SyncLatency = nil
++	agentTransitionLatency = nil
+
+	// These should not panic
+	ctx := context.Background()
+@@ -452,6 +456,7 @@
+	RecordQueueLength(ctx, 1)
+	RecordTaskQueueLength(ctx, 1)
+	RecordTaskProcessed(ctx, time.Second)
++	RecordAgentTransitionLatency(ctx, "pending_to_running", 1234.5)
+ }
+
+ func TestLogAgentExecution(t *testing.T) {
