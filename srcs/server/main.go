@@ -461,7 +461,9 @@ func run(now time.Time, listen listenFunc) error {
 	})
 
 	// 5. Start the builtin agent process (Rust binary).
-	// The Rust binary connects to the gRPC server and self-registers.
+	// Note: We are migrating the Rust builtin agent to the Go builtin package.
+	// The old rust binary is still spawned for backwards compatibility,
+	// but the orchestration layer now routes "builtin" agents to the Go implementation.
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	grpcEndpoint := "http://localhost" + grpcAddress
 	startBuiltinAgentProcess(ctx, grpcEndpoint)

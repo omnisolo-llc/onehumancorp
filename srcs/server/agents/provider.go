@@ -460,6 +460,8 @@ type BuiltinProvider struct{}
 // Has no side effects.
 func (p *BuiltinProvider) Type() ProviderType { return ProviderTypeBuiltin }
 
+func (p *BuiltinProvider) IsBuiltin() bool { return true }
+
 // Description functionality.
 // Accepts no parameters.
 // Returns string.

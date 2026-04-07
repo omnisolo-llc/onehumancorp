@@ -47,4 +47,12 @@ type ChatRequest struct {
 // ChatResponse is the payload received from the LLM.
 type ChatResponse struct {
 	Message Message `json:"message"`
+	Usage   Usage   `json:"usage,omitempty"`
+}
+
+// Usage represents token usage statistics.
+type Usage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
