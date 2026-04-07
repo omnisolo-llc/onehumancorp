@@ -83,10 +83,11 @@ func TestPublish_ChannelFull(t *testing.T) {
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
-	hub.mu.Lock()
+	shard := hub.getShard("swe-1")
+	shard.mu.Lock()
 	ch := make(chan struct{}, 1)
-	hub.subs["swe-1"] = append(hub.subs["swe-1"], ch)
-	hub.mu.Unlock()
+	shard.subs["swe-1"] = append(shard.subs["swe-1"], ch)
+	shard.mu.Unlock()
 
 	ch <- struct{}{}
 
@@ -109,10 +110,11 @@ func TestPublish_MeetingChannelFull(t *testing.T) {
 	hub.RegisterAgent(Agent{ID: "pm-1", Name: "PM", Role: "PRODUCT_MANAGER", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: "org-1"})
 
-	hub.mu.Lock()
+	shard := hub.getShard("swe-1")
+	shard.mu.Lock()
 	ch := make(chan struct{}, 1)
-	hub.subs["swe-1"] = append(hub.subs["swe-1"], ch)
-	hub.mu.Unlock()
+	shard.subs["swe-1"] = append(shard.subs["swe-1"], ch)
+	shard.mu.Unlock()
 
 	ch <- struct{}{}
 

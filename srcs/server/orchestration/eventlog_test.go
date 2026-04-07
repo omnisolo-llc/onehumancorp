@@ -39,13 +39,18 @@ func TestEventLogWorker_CoverageGaps(t *testing.T) {
 
 	// Create a new fresh hub where we can control the startup or just re-run the worker
 	hub2 := &Hub{
-		agents:        make(map[string]Agent),
-		inbox:         make(map[string][]Message),
+		shards:        make([]*HubShard, 16),
 		meetings:      make(map[string]MeetingRoom),
-		subs:          make(map[string][]chan struct{}),
 		tokenTrackers: make(map[string]struct{}),
 		autoCorTrack:  make(map[string]struct{}),
 		eventLogChan:  make(chan interface{}, 1000),
+	}
+	for i := 0; i < 16; i++ {
+		hub2.shards[i] = &HubShard{
+			agents: make(map[string]Agent),
+			inbox:  make(map[string][]Message),
+			subs:   make(map[string][]chan struct{}),
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

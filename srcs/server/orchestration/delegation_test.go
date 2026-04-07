@@ -44,7 +44,8 @@ func TestDelegateSubTask_Success(t *testing.T) {
 	// Look for the newly spawned sub-agent directly by prefix to avoid
 	// non-deterministic map iteration order.
 	var subAgentID string
-	for id := range hub.agents {
+	for _, agent := range hub.Agents() {
+		id := agent.ID
 		if strings.HasPrefix(id, "sub-agent-SWE-") {
 			subAgentID = id
 			break
@@ -52,10 +53,10 @@ func TestDelegateSubTask_Success(t *testing.T) {
 	}
 
 	if subAgentID == "" {
-		t.Fatalf("no sub-agent with prefix 'sub-agent-SWE-' found; agents: %v", hub.agents)
+		t.Fatalf("no sub-agent with prefix 'sub-agent-SWE-' found; agents: %v", hub.Agents())
 	}
 
-	msgs := hub.inbox[subAgentID]
+	msgs := hub.Inbox(subAgentID)
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message in inbox, got %d", len(msgs))
 	}
@@ -174,7 +175,8 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 	// Look for the newly spawned sub-agent directly by prefix to avoid
 	// non-deterministic map iteration order.
 	var subAgentID string
-	for id := range hub.agents {
+	for _, agent := range hub.Agents() {
+		id := agent.ID
 		if strings.HasPrefix(id, "sub-agent-QA-") {
 			subAgentID = id
 			break
@@ -182,10 +184,10 @@ func TestDelegateSubTask_Integration(t *testing.T) {
 	}
 
 	if subAgentID == "" {
-		t.Fatalf("no sub-agent with prefix 'sub-agent-QA-' found; agents: %v", hub.agents)
+		t.Fatalf("no sub-agent with prefix 'sub-agent-QA-' found; agents: %v", hub.Agents())
 	}
 
-	agent, exists := hub.agents[subAgentID]
+	agent, exists := hub.Agent(subAgentID)
 	if !exists {
 		t.Fatalf("agent does not exist")
 	}
@@ -320,12 +322,12 @@ func TestDelegateSubTask_PublishErrorMock(t *testing.T) {
 	go func() {
 		for {
 			hub.mu.Lock()
-			_, ok := hub.agents["sender-fail"]
+			_, ok := hub.Agent("sender-fail")
 			if !ok {
 				hub.mu.Unlock()
 				break
 			}
-			delete(hub.agents, "sender-fail")
+			hub.FireAgent("sender-fail")
 			hub.mu.Unlock()
 		}
 	}()

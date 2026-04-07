@@ -41,7 +41,7 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 	// 1. Quota Enforcement & Provisioning
 	// Prevent TOCTOU quota bypass by holding the write lock during enforcement and registration.
 	s.hub.mu.Lock()
-	currentAgents := len(s.hub.agents)
+	currentAgents := len(s.hub.Agents())
 
 	// VRAM Quota Enforcement: Hard limit at 10 active agents across the hub
 	if currentAgents >= 10 {
@@ -59,8 +59,8 @@ func (s *HubServiceServer) DelegateSubTask(ctx context.Context, req *pb.SubTask)
 		ProviderType:   "builtin",
 	}
 
-	if _, exists := s.hub.agents[subAgent.ID]; !exists {
-		s.hub.agents[subAgent.ID] = subAgent
+	if _, exists := s.hub.Agent(subAgent.ID); !exists {
+		s.hub.RegisterAgent(subAgent)
 	}
 	s.hub.mu.Unlock()
 

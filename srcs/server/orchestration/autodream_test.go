@@ -49,7 +49,7 @@ func TestAutoDreamPruneSessions(t *testing.T) {
 		}
 	}
 
-	worker.pruneStaleSessions(ctx)
+	worker.pruneStaleSessions(context.Background())
 
 	var count int
 	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data").Scan(&count)

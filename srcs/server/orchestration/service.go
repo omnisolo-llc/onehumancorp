@@ -257,13 +257,24 @@ type MeetingRoom struct {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+// HubShard contains sharded state to prevent global lock contention during message routing.
+type HubShard struct {
+	mu     sync.RWMutex
+	agents map[string]Agent
+	inbox  map[string][]Message
+	subs   map[string][]chan struct{}
+}
+
+// Hub acts as the central, thread-safe asynchronous message broker and state registry for all active agents and meeting rooms.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
 type Hub struct {
 	mu             sync.RWMutex
-	agents         map[string]Agent
-	inbox          map[string][]Message
+	shards         []*HubShard // Parallel Execution Hooks: Sharded Agent state
 	meetings       map[string]MeetingRoom
 	minimaxAPIKey  string
-	subs           map[string][]chan struct{}
 	sipDB          *SIPDB
 	tokenTrackers  map[string]struct{}
 	GetTokenUsage  func(ctx context.Context) map[string]int64
@@ -277,6 +288,14 @@ type Hub struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	taskManager    *TaskManager
+}
+
+func (h *Hub) getShard(key string) *HubShard {
+	var hash uint32
+	for i := 0; i < len(key); i++ {
+		hash = hash*31 + uint32(key[i])
+	}
+	return h.shards[hash%uint32(len(h.shards))]
 }
 
 func (h *Hub) TaskManager() *TaskManager {
@@ -316,10 +335,8 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	h := &Hub{
-		agents:        map[string]Agent{},
-		inbox:         map[string][]Message{},
+		shards:        make([]*HubShard, 16),
 		meetings:      map[string]MeetingRoom{},
-		subs:          map[string][]chan struct{}{},
 		tokenTrackers: map[string]struct{}{},
 		autoCorTrack:  map[string]struct{}{},
 		eventLogChan:  make(chan interface{}, 100),
@@ -328,6 +345,14 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 		ctx:           ctx,
 		cancel:        cancel,
+	}
+
+	for i := 0; i < 16; i++ {
+		h.shards[i] = &HubShard{
+			agents: map[string]Agent{},
+			inbox:  map[string][]Message{},
+			subs:   map[string][]chan struct{}{},
+		}
 	}
 
 
@@ -737,14 +762,18 @@ func (h *Hub) RegisterAgent(agent Agent) {
 		return
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.mu.RLock()
+	sipDB := h.sipDB
+	h.mu.RUnlock()
 
-	h.agents[agent.ID] = agent
+	shard := h.getShard(agent.ID)
+	shard.mu.Lock()
+	shard.agents[agent.ID] = agent
+	shard.mu.Unlock()
 
-	if h.sipDB != nil {
+	if sipDB != nil {
 		go func(a Agent) {
-			_ = h.sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
+			_ = sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
 		}(agent)
 	}
 }
@@ -831,10 +860,11 @@ func (h *Hub) Agent(id string) (Agent, bool) {
 		return agent, ok
 	}
 
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	shard := h.getShard(id)
+	shard.mu.RLock()
+	defer shard.mu.RUnlock()
 
-	agent, ok := h.agents[id]
+	agent, ok := shard.agents[id]
 	return agent, ok
 }
 
@@ -871,9 +901,12 @@ func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
 	meeting := MeetingRoom{ID: id, Participants: append([]string(nil), participants...)}
 	h.meetings[id] = meeting
 	for _, participant := range participants {
-		agent := h.agents[participant]
+		shard := h.getShard(participant)
+		shard.mu.Lock()
+		agent := shard.agents[participant]
 		agent.Status = StatusInMeeting
-		h.agents[participant] = agent
+		shard.agents[participant] = agent
+		shard.mu.Unlock()
 	}
 
 	go telemetry.RecordMeetingEvent(context.Background(), "opened")
@@ -914,9 +947,12 @@ func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) Me
 	meeting := MeetingRoom{ID: id, Agenda: agenda, Participants: append([]string(nil), participants...)}
 	h.meetings[id] = meeting
 	for _, participant := range participants {
-		agent := h.agents[participant]
+		shard := h.getShard(participant)
+		shard.mu.Lock()
+		agent := shard.agents[participant]
 		agent.Status = StatusInMeeting
-		h.agents[participant] = agent
+		shard.agents[participant] = agent
+		shard.mu.Unlock()
 	}
 
 	go telemetry.RecordMeetingEvent(context.Background(), "opened")
@@ -936,11 +972,12 @@ func (h *Hub) FireAgent(id string) {
 		return
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	shard := h.getShard(id)
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
 
-	delete(h.agents, id)
-	delete(h.inbox, id)
+	delete(shard.agents, id)
+	delete(shard.inbox, id)
 }
 
 // Publish validates and routes a message to a direct recipient, a meeting room, or both.
@@ -956,36 +993,45 @@ func (h *Hub) Publish(message Message) error {
 		return h.publishRepository(message)
 	}
 
-	h.mu.Lock()
-	sender, senderOk := h.agents[message.FromAgent]
+	senderShard := h.getShard(message.FromAgent)
+	senderShard.mu.RLock()
+	sender, senderOk := senderShard.agents[message.FromAgent]
+	senderShard.mu.RUnlock()
+
 	if !senderOk {
-		h.mu.Unlock()
 		return errors.New("sender agent is not registered")
 	}
 
 	if message.ToAgent != "" {
-		if _, ok := h.agents[message.ToAgent]; !ok {
-			h.mu.Unlock()
+		recipientShard := h.getShard(message.ToAgent)
+		recipientShard.mu.RLock()
+		if _, ok := recipientShard.agents[message.ToAgent]; !ok {
+			recipientShard.mu.RUnlock()
 			return errors.New("recipient agent is not registered")
 		}
+		recipientShard.mu.RUnlock()
 	}
 
+	h.mu.RLock()
 	if message.MeetingID != "" {
 		if _, ok := h.meetings[message.MeetingID]; !ok {
-			h.mu.Unlock()
+			h.mu.RUnlock()
 			return errors.New("meeting room is not registered")
 		}
 	}
+	h.mu.RUnlock()
 
 	if message.ToAgent != "" {
-		inbox := h.inbox[message.ToAgent]
+		recipientShard := h.getShard(message.ToAgent)
+		recipientShard.mu.Lock()
+		inbox := recipientShard.inbox[message.ToAgent]
 		if cap(inbox) == 0 {
 			inbox = getMessageSlice()
 		}
 
-		h.inbox[message.ToAgent] = append(inbox, message)
+		recipientShard.inbox[message.ToAgent] = append(inbox, message)
 
-		if subs, ok := h.subs[message.ToAgent]; ok {
+		if subs, ok := recipientShard.subs[message.ToAgent]; ok {
 			for _, sub := range subs {
 				select {
 				case sub <- struct{}{}:
@@ -993,9 +1039,11 @@ func (h *Hub) Publish(message Message) error {
 				}
 			}
 		}
+		recipientShard.mu.Unlock()
 	}
 
 	if message.MeetingID != "" {
+		h.mu.Lock()
 		meeting, ok := h.meetings[message.MeetingID]
 		if !ok {
 			h.mu.Unlock()
@@ -1064,10 +1112,14 @@ func (h *Hub) Publish(message Message) error {
 		}
 
 		h.meetings[message.MeetingID] = meeting
+		h.mu.Unlock()
+
 		sender.Status = StatusInMeeting
 
 		for _, participant := range meeting.Participants {
-			if subs, ok := h.subs[participant]; ok {
+			pShard := h.getShard(participant)
+			pShard.mu.RLock()
+			if subs, ok := pShard.subs[participant]; ok {
 				for _, sub := range subs {
 					select {
 					case sub <- struct{}{}:
@@ -1075,15 +1127,19 @@ func (h *Hub) Publish(message Message) error {
 					}
 				}
 			}
+			pShard.mu.RUnlock()
 		}
 	} else {
 		sender.Status = StatusActive
 	}
 
-	h.agents[message.FromAgent] = sender
-	centrifugeNode := h.centrifugeNode
+	senderShard.mu.Lock()
+	senderShard.agents[message.FromAgent] = sender
+	senderShard.mu.Unlock()
 
-	h.mu.Unlock()
+	h.mu.RLock()
+	centrifugeNode := h.centrifugeNode
+	h.mu.RUnlock()
 
 	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
 	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
@@ -1202,11 +1258,10 @@ func (h *Hub) publishRepository(message Message) error {
 }
 
 func (h *Hub) notifyRealtimeTargets(message Message, meetingParticipants []string) *CentrifugeNode {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	if message.ToAgent != "" {
-		if subs, ok := h.subs[message.ToAgent]; ok {
+		recipientShard := h.getShard(message.ToAgent)
+		recipientShard.mu.RLock()
+		if subs, ok := recipientShard.subs[message.ToAgent]; ok {
 			for _, sub := range subs {
 				select {
 				case sub <- struct{}{}:
@@ -1214,10 +1269,13 @@ func (h *Hub) notifyRealtimeTargets(message Message, meetingParticipants []strin
 				}
 			}
 		}
+		recipientShard.mu.RUnlock()
 	}
 
 	for _, participant := range meetingParticipants {
-		if subs, ok := h.subs[participant]; ok {
+		pShard := h.getShard(participant)
+		pShard.mu.RLock()
+		if subs, ok := pShard.subs[participant]; ok {
 			for _, sub := range subs {
 				select {
 				case sub <- struct{}{}:
@@ -1225,8 +1283,11 @@ func (h *Hub) notifyRealtimeTargets(message Message, meetingParticipants []strin
 				}
 			}
 		}
+		pShard.mu.RUnlock()
 	}
 
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.centrifugeNode
 }
 
@@ -1238,26 +1299,27 @@ func (h *Hub) notifyRealtimeTargets(message Message, meetingParticipants []strin
 // Produces no errors.
 // Has no side effects.
 func (h *Hub) Subscribe(agentID string) (<-chan struct{}, func()) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	shard := h.getShard(agentID)
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
 
 	ch := make(chan struct{}, 1)
-	h.subs[agentID] = append(h.subs[agentID], ch)
+	shard.subs[agentID] = append(shard.subs[agentID], ch)
 
 	unsubscribe := func() {
-		h.mu.Lock()
-		defer h.mu.Unlock()
-		subs := h.subs[agentID]
+		shard.mu.Lock()
+		defer shard.mu.Unlock()
+		subs := shard.subs[agentID]
 		for i, sub := range subs {
 			if sub == ch {
 				// Prevent memory leak from lingering reference in underlying array
 				subs[i] = nil
-				h.subs[agentID] = append(subs[:i], subs[i+1:]...)
+				shard.subs[agentID] = append(subs[:i], subs[i+1:]...)
 				break
 			}
 		}
-		if len(h.subs[agentID]) == 0 {
-			delete(h.subs, agentID)
+		if len(shard.subs[agentID]) == 0 {
+			delete(shard.subs, agentID)
 		}
 	}
 
@@ -1282,17 +1344,18 @@ func (h *Hub) Inbox(agentID string) []Message {
 		return inbox
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	shard := h.getShard(agentID)
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
 
-	inbox := h.inbox[agentID]
+	inbox := shard.inbox[agentID]
 	if len(inbox) == 0 {
 		return nil
 	}
 
 	// ⚡ BOLT: [O(1) Inbox draining instead of O(N) slice copy] - Randomized Selection from Top 5
 	// To prevent memory leak of map keys over time, delete the key entirely.
-	delete(h.inbox, agentID)
+	delete(shard.inbox, agentID)
 	return inbox
 }
 
@@ -1392,12 +1455,14 @@ func (h *Hub) Agents() []Agent {
 		return agents
 	}
 
-	h.mu.RLock()
-	agents := make([]Agent, 0, len(h.agents))
-	for _, agent := range h.agents {
-		agents = append(agents, agent)
+	var agents []Agent
+	for _, shard := range h.shards {
+		shard.mu.RLock()
+		for _, agent := range shard.agents {
+			agents = append(agents, agent)
+		}
+		shard.mu.RUnlock()
 	}
-	h.mu.RUnlock()
 
 	// ⚡ BOLT: [O(n log n) sorting inside read lock] - Randomized Selection from Top 5
 	sort.Slice(agents, func(i, j int) bool {
