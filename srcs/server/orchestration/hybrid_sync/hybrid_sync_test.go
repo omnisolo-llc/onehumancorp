@@ -10,8 +10,30 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	_ "modernc.org/sqlite"
 )
+
+type MockQueue struct {
+	EnqueuedJobs []*queue.Job
+}
+
+func (m *MockQueue) Enqueue(ctx context.Context, job *queue.Job) error {
+	m.EnqueuedJobs = append(m.EnqueuedJobs, job)
+	return nil
+}
+
+func (m *MockQueue) Dequeue(ctx context.Context, roles []string) (*queue.Job, error) {
+	return nil, nil
+}
+
+func (m *MockQueue) Complete(ctx context.Context, jobID string) error {
+	return nil
+}
+
+func (m *MockQueue) Fail(ctx context.Context, jobID string, reason string) error {
+	return nil
+}
 
 func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	// Setup SQLite in-memory db
@@ -60,10 +82,21 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL)
+	mockQueue := &MockQueue{}
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL, mockQueue)
 
 	// Process sync manually for testing
 	daemon.ProcessSync(context.Background())
+
+	if len(mockQueue.EnqueuedJobs) == 2 {
+		receivedPayloads = []SyncPayload{}
+		for _, job := range mockQueue.EnqueuedJobs {
+			var p SyncPayload
+			if err := json.Unmarshal([]byte(job.Payload), &p); err == nil {
+				receivedPayloads = append(receivedPayloads, p)
+			}
+		}
+	}
 
 	// Validate received payload
 	if len(receivedPayloads) != 2 {

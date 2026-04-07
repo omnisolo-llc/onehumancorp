@@ -11,7 +11,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -22,9 +25,10 @@ type HybridSyncDaemon struct {
 	ticker      *time.Ticker
 	quit        chan struct{}
 	cloudAPIURL string
+	subAgentQueue queue.TaskQueue
 }
 
-func NewHybridSyncDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAPIURL string) *HybridSyncDaemon {
+func NewHybridSyncDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAPIURL string, subAgentQueue queue.TaskQueue) *HybridSyncDaemon {
 	if cloudAPIURL == "" {
 		cloudAPIURL = os.Getenv("OHC_CORE_URL")
 	}
@@ -33,10 +37,11 @@ func NewHybridSyncDaemon(dbWrapper *db.DB, pollInterval time.Duration, cloudAPIU
 	}
 
 	return &HybridSyncDaemon{
-		dbWrapper:   dbWrapper,
-		ticker:      time.NewTicker(pollInterval),
-		quit:        make(chan struct{}),
-		cloudAPIURL: cloudAPIURL,
+		dbWrapper:     dbWrapper,
+		ticker:        time.NewTicker(pollInterval),
+		quit:          make(chan struct{}),
+		cloudAPIURL:   cloudAPIURL,
+		subAgentQueue: subAgentQueue,
 	}
 }
 
@@ -131,9 +136,29 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Error("hybrid_sync: failed to send escalations to cloud", "error", err)
-		return
+	if d.subAgentQueue != nil {
+		for _, p := range payloads {
+			payloadBytes, err := json.Marshal(p)
+			if err != nil {
+				slog.Error("hybrid_sync: failed to marshal queue payload", "error", err)
+				continue
+			}
+
+			job := &queue.Job{
+				ID:        uuid.New().String(),
+				AgentRole: "OmniContext",
+				Payload:   string(payloadBytes),
+			}
+			if err := d.subAgentQueue.Enqueue(ctx, job); err != nil {
+				slog.Error("hybrid_sync: failed to enqueue task", "error", err)
+				return
+			}
+		}
+	} else {
+		if err := d.sendToCloud(ctx, payloads); err != nil {
+			slog.Error("hybrid_sync: failed to send escalations to cloud", "error", err)
+			return
+		}
 	}
 
 	// Update the local SQLite database to mark as no longer requiring escalation

@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"testing"
+
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin/tools"
 )
 
 func TestBuiltinAgent(t *testing.T) {
@@ -21,7 +23,7 @@ func TestBuiltinAgent(t *testing.T) {
 		Client:      mockClient,
 		Model:       "mock-model",
 		System:      "You are a helpful assistant.",
-		Tools:       []Tool{SendMessageTool, TodoWriteTool},
+		Tools:       []tools.Tool{tools.SendMessageTool, tools.TodoWriteTool},
 		MaxTokens:   100,
 		Temperature: 0,
 	}
@@ -45,7 +47,7 @@ func TestTools(t *testing.T) {
 	ctx := context.Background()
 
 	// Test WebSearchTool
-	res, err := WebSearchTool.Execute(ctx, []byte(`{"query":"test"}`))
+	res, err := tools.WebSearchTool.Execute(ctx, []byte(`{"query":"test"}`))
 	if err != nil {
 		t.Fatalf("WebSearchTool err: %v", err)
 	}
@@ -57,7 +59,7 @@ func TestTools(t *testing.T) {
 	defer os.RemoveAll(".agent-task")
 	os.MkdirAll(".agent-task", 0755)
 
-	res, err = TodoWriteTool.Execute(ctx, []byte(`{"todo":"test todo"}`))
+	res, err = tools.TodoWriteTool.Execute(ctx, []byte(`{"todo":"test todo"}`))
 	if err != nil {
 		t.Fatalf("TodoWriteTool err: %v", err)
 	}

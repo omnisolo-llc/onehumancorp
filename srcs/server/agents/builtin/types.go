@@ -1,6 +1,10 @@
 package builtin
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin/tools"
+)
 
 // Role represents the role of a message sender.
 type Role string
@@ -36,12 +40,12 @@ type ToolResult struct {
 
 // ChatRequest is the payload sent to the LLM.
 type ChatRequest struct {
-	Model       string    `json:"model"`
-	System      string    `json:"system,omitempty"`
-	Messages    []Message `json:"messages"`
-	Tools       []Tool    `json:"tools,omitempty"`
-	MaxTokens   int       `json:"max_tokens,omitempty"`
-	Temperature float32   `json:"temperature,omitempty"`
+	Model       string       `json:"model"`
+	System      string       `json:"system,omitempty"`
+	Messages    []Message    `json:"messages"`
+	Tools       []tools.Tool `json:"tools,omitempty"`
+	MaxTokens   int          `json:"max_tokens,omitempty"`
+	Temperature float32      `json:"temperature,omitempty"`
 }
 
 // ChatResponse is the payload received from the LLM.

@@ -9,34 +9,16 @@ go_library(
         "llm_openai.go",
         "loop.go",
         "prompt.go",
-        "tools.go",
         "types.go",
-        "tools/bash.go",
-        "tools/glob.go",
-        "tools/grep.go",
-        "tools/read.go",
-        "tools/sendmessage.go",
-        "tools/todowrite.go",
-        "tools/toolsearch.go",
-        "tools/webfetch.go",
-        "tools/websearch.go",
-        "tools/write.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
     visibility = ["//visibility:public"],
-    deps = [
-        # "//srcs/server/db",
-        # "//srcs/server/orchestration",
-    ],
+    deps = ["//srcs/server/agents/builtin/tools"],
 )
 
 go_test(
     name = "builtin_test",
-    srcs = [
-        "agent_test.go",
-    ],
+    srcs = ["agent_test.go"],
     embed = [":builtin"],
-    deps = [
-        # "//srcs/server/db",
-    ],
+    deps = ["//srcs/server/agents/builtin/tools"],
 )
