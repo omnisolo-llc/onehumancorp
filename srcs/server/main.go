@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 	"log/slog"
 	"net"
 	"net/http"
@@ -339,6 +339,16 @@ func run(now time.Time, listen listenFunc) error {
 						}
 					}
 				}()
+			}
+
+			// Hybrid RAG Daemon Sync (Omni-Context)
+			if pool != nil && pool.Provider.IsSQLite() {
+				cloudAPIURL := os.Getenv("OHC_CORE_URL")
+				if cloudAPIURL == "" {
+					cloudAPIURL = "http://localhost:8080"
+				}
+				syncDaemon := hybrid_sync.NewHybridSyncDaemon(pool, 1*time.Minute, cloudAPIURL)
+				syncDaemon.Start(ctx)
 			}
 
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
