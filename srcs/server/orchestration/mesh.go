@@ -15,6 +15,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // MeshMessage represents a realtime message sent over the mesh.
@@ -330,9 +331,12 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 
 func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
 	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
-	return meshWithRetry(ctx, 3, func() error {
+	start := time.Now()
+	err := meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
+	telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent_Redis", time.Since(start))
+	return err
 }
 
 func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
@@ -738,6 +742,7 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
 	lm.eventsGlobalMu.RUnlock()
 
+	start := time.Now()
 	err := meshWithRetry(ctx, 3, func() error {
 		select {
 		case broadcastChan <- payload:
@@ -746,6 +751,7 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 			return fmt.Errorf("MemoryMeshTransport events broadcast channel full")
 		}
 	})
+	telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent_Memory", time.Since(start))
 
 	if err != nil {
 		slog.Warn("MemoryMeshTransport events broadcast channel full, dropping message after retries")
