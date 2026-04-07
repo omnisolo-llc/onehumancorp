@@ -667,9 +667,9 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
-		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
+		// 1. Mark stagnant IN_PROGRESS and PENDING missions as FAILED (sanitizing the queue)
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'IN_PROGRESS') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
 		if err != nil {
 			return err
 		}
@@ -1102,7 +1102,8 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		// Parse payload to redact and sanitize
 		var rawData interface{}
 		if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
-			slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+				// Signal Hygiene: Demote to debug to avoid noise on malformed manual test entries or bad sync payloads
+				slog.Debug("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
 			if syncMissionsErr != nil {
 				syncMissionsErr.Add(ctx, 1)
 			}
@@ -1123,7 +1124,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		// Re-marshal sanitized payload
 		sanitizedBytes, err := json.Marshal(rawData)
 		if err != nil {
-			slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+				slog.Debug("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
 			if syncMissionsErr != nil {
 				syncMissionsErr.Add(ctx, 1)
 			}
