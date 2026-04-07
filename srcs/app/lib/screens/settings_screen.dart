@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
+import '../widgets/glass_card.dart';
+
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -47,7 +49,7 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 const _SectionHeader(title: 'Communication'),
-                Card(
+                GlassCard(
                   child: ListTile(
                     leading: Icon(
                       settings.standaloneMode
