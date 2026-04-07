@@ -283,9 +283,13 @@ func initializeTables(provider db.Provider) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
+	scopedKey := key
+	if s.orgID != "system" {
+		scopedKey = s.orgID + ":" + key
+	}
 	var value string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = $1 AND organization_id = $2", key, s.orgID).Scan(&value)
+		err := s.db.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = $1 AND organization_id = $2", scopedKey, s.orgID).Scan(&value)
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -300,13 +304,17 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
+	scopedKey := key
+	if s.orgID != "system" {
+		scopedKey = s.orgID + ":" + key
+	}
 	return withSipRetry(ctx, func() error {
 		// Update logic doesn't use simple INSERT ON CONFLICT easily with orgID without dropping PRIMARY KEY constraint,
 		// but since key is primary key globally in schema, we just update it.
 		// However, it's safer to ensure we set organization_id.
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
-			key, value, s.orgID,
+			scopedKey, value, s.orgID,
 		)
 		return err
 	})
@@ -345,6 +353,9 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 			if err := rows.Scan(&id, &taskStr); err != nil {
 				return err
 			}
+			if s.orgID != "system" && strings.HasPrefix(id, s.orgID+":") {
+				id = strings.TrimPrefix(id, s.orgID+":")
+			}
 
 			var msg Message
 			var wrapper struct {
@@ -382,9 +393,13 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
+	scopedMissionID := missionID
+	if s.orgID != "system" {
+		scopedMissionID = s.orgID + ":" + missionID
+	}
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1 AND organization_id = $2 RETURNING id", scopedMissionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
@@ -399,9 +414,13 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Produces errors: Explicit error handling.
 // Has side effects: Updates mission status in agent_missions table and syncs to remote.
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
+	scopedMissionID := missionID
+	if s.orgID != "system" {
+		scopedMissionID = s.orgID + ":" + missionID
+	}
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1 AND organization_id = $2 RETURNING id", scopedMissionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
@@ -444,10 +463,14 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) error {
+	scopedAgentID := agentID
+	if s.orgID != "system" {
+		scopedAgentID = s.orgID + ":" + agentID
+	}
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP",
-			agentID, role, status, s.orgID,
+			scopedAgentID, role, status, s.orgID,
 		)
 		return err
 	})
@@ -470,6 +493,10 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
+	scopedMissionID := missionID
+	if s.orgID != "system" {
+		scopedMissionID = s.orgID + ":" + missionID
+	}
 	return withSipRetry(ctx, func() error {
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
@@ -493,7 +520,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 						payload=EXCLUDED.payload
 				`
 			}
-			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
+			_, err = tx.Exec(ctx, upsertQuery, scopedMissionID, status, payload, s.orgID)
 			if err != nil {
 				return err
 			}
@@ -501,7 +528,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			// Postgres with FOR UPDATE SKIP LOCKED
 			// Try to select existing row for update
 			var existingID string
-			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
+			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", scopedMissionID, s.orgID).Scan(&existingID)
 
 			if err != nil {
 				// Record doesn't exist or is locked by someone else.
@@ -512,7 +539,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO NOTHING
 				`
-				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
+				_, errInsert := tx.Exec(ctx, insertQuery, scopedMissionID, status, payload, s.orgID)
 				if errInsert != nil {
 					return errInsert
 				}
@@ -527,7 +554,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					SET status = $1, payload = $2
 					WHERE id = $3 AND organization_id = $4
 				`
-				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)
+				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, scopedMissionID, s.orgID)
 				if errUpdate != nil {
 					return errUpdate
 				}
@@ -548,7 +575,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 							payload=EXCLUDED.payload
 					`
 				}
-				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
+				_, errInsert := tx.Exec(ctx, insertQuery, scopedMissionID, status, payload, s.orgID)
 				if errInsert != nil {
 					return errInsert
 				}
@@ -613,10 +640,14 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		Task: task,
 	}
 	taskBytes, _ := json.Marshal(wrapper)
+		scopedMissionID := missionID
+		if s.orgID != "system" {
+			scopedMissionID = s.orgID + ":" + missionID
+		}
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, $3)",
-			missionID, string(taskBytes), s.orgID,
+				scopedMissionID, string(taskBytes), s.orgID,
 		)
 		return err
 	})
@@ -667,6 +698,10 @@ type CapabilityPlugin struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts or updates a record in the capability_plugins table.
 func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityPlugin) error {
+	scopedPluginID := plugin.PluginID
+	if s.orgID != "system" {
+		scopedPluginID = s.orgID + ":" + plugin.PluginID
+	}
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at, organization_id)
@@ -675,7 +710,7 @@ func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityP
 			 name=excluded.name, version=excluded.version,
 			 manifest_url=excluded.manifest_url, status=excluded.status,
 			 registered_at=CURRENT_TIMESTAMP`,
-			plugin.PluginID, plugin.Name, plugin.Version, plugin.ManifestURL, plugin.Status, s.orgID,
+			scopedPluginID, plugin.Name, plugin.Version, plugin.ManifestURL, plugin.Status, s.orgID,
 		)
 		return err
 	})
@@ -711,6 +746,9 @@ func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]Capa
 				return err
 			}
 			p.RegisteredAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			if s.orgID != "system" && strings.HasPrefix(p.PluginID, s.orgID+":") {
+				p.PluginID = strings.TrimPrefix(p.PluginID, s.orgID+":")
+			}
 			plugins = append(plugins, p)
 		}
 		return nil
@@ -733,6 +771,10 @@ type EpisodicMemory struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the swarm_memory_embeddings table.
 func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) error {
+	scopedMemoryID := memory.MemoryID
+	if s.orgID != "system" {
+		scopedMemoryID = s.orgID + ":" + memory.MemoryID
+	}
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id)
@@ -740,7 +782,7 @@ func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) 
 			 ON CONFLICT(memory_id) DO UPDATE SET
 			 context=excluded.context, vector_embedding=excluded.vector_embedding,
 			 source_plugin=excluded.source_plugin`,
-			memory.MemoryID, memory.Context, memory.VectorEmbedding, memory.SourcePlugin, s.orgID,
+			scopedMemoryID, memory.Context, memory.VectorEmbedding, memory.SourcePlugin, s.orgID,
 		)
 		return err
 	})
@@ -775,6 +817,9 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 				return err
 			}
 			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			if s.orgID != "system" && strings.HasPrefix(m.MemoryID, s.orgID+":") {
+				m.MemoryID = strings.TrimPrefix(m.MemoryID, s.orgID+":")
+			}
 			memories = append(memories, m)
 		}
 		return nil
@@ -941,6 +986,9 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 			if err := rows.Scan(&id, &payload); err != nil {
 				return err
 			}
+			if s.orgID != "system" && strings.HasPrefix(id, s.orgID+":") {
+				id = strings.TrimPrefix(id, s.orgID+":")
+			}
 			records = append(records, struct {
 				id      string
 				payload string
@@ -996,7 +1044,11 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		if err == nil {
 			// treat 409 Conflict as success for local parity
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
-				idsToDelete = append(idsToDelete, rec.id)
+				scopedID := rec.id
+				if s.orgID != "system" {
+					scopedID = s.orgID + ":" + rec.id
+				}
+				idsToDelete = append(idsToDelete, scopedID)
 				syncedCount++
 			}
 			resp.Body.Close()
@@ -1044,6 +1096,9 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 			var id, payload string
 			if err := rows.Scan(&id, &payload); err != nil {
 				return err
+			}
+			if s.orgID != "system" && strings.HasPrefix(id, s.orgID+":") {
+				id = strings.TrimPrefix(id, s.orgID+":")
 			}
 			missions = append(missions, struct {
 				id      string
@@ -1110,7 +1165,11 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		if err == nil {
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				updateErr := withSipRetry(ctx, func() error {
-					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)
+					scopedID := m.id
+					if s.orgID != "system" {
+						scopedID = s.orgID + ":" + m.id
+					}
+					_, updateErr := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", scopedID)
 					return updateErr
 				})
 				if updateErr == nil {
