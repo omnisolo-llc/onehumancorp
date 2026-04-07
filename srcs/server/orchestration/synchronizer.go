@@ -3,7 +3,7 @@ package orchestration
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -61,7 +61,7 @@ func (s *SwarmSynchronizer) ProcessSyncTick(ctx context.Context) {
 
 	rows, err := s.dbProvider.Query(ctx, query)
 	if err != nil {
-		log.Printf("Failed to fetch unsynced memories: %v", err)
+		slog.Error("Failed to fetch unsynced memories", "error", err)
 		return
 	}
 	defer rows.Close()
@@ -75,7 +75,7 @@ func (s *SwarmSynchronizer) ProcessSyncTick(ctx context.Context) {
 	for rows.Next() {
 		var u unSynced
 		if err := rows.Scan(&u.id, &u.value); err != nil {
-			log.Printf("Failed to scan memory: %v", err)
+			slog.Error("Failed to scan memory", "error", err)
 			continue
 		}
 		memories = append(memories, u)
@@ -88,7 +88,7 @@ func (s *SwarmSynchronizer) ProcessSyncTick(ctx context.Context) {
 
 		cloudMissionID, err := s.cloudClient.PushSanitizedMemory(ctx, m.id, sanitized)
 		if err != nil {
-			log.Printf("Failed to push memory %s to cloud: %v", m.id, err)
+			slog.Error("Failed to push memory to cloud", "memory_id", m.id, "error", err)
 			continue
 		}
 
@@ -100,7 +100,7 @@ func (s *SwarmSynchronizer) ProcessSyncTick(ctx context.Context) {
 		`
 		_, err = s.dbProvider.Exec(ctx, insertQuery, syncID, m.id, cloudMissionID, time.Now())
 		if err != nil {
-			log.Printf("Failed to insert sync log for %s: %v", m.id, err)
+			slog.Error("Failed to insert sync log", "memory_id", m.id, "error", err)
 		}
 	}
 }
