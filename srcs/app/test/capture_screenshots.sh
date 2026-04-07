@@ -71,10 +71,13 @@ playwright_package_dir=""
 
 if [[ -n "${runfiles_root}" ]]; then
   web_artifacts="$(find_first_dir \
+    "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app_web.web_build_artifacts" \
     "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app_web_build_artifacts" \
+    "${runfiles_root}/_main/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/_main/srcs/app/app_web.web_build_artifacts" \
     "${runfiles_root}/_main/srcs/app/app_web_build_artifacts" \
+    "${runfiles_root}/__main__/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/__main__/srcs/app/app_web.web_build_artifacts" \
     "${runfiles_root}/__main__/srcs/app/app_web_build_artifacts" || true)"
   playwright_package_dir="$(find_first_dir \
