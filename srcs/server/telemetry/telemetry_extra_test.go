@@ -45,6 +45,7 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
 	RecordSwarmTaskQueueLength(ctx, 1)
 	RecordSwarmTaskProcessingLatency(ctx, 100.5)
+	RecordAgentTransitionLatency(ctx, "pending_to_running", 250*time.Millisecond)
 	RecordTaskEnqueued(ctx, "task1")
 	RecordTaskFailed(ctx, "task1", "err1")
 	RecordCacheMiss(ctx, "op1", "type1")

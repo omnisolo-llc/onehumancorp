@@ -371,6 +371,14 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	task.Status = "IN_PROGRESS"
 	telemetry.RecordSwarmTaskTransition(ctx, task.OrganizationID, "PENDING", "IN_PROGRESS")
+
+	// Record Transition Latency (PENDING -> RUNNING)
+	if task.UpdatedAt.IsZero() {
+		telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", time.Since(task.CreatedAt))
+	} else {
+		telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", time.Since(task.UpdatedAt))
+	}
+
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
@@ -403,7 +411,8 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 	// Verify ownership first
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
+	var updatedAt sql.NullTime
+	err := tm.db.QueryRow(ctx, "SELECT status, updated_at FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus, &updatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -420,6 +429,12 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	}
 
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
+
+	if currentStatus == "IN_PROGRESS" {
+		if updatedAt.Valid && !updatedAt.Time.IsZero() {
+			telemetry.RecordAgentTransitionLatency(ctx, "running_to_review", time.Since(updatedAt.Time))
+		}
+	}
 
 	// Broadcast task review
 	if tm.hub != nil {
@@ -450,8 +465,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	var createdAt time.Time
+	var updatedAt sql.NullTime
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, updated_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &updatedAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -471,6 +487,12 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
+
+	if currentStatus == "IN_PROGRESS" {
+		if updatedAt.Valid && !updatedAt.Time.IsZero() {
+			telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", time.Since(updatedAt.Time))
+		}
+	}
 
 	// Broadcast task completion
 	if tm.hub != nil {

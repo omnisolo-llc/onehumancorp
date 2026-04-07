@@ -35,6 +35,7 @@ var (
 	swarmTaskTransitionsCounter metric.Int64Counter
 	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
 	swarmTaskProcessingLatency  metric.Float64Histogram
+	AgentTransitionLatency      metric.Float64Histogram
 	taskEnqueuedCounter metric.Int64Counter
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
@@ -191,6 +192,15 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTaskProcessingLatency, err = m.Float64Histogram(
 		"ohc_swarm_task_processing_latency_ms",
 		metric.WithDescription("Latency of processing swarm tasks"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -904,6 +914,16 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 		return
 	}
 	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+}
+
+// RecordAgentTransitionLatency records the duration of a specific agent state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, duration time.Duration) {
+	if AgentTransitionLatency == nil {
+		return
+	}
+	AgentTransitionLatency.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transition),
+	))
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.
