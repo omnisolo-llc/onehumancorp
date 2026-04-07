@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -114,6 +115,18 @@ func (r *TenantRegistry) handler(orgID string) http.Handler {
 // Produces no errors.
 // Has no side effects.
 func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	claims := auth.ClaimsFromContext(req.Context())
+
+	if claims != nil && claims.OrganizationID != "" {
+		// Authenticated request with an org — lazily provision a tenant if needed.
+		h := r.handler(claims.OrganizationID)
+		if h == nil {
+			h = r.Provision(defaultTenantOrganization(claims.OrganizationID))
+		}
+		h.ServeHTTP(w, req)
+		return
+	}
+
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		r.mu.RLock()
 		for _, h := range r.tenants {
@@ -125,18 +138,6 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 		// If no tenant is provisioned yet in standalone mode, lazily provision the default single-tenant
 		h := r.Provision(defaultTenantOrganization("standalone-single-user"))
-		h.ServeHTTP(w, req)
-		return
-	}
-
-	claims := auth.ClaimsFromContext(req.Context())
-
-	if claims != nil && claims.OrganizationID != "" {
-		// Authenticated request with an org — lazily provision a tenant if needed.
-		h := r.handler(claims.OrganizationID)
-		if h == nil {
-			h = r.Provision(defaultTenantOrganization(claims.OrganizationID))
-		}
 		h.ServeHTTP(w, req)
 		return
 	}
@@ -154,8 +155,21 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// tenant state. This handles public routes (login, healthz, readyz, metrics, /api/auth/login)
 	// without falling back to a random tenant. We use Provision to lazily create and reuse a static public handler
 	// rather than spawning a new hub and tracker for every public request (which causes resource exhaustion).
-	h := r.Provision(defaultTenantOrganization("public"))
-	h.ServeHTTP(w, req)
+
+	// We no longer fallback to a random tenant for non-public unauthenticated routes
+	// as this comprises multi-tenant safety. If it's a private route, auth.Middleware will catch it.
+	// If it's a public route like /api/auth/login, a 'public' tenant handles it gracefully.
+
+	// Only serve known public routes unauthenticated, block otherwise.
+	if req.URL.Path == "/api/auth/login" || req.URL.Path == "/healthz" || req.URL.Path == "/readyz" || req.URL.Path == "/metrics" || req.URL.Path == "/login" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/" || strings.HasPrefix(req.URL.Path, "/assets/") {
+		h := r.Provision(defaultTenantOrganization("public"))
+		h.ServeHTTP(w, req)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
 }
 
 func defaultTenantOrganization(orgID string) domain.Organization {
