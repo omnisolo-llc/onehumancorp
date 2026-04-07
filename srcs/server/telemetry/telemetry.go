@@ -45,6 +45,7 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
+	AgentTransitionLatency     metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
@@ -361,6 +362,15 @@ func InitWithMeter(m mockableMeter) error {
 	TaskProcessingLatency, err = m.Float64Histogram(
 		"ohc_task_processing_latency_seconds",
 		metric.WithDescription("Task processing latency in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions"),
 		metric.WithUnit("s"),
 	)
 	if err != nil {
@@ -844,6 +854,16 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 		return
 	}
 	TaskProcessingLatency.Record(ctx, latency.Seconds())
+}
+
+// RecordAgentTransitionLatency records the duration an agent spends in a specific state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transitionType string, duration float64) {
+	if AgentTransitionLatency == nil {
+		return
+	}
+	AgentTransitionLatency.Record(ctx, duration, metric.WithAttributes(
+		attribute.String("transition", transitionType),
+	))
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
