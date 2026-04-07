@@ -45,6 +45,9 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 
 	tm := NewTaskManager(prov, nil)
 
+	mesh := NewMemoryMeshTransport(prov)
+	tm.SetMesh(mesh)
+
 	return tm, func() {
 		prov.Close()
 	}

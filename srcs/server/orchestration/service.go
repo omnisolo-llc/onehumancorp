@@ -797,6 +797,13 @@ func (h *Hub) SetCentrifugeNode(cn *CentrifugeNode) {
 	h.centrifugeNode = cn
 }
 
+// SetTaskManager injects a TaskManager instance into the Hub.
+func (h *Hub) SetTaskManager(tm *TaskManager) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.taskManager = tm
+}
+
 // CentrifugeNode returns the currently attached CentrifugeNode (may be nil).
 func (h *Hub) CentrifugeNode() *CentrifugeNode {
 	h.mu.RLock()

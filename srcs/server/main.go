@@ -487,6 +487,10 @@ func run(now time.Time, listen listenFunc) error {
 		cn.SetMeshTransport(mesh)
 	}
 
+	if tm := hub.TaskManager(); tm != nil {
+		tm.SetMesh(mesh)
+	}
+
 	// Start gRPC server
 	go func() {
 		lis, err := netListen("tcp", grpcAddress)

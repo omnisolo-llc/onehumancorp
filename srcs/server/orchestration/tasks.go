@@ -43,6 +43,7 @@ type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
+	mesh        MeshTransport   // For Mesh events
 	stopChan    chan struct{}
 	stateMachine *statemachine.StateMachine
 	taskQueue   queue.TaskQueue
@@ -153,6 +154,11 @@ func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 	tm.hub = hub
 }
 
+// SetMesh injects the MeshTransport dependency into the TaskManager.
+func (tm *TaskManager) SetMesh(mesh MeshTransport) {
+	tm.mesh = mesh
+}
+
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
 func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, description, priority string) (*SharedTask, error) {
@@ -241,6 +247,17 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 				"priority":        task.Priority,
 			}
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
+		}()
+	}
+
+	if tm.mesh != nil {
+		go func() {
+			_ = tm.mesh.BroadcastTask(context.Background(), Task{
+				AgentID: task.AssignedAgentID,
+				Action:  "CREATE",
+				Status:  task.Status,
+				TaskID:  task.ID,
+			})
 		}()
 	}
 
@@ -386,6 +403,17 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		}()
 	}
 
+	if tm.mesh != nil {
+		go func() {
+			_ = tm.mesh.BroadcastTask(context.Background(), Task{
+				AgentID: agentID,
+				Action:  "CLAIM",
+				Status:  task.Status,
+				TaskID:  task.ID,
+			})
+		}()
+	}
+
 	return &task, nil
 }
 
@@ -431,6 +459,17 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 				"status":   "REVIEW",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+
+	if tm.mesh != nil {
+		go func() {
+			_ = tm.mesh.BroadcastTask(context.Background(), Task{
+				AgentID: agentID,
+				Action:  "REVIEW",
+				Status:  "REVIEW",
+				TaskID:  taskID,
+			})
 		}()
 	}
 
@@ -482,6 +521,17 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+
+	if tm.mesh != nil {
+		go func() {
+			_ = tm.mesh.BroadcastTask(context.Background(), Task{
+				AgentID: agentID,
+				Action:  "COMPLETE",
+				Status:  "COMPLETED",
+				TaskID:  taskID,
+			})
 		}()
 	}
 
@@ -752,6 +802,17 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					"status":   t.Status,
 				}
 				tm.hub.PublishTaskBroadcast(t.ID, payload)
+			}(task)
+		}
+
+		if tm.mesh != nil {
+			go func(t *SharedTask) {
+				_ = tm.mesh.BroadcastTask(context.Background(), Task{
+					AgentID: agentID,
+					Action:  "CLAIM",
+					Status:  t.Status,
+					TaskID:  t.ID,
+				})
 			}(task)
 		}
 	}

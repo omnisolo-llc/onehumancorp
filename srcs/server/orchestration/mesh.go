@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 )
@@ -231,6 +232,11 @@ func NewRedisMeshTransport(redisURL string) (*RedisMeshTransport, error) {
 }
 
 func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast_task", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:tasks")
+	}()
 	data, err := json.Marshal(task)
 	if err != nil {
 		return err
@@ -264,6 +270,11 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 }
 
 func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast_coordination", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:coordination")
+	}()
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -297,6 +308,11 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "advertise_capabilities", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:capabilities")
+	}()
 	data, err := json.Marshal(caps)
 	if err != nil {
 		return err
@@ -329,6 +345,11 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast_mesh_event", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:events:" + topic)
+	}()
 	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
@@ -548,6 +569,12 @@ func (lm *MemoryMeshTransport) persistWorker(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast_task", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:tasks")
+	}()
+
 	shardIdx := lm.getShard(task.TaskID)
 
 	err := meshWithRetry(ctx, 3, func() error {
@@ -610,6 +637,12 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast_coordination", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:coordination")
+	}()
+
 	shardIdx := lm.getShard(msg.AgentID)
 
 	err := meshWithRetry(ctx, 3, func() error {
@@ -663,6 +696,12 @@ func (lm *MemoryMeshTransport) runCoord(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "advertise_capabilities", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:capabilities")
+	}()
+
 	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {
@@ -731,6 +770,12 @@ func (lm *MemoryMeshTransport) initTopic(topic string) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(ctx, "broadcast_mesh_event", time.Since(start))
+		telemetry.RecordTeammateMeshBroadcast(ctx, "mesh:events:" + topic)
+	}()
+
 	lm.initTopic(topic)
 	shardIdx := lm.getShard(string(payload)) // hash payload for random shard since event ID isn't directly available
 

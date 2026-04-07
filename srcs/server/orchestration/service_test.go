@@ -1503,6 +1503,9 @@ func TestHandleSyncMissions(t *testing.T) {
 	hub, _ := NewCentrifugeNode()
 	tm := NewTaskManager(provider, hub)
 
+	mesh := NewMemoryMeshTransport(provider)
+	tm.SetMesh(mesh)
+
 	payloads := []SyncDaemonPayload{
 		{ID: "m1", Status: "SYNCED", Payload: `{"data": "test"}`},
 	}
