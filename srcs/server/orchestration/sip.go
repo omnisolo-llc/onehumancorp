@@ -228,6 +228,7 @@ func initializeTables(provider db.Provider) error {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
 			synced_to_cloud BOOLEAN DEFAULT FALSE
 		);`,
@@ -383,13 +384,24 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	var id string
+	var oldTimestampStr sql.NullString
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		// Fetch old timestamp before updating
+		_ = s.db.QueryRow(ctx, "SELECT COALESCE(updated_at, created_at) FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&oldTimestampStr)
+
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
 		return err
 	})
+	if err == nil && oldTimestampStr.Valid {
+		if t, parseErr := time.Parse(time.RFC3339Nano, oldTimestampStr.String); parseErr == nil {
+			telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", time.Since(t))
+		} else if t, parseErr := time.Parse("2006-01-02 15:04:05", oldTimestampStr.String); parseErr == nil {
+			telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", time.Since(t))
+		}
+	}
 	return err
 }
 
@@ -400,13 +412,24 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Has side effects: Updates mission status in agent_missions table and syncs to remote.
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
 	var id string
+	var oldTimestampStr sql.NullString
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		// Fetch old timestamp before updating
+		_ = s.db.QueryRow(ctx, "SELECT COALESCE(updated_at, created_at) FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&oldTimestampStr)
+
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
 		return err
 	})
+	if err == nil && oldTimestampStr.Valid {
+		if t, parseErr := time.Parse(time.RFC3339Nano, oldTimestampStr.String); parseErr == nil {
+			telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", time.Since(t))
+		} else if t, parseErr := time.Parse("2006-01-02 15:04:05", oldTimestampStr.String); parseErr == nil {
+			telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", time.Since(t))
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -480,17 +503,18 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		if s.db.IsSQLite() {
 			// SQLite simple UPSERT
 			upsertQuery := `
-				INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 				ON CONFLICT(id) DO NOTHING
 			`
 			if forceLocal {
 				upsertQuery = `
-					INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO UPDATE SET
 						status=EXCLUDED.status,
-						payload=EXCLUDED.payload
+						payload=EXCLUDED.payload,
+						updated_at=CURRENT_TIMESTAMP
 				`
 			}
 			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
@@ -508,8 +532,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 				// Since we skip locked, if it's locked we might just skip the insert/update to avoid contention,
 				// or we try inserting. For standard upsert logic without waiting:
 				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO NOTHING
 				`
 				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
@@ -524,7 +548,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			if forceLocal && existingID != "" {
 				updateQuery := `
 					UPDATE agent_missions
-					SET status = $1, payload = $2
+					SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP
 					WHERE id = $3 AND organization_id = $4
 				`
 				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)
@@ -535,17 +559,18 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 				// We tried to select and it failed (either not found or locked).
 				// We will try an insert ON CONFLICT.
 				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO NOTHING
 				`
 				if forceLocal {
 					insertQuery = `
-						INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+						INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 						ON CONFLICT(id) DO UPDATE SET
 							status=EXCLUDED.status,
-							payload=EXCLUDED.payload
+							payload=EXCLUDED.payload,
+							updated_at=CURRENT_TIMESTAMP
 					`
 				}
 				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
@@ -615,7 +640,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	taskBytes, _ := json.Marshal(wrapper)
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, $3)",
+			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)",
 			missionID, string(taskBytes), s.orgID,
 		)
 		return err

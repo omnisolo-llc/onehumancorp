@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
@@ -20,6 +23,11 @@ func ClearSemaphore() {
 }
 
 func TestSIPDB_Init(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+	telemetry.InitTelemetry()
+
 	db, err := NewSIPDB(":memory:")
 	if err != nil {
 		t.Fatalf("failed to initialize SIPDB: %v", err)
@@ -150,6 +158,11 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 }
 
 func TestSIPDB_CompleteMission_RowsAffectedError(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+	telemetry.InitTelemetry()
+
 	// We can't easily trigger RowsAffected() error with go-sqlite3 normally,
 	// but let's at least test the "mission not found" path.
 	dbPath := filepath.Join(t.TempDir(), "test.db")
@@ -195,6 +208,11 @@ func TestSIPDB_GetPendingMissions_BadData(t *testing.T) {
 }
 
 func TestSIPDB_CompleteMission_ExecError(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+	telemetry.InitTelemetry()
+
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -604,6 +622,11 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 }
 
 func TestSIPDB_BurstMission(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+	telemetry.InitTelemetry()
+
 	dbPath := filepath.Join(t.TempDir(), "test_burst_mission.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {

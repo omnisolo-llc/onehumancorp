@@ -46,6 +46,8 @@ var (
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 
+	agentTransitionLatency metric.Float64Histogram
+
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
@@ -166,6 +168,15 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -844,6 +855,16 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 		return
 	}
 	TaskProcessingLatency.Record(ctx, latency.Seconds())
+}
+
+// RecordAgentTransitionLatency records the latency of a specific agent state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, duration time.Duration) {
+	if agentTransitionLatency == nil {
+		return
+	}
+	agentTransitionLatency.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transition),
+	))
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.

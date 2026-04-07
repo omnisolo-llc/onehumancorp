@@ -99,5 +99,6 @@ go_test(
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
+        "@com_github_prometheus_client_golang//prometheus",
     ],
 )
