@@ -449,9 +449,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		defer tm.mu.Unlock()
 	}
 
-	var createdAt time.Time
+	var createdAt, updatedAt time.Time
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, updated_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &updatedAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -461,6 +461,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+
+	executionLatency := time.Since(updatedAt)
+	telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", executionLatency)
 
 	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
@@ -628,6 +631,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
 			}
 
+			waitLatency := time.Since(task.CreatedAt)
+			telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", waitLatency)
+
 			task.AssignedAgentID = agentID
 
 			var payloadMap map[string]interface{}
@@ -691,6 +697,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			if errQuery != nil {
 				return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
 			}
+
+			waitLatency := time.Since(task.CreatedAt)
+			telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", waitLatency)
 
 			task.AssignedAgentID = agentID
 

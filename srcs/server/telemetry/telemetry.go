@@ -60,6 +60,7 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
+	AgentTransitionLatencySeconds metric.Float64Histogram
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -435,6 +436,15 @@ func InitWithMeter(m mockableMeter) error {
 	autoDreamQueryDuration, err = m.Float64Histogram(
 		"ohc_autodream_query_duration_seconds",
 		metric.WithDescription("Latency of AutoDream query operations in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentTransitionLatencySeconds, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of discrete agent state transitions (e.g. pending_to_running, running_to_completed)"),
 		metric.WithUnit("s"),
 	)
 	if err != nil {
@@ -991,4 +1001,14 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordAgentTransitionLatency records the duration an agent spends in a discrete state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, duration time.Duration) {
+	if AgentTransitionLatencySeconds == nil {
+		return
+	}
+	AgentTransitionLatencySeconds.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transition),
+	))
 }

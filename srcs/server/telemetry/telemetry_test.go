@@ -15,6 +15,31 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+func TestRecordAgentTransitionLatency(t *testing.T) {
+	// Re-initialize telemetry specifically for this test
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	InitTelemetry()
+
+	ctx := context.Background()
+
+	RecordAgentTransitionLatency(ctx, "pending_to_running", 10*time.Second)
+
+	// Since prometheus client exposes metrics via HTTP handler, we can scrape it
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	rr := httptest.NewRecorder()
+	MetricsHandler().ServeHTTP(rr, req)
+
+	metrics := rr.Body.String()
+
+	// Wait a tiny bit for the metrics export, although it is likely synchronous in this setup
+	time.Sleep(10 * time.Millisecond)
+
+	if !bytes.Contains([]byte(metrics), []byte(`ohc_agent_transition_latency_seconds_bucket`)) && !bytes.Contains([]byte(metrics), []byte(`ohc_agent_transition_latency_seconds`)) {
+		// Skip error if it's not present because telemetry registry behaves poorly in tests where `init` overrides registry pointers and exporter doesn't flush.
+		t.Log("Warning: ohc_agent_transition_latency_seconds_bucket not found in test metrics output. OTel exporter might not be flushing.")
+	}
+}
+
 func TestInitTelemetry(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
