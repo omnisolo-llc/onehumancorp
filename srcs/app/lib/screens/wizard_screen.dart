@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────
 
@@ -362,52 +363,12 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget buildGlassCard({required Color color, required Widget child}) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.compose(
-            outer: ColorFilter.matrix(<double>[
-              1.168,
-              -0.153,
-              -0.015,
-              0,
-              0,
-              -0.046,
-              1.061,
-              -0.015,
-              0,
-              0,
-              -0.046,
-              -0.152,
-              1.198,
-              0,
-              0,
-              0,
-              0,
-              0,
-              1,
-              0,
-            ]),
-            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.03),
-              border: Border.all(color: color.withValues(alpha: 0.08)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: child,
-          ),
-        ),
-      );
-    }
-
     if (status.configured) {
       return Semantics(
         label: 'Platform is fully configured',
-        child: buildGlassCard(
-          color: Theme.of(context).colorScheme.primary,
+        child: GlassCard(
+          baseColor: Theme.of(context).colorScheme.primary,
+          padding: EdgeInsets.zero,
           child: ListTile(
             leading: Icon(
               Icons.check_circle,
@@ -428,8 +389,9 @@ class _StatusBanner extends StatelessWidget {
     if (!status.centrifugeStep) missing.add('Centrifuge');
     return Semantics(
       label: 'Configuration incomplete. Remaining: ${missing.join(', ')}',
-      child: buildGlassCard(
-        color: Theme.of(context).colorScheme.error,
+      child: GlassCard(
+        baseColor: Theme.of(context).colorScheme.error,
+        padding: EdgeInsets.zero,
         child: ListTile(
           leading: Icon(
             Icons.warning_amber,
@@ -598,43 +560,20 @@ class _CentrifugeStep extends StatelessWidget {
         const SizedBox(height: 16),
         Semantics(
           label: 'Channel Convention Info Card',
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(const <double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+          child: GlassCard(
+            padding: const EdgeInsets.all(12),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Channel convention',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Channel convention',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 4),
-                      Text('• meeting:<id>  — live transcript updates'),
-                      Text('• chat:<room>   — real-time chat messages'),
-                      Text('• agent:<id>    — per-agent inbox notifications'),
-                    ],
-                  ),
-                ),
-              ),
+                SizedBox(height: 4),
+                Text('• meeting:<id>  — live transcript updates'),
+                Text('• chat:<room>   — real-time chat messages'),
+                Text('• agent:<id>    — per-agent inbox notifications'),
+              ],
             ),
           ),
         ),

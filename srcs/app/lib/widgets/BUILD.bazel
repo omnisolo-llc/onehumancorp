@@ -37,6 +37,16 @@ flutter_library(
 )
 
 alias(
+    name = "agent_swarm_dashboard",
+    actual = ":widgets_lib",
+)
+
+alias(
+    name = "glass_card",
+    actual = ":widgets_lib",
+)
+
+alias(
     name = "org_tree_widget",
     actual = ":widgets_lib",
 )

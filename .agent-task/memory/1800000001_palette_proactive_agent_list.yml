@@ -1,0 +1,2 @@
+context: |
+  Extracted the GlassCard widget to standardize OHC visual tokens (glassmorphism blur) across the Flutter application. Implemented the AgentSwarmDashboard widget with a mocked data stream and integrated it into the DashboardScreen. Discovered and documented the danger of running Gazelle globally, which unintentionally mutates backend build files with scratch data.

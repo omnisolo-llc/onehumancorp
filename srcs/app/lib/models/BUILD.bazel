@@ -40,6 +40,11 @@ alias(
 )
 
 alias(
+    name = "agent_status",
+    actual = ":models_lib",
+)
+
+alias(
     name = "ai_provider_model",
     actual = ":models_lib",
 )
