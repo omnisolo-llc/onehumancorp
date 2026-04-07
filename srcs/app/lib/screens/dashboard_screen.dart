@@ -1,7 +1,7 @@
+import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
@@ -611,81 +611,32 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
             position: _slideAnimation,
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: MouseRegion(
-                onEnter: (_) => setState(() => _isHovered = true),
-                onExit: (_) => setState(() => _isHovered = false),
-                child: AnimatedScale(
-                  scale: _isHovered ? 1.02 : 1.0,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.compose(
-                        outer: ColorFilter.matrix(const <double>[
-                          1.168, -0.153, -0.015, 0, 0,
-                          -0.046, 1.061, -0.015, 0, 0,
-                          -0.046, -0.152, 1.198, 0, 0,
-                          0, 0, 0, 1, 0,
-                        ]),
-                        inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                      ),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        decoration: BoxDecoration(
-                          color: _isHovered
-                              ? const Color.fromRGBO(255, 255, 255, 0.08)
-                              : const Color.fromRGBO(255, 255, 255, 0.03),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _isHovered
-                                ? Colors.white.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Semantics(
-                            button: true,
-                            label: '${widget.label}: ${widget.value} action',
-                            child: InkWell(
-                              onTap: () {},
-                              borderRadius: BorderRadius.circular(16),
-                              splashColor: widget.color.withValues(alpha: 0.1),
-                              highlightColor: widget.color.withValues(alpha: 0.05),
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(widget.icon, color: effectiveIconColor, size: 32),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      widget.value,
-                                      style: TextStyle(
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.bold,
-                                        color: effectiveIconColor,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      widget.label,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+              child: GlassCard(
+                onTap: () {},
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(widget.icon, color: effectiveIconColor, size: 32),
+                    const SizedBox(height: 16),
+                    Text(
+                      widget.value,
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: effectiveIconColor,
+                        fontFamily: 'Inter',
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
