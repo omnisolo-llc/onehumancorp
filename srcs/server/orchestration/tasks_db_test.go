@@ -3,88 +3,75 @@ package orchestration
 import (
 	"context"
 	"testing"
-
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-func TestClaimTask_SQLite(t *testing.T) {
-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
-	if err != nil {
-		t.Fatalf("failed to create sqlite provider: %v", err)
-	}
+func TestTasksDB_ClaimTask(t *testing.T) {
+	// Use the test provider from db package to get a clean SQLite database
+	dbProvider := db.NewTestProvider(t)
+	database := &db.DB{Provider: dbProvider}
+	var err error
 
-	ctx := context.Background()
 
-	// Create table manually since we might not run migrations in this test or wait for them
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+
+	// Create table manually for test
+	_, err = database.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS shared_tasks_v2 (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			parent_plan_id TEXT,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			dependencies JSONB,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
+			created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		);
 	`)
 	if err != nil {
-		t.Fatalf("failed to create table: %v", err)
+		t.Fatalf("failed to create test table: %v", err)
 	}
 
-	// Insert a test task
-	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, organization_id, title, status)
-		VALUES ('task-1', 'org-1', 'Test Task', 'PENDING')
-	`)
+	tasksDB := NewTasksDB(database)
+	ctx := context.Background()
+
+	// Try claiming when empty
+	_, err = tasksDB.ClaimTask(ctx, "org1", "agent1")
+	if err != ErrNoTasksAvailable {
+		t.Errorf("expected ErrNoTasksAvailable, got: %v", err)
+	}
+
+	// Create a task
+	task := &SharedTask{
+		ID:             "task1",
+		OrganizationID: "org1",
+		Title:          "Test Task",
+		Status:         "PENDING",
+	}
+	err = tasksDB.CreateTask(ctx, task)
 	if err != nil {
-		t.Fatalf("failed to insert test task: %v", err)
+		t.Fatalf("failed to create task: %v", err)
 	}
 
-	claims := &auth.Claims{
-		OrganizationID: "org-1",
-	}
-	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
-
-	to := NewTaskOrchestrator(dbProvider)
-
-	// Claim the task
-	task, err := to.ClaimTask(ctxWithClaims, "agent-1")
+	// Claim it
+	claimed, err := tasksDB.ClaimTask(ctx, "org1", "agent1")
 	if err != nil {
-		t.Fatalf("ClaimTask failed: %v", err)
+		t.Fatalf("failed to claim task: %v", err)
+	}
+	if claimed.ID != "task1" {
+		t.Errorf("expected task1, got %s", claimed.ID)
+	}
+	if claimed.Status != "ASSIGNED" {
+		t.Errorf("expected ASSIGNED, got %s", claimed.Status)
+	}
+	if claimed.AssignedAgentID != "agent1" {
+		t.Errorf("expected agent1, got %v", claimed.AssignedAgentID)
 	}
 
-	if task == nil {
-		t.Fatalf("expected to claim a task, got nil")
+	// Try claiming again, should be empty since we claimed it
+	_, err = tasksDB.ClaimTask(ctx, "org1", "agent2")
+	if err != ErrNoTasksAvailable {
+		t.Errorf("expected ErrNoTasksAvailable, got: %v", err)
 	}
-
-	if task.ID != "task-1" {
-		t.Errorf("expected task ID 'task-1', got '%s'", task.ID)
-	}
-
-	if task.Status != "ASSIGNED" {
-		t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
-	}
-
-	if task.AssignedAgentID == nil || *task.AssignedAgentID != "agent-1" {
-		t.Errorf("expected assigned agent 'agent-1', got '%v'", task.AssignedAgentID)
-	}
-
-	// Try to claim another task, should return nil
-	task2, err := to.ClaimTask(ctxWithClaims, "agent-2")
-	if err != nil {
-		t.Fatalf("ClaimTask failed: %v", err)
-	}
-
-	if task2 != nil {
-		t.Fatalf("expected nil task, got %v", task2)
-	}
-}
-
-func TestClaimTask_Postgres(t *testing.T) {
-	// Skip Postgres since it requires running instance for this pure db-layer test
-	t.Skip("Postgres requires a running instance, skip for basic unit test")
 }

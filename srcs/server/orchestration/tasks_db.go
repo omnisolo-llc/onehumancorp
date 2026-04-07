@@ -2,146 +2,179 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
+	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-type SharedTaskDB struct {
-	ID              string
-	OrganizationID  string
-	ParentPlanID    *string
-	Title           string
-	Description     *string
-	Status          string
-	AssignedAgentID *string
-	Dependencies    *string // JSON string
-	CreatedAt       string
-	UpdatedAt       string
+var ErrNoTasksAvailable = errors.New("no tasks available to claim")
+
+type TasksDB struct {
+	dbWrapper *db.DB
+	mu        sync.Mutex
 }
 
-type TaskOrchestrator struct {
-	dbProvider db.Provider
-	mu         sync.Mutex // For SQLite concurrent assignment locking
-}
-
-func NewTaskOrchestrator(dbProvider db.Provider) *TaskOrchestrator {
-	return &TaskOrchestrator{
-		dbProvider: dbProvider,
+func NewTasksDB(dbWrapper *db.DB) *TasksDB {
+	return &TasksDB{
+		dbWrapper: dbWrapper,
 	}
 }
 
-// ClaimTask attempts to claim a task. Returns the task ID and an error if one occurred.
-func (to *TaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return nil, errors.New("unauthorized: missing claims")
-	}
+var PublishMeshEventFunc func(ctx context.Context, topic string, payload []byte) error
 
-	if to.dbProvider.IsSQLite() {
-		return to.claimTaskSQLite(ctx, claims.OrganizationID, agentID)
-	}
-	return to.claimTaskPostgres(ctx, claims.OrganizationID, agentID)
+func SetPublishMeshEventFunc(f func(ctx context.Context, topic string, payload []byte) error) {
+	PublishMeshEventFunc = f
 }
 
-func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-	to.mu.Lock()
-	defer to.mu.Unlock()
-
-	tx, err := to.dbProvider.Begin(ctx)
+func (t *TasksDB) CreateTask(ctx context.Context, task *SharedTask) error {
+	depsJSON, err := json.Marshal(task.Dependencies)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return err
+	}
+
+	query := `
+		INSERT INTO shared_tasks_v2 (
+			id, organization_id, parent_plan_id, title, description,
+			status, assigned_agent_id, dependencies, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+		)
+	`
+	now := time.Now()
+	if task.CreatedAt.IsZero() {
+		task.CreatedAt = now
+	}
+	if task.UpdatedAt.IsZero() {
+		task.UpdatedAt = now
+	}
+	if task.Status == "" {
+		task.Status = "PENDING"
+	}
+
+	_, err = t.dbWrapper.Exec(ctx, query,
+		task.ID, task.OrganizationID, task.ParentPlanID, task.Title, task.Description,
+		task.Status, task.AssignedAgentID, string(depsJSON), task.CreatedAt, task.UpdatedAt)
+	return err
+}
+
+func (t *TasksDB) ClaimTask(ctx context.Context, orgID string, agentID string) (*SharedTask, error) {
+	if t.dbWrapper.IsSQLite() {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+
+		// SQLite: First select pending task
+		query := `SELECT id, parent_plan_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
+				  FROM shared_tasks_v2
+				  WHERE organization_id = $1 AND status = 'PENDING'
+				  LIMIT 1`
+
+		row := t.dbWrapper.QueryRow(ctx, query, orgID)
+		var task SharedTask
+		task.OrganizationID = orgID
+		var depsStr string
+	var createdAtStr, updatedAtStr sql.NullString
+		err := row.Scan(&task.ID, &task.ParentPlanID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &depsStr, &createdAtStr, &updatedAtStr)
+
+		if createdAtStr.Valid {
+			if t, err := time.Parse(time.RFC3339, createdAtStr.String); err == nil {
+				task.CreatedAt = t
+			}
+		}
+		if updatedAtStr.Valid {
+			if t, err := time.Parse(time.RFC3339, updatedAtStr.String); err == nil {
+				task.UpdatedAt = t
+			}
+		}
+
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNoTasksAvailable
+			}
+			return nil, err
+		}
+
+		// Update the task to ASSIGNED
+		updateQuery := `UPDATE shared_tasks_v2 SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = $2 WHERE id = $3`
+		now := time.Now()
+		_, err = t.dbWrapper.Exec(ctx, updateQuery, agentID, now, task.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		task.Status = "ASSIGNED"
+		task.AssignedAgentID = agentID
+		task.UpdatedAt = now
+		if PublishMeshEventFunc != nil {
+			PublishMeshEventFunc(ctx, "mesh:tasks", []byte(`{"event_type": "TASK_CLAIMED", "task_id": "`+task.ID+`"}`))
+		}
+		if depsStr != "" {
+			_ = json.Unmarshal([]byte(depsStr), &task.Dependencies)
+		}
+
+		return &task, nil
+	}
+
+	// PostgreSQL: SELECT FOR UPDATE SKIP LOCKED
+	tx, err := t.dbWrapper.Begin(ctx)
+	if err != nil {
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
-	// In SQLite we use a simple SELECT then UPDATE in a transaction, protected by application mutex
-	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
-		LIMIT 1
-	`
-	row := tx.QueryRow(ctx, query, orgID)
+	query := `SELECT id, parent_plan_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
+			  FROM shared_tasks_v2
+			  WHERE organization_id = $1 AND status = 'PENDING'
+			  FOR UPDATE SKIP LOCKED LIMIT 1`
 
-	task := &SharedTaskDB{}
-	if err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID,
-		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
-	); err != nil {
-		// Could be sql.ErrNoRows or pgx.ErrNoRows. We handle it generally
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-			return nil, nil // No task found
+	row := tx.QueryRow(ctx, query, orgID)
+	var task SharedTask
+	task.OrganizationID = orgID
+	var depsStr string
+	var createdAtStr, updatedAtStr sql.NullString
+	err = row.Scan(&task.ID, &task.ParentPlanID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &depsStr, &createdAtStr, &updatedAtStr)
+
+		if createdAtStr.Valid {
+			if t, err := time.Parse(time.RFC3339, createdAtStr.String); err == nil {
+				task.CreatedAt = t
+			}
 		}
-		return nil, fmt.Errorf("failed to query pending task: %w", err)
+		if updatedAtStr.Valid {
+			if t, err := time.Parse(time.RFC3339, updatedAtStr.String); err == nil {
+				task.UpdatedAt = t
+			}
+		}
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoTasksAvailable
+		}
+		return nil, err
 	}
 
-	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2
-	`
-	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
+	updateQuery := `UPDATE shared_tasks_v2 SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = $2 WHERE id = $3`
+	now := time.Now()
+	_, err = tx.Exec(ctx, updateQuery, agentID, now, task.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return nil, err
 	}
 
 	task.Status = "ASSIGNED"
-	task.AssignedAgentID = &agentID
-	return task, nil
-}
-
-func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-	tx, err := to.dbProvider.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	task.AssignedAgentID = agentID
+	task.UpdatedAt = now
+	if PublishMeshEventFunc != nil {
+		PublishMeshEventFunc(ctx, "mesh:tasks", []byte(`{"event_type": "TASK_CLAIMED", "task_id": "`+task.ID+`"}`))
 	}
-	defer tx.Rollback(ctx)
-
-	// In Postgres we can use FOR UPDATE SKIP LOCKED
-	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
-	`
-	row := tx.QueryRow(ctx, query, orgID)
-
-	task := &SharedTaskDB{}
-	if err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID,
-		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
-	); err != nil {
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-			return nil, nil // No task found
-		}
-		return nil, fmt.Errorf("failed to query pending task: %w", err)
+	if depsStr != "" {
+		_ = json.Unmarshal([]byte(depsStr), &task.Dependencies)
 	}
 
-	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2
-	`
-	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	task.Status = "ASSIGNED"
-	task.AssignedAgentID = &agentID
-	return task, nil
+	return &task, nil
 }
