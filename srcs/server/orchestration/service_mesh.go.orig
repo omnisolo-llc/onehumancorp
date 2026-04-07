@@ -8,7 +8,6 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"google.golang.org/protobuf/proto"
 
 )
 
@@ -37,11 +36,10 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 
 	telemetry.RecordMeshBroadcast(ctx, "capabilities")
 
-	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+	return &pb.PublishMessageResponse{Success: true}, nil
 }
 
 // DiscoverAgents streams known agent capabilities from the mesh
-/*
 func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
 	ctx := stream.Context()
 
@@ -79,10 +77,8 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 		}
 	}
 }
-*/
 
 // StreamMeshEvents streams real-time events from the mesh
-/*
 func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
 	ctx := stream.Context()
 
@@ -116,15 +112,12 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 				return nil
 			}
 
-			eventID := fmt.Sprintf("evt-%d", time.Now().UnixNano())
-			topic := req.GetTopic()
-			timestamp := time.Now().UnixNano()
-			event := pb.MeshEvent_builder{
-				EventId:   proto.String(eventID),
-				Topic:     proto.String(topic),
+			event := &pb.MeshEvent{
+				EventId:   fmt.Sprintf("evt-%d", time.Now().UnixNano()),
+				Topic:     req.GetTopic(),
 				Payload:   payload,
-				Timestamp: proto.Int64(timestamp),
-			}.Build()
+				Timestamp: time.Now().Unix(),
+			}
 
 			if err := stream.Send(event); err != nil {
 				return err
@@ -134,4 +127,3 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 		}
 	}
 }
-*/

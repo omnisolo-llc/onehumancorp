@@ -1,0 +1,10 @@
+--- srcs/server/orchestration/service_mesh.go	2024-04-07 00:00:00.000000000 +0000
++++ srcs/server/orchestration/service_mesh.go	2024-04-07 00:00:00.000000000 +0000
+@@ -9,6 +9,7 @@
+
+	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
++	"google.golang.org/protobuf/proto"
+ )
+
+ // AdvertiseCapabilities advertises an agent's capabilities to the mesh

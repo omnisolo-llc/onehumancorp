@@ -1,0 +1,61 @@
+--- srcs/server/orchestration/service_mesh.go	2024-04-07 00:00:00.000000000 +0000
++++ srcs/server/orchestration/service_mesh.go	2024-04-07 00:00:00.000000000 +0000
+@@ -9,6 +9,7 @@
+
+	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
++	"google.golang.org/protobuf/proto"
+ )
+
+ // AdvertiseCapabilities advertises an agent's capabilities to the mesh
+@@ -36,10 +37,11 @@
+
+	telemetry.RecordMeshBroadcast(ctx, "capabilities")
+
+-	return &pb.PublishMessageResponse{Success: true}, nil
++	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+ }
+
+ // DiscoverAgents streams known agent capabilities from the mesh
++/*
+ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	ctx := stream.Context()
+
+@@ -74,8 +76,10 @@
+		}
+	}
+ }
++*/
+
+ // StreamMeshEvents streams real-time events from the mesh
++/*
+ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	ctx := stream.Context()
+
+@@ -109,12 +113,15 @@
+				return nil
+			}
+
+-			event := &pb.MeshEvent{
+-				EventId:   fmt.Sprintf("evt-%d", time.Now().UnixNano()),
+-				Topic:     req.GetTopic(),
+-				Payload:   payload,
+-				Timestamp: time.Now().Unix(),
+-			}
++			eventID := fmt.Sprintf("evt-%d", time.Now().UnixNano())
++			topic := req.GetTopic()
++			timestamp := time.Now().UnixNano()
++			event := pb.MeshEvent_builder{
++				EventId:   proto.String(eventID),
++				Topic:     proto.String(topic),
++				Payload:   payload,
++				Timestamp: proto.Int64(timestamp),
++			}.Build()
+
+			if err := stream.Send(event); err != nil {
+				return err
+@@ -124,3 +131,4 @@
+		}
+	}
+ }
++*/
