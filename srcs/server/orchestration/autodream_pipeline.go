@@ -2,24 +2,39 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
+// EmbeddingClient interface for dependency injection and testing
+type EmbeddingClient interface {
+	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
+}
+
 // AutoDreamPipeline is the daemon process for long-term memory consolidation
 type AutoDreamPipeline struct {
-	db   db.Provider
-	done chan struct{}
+	db     db.Provider
+	client EmbeddingClient
+	done   chan struct{}
 }
 
 // NewAutoDreamPipeline creates a new pipeline instance
 func NewAutoDreamPipeline(provider db.Provider) *AutoDreamPipeline {
+	var client EmbeddingClient
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	if minimaxKey != "" {
+		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), provider, nil)
+	}
+
 	return &AutoDreamPipeline{
-		db:   provider,
-		done: make(chan struct{}),
+		db:     provider,
+		client: client,
+		done:   make(chan struct{}),
 	}
 }
 
@@ -105,9 +120,20 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	}
 
 	for _, m := range memories {
-		// In a real system, we'd call an LLM to generate embeddings here.
-		// For now, we mock the embedding vector.
-		mockEmbedding := "[0.0, 0.0, 0.0]"
+		embeddingStr := "[0.0, 0.0, 0.0]"
+
+		if p.client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, err := p.client.GenerateEmbedding(ctxTimeout, m.payload)
+			cancel()
+			if err == nil && len(resp) > 0 {
+				if bytes, err := json.Marshal(resp); err == nil {
+					embeddingStr = string(bytes)
+				}
+			} else if err != nil {
+				slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
+			}
+		}
 
 		// 2. Load into autodream_memories
 		var insertQuery string
@@ -119,14 +145,14 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 				VALUES (?, ?, ?, ?, ?, 'shared_task', CURRENT_TIMESTAMP)
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, mockEmbedding}
+			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
 		} else {
 			insertQuery = `
 				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
 				VALUES ($1, $2, $3, $4, $5::vector, 'shared_task', NOW())
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, mockEmbedding}
+			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
 		}
 
 		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {

@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockEmbeddingClient struct{}
+
+func (m *mockEmbeddingClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	return []float32{0.1, 0.2, 0.3}, nil
+}
+
 func TestAutoDreamPipeline_Process(t *testing.T) {
 	provider, err := db.NewSQLiteProvider(":memory:")
 	require.NoError(t, err)
@@ -62,11 +68,14 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 
 	pipeline := NewAutoDreamPipeline(provider)
 
+	// Mock the LLM client
+	pipeline.client = &mockEmbeddingClient{}
+
 	// Run process
 	pipeline.process(ctx)
 
 	// Verify only completed tasks were consolidated
-	rows, err := provider.Query(ctx, "SELECT id, content, source_type FROM autodream_memories")
+	rows, err := provider.Query(ctx, "SELECT id, content, source_type, embedding FROM autodream_memories")
 	require.NoError(t, err)
 	defer rows.Close()
 
@@ -74,6 +83,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 		id         string
 		content    string
 		sourceType string
+		embedding  string
 	}
 
 	for rows.Next() {
@@ -81,8 +91,9 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 			id         string
 			content    string
 			sourceType string
+			embedding  string
 		}
-		err := rows.Scan(&m.id, &m.content, &m.sourceType)
+		err := rows.Scan(&m.id, &m.content, &m.sourceType, &m.embedding)
 		require.NoError(t, err)
 		memories = append(memories, m)
 	}
@@ -91,6 +102,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	assert.Equal(t, "task-1", memories[0].id)
 	assert.Equal(t, `{"result": "success"}`, memories[0].content)
 	assert.Equal(t, "shared_task", memories[0].sourceType)
+	assert.Equal(t, "[0.1,0.2,0.3]", memories[0].embedding)
 }
 
 func TestAutoDreamPipeline_StartStop(t *testing.T) {
