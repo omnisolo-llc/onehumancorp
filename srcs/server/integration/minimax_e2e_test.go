@@ -27,6 +27,9 @@ import (
 // minimaxAPIKey returns the Minimax API key from the environment, or an empty
 // string when the variable is unset.
 func minimaxAPIKey() string {
+	if os.Getenv("CI") != "" || os.Getenv("MCP_BUNDLE_DIR") != "" {
+		return "" // Force mock server in CI/Sandbox environments to prevent flake/timeouts
+	}
 	return os.Getenv("MINIMAX_API_KEY")
 }
 
@@ -46,12 +49,21 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 		key = "mock-key-for-testing-purposes"
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
+			// Depending on the path, we might need a different response
+			if strings.Contains(r.URL.Path, "embeddings") {
+				w.Write([]byte(`{"data":[{"embedding":[0.1, 0.2, 0.3]}]}`))
+				return
+			}
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
 		}))
 		defer ts.Close()
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
+
+		originalEmbURL := orchestration.MinimaxEmbeddingAPIURL
+		orchestration.MinimaxEmbeddingAPIURL = ts.URL
+		defer func() { orchestration.MinimaxEmbeddingAPIURL = originalEmbURL }()
 	}
 
 	hub := orchestration.NewHub()
@@ -155,12 +167,20 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 		key = "mock-key-for-testing-purposes"
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
+			if strings.Contains(r.URL.Path, "embeddings") {
+				w.Write([]byte(`{"data":[{"embedding":[0.1, 0.2, 0.3]}]}`))
+				return
+			}
 			w.Write([]byte(`{"choices":[{"message":{"content":"Mock response"}}]}`))
 		}))
 		defer ts.Close()
 		originalURL := orchestration.MinimaxAPIURL
 		orchestration.MinimaxAPIURL = ts.URL
 		defer func() { orchestration.MinimaxAPIURL = originalURL }()
+
+		originalEmbURL := orchestration.MinimaxEmbeddingAPIURL
+		orchestration.MinimaxEmbeddingAPIURL = ts.URL
+		defer func() { orchestration.MinimaxEmbeddingAPIURL = originalEmbURL }()
 	}
 
 	hub := orchestration.NewHub()
