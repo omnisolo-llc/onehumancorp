@@ -67,6 +67,7 @@ go_test(
         "chaos_test.go",
         "delegation_test.go",
         "eventlog_test.go",
+        "health_test.go",
         "hub_test.go",
         "minimax_client_test.go",
         "service_extra_test.go",

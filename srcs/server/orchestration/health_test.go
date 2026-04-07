@@ -2,10 +2,12 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
 
 func TestHybridHealthProbe(t *testing.T) {
@@ -45,10 +47,13 @@ func TestCheckHealthDegraded_NoDB(t *testing.T) {
 func TestCheckHealth_SQLite(t *testing.T) {
 	// Setup a temporary in-memory sqlite
 	ctx := context.Background()
-	provider, err := db.NewSQLiteProvider(":memory:")
+
+	sqlDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		t.Fatalf("Failed to create sqlite provider: %v", err)
+		t.Fatalf("Failed to open memory sqlite: %v", err)
 	}
+
+	provider := db.NewSqliteProvider(sqlDB)
 	defer provider.Close()
 
 	// Ensure the agent_missions table exists
@@ -100,7 +105,7 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 	hub := NewHub()
 
 	// Use a mock setup to test MeshActive
-	cn, err := NewCentrifugeNode(nil)
+	cn, err := NewCentrifugeNode()
 	if err != nil {
 		t.Skipf("Skipping TestCheckHealth_MeshActive since NewCentrifugeNode failed to initialize: %v", err)
 	}
