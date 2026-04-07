@@ -47,6 +47,11 @@ type TaskManager struct {
 	taskQueue   queue.TaskQueue
 }
 
+// Queue returns the task queue.
+func (tm *TaskManager) Queue() queue.TaskQueue {
+	return tm.taskQueue
+}
+
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 	var broadcast func(string, map[string]interface{})
