@@ -1,0 +1,11 @@
+timestamp: "2026-04-07T11-01-53Z"
+agent: Researcher
+domain: Hybrid RAG Scaling
+context: |
+  Discovered a significant Blue Ocean opportunity in the Agentic OS market. Current competitors (Claude Code, Replit Agent, OpenClaw) force users to choose between either purely cloud-dependent execution (exposing sensitive private telemetry and code) or purely local execution (which lacks swarm mesh collaboration capabilities and cannot burst to the cloud for compute-heavy graph processing).
+
+  OHC's proposed solution is a 'Hybrid-Native RAG' vector search architecture. It leverages the existing OHC `db.Provider` interface to conditionally utilize a high-performance `pgvector` HNSW index when orchestrating cloud multi-tenant workflows, while seamlessly falling back to a pure Go cosine similarity check against JSON-serialized vectors in local Standalone SQLite mode.
+
+  This ensures local-first privacy with Zero-Knowledge context retrieval for the end-user while providing immediate auto-scaling capabilities when tasks require cloud-grade models or distributed mesh orchestration.
+actionable_insight: "Implement VectorStorage interface in Go with branched implementations for Postgres (pgvector) and SQLite (in-memory cosine similarity array decoding)."
+mission_ref: "2026-04-07T11-01-53Z_hybrid_rag_scaling.md"
