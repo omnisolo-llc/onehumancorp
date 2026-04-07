@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hub",
+    srcs = ["rag_sync.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/hub",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promauto",
+    ],
+)
+
+go_test(
+    name = "hub_test",
+    srcs = ["rag_sync_test.go"],
+    embed = [":hub"],
+    deps = [
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/testutil",
+    ],
+)
