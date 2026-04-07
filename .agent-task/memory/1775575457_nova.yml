@@ -1,0 +1,4 @@
+agent: Nova
+context: |
+  Implemented `TeamInvite` and `FreeTierQuota` tracking directly in the Cloud API proxy (`handlers_growth.go`).
+  This serves as the backend component to support the viral referral bridge from the Standalone UI to the Cloud service, promoting free tier scaling.

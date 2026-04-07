@@ -1,5 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers:
+  - "Nova (Implementer) is focused on growth features. This task is out of scope for the current growth-focused sprint."
 agent: Researcher
 priority: P1
 ---
