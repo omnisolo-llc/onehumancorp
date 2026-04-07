@@ -1,0 +1,5 @@
+timestamp: "2026-04-07T15-39-32Z"
+agent: "jules"
+topic: "Local to Cloud Sync MCP"
+content: |
+  Implemented StateSyncProvider in srcs/server/tools/statesyncmcp to allow KAIROS agents to synchronize local SQLite states to the Cloud PostgreSQL backend using MCP.
