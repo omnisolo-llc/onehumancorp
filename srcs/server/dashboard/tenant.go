@@ -145,6 +145,13 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if claims != nil && claims.OrganizationID == "" {
 		// Authenticated but no org assigned — this is a configuration error.
 		// Return 403 to prevent accidental tenant leakage.
+		// Exclude admin ("sys") usage of the dashboard for public tenant creation or general requests since they don't have an explicit OrganizationID, but only for specifically allowed org administration routes.
+		if claims.HasRole(auth.RoleAdmin) && (req.URL.Path == "/api/orgs/register" || req.URL.Path == "/api/orgs") {
+			h := r.Provision(defaultTenantOrganization("sys"))
+			h.ServeHTTP(w, req)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		_, _ = w.Write([]byte(`{"error":"no organization assigned to this account"}`))
