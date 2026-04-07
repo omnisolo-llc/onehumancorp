@@ -15,7 +15,7 @@ class _CommandTestService extends LocalManagerService {
   Future<bool> isServiceRunning() async => running;
 
   @override
-  Future<Process> processStart(
+  Future<Process> processStartImpl(
     String executable,
     List<String> arguments, {
     bool runInShell = true,
@@ -29,7 +29,7 @@ class _CommandTestService extends LocalManagerService {
   }
 
   @override
-  Future<ProcessResult> processRun(
+  Future<ProcessResult> processRunImpl(
     String executable,
     List<String> arguments, {
     bool runInShell = true,
@@ -158,14 +158,14 @@ void main() {
     expect(doctorOutput, contains('warn'));
   });
 
-  test('default processRun executes a shell command', () async {
+  test('default processRunImpl executes a shell command', () async {
     final defaultService = LocalManagerService(homeOverride: tempHome.path);
     ProcessResult result;
 
     if (Platform.isWindows) {
-      result = await defaultService.processRun('cmd', ['/c', 'echo', 'ok']);
+      result = await defaultService.processRunImpl('cmd', ['/c', 'echo', 'ok']);
     } else {
-      result = await defaultService.processRun('sh', ['-c', 'echo ok']);
+      result = await defaultService.processRunImpl('sh', ['-c', 'echo ok']);
     }
 
     expect(result.stdout.toString().toLowerCase(), contains('ok'));
