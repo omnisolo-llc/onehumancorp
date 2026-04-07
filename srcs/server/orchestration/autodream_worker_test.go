@@ -26,6 +26,8 @@ func setupTestDB(t *testing.T) db.Provider {
 		content TEXT NOT NULL,
 		embedding TEXT,
 		source_mission_id TEXT,
+		sync_status VARCHAR(50) DEFAULT 'pending',
+		last_sync_at TIMESTAMPTZ,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)

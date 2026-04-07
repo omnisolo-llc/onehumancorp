@@ -36,6 +36,8 @@ func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 			content TEXT NOT NULL,
 			embedding TEXT,
 			source_mission_id TEXT,
+		sync_status VARCHAR(50) DEFAULT 'pending',
+		last_sync_at TIMESTAMPTZ,
 			consolidated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
