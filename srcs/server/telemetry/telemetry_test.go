@@ -43,6 +43,9 @@ func TestInitTelemetry(t *testing.T) {
 	if latencyHistogram == nil {
 		t.Error("expected latencyHistogram to be initialized")
 	}
+	if AgentTransitionLatency == nil {
+		t.Error("expected AgentTransitionLatency to be initialized")
+	}
 	if tokenUsageCounter == nil {
 		t.Error("expected tokenUsageCounter to be initialized")
 	}
@@ -382,6 +385,10 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		RecordAgentTransitionLatency(ctx, "pending_to_in_progress", time.Second)
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -450,6 +457,11 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordAgentTransitionLatency Uninitialized", func(t *testing.T) {
+		AgentTransitionLatency = nil
+		RecordAgentTransitionLatency(ctx, "pending_to_in_progress", time.Second)
 	})
 }
 

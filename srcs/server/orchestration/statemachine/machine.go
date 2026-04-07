@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // State constants
@@ -97,21 +99,41 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID, entityType, toState, agentID, reason string) (func(), error) {
 	// Acquire lock and read current state
 	var currentState string
+	var updatedAt time.Time
 	var query string
 
 	if entityType == "SHARED_TASK" {
 		if sm.dbProvider.IsSQLite() {
-			query = `SELECT status FROM shared_tasks WHERE id = $1`
+			query = `SELECT status, COALESCE(updated_at, created_at) FROM shared_tasks WHERE id = $1`
 		} else {
-			query = `SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE`
+			query = `SELECT status, COALESCE(updated_at, created_at) FROM shared_tasks WHERE id = $1 FOR UPDATE`
 		}
 
-		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
-		if err != nil {
-			if strings.Contains(err.Error(), "no rows in result set") {
-				return nil, fmt.Errorf("entity not found: %s", entityID)
+		var updatedAtStr string
+		if sm.dbProvider.IsSQLite() {
+			err := tx.QueryRow(ctx, query, entityID).Scan(&currentState, &updatedAtStr)
+			if err == nil {
+				// Parse SQLite timestamp
+				parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", updatedAtStr)
+				if parseErr == nil {
+					updatedAt = parsedTime
+				} else {
+					updatedAt = time.Now() // fallback
+				}
+			} else {
+				if strings.Contains(err.Error(), "no rows in result set") {
+					return nil, fmt.Errorf("entity not found: %s", entityID)
+				}
+				return nil, fmt.Errorf("failed to read current state: %w", err)
 			}
-			return nil, fmt.Errorf("failed to read current state: %w", err)
+		} else {
+			err := tx.QueryRow(ctx, query, entityID).Scan(&currentState, &updatedAt)
+			if err != nil {
+				if strings.Contains(err.Error(), "no rows in result set") {
+					return nil, fmt.Errorf("entity not found: %s", entityID)
+				}
+				return nil, fmt.Errorf("failed to read current state: %w", err)
+			}
 		}
 	} else {
 		return nil, fmt.Errorf("unsupported entity type: %s", entityType)
@@ -158,6 +180,11 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 			}
 			sm.broadcast(entityID, payload)
 		}
+
+		// Record telemetry
+		transitionName := strings.ToLower(fmt.Sprintf("%s_to_%s", currentState, toState))
+		duration := time.Since(updatedAt)
+		telemetry.RecordAgentTransitionLatency(ctx, transitionName, duration)
 	}
 
 	return broadcastFunc, nil
