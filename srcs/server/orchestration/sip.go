@@ -228,6 +228,7 @@ func initializeTables(provider db.Provider) error {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
 			synced_to_cloud BOOLEAN DEFAULT FALSE
 		);`,
@@ -477,20 +478,29 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		}
 		defer tx.Rollback(ctx)
 
+		var existingStatus string
+		var existingUpdatedAt sql.NullTime
+
 		if s.db.IsSQLite() {
+			err = tx.QueryRow(ctx, "SELECT status, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&existingStatus, &existingUpdatedAt)
+			if err != nil && err != sql.ErrNoRows {
+				return err
+			}
+
 			// SQLite simple UPSERT
 			upsertQuery := `
-				INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 				ON CONFLICT(id) DO NOTHING
 			`
 			if forceLocal {
 				upsertQuery = `
-					INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO UPDATE SET
 						status=EXCLUDED.status,
-						payload=EXCLUDED.payload
+						payload=EXCLUDED.payload,
+						updated_at=CURRENT_TIMESTAMP
 				`
 			}
 			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
@@ -501,15 +511,15 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			// Postgres with FOR UPDATE SKIP LOCKED
 			// Try to select existing row for update
 			var existingID string
-			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
+			err := tx.QueryRow(ctx, "SELECT id, status, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID, &existingStatus, &existingUpdatedAt)
 
 			if err != nil {
 				// Record doesn't exist or is locked by someone else.
 				// Since we skip locked, if it's locked we might just skip the insert/update to avoid contention,
 				// or we try inserting. For standard upsert logic without waiting:
 				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO NOTHING
 				`
 				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
@@ -524,7 +534,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			if forceLocal && existingID != "" {
 				updateQuery := `
 					UPDATE agent_missions
-					SET status = $1, payload = $2
+					SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP
 					WHERE id = $3 AND organization_id = $4
 				`
 				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)
@@ -535,17 +545,18 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 				// We tried to select and it failed (either not found or locked).
 				// We will try an insert ON CONFLICT.
 				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO NOTHING
 				`
 				if forceLocal {
 					insertQuery = `
-						INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
-						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
+						INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
 						ON CONFLICT(id) DO UPDATE SET
 							status=EXCLUDED.status,
-							payload=EXCLUDED.payload
+							payload=EXCLUDED.payload,
+							updated_at=CURRENT_TIMESTAMP
 					`
 				}
 				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
@@ -553,6 +564,11 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					return errInsert
 				}
 			}
+		}
+
+		if existingStatus != "" && existingStatus != status && existingUpdatedAt.Valid {
+			transitionLatency := time.Since(existingUpdatedAt.Time)
+			telemetry.RecordAgentTransitionLatency(ctx, fmt.Sprintf("%s_to_%s", strings.ToLower(existingStatus), strings.ToLower(status)), transitionLatency)
 		}
 
 		return tx.Commit(ctx)

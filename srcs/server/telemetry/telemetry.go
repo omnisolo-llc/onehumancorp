@@ -45,6 +45,7 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
+	AgentTransitionLatencySeconds metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
@@ -166,6 +167,15 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentTransitionLatencySeconds, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -904,6 +914,16 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 		return
 	}
 	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+}
+
+// RecordAgentTransitionLatency logs the timing of specific state changes.
+func RecordAgentTransitionLatency(ctx context.Context, transitionType string, latency time.Duration) {
+	if AgentTransitionLatencySeconds == nil {
+		return
+	}
+	AgentTransitionLatencySeconds.Record(ctx, latency.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transitionType),
+	))
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.

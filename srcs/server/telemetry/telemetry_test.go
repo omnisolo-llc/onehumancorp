@@ -382,6 +382,10 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		RecordAgentTransitionLatency(ctx, "pending_to_running", 500*time.Millisecond)
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -450,6 +454,13 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordAgentTransitionLatency Uninitialized", func(t *testing.T) {
+		originalAgentTransitionLatencySeconds := AgentTransitionLatencySeconds
+		AgentTransitionLatencySeconds = nil
+		defer func() { AgentTransitionLatencySeconds = originalAgentTransitionLatencySeconds }()
+		RecordAgentTransitionLatency(ctx, "pending_to_running", 500*time.Millisecond)
 	})
 }
 
