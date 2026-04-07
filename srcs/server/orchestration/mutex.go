@@ -157,7 +157,7 @@ func (m *SQLiteMutex) Unlock(ctx context.Context) error {
 		return err
 	}
 
-	rowsAffected, _ := res.RowsAffected()
+	rowsAffected, _ := res.RowsAffected
 	if rowsAffected == 0 {
 		return ErrLockNotOwned
 	}

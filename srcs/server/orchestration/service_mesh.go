@@ -40,7 +40,7 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 }
 
 // DiscoverAgents streams known agent capabilities from the mesh
-func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+func (s *HubServiceServer) DiscoverAgents2(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
 	ctx := stream.Context()
 
 	start := time.Now()
@@ -79,7 +79,7 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 }
 
 // StreamMeshEvents streams real-time events from the mesh
-func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+func (s *HubServiceServer) StreamMeshEvents2(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
 	ctx := stream.Context()
 
 	start := time.Now()

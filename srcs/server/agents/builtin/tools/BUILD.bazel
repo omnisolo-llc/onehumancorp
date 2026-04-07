@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "tools",
+    srcs = [
+        "bash.go",
+        "glob.go",
+        "grep.go",
+        "read.go",
+        "sendmessage.go",
+        "todowrite.go",
+        "toolsearch.go",
+        "webfetch.go",
+        "websearch.go",
+        "write.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin/tools",
+    visibility = ["//visibility:public"],
+)
