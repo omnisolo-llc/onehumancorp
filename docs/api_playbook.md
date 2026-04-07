@@ -53,6 +53,16 @@
 }</code></pre>
 </div>
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>GET <code>/api/v1/mesh/rooms/{room_id}</code></strong>
+  <p>Retrieves the current state and participants of a specific KAIROS orchestration room within the Teammate Mesh.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "room_id": "room-999",
+  "active_agents": ["agent-1", "agent-2"],
+  "status": "active"
+}</code></pre>
+</div>
+
 ### 2.3 Sub-Agent Queue
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
   <strong>POST <code>/api/queue/subagent</code></strong>
@@ -81,6 +91,33 @@
         DB-->>Worker: Lock Acquired (EXECUTING)
         Worker->>API: Complete Task
         API->>DB: Update State (COMPLETED)
+    ```
+  </div>
+</div>
+
+### 2.4 AutoDream Pipeline
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/v1/autodream/</code></strong>
+  <p>Triggers the KAIROS AutoDream pipeline to convert episodic memory into long-term embedded vector truth.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "memory_id": "mem-1024",
+  "priority": "background"
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">AutoDream Vector Embedding Workflow</h4>
+  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    ```mermaid
+    graph TD
+        A[Episodic Memory] -->|Trigger AutoDream| B(AutoDream Pipeline)
+        B --> C{Vector Embedding Model}
+        C -->|Generate Embeddings| D[Vector Database]
+        D --> E[Long-Term Agent Context]
+
+        style A fill:#003366,stroke:#333,stroke-width:2px,color:#fff
+        style B fill:#006699,stroke:#333,stroke-width:2px,color:#fff
+        style C fill:#0099cc,stroke:#333,stroke-width:2px,color:#fff
+        style D fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
+        style E fill:#00ffcc,stroke:#333,stroke-width:2px,color:#111
     ```
   </div>
 </div>
