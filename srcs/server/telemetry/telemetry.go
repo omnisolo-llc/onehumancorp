@@ -464,6 +464,10 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	if realMeter, ok := m.(metric.Meter); ok {
+		initRagSyncMetrics(realMeter)
+	}
+
 	if len(errs) > 0 {
 		return errs[0]
 	}
