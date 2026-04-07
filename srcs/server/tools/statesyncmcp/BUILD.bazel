@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "statesyncmcp",
+    srcs = ["statesyncmcp.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/tools/statesyncmcp",
+    visibility = ["//visibility:public"],
+    deps = ["//srcs/server/auth"],
+)
+
+go_test(
+    name = "statesyncmcp_test",
+    srcs = ["statesyncmcp_test.go"],
+    embed = [":statesyncmcp"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)
