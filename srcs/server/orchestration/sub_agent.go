@@ -173,11 +173,7 @@ parent_task_id: %s
 isolated_context: %t
 ---`, task.ID, time.Now().Unix(), subAgentType, parentTaskID, isolatedContext)
 
-	err := writeHeartbeatFile(task.ID, heartbeatContent)
-	if err != nil {
-		// Just log or ignore since heartbeats are non-critical
-		fmt.Printf("failed to write heartbeat: %v\n", err)
-	}
+	_ = writeHeartbeatFile(task.ID, heartbeatContent)
 
 	// Simulate real work that might fail
 	select {

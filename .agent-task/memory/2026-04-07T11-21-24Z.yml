@@ -1,0 +1,7 @@
+---
+timestamp: "2026-04-07T11-21-24Z"
+topic: "Observability Hygiene and Mesh Resilience"
+---
+- When triaging local-to-cloud mesh issues, `fmt.Printf` inside rapid-loop operations like `executeTask` in `sub_agent.go` causes unacceptable log bloat. It should be explicitly silenced or routed to the correct telemetry channels.
+- `HybridHealthProbe` exists and serves as a key indicator for hybrid transition phases (SQLite vs Cloud connection times).
+- Stagnant tasks blocking the KAIROS engine were successfully rotated.
