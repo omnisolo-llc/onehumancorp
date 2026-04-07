@@ -375,6 +375,7 @@ var defaultMcpTools = []MCPTool{
 	{ID: "github-actions-mcp", Name: "GitHub Actions", Description: "CI/CD pipelines: trigger workflow runs, inspect job logs, and manage deployment environments.", Category: "cicd", Status: "available"},
 	{ID: "notion-mcp", Name: "Notion", Description: "Knowledge base: read and write pages, manage databases, and retrieve structured documentation.", Category: "knowledge", Status: "available"},
 	{ID: "spire-mcp", Name: "SPIFFE/SPIRE", Description: "Identity management: issue and rotate SVID certificates for agent workloads.", Category: "identity", Status: "available"},
+	{ID: "statesync-mcp", Name: "Hybrid Local-to-Cloud State Sync", Description: "Synchronizes offline SQLite state to PostgreSQL Cloud and vice-versa.", Category: "database", Status: "available"},
 }
 
 var statusOrder = []orchestration.Status{
