@@ -66,6 +66,9 @@ func TestSIPDB_Init(t *testing.T) {
 		t.Fatalf("expected mission ID 'm1', got '%s'", missions[0].ID)
 	}
 
+	// Wait a moment so transition duration > 0
+	time.Sleep(10 * time.Millisecond)
+
 	// Test Completion
 	err = db.CompleteMission(ctx, "m1")
 	if err != nil {
@@ -626,6 +629,9 @@ func TestSIPDB_BurstMission(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DelegateMission failed: %v", err)
 	}
+
+	// Wait a moment so transition duration > 0
+	time.Sleep(10 * time.Millisecond)
 
 	// Test 1: Burst without endpoint
 	err = db.BurstMission(ctx, "mission-burst-1", "")
