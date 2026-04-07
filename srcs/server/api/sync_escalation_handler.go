@@ -8,6 +8,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 )
 
@@ -35,10 +36,23 @@ func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
 		}
 
 		syncedCount := 0
-		if hub.TaskManager() != nil {
+		if hub.SIPDB() != nil {
+			q := queue.NewPostgresTaskQueue(hub.SIPDB().Provider())
 			for _, p := range payloads {
 				if p.MemoryID == "" {
 					continue
+				}
+
+				var parsedContext interface{}
+				if err := json.Unmarshal([]byte(p.Context), &parsedContext); err == nil {
+					redactedContext := telemetry.RedactInterfacePII(parsedContext)
+					if redactedBytes, err := json.Marshal(redactedContext); err == nil {
+						p.Context = string(redactedBytes)
+					} else {
+						p.Context = telemetry.RedactPII(p.Context)
+					}
+				} else {
+					p.Context = telemetry.RedactPII(p.Context)
 				}
 
 				job := &queue.Job{
@@ -48,18 +62,10 @@ func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
 					Payload:      p.Context,
 				}
 
-				// We need to enqueue this to the TaskQueue which we get from the provider if we can't directly.
-				// However, if we don't have access to tm.taskQueue directly because it's unexported:
-				// we could use a custom postgres_queue or enqueue directly to the database here, since we have the DB.
-
-				// Let's create a Postgres queue right here with hub.SIPDB().Provider() if available.
-				if hub.SIPDB() != nil {
-					q := queue.NewPostgresTaskQueue(hub.SIPDB().Provider())
-					if err := q.Enqueue(ctx, job); err != nil {
-						slog.Error("failed to enqueue escalation job", "memory_id", p.MemoryID, "error", err)
-					} else {
-						syncedCount++
-					}
+				if err := q.Enqueue(ctx, job); err != nil {
+					slog.Error("failed to enqueue escalation job", "memory_id", p.MemoryID, "error", err)
+				} else {
+					syncedCount++
 				}
 			}
 		}
