@@ -48,3 +48,10 @@ type ChatRequest struct {
 type ChatResponse struct {
 	Message Message `json:"message"`
 }
+
+// QueryContext is the context window tracking
+type QueryContext struct {
+    MaxTokens    int
+    TokensUsed   int
+    TokensBudget int
+}

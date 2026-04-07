@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -27,25 +28,83 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	// For simplicity, we assume req structure aligns with a translation layer, or we map it here.
 
 	// Map our ChatRequest to Anthropic's payload
-	type antMessage struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-
-	var messages []antMessage
+	var messages []map[string]interface{}
 	for _, m := range req.Messages {
 		if m.Role == RoleSystem {
 			continue // Handled separately
 		}
 
 		role := string(m.Role)
+
+		// Handle tool interactions
 		if role == string(RoleTool) {
-			role = "user" // Tool results are often sent as user in some simplified layers
+			role = "user"
+
+			// Map our tool results format to Anthropic format
+			var contentParts []map[string]interface{}
+			for _, tr := range m.ToolResults {
+				content := tr.Content
+				if tr.Error != "" {
+					content = "Error: " + tr.Error
+				}
+
+				contentParts = append(contentParts, map[string]interface{}{
+					"type":        "tool_result",
+					"tool_use_id": tr.ToolCallID,
+					"content":     content,
+				})
+			}
+			messages = append(messages, map[string]interface{}{
+				"role":    role,
+				"content": contentParts,
+			})
+			continue
 		}
 
-		messages = append(messages, antMessage{
-			Role:    role,
-			Content: m.Content,
+		if len(m.ToolCalls) > 0 {
+			// Assistant message with tool calls
+			var contentParts []map[string]interface{}
+			if m.Content != "" {
+				contentParts = append(contentParts, map[string]interface{}{
+					"type": "text",
+					"text": m.Content,
+				})
+			}
+			for _, tc := range m.ToolCalls {
+				var args map[string]interface{}
+				if len(tc.Arguments) > 0 {
+					_ = json.Unmarshal(tc.Arguments, &args)
+				}
+				if args == nil {
+					args = make(map[string]interface{})
+				}
+				contentParts = append(contentParts, map[string]interface{}{
+					"type":  "tool_use",
+					"id":    tc.ID,
+					"name":  tc.Name,
+					"input": args,
+				})
+			}
+			messages = append(messages, map[string]interface{}{
+				"role":    role,
+				"content": contentParts,
+			})
+			continue
+		}
+
+		messages = append(messages, map[string]interface{}{
+			"role":    role,
+			"content": m.Content,
+		})
+	}
+
+	// Map tools to Anthropic tool schema
+	var tools []map[string]interface{}
+	for _, t := range req.Tools {
+		tools = append(tools, map[string]interface{}{
+			"name":         t.Name,
+			"description":  t.Description,
+			"input_schema": t.Parameters,
 		})
 	}
 
@@ -54,6 +113,9 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 		"max_tokens": req.MaxTokens,
 		"system":     req.System,
 		"messages":   messages,
+	}
+	if len(tools) > 0 {
+		payload["tools"] = tools
 	}
 
 	body, _ := json.Marshal(payload)
@@ -74,12 +136,18 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return ChatResponse{}, fmt.Errorf("anthropic api error: %s", resp.Status)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return ChatResponse{}, fmt.Errorf("anthropic api error: %s - %s", resp.Status, string(bodyBytes))
 	}
 
 	var result struct {
-		Content []struct {
-			Text string `json:"text"`
+		StopReason string `json:"stop_reason"`
+		Content    []struct {
+			Type  string          `json:"type"`
+			Text  string          `json:"text"`
+			ID    string          `json:"id"`
+			Name  string          `json:"name"`
+			Input json.RawMessage `json:"input"`
 		} `json:"content"`
 	}
 
@@ -88,14 +156,25 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	}
 
 	content := ""
-	if len(result.Content) > 0 {
-		content = result.Content[0].Text
+	var toolCalls []ToolCall
+
+	for _, c := range result.Content {
+		if c.Type == "text" {
+			content += c.Text
+		} else if c.Type == "tool_use" {
+			toolCalls = append(toolCalls, ToolCall{
+				ID:        c.ID,
+				Name:      c.Name,
+				Arguments: c.Input,
+			})
+		}
 	}
 
 	return ChatResponse{
 		Message: Message{
-			Role:    RoleAssistant,
-			Content: content,
+			Role:      RoleAssistant,
+			Content:   content,
+			ToolCalls: toolCalls,
 		},
 	}, nil
 }

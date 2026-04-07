@@ -3,14 +3,24 @@ package builtin
 import (
 	"context"
 	"fmt"
+    "log/slog"
+    "time"
 )
 
 // Run executes the agent loop until completion or error.
 func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Message, error) {
 	messages := append([]Message(nil), initialMessages...)
 
-	for {
-		// Prepare request
+    // Conversation loop state
+    maxTurns := 100
+    turnCount := 0
+    consecutiveErrors := 0
+    maxConsecutiveErrors := 3
+
+	for turnCount < maxTurns {
+		turnCount++
+
+        // Prepare request
 		req := ChatRequest{
 			Model:       a.Model,
 			System:      a.System,
@@ -23,8 +33,15 @@ func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Me
 		// Call LLM
 		resp, err := a.Client.Chat(ctx, req)
 		if err != nil {
-			return messages, fmt.Errorf("llm chat error: %w", err)
+            consecutiveErrors++
+            if consecutiveErrors >= maxConsecutiveErrors {
+			    return messages, fmt.Errorf("llm chat error (exceeded max retries): %w", err)
+            }
+            slog.Warn("llm chat error, retrying", "err", err, "turn", turnCount)
+            time.Sleep(time.Second * time.Duration(consecutiveErrors))
+            continue
 		}
+        consecutiveErrors = 0 // Reset on success
 
 		messages = append(messages, resp.Message)
 
@@ -38,7 +55,8 @@ func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Me
 		for _, tc := range resp.Message.ToolCalls {
 			result, err := a.executeToolCall(ctx, tc)
 			if err != nil {
-				// We can return the error as a tool result instead of failing the whole loop
+				// We return the error as a tool result instead of failing the whole loop,
+                // allowing the LLM to gracefully recover.
 				toolResults = append(toolResults, ToolResult{
 					ToolCallID: tc.ID,
 					Error:      err.Error(),
@@ -54,6 +72,10 @@ func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Me
 			ToolResults: toolResults,
 		})
 	}
+
+    if turnCount >= maxTurns {
+        return messages, fmt.Errorf("exceeded maximum turns (%d)", maxTurns)
+    }
 
 	return messages, nil
 }

@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,6 +15,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/onehumancorp/mono/srcs/server/agents/local"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -460,11 +461,25 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	})
 
-	// 5. Start the builtin agent process (Rust binary).
+	// 5. Start the Go builtin agent process.
 	// The Rust binary connects to the gRPC server and self-registers.
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	grpcEndpoint := "http://localhost" + grpcAddress
-	startBuiltinAgentProcess(ctx, grpcEndpoint)
+
+	// Start local builtin agent
+	go func() {
+		time.Sleep(1 * time.Second)
+		cfg := local.AgentConfig{} // default config
+		runner, err := local.StartDefaultRunner(hub, cfg)
+		if err != nil {
+			slog.Error("failed to start local runner", "error", err)
+			return
+		}
+
+		<-ctx.Done()
+		runner.Stop()
+	}()
+
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Setup MeshTransport for Hub

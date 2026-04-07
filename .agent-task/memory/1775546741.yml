@@ -1,0 +1,1 @@
+context:\n  module: builtin-agent\n  update: Reimplemented claude-code harness, resolving missing token budget, stream handler, and tool permission tracking.\n  author: Implementer Agent\n  timestamp: 2026-04-07T07:25:41Z
