@@ -382,6 +382,50 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		RecordAgentTransitionLatency(ctx, "pending_to_running", 500*time.Millisecond)
+	})
+}
+
+func TestRecordAgentTransitionLatencyExport(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	cleanup, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("failed to init telemetry: %v", err)
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+	RecordAgentTransitionLatency(ctx, "pending_to_running", 5*time.Second)
+
+	// Allow asynchronous metric exports to complete before asserting
+	time.Sleep(10 * time.Millisecond)
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	rr := httptest.NewRecorder()
+
+	MetricsHandler().ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	if !bytes.Contains([]byte(body), []byte("ohc_agent_transition_latency_seconds")) {
+		t.Errorf("Expected body to contain 'ohc_agent_transition_latency_seconds', got %q", body)
+	}
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {

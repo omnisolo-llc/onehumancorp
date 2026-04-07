@@ -35,6 +35,7 @@ var (
 	swarmTaskTransitionsCounter metric.Int64Counter
 	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
 	swarmTaskProcessingLatency  metric.Float64Histogram
+	agentTransitionLatency      metric.Float64Histogram
 	taskEnqueuedCounter metric.Int64Counter
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
@@ -166,6 +167,15 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Agent state transition latency in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -904,6 +914,25 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 		return
 	}
 	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+}
+
+// RecordAgentTransitionLatency records the time spent in the previous state during a transition.
+//
+//   - ctx: context.Context; The context of the active trace or request.
+//   - transition: string; The type of state transition (e.g. pending_to_running).
+//   - duration: time.Duration; The time spent in the previous state.
+//
+// Accepts parameters: ctx context.Context, transition string, duration time.Duration (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, duration time.Duration) {
+	if agentTransitionLatency == nil {
+		return
+	}
+	agentTransitionLatency.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transition),
+	))
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.
