@@ -228,6 +228,7 @@ func initializeTables(provider db.Provider) error {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
 			synced_to_cloud BOOLEAN DEFAULT FALSE
 		);`,
