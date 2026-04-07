@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
@@ -137,56 +138,38 @@ class _GlassMessageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.memory, color: colors.primary),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message.authorName,
+                  style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: colors.primary, fontSize: 16),
                 ),
-                child: Icon(Icons.memory, color: colors.primary),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      message.authorName,
-                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: colors.primary, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message.body,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  message.body,
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -248,39 +231,28 @@ class _MemoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colors.secondaryContainer.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.3)),
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              Icon(Icons.cloud_sync, size: 14, color: colors.secondary),
+              const SizedBox(width: 4),
               Text(
-                value,
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(Icons.cloud_sync, size: 14, color: colors.secondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    updatedAt,
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant),
-                  ),
-                ],
+                updatedAt,
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
