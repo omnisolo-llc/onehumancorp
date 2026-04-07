@@ -4,30 +4,26 @@ go_library(
     name = "builtin",
     srcs = [
         "agent.go",
+        "bash.go",
+        "glob.go",
+        "grep.go",
         "llm_anthropic.go",
         "llm_ollama.go",
         "llm_openai.go",
         "loop.go",
         "prompt.go",
+        "read.go",
+        "sendmessage.go",
+        "todowrite.go",
+        "toolsearch.go",
         "tools.go",
         "types.go",
-        "tools/bash.go",
-        "tools/glob.go",
-        "tools/grep.go",
-        "tools/read.go",
-        "tools/sendmessage.go",
-        "tools/todowrite.go",
-        "tools/toolsearch.go",
-        "tools/webfetch.go",
-        "tools/websearch.go",
-        "tools/write.go",
+        "webfetch.go",
+        "websearch.go",
+        "write.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
     visibility = ["//visibility:public"],
-    deps = [
-        # "//srcs/server/db",
-        # "//srcs/server/orchestration",
-    ],
 )
 
 go_test(
@@ -36,7 +32,4 @@ go_test(
         "agent_test.go",
     ],
     embed = [":builtin"],
-    deps = [
-        # "//srcs/server/db",
-    ],
 )

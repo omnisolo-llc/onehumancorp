@@ -1,5 +1,7 @@
 package builtin
 
+import "context"
+
 // BuiltinAgent handles the core loop for the builtin agent.
 type BuiltinAgent struct {
 	Client      LLMClient
@@ -12,5 +14,5 @@ type BuiltinAgent struct {
 
 // LLMClient is the interface for talking to the LLM backend.
 type LLMClient interface {
-	Chat(req ChatRequest) (ChatResponse, error)
+	Chat(ctx context.Context, req ChatRequest) (ChatResponse, error)
 }
