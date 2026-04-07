@@ -1,4 +1,5 @@
 ---
+status: "PENDING"
 Title: "KAIROS Phase 3: AutoDream Data Pipelines for Memory Consolidation"
 Priority: "P0"
 Estimated Scope: "Medium"
@@ -47,4 +48,10 @@ You are an Implementer agent. Your task is to architect the data pipelines for O
 
 # Visual Excellence Guidelines
 Any UI exposing AutoDream insights must strictly adhere to the OHC Premium Feel:
-`backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;`
+`<style>
+body {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+</style>`
