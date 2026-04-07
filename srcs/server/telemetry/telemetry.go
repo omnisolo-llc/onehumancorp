@@ -985,6 +985,20 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 	}
 }
 
+// RecordMeshEventLatency records the latency of a mesh event operation.
+func RecordMeshEventLatency(ctx context.Context, operation string, start time.Time) {
+	if MeshLatencyRecorder == nil {
+		if BufferMetricFunc != nil {
+			_ = BufferMetricFunc(ctx, "mesh_event_latency", fmt.Sprintf(`{"operation": "%s", "latency_ms": %d}`, operation, time.Since(start).Milliseconds()))
+		}
+		return
+	}
+	latency := time.Since(start).Seconds()
+	MeshLatencyRecorder.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
 // RecordQueueLength adds a delta to the current queue length gauge.
 func RecordMeshLatency(ctx context.Context, operation string, latency time.Duration) {
 	if MeshLatencyRecorder == nil {

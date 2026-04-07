@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 )
@@ -231,6 +232,7 @@ func NewRedisMeshTransport(redisURL string) (*RedisMeshTransport, error) {
 }
 
 func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
+	defer telemetry.RecordMeshEventLatency(ctx, "tasks", time.Now())
 	data, err := json.Marshal(task)
 	if err != nil {
 		return err
@@ -264,6 +266,7 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 }
 
 func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	defer telemetry.RecordMeshEventLatency(ctx, "coordination", time.Now())
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -297,6 +300,7 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	defer telemetry.RecordMeshEventLatency(ctx, "capabilities", time.Now())
 	data, err := json.Marshal(caps)
 	if err != nil {
 		return err
@@ -329,6 +333,7 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	defer telemetry.RecordMeshEventLatency(ctx, topic, time.Now())
 	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
@@ -548,6 +553,7 @@ func (lm *MemoryMeshTransport) persistWorker(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
+	defer telemetry.RecordMeshEventLatency(ctx, "tasks", time.Now())
 	shardIdx := lm.getShard(task.TaskID)
 
 	err := meshWithRetry(ctx, 3, func() error {
@@ -610,6 +616,7 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	defer telemetry.RecordMeshEventLatency(ctx, "coordination", time.Now())
 	shardIdx := lm.getShard(msg.AgentID)
 
 	err := meshWithRetry(ctx, 3, func() error {
@@ -663,6 +670,7 @@ func (lm *MemoryMeshTransport) runCoord(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	defer telemetry.RecordMeshEventLatency(ctx, "capabilities", time.Now())
 	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {
@@ -731,6 +739,7 @@ func (lm *MemoryMeshTransport) initTopic(topic string) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	defer telemetry.RecordMeshEventLatency(ctx, topic, time.Now())
 	lm.initTopic(topic)
 	shardIdx := lm.getShard(string(payload)) // hash payload for random shard since event ID isn't directly available
 

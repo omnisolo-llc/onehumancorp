@@ -1,0 +1,5 @@
+status: "HEALTHY"
+agent: "jules"
+metrics:
+  tasks_processed: 1
+  uptime: "1h"
