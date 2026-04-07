@@ -319,6 +319,20 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to check pending task: %w", queryErr)
 	}
 
+	// Fetch task prior to transition to calculate latency from last update
+	var preTransitionUpdatedAt sql.NullTime
+	var preTransitionCreatedAt time.Time
+	preTransitionQuery := `SELECT created_at, updated_at FROM shared_tasks WHERE id = $1`
+	if err := tx.QueryRow(ctx, preTransitionQuery, fetchedTaskID).Scan(&preTransitionCreatedAt, &preTransitionUpdatedAt); err == nil {
+		// Calculate latency using updated_at if valid, otherwise fallback to created_at
+		baseTime := preTransitionCreatedAt
+		if preTransitionUpdatedAt.Valid {
+			baseTime = preTransitionUpdatedAt.Time
+		}
+		duration := time.Since(baseTime)
+		telemetry.RecordAgentTransitionLatency(ctx, "pending_to_running", duration)
+	}
+
 	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Claimed task")
 	if err != nil {
 		return nil, fmt.Errorf("failed to transition state: %w", err)
@@ -450,8 +464,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	var createdAt time.Time
+	var updatedAt sql.NullTime
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, updated_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &updatedAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -461,6 +476,14 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+
+	// Calculate transition latency using updated_at
+	baseTime := createdAt
+	if updatedAt.Valid {
+		baseTime = updatedAt.Time
+	}
+	duration := time.Since(baseTime)
+	telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", duration)
 
 	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
