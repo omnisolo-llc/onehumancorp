@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // State constants
@@ -127,9 +129,18 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 	}
 
 	// Update entity state
+	var latency time.Duration
 	if entityType == "SHARED_TASK" {
+		// Read updated_at to calculate latency
+		var updatedAt time.Time
+		timeQuery := `SELECT updated_at FROM shared_tasks WHERE id = $1`
+		err := tx.QueryRow(ctx, timeQuery, entityID).Scan(&updatedAt)
+		if err == nil && !updatedAt.IsZero() {
+			latency = time.Since(updatedAt)
+		}
+
 		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
-		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
+		_, err = tx.Exec(ctx, updateQuery, toState, agentID, entityID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update entity state: %w", err)
 		}
@@ -157,6 +168,11 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 				"reason":      reason,
 			}
 			sm.broadcast(entityID, payload)
+		}
+
+		if latency > 0 {
+			transitionType := strings.ToLower(currentState) + "_to_" + strings.ToLower(toState)
+			telemetry.RecordAgentTransitionLatency(ctx, transitionType, latency)
 		}
 	}
 

@@ -24,6 +24,7 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
+	agentTransitionLatency metric.Float64Histogram
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -191,6 +192,15 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTaskProcessingLatency, err = m.Float64Histogram(
 		"ohc_swarm_task_processing_latency_ms",
 		metric.WithDescription("Latency of processing swarm tasks"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Time spent during agent state transitions"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -763,6 +773,16 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	}
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
+	))
+}
+
+// RecordAgentTransitionLatency records the latency between agent state transitions.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, latency time.Duration) {
+	if agentTransitionLatency == nil {
+		return
+	}
+	agentTransitionLatency.Record(ctx, latency.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transition),
 	))
 }
 

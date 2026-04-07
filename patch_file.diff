@@ -1,0 +1,87 @@
+--- srcs/server/telemetry/telemetry.go
++++ srcs/server/telemetry/telemetry.go
+@@ -24,6 +24,7 @@
+	requestCounter   metric.Int64Counter
+	latencyHistogram metric.Float64Histogram
+	MeshLatencyRecorder metric.Float64Histogram
++	agentTransitionLatency metric.Float64Histogram
+
+	tokenUsageCounter          metric.Int64Counter
+	tokenBurnRateGauge         metric.Float64Gauge
+@@ -195,6 +196,15 @@
+	if err != nil {
+		errs = append(errs, err)
+	}
++
++	agentTransitionLatency, err = m.Float64Histogram(
++		"ohc_agent_transition_latency_seconds",
++		metric.WithDescription("Time spent during agent state transitions"),
++		metric.WithUnit("s"),
++	)
++	if err != nil {
++		errs = append(errs, err)
++	}
+
+	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
+@@ -765,6 +775,16 @@
+		attribute.String("operation", operation),
+	))
+ }
++
++// RecordAgentTransitionLatency records the latency between agent state transitions.
++func RecordAgentTransitionLatency(ctx context.Context, transition string, latency time.Duration) {
++	if agentTransitionLatency == nil {
++		return
++	}
++	agentTransitionLatency.Record(ctx, latency.Seconds(), metric.WithAttributes(
++		attribute.String("transition", transition),
++	))
++}
+
+ // RecordSQLiteRetryExhausted increments the global counter for SQLite transaction failed after exhausting retries.
+ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
+--- srcs/server/orchestration/statemachine/machine.go
++++ srcs/server/orchestration/statemachine/machine.go
+@@ -6,8 +6,10 @@
+	"encoding/hex"
+	"fmt"
+	"strings"
++	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/db"
++	"github.com/onehumancorp/mono/srcs/server/telemetry"
+ )
+
+ // State constants
+@@ -127,9 +129,18 @@
+	}
+
+	// Update entity state
++	var latency time.Duration
+	if entityType == "SHARED_TASK" {
++		// Read updated_at to calculate latency
++		var updatedAt time.Time
++		timeQuery := `SELECT updated_at FROM shared_tasks WHERE id = $1`
++		err := tx.QueryRow(ctx, timeQuery, entityID).Scan(&updatedAt)
++		if err == nil && !updatedAt.IsZero() {
++			latency = time.Since(updatedAt)
++		}
++
+		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+-		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
++		_, err = tx.Exec(ctx, updateQuery, toState, agentID, entityID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update entity state: %w", err)
+		}
+@@ -158,6 +169,11 @@
+			}
+			sm.broadcast(entityID, payload)
+		}
++
++		if latency > 0 {
++			transitionType := strings.ToLower(currentState) + "_to_" + strings.ToLower(toState)
++			telemetry.RecordAgentTransitionLatency(ctx, transitionType, latency)
++		}
+	}
+
+	return broadcastFunc, nil
