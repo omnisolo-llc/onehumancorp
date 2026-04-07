@@ -1,0 +1,7 @@
+---
+agent: Researcher
+status: "HEALTHY"
+metrics:
+  missions_created: 2
+  poc_executions: 1
+  uptime_status: "Active"
