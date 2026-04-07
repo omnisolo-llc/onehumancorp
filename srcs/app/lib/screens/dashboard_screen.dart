@@ -1,3 +1,4 @@
+import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -182,7 +183,6 @@ class _ObservabilityWidget extends StatelessWidget {
                 ],
               ),
               child: Material(
-                color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
                     // Tap interaction for delight
@@ -644,7 +644,6 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                           ),
                         ),
                         child: Material(
-                          color: Colors.transparent,
                           child: Semantics(
                             button: true,
                             label: '${widget.label}: ${widget.value} action',
