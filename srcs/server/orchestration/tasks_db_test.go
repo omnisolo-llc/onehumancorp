@@ -29,7 +29,8 @@ func TestClaimTask_SQLite(t *testing.T) {
 			dependencies JSONB,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
+		);
+		CREATE INDEX IF NOT EXISTS idx_shared_tasks_org_status ON shared_tasks(organization_id, status);
 	`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
