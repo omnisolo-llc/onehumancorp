@@ -4,7 +4,6 @@
 -- We use pgvector for similarity searches in Postgres.
 -- The Go `db.Provider` abstraction converts this to TEXT for SQLite fallback if needed.
 
-CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS agent_session_data (
     session_id TEXT PRIMARY KEY,

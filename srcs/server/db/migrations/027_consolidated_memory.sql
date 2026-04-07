@@ -1,4 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS consolidated_memory (
     id TEXT PRIMARY KEY,

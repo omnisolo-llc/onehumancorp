@@ -171,6 +171,13 @@ func New(ctx context.Context) (*DB, error) {
 // A simple `schema_migrations` table tracks which files have already been
 // applied.
 func (p *DB) RunMigrations(ctx context.Context) error {
+	// Execute CREATE EXTENSION for PostgreSQL only
+	if !p.Provider.IsSQLite() {
+		if _, err := p.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS vector;"); err != nil {
+			return fmt.Errorf("db: create vector extension: %w", err)
+		}
+	}
+
 	// Ensure tracking table exists.
 	// We use standard timestamp to be compatible with both
 	if _, err := p.Exec(ctx, `

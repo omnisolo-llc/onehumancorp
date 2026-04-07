@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE EXTENSION IF NOT EXISTS vector;
 
 -- For autoDream Memory Embeddings
 CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
