@@ -46,6 +46,9 @@ func TestInitTelemetry(t *testing.T) {
 	if tokenUsageCounter == nil {
 		t.Error("expected tokenUsageCounter to be initialized")
 	}
+	if agentTransitionLatency == nil {
+		t.Error("expected agentTransitionLatency to be initialized")
+	}
 	if agentApiCallsCounter == nil {
 		t.Error("expected agentApiCallsCounter to be initialized")
 	}
@@ -326,6 +329,30 @@ func TestMetricsHandler(t *testing.T) {
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
+	}
+}
+
+func TestRecordAgentTransitionLatency(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+
+	InitTelemetry()
+
+	ctx := context.Background()
+	RecordAgentTransitionLatency(ctx, "pending_to_running", 123*time.Millisecond)
+
+	time.Sleep(10 * time.Millisecond)
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	rr := httptest.NewRecorder()
+	MetricsHandler().ServeHTTP(rr, req)
+
+	if !bytes.Contains(rr.Body.Bytes(), []byte("ohc_agent_transition_latency_seconds")) {
+		t.Errorf("Expected ohc_agent_transition_latency_seconds metric, got:\n%s", rr.Body.String())
+	}
+	if !bytes.Contains(rr.Body.Bytes(), []byte("transition=\"pending_to_running\"")) {
+		t.Errorf("Expected transition=\"pending_to_running\" attribute, got:\n%s", rr.Body.String())
 	}
 }
 

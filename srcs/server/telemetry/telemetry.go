@@ -60,6 +60,7 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
+	agentTransitionLatency      metric.Float64Histogram
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -444,6 +445,15 @@ func InitWithMeter(m mockableMeter) error {
 	meshBroadcastTotal, err = m.Int64Counter(
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -990,5 +1000,14 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordAgentTransitionLatency records the duration an agent spent in a specific state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, duration time.Duration) {
+	if agentTransitionLatency != nil {
+		agentTransitionLatency.Record(ctx, duration.Seconds(), metric.WithAttributes(
+			attribute.String("transition", transition),
+		))
 	}
 }

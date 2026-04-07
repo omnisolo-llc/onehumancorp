@@ -228,6 +228,7 @@ func initializeTables(provider db.Provider) error {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
 			synced_to_cloud BOOLEAN DEFAULT FALSE
 		);`,
@@ -384,10 +385,21 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	var id string
 	err := withSipRetry(ctx, func() error {
-		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED' WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
+		var currentStatus string
+		var updatedAt sql.NullTime
+		_ = s.db.QueryRow(ctx, "SELECT status, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&currentStatus, &updatedAt)
+
+		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
 		}
+
+		if err == nil && currentStatus != "" && currentStatus != "COMPLETED" && updatedAt.Valid {
+			latency := time.Since(updatedAt.Time)
+			transitionType := strings.ToLower(currentStatus) + "_to_completed"
+			telemetry.RecordAgentTransitionLatency(ctx, transitionType, latency)
+		}
+
 		return err
 	})
 	return err
@@ -477,6 +489,10 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		}
 		defer tx.Rollback(ctx)
 
+		var currentStatus string
+		var updatedAt sql.NullTime
+		_ = tx.QueryRow(ctx, "SELECT status, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&currentStatus, &updatedAt)
+
 		if s.db.IsSQLite() {
 			// SQLite simple UPSERT
 			upsertQuery := `
@@ -490,7 +506,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
 					ON CONFLICT(id) DO UPDATE SET
 						status=EXCLUDED.status,
-						payload=EXCLUDED.payload
+						payload=EXCLUDED.payload,
+						updated_at=CURRENT_TIMESTAMP
 				`
 			}
 			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
@@ -524,7 +541,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			if forceLocal && existingID != "" {
 				updateQuery := `
 					UPDATE agent_missions
-					SET status = $1, payload = $2
+					SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP
 					WHERE id = $3 AND organization_id = $4
 				`
 				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)
@@ -545,7 +562,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
 						ON CONFLICT(id) DO UPDATE SET
 							status=EXCLUDED.status,
-							payload=EXCLUDED.payload
+							payload=EXCLUDED.payload,
+							updated_at=CURRENT_TIMESTAMP
 					`
 				}
 				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
@@ -553,6 +571,12 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					return errInsert
 				}
 			}
+		}
+
+		if currentStatus != "" && currentStatus != status && updatedAt.Valid {
+			latency := time.Since(updatedAt.Time)
+			transitionType := strings.ToLower(currentStatus) + "_to_" + strings.ToLower(status)
+			telemetry.RecordAgentTransitionLatency(ctx, transitionType, latency)
 		}
 
 		return tx.Commit(ctx)
