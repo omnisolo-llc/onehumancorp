@@ -266,3 +266,68 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 		t.Fatalf("expected error when completing non-existent task")
 	}
 }
+
+func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+
+	// Create 1 task
+	task, err := tm.CreateTask(ctx, "org-1", "Test Concurrent Claim", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Concurrently attempt to claim
+	errCh := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		go func(agentID string) {
+			claimed, err := tm.ClaimTask(ctx, task.ID, agentID)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if claimed != nil {
+				errCh <- nil
+			} else {
+				errCh <- nil // nil task means it couldn't claim, which is fine
+			}
+		}( "agent-" + string(rune('A'+i)))
+	}
+
+	for i := 0; i < 10; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatalf("unexpected error during claim: %v", err)
+		}
+	}
+
+	// Verify only exactly 1 agent actually claimed it
+	updatedTask, err := getTaskHelper(t, ctx, tm, task.ID)
+	if err != nil {
+		t.Fatalf("failed to get task: %v", err)
+	}
+	if updatedTask.Status != "IN_PROGRESS" {
+		t.Errorf("expected IN_PROGRESS, got %s", updatedTask.Status)
+	}
+	if updatedTask.AssignedAgentID == "" {
+		t.Errorf("expected an agent ID to be assigned")
+	}
+}
+
+func getTaskHelper(t *testing.T, ctx context.Context, tm *TaskManager, taskID string) (*SharedTask, error) {
+	t.Helper()
+	var task SharedTask
+	query := `
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at, agent_id
+		FROM shared_tasks
+		WHERE id = $1
+	`
+	err := tm.db.QueryRow(ctx, query, taskID).Scan(
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.AssignedAgentID,
+	)
+	return &task, err
+}

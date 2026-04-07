@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 	"strings"
 
@@ -45,6 +46,7 @@ type TaskManager struct {
 	stopChan    chan struct{}
 	stateMachine *statemachine.StateMachine
 	taskQueue   queue.TaskQueue
+	mu          sync.Mutex // For Standalone mode SQLite locking
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -173,6 +175,11 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 		priority = "P2"
 	}
 
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
+	}
+
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -260,6 +267,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
 		}
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
 	}
 
 	tx, err := tm.db.Begin(ctx)
@@ -384,6 +396,11 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return errors.New("unauthorized: missing claims")
 	}
 
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
+	}
+
 	// Verify ownership first
 	var currentStatus string
 	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
@@ -425,6 +442,11 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
 	}
 
 	var createdAt time.Time
@@ -535,6 +557,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
 	}
 
 	tx, err := tm.db.Begin(ctx)
