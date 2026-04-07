@@ -755,3 +755,75 @@ func generateID() string {
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b[0:4]) + "-" + hex.EncodeToString(b[4:6]) + "-" + hex.EncodeToString(b[6:8]) + "-" + hex.EncodeToString(b[8:10]) + "-" + hex.EncodeToString(b[10:])
 }
+// SweepAbandonedTasks finds tasks that have been IN_PROGRESS for too long and reverts them to PENDING.
+func (tm *TaskManager) SweepAbandonedTasks(ctx context.Context, timeout time.Duration) (int, error) {
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if tm.db.IsSQLite() {
+		query = `
+			SELECT id, assigned_agent_id
+			FROM shared_tasks
+			WHERE status = 'IN_PROGRESS' AND updated_at < datetime('now', '-' || $1 || ' seconds')
+		`
+	} else {
+		query = `
+			SELECT id, assigned_agent_id
+			FROM shared_tasks
+			WHERE status = 'IN_PROGRESS' AND updated_at < NOW() - make_interval(secs => $1)
+			FOR UPDATE SKIP LOCKED
+		`
+	}
+
+	rows, err := tx.Query(ctx, query, int(timeout.Seconds()))
+	if err != nil {
+		return 0, fmt.Errorf("failed to query abandoned tasks: %w", err)
+	}
+
+	type taskInfo struct {
+		id      string
+		agentID string
+	}
+	var tasks []taskInfo
+
+	for rows.Next() {
+		var id string
+		var agentID *string
+		if err := rows.Scan(&id, &agentID); err == nil {
+			aID := ""
+			if agentID != nil {
+				aID = *agentID
+			}
+			tasks = append(tasks, taskInfo{id: id, agentID: aID})
+		}
+	}
+	rows.Close()
+
+	var broadcastFuncs []func()
+	count := 0
+
+	for _, t := range tasks {
+		broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, t.id, "SHARED_TASK", statemachine.StatePending, t.agentID, "Swept abandoned task")
+		if err != nil {
+			continue
+		}
+		broadcastFuncs = append(broadcastFuncs, broadcastFunc)
+		count++
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	for _, b := range broadcastFuncs {
+		if b != nil {
+			b()
+		}
+	}
+
+	return count, nil
+}

@@ -266,3 +266,55 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 		t.Fatalf("expected error when completing non-existent task")
 	}
 }
+
+func TestTaskManager_SweepAbandonedTasks(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+
+	// Create a task
+	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Claim it
+	claimedTask, err := tm.ClaimTask(ctx, task.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if claimedTask.Status != "IN_PROGRESS" {
+		t.Fatalf("expected IN_PROGRESS, got %s", claimedTask.Status)
+	}
+
+	// Wait 1 second (so we can sweep tasks older than 0 seconds)
+	time.Sleep(1 * time.Second)
+
+	// Modify updated_at manually to simulate it being abandoned for 2 hours
+	_, err = tm.db.Exec(ctx, "UPDATE shared_tasks SET updated_at = datetime('now', '-2 hours') WHERE id = $1", task.ID)
+	if err != nil {
+		t.Fatalf("failed to update task time: %v", err)
+	}
+
+	// Sweep abandoned tasks (timeout 1 hour)
+	count, err := tm.SweepAbandonedTasks(ctx, 1 * time.Hour)
+	if err != nil {
+		t.Fatalf("expected no error sweeping tasks, got %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 task swept, got %d", count)
+	}
+
+	// Verify task is back to PENDING
+	var newStatus string
+	err = tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", task.ID).Scan(&newStatus)
+	if err != nil {
+		t.Fatalf("failed to query task: %v", err)
+	}
+	if newStatus != "PENDING" {
+		t.Fatalf("expected task to be PENDING, got %s", newStatus)
+	}
+}
