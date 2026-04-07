@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/statesyncmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -387,6 +388,43 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		res, err := inspector.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
+		}
+
+		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
+	// ── Hybrid Local-to-Cloud State Sync MCP tool ─────────────────────────────
+	case "state-sync-mcp":
+		var provider statesyncmcp.StateSyncProvider
+		if s.hub.SIPDB() != nil {
+			provider = statesyncmcp.NewLocalSyncProvider()
+		} else {
+			provider = statesyncmcp.NewCloudSyncProvider()
+		}
+
+		inspector := statesyncmcp.NewServer(provider)
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid state-sync-mcp parameters: %w", err)
+		}
+
+		// Inject mock claims if not running with valid HTTP auth context
+		claims := &auth.Claims{
+			OrganizationID: s.org.ID,
+		}
+
+		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+		resultStr, err := inspector.CallTool(ctx, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+
+		// Try unmarshaling the resultStr to JSON if possible
+		var res interface{}
+		if err := json.Unmarshal([]byte(resultStr), &res); err != nil {
+			res = resultStr
 		}
 
 		return map[string]any{
