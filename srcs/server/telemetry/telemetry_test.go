@@ -382,6 +382,10 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
 		RecordSwarmTaskCompleted(ctx, "mission-123")
 	})
+
+	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		RecordAgentTransitionLatency(ctx, "pending_to_running", 100 * time.Millisecond)
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -390,7 +394,9 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	originalHumanInteractionsCounter := humanInteractionsCounter
 	originalMeetingEventsCounter := meetingEventsCounter
 	originalTokenBurnRateGauge := tokenBurnRateGauge
+	originalAgentTransitionLatency := AgentTransitionLatency
 
+	AgentTransitionLatency = nil
 	tokenUsageCounter = nil
 	agentApiCallsCounter = nil
 	humanInteractionsCounter = nil
@@ -398,6 +404,7 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	tokenBurnRateGauge = nil
 
 	defer func() {
+		AgentTransitionLatency = originalAgentTransitionLatency
 		tokenUsageCounter = originalTokenUsageCounter
 		agentApiCallsCounter = originalAgentApiCallsCounter
 		humanInteractionsCounter = originalHumanInteractionsCounter
