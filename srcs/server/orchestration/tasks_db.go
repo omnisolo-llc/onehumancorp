@@ -25,13 +25,18 @@ type SharedTaskDB struct {
 
 type TaskOrchestrator struct {
 	dbProvider db.Provider
-	mu         sync.Mutex // For SQLite concurrent assignment locking
+	hub        *HubService // Optional hub for realtime teammate mesh broadcasting
+	mu         sync.Mutex  // For SQLite concurrent assignment locking
 }
 
 func NewTaskOrchestrator(dbProvider db.Provider) *TaskOrchestrator {
 	return &TaskOrchestrator{
 		dbProvider: dbProvider,
 	}
+}
+
+func (to *TaskOrchestrator) SetHub(hub *HubService) {
+	to.hub = hub
 }
 
 // ClaimTask attempts to claim a task. Returns the task ID and an error if one occurred.
@@ -95,6 +100,11 @@ func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID 
 
 	task.Status = "ASSIGNED"
 	task.AssignedAgentID = &agentID
+
+	if to.hub != nil {
+		to.hub.PublishMeshEvent(ctx, orgID, "task.assigned", []byte(task.ID))
+	}
+
 	return task, nil
 }
 
@@ -143,5 +153,10 @@ func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentI
 
 	task.Status = "ASSIGNED"
 	task.AssignedAgentID = &agentID
+
+	if to.hub != nil {
+		to.hub.PublishMeshEvent(ctx, orgID, "task.assigned", []byte(task.ID))
+	}
+
 	return task, nil
 }
