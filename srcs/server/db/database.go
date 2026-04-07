@@ -82,16 +82,22 @@ func New(ctx context.Context) (*DB, error) {
 				f, err := os.OpenFile(basePath, os.O_CREATE|os.O_RDWR, 0600)
 				if err == nil {
 					f.Close()
-					os.Chmod(basePath, 0600) // Ensure chmod if file already existed
+					if err := os.Chmod(basePath, 0600); err != nil { // Ensure chmod if file already existed
+						return nil, fmt.Errorf("db: failed to set 0600 permissions on %s: %w", basePath, err)
+					}
 				}
 				// Also pre-touch wal and shm files so that SQLite respects 0600 when it takes them over if not already created
 				if fwal, err := os.OpenFile(basePath+"-wal", os.O_CREATE|os.O_RDWR, 0600); err == nil {
 					fwal.Close()
-					os.Chmod(basePath+"-wal", 0600)
+					if err := os.Chmod(basePath+"-wal", 0600); err != nil {
+						return nil, fmt.Errorf("db: failed to set 0600 permissions on %s-wal: %w", basePath, err)
+					}
 				}
 				if fshm, err := os.OpenFile(basePath+"-shm", os.O_CREATE|os.O_RDWR, 0600); err == nil {
 					fshm.Close()
-					os.Chmod(basePath+"-shm", 0600)
+					if err := os.Chmod(basePath+"-shm", 0600); err != nil {
+						return nil, fmt.Errorf("db: failed to set 0600 permissions on %s-shm: %w", basePath, err)
+					}
 				}
 			}
 		}
@@ -138,13 +144,19 @@ func New(ctx context.Context) (*DB, error) {
 				basePath = basePath[:idx]
 			}
 			if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
-				os.Chmod(basePath, 0600)
+				if err := os.Chmod(basePath, 0600); err != nil {
+					return nil, fmt.Errorf("db: failed to set 0600 permissions on %s: %w", basePath, err)
+				}
 			}
 			if info, err := os.Stat(basePath + "-wal"); err == nil && !info.IsDir() {
-				os.Chmod(basePath+"-wal", 0600)
+				if err := os.Chmod(basePath+"-wal", 0600); err != nil {
+					return nil, fmt.Errorf("db: failed to set 0600 permissions on %s-wal: %w", basePath, err)
+				}
 			}
 			if info, err := os.Stat(basePath + "-shm"); err == nil && !info.IsDir() {
-				os.Chmod(basePath+"-shm", 0600)
+				if err := os.Chmod(basePath+"-shm", 0600); err != nil {
+					return nil, fmt.Errorf("db: failed to set 0600 permissions on %s-shm: %w", basePath, err)
+				}
 			}
 		}
 
