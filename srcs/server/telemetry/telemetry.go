@@ -53,6 +53,7 @@ var (
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
+	agentTransitionLatency metric.Float64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
@@ -233,6 +234,15 @@ func InitWithMeter(m mockableMeter) error {
 	syncDaemonBatchSize, err = m.Int64Histogram(
 		"sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentTransitionLatency, err = m.Float64Histogram(
+		"ohc_agent_transition_latency_seconds",
+		metric.WithDescription("Latency of agent state transitions"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -991,4 +1001,14 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordAgentTransitionLatency records the duration an agent spends in a specific state transition.
+func RecordAgentTransitionLatency(ctx context.Context, transition string, duration time.Duration) {
+	if agentTransitionLatency == nil {
+		return
+	}
+	agentTransitionLatency.Record(ctx, duration.Seconds(), metric.WithAttributes(
+		attribute.String("transition", transition),
+	))
 }

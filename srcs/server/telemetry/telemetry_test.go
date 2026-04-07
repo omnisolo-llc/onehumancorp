@@ -630,3 +630,54 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 	}
 	cleanup()
 }
+
+func TestRecordAgentTransitionLatency(t *testing.T) {
+	// Reset the registerer
+	registry := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = registry
+	prometheus.DefaultGatherer = registry
+
+	// In Standalone Mode, Telemetry may be disabled. Force it enabled for tests.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	cleanup, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("failed to init telemetry: %v", err)
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+
+	RecordAgentTransitionLatency(ctx, "pending_to_running", 1*time.Second)
+
+	// In test, since InitTelemetry configures otelprom.New() with DefaultRegisterer, we need time for collection
+	time.Sleep(100 * time.Millisecond)
+
+	// Since we are using an HTTP handler to export metrics, we can query it
+	// NOTE: OpenTelemetry exports asynchronously to Prometheus.
+	handler := MetricsHandler()
+	req := httptest.NewRequest("GET", "/metrics", nil)
+
+	for i := 0; i < 15; i++ {
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		output := rr.Body.String()
+		if bytes.Contains([]byte(output), []byte("ohc_agent_transition_latency_seconds")) {
+			return // Success
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	output := rr.Body.String()
+	if !bytes.Contains([]byte(output), []byte("ohc_agent_transition_latency_seconds")) {
+		t.Errorf("Expected metrics to contain 'ohc_agent_transition_latency_seconds'")
+	}
+}

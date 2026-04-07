@@ -444,6 +444,32 @@
       ],
       "title": "Token Burn Rate Forecast",
       "type": "timeseries"
+    },
+    {
+      "id": 105,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "type": "timeseries",
+      "title": "Agent State Transition Latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, transition) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
+          "legendFormat": "{{transition}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",
