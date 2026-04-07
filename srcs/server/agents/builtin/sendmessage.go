@@ -11,6 +11,8 @@ import (
 var SendMessageTool = Tool{
 	Name:        "SendMessage",
 	Description: "Send a message to the user.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

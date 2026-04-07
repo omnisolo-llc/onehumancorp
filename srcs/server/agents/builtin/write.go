@@ -11,6 +11,8 @@ import (
 var FileWriteTool = Tool{
 	Name:        "Write",
 	Description: "Write content to a file on the local filesystem.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

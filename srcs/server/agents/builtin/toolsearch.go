@@ -10,6 +10,8 @@ import (
 var ToolSearchTool = Tool{
 	Name:        "ToolSearch",
 	Description: "Search for available tools and their descriptions.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

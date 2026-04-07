@@ -1,6 +1,9 @@
 package builtin
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
 
 // Role represents the role of a message sender.
 type Role string
@@ -47,4 +50,24 @@ type ChatRequest struct {
 // ChatResponse is the payload received from the LLM.
 type ChatResponse struct {
 	Message Message `json:"message"`
+}
+
+// TokenUsage tracking
+type TokenUsage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
+}
+
+// StreamEvent represents a chunk in a streaming response
+type StreamEvent struct {
+	Type    string  `json:"type"` // e.g. "message_start", "content_block_delta", "message_stop"
+	Message Message `json:"message,omitempty"`
+	Delta   string  `json:"delta,omitempty"`
+	Usage   TokenUsage `json:"usage,omitempty"`
+}
+
+// StreamingClient extends LLMClient to support streaming
+type StreamingClient interface {
+	LLMClient
+	ChatStream(ctx context.Context, req ChatRequest) (<-chan StreamEvent, error)
 }

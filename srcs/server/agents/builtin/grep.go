@@ -12,6 +12,8 @@ import (
 var GrepTool = Tool{
 	Name:        "Grep",
 	Description: "Search for a pattern in files in the specified directory.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

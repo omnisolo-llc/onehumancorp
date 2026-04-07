@@ -11,6 +11,8 @@ import (
 var TodoWriteTool = Tool{
 	Name:        "TodoWrite",
 	Description: "Write to the active TODO list.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

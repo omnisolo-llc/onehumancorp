@@ -191,7 +191,7 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				// Handle Builtin agent logic
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
 					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
-					// In a full implementation, we'd spawn the BuiltinAgent loop asynchronously here.
+					go RunBuiltinAgentForTask(context.Background(), tw.hub, issue, a.ID)
 				}
 
 				agentFound = true

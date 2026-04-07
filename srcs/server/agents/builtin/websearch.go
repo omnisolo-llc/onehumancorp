@@ -11,6 +11,8 @@ import (
 var WebSearchTool = Tool{
 	Name:        "WebSearch",
 	Description: "Search the web for a query.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

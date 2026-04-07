@@ -12,6 +12,8 @@ import (
 var WebFetchTool = Tool{
 	Name:        "WebFetch",
 	Description: "Fetch the content of a URL.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

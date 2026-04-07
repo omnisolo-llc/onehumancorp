@@ -6,6 +6,7 @@ go_library(
         "agent.go",
         "agent_task_worker.go",
         "autodream.go",
+        "builtin_runner.go",
         "local_provider.go",
         "provider.go",
         "registry.go",
@@ -13,6 +14,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/agents/builtin",
         "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",

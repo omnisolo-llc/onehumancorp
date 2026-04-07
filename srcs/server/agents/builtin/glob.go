@@ -11,6 +11,8 @@ import (
 var GlobTool = Tool{
 	Name:        "Glob",
 	Description: "List files matching a glob pattern.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

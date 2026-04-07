@@ -11,6 +11,8 @@ import (
 var FileReadTool = Tool{
 	Name:        "Read",
 	Description: "Read a file from the local filesystem.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {

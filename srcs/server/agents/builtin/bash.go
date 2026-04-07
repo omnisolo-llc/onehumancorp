@@ -10,6 +10,8 @@ import (
 var BashTool = Tool{
 	Name:        "Bash",
 	Description: "Execute a bash script.",
+	SearchHint: "built-in tool",
+	RequiresApproval: false,
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {
