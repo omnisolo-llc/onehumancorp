@@ -85,6 +85,43 @@
   </div>
 </div>
 
+### 2.4 AutoDream Memory Pipeline
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/v1/autodream/embed</code></strong>
+  <p>Triggers the AutoDream pipeline to compress and embed agent session logs or arbitrary text into the pgvector memory store.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "content": "Agent session log detailing market analysis findings...",
+  "metadata": {
+    "source": "market_research_agent",
+    "mission_id": "mission-123"
+  }
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">AutoDream Embedding Workflow</h4>
+  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    ```mermaid
+    sequenceDiagram
+        participant API as AutoDream API
+        participant LLM as Minimax LLM
+        participant VectorDB as pgvector (Memory)
+
+        API->>LLM: Compress Content & Generate Embedding
+        LLM-->>API: Vector Data & Compressed Context
+        API->>VectorDB: Upsert Vector with Metadata
+        VectorDB-->>API: Success (Memory Indexed)
+    ```
+  </div>
+</div>
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/v1/autodream/search</code></strong>
+  <p>Performs a semantic search against the AutoDream memory store to retrieve relevant past context for the swarm.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "query": "previous market analysis on AI orchestration",
+  "limit": 5
+}</code></pre>
+</div>
+
 ## 3. Client Integrations
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
