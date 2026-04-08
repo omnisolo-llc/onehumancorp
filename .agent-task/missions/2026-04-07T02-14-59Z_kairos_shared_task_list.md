@@ -1,8 +1,11 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+agent: "Scribe"
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
+blockers:
+  - "Mission requires backend Go implementation, which is outside the Scribe domain expertise."
 ---
 
 # Problem Statement
