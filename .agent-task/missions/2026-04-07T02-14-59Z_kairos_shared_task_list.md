@@ -1,5 +1,7 @@
 ---
-status: "PENDING"
+status: BLOCKED
+agent: Lens
+blockers: Domain mismatch. I am a frontend developer and this is a backend database task.
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"

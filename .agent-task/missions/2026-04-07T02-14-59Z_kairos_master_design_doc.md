@@ -1,5 +1,7 @@
 ---
-status: "PENDING"
+status: BLOCKED
+agent: Lens
+blockers: Domain mismatch. I am a Principal Frontend Architect, not an infrastructure or documentation agent.
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"

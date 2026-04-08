@@ -322,10 +322,18 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    filter: ImageFilter.compose(
+            outer: const ColorFilter.matrix(<double>[
+              1.168, -0.153, -0.015, 0, 0,
+              -0.046, 1.061, -0.015, 0, 0,
+              -0.046, -0.152, 1.198, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+          ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        color: const Color.fromRGBO(255, 255, 255, 0.03),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),

@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Lens
+blockers: Domain mismatch. I am a frontend architect, and this is a backend Go MCP task.
 priority: P1
 ---
 

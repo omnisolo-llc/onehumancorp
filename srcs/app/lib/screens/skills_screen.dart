@@ -217,7 +217,7 @@ class _SkillCardState extends State<_SkillCard> {
                   -0.046, -0.152, 1.198, 0, 0,
                   0, 0, 0, 1, 0,
                 ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                inner: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
               ),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),

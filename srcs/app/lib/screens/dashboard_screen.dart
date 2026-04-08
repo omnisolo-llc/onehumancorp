@@ -166,7 +166,7 @@ class _ObservabilityWidget extends StatelessWidget {
                 -0.046, -0.152, 1.198, 0, 0,
                 0, 0, 0, 1, 0,
               ]),
-              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              inner: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
             ),
             child: Container(
               decoration: BoxDecoration(
@@ -415,7 +415,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                   1,
                       0,
                     ]),
-                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    inner: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
                   ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -628,7 +628,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                           -0.046, -0.152, 1.198, 0, 0,
                           0, 0, 0, 1, 0,
                         ]),
-                        inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                        inner: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
                       ),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
