@@ -81,6 +81,7 @@ launch_desktop() {
     echo -e "${DIM}[Starting local Prometheus Agent if available]${RESET}"
     if command -v prometheus >/dev/null 2>&1; then
         prometheus --config.file=deploy/docker/prometheus/prometheus-agent.yml \
+                   --enable-feature=agent \
                    --storage.tsdb.path="$HOME/.ohc-local-data/prometheus" \
                    --web.listen-address="127.0.0.1:9091" > /dev/null 2>&1 &
         PROMETHEUS_PID=$!
