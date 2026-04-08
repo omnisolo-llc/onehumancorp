@@ -25,6 +25,8 @@ elif [[ "$MODE" == "standalone" ]]; then
     echo "Switching to Standalone Mode..."
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=false
+    export OHC_STANDALONE=true
+    export GOMAXPROCS=2
     echo "Starting OHC Desktop App (Standalone Mode)..."
     cd "$PROJECT_ROOT" && bazelisk run //:desktop
 elif [[ "$MODE" == "headless" ]]; then

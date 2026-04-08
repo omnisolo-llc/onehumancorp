@@ -21,6 +21,8 @@ case $MODE in
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=false
     export OHC_SOURCE_MODE=standalone
+    export OHC_STANDALONE=true
+    export GOMAXPROCS=2
     echo "Configured for Standalone Desktop Mode."
     ;;
   headless)
