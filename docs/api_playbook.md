@@ -66,7 +66,7 @@
 }</code></pre>
 
   <h4 style="margin-top: 1rem;">Queue Orchestration Flow</h4>
-  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;" markdown="1">
     ```mermaid
     sequenceDiagram
         participant API as OHC API
