@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Miser
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
@@ -115,3 +116,6 @@ P0
 
 ## Estimated Scope
 Medium
+
+blockers:
+- Domain mismatch: As a Miser (Cost Engineer), my domain is cost optimization. Hybrid MCP RAG Sync is backend data synchronization.

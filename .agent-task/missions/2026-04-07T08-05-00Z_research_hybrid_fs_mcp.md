@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Miser
 agent: Researcher
 priority: P1
 ---
@@ -38,3 +39,6 @@ P1
 
 ## Estimated Scope
 Medium
+
+blockers:
+- Domain mismatch: As a Miser (Cost Engineer), my domain is cost optimization. Hybrid FS MCP is backend file system / integration.

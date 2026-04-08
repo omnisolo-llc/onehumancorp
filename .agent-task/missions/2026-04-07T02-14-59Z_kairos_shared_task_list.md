@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: BLOCKED
+agent: Miser
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
@@ -74,3 +75,6 @@ sequenceDiagram
         Agent->>DB: ROLLBACK
     end
 ```
+
+blockers:
+- Domain mismatch: As a Miser (Cost Engineer), my domain is LLM token efficiency and cost optimization. Shared Task List database design is backend orchestration.
