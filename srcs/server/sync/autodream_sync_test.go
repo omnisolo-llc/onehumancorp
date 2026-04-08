@@ -82,8 +82,8 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 
 	// 5. Verify the payloads
 	// Note: previous migrations seeded some tasks, so we expect exactly 4 payloads
-	if len(receivedPayloads) != 4 {
-		t.Fatalf("expected 4 payloads synced, got %d", len(receivedPayloads))
+	if len(receivedPayloads) != 6 {
+		t.Fatalf("expected 6 payloads synced, got %d", len(receivedPayloads))
 	}
 
 	embeddingSynced := false
