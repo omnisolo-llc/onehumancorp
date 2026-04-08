@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,9 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/agents/local"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -23,6 +26,8 @@ type AutoDreamPipeline struct {
 	worker        *orchestration.AutoDreamWorker
 	llm           local.LLMClient
 	minimaxClient orchestration.MinimaxClient
+	redisClient   rueidis.Client
+	queue         queue.TaskQueue
 }
 
 // NewAutoDreamPipeline creates a new AutoDreamPipeline instance.
@@ -46,16 +51,57 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 		mClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool, redisClient)
 	}
 
-	return &AutoDreamPipeline{
+	p := &AutoDreamPipeline{
 		pool:          pool,
 		worker:        worker,
 		llm:           llmClient,
 		minimaxClient: mClient,
+		redisClient:   redisClient,
+	}
+
+	if redisClient != nil {
+		p.queue = queue.NewRedisTaskQueue(redisClient, "ohc_")
+	} else if pool.IsSQLite() {
+		p.queue = queue.NewSQLiteTaskQueue(pool)
+	} else {
+		p.queue = queue.NewPostgresTaskQueue(pool)
+	}
+
+	return p
+}
+
+func (p *AutoDreamPipeline) checkMailbox(ctx context.Context) {
+	if p.redisClient == nil {
+		return
+	}
+	// Teammate Mesh: Check mailbox at start, safely pop messages to prevent race conditions.
+	slog.Info("AutoDreamPipeline: checking Teammate Mesh mailbox on start")
+
+	// Pop messages one by one to avoid data loss from concurrent appends
+	for {
+		cmd := p.redisClient.B().Lpop().Key("autodream_mailbox").Build()
+		res := p.redisClient.Do(ctx, cmd)
+		msg, err := res.ToString()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				break // Queue empty
+			}
+			slog.Warn("AutoDreamPipeline: failed to check mailbox", "error", err)
+			break
+		}
+		slog.Info("AutoDreamPipeline: mailbox message received", "message", msg)
 	}
 }
 
-// Start runs the pipeline in the background on a ticker.
+// Start runs the pipeline in the background using distributed queues.
 func (p *AutoDreamPipeline) Start(ctx context.Context) {
+	// Coordinate via Teammate Mesh
+	p.checkMailbox(ctx)
+
+	// Distributed Worker Queue: Start the consumer loop
+	go p.runQueueWorker(ctx)
+
+	// Publisher loop: Periodically scans for work and enqueues to the distributed queue
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
 
@@ -64,12 +110,164 @@ func (p *AutoDreamPipeline) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			p.processBatch(ctx)
+			p.enqueueStaleSessions(ctx)
 			p.processFiles(ctx)
 			p.resolveConflicts(ctx)
 		}
 	}
 }
+
+// runQueueWorker polls the distributed TaskQueue for memory pruning jobs.
+func (p *AutoDreamPipeline) runQueueWorker(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			task, err := p.queue.Dequeue(ctx, []string{"autodream_pruning"})
+			if err != nil {
+				slog.Error("AutoDreamPipeline: error polling queue", "error", err)
+				continue
+			}
+			if task == nil {
+				continue
+			}
+
+			// Extract payload
+			var payload map[string]interface{}
+			if err := json.Unmarshal([]byte(task.Payload), &payload); err == nil {
+				sessionID, _ := payload["session_id"].(string)
+				agentID, _ := payload["agent_id"].(string)
+				contextData, _ := payload["context_data"].(string)
+
+				if sessionID != "" && contextData != "" {
+					p.processSingleSession(ctx, sessionID, agentID, contextData)
+				}
+			}
+
+			// Mark task as completed
+			_ = p.queue.Complete(ctx, task.ID)
+		}
+	}
+}
+
+// enqueueStaleSessions finds stale sessions and adds them to the distributed worker queue.
+func (p *AutoDreamPipeline) enqueueStaleSessions(ctx context.Context) {
+	threshold := time.Now().Add(-1 * time.Hour).UTC()
+	var query string
+	if p.pool.IsSQLite() {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
+	} else {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := p.pool.Query(ctx, query, threshold)
+	if err != nil {
+		slog.Error("AutoDreamPipeline: failed to fetch stale sessions for queue", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var sessionID, agentID, contextData string
+		if err := rows.Scan(&sessionID, &agentID, &contextData); err == nil {
+			payload := map[string]interface{}{
+				"session_id":   sessionID,
+				"agent_id":     agentID,
+				"context_data": contextData,
+			}
+			payloadBytes, _ := json.Marshal(payload)
+
+			job := &queue.Job{
+				ID:        uuid.New().String(),
+				AgentRole: "autodream_pruning",
+				Payload:   string(payloadBytes),
+				Status:    "PENDING",
+			}
+
+			err := p.queue.Enqueue(ctx, job)
+			if err != nil {
+				slog.Error("AutoDreamPipeline: failed to enqueue pruning task", "error", err)
+				continue
+			}
+
+			// Once enqueued, optionally mark it as queued or remove it,
+			// but for this implementation we'll remove it from the table immediately
+			// and let the distributed worker process it and store it into consolidated memory.
+			// This prevents it from being picked up again on next loop.
+			delQuery := "DELETE FROM agent_session_data WHERE session_id = $1"
+			if p.pool.IsSQLite() {
+				delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+			}
+			_, _ = p.pool.Exec(ctx, delQuery, sessionID)
+		}
+	}
+}
+
+// processSingleSession handles memory pruning for a single agent session data point.
+func (p *AutoDreamPipeline) processSingleSession(ctx context.Context, sessionID, agentID, contextData string) {
+	prompt := fmt.Sprintf("Summarize and consolidate this agent session memory:\n%s", contextData)
+
+	req := local.CompletionRequest{
+		SystemPrompt: "You are an AI Memory Consolidator.",
+		Messages: []local.ConversationMessage{
+			{Role: "user", Content: []local.ContentPart{{Type: "text", Text: prompt}}},
+		},
+		MaxTokens: 500,
+	}
+
+	ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+	resp, err := p.llm.Complete(ctxTimeout, req)
+	cancel()
+
+	summary := "Summarized context from session " + sessionID
+	if err == nil && resp != nil && resp.Text != "" {
+		summary = resp.Text
+	} else {
+		slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
+	}
+
+	var embeddingStr string
+	if p.minimaxClient != nil {
+		ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+		embedding, embedErr := p.minimaxClient.GenerateEmbedding(ctxTimeout, summary)
+		cancel()
+		if embedErr == nil && len(embedding) > 0 {
+			str := fmt.Sprintf("%v", embedding)
+			str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
+			embeddingStr = "[" + str + "]"
+		}
+	}
+
+	if embeddingStr == "" {
+		var vec []string
+		for i := 0; i < 1536; i++ {
+			vec = append(vec, "0.0")
+		}
+		embeddingStr = "[" + strings.Join(vec, ",") + "]"
+	}
+
+	var insertQuery string
+	if p.pool.IsSQLite() {
+		insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)"
+		id := fmt.Sprintf("%d", time.Now().UnixNano())
+		_, err = p.pool.Exec(ctx, insertQuery, id, "system", agentID, summary, embeddingStr, "session_compression")
+	} else {
+		insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)"
+		id := fmt.Sprintf("%d", time.Now().UnixNano())
+		_, err = p.pool.Exec(ctx, insertQuery, id, "system", agentID, summary, embeddingStr, "session_compression")
+	}
+
+	if err != nil {
+		slog.Error("AutoDreamPipeline: failed to insert consolidated memory", "error", err)
+	} else {
+		telemetry.RecordAutoDreamMemoryCompressed(ctx, agentID)
+	}
+}
+
 
 // resolveConflicts finds vector embeddings that are similar but have conflicting contexts,
 // similar to orchestration.AutoDreamWorker but targeting consolidated_memory.
@@ -160,6 +358,28 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 	}
 }
 
+// InjectTruth inserts high-dimensional semantic memory directly into the consolidated store.
+func (p *AutoDreamPipeline) InjectTruth(ctx context.Context, memoryID, content string, embedding string) error {
+	var query string
+	if p.pool.IsSQLite() {
+		query = `
+			INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+		`
+		_, err := p.pool.Exec(ctx, query, memoryID, "system", "system", content, embedding, "injected_truth")
+		return err
+	}
+
+	query = `
+		INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
+		VALUES ($1, $2, $3, $4, $5::vector, $6)
+		ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+	`
+	_, err := p.pool.Exec(ctx, query, memoryID, "system", "system", content, embedding, "injected_truth")
+	return err
+}
+
 // SearchTruth queries the consolidated vector database for the closest semantic embeddings.
 func (p *AutoDreamPipeline) SearchTruth(ctx context.Context, embedding string, limit int) ([]orchestration.TruthSearchResult, error) {
 	if p.pool.IsSQLite() {
@@ -209,132 +429,6 @@ func (p *AutoDreamPipeline) SearchTruth(ctx context.Context, embedding string, l
 	return results, nil
 }
 
-func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
-	slog.Info("AutoDreamPipeline: starting memory consolidation batch")
-
-	// 1. Extraction: Poll recent agent_session_data
-	threshold := time.Now().Add(-1 * time.Hour).UTC()
-	var query string
-	if p.pool.IsSQLite() {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
-	} else {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
-	}
-
-	rows, err := p.pool.Query(ctx, query, threshold)
-	if err != nil {
-		slog.Error("AutoDreamPipeline: failed to fetch stale sessions", "error", err)
-		return
-	}
-
-	type Session struct {
-		ID          string
-		AgentID     string
-		ContextData string
-	}
-
-	var sessions []Session
-	for rows.Next() {
-		var s Session
-		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err == nil {
-			sessions = append(sessions, s)
-		}
-	}
-	rows.Close()
-
-	if len(sessions) == 0 {
-		return
-	}
-
-	// 2. Consolidation & Embedding
-	for _, s := range sessions {
-		prompt := fmt.Sprintf("Summarize and consolidate this agent session memory:\n%s", s.ContextData)
-
-		req := local.CompletionRequest{
-			SystemPrompt: "You are an AI Memory Consolidator.",
-			Messages: []local.ConversationMessage{
-				{Role: "user", Content: []local.ContentPart{{Type: "text", Text: prompt}}},
-			},
-			MaxTokens: 500,
-		}
-
-		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-		resp, err := p.llm.Complete(ctxTimeout, req)
-		cancel()
-
-		summary := "Summarized context from session " + s.ID
-		if err == nil && resp != nil && resp.Text != "" {
-			summary = resp.Text
-		} else {
-			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
-		}
-
-		var embeddingStr string
-		if p.minimaxClient != nil {
-			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
-			embedding, embedErr := p.minimaxClient.GenerateEmbedding(ctxTimeout, summary)
-			cancel()
-			if embedErr == nil && len(embedding) > 0 {
-				str := fmt.Sprintf("%v", embedding)
-				str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
-				embeddingStr = "[" + str + "]"
-			}
-		}
-
-		if embeddingStr == "" {
-			// Fallback vector for tests or missing API keys to allow insertion
-			var vec []string
-			for i := 0; i < 1536; i++ {
-				vec = append(vec, "0.0")
-			}
-			embeddingStr = "[" + strings.Join(vec, ",") + "]"
-		}
-
-		err = func() error {
-			tx, err := p.pool.Begin(ctx)
-			if err != nil {
-				return err
-			}
-			defer tx.Rollback(ctx)
-
-			// 3. Loading: Upsert into consolidated_memory using pgvector
-			var insertQuery string
-			if p.pool.IsSQLite() {
-				insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)"
-				id := fmt.Sprintf("%d", time.Now().UnixNano())
-				_, err = tx.Exec(ctx, insertQuery, id, "system", s.AgentID, summary, embeddingStr, "session_compression")
-			} else {
-				insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)"
-				id := fmt.Sprintf("%d", time.Now().UnixNano())
-				_, err = tx.Exec(ctx, insertQuery, id, "system", s.AgentID, summary, embeddingStr, "session_compression")
-			}
-
-			if err != nil {
-				slog.Error("AutoDreamPipeline: failed to insert consolidated memory", "error", err)
-				return err
-			}
-
-		telemetry.RecordAutoDreamMemoryCompressed(ctx, s.AgentID)
-
-			// Delete from agent_session_data
-			var delQuery string
-			if p.pool.IsSQLite() {
-				delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
-			} else {
-				delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
-			}
-			_, err = tx.Exec(ctx, delQuery, s.ID)
-			if err != nil {
-				slog.Error("AutoDreamPipeline: failed to delete session data after compression", "error", err)
-				return err
-			}
-
-			return tx.Commit(ctx)
-		}()
-	}
-
-	slog.Info("AutoDreamPipeline: batch completed", "count", len(sessions))
-}
 
 func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 	memoryDir := ".agent-task/memory"

@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -45,7 +46,22 @@ func TestAutoDreamPipeline_Batch(t *testing.T) {
 	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
 	pipeline.llm = &mockLLM{response: "Summarized mock context"}
 
-	pipeline.processBatch(ctx)
+	// Enqueue and then process via the worker
+	pipeline.enqueueStaleSessions(ctx)
+
+	// Wait a moment for queue to process if this were real async, but here we can just invoke logic manually
+	// or call the worker logic if it's sync in test
+
+	task, _ := pipeline.queue.Dequeue(ctx, []string{"autodream_pruning"})
+	if task != nil {
+		var payload map[string]interface{}
+		if err := json.Unmarshal([]byte(task.Payload), &payload); err == nil {
+			sessionID, _ := payload["session_id"].(string)
+			agentID, _ := payload["agent_id"].(string)
+			contextData, _ := payload["context_data"].(string)
+			pipeline.processSingleSession(ctx, sessionID, agentID, contextData)
+		}
+	}
 
 	// Verify session was deleted
 	var count int
@@ -105,5 +121,95 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 	// File should be deleted
 	if _, err := os.Stat(".agent-task/memory/test.yml"); !os.IsNotExist(err) {
 		t.Errorf("expected test file to be deleted")
+	}
+}
+
+
+func TestAutoDreamPipeline_ResolveConflicts(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	ctx := context.Background()
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
+	pipeline.llm = &mockLLM{response: "Summarized conflict"}
+
+	// Note: We can't easily mock pgvector<=> behavior in SQLite for conflict detection,
+	// but we can call it to ensure it exits gracefully.
+	pipeline.resolveConflicts(ctx)
+}
+
+func TestAutoDreamPipeline_Start(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
+
+	// Fast cancel to prevent long running loops
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+	}()
+
+	pipeline.Start(ctx)
+}
+
+func TestAutoDreamPipeline_TruthInjectionAndSearch(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	ctx := context.Background()
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
+
+	// Inject Truth
+	err = pipeline.InjectTruth(ctx, "truth-1", "AutoDream is an awesome memory system", "[0.1, 0.2, 0.3]")
+	if err != nil {
+		t.Fatalf("failed to inject truth: %v", err)
+	}
+
+	// Verify Injection
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE id = 'truth-1'").Scan(&count)
+	if err != nil || count != 1 {
+		t.Fatalf("expected 1 injected truth, got %d", count)
+	}
+
+	// Search Truth
+	results, err := pipeline.SearchTruth(ctx, "[0.1, 0.2, 0.3]", 5)
+	if err != nil {
+		t.Fatalf("failed to search truth: %v", err)
+	}
+
+	if len(results) == 0 {
+		t.Fatalf("expected at least 1 search result, got 0")
+	}
+
+	if results[0].MemoryID != "truth-1" {
+		t.Errorf("expected MemoryID truth-1, got %s", results[0].MemoryID)
 	}
 }
