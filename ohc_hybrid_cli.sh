@@ -30,6 +30,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Verify API Health Diagnostics"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -168,6 +169,22 @@ seed_mock_data() {
     fi
 }
 
+verify_api_health() {
+    echo -e "${DIM}[Verifying API Health Diagnostics via /api/wizard/onboarding_verify]${RESET}"
+    PORT=${PORT:-8080}
+    API_URL="http://127.0.0.1:${PORT}/api/wizard/onboarding_verify"
+
+    if ! curl -s --head "$API_URL" | grep "200" > /dev/null; then
+        echo -e "${PURPLE}✗ Failed to connect to OHC Backend on port ${PORT}.${RESET}"
+        echo -e "${DIM}Ensure the server is running before executing API diagnostics.${RESET}\n"
+        return
+    fi
+
+    RESPONSE=$(curl -s "$API_URL")
+    echo "$RESPONSE" | jq . || echo -e "${DIM}Raw Response: $RESPONSE${RESET}"
+    echo -e "${GREEN}API Diagnostics completed.${RESET}\n"
+}
+
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
     DB_FILE="$HOME/.ohc-local-data/standalone.db"
@@ -212,6 +229,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) verify_api_health ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
