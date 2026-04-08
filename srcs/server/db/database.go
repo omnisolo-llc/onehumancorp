@@ -78,6 +78,13 @@ func New(ctx context.Context) (*DB, error) {
 			basePath = strings.TrimPrefix(basePath, "file:")
 
 			if basePath != ":memory:" && !strings.Contains(basePath, "mode=memory") {
+				// Ensure parent directory exists before creating files
+				if dir := filepath.Dir(basePath); dir != "." && dir != "" {
+					if err := os.MkdirAll(dir, 0700); err != nil {
+						return nil, fmt.Errorf("db: failed to create directory %s: %w", dir, err)
+					}
+				}
+
 				// Touch the file with 0600 permissions before opening
 				f, err := os.OpenFile(basePath, os.O_CREATE|os.O_RDWR, 0600)
 				if err == nil {
