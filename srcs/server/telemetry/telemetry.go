@@ -41,6 +41,8 @@ var (
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
+	RAGRecordsSyncedCounter    metric.Int64Counter
+	RAGSyncErrorsCounter       metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
@@ -451,6 +453,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+		RAGRecordsSyncedCounter, err = m.Int64Counter(
+			"rag_records_synced_total",
+			metric.WithDescription("Total number of RAG records successfully synced"),
+		)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		RAGSyncErrorsCounter, err = m.Int64Counter(
+			"rag_sync_errors_total",
+			metric.WithDescription("Total number of errors during RAG record synchronization"),
+		)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
 	meshBroadcastTotal, err = m.Int64Counter(
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
@@ -774,6 +792,22 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+}
+
+// RecordRAGRecordsSynced increments the counter for successfully synced RAG records.
+func RecordRAGRecordsSynced(ctx context.Context, count int) {
+	if RAGRecordsSyncedCounter == nil {
+		return
+	}
+	RAGRecordsSyncedCounter.Add(ctx, int64(count))
+}
+
+// RecordRAGSyncError increments the counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if RAGSyncErrorsCounter == nil {
+		return
+	}
+	RAGSyncErrorsCounter.Add(ctx, 1)
 }
 
 // RecordSQLiteRetryExhausted increments the global counter for SQLite transaction failed after exhausting retries.
