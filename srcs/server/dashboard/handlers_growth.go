@@ -102,6 +102,56 @@ func (s *Server) handleReferrals(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CloudBridgeInvite defines a viral invite that dynamically provisions a temporary multi-tenant context.
+type CloudBridgeInvite struct {
+	ID                string    `json:"id"`
+	InviterID         string    `json:"inviterId"`
+	CollaboratorEmail string    `json:"collaboratorEmail"`
+	AssetID           string    `json:"assetId"`
+	Status            string    `json:"status"` // PENDING, ACCEPTED, EXPIRED
+	CreatedAt         time.Time `json:"createdAt"`
+}
+
+type cloudBridgeCreateRequest struct {
+	InviterID         string `json:"inviterId"`
+	CollaboratorEmail string `json:"collaboratorEmail"`
+	AssetID           string `json:"assetId"`
+}
+
+func (s *Server) handleCloudBridgeInvite(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		invites := append([]CloudBridgeInvite(nil), s.cloudBridges...)
+		s.mu.RUnlock()
+		writeJSON(w, invites)
+	case http.MethodPost:
+		var req cloudBridgeCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.InviterID == "" || req.CollaboratorEmail == "" || req.AssetID == "" {
+			http.Error(w, "inviterId, collaboratorEmail, and assetId are required", http.StatusBadRequest)
+			return
+		}
+		invite := CloudBridgeInvite{
+			ID:                "bridge-" + time.Now().UTC().Format("20060102150405"),
+			InviterID:         req.InviterID,
+			CollaboratorEmail: req.CollaboratorEmail,
+			AssetID:           req.AssetID,
+			Status:            "PENDING",
+			CreatedAt:         time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.cloudBridges = append(s.cloudBridges, invite)
+		s.mu.Unlock()
+		writeJSON(w, invite)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // Download defines a tracked desktop app download.
 type Download struct {
 	ID        string    `json:"id"`

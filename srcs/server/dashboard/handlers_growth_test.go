@@ -62,6 +62,62 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 	}
 }
 
+func TestHandleCloudBridgeInvite(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"inviterId": "user-abc", "collaboratorEmail": "test@example.com", "assetId": "asset-xyz"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/cloud-bridge", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleCloudBridgeInvite(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created CloudBridgeInvite
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.InviterID != "user-abc" {
+		t.Errorf("expected inviterId 'user-abc', got '%s'", created.InviterID)
+	}
+	if created.CollaboratorEmail != "test@example.com" {
+		t.Errorf("expected collaboratorEmail 'test@example.com', got '%s'", created.CollaboratorEmail)
+	}
+	if created.AssetID != "asset-xyz" {
+		t.Errorf("expected assetId 'asset-xyz', got '%s'", created.AssetID)
+	}
+	if created.Status != "PENDING" {
+		t.Errorf("expected status 'PENDING', got '%s'", created.Status)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/cloud-bridge", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleCloudBridgeInvite(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []CloudBridgeInvite
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 invite, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
 func TestHandleViralCoefficient(t *testing.T) {
 	s := &Server{
 		referrals: []Referral{
