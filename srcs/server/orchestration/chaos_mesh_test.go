@@ -293,3 +293,73 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
 	})
 }
+package orchestration
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+// TestSIPDB_ThinClientFailSafe simulates Thin Client sync degradation.
+func TestSIPDB_ThinClientFailSafe(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_failsafe.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert some test missions
+	_, err = db.db.Exec(context.Background(), `
+		INSERT INTO agent_missions (id, status, payload, created_at, organization_id)
+		VALUES ('m-failsafe-1', 'PENDING', '{"role":"TESTER"}', CURRENT_TIMESTAMP, 'standalone-single-user')
+	`)
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	// Case 1: Remote endpoint drops connection immediately (500 Server Error)
+	ts500 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts500.Close()
+
+	// Should not panic, and should return an error or skip syncing, returning 0 synced count.
+	syncedCount, err := db.SyncMissions(ctx, ts500.URL)
+	if syncedCount != 0 {
+		t.Errorf("Expected 0 synced count for 500 Server Error, got %d", syncedCount)
+	}
+
+	// Verify the mission is still PENDING locally, degrading gracefully
+	var status string
+	err = db.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'm-failsafe-1'").Scan(&status)
+	if err != nil || status != "PENDING" {
+		t.Errorf("Expected mission to remain PENDING after failed sync, got status: %s (err: %v)", status, err)
+	}
+
+	// Case 2: Network latency spike (timeout)
+	tsTimeout := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(3 * time.Second) // Force a simulated timeout
+	}))
+	defer tsTimeout.Close()
+
+	// Wrap in a tight timeout to mimic connection drop
+	timeoutCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
+	syncedCount, err = db.SyncMissions(timeoutCtx, tsTimeout.URL)
+	if syncedCount != 0 {
+		t.Errorf("Expected 0 synced count for timeout context, got %d", syncedCount)
+	}
+
+	err = db.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'm-failsafe-1'").Scan(&status)
+	if err != nil || status != "PENDING" {
+		t.Errorf("Expected mission to remain PENDING after timeout, got status: %s (err: %v)", status, err)
+	}
+}
