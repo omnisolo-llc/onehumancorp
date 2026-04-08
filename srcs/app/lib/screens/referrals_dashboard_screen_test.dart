@@ -39,31 +39,66 @@ void main() {
       ],
     );
 
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {
+        'totalReferrals': 100,
+        'totalConversions': 25,
+        'uniqueInviters': 10,
+        'kFactor': 2.5,
+      },
+    );
+
     await tester.pumpWidget(buildTestWidget());
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     await tester.pumpAndSettle();
 
     expect(find.text('Viral Loop Dashboard'), findsOneWidget);
+
+    // Check K-Factor card
+    expect(find.text('Total Referrals'), findsOneWidget);
+    expect(find.text('100'), findsOneWidget);
+    expect(find.text('Total Conversions'), findsNWidgets(2)); // One in card, one in referral item
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('Unique Inviters'), findsOneWidget);
+    // expect(find.text('10'), findsOneWidget); // Clashes with conversion value 10 below
+    expect(find.text('K-Factor'), findsOneWidget);
+    expect(find.text('2.50'), findsOneWidget);
+
+    // Check referral list
     expect(find.text('Ref: JULES2026'), findsOneWidget);
     expect(find.text('User: jules'), findsOneWidget);
     expect(find.text('42'), findsOneWidget);
-    expect(find.text('10'), findsOneWidget);
+    expect(find.text('10'), findsNWidgets(2)); // uniqueInviters (10) and conversions (10)
     expect(find.text('Clicks'), findsOneWidget);
-    expect(find.text('Conversions'), findsOneWidget);
   });
 
   testWidgets('displays empty state', (tester) async {
     when(() => mockApiService.listReferrals()).thenAnswer((_) async => []);
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {
+        'totalReferrals': 0,
+        'totalConversions': 0,
+        'uniqueInviters': 0,
+        'kFactor': 0.0,
+      },
+    );
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
+    // Check K-Factor card still displays
+    expect(find.text('K-Factor'), findsOneWidget);
+    expect(find.text('0.00'), findsOneWidget);
+
+    // Check empty message
     expect(find.text('No referrals tracked yet.'), findsOneWidget);
   });
 
   testWidgets('displays error state', (tester) async {
     when(() => mockApiService.listReferrals())
+        .thenAnswer((_) => Future.error(Exception('API failure')));
+    when(() => mockApiService.getViralCoefficient())
         .thenAnswer((_) => Future.error(Exception('API failure')));
 
     await tester.pumpWidget(buildTestWidget());
