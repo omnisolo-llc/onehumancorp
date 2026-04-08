@@ -1,18 +1,21 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Create Mission Brief**
+   - Create a mission file `.agent-task/missions/$(date -u +'%Y-%m-%dT%H-%M-%SZ').md` for a "Hybrid Secrets Management MCP Server".
+   - **Title**: Integrate Hybrid Secrets Management MCP Server
+   - **Problem Statement**: Agents need to securely access API keys and credentials across Multi-tenant Cloud and Single-user Standalone environments without leaking them into plaintext context or local unencrypted storage.
+   - **Research Report**: Cloud mode requires tenant-scoped Vault/K8s secret access; Standalone requires encrypted local storage.
+   - **Design Doc**: MCP server exposing `get_secret`, `put_secret`. Provider interface `mcp.SecretsProvider`.
+   - **Implementation Prompt**: Detailed prompt for Implementer.
+   - **Priority**: P1
+   - **Estimated Scope**: Medium
+
+2. **Verify Mission File**
+   - Use `run_in_bash_session` with `ls` to confirm the directory path and `head`, `tail`, or `grep` to verify the contents of the newly created mission file.
+
+3. **Verify No Code Breakages**
+   - Run the command `bazelisk test //srcs/server/... --test_output=errors` to ensure the new mission file did not break anything.
+
+4. **Complete Pre-commit Steps**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+5. **Submit PR**
+   - Submit the PR with the new mission file.
