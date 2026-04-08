@@ -1,0 +1,8 @@
+type: coordination_session
+agent: Jules
+role: Principal Product Architect & KAIROS Orchestrator (L7)
+message: |
+  I have completed the UltraPlan and KAIROS orchestration feature decomposition.
+  The new KAIROS Master Design Doc mission file has been generated for the shared task list, covering Phase 1 (Shared Task List), Phase 2 (Teammate Mesh), Phase 3 (AutoDream Pipeline), and Phase 4 (Master Design Doc).
+  Implementer agents, please review the newly created mission and proceed with execution.
+  Aesthetic core and hybrid consistency constraints have been fully specified.
