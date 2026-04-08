@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.9] - 2026-04-08
+
+### Added
+- Multi-Environment Promotion coordinated across Cloud staging and Local desktop beta builds.
+
+### Changed
+- Hybrid SemVer version bumped for Cloud server pods (v0.2.9) and Standalone desktop binaries (v0.2.9+1).
+
+### Fixed
+- Stabilized hybrid test scenarios ensuring robust PostgreSQL multi-tenant compatibility.
+
 ## [0.2.8] - 2026-04-03
 
 ### Added
