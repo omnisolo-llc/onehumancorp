@@ -41,9 +41,16 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 		})
 	}
 
+	if req.MaxTokens <= 0 {
+		req.MaxTokens = 2048
+	} else if req.MaxTokens > 4096 {
+		req.MaxTokens = 4096
+	}
+
 	payload := map[string]interface{}{
 		"model":       req.Model,
 		"messages":    messages,
+		"max_tokens":  req.MaxTokens,
 	}
 
 	body, _ := json.Marshal(payload)

@@ -49,10 +49,29 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 		})
 	}
 
+	if req.MaxTokens <= 0 {
+		req.MaxTokens = 2048
+	} else if req.MaxTokens > 4096 {
+		req.MaxTokens = 4096
+	}
+
+	var systemPayload interface{} = req.System
+	if req.System != "" {
+		systemPayload = []map[string]interface{}{
+			{
+				"type": "text",
+				"text": req.System,
+				"cache_control": map[string]interface{}{
+					"type": "ephemeral",
+				},
+			},
+		}
+	}
+
 	payload := map[string]interface{}{
 		"model":      req.Model,
 		"max_tokens": req.MaxTokens,
-		"system":     req.System,
+		"system":     systemPayload,
 		"messages":   messages,
 	}
 
@@ -65,6 +84,7 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 
 	httpReq.Header.Set("x-api-key", c.APIKey)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
+	httpReq.Header.Set("anthropic-beta", "prompt-caching-2024-07-31")
 	httpReq.Header.Set("content-type", "application/json")
 
 	resp, err := c.Client.Do(httpReq)
