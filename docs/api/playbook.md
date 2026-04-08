@@ -306,6 +306,29 @@ graph TD
 ```
 
 
+### 4.7 Hybrid MCP RAG Sync
+
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>Hybrid MCP RAG Protocol</strong>
+  <p>The OHC Hybrid Architecture (OHC-HA) seamlessly bridges local SQLite execution with multi-tenant PostgreSQL cloud orchestration. Agents can execute privately on their local desktop while dynamically escalating and synchronizing Context/RAG memories to the cloud when massive parallel compute is required.</p>
+
+  <h4 style="margin-top: 1rem;">Hybrid RAG Sync Architecture</h4>
+  <div markdown="1" style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    ```mermaid
+    graph TD
+        A[Standalone Mode] -->|Private Local State| B(SQLite DB)
+        B -.->|Background Sync via OHC-SIP| C{Sync Engine}
+        C -->|Aggregated Insights| D(PostgreSQL DB)
+        D -->|Global Context| E[Cloud Swarm Orchestration]
+
+        style A fill:#003366,stroke:#333,stroke-width:2px,color:#fff
+        style B fill:#006699,stroke:#333,stroke-width:2px,color:#fff
+        style D fill:#0099cc,stroke:#333,stroke-width:2px,color:#fff
+        style E fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
+    ```
+  </div>
+</div>
+
 ### 4.8 KAIROS Shared Task List API
 
 **Endpoint:** `POST /api/v1/tasks/claim`
