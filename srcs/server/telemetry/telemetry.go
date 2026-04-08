@@ -61,6 +61,8 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
+	RAGRecordsSyncedTotal       metric.Int64Counter
+	RAGSyncErrorsTotal          metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -460,6 +462,22 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1011,4 +1029,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGRecordsSynced increments the global counter for synced RAG records.
+func RecordRAGRecordsSynced(ctx context.Context, count int64) {
+	if RAGRecordsSyncedTotal == nil {
+		return
+	}
+	RAGRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if RAGSyncErrorsTotal == nil {
+		return
+	}
+	RAGSyncErrorsTotal.Add(ctx, 1)
 }
