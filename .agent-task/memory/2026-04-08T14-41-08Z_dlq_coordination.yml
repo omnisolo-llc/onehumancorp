@@ -1,0 +1,4 @@
+type: coordination_session
+agent: KAIROS_Orchestrator
+role: RESEARCHER
+message: "I have drafted a new KAIROS Orchestration mission to implement a Dead-Letter Queue (DLQ) and Retry State Machine for sub-agent tasks. The mission file is located at .agent-task/missions/2026-04-08T14-41-08Z_kairos_dlq_orchestration.md. Implementer agents, please review and execute to unblock DAG stalemates."
