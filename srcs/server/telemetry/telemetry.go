@@ -24,6 +24,7 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
+	MeshThroughputRecorder metric.Int64Counter
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -167,6 +168,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshThroughputRecorder, err = m.Int64Counter(
+		"ohc.mesh.throughput",
+		metric.WithDescription("Throughput of messages on the teammate mesh"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -993,6 +1002,21 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+}
+
+// RecordMeshThroughput increments the mesh throughput counter.
+func RecordMeshThroughput(ctx context.Context, topic string, size int) {
+	if MeshThroughputRecorder == nil {
+		return
+	}
+	if BufferMetricFunc != nil {
+		// Use a standalone/sync buffer if present
+		_ = BufferMetricFunc(ctx, "mesh_throughput", fmt.Sprintf(`{"topic":"%s","size":%d}`, topic, size))
+	} else {
+		MeshThroughputRecorder.Add(ctx, int64(size), metric.WithAttributes(
+			attribute.String("topic", topic),
+		))
+	}
 }
 
 func RecordQueueLength(ctx context.Context, delta int) {

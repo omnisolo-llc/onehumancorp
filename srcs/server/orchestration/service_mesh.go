@@ -8,7 +8,7 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-
+	"google.golang.org/protobuf/proto"
 )
 
 // AdvertiseCapabilities advertises an agent's capabilities to the mesh
@@ -74,6 +74,8 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 			if err := stream.Send(&caps); err != nil {
 				return err
 			}
+
+			telemetry.RecordMeshThroughput(ctx, "capabilities", proto.Size(&caps))
 		}
 	}
 }
@@ -124,6 +126,7 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			}
 
 			telemetry.RecordMeshBroadcast(ctx, "events")
+			telemetry.RecordMeshThroughput(ctx, req.GetTopic(), len(payload))
 		}
 	}
 }

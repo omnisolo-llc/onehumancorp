@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/centrifugal/centrifuge"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // Node is an interface for Centrifuge operations to allow mocking in tests.
@@ -193,6 +194,7 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 		data, err := json.Marshal(payload)
 		if err == nil {
 			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", data)
+			telemetry.RecordMeshThroughput(context.Background(), "tasks", len(data))
 		}
 	}
 	channel := "mesh:tasks"
