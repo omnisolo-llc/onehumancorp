@@ -62,6 +62,49 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 	}
 }
 
+func TestHandleInviteLink(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"userId": "user-growth"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/invite-link", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleInviteLink(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var res InviteLinkResponse
+	if err := json.NewDecoder(w.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.Code == "" {
+		t.Errorf("expected code to be generated, got empty")
+	}
+	if res.InviteLink == "" {
+		t.Errorf("expected inviteLink to be generated, got empty")
+	}
+
+	// Verify that a corresponding referral tracking entry was created.
+	s.mu.RLock()
+	refs := s.referrals
+	s.mu.RUnlock()
+
+	if len(refs) != 1 {
+		t.Fatalf("expected 1 referral entry created, got %d", len(refs))
+	}
+	if refs[0].UserID != "user-growth" {
+		t.Errorf("expected referral entry user ID to be 'user-growth', got '%s'", refs[0].UserID)
+	}
+	if refs[0].ReferralCode != res.Code {
+		t.Errorf("expected referral entry code to match response code '%s', got '%s'", res.Code, refs[0].ReferralCode)
+	}
+}
+
 func TestHandleViralCoefficient(t *testing.T) {
 	s := &Server{
 		referrals: []Referral{

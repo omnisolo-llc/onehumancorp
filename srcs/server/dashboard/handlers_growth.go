@@ -155,6 +155,58 @@ func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// InviteLinkRequest represents a request to generate a viral team invite link.
+type InviteLinkRequest struct {
+	UserID string `json:"userId"`
+}
+
+// InviteLinkResponse represents the generated viral team invite link.
+type InviteLinkResponse struct {
+	InviteLink string `json:"inviteLink"`
+	Code       string `json:"code"`
+}
+
+func (s *Server) handleInviteLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req InviteLinkRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.UserID == "" {
+		http.Error(w, "userId is required", http.StatusBadRequest)
+		return
+	}
+
+	// Generate a unique, trackable viral code using a timestamp-based approach.
+	code := "INV-" + req.UserID + "-" + time.Now().UTC().Format("20060102150405")
+	link := "https://cloud.onehumancorp.com/invite?code=" + code
+
+	// Register it automatically as a 0-click referral.
+	ref := Referral{
+		ID:           "ref-" + time.Now().UTC().Format("20060102150405"),
+		UserID:       req.UserID,
+		ReferralCode: code,
+		Clicks:       0,
+		Conversions:  0,
+		CreatedAt:    time.Now().UTC(),
+	}
+
+	s.mu.Lock()
+	s.referrals = append(s.referrals, ref)
+	s.mu.Unlock()
+
+	res := InviteLinkResponse{
+		InviteLink: link,
+		Code:       code,
+	}
+	writeJSON(w, res)
+}
+
 func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

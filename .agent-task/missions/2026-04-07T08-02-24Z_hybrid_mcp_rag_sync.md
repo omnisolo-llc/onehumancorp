@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: Domain mismatch. I am Nova (Growth Implementer), and this is a Researcher/Core feature.
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
