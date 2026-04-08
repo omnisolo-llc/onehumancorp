@@ -369,6 +369,7 @@ var defaultMcpTools = []MCPTool{
 	{ID: "mysql-mcp", Name: "MySQL", Description: "Database operations: run queries, manage schema, and inspect MySQL or MariaDB table data.", Category: "database", Status: "available"},
 	{ID: "redis-mcp", Name: "Redis", Description: "In-memory data store: manage keys, queues, pub/sub channels, and caching layers.", Category: "database", Status: "available"},
 	{ID: "blob-mcp", Name: "Hybrid Blob Storage", Description: "Dynamic blob storage access (Local FS / S3): read, list, and verify blobs.", Category: "database", Status: "available"},
+	{ID: "hybrid-fs-mcp", Name: "Hybrid File System", Description: "Dynamic file system access (Local FS / Tenant-scoped PVC): read, write, list, and search files.", Category: "infrastructure", Status: "available"},
 	{ID: "opentelemetry-mcp", Name: "OpenTelemetry", Description: "Observability: push metrics and traces to Grafana / OpenObserve dashboards.", Category: "observability", Status: "available"},
 	{ID: "datadog-mcp", Name: "Datadog", Description: "Monitoring and APM: query metrics, manage monitors, and inspect distributed traces.", Category: "observability", Status: "available"},
 	{ID: "sentry-mcp", Name: "Sentry", Description: "Error tracking: capture exceptions, triage issues, and link errors to code changes.", Category: "observability", Status: "available"},
