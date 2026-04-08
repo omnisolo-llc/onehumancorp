@@ -171,16 +171,16 @@ func (r *PgHubRepository) UpdateAgentStatus(ctx context.Context, id string, stat
 }
 
 func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
-	// Prevent unauthorized deletion if scoped
-	if r.orgID != "" {
-		var count int
-		err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = $1 AND organization_id = $2", id, r.orgID).Scan(&count)
-		if err != nil || count == 0 {
-			return fmt.Errorf("pg: unauthorized or missing agent")
-		}
-	}
-
 	return pgWithRetry(ctx, func() error {
+		// Prevent unauthorized deletion if scoped
+		if r.orgID != "" {
+			var count int
+			err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM agents WHERE id = $1 AND organization_id = $2", id, r.orgID).Scan(&count)
+			if err != nil || count == 0 {
+				return fmt.Errorf("pg: unauthorized or missing agent")
+			}
+		}
+
 		tx, err := r.pool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("pg: begin remove agent: %w", err)

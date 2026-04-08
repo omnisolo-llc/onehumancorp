@@ -38,12 +38,14 @@ func (r *SqliteTaskRepository) Get(ctx context.Context, orgID, id string) (Task,
 	task := Task{}
 	var schedType, status string
 	var payload string
+	var schedAt, createdAt, lastRunAt, nextRunAt db.FlexTime
+
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, organization_id, agent_id, name, schedule_type, schedule_at, interval_s, expression, status, payload, created_at, last_run_at, next_run_at
 		FROM scheduled_tasks WHERE id = ? AND organization_id = ?`, id, orgID).Scan(
 		&task.ID, &task.OrganizationID, &task.AgentID, &task.Name,
-		&schedType, &task.Schedule.At, &task.Schedule.IntervalS, &task.Schedule.Expression,
-		&status, &payload, &task.CreatedAt, &task.LastRunAt, &task.NextRunAt,
+		&schedType, &schedAt, &task.Schedule.IntervalS, &task.Schedule.Expression,
+		&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
 	)
 	if err != nil {
 		return Task{}, fmt.Errorf("sqlite: get task: %w", err)
@@ -51,6 +53,20 @@ func (r *SqliteTaskRepository) Get(ctx context.Context, orgID, id string) (Task,
 	task.Schedule.Type = ScheduleType(schedType)
 	task.Status = TaskStatus(status)
 	task.Payload = json.RawMessage(payload)
+
+	if !schedAt.Time.IsZero() {
+		task.Schedule.At = &schedAt.Time
+	}
+	if !createdAt.Time.IsZero() {
+		task.CreatedAt = createdAt.Time
+	}
+	if !lastRunAt.Time.IsZero() {
+		task.LastRunAt = &lastRunAt.Time
+	}
+	if !nextRunAt.Time.IsZero() {
+		task.NextRunAt = &nextRunAt.Time
+	}
+
 	return task, nil
 }
 
@@ -68,16 +84,32 @@ func (r *SqliteTaskRepository) ListForOrg(ctx context.Context, orgID string) ([]
 		var t Task
 		var schedType, status string
 		var payload string
+		var schedAt, createdAt, lastRunAt, nextRunAt db.FlexTime
+
 		if err := rows.Scan(
 			&t.ID, &t.OrganizationID, &t.AgentID, &t.Name,
-			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
-			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
+			&schedType, &schedAt, &t.Schedule.IntervalS, &t.Schedule.Expression,
+			&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
 		); err != nil {
 			return nil, fmt.Errorf("sqlite: scan task: %w", err)
 		}
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
+
+		if !schedAt.Time.IsZero() {
+			t.Schedule.At = &schedAt.Time
+		}
+		if !createdAt.Time.IsZero() {
+			t.CreatedAt = createdAt.Time
+		}
+		if !lastRunAt.Time.IsZero() {
+			t.LastRunAt = &lastRunAt.Time
+		}
+		if !nextRunAt.Time.IsZero() {
+			t.NextRunAt = &nextRunAt.Time
+		}
+
 		tasks = append(tasks, t)
 	}
 	return tasks, nil
@@ -106,10 +138,12 @@ func (r *SqliteTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 		var t Task
 		var schedType, status string
 		var payload string
+		var schedAt, createdAt, lastRunAt, nextRunAt db.FlexTime
+
 		if err := rows.Scan(
 			&t.ID, &t.OrganizationID, &t.AgentID, &t.Name,
-			&schedType, &t.Schedule.At, &t.Schedule.IntervalS, &t.Schedule.Expression,
-			&status, &payload, &t.CreatedAt, &t.LastRunAt, &t.NextRunAt,
+			&schedType, &schedAt, &t.Schedule.IntervalS, &t.Schedule.Expression,
+			&status, &payload, &createdAt, &lastRunAt, &nextRunAt,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("sqlite: scan due task: %w", err)
@@ -117,6 +151,20 @@ func (r *SqliteTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 		t.Schedule.Type = ScheduleType(schedType)
 		t.Status = TaskStatus(status)
 		t.Payload = json.RawMessage(payload)
+
+		if !schedAt.Time.IsZero() {
+			t.Schedule.At = &schedAt.Time
+		}
+		if !createdAt.Time.IsZero() {
+			t.CreatedAt = createdAt.Time
+		}
+		if !lastRunAt.Time.IsZero() {
+			t.LastRunAt = &lastRunAt.Time
+		}
+		if !nextRunAt.Time.IsZero() {
+			t.NextRunAt = &nextRunAt.Time
+		}
+
 		tasks = append(tasks, t)
 	}
 	rows.Close()
