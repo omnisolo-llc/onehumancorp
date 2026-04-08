@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
@@ -179,34 +180,62 @@ class _MessageBubble extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: ClipRRect(
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isMe ? 12 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 12),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isMe ? 16 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 16),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe)
-              Text(
-                message.authorName,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+          child: BackdropFilter(
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.168, -0.153, -0.015, 0, 0,
+                -0.046, 1.061, -0.015, 0, 0,
+                -0.046, -0.152, 1.198, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-            Text(message.body),
-          ],
+              decoration: BoxDecoration(
+                color: isMe
+                    ? cs.primaryContainer.withValues(alpha: 0.3)
+                    : cs.surfaceContainerHighest.withValues(alpha: 0.3),
+                border: Border.all(
+                  color: isMe
+                      ? cs.primaryContainer.withValues(alpha: 0.5)
+                      : cs.outlineVariant.withValues(alpha: 0.3),
+                ),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isMe ? 16 : 0),
+                  bottomRight: Radius.circular(isMe ? 0 : 16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (!isMe)
+                    Text(
+                      message.authorName,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  Text(message.body),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -89,13 +90,36 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           if (lines.isEmpty) {
             return const Center(child: Text('No logs yet.'));
           }
-          return Container(
-            color: const Color(0xFF1a1a2e),
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.all(12),
-              itemCount: lines.length,
-              itemBuilder: (_, i) => _LogLine(line: lines[i], index: i),
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.compose(
+                  outer: ColorFilter.matrix(const <double>[
+                    1.168, -0.153, -0.015, 0, 0,
+                    -0.046, 1.061, -0.015, 0, 0,
+                    -0.046, -0.152, 1.198, 0, 0,
+                    0, 0, 0, 1, 0,
+                  ]),
+                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(26, 26, 46, 0.7),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: lines.length,
+                    itemBuilder: (_, i) => _LogLine(line: lines[i], index: i),
+                  ),
+                ),
+              ),
             ),
           );
         },
