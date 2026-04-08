@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.8 (Cloud) / v0.1.8+1 (Standalone)
+- Scaling (Cloud): Hybrid Local-to-Cloud State Sync MCP proxy.
+- Privacy/Offline (Standalone): Hybrid Local-to-Cloud State Sync MCP proxy.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.
