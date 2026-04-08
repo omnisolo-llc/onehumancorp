@@ -362,6 +362,57 @@ sequenceDiagram
     end
 ```
 
+### 4.4 KAIROS Sub-Agent Queue API
+
+**Endpoint:** `POST /api/queue/subagent`
+Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).
+
+**Payload:**
+```json
+{
+  "parent_task_id": "task_12345",
+  "payload": {
+    "instruction": "Verify the styling tokens in the frontend."
+  },
+  "scheduled_at": "2026-04-06T12:00:00Z"
+}
+```
+
+### 4.5 Teammate Mesh v2 (Centrifuge)
+
+**Endpoint:** `POST /api/mesh/v2/broadcast`
+Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
+
+**Payload:**
+```json
+{
+  "channel": "mesh:tasks",
+  "event_type": "TASK_TRANSITION",
+  "data": {
+    "task_id": "task_12345",
+    "previous_state": "PENDING",
+    "new_state": "IN_PROGRESS"
+  }
+}
+```
+
+#### Sub-Agent Queuing Workflow
+```mermaid
+graph TD
+    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
+    API --> QueueInterface{SubAgent Queue Interface}
+    QueueInterface -->|Cloud-Native| Rueidis[(Redis ZSETs)]
+    QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
+    Rueidis -->|Dequeues| Worker[Sub-Agent Worker]
+    SQLite -->|Dequeues| Worker
+    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
+    V2Mesh --> Centrifuge[Centrifuge Node Pub/Sub]
+    Centrifuge --> Swarm[Teammate Swarm]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh,Centrifuge,Swarm premium;
+```
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
