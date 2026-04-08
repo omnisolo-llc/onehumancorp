@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/slide_to_approve.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 /// Screen for managing agent-to-human escalation handoffs.
 class HandoffsScreen extends ConsumerStatefulWidget {
@@ -164,12 +165,11 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               return Semantics(
                 label: 'Handoff from agent to human. Intent: ${handoff.intent}',
                 excludeSemantics: true,
-                child: Card(
+                child: GlassCard(
                   margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -231,14 +231,13 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 24),
-                        SlideToApprove(
-                          disabled: isProcessing,
-                          onApprove: () => _handleApprove(handoff.id),
-                          onReject: () => _handleReject(handoff.id),
-                        ),
-                      ],
-                    ),
+                      const SizedBox(height: 24),
+                      SlideToApprove(
+                        disabled: isProcessing,
+                        onApprove: () => _handleApprove(handoff.id),
+                        onReject: () => _handleReject(handoff.id),
+                      ),
+                    ],
                   ),
                 ),
               );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 /// Screen for managing external integrations and MCP tools.
 class IntegrationsScreen extends ConsumerStatefulWidget {
@@ -207,14 +208,11 @@ class _IntegrationCardState extends State<_IntegrationCard> {
     return Semantics(
       label: 'Connect to ${widget.title}. ${widget.subtitle}',
       button: true,
-      child: Card(
-        child: InkWell(
-          onTap: widget.onConnect,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: GlassCard(
+        onTap: widget.onConnect,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
@@ -254,17 +252,15 @@ class _IntegrationCardState extends State<_IntegrationCard> {
                     color: colors.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: widget.onConnect,
-                    child: const Text('Configure'),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: widget.onConnect,
+                child: const Text('Configure'),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -285,23 +281,20 @@ class _MCPToolTile extends StatelessWidget {
       label: 'Invoke MCP Tool: $name. $description',
       button: true,
       excludeSemantics: true,
-      child: Card(
+      child: GlassCard(
         margin: const EdgeInsets.only(bottom: 12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {},
-          child: ListTile(
-            leading: const Icon(Icons.build_circle_outlined),
-            title: Text(name),
+        onTap: () {},
+        child: ListTile(
+          leading: const Icon(Icons.build_circle_outlined),
+          title: Text(name),
             subtitle: Text(
               description,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: OutlinedButton(
-              onPressed: () {}, // Invoke dialog
-              child: const Text('Invoke'),
-            ),
+          trailing: OutlinedButton(
+            onPressed: () {}, // Invoke dialog
+            child: const Text('Invoke'),
           ),
         ),
       ),
