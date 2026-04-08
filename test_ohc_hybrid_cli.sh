@@ -4,6 +4,7 @@
 echo "Running test..."
 export OHC_STANDALONE=true
 export DATABASE_URL=""
+export HOME=$(pwd)/test_home
 
 # Mock sqlite3
 sqlite3() {
@@ -12,7 +13,9 @@ sqlite3() {
 }
 export -f sqlite3
 
-touch local_standalone.db
+mkdir -p test_home/.ohc-local-data
+touch test_home/.ohc-local-data/standalone.db
+
 OUTPUT=$(./ohc_hybrid_cli.sh << CMD
 7
 q
@@ -24,7 +27,7 @@ if echo "$OUTPUT" | grep -q "Migrations appear successful"; then
 else
     echo "Test failed."
     echo "$OUTPUT"
-    rm local_standalone.db
+    rm -rf test_home
     kill -SIGINT $$
 fi
-rm local_standalone.db
+rm -rf test_home
