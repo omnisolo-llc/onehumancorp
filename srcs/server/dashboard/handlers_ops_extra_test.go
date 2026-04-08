@@ -116,3 +116,19 @@ func TestHandleScaleStreamOpsExtra(t *testing.T) {
 		t.Errorf("expected stream to contain AI Workforce Manager messages, got %q", body)
 	}
 }
+
+func TestScaleStreamSecurityIsolation(t *testing.T) {
+	// Verify that /api/v1/scale/stream endpoint requires authentication.
+	// Since we removed it from publicPaths, unauthenticated requests should fail.
+
+	_, server, _ := newTestServer(t)
+
+	req := httptest.NewRequest("GET", "/api/v1/scale/stream", nil)
+	w := httptest.NewRecorder()
+
+	server.Config.Handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected 401 Unauthorized for unauthenticated stream request, got %d", w.Code)
+	}
+}

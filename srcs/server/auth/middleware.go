@@ -30,6 +30,22 @@ func Middleware(store *Store) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Allow public routes
 			if isPublic(r.URL.Path) {
+				// Manually authenticate SSE streams with a query token bypass since it's a public path
+				if r.URL.Path == "/api/v1/scale/stream" {
+					token := r.URL.Query().Get("token")
+					if token == "" {
+						jsonError(w, "authentication required", http.StatusUnauthorized)
+						return
+					}
+					claims, err := store.ValidateToken(token)
+					if err != nil || !claims.HasRole("system") {
+						jsonError(w, "invalid token or missing system role: "+err.Error(), http.StatusUnauthorized)
+						return
+					}
+					ctx := context.WithValue(r.Context(), claimsContextKey, claims)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 				next.ServeHTTP(w, r)
 				return
 			}

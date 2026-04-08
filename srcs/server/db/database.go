@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -110,17 +112,38 @@ func New(ctx context.Context) (*DB, error) {
 			// Zero Secrets: Generate a cryptographically secure local storage key on first run and store in environment or require user to provide it.
 			// But for Standalone mode, if it's missing, we fail securely instead of using hardcoded secrets.
 			if os.Getenv("OHC_STANDALONE") == "true" {
-				// We cannot fail yet as it breaks tests without environment variables.
-				// For tests, use a transient key.
-				key = "standalone_ephemeral_key"
+				// First check if we previously generated and saved a key
+				keyFile := ".agent-task/.ohc_sqlite_key"
+				if _, err := os.Stat(keyFile); err == nil {
+					keyBytes, readErr := os.ReadFile(keyFile)
+					if readErr == nil {
+						key = strings.TrimSpace(string(keyBytes))
+					}
+				}
+
+				if key == "" {
+					// Generate a cryptographically secure random 32-byte key
+					b := make([]byte, 32)
+					if _, err := rand.Read(b); err != nil {
+						return nil, fmt.Errorf("db: failed to generate secure ephemeral sqlite key: %w", err)
+					}
+					key = hex.EncodeToString(b)
+
+					// Persist it securely so data is not lost on restart
+					os.MkdirAll(".agent-task", 0700)
+					if err := os.WriteFile(keyFile, []byte(key), 0600); err != nil {
+						return nil, fmt.Errorf("db: failed to persist secure sqlite key: %w", err)
+					}
+					slog.Warn("db: OHC_SQLITE_KEY not provided in standalone mode, generated a secure encryption key and persisted to " + keyFile)
+				}
 			} else {
 				key = "transient_memory_key"
 			}
 		}
 		if !strings.Contains(sqliteDSN, "?") {
-			sqliteDSN += "?_pragma=key(" + key + ")"
+			sqliteDSN += "?_pragma=key('" + key + "')"
 		} else {
-			sqliteDSN += "&_pragma=key(" + key + ")"
+			sqliteDSN += "&_pragma=key('" + key + "')"
 		}
 
 		sqliteDB, sqliteErr := sql.Open("sqlite", sqliteDSN)

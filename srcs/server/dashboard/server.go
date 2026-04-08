@@ -549,7 +549,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/b2b/revoke", server.handleB2BRevoke)
 	// Phase 5 – Autonomous SRE / Incident Management
 	mux.HandleFunc("/api/v1/scale", server.handleScale)
-	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream)
+	mux.HandleFunc("/api/v1/scale/stream", server.handleScaleStream) // authentication handled in middleware for query token
 	mux.HandleFunc("/api/v1/stream", auth.RequireRole("system", server.handleStream))
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)

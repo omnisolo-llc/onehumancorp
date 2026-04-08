@@ -50,3 +50,43 @@ func TestStandaloneFallback(t *testing.T) {
 	// Clean up swarm.db
 	os.RemoveAll(".agent-task")
 }
+
+func TestStandaloneEncryptionKeyGeneration(t *testing.T) {
+	// Verify that when OHC_STANDALONE=true and OHC_SQLITE_KEY is empty,
+	// New() uses a dynamically generated 32-byte secure encryption key,
+	// rejecting the static 'standalone_ephemeral_key', and persists it.
+
+	// Ensure clean slate
+	os.RemoveAll(".agent-task")
+
+	os.Setenv("OHC_STANDALONE", "true")
+	os.Setenv("DATABASE_URL", "sqlite://file:test_crypto.db?mode=memory")
+	os.Setenv("OHC_SQLITE_KEY", "")
+	defer os.Unsetenv("OHC_STANDALONE")
+	defer os.Unsetenv("DATABASE_URL")
+	defer os.Unsetenv("OHC_SQLITE_KEY")
+
+	db1, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to initialize db1: %v", err)
+	}
+	db1.Close()
+
+	if !db1.Provider.IsSQLite() {
+		t.Errorf("Expected fallback to SQLite provider in standalone mode")
+	}
+
+	// Verify key file was created
+	keyFile := ".agent-task/.ohc_sqlite_key"
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		t.Fatalf("Expected key file %s to be created", keyFile)
+	}
+
+	keyBytes, _ := os.ReadFile(keyFile)
+	if len(keyBytes) != 64 { // 32 bytes hex encoded = 64 chars
+		t.Errorf("Expected key to be 64 characters long, got %d", len(keyBytes))
+	}
+
+	// Clean up
+	os.RemoveAll(".agent-task")
+}
