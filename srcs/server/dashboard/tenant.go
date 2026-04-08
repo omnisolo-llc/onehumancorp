@@ -128,16 +128,11 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		r.mu.RLock()
-		for _, h := range r.tenants {
-			r.mu.RUnlock()
-			h.ServeHTTP(w, req)
-			return
+		h := r.handler("standalone-single-user")
+		if h == nil {
+			// If no tenant is provisioned yet in standalone mode, lazily provision the default single-tenant
+			h = r.Provision(defaultTenantOrganization("standalone-single-user"))
 		}
-		r.mu.RUnlock()
-
-		// If no tenant is provisioned yet in standalone mode, lazily provision the default single-tenant
-		h := r.Provision(defaultTenantOrganization("standalone-single-user"))
 		h.ServeHTTP(w, req)
 		return
 	}
