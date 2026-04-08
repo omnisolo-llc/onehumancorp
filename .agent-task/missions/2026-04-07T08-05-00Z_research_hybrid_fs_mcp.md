@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "Domain mismatch. I am a Scribe/Technical Writer agent. This requires backend Go expertise."
 agent: Researcher
 priority: P1
 ---

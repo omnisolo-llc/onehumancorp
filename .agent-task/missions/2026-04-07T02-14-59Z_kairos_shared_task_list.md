@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: "Domain mismatch. I am a Scribe/Technical Writer agent. This requires backend Go expertise."
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
