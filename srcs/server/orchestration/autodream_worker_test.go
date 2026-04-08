@@ -33,6 +33,28 @@ func setupTestDB(t *testing.T) db.Provider {
 		t.Fatalf("failed to create autodream_memories table: %v", err)
 	}
 
+	_, err = provider.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS embedding_cache (
+			content_hash TEXT PRIMARY KEY,
+			embedding TEXT NOT NULL,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create embedding_cache table: %v", err)
+	}
+
+	_, err = provider.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS llm_reason_cache (
+			prompt_hash TEXT PRIMARY KEY,
+			response TEXT NOT NULL,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create llm_reason_cache table: %v", err)
+	}
+
 	return provider
 }
 
