@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -365,6 +366,29 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}, nil
 
 	// ── Hybrid Blob Storage tool ──────────────────────────────────────────────
+	case "hybridfs-mcp":
+		provider := hybridfsmcp.NewProvider()
+		inspector := hybridfsmcp.NewHybridFSMCP(provider)
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid hybridfs-mcp parameters: %w", err)
+		}
+
+		if req.Method == "tools/list" {
+			return inspector.ListTools(), nil
+		} else if req.Method == "tools/call" {
+			toolName, ok := params["name"].(string)
+			if !ok {
+				return nil, errors.New("missing tool name")
+			}
+			args, _ := params["arguments"].(map[string]interface{})
+			if args == nil {
+				args = make(map[string]interface{})
+			}
+			return inspector.CallTool(r.Context(), toolName, args)
+		}
+		return nil, fmt.Errorf("unsupported hybridfs-mcp method: %s", req.Method)
+
 	case "blob-mcp":
 		if s.hub.Storage() == nil {
 			return nil, errors.New("storage provider not configured")
