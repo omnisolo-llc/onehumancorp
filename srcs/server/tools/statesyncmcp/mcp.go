@@ -61,7 +61,7 @@ func (m *StateSyncMCP) ListTools() []Tool {
 func (m *StateSyncMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
 	if !m.isLocal {
 		return map[string]interface{}{
-			"status": "skipped",
+			"status":  "skipped",
 			"message": "Not running in Standalone/Local mode. Sync is a no-op.",
 		}, nil
 	}

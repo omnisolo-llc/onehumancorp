@@ -247,9 +247,14 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	}
 
 	// Prune missions older than 24 hours
-	err = db.PruneStaleMissions(ctx, 24*time.Hour)
+	pruned, err := db.PruneStaleMissions(ctx, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("Failed to prune stale missions: %v", err)
+	}
+
+	// 2 completed/old should be pruned
+	if pruned != 2 {
+		t.Fatalf("Expected 2 rows to be pruned, got %d", pruned)
 	}
 
 	var count int
@@ -282,7 +287,7 @@ func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
 	}
 	db.Close()
 
-	err = db.PruneStaleMissions(context.Background(), 24*time.Hour)
+	_, err = db.PruneStaleMissions(context.Background(), 24*time.Hour)
 	if err == nil {
 		t.Fatal("Expected error when pruning on closed DB")
 	}
@@ -603,7 +608,7 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	_, _ = db.db.Exec(ctx, "DELETE FROM agent_missions")
 
 	_ = db.CompleteMission(ctx, "nonexistent")
-	_ = db.PruneStaleMissions(ctx, 0)
+	_, _ = db.PruneStaleMissions(ctx, 0)
 }
 
 func TestSIPDB_BurstMission(t *testing.T) {

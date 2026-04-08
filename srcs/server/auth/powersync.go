@@ -3,19 +3,19 @@ package auth
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"os"
-	"time"
-	"encoding/base64"
 	"sync"
+	"time"
 )
 
 // In a real app we'd load this from an env var, we'll auto-generate one for this demo if not provided.
 var (
 	powerSyncKeyMu sync.Mutex
-	powerSyncPriv ed25519.PrivateKey
-	powerSyncPub  ed25519.PublicKey
+	powerSyncPriv  ed25519.PrivateKey
+	powerSyncPub   ed25519.PublicKey
 )
 
 func getPowerSyncKeys() (ed25519.PrivateKey, ed25519.PublicKey) {
@@ -88,11 +88,11 @@ func PowerSyncTokenHandler(store *Store) http.HandlerFunc {
 		exp := now.Add(24 * time.Hour).Unix()
 
 		powerSyncClaims := map[string]interface{}{
-			"iss": "ohc-backend",
-			"sub": claims.Subject,
-			"aud": "powersync",
-			"iat": now.Unix(),
-			"exp": exp,
+			"iss":             "ohc-backend",
+			"sub":             claims.Subject,
+			"aud":             "powersync",
+			"iat":             now.Unix(),
+			"exp":             exp,
 			"organization_id": claims.OrganizationID,
 		}
 
@@ -112,8 +112,8 @@ func PowerSyncTokenHandler(store *Store) http.HandlerFunc {
 		token := sigInput + "." + base64.RawURLEncoding.EncodeToString(sig)
 
 		response := map[string]interface{}{
-			"token": token,
-			"expires_at": exp,
+			"token":          token,
+			"expires_at":     exp,
 			"power_sync_url": os.Getenv("OHC_POWERSYNC_URL"), // Or default if not set
 		}
 

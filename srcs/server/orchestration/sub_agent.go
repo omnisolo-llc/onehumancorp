@@ -29,13 +29,13 @@ type SubAgentSpawner interface {
 
 // DefaultSubAgentSpawner implements SubAgentSpawner.
 type DefaultSubAgentSpawner struct {
-	db       db.Provider
-	tm       *TaskManager
-	hub      *CentrifugeNode // For teammate mesh broadcasts
-	sem      chan struct{} // For concurrency limits in standalone mode
-	wg       sync.WaitGroup
-	ctx      context.Context
-	cancel   context.CancelFunc
+	db     db.Provider
+	tm     *TaskManager
+	hub    *CentrifugeNode // For teammate mesh broadcasts
+	sem    chan struct{}   // For concurrency limits in standalone mode
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewDefaultSubAgentSpawner creates a new DefaultSubAgentSpawner.

@@ -663,8 +663,9 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table and updates stuck records.
-func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
-	return withSipRetry(ctx, func() error {
+func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) (int64, error) {
+	var rowsPruned int64
+	err := withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
@@ -677,13 +678,20 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		// 2. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			result, err := s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			if err == nil {
+				rowsPruned = result
+			}
+			return err
 		} else {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			result, err := s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			if err == nil {
+				rowsPruned = result
+			}
+			return err
 		}
-
-		return err
 	})
+	return rowsPruned, err
 }
 
 // CapabilityPlugin represents an MCP plugin registration.

@@ -34,7 +34,7 @@ type Node interface {
 // CentrifugeNode wraps a centrifuge.Node with OHC-specific configuration and
 // channel-permission rules that map directly to the Hub's meeting/chat model.
 type CentrifugeNode struct {
-	node Node
+	node          Node
 	meshTransport MeshTransport
 }
 
@@ -118,7 +118,6 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 
 	return &CentrifugeNode{node: node}, nil
 }
-
 
 // SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
 func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {

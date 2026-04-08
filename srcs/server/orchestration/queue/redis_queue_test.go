@@ -51,8 +51,8 @@ func TestRedisTaskQueue(t *testing.T) {
 
 // Additional coverage placeholders
 func TestRedisTaskQueue_Coverage(t *testing.T) {
-    _ = Job{
-        ID: "test",
-        RunAfter: time.Now(),
-    }
+	_ = Job{
+		ID:       "test",
+		RunAfter: time.Now(),
+	}
 }

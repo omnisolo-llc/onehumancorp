@@ -2,9 +2,9 @@ package statemachine
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"testing"
-	"database/sql"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "modernc.org/sqlite"

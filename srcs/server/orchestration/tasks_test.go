@@ -296,7 +296,7 @@ func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
 			} else {
 				errCh <- nil // nil task means it couldn't claim, which is fine
 			}
-		}( "agent-" + string(rune('A'+i)))
+		}("agent-" + string(rune('A'+i)))
 	}
 
 	for i := 0; i < 10; i++ {

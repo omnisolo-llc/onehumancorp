@@ -427,7 +427,7 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 	}
 	// Execute pruning task
 	if s.hub.SIPDB() != nil {
-		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
+		_, _ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
 }

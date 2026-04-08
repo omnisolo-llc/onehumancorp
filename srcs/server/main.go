@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 	"log/slog"
 	"net"
 	"net/http"
@@ -374,10 +374,11 @@ func run(now time.Time, listen listenFunc) error {
 					return
 				case <-ticker.C:
 					// Prune missions older than 7 days or marked COMPLETED
-					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
+					pruned, err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour)
+					if err != nil {
 						slog.Error("failed to prune stale agent missions", "error", err)
-					} else {
-						slog.Debug("successfully pruned stale agent missions")
+					} else if pruned > 0 {
+						slog.Debug("successfully pruned stale agent missions", "count", pruned)
 					}
 				}
 			}

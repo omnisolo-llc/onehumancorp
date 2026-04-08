@@ -74,7 +74,7 @@ func (r *mockRows) Scan(dest ...any) error {
 func (r *mockRows) Close() {}
 
 func (r *mockRows) Columns() ([]string, error) { return nil, nil }
-func (r *mockRows) Err() error { return nil }
+func (r *mockRows) Err() error                 { return nil }
 
 func TestDBStateSyncProvider_GetStatus(t *testing.T) {
 	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}

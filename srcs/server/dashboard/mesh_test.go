@@ -51,7 +51,7 @@ func TestHandleMeshBroadcast(t *testing.T) {
 
 	t.Run("ValidBroadcastMeshTasks", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"channel": "mesh:tasks",
+			"channel":  "mesh:tasks",
 			"agent_id": "test-agent",
 			"action":   "test-action",
 			"status":   "test-status",
@@ -62,7 +62,7 @@ func TestHandleMeshBroadcast(t *testing.T) {
 
 		// Setup context to bypass auth middleware but satisfy auth role check
 		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
-			Role: "system",
+			Role:           "system",
 			OrganizationID: "org-mesh",
 		})
 		req = req.WithContext(ctx)
@@ -78,7 +78,7 @@ func TestHandleMeshBroadcast(t *testing.T) {
 
 	t.Run("ValidBroadcastMeshCoordination", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"channel": "mesh:coordination",
+			"channel":  "mesh:coordination",
 			"agent_id": "test-agent",
 			"action":   "test-action",
 			"status":   "test-status",
@@ -88,7 +88,7 @@ func TestHandleMeshBroadcast(t *testing.T) {
 		req := createMockTLSRequest(http.MethodPost, "/api/mesh/broadcast", body, true)
 
 		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
-			Role: "system",
+			Role:           "system",
 			OrganizationID: "org-mesh",
 		})
 		req = req.WithContext(ctx)
