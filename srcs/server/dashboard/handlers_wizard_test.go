@@ -119,11 +119,85 @@ func TestHandleWizardConfigure_WrongMethod(t *testing.T) {
 	}
 }
 
-func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
+func TestHandleWizardOnboardingVerify_Standalone_MissingDBPath(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	server := &Server{}
+	server := &Server{
+		settings: settings.AppSettings{}, // Empty DBPath
+	}
+	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardOnboardingVerify(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp["mode"] != "standalone" {
+		t.Errorf("Expected mode standalone, got %v", resp["mode"])
+	}
+
+	if resp["status"] != "degraded" {
+		t.Errorf("Expected status degraded, got %v", resp["status"])
+	}
+}
+
+func TestHandleWizardOnboardingVerify_Standalone_DBPathNotExist(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	server := &Server{
+		settings: settings.AppSettings{
+			DBPath: "/path/to/nonexistent/db.sqlite",
+		},
+	}
+	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardOnboardingVerify(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp["mode"] != "standalone" {
+		t.Errorf("Expected mode standalone, got %v", resp["mode"])
+	}
+
+	if resp["status"] != "degraded" {
+		t.Errorf("Expected status degraded, got %v", resp["status"])
+	}
+}
+
+func TestHandleWizardOnboardingVerify_Standalone_DBPathExists(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	// Create a temporary file to act as the DB
+	tmpfile, err := os.CreateTemp("", "testdb*.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+	tmpfile.Close()
+
+	server := &Server{
+		settings: settings.AppSettings{
+			DBPath: tmpfile.Name(),
+		},
+	}
 	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
 	rr := httptest.NewRecorder()
 

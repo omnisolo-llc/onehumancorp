@@ -176,6 +176,41 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 			"status":  "ok",
 			"message": "Standalone mode active",
 		})
+
+		s.mu.RLock()
+		dbPath := s.settings.DBPath
+		s.mu.RUnlock()
+
+		if dbPath == "" {
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DBPath",
+				"status":  "missing",
+				"message": "DBPath is not configured in settings",
+			})
+		} else {
+			if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+				allHealthy = false
+				diagnostics = append(diagnostics, map[string]interface{}{
+					"check":   "DBPath",
+					"status":  "missing",
+					"message": "Database file does not exist at " + dbPath,
+				})
+			} else if err != nil {
+				allHealthy = false
+				diagnostics = append(diagnostics, map[string]interface{}{
+					"check":   "DBPath",
+					"status":  "error",
+					"message": "Failed to access database file at " + dbPath + ": " + err.Error(),
+				})
+			} else {
+				diagnostics = append(diagnostics, map[string]interface{}{
+					"check":   "DBPath",
+					"status":  "ok",
+					"message": "Database file exists and is accessible at " + dbPath,
+				})
+			}
+		}
 	}
 
 	respStatus := "healthy"
