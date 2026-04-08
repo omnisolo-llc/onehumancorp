@@ -162,6 +162,47 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 	return response, nil
 }
 
+// EvictOldCaches removes entries from the DB cache older than the given duration.
+// Redis entries are evicted automatically via TTL, so this only affects the DB.
+func (c *CachedMinimaxClient) EvictOldCaches(ctx context.Context, olderThan time.Duration) error {
+	if c.db == nil {
+		return nil
+	}
+
+	cutoff := time.Now().Add(-olderThan)
+
+	// Clean up embedding_cache
+	delQueryEmbed := "DELETE FROM embedding_cache WHERE created_at < $1"
+	if c.db.IsSQLite() {
+		delQueryEmbed = "DELETE FROM embedding_cache WHERE created_at < ?"
+	}
+	resEmbed, err := c.db.Exec(ctx, delQueryEmbed, cutoff)
+	if err != nil {
+		slog.ErrorContext(ctx, "CachedMinimaxClient: failed to evict old embeddings", "err", err)
+	} else {
+		if resEmbed > 0 {
+			slog.InfoContext(ctx, "CachedMinimaxClient: evicted old embeddings", "count", resEmbed)
+		}
+	}
+
+	// Clean up llm_reason_cache
+	delQueryReason := "DELETE FROM llm_reason_cache WHERE created_at < $1"
+	if c.db.IsSQLite() {
+		delQueryReason = "DELETE FROM llm_reason_cache WHERE created_at < ?"
+	}
+	resReason, err := c.db.Exec(ctx, delQueryReason, cutoff)
+	if err != nil {
+		slog.ErrorContext(ctx, "CachedMinimaxClient: failed to evict old reason caches", "err", err)
+		return err // Return error for reason cache failure since it's the second one
+	} else {
+		if resReason > 0 {
+			slog.InfoContext(ctx, "CachedMinimaxClient: evicted old reason caches", "count", resReason)
+		}
+	}
+
+	return nil
+}
+
 // GenerateEmbedding caches calls to the underlying GenerateEmbedding.
 func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	hashBytes := sha256.Sum256([]byte(text))

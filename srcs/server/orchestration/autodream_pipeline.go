@@ -43,6 +43,9 @@ func (p *AutoDreamPipeline) Start(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute) // run periodically
 	defer ticker.Stop()
 
+	evictionTicker := time.NewTicker(24 * time.Hour) // evict daily
+	defer evictionTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -52,6 +55,13 @@ func (p *AutoDreamPipeline) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			p.process(context.Background())
+		case <-evictionTicker.C:
+			if cachedClient, ok := p.client.(*CachedMinimaxClient); ok {
+				// Evict caches older than 30 days
+				if err := cachedClient.EvictOldCaches(context.Background(), 30*24*time.Hour); err != nil {
+					slog.Error("AutoDreamPipeline: failed to evict old caches", "err", err)
+				}
+			}
 		}
 	}
 }

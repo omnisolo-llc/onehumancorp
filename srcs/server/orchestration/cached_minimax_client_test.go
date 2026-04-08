@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/rueidis"
@@ -148,6 +149,55 @@ func TestCachedMinimaxClient_GenerateEmbedding(t *testing.T) {
 	}
 	if mockClient.calls != 3 {
 		t.Fatalf("expected 3 calls to mock client, got %d", mockClient.calls)
+	}
+}
+
+func TestCachedMinimaxClient_EvictOldCaches(t *testing.T) {
+	ctx := context.Background()
+	prov := setupDB(t)
+	defer prov.Close()
+
+	// Insert old and new records
+	oldTime := time.Now().Add(-40 * 24 * time.Hour)
+	newTime := time.Now().Add(-10 * 24 * time.Hour)
+
+	_, err := prov.Exec(ctx, "INSERT INTO embedding_cache (content_hash, embedding, created_at) VALUES ('hash1', 'embed1', ?)", oldTime)
+	if err != nil {
+		t.Fatalf("failed to insert old embedding: %v", err)
+	}
+	_, err = prov.Exec(ctx, "INSERT INTO embedding_cache (content_hash, embedding, created_at) VALUES ('hash2', 'embed2', ?)", newTime)
+	if err != nil {
+		t.Fatalf("failed to insert new embedding: %v", err)
+	}
+
+	_, err = prov.Exec(ctx, "INSERT INTO llm_reason_cache (prompt_hash, response, created_at) VALUES ('hash1', 'resp1', ?)", oldTime)
+	if err != nil {
+		t.Fatalf("failed to insert old reason: %v", err)
+	}
+	_, err = prov.Exec(ctx, "INSERT INTO llm_reason_cache (prompt_hash, response, created_at) VALUES ('hash2', 'resp2', ?)", newTime)
+	if err != nil {
+		t.Fatalf("failed to insert new reason: %v", err)
+	}
+
+	client := NewCachedMinimaxClient(&mockMinimax{}, prov, nil).(*CachedMinimaxClient)
+
+	// Evict caches older than 30 days
+	err = client.EvictOldCaches(ctx, 30*24*time.Hour)
+	if err != nil {
+		t.Fatalf("EvictOldCaches failed: %v", err)
+	}
+
+	// Verify embedding_cache
+	var count int
+	err = prov.QueryRow(ctx, "SELECT COUNT(*) FROM embedding_cache").Scan(&count)
+	if err != nil || count != 1 {
+		t.Fatalf("expected 1 embedding, got %d, err: %v", count, err)
+	}
+
+	// Verify llm_reason_cache
+	err = prov.QueryRow(ctx, "SELECT COUNT(*) FROM llm_reason_cache").Scan(&count)
+	if err != nil || count != 1 {
+		t.Fatalf("expected 1 reason, got %d, err: %v", count, err)
 	}
 }
 
