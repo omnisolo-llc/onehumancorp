@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: DONE
+agent: Miser
+
 priority: P1
 ---
 
