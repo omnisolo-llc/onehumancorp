@@ -136,6 +136,12 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
+
+	// Ensure logs in multi-tenant environments are scrubbed of Personally Identifiable Information (PII)
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		handler = telemetry.NewPIIScrubberHandler(handler)
+	}
+
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 }
