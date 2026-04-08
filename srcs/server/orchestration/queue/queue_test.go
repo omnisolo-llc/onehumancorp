@@ -121,3 +121,55 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		t.Fatalf("Expected 1 attempt, got %d", attempts)
 	}
 }
+
+func TestSQLiteTaskQueue_ChaosLocking(t *testing.T) {
+	provider := newTestProvider(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	schema := `
+	CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+		id TEXT PRIMARY KEY,
+		parent_task_id TEXT,
+		agent_role TEXT NOT NULL,
+		payload TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'QUEUED',
+		attempts INTEGER DEFAULT 0,
+		max_attempts INTEGER DEFAULT 3,
+		run_after DATETIME DEFAULT CURRENT_TIMESTAMP,
+		locked_until DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';
+	`
+	_, err := provider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	q := NewSQLiteTaskQueue(provider)
+
+	job := &Job{
+		ID:           "chaos-job-1",
+		ParentTaskID: "task-1",
+		AgentRole:    "tester",
+		Payload:      "{}",
+		MaxAttempts:  3,
+	}
+
+	if err := q.Enqueue(ctx, job); err != nil {
+		t.Fatalf("Enqueue failed: %v", err)
+	}
+
+	// Cancel the context to simulate network drop / timeout during dequeue
+	cancel()
+	dequeued, err := q.Dequeue(ctx, []string{"tester"})
+	if err == nil {
+		t.Fatal("Expected Dequeue to fail due to context cancellation, got nil error")
+	}
+	if dequeued != nil {
+		t.Fatal("Expected no job returned on canceled context")
+	}
+}

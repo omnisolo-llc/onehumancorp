@@ -741,11 +741,11 @@ func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]Capa
 
 		for rows.Next() {
 			var p CapabilityPlugin
-			var t string
+			var t db.FlexTime
 			if err := rows.Scan(&p.PluginID, &p.Name, &p.Version, &p.ManifestURL, &p.Status, &t); err != nil {
 				return err
 			}
-			p.RegisteredAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			p.RegisteredAt = t.Time
 			plugins = append(plugins, p)
 		}
 		return nil
@@ -805,11 +805,11 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 
 		for rows.Next() {
 			var m EpisodicMemory
-			var t string
+			var t db.FlexTime
 			if err := rows.Scan(&m.MemoryID, &m.Context, &m.VectorEmbedding, &m.SourcePlugin, &t); err != nil {
 				return err
 			}
-			m.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", t)
+			m.CreatedAt = t.Time
 			memories = append(memories, m)
 		}
 		return nil

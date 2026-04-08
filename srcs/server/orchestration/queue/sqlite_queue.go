@@ -83,7 +83,7 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 
 	var j Job
 	var lockedUntil sql.NullString
-	var runAfterStr, createdAtStr, updatedAtStr string
+	var runAfterStr, createdAtStr, updatedAtStr db.FlexTime
 	err = row.Scan(&j.ID, &j.ParentTaskID, &j.AgentRole, &j.Payload, &j.Status, &j.Attempts, &j.MaxAttempts, &runAfterStr, &lockedUntil, &createdAtStr, &updatedAtStr)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -116,25 +116,14 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 
 	telemetry.RecordQueueLength(ctx, -1) // Job removed from queued state
 
-	parseTime := func(s string) time.Time {
-		t, err := time.Parse(time.RFC3339Nano, s)
-		if err == nil {
-			return t
-		}
-		// Fallback for SQLite CURRENT_TIMESTAMP format
-		t, err = time.Parse(time.DateTime, s)
-		if err == nil {
-			return t
-		}
-		return time.Time{}
-	}
-
-	j.RunAfter = parseTime(runAfterStr)
-	j.CreatedAt = parseTime(createdAtStr)
-	j.UpdatedAt = parseTime(updatedAtStr)
+	j.RunAfter = runAfterStr.Time
+	j.CreatedAt = createdAtStr.Time
+	j.UpdatedAt = updatedAtStr.Time
 	if lockedUntil.Valid && lockedUntil.String != "" {
-		lt := parseTime(lockedUntil.String)
-		j.LockedUntil = &lt
+		var lt db.FlexTime
+		if err := lt.Scan(lockedUntil.String); err == nil {
+			j.LockedUntil = &lt.Time
+		}
 	}
 
 	j.Status = "RUNNING"
