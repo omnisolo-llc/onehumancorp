@@ -141,12 +141,11 @@ Events emitted:
 ### 4.3 KAIROS Orchestration APIs
 Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines.
 
-**Endpoint:** `GET /api/v1/mesh/rooms/{room_id}`
-Retrieve the real-time state and history of a specific Teammate Mesh room.
-
-**Response (200 OK):**
-```json
-{
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>GET <code>/api/v1/mesh/rooms/{room_id}</code></strong>
+  <p>Retrieve the real-time state and history of a specific Teammate Mesh room.</p>
+  <strong>Response (200 OK):</strong>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "room_id": "room_a1b2",
   "active_agents": ["agent_swe_004", "agent_reviewer_001"],
   "messages": [
@@ -156,60 +155,84 @@ Retrieve the real-time state and history of a specific Teammate Mesh room.
       "status": "success"
     }
   ]
-}
-```
+}</code></pre>
+</div>
 
-**Endpoint:** `POST /api/v1/autodream/`
-Trigger the AutoDream vector pipeline to process shared memory and generate new embedded vectors for RAG.
-
-**Payload:**
-```json
-{
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/v1/autodream/</code></strong>
+  <p>Trigger the AutoDream vector pipeline to process shared memory and generate new embedded vectors for RAG.</p>
+  <strong>Payload:</strong>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "pipeline_id": "dream_001",
   "force_reindex": false
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
+}</code></pre>
+  <strong>Response (202 Accepted):</strong>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "status": "processing",
   "pipeline_id": "dream_001"
-}
-```
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">AutoDream Embedding Workflow</h4>
+  <div markdown="1" style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    ```mermaid
+    graph TD
+        A[Agent Session Logs] -->|Compress| B(Minimax LLM)
+        B -->|Vectorize| C[Embedding Model]
+        C -->|Upsert| D[(pgvector / SQLite DB)]
+        D -->|Semantic Search| E[Agent Swarm Context]
+
+        classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+        class A,B,C,D,E premium;
+    ```
+  </div>
+</div>
 
 ### 4.4 KAIROS Sub-Agent Queue API
 
-**Endpoint:** `POST /api/queue/subagent`
-Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).
-
-**Payload:**
-```json
-{
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/queue/subagent</code></strong>
+  <p>Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).</p>
+  <strong>Payload:</strong>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "parent_task_id": "task_12345",
   "payload": {
     "instruction": "Verify the styling tokens in the frontend."
   },
   "scheduled_at": "2026-04-06T12:00:00Z"
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
+}</code></pre>
+  <strong>Response (202 Accepted):</strong>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "queue_id": "queue_9876",
   "status": "ENQUEUED"
-}
-```
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">Queue Orchestration Flow</h4>
+  <div markdown="1" style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    ```mermaid
+    sequenceDiagram
+        participant API as OHC API
+        participant DB as State Machine (PG/SQLite)
+        participant Queue as Sub-Agent Queue
+        participant Worker as Sub-Agent
+
+        API->>Queue: POST /api/queue/subagent
+        Queue->>DB: Record Task (PENDING)
+        Worker->>Queue: Poll/Subscribe
+        Worker->>DB: FOR UPDATE SKIP LOCKED
+        DB-->>Worker: Lock Acquired (EXECUTING)
+        Worker->>API: Complete Task
+        API->>DB: Update State (COMPLETED)
+    ```
+  </div>
+</div>
 
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
-**Endpoint:** `POST /api/mesh/v2/broadcast`
-Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
-
-**Payload:**
-```json
-{
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/mesh/v2/broadcast</code></strong>
+  <p>Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.</p>
+  <strong>Payload:</strong>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "channel": "mesh:tasks",
   "event_type": "TASK_TRANSITION",
   "data": {
@@ -217,8 +240,8 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
     "previous_state": "PENDING",
     "new_state": "IN_PROGRESS"
   }
-}
-```
+}</code></pre>
+</div>
 
 ### 4.6 AutoDream Vector Embedding Workflow
 ```mermaid
