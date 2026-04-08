@@ -35,7 +35,12 @@ func TestHandleScaleStreamOpsCoverage(t *testing.T) {
 	t.Run("invalid method", func(t *testing.T) {
 		// Create a test context with a timeout to cancel the request
 		ctx, cancel := context.WithCancel(context.Background())
-		req := httptest.NewRequest("POST", "/api/ops/scale/stream", nil).WithContext(ctx)
+
+		// Setup a valid token
+		adminUser, _ := authStore.CreateUser("adminuser2", "admin2@test.com", "adminpass123", []string{"admin"})
+		token, _ := authStore.IssueToken(adminUser)
+
+		req := httptest.NewRequest("POST", "/api/ops/scale/stream?token="+token, nil).WithContext(ctx)
 		w := httptest.NewRecorder()
 
 		// Run in a goroutine and cancel immediately so the sleep loop exits

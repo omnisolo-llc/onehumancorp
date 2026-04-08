@@ -106,6 +106,7 @@ func TestHandleScaleStreamOpsExtra(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
+
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/stream", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 

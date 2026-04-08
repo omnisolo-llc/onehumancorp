@@ -423,10 +423,10 @@ func TestHandleScale1(t *testing.T) {
 }
 
 func TestHandleScaleStream1(t *testing.T) {
-	app, server, _ := newTestServer(t)
+	app, server, token := newTestServer(t)
 	defer server.Close()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/stream", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/stream?token="+token, nil)
 	rec := httptest.NewRecorder()
 
 	done := make(chan struct{})

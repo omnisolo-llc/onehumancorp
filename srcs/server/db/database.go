@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	crypto_rand "crypto/rand"
 	"database/sql"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -110,9 +112,28 @@ func New(ctx context.Context) (*DB, error) {
 			// Zero Secrets: Generate a cryptographically secure local storage key on first run and store in environment or require user to provide it.
 			// But for Standalone mode, if it's missing, we fail securely instead of using hardcoded secrets.
 			if os.Getenv("OHC_STANDALONE") == "true" {
-				// We cannot fail yet as it breaks tests without environment variables.
-				// For tests, use a transient key.
-				key = "standalone_ephemeral_key"
+				// In Standalone Mode, if key is missing, dynamically generate a 32-byte secure key and persist it
+				keyFile := filepath.Join(".agent-task", ".ohc_sqlite_key")
+				b, err := os.ReadFile(keyFile)
+				if err == nil && len(b) > 0 {
+					key = string(b)
+				} else {
+					// Generate new 32-byte secure key
+					randomBytes := make([]byte, 32)
+					if _, err := crypto_rand.Read(randomBytes); err != nil {
+						// Fallback if random fails
+						key = "standalone_ephemeral_key"
+					} else {
+						key = hex.EncodeToString(randomBytes)
+						// Ensure dir exists
+						os.MkdirAll(".agent-task", 0700)
+						// Write with 0600 permissions
+						if err := os.WriteFile(keyFile, []byte(key), 0600); err != nil {
+							// If writing fails, we just use a transient key for tests or read-only envs
+							key = "standalone_ephemeral_key"
+						}
+					}
+				}
 			} else {
 				key = "transient_memory_key"
 			}

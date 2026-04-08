@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
@@ -383,6 +384,22 @@ func (s *Server) handleScale(w http.ResponseWriter, r *http.Request) {
 // Produces no errors.
 // Has no side effects.
 func (s *Server) handleScaleStream(w http.ResponseWriter, r *http.Request) {
+	// Check if already authenticated via middleware (e.g. Bearer token)
+	claims := auth.ClaimsFromContext(r.Context())
+
+	// Manual authentication for SSE query token bypass if no existing claims
+	if claims == nil && s.authStore != nil {
+		token := r.URL.Query().Get("token")
+		if token == "" {
+			http.Error(w, "unauthorized: missing token", http.StatusUnauthorized)
+			return
+		}
+		if _, err := s.authStore.ValidateToken(token); err != nil {
+			http.Error(w, "unauthorized: invalid token", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	// Set headers for SSE
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")

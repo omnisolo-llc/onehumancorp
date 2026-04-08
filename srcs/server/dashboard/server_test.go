@@ -3824,8 +3824,8 @@ func TestHandleScale(t *testing.T) {
 func TestHandleScaleStream(t *testing.T) {
 	_, server, token := newTestServer(t)
 
-	req, _ := http.NewRequest("GET", server.URL+"/api/v1/scale/stream", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	// Test with query token instead of Authorization header for SSE bypass logic
+	req, _ := http.NewRequest("GET", server.URL+"/api/v1/scale/stream?token="+token, nil)
 
 	// Set a reasonable timeout so we have time to read the first flush
 	ctx, cancel := context.WithTimeout(req.Context(), 2*time.Second)
