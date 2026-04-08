@@ -413,7 +413,7 @@ func (s *Server) handleSnapshotRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	org, hub, tracker, err := seededScenarioByDomain(target.Domain, time.Now().UTC())
+	org, hub, tracker, err := SeededScenarioByDomain(target.Domain, time.Now().UTC())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

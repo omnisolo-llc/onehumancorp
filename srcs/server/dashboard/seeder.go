@@ -10,7 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
-func seededScenario(name string, now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
+func SeededScenario(name string, now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
 	scenario := name
 	if scenario == "" {
 		scenario = "launch-readiness"
@@ -175,7 +175,7 @@ func seededAccounting(now time.Time) (domain.Organization, *orchestration.Hub, *
 	return org, hub, tracker, nil
 }
 
-func seededScenarioByDomain(dom string, now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
+func SeededScenarioByDomain(dom string, now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
 	switch dom {
 	case "software_company":
 		return seededLaunchReadiness(now)

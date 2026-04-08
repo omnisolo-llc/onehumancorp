@@ -1567,9 +1567,9 @@ func TestHandleAnalyticsReturnsMetrics(t *testing.T) {
 func TestSeededScenarioByDomainHandlesAllDomains(t *testing.T) {
 	now := time.Now().UTC()
 	for _, dom := range []string{"software_company", "digital_marketing_agency", "accounting_firm"} {
-		org, hub, tracker, err := seededScenarioByDomain(dom, now)
+		org, hub, tracker, err := SeededScenarioByDomain(dom, now)
 		if err != nil {
-			t.Fatalf("seededScenarioByDomain(%q) error: %v", dom, err)
+			t.Fatalf("SeededScenarioByDomain(%q) error: %v", dom, err)
 		}
 		if org.Domain != dom {
 			t.Fatalf("expected domain %q, got %q", dom, org.Domain)
@@ -1581,7 +1581,7 @@ func TestSeededScenarioByDomainHandlesAllDomains(t *testing.T) {
 }
 
 func TestSeededScenarioByDomainRejectsUnknown(t *testing.T) {
-	_, _, _, err := seededScenarioByDomain("unknown_domain", time.Now().UTC())
+	_, _, _, err := SeededScenarioByDomain("unknown_domain", time.Now().UTC())
 	if err == nil {
 		t.Fatalf("expected error for unknown domain")
 	}
