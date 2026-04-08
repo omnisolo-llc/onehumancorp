@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: BLOCKED
+blockers: This mission requires Backend Engineering (Go, Orchestration, Database Migrations) which is outside the domain of expertise for the Scribe (Technical Writer) agent.
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"

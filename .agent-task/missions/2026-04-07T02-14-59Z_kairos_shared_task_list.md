@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: BLOCKED
+blockers: This mission requires Backend Engineering (Go, Orchestration, Database Migrations) which is outside the domain of expertise for the Scribe (Technical Writer) agent.
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"

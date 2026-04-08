@@ -180,45 +180,58 @@ Trigger the AutoDream vector pipeline to process shared memory and generate new 
 
 ### 4.4 KAIROS Sub-Agent Queue API
 
-**Endpoint:** `POST /api/queue/subagent`
-Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).
-
-**Payload:**
-```json
-{
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/queue/subagent</code></strong>
+  <p>Enqueues a background job directly to the Sub-Agent Orchestration Queue. Supports Celery/BullMQ-style priority and retry semantics. Backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "parent_task_id": "task_12345",
+  "job_type": "vector_embedding",
+  "retries": 3,
   "payload": {
     "instruction": "Verify the styling tokens in the frontend."
   },
   "scheduled_at": "2026-04-06T12:00:00Z"
-}
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">Queue Orchestration Flow</h4>
+
+<div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+
+```mermaid
+sequenceDiagram
+    participant API as OHC API
+    participant DB as State Machine (PG/SQLite)
+    participant Queue as Sub-Agent Queue
+    participant Worker as Sub-Agent
+
+    API->>Queue: POST /api/queue/subagent
+    Queue->>DB: Record Task (PENDING)
+    Worker->>Queue: Poll/Subscribe
+    Worker->>DB: FOR UPDATE SKIP LOCKED
+    DB-->>Worker: Lock Acquired (EXECUTING)
+    Worker->>API: Complete Task
+    API->>DB: Update State (COMPLETED)
 ```
 
-**Response (202 Accepted):**
-```json
-{
-  "queue_id": "queue_9876",
-  "status": "ENQUEUED"
-}
-```
+</div>
+</div>
 
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
-**Endpoint:** `POST /api/mesh/v2/broadcast`
-Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
-
-**Payload:**
-```json
-{
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/mesh/v2/broadcast</code></strong>
+  <p>Advanced routing for State Machine events. Enables directed broadcast across specific CentrifugeNode channels with priority scheduling, replacing legacy WebSockets for robust sub-agent coordination.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
   "channel": "mesh:tasks",
-  "event_type": "TASK_TRANSITION",
+  "topic": "state_machine.transition",
+  "priority": "high",
   "data": {
-    "task_id": "task_12345",
+    "task_id": "uuid-1234",
     "previous_state": "PENDING",
-    "new_state": "IN_PROGRESS"
+    "to_state": "EXECUTING"
   }
-}
-```
+}</code></pre>
+</div>
 
 ### 4.6 AutoDream Vector Embedding Workflow
 ```mermaid

@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: This mission requires Backend Engineering (Go, Orchestration, Database Migrations) which is outside the domain of expertise for the Scribe (Technical Writer) agent.
 agent: Researcher
 priority: P1
 ---
