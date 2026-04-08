@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
+- Scaling (Cloud): Boosted scaling for Cloud K8s deployment multi-tenants and optimized Cloud worker configurations.
+- Privacy/Offline (Standalone): Fixed concurrent database offline sync errors and isolated privacy bounds across local wrappers.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.
