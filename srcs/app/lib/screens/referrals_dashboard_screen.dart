@@ -14,6 +14,7 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
 
 class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
   late Future<List<Map<String, dynamic>>> _referralsFuture;
+  late Future<Map<String, dynamic>> _viralCoefficientFuture;
 
   @override
   void initState() {
@@ -23,7 +24,9 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
 
   void _refresh() {
     setState(() {
-      _referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+      final api = ref.read(apiServiceProvider)!;
+      _referralsFuture = api.listReferrals();
+      _viralCoefficientFuture = api.getViralCoefficient();
     });
   }
 
@@ -41,9 +44,9 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _referralsFuture,
-        builder: (context, snapshot) {
+      body: FutureBuilder(
+        future: Future.wait([_viralCoefficientFuture, _referralsFuture]),
+        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -56,28 +59,108 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
             );
           }
 
-          final referrals = snapshot.data ?? [];
-
-          if (referrals.isEmpty) {
-            return const Center(
-              child: Text(
-                'No referrals tracked yet.',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              ),
-            );
-          }
+          final coefficientData = snapshot.data![0] as Map<String, dynamic>;
+          final referrals = snapshot.data![1] as List<Map<String, dynamic>>;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Wrap(
-              spacing: 24,
-              runSpacing: 24,
-              children: referrals.map((r) {
-                return _ReferralCard(referral: r);
-              }).toList(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildCoefficientSummary(context, coefficientData),
+                const SizedBox(height: 32),
+                const Text(
+                  'Recent Referrals',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (referrals.isEmpty)
+                  const Center(
+                    child: Text(
+                      'No referrals tracked yet.',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 24,
+                    runSpacing: 24,
+                    children: referrals.map((r) {
+                      return _ReferralCard(referral: r);
+                    }).toList(),
+                  ),
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildCoefficientSummary(BuildContext context, Map<String, dynamic> data) {
+    final colors = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color.fromRGBO(255, 255, 255, 0.03),
+            border: Border.all(color: colors.outline.withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Viral Coefficient (K-Factor)',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The K-factor measures the growth rate of the Sovereign-to-Cloud referral loop.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 48,
+                runSpacing: 24,
+                children: [
+                  _StatColumn(
+                    label: 'Total Referrals',
+                    value: '${data['totalReferrals']}',
+                  ),
+                  _StatColumn(
+                    label: 'Total Conversions',
+                    value: '${data['totalConversions']}',
+                  ),
+                  _StatColumn(
+                    label: 'Unique Inviters',
+                    value: '${data['uniqueInviters']}',
+                  ),
+                  _StatColumn(
+                    label: 'K-Factor',
+                    value: (data['kFactor'] as num).toStringAsFixed(2),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

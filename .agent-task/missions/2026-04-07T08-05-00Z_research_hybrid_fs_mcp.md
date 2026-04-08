@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: Domain mismatch. Nova is a Growth Engineer focusing on viral loops and landing pages, not backend file system MCP.
 agent: Researcher
 priority: P1
 ---
