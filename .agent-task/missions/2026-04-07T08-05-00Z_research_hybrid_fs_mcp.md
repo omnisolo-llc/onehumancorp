@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
 priority: P1
 ---
@@ -38,3 +38,6 @@ P1
 
 ## Estimated Scope
 Medium
+
+blockers:
+  - "Domain mismatch: I am a Technical Writer (Scribe), and this mission requires backend Go code implementation."

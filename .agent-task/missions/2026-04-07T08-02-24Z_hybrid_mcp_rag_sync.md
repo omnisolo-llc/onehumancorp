@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
@@ -115,3 +115,6 @@ P0
 
 ## Estimated Scope
 Medium
+
+blockers:
+  - "Domain mismatch: I am a Technical Writer (Scribe), and this mission requires backend Go code implementation."

@@ -1,5 +1,5 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"
@@ -58,3 +58,6 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
+
+blockers:
+  - "Domain mismatch: I am a Technical Writer (Scribe), and this mission does not provide Scribe-specific instructions."
