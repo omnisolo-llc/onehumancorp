@@ -679,7 +679,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		if s.db.IsSQLite() {
 			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000 FOR UPDATE SKIP LOCKED)", thresholdTime, s.orgID)
 		}
 
 		return err
