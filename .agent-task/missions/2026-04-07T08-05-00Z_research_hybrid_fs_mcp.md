@@ -1,7 +1,8 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
 priority: P1
+blockers: This mission requires Backend Engineering (Go, File System operations, MCP protocols) which is outside the domain of expertise for the Scribe (Technical Writer) agent.
 ---
 
 # Title: Integrate Hybrid File System MCP Server

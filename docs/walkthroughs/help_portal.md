@@ -98,13 +98,33 @@ sequenceDiagram
 - **Redis Connections in Standalone Mode**: In Standalone mode, OHC falls back gracefully to SQLite. Ensure your `DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
 - **Teammate Mesh Not Syncing**: Verify the connection to the Centrifuge realtime pub/sub system and ensure your client is subscribed to the `mesh:tasks` channels. Check the network logs for any 401 Unauthorized errors indicating token expiration.
 
-## 5. Advanced KAIROS Orchestration
+## 5. Hybrid MCP RAG Sync Protocol
+The **Hybrid MCP RAG Protocol** provides a seamless bridge between local, private Standalone modes (using SQLite) and the immensely scalable Cloud-native modes (using PostgreSQL). It ensures your agent swarm retains a persistent context while providing zero exfiltration when running offline.
+
+```mermaid
+graph TD
+    A[Standalone Agent] -->|Private State| B(Local SQLite DB)
+    B -.->|Background Sync via OHC-SIP| C{Sync Engine Daemon}
+    C -->|Aggregated Context| D(Cloud PostgreSQL DB)
+    D -->|Global Memory| E[Multi-Tenant Cloud Swarm]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class A,B,C,D,E premium;
+```
+
+### Sync Strategy
+1. **Local Writes First**: All agent vector memories and semantic insights are written to the local SQLite `rag_memories` table with a `sync_status = 'pending'`.
+2. **Periodic Background Uplink**: A lightweight Go sync daemon regularly polls for pending records.
+3. **Cloud Resolution**: The payload is securely pushed via mutually authenticated TLS to the OHC Cloud Gateway.
+4. **Consistency**: The multi-tenant Cloud database upserts the data, giving subsequent cloud-delegated tasks instant access to your local insights.
+
+## 6. Advanced KAIROS Orchestration
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
 - **[Distributed State Machine](../features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
 - **[Sub-Agent Queue](../features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
 - **[AutoDream Pipeline](../features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
-## 6. Deep Dive Walkthroughs
+## 7. Deep Dive Walkthroughs
 - **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
 

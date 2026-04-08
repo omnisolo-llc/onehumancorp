@@ -1,6 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
+blockers: This mission requires Backend Engineering (Go, Orchestration, Database Migrations) which is outside the domain of expertise for the Scribe (Technical Writer) agent.
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
