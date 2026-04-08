@@ -70,6 +70,10 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   }
 
   String _formatRole(String role) {
+    if (role == 'AI_NEWS_COLLECTOR') return 'AI News Collector';
+    if (role == 'CEO') return 'CEO';
+    if (role == 'SEO_SPECIALIST') return 'SEO Specialist';
+    if (role == 'QA_TESTER') return 'QA Tester';
     return role
         .replaceAll('_', ' ')
         .toLowerCase()
@@ -322,10 +326,19 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
+                    filter: ImageFilter.compose(
+                      inner: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      outer: const ColorFilter.matrix(<double>[
+                        1.787, -0.715, -0.072, 0, 0,
+                        -0.213, 1.285, -0.072, 0, 0,
+                        -0.213, -0.715, 1.928, 0, 0,
+                        0, 0, 0, 1, 0,
+                      ]),
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        color: const Color.fromRGBO(255, 255, 255, 0.03),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
