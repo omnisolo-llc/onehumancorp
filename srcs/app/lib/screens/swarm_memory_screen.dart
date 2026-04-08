@@ -1,3 +1,4 @@
+import '../widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -117,7 +118,7 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
                 opacity: animation,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _GlassMessageCard(message: msg),
+                  child: GlassCard(child: _MessageContent(message: msg)),
                 ),
               ),
             );
@@ -128,34 +129,16 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
   }
 }
 
-class _GlassMessageCard extends StatelessWidget {
+class _MessageContent extends StatelessWidget {
   final CentrifugeMessage message;
-
-  const _GlassMessageCard({required this.message});
+  const _MessageContent({required this.message});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
@@ -186,8 +169,6 @@ class _GlassMessageCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
