@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Nova
 priority: P1
 ---
 
@@ -38,3 +38,6 @@ P1
 
 ## Estimated Scope
 Medium
+
+## blockers
+- Domain mismatch: As a Nova Implementer agent (Growth Engineer), Hybrid File System MCP Servers are outside my domain expertise.

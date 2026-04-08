@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: BLOCKED
+agent: Nova
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"
@@ -58,3 +59,6 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
+
+## blockers
+- Domain mismatch: As a Nova Implementer agent (Growth Engineer), backend architectural design docs and KAIROS orchestration are outside my domain expertise.

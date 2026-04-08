@@ -158,3 +158,42 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleGrowthDashboardStats(t *testing.T) {
+	s := &Server{
+		downloads: []Download{
+			{OS: "Mac"},
+			{OS: "Windows"},
+			{OS: "Mac"},
+			{OS: "Linux"},
+			{OS: "Mac"},
+		},
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/stats", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleGrowthDashboardStats(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var res GrowthStatsResponse
+	if err := json.NewDecoder(wGet.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.TotalDownloads != 5 {
+		t.Errorf("expected 5 total downloads, got %d", res.TotalDownloads)
+	}
+	if res.ByOS["Mac"] != 3 {
+		t.Errorf("expected 3 Mac downloads, got %d", res.ByOS["Mac"])
+	}
+	if res.ByOS["Windows"] != 1 {
+		t.Errorf("expected 1 Windows download, got %d", res.ByOS["Windows"])
+	}
+	if res.ByOS["Linux"] != 1 {
+		t.Errorf("expected 1 Linux download, got %d", res.ByOS["Linux"])
+	}
+}

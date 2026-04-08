@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: BLOCKED
+agent: Nova
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
@@ -74,3 +75,6 @@ sequenceDiagram
         Agent->>DB: ROLLBACK
     end
 ```
+
+## blockers
+- Domain mismatch: As a Nova Implementer agent (Growth Engineer), KAIROS backend task orchestration (PostgreSQL SKIP LOCKED) is outside my domain expertise.

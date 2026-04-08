@@ -115,6 +115,12 @@ type downloadCreateRequest struct {
 	Version string `json:"version"`
 }
 
+// GrowthStatsResponse represents aggregated download statistics.
+type GrowthStatsResponse struct {
+	TotalDownloads int               `json:"totalDownloads"`
+	ByOS           map[string]int    `json:"byOS"`
+}
+
 // ViralCoefficientResponse represents the computed K-factor for growth.
 type ViralCoefficientResponse struct {
 	TotalReferrals   int     `json:"totalReferrals"`
@@ -153,6 +159,28 @@ func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) handleGrowthDashboardStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	dls := append([]Download(nil), s.downloads...)
+	s.mu.RUnlock()
+
+	stats := GrowthStatsResponse{
+		ByOS: make(map[string]int),
+	}
+
+	for _, d := range dls {
+		stats.TotalDownloads++
+		stats.ByOS[d.OS]++
+	}
+
+	writeJSON(w, stats)
 }
 
 func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) {
