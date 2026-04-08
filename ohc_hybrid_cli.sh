@@ -30,6 +30,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Display Day One Welcome Guide"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -168,6 +169,37 @@ seed_mock_data() {
     fi
 }
 
+show_welcome_guide() {
+    echo -e "${DIM}[Fetching Welcome Guide...]${RESET}"
+    PORT=${PORT:-8080}
+    API_URL="http://127.0.0.1:${PORT}/api/wizard/welcome"
+    RESPONSE=$(curl -s "$API_URL" || echo "failed")
+    if [ "$RESPONSE" == "failed" ]; then
+        echo -e "${PURPLE}✗ Failed to connect to OHC Backend on port ${PORT}.${RESET}"
+        echo -e "${DIM}Please ensure the server is running to view the interactive guide.${RESET}"
+        echo -e "${DIM}Alternatively, read the README.md in the repository root.${RESET}"
+    else
+        echo -e "${GREEN}✓ Connection successful!${RESET}"
+        TITLE=$(echo "$RESPONSE" | grep -o '"title":"Welcome[^"]*"' | sed 's/"title":"\(.*\)"/\1/' || echo "Welcome to OHC Hybrid Agentic OS")
+        MESSAGE=$(echo "$RESPONSE" | grep -o '"message":"[^"]*"' | head -n 1 | sed 's/"message":"\(.*\)"/\1/' || echo "")
+
+        echo -e "\n${BOLD}${CYAN}======================================================${RESET}"
+        echo -e "${BOLD}${CYAN}  $TITLE  ${RESET}"
+        echo -e "${BOLD}${CYAN}======================================================${RESET}"
+        echo -e "${GREEN}$MESSAGE${RESET}\n"
+
+        echo -e "${BOLD}Next Steps:${RESET}"
+        echo -e "  - Run the interactive environment wizard (Option e)"
+        echo -e "  - Launch the standalone desktop mode (Option 3)"
+        echo -e "  - Explore the Teammate Mesh APIs\n"
+
+        echo -e "${BOLD}Useful Links:${RESET}"
+        echo -e "  - Documentation: https://docs.onehumancorp.com"
+        echo -e "  - Architecture: https://docs.onehumancorp.com/architecture\n"
+    fi
+    echo ""
+}
+
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
     DB_FILE="$HOME/.ohc-local-data/standalone.db"
@@ -212,6 +244,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) show_welcome_guide ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac

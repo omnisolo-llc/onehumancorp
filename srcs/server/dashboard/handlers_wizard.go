@@ -122,6 +122,29 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 	return false
 }
 
+// handleWizardWelcome provides a basic JSON payload with getting started information.
+func (s *Server) handleWizardWelcome(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	resp := map[string]interface{}{
+		"title":   "Welcome to OHC Hybrid Agentic OS",
+		"message": "You are successfully running the OHC OS.",
+		"links": []map[string]string{
+			{"title": "Documentation", "url": "https://docs.onehumancorp.com"},
+			{"title": "Architecture", "url": "https://docs.onehumancorp.com/architecture"},
+		},
+		"next_steps": []string{
+			"Run the interactive environment wizard",
+			"Launch the standalone desktop mode",
+			"Explore the Teammate Mesh APIs",
+		},
+	}
+	writeJSON(w, resp)
+}
+
 // handleWizardOnboardingVerify performs a diagnostic verification of the environment variables
 // and connection requirements for Day One onboarding.
 func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {

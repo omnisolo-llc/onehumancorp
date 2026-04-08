@@ -119,6 +119,39 @@ func TestHandleWizardConfigure_WrongMethod(t *testing.T) {
 	}
 }
 
+func TestHandleWizardWelcome(t *testing.T) {
+	server := &Server{}
+	req, _ := http.NewRequest("GET", "/api/wizard/welcome", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardWelcome(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp["title"] != "Welcome to OHC Hybrid Agentic OS" {
+		t.Errorf("Expected title Welcome to OHC Hybrid Agentic OS, got %v", resp["title"])
+	}
+}
+
+func TestHandleWizardWelcome_WrongMethod(t *testing.T) {
+	server := &Server{}
+	req, _ := http.NewRequest("POST", "/api/wizard/welcome", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardWelcome(rr, req)
+
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusMethodNotAllowed)
+	}
+}
+
 func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
