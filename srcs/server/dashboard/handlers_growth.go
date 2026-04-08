@@ -115,6 +115,53 @@ type downloadCreateRequest struct {
 	Version string `json:"version"`
 }
 
+// SovereignInvite defines an invitation linking standalone to cloud.
+type SovereignInvite struct {
+	ID        string    `json:"id"`
+	InviterID string    `json:"inviterId"`
+	AssetID   string    `json:"assetId"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type sovereignInviteCreateRequest struct {
+	InviterID string `json:"inviterId"`
+	AssetID   string `json:"assetId"`
+}
+
+func (s *Server) handleSovereignInvites(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		invites := append([]SovereignInvite(nil), s.sovereignInvites...)
+		s.mu.RUnlock()
+		writeJSON(w, invites)
+	case http.MethodPost:
+		var req sovereignInviteCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.InviterID == "" || req.AssetID == "" {
+			http.Error(w, "inviterId and assetId are required", http.StatusBadRequest)
+			return
+		}
+		invite := SovereignInvite{
+			ID:        "si-" + time.Now().UTC().Format("20060102150405"),
+			InviterID: req.InviterID,
+			AssetID:   req.AssetID,
+			Status:    "PENDING",
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.sovereignInvites = append(s.sovereignInvites, invite)
+		s.mu.Unlock()
+		writeJSON(w, invite)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // ViralCoefficientResponse represents the computed K-factor for growth.
 type ViralCoefficientResponse struct {
 	TotalReferrals   int     `json:"totalReferrals"`

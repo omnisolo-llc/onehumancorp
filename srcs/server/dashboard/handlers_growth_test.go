@@ -103,6 +103,59 @@ func TestHandleViralCoefficient(t *testing.T) {
 	}
 }
 
+func TestHandleSovereignInvites(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"inviterId": "user-456", "assetId": "asset-123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/sovereign-invites", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleSovereignInvites(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created SovereignInvite
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.InviterID != "user-456" {
+		t.Errorf("expected inviterId 'user-456', got '%s'", created.InviterID)
+	}
+	if created.AssetID != "asset-123" {
+		t.Errorf("expected assetId 'asset-123', got '%s'", created.AssetID)
+	}
+	if created.Status != "PENDING" {
+		t.Errorf("expected status 'PENDING', got '%s'", created.Status)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/sovereign-invites", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleSovereignInvites(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []SovereignInvite
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 invite, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
 func TestHandleReferrals(t *testing.T) {
 	s := &Server{}
 
