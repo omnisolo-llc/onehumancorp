@@ -136,7 +136,8 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	logger := slog.New(handler)
+	piiHandler := &telemetry.PIIScrubberHandler{Handler: handler}
+	logger := slog.New(piiHandler)
 	slog.SetDefault(logger)
 }
 
@@ -306,61 +307,67 @@ func run(now time.Time, listen listenFunc) error {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
 
-			// Setup AutoDreamSyncEngine
-			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
-			if syncCloudAPI != "" && pool != nil {
-				slog.Info("starting autodream sync engine", "endpoint", syncCloudAPI)
-				autodreamSyncEngine := sync.NewAutoDreamSyncEngine(pool, 1*time.Minute, syncCloudAPI)
-				autodreamSyncEngine.Start(ctx)
-			}
+			// Background sync for standalone telemetry and orchestration to cloud
+			// We strictly gate all out-bound sync operations in standalone mode behind the
+			// OHC_TELEMETRY_ENABLED consent flag to prevent unconsented data exfiltration.
+			if envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
+				// Setup AutoDreamSyncEngine
+				syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
+				if syncCloudAPI != "" && pool != nil {
+					slog.Info("starting autodream sync engine", "endpoint", syncCloudAPI)
+					autodreamSyncEngine := sync.NewAutoDreamSyncEngine(pool, 1*time.Minute, syncCloudAPI)
+					autodreamSyncEngine.Start(ctx)
+				}
 
-			// Background sync for standalone metrics to cloud
-			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
-			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
-				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
-			}
-			// Background sync for standalone missions to cloud
-			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
-			if missionsEndpoint != "" {
-				go func() {
-					ticker := time.NewTicker(2 * time.Second)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ctx.Done():
-							return
-						case <-ticker.C:
-							syncedCount, err := sipdb.SyncMissions(ctx, missionsEndpoint)
-							if err != nil {
-								slog.Warn("Failed to sync standalone missions", "error", err)
-							} else if syncedCount > 0 {
-								slog.Debug("Successfully synced standalone missions to cloud", "count", syncedCount)
+				// Background sync for standalone metrics to cloud
+				cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
+				if cloudEndpoint != "" {
+					telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
+				}
+
+				// Background sync for standalone missions to cloud
+				missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
+				if missionsEndpoint != "" {
+					go func() {
+						ticker := time.NewTicker(2 * time.Second)
+						defer ticker.Stop()
+						for {
+							select {
+							case <-ctx.Done():
+								return
+							case <-ticker.C:
+								syncedCount, err := sipdb.SyncMissions(ctx, missionsEndpoint)
+								if err != nil {
+									slog.Warn("Failed to sync standalone missions", "error", err)
+								} else if syncedCount > 0 {
+									slog.Debug("Successfully synced standalone missions to cloud", "count", syncedCount)
+								}
 							}
 						}
-					}
-				}()
-			}
+					}()
+				}
 
-			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
-			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
-			if contextEndpoint != "" {
-				go func() {
-					ticker := time.NewTicker(5 * time.Second)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ctx.Done():
-							return
-						case <-ticker.C:
-							syncedCount, err := sipdb.SyncContextSync(ctx, contextEndpoint)
-							if err != nil {
-								slog.Warn("Failed to sync standalone RAG context", "error", err)
-							} else if syncedCount > 0 {
-								slog.Debug("Successfully synced standalone RAG context to cloud", "count", syncedCount)
+				// Background sync for Hybrid MCP RAG state to cloud orchestration engine
+				contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
+				if contextEndpoint != "" {
+					go func() {
+						ticker := time.NewTicker(5 * time.Second)
+						defer ticker.Stop()
+						for {
+							select {
+							case <-ctx.Done():
+								return
+							case <-ticker.C:
+								syncedCount, err := sipdb.SyncContextSync(ctx, contextEndpoint)
+								if err != nil {
+									slog.Warn("Failed to sync standalone RAG context", "error", err)
+								} else if syncedCount > 0 {
+									slog.Debug("Successfully synced standalone RAG context to cloud", "count", syncedCount)
+								}
 							}
 						}
-					}
-				}()
+					}()
+				}
 			}
 		}
 
