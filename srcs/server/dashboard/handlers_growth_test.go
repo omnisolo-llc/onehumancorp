@@ -9,6 +9,59 @@ import (
 
 )
 
+func TestHandleExperimentConversion(t *testing.T) {
+	s := &Server{}
+
+	// Test Valid POST
+	payload := `{"experimentId": "exp-123", "variant": "B", "userId": "user-456"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/experiments/convert", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleExperimentConversion(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created ExperimentConversion
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.ExperimentID != "exp-123" {
+		t.Errorf("expected experimentId 'exp-123', got '%s'", created.ExperimentID)
+	}
+	if created.Variant != "B" {
+		t.Errorf("expected variant 'B', got '%s'", created.Variant)
+	}
+	if created.UserID != "user-456" {
+		t.Errorf("expected userId 'user-456', got '%s'", created.UserID)
+	}
+
+	// Test Invalid POST (missing required fields)
+	invalidPayload := `{"userId": "user-456"}`
+	reqInvalid := httptest.NewRequest(http.MethodPost, "/api/growth/experiments/convert", bytes.NewBufferString(invalidPayload))
+	reqInvalid.Header.Set("Content-Type", "application/json")
+	wInvalid := httptest.NewRecorder()
+
+	s.handleExperimentConversion(wInvalid, reqInvalid)
+
+	if wInvalid.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", wInvalid.Code)
+	}
+
+	// Test Method Not Allowed (GET)
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/experiments/convert", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleExperimentConversion(wGet, reqGet)
+
+	if wGet.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected status 405, got %d", wGet.Code)
+	}
+}
+
 func TestHandleLandingPageExperiments(t *testing.T) {
 	s := &Server{}
 

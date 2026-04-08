@@ -20,6 +20,21 @@ type experimentCreateRequest struct {
 	TrafficSplit float64 `json:"trafficSplit"`
 }
 
+// ExperimentConversion defines a conversion event for an A/B test.
+type ExperimentConversion struct {
+	ID           string    `json:"id"`
+	ExperimentID string    `json:"experimentId"`
+	Variant      string    `json:"variant"`
+	UserID       string    `json:"userId"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type experimentConversionRequest struct {
+	ExperimentID string `json:"experimentId"`
+	Variant      string `json:"variant"`
+	UserID       string `json:"userId"`
+}
+
 // Referral defines a viral referral link.
 type Referral struct {
 	ID           string    `json:"id"`
@@ -33,6 +48,38 @@ type Referral struct {
 type referralCreateRequest struct {
 	UserID       string `json:"userId"`
 	ReferralCode string `json:"referralCode"`
+}
+
+func (s *Server) handleExperimentConversion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req experimentConversionRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if req.ExperimentID == "" || req.Variant == "" {
+		http.Error(w, "experimentId and variant are required", http.StatusBadRequest)
+		return
+	}
+
+	conv := ExperimentConversion{
+		ID:           "conv-" + time.Now().UTC().Format("20060102150405"),
+		ExperimentID: req.ExperimentID,
+		Variant:      req.Variant,
+		UserID:       req.UserID,
+		CreatedAt:    time.Now().UTC(),
+	}
+
+	s.mu.Lock()
+	s.conversions = append(s.conversions, conv)
+	s.mu.Unlock()
+
+	writeJSON(w, conv)
 }
 
 func (s *Server) handleLandingPageExperiments(w http.ResponseWriter, r *http.Request) {
