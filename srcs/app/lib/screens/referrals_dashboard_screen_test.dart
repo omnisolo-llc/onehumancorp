@@ -26,6 +26,14 @@ void main() {
   }
 
   testWidgets('displays list of referrals', (tester) async {
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {
+        'totalReferrals': 4,
+        'totalConversions': 6,
+        'uniqueInviters': 3,
+        'kFactor': 2.0,
+      },
+    );
     when(() => mockApiService.listReferrals()).thenAnswer(
       (_) async => [
         {
@@ -51,9 +59,21 @@ void main() {
     expect(find.text('10'), findsOneWidget);
     expect(find.text('Clicks'), findsOneWidget);
     expect(find.text('Conversions'), findsOneWidget);
+    expect(find.text('Viral Coefficient (K-Factor)'), findsOneWidget);
+    expect(find.text('2.00'), findsOneWidget);
+    expect(find.text('across 3 unique inviters'), findsOneWidget);
   });
 
   testWidgets('displays empty state', (tester) async {
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {
+        'totalReferrals': 4,
+        'totalConversions': 6,
+        'uniqueInviters': 3,
+        'kFactor': 2.0,
+      },
+    );
+    when(() => mockApiService.getViralCoefficient()).thenAnswer((_) async => {'kFactor': 0.0, 'uniqueInviters': 0});
     when(() => mockApiService.listReferrals()).thenAnswer((_) async => []);
 
     await tester.pumpWidget(buildTestWidget());
@@ -63,6 +83,7 @@ void main() {
   });
 
   testWidgets('displays error state', (tester) async {
+    when(() => mockApiService.getViralCoefficient()).thenAnswer((_) async => {});
     when(() => mockApiService.listReferrals())
         .thenAnswer((_) => Future.error(Exception('API failure')));
 

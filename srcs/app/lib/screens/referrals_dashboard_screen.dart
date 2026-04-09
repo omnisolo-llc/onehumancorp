@@ -14,16 +14,20 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
 
 class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
   late Future<List<Map<String, dynamic>>> _referralsFuture;
+  late Future<Map<String, dynamic>> _kFactorFuture;
 
   @override
   void initState() {
     super.initState();
-    _refresh();
+    // Initialize both futures explicitly if _refresh relies on context read
+    _referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+    _kFactorFuture = ref.read(apiServiceProvider)!.getViralCoefficient();
   }
 
   void _refresh() {
     setState(() {
       _referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+      _kFactorFuture = ref.read(apiServiceProvider)!.getViralCoefficient();
     });
   }
 
@@ -41,9 +45,9 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _referralsFuture,
-        builder: (context, snapshot) {
+      body: FutureBuilder(
+        future: Future.wait([_referralsFuture, _kFactorFuture]),
+        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -56,25 +60,39 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
             );
           }
 
-          final referrals = snapshot.data ?? [];
+          final referrals = (snapshot.data?[0] as List?)?.cast<Map<String, dynamic>>() ?? [];
+          final kFactorData = (snapshot.data?[1] as Map?)?.cast<String, dynamic>() ?? {};
 
+          final kFactor = (kFactorData['kFactor'] as num?)?.toDouble() ?? 0.0;
+          final uniqueInviters = kFactorData['uniqueInviters'] as int? ?? 0;
+
+          Widget contentWidget;
           if (referrals.isEmpty) {
-            return const Center(
+            contentWidget = const Center(
               child: Text(
                 'No referrals tracked yet.',
                 style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               ),
             );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Wrap(
+          } else {
+            contentWidget = Wrap(
               spacing: 24,
               runSpacing: 24,
               children: referrals.map((r) {
                 return _ReferralCard(referral: r);
               }).toList(),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _KFactorCard(kFactor: kFactor, uniqueInviters: uniqueInviters),
+                const SizedBox(height: 32),
+                contentWidget,
+              ],
             ),
           );
         },
@@ -193,6 +211,69 @@ class _StatColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _KFactorCard extends StatelessWidget {
+  final double kFactor;
+  final int uniqueInviters;
+
+  const _KFactorCard({required this.kFactor, required this.uniqueInviters});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: colors.surface.withValues(alpha: 0.03),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Viral Coefficient (K-Factor)',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                kFactor.toStringAsFixed(2),
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: colors.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'across $uniqueInviters unique inviters',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

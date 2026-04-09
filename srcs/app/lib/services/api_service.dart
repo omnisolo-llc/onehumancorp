@@ -492,7 +492,23 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
+
+  Future<Map<String, dynamic>> getViralCoefficient() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/growth/viral-coefficient'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to get viral coefficient');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
+
 
 
   Future<void> trackDownload(String os, String version) async {
