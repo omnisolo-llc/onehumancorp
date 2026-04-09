@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hub",
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    importpath = "github.com/onehumancorp/mono/srcs/server/hub",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "hub_test",
+    srcs = glob(["*_test.go"]),
+    embed = [":hub"],
+)
