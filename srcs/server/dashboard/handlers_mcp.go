@@ -15,6 +15,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
 	"go.opentelemetry.io/otel"
 )
@@ -143,7 +144,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.RUnlock()
 
-	result, err := s.invokeMCPTool(req)
+	result, err := s.invokeMCPTool(r.Context(), req)
 
 	s.mu.Lock()
 	if err != nil {
@@ -234,7 +235,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, result)
 }
 
-func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
+func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[string]any, error) {
 	// Emit structured trace for MCP tool invocation
 	if telemetry.Verbosity >= 2 {
 		slog.Info("agent execution trace",
@@ -246,6 +247,26 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 	}
 
 	switch req.ToolID {
+	case "hybrid-fs-mcp":
+		proxyReq := &hybridfsmcp.MCPRequest{
+			ToolID:   req.ToolID,
+			Action:   req.Action,
+			Params:   req.Params,
+			AgentID:  req.AgentID,
+			SPIFFEID: req.SPIFFEID,
+		}
+		res, err := hybridfsmcp.HandleHybridFSMCPRequest(ctx, proxyReq)
+		if err != nil {
+			return nil, err
+		}
+
+		// Return it as map[string]any
+		return map[string]any{
+			"tool_id": res.ToolID,
+			"status": res.Status,
+			"result_data": string(res.ResultData),
+		}, nil
+
 	// ── Communication tools ───────────────────────────────────────────────────
 	case "telegram-mcp", "slack-mcp", "teams-mcp":
 		var p chatToolParams
