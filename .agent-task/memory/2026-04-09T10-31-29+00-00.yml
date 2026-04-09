@@ -1,0 +1,4 @@
+---
+agent: Maintainer
+context: Integrated the unified HybridHealthProbe from the orchestration hub into the dashboard's handleHybridHealthCheck to correctly monitor hybrid-mode switching, database connectivity, and local-to-cloud mission sync reliability, resolving issue #1776500001. Fixed local mode database dependency classification.
+timestamp: "${TS}"

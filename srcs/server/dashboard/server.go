@@ -705,19 +705,19 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mode := "local"
-	isStandalone := true
-	if os.Getenv("DATABASE_URL") != "" {
-		mode = "cloud"
-		isStandalone = false
-	}
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		isStandalone = true
-		mode = "standalone"
+	ctx := r.Context()
+	probe, err := s.hub.CheckHealth(ctx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
 	}
 
 	var checklist []map[string]interface{}
-	if isStandalone {
+	if probe.Mode == "standalone" || probe.Mode == "local" {
 		checklist = append(checklist, map[string]interface{}{
 			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local standalone data storage",
 		})
@@ -726,26 +726,14 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		})
 	} else {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Multi-tenant", "status": "ok", "description": "Cloud-native persistent data storage",
+			"id": "postgres_db", "label": "PostgreSQL Database", "status": "ok", "description": "Cloud data storage",
 		})
-		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_connected", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud DB connectivity verified",
-		})
-		if os.Getenv("REDIS_URL") != "" {
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_cache", "label": "Redis Distributed Cache", "status": "ok", "description": "High-throughput Pub/Sub mesh",
-			})
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_available", "label": "Redis Available", "status": "ok", "description": "Redis Cache connectivity verified",
-			})
-		}
 	}
 
 	// Check for stuck agent_missions specifically for Hybrid metric insights
 	var stuckMissionsCount int
 	var missionsProbeStatus = "ok"
 	if s.hub != nil && s.hub.SIPDB() != nil {
-		ctx := r.Context()
 		missions, err := s.hub.SIPDB().GetPendingMissions(ctx, "ANY")
 		if err == nil {
 			stuckMissionsCount = len(missions)
@@ -763,29 +751,34 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		"count":       stuckMissionsCount,
 	})
 
-	// Delegate to the shared orchestration check
-	probe, errProbe := s.hub.CheckHealth(r.Context())
-	if errProbe == nil {
-		if probe.Status != "healthy" {
-			missionsProbeStatus = probe.Status
-		}
-		checklist = append(checklist, map[string]interface{}{
-			"id":          "mesh_active",
-			"label":       "Centrifuge Teammate Mesh",
-			"status":      "ok",
-			"description": "Real-time communication layer",
-			"active":      probe.MeshActive,
-		})
+	if probe.Status != "healthy" {
+		missionsProbeStatus = probe.Status
 	}
+	checklist = append(checklist, map[string]interface{}{
+		"id":          "mesh_active",
+		"label":       "Centrifuge Teammate Mesh",
+		"status":      "ok",
+		"description": "Real-time communication layer",
+		"active":      probe.MeshActive,
+	})
 
-	resp := map[string]interface{}{
+	response := map[string]interface{}{
 		"status":     missionsProbeStatus,
-		"mode":       mode,
+		"mode":       probe.Mode,
 		"sync_ready": true,
 		"checklist":  checklist,
-		"details":    probe,
+		"details": map[string]interface{}{
+			"status":       probe.Status,
+			"db_ping":      probe.DBPing,
+			"sync_backlog": probe.SyncBacklog,
+			"mesh_active":  probe.MeshActive,
+		},
 	}
-	_ = json.NewEncoder(w).Encode(resp)
+
+	if probe.Status != "healthy" && probe.Status != "ok" {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {
