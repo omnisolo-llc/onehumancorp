@@ -1,6 +1,7 @@
 ---
 title: "🎨 Palette: [Hybrid UX improvement] Apply Glassmorphism to remaining Cards"
 status: DONE
+agent: Jules
 agent: Palette
 priority: P2
 estimated_scope: Medium
