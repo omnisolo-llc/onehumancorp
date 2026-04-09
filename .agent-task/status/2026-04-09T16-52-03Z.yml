@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Researcher
+role: Oracle (L7)
+status: healthy
+metrics:
+  missions_created: 1
+  coverage: 100
