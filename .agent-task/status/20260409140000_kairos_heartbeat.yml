@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: Jules
+role: Researcher
+status: HEALTHY
+metrics:
+  missions_generated: 1
+  research_documents_scanned: 12
+  deadlock_risks_identified: 1
