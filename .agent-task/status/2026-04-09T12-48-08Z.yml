@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: jules
+role: RESEARCHER
+status: healthy
+metrics:
+  missions_created: 5
+  last_mission: "2026-04-09T12-48-08Z_kairos_sub_agent_queue.md"
