@@ -24,6 +24,8 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -242,6 +244,22 @@ func InitWithMeter(m mockableMeter) error {
 	latencyHistogram, err = m.Float64Histogram(
 		"http_request_duration_seconds",
 		metric.WithDescription("HTTP request latency in seconds"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synchronized"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG synchronization errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -982,6 +1000,20 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
 		))
+	}
+}
+
+// RecordRAGSync records a successful RAG synchronization.
+func RecordRAGSync(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal != nil {
+		RagRecordsSyncedTotal.Add(ctx, int64(count))
+	}
+}
+
+// RecordRAGSyncError records a failed RAG synchronization.
+func RecordRAGSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal != nil {
+		RagSyncErrorsTotal.Add(ctx, 1)
 	}
 }
 

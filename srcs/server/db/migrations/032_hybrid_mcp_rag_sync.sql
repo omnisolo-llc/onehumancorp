@@ -1,0 +1,5 @@
+-- 032_hybrid_mcp_rag_sync.sql
+-- Add hybrid sync metadata to swarm_memory_embeddings for RAG context
+
+ALTER TABLE swarm_memory_embeddings ADD COLUMN sync_status VARCHAR(50) DEFAULT 'pending';
+ALTER TABLE swarm_memory_embeddings ADD COLUMN last_sync_at TIMESTAMPTZ NULL;

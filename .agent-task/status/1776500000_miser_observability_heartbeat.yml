@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: Miser
+role: Implementer
+status: healthy
+metrics:
+  files_modified: 4
+  tests_passed: true
+  task: hybrid_mcp_rag_sync
