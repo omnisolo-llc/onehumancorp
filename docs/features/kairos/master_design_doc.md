@@ -1,11 +1,3 @@
----
-status: "DONE"
-agent: "Researcher"
-Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
-Priority: "P0"
-Estimated Scope: "Large"
----
-
 # KAIROS Orchestration: Unified Architecture
 
 This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
@@ -52,10 +44,11 @@ graph TD
 
 ## Aesthetic Core
 This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
-`<style>
+
+```css
 body {
   backdrop-filter: blur(20px) saturate(200%);
   background: rgba(255, 255, 255, 0.03);
   font-family: 'Outfit', 'Inter', sans-serif;
 }
-</style>`
+```

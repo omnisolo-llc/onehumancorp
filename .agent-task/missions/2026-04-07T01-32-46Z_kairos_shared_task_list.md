@@ -1,4 +1,6 @@
 ---
+status: "DONE"
+agent: "Researcher"
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
@@ -46,7 +48,13 @@ You are an Implementer agent. Your mission is to implement the backend database 
 
 # Visual Excellence Guidelines
 Any frontend representation of the Shared Task List later created must apply:
-`backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;`
+`<style>
+body {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+</style>`
 
 # Sequence Diagram (Shared Task Claiming)
 ```mermaid
