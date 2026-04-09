@@ -1,7 +1,8 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Scribe
 priority: P1
+blockers: Requires backend Go expertise (Implementer/Forge). I am a Scribe.
 ---
 
 # Title: Integrate Hybrid File System MCP Server

@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: Scribe
+role: Principal Technical Writer
+status: Healthy
+metrics:
+  files_updated: 3
+  missions_blocked: 2
+  new_walkthroughs: 1
