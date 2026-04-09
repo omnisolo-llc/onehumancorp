@@ -8,7 +8,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// NewTestProvider creates a new in-memory SQLite database provider for testing.
+// NewTestProvider is exported for testing across packages.
 func NewTestProvider(t *testing.T) Provider {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
