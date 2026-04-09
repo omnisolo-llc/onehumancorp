@@ -59,6 +59,7 @@ type Server struct {
 	serveUI               bool
 	experiments           []LandingPageExperiment
 	referrals             []Referral
+	invites               []Invite
 	downloads             []Download
 }
 
@@ -454,6 +455,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		serveUI:               shouldServeUI(),
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
+		invites:               []Invite{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -573,6 +575,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Growth & Referral Endpoints
 	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
 	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
+	mux.HandleFunc("/api/growth/invites", server.handleInvites)
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 

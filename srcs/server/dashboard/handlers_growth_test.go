@@ -158,3 +158,57 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+
+func TestHandleInvites(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"senderId": "user-123", "email": "test@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/invites", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleInvites(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created Invite
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.SenderID != "user-123" {
+		t.Errorf("expected senderId 'user-123', got '%s'", created.SenderID)
+	}
+	if created.Email != "test@example.com" {
+		t.Errorf("expected email 'test@example.com', got '%s'", created.Email)
+	}
+	if created.Status != "PENDING" {
+		t.Errorf("expected status 'PENDING', got '%s'", created.Status)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/invites", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleInvites(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []Invite
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 invite, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}

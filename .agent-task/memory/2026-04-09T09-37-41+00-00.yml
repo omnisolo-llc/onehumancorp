@@ -1,0 +1,3 @@
+agent: Nova
+context: Implemented team invites to bridge Standalone to Cloud via a Viral Invite Loop. Noted that auto-generated Dart/Flutter build artifacts should never be checked in to source control. Additionally, internal API client methods should be leveraged over generic http calls.
+timestamp: ${TS}
