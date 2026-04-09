@@ -170,6 +170,11 @@ seed_mock_data() {
 
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
+    if [ ! -d "$HOME/.ohc-local-data" ]; then
+        echo -e "  ${PURPLE}✗ Directory $HOME/.ohc-local-data not found!${RESET}"
+        echo -e "    Please 'Launch Standalone Desktop Mode' (Option 3) first to initialize the environment."
+        return
+    fi
     DB_FILE="$HOME/.ohc-local-data/standalone.db"
     if [ ! -f "$DB_FILE" ]; then
         echo -e "  ${PURPLE}✗ Database file $DB_FILE not found!${RESET}"
