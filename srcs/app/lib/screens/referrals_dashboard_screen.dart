@@ -13,7 +13,7 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
-  late Future<List<Map<String, dynamic>>> _referralsFuture;
+  late Future<List<dynamic>> _dashboardDataFuture;
 
   @override
   void initState() {
@@ -23,7 +23,9 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
 
   void _refresh() {
     setState(() {
-      _referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+      final referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+      final viralCoefficientFuture = ref.read(apiServiceProvider)!.getViralCoefficient();
+      _dashboardDataFuture = Future.wait([referralsFuture, viralCoefficientFuture]);
     });
   }
 
@@ -41,9 +43,9 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _referralsFuture,
-        builder: (context, snapshot) {
+      body: FutureBuilder(
+        future: _dashboardDataFuture,
+        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -56,28 +58,113 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
             );
           }
 
-          final referrals = snapshot.data ?? [];
-
-          if (referrals.isEmpty) {
-            return const Center(
-              child: Text(
-                'No referrals tracked yet.',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              ),
-            );
-          }
+          final referrals = snapshot.data![0] as List<Map<String, dynamic>>;
+          final coefficient = snapshot.data![1] as Map<String, dynamic>;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Wrap(
-              spacing: 24,
-              runSpacing: 24,
-              children: referrals.map((r) {
-                return _ReferralCard(referral: r);
-              }).toList(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _CoefficientSummaryCard(coefficient: coefficient),
+                const SizedBox(height: 32),
+                const Text(
+                  'Recent Referrals',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (referrals.isEmpty)
+                  const Center(
+                    child: Text(
+                      'No referrals tracked yet.',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 24,
+                    runSpacing: 24,
+                    children: referrals.map((r) {
+                      return _ReferralCard(referral: r);
+                    }).toList(),
+                  ),
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _CoefficientSummaryCard extends StatelessWidget {
+  final Map<String, dynamic> coefficient;
+
+  const _CoefficientSummaryCard({required this.coefficient});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final kFactor = coefficient['kFactor'] as num? ?? 0.0;
+    final formattedKFactor = kFactor.toStringAsFixed(2);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: colors.primaryContainer.withValues(alpha: 0.2),
+            border: Border.all(
+              color: colors.primary.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _StatColumn(
+                label: 'Total Referrals',
+                value: '${coefficient['totalReferrals'] ?? 0}',
+              ),
+              _StatColumn(
+                label: 'Total Conversions',
+                value: '${coefficient['totalConversions'] ?? 0}',
+              ),
+              _StatColumn(
+                label: 'Unique Inviters',
+                value: '${coefficient['uniqueInviters'] ?? 0}',
+              ),
+              Column(
+                children: [
+                  Text(
+                    'K-Factor: $formattedKFactor',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: colors.primary,
+                    ),
+                  ),
+                  Text(
+                    'Viral Coefficient',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
