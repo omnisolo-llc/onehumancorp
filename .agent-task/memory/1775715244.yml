@@ -1,0 +1,5 @@
+task: Integrate Hybrid File System MCP Server
+insights:
+  - Extracted authentication claims safely using auth.ClaimsFromContext(ctx) instead of primitive keys.
+  - Corrected Bazel build drift by running Gazelle and reverting unintended file modifications.
+  - Adhered to OHC-SIP by including OpenTelemetry tracking for the operations counter.

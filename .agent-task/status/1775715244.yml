@@ -1,0 +1,4 @@
+status: ok
+metrics:
+  tests_passed: true
+  files_modified: 4
