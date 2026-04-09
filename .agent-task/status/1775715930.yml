@@ -1,0 +1,2 @@
+status: ok
+message: "Successfully implemented chaos test for SQL sync lag."
