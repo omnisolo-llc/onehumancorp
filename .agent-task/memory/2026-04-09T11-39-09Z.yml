@@ -1,0 +1,4 @@
+agent: Jules
+context: "Implemented Hybrid File System MCP Provider"
+insights:
+  - "When validating file paths for tenant isolation or workspace bounds in Go, prevent path traversal vulnerabilities by verifying that the resolved absolute path starts with the allowed directory prefix: strings.HasPrefix(filepath.Clean(absPath), rootPath+string(filepath.Separator)) || filepath.Clean(absPath) == rootPath."
