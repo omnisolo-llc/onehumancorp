@@ -329,7 +329,12 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
-	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
+	compressed, err := compressData(payload)
+	if err != nil {
+		slog.Warn("Failed to compress mesh event payload", "err", err)
+		compressed = payload
+	}
+	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(compressed)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
@@ -339,8 +344,13 @@ func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic str
 	ch := make(chan []byte, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:" + topic).Build(), func(msg rueidis.PubSubMessage) {
+			decompressed, err := decompressData([]byte(msg.Message))
+			if err != nil {
+				slog.Warn("Failed to decompress mesh event payload", "err", err)
+				decompressed = []byte(msg.Message)
+			}
 			select {
-			case ch <- []byte(msg.Message):
+			case ch <- decompressed:
 			default:
 				slog.Warn("RedisMeshTransport.SubscribeMeshEvents channel full, dropping message")
 			}
@@ -738,9 +748,15 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
 	lm.eventsGlobalMu.RUnlock()
 
-	err := meshWithRetry(ctx, 3, func() error {
+	compressed, err := compressData(payload)
+	if err != nil {
+		slog.Warn("Failed to compress mesh event payload", "err", err)
+		compressed = payload
+	}
+
+	err = meshWithRetry(ctx, 3, func() error {
 		select {
-		case broadcastChan <- payload:
+		case broadcastChan <- compressed:
 			return nil
 		default:
 			return fmt.Errorf("MemoryMeshTransport events broadcast channel full")
@@ -791,13 +807,19 @@ func (lm *MemoryMeshTransport) runEvents(topic string, shardIdx int) {
 	lm.eventsGlobalMu.RUnlock()
 
 	for msg := range broadcastChan {
+		decompressed, err := decompressData(msg)
+		if err != nil {
+			slog.Warn("Failed to decompress mesh event payload", "err", err)
+			decompressed = msg
+		}
+
 		lm.eventsGlobalMu.RLock()
 		if muArray, ok := lm.eventsMu[topic]; ok {
 			subsArray := lm.eventsSubs[topic]
 			muArray[shardIdx].RLock()
 			for ch := range subsArray[shardIdx] {
 				select {
-				case ch <- msg:
+				case ch <- decompressed:
 				default:
 				}
 			}

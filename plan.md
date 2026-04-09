@@ -1,18 +1,21 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1.  **Refactor `MeshTransport` implementations to compress and decompress event payloads.**
+    - `MeshTransport.BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error`
+    - `MeshTransport.SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)`
+    - Both `RedisMeshTransport` and `MemoryMeshTransport` implement these methods.
+
+2.  **Add `compressData` and `decompressData` methods to `mesh.go`.**
+    - The same compression/decompression logic using `compress/gzip` and `encoding/base64` exists in `srcs/server/orchestration/cached_minimax_client.go` or `srcs/server/checkpointer/checkpointer.go`. We can implement them globally in `srcs/server/orchestration/utils.go` or directly within `mesh.go`. Given they are unexported, let's just add `compressPayload` and `decompressPayload` in `mesh.go` specifically for `[]byte` in/out. Actually, `cached_minimax_client.go` already has `compressData([]byte) ([]byte, error)` and `decompressData([]byte) ([]byte, error)`. I can use those if they're in the same package `orchestration`.
+
+3.  **Update `RedisMeshTransport`**:
+    - In `BroadcastMeshEvent`, compress the `payload` using `compressData` before broadcasting.
+    - In `SubscribeMeshEvents`, when receiving a message, decompress it using `decompressData` before passing it to the channel.
+
+4.  **Update `MemoryMeshTransport`**:
+    - Similarly, in `BroadcastMeshEvent`, compress the `payload`. Wait, for `MemoryMeshTransport` it might be fine to leave it uncompressed since it's just in-memory, but compressing it might save actual memory bytes if the events stay queued for a while, and it ensures behavior is consistent with Cloud mode. So I will compress it there too.
+
+5.  **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+    - Run `bazelisk test //srcs/server/orchestration/...`
+
+6.  **Submit the change.**
+    - Branch name: `miser-compress-mesh-events`
+    - Commit message: "🚀 Miser: Proactive Agent Memory Payload Compression"
