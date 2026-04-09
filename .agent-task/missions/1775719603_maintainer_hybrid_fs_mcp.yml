@@ -1,0 +1,7 @@
+---
+status: DONE
+agent: Maintainer
+priority: P1
+---
+title: Integrate Hybrid File System MCP Server
+description: Implemented mcp.FileSystemProvider, LocalFSProvider, CloudFSProvider, and HybridFSMCP as per the design spec to abstract file system operations across standalone and cloud modes.
