@@ -1,13 +1,9 @@
 package orchestration
 
-
 import (
 	"google.golang.org/protobuf/proto"
+	"math/rand"
 
-
-
-
-	"strings"
 	"bufio"
 	"bytes"
 	"context"
@@ -21,24 +17,23 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/storage"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 )
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -329,7 +324,6 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		ctx:           ctx,
 		cancel:        cancel,
 	}
-
 
 	// Default to a stub S3 provider if we can't initialize a local one
 	h.storage = storage.NewS3Provider("ohc-blobs")
@@ -1710,7 +1704,8 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 
 	// Retry loop to handle transient empty responses from Minimax.
 	var lastErr error
-	for i := 0; i < 3; i++ {
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
@@ -1727,7 +1722,12 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			time.Sleep(1 * time.Second)
+			backoff := time.Duration((1<<i)*1000+rand.Intn(1000)) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(backoff):
+			}
 			continue
 		}
 
@@ -1736,7 +1736,12 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-			time.Sleep(1 * time.Second)
+			backoff := time.Duration((1<<i)*1000+rand.Intn(1000)) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(backoff):
+			}
 			continue
 		}
 
@@ -1754,14 +1759,24 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			time.Sleep(1 * time.Second)
+			backoff := time.Duration((1<<i)*1000+rand.Intn(1000)) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(backoff):
+			}
 			continue
 		}
 
 		if len(result.Choices) == 0 {
 			c.cb.RecordFailure()
 			lastErr = errors.New("empty response from minimax")
-			time.Sleep(1 * time.Second)
+			backoff := time.Duration((1<<i)*1000+rand.Intn(1000)) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(backoff):
+			}
 			continue
 		}
 
@@ -1820,7 +1835,8 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	payloadBytes := buf.Bytes()
 	var lastErr error
 
-	for i := 0; i < 3; i++ {
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
 			return nil, err
@@ -1833,7 +1849,12 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			time.Sleep(1 * time.Second)
+			backoff := time.Duration((1<<i)*1000+rand.Intn(1000)) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
 			continue
 		}
 
@@ -1841,7 +1862,12 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 			c.cb.RecordFailure()
 			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
 			resp.Body.Close()
-			time.Sleep(1 * time.Second)
+			backoff := time.Duration((1<<i)*1000+rand.Intn(1000)) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
 			continue
 		}
 
@@ -1926,10 +1952,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action": "sync",
-			"status": payload.Status,
+			"action":   "sync",
+			"status":   payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload": payload.Payload,
+			"payload":  payload.Payload,
 		})
 	}
 
@@ -2017,6 +2043,3 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 	w.WriteHeader(http.StatusOK)
 }
-
-
-
