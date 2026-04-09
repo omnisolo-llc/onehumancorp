@@ -86,6 +86,14 @@
 </div>
 
 ## 3. Client Integrations
+### 3.1 Hybrid MCP RAG Protocol
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+
+  <p>Learn how local data securely syncs to the cloud in our <a href="walkthroughs/hybrid_mcp_rag.md">Hybrid MCP RAG Walkthrough</a>.</p>
+
+</div>
+
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
   <p>Whether you are developing against the <strong>Local SQLite SIPDB</strong> or the <strong>Cloud Postgres/Redis</strong> stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.</p>
