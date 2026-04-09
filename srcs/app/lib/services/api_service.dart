@@ -492,6 +492,15 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
+  Future<Map<String, dynamic>> getViralCoefficient() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/growth/viral-coefficient'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
 

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'dart:ui';
 import 'package:ohc_app/models/user.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/viral_coefficient_widget.dart';
 
 /// Screen for administering users and managing RBAC.
 class UserManagementScreen extends ConsumerStatefulWidget {
@@ -94,6 +95,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           const Padding(
             padding: EdgeInsets.all(24.0),
             child: GrowthReferralWidget(),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            child: ViralCoefficientWidget(),
           ),
           Expanded(
             child: FutureBuilder<List<UserPublic>>(
