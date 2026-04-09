@@ -1,0 +1,5 @@
+status: HEALTHY
+metrics:
+  agent_id: Implementer
+  tasks_completed: 1
+  uptime_seconds: 300
