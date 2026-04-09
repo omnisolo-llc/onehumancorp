@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.9 (Cloud) / v0.1.9+1 (Standalone)
+- Scaling (Cloud): Deployed KAIROS Shared Task List with PostgreSQL `SKIP LOCKED` and Teammate Mesh via Redis.
+- Privacy/Offline (Standalone): Enforced strict opt-in telemetry controls and stabilized AutoDream SQLite vector fallbacks.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.
