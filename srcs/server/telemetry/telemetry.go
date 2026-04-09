@@ -43,6 +43,8 @@ var (
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
+	RAGRecordsSyncedTotal            metric.Int64Counter
+	RAGSyncErrorsTotal               metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 	AgentTransitionLatency     metric.Float64Histogram
@@ -167,6 +169,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced successfully"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1029,30 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGSyncSuccess increments the global counter for successfully synced RAG records.
+//
+// Accepts parameters: ctx context.Context, count int64 (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordRAGSyncSuccess(ctx context.Context, count int64) {
+	if RAGRecordsSyncedTotal == nil {
+		return
+	}
+	RAGRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+//
+// Accepts parameters: ctx context.Context, count int64 (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordRAGSyncError(ctx context.Context, count int64) {
+	if RAGSyncErrorsTotal == nil {
+		return
+	}
+	RAGSyncErrorsTotal.Add(ctx, count)
 }
