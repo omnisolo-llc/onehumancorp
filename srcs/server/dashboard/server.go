@@ -504,7 +504,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mcp/tools", server.handleMCPTools)
 	mux.HandleFunc("/api/mcp/tools/register", server.handleMCPRegister)
 	mux.HandleFunc("/api/mcp/tools/invoke", server.handleMCPInvoke)
-	mux.HandleFunc("/api/dev/seed", auth.RequireRole("admin", server.handleDevSeed))
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mux.HandleFunc("/api/dev/seed", server.handleDevSeed)
+	} else {
+		mux.HandleFunc("/api/dev/seed", auth.RequireRole("admin", server.handleDevSeed))
+	}
 	mux.HandleFunc("/api/settings", server.handleSettings)
 	mux.HandleFunc("/api/scheduler", server.handleSchedulerTasks)
 	mux.HandleFunc("/api/scheduler/cancel", server.handleSchedulerCancel)
