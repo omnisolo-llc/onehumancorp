@@ -45,6 +45,7 @@ graph TD;
 - [Hybrid Architecture](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
+- [Hybrid Architecture Modes Walkthrough](walkthroughs/hybrid_architecture_modes.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)
 - [UI Testing Guidelines](developer/ui_testing_guidelines.md)
