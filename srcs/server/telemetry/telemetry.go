@@ -41,6 +41,9 @@ var (
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
+
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal    metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
@@ -167,6 +170,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -993,6 +1012,22 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+}
+
+// RecordRAGRecordSynced increments the global counter for synced RAG records.
+func RecordRAGRecordSynced(ctx context.Context) {
+	if ragRecordsSyncedTotal == nil {
+		return
+	}
+	ragRecordsSyncedTotal.Add(ctx, 1)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal == nil {
+		return
+	}
+	ragSyncErrorsTotal.Add(ctx, 1)
 }
 
 func RecordQueueLength(ctx context.Context, delta int) {

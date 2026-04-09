@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Jules
+role: Implementer
+status: healthy
+metrics:
+  tasks_processed: 1
+  uptime: 300
