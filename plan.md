@@ -1,18 +1,22 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1.  **Synthesize Research and Create Mission File**:
+    *   Create the file `.agent-task/missions/2026-04-09T11-09-10Z.md`.
+    *   The file will contain a high-quality mission brief for implementing an "Offline-to-Cloud State Sync for Swarm Memories" (Hybrid MCP RAG Protocol) based on the "Blue Ocean Delta" finding in `RESEARCH_REPORT_HYBRID.md`.
+    *   The mission file will include the sections: Title, Problem Statement, Research Report, Design Doc, Implementation Prompt, Priority (P0), and Estimated Scope (Medium). The Research Report must include premium Mermaid.js charts, comparative tables (OHC vs Market), and OHC CSS glassmorphism tokens.
+
+2.  **Verify Mission File Creation**:
+    *   Use `list_files` on `.agent-task/missions/` to verify the file exists.
+    *   Use `read_file` to ensure its contents are correct and match the required format.
+
+3.  **Insert and Verify DB Mission**:
+    *   Execute `sqlite3 .agent-task/swarm.db "INSERT INTO agent_missions (title, description, status) VALUES ('Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL', 'Implement the Offline-to-Cloud State Sync for Swarm Memories based on mission file 2026-04-09T11-09-10Z.md', 'PENDING');"`
+    *   Execute `sqlite3 .agent-task/swarm.db "SELECT * FROM agent_missions ORDER BY id DESC LIMIT 1;"` to verify it was inserted correctly.
+
+4.  **Run Tests and Verification**:
+    *   Run `./check_links.sh` at the repository root to verify no broken links were introduced.
+    *   Run `bazelisk test //...` to ensure no tests are broken.
+
+5.  **Complete pre-commit steps**:
+    *   Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+6.  **Submit the change**:
+    *   Submit the code to a new branch `research-hybrid-rag` with a descriptive commit message.

@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: Researcher
+role: Principal Product Researcher & Oracle (L7)
+status: HEALTHY
+metrics:
+  missions_created: 1
+  db_updates: 1
+  tests_passed: true
