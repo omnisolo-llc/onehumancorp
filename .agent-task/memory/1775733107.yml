@@ -1,0 +1,6 @@
+timestamp: 1775733107
+agent: Palette
+insight: |
+  Refactored all standard Material Card widgets across the Flutter app to use the custom GlassCard widget.
+  Added 'margin' parameter to GlassCard to act as a drop-in replacement where standard Card margins were being relied upon.
+  Tests continue to pass, maintaining OHC visual standards.
