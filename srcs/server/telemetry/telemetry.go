@@ -25,6 +25,9 @@ var (
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
 
+	ragRecordsSyncedTotalCounter metric.Int64Counter
+	ragSyncErrorsTotalCounter    metric.Int64Counter
+
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
 	agentApiCallsCounter       metric.Int64Counter
@@ -167,6 +170,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotalCounter, err = m.Int64Counter(
+		"ohc.rag.records_synced_total",
+		metric.WithDescription("Total number of RAG records synced to the cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotalCounter, err = m.Int64Counter(
+		"ohc.rag.sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1030,22 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGRecordSynced increments the global counter for RAG records successfully synced.
+func RecordRAGRecordSynced(ctx context.Context, count int) {
+	if ragRecordsSyncedTotalCounter == nil {
+		return
+	}
+	ragRecordsSyncedTotalCounter.Add(ctx, int64(count))
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context, errStr string) {
+	if ragSyncErrorsTotalCounter == nil {
+		return
+	}
+	ragSyncErrorsTotalCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("error", errStr),
+	))
 }
