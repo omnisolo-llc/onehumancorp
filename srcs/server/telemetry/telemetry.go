@@ -27,7 +27,11 @@ var (
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
+
 	agentApiCallsCounter       metric.Int64Counter
+	RagRecordsSyncedTotal      metric.Int64Counter
+	RagSyncErrorsTotal         metric.Int64Counter
+
 	agentApiErrorsCounter      metric.Int64Counter
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
@@ -263,6 +267,7 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+
 	agentApiCallsCounter, err = m.Int64Counter(
 		"ohc_agent_api_calls_total",
 		metric.WithDescription("Total API calls made by or for agents"),
@@ -270,6 +275,23 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total RAG records synced to cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total errors during RAG sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 
 	agentApiErrorsCounter, err = m.Int64Counter(
 		"ohc_agent_api_errors_total",
