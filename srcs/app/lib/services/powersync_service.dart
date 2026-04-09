@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:path_provider/path_provider.dart';
@@ -28,7 +27,7 @@ class PowerSyncService {
     // Initialize PowerSync for Cloud Mode multi-tenant isolation,
     // or hybrid scenarios as determined by settings.
 
-    final schema = Schema((<Table>[
+    const schema = Schema((<Table>[
       Table('agents', [
         Column.text('name'),
         Column.text('role'),

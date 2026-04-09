@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -95,7 +96,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   const SizedBox(height: 32),
 
                   // Step 1: Role
-                  _SectionHeader(number: 1, title: 'Select Specialization'),
+                  const _SectionHeader(number: 1, title: 'Select Specialization'),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
@@ -117,9 +118,9 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   const SizedBox(height: 48),
 
                   // Step 2: Capacity
-                  _SectionHeader(number: 2, title: 'Define Target Capacity'),
+                  const _SectionHeader(number: 2, title: 'Define Target Capacity'),
                   const SizedBox(height: 16),
-                  Card(
+                  GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Column(

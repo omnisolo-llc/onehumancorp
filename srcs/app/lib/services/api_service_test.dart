@@ -3,11 +3,6 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
-import 'package:ohc_app/models/agent.dart';
-import 'package:ohc_app/models/ai_provider.dart';
-import 'package:ohc_app/models/channel.dart';
-import 'package:ohc_app/models/security_issue.dart';
-import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/services/api_service.dart';
 
 class MockHttpClient extends Mock implements http.Client {}

@@ -155,17 +155,17 @@ class AppShell extends StatelessWidget {
 class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return NavigationDrawer(
+    return const NavigationDrawer(
       children: [
-        const SizedBox(height: 16),
-        const Padding(
+        SizedBox(height: 16),
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'One Human Corp',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
-        const Divider(),
+        Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
@@ -208,7 +208,7 @@ class _Sidebar extends StatelessWidget {
           label: 'Channels',
           path: '/channels',
         ),
-        const Divider(),
+        Divider(),
         _NavItem(
           icon: Icons.psychology,
           label: 'AI Providers',
@@ -217,7 +217,7 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.extension, label: 'Skills', path: '/skills'),
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _NavItem(icon: Icons.settings, label: 'Settings', path: '/settings'),
         _NavItem(
           icon: Icons.computer,
@@ -229,7 +229,7 @@ class _Sidebar extends StatelessWidget {
           label: 'Setup Wizard',
           path: '/wizard',
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
       ],
     );
   }

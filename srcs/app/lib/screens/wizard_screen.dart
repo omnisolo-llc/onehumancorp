@@ -367,7 +367,7 @@ class _StatusBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
           filter: ImageFilter.compose(
-            outer: ColorFilter.matrix(<double>[
+            outer: const ColorFilter.matrix(<double>[
               1.168,
               -0.153,
               -0.015,
@@ -602,7 +602,7 @@ class _CentrifugeStep extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: BackdropFilter(
               filter: ImageFilter.compose(
-                outer: ColorFilter.matrix(const <double>[
+                outer: const ColorFilter.matrix(<double>[
                   1.168, -0.153, -0.015, 0, 0,
                   -0.046, 1.061, -0.015, 0, 0,
                   -0.046, -0.152, 1.198, 0, 0,

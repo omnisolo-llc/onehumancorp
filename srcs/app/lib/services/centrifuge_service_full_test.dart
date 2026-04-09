@@ -63,13 +63,13 @@ void main() {
   });
 
   group('CentrifugeService subscribe/unsubscribe', () {
-    final _pubController =
+    final pubController0 =
         StreamController<centrifuge.PublicationEvent>.broadcast();
 
     setUp(() {
       when(() => mockClient.connect()).thenAnswer((_) async {});
       when(() => mockClient.newSubscription(any())).thenReturn(mockSub);
-      when(() => mockSub.publication).thenAnswer((_) => _pubController.stream);
+      when(() => mockSub.publication).thenAnswer((_) => pubController0.stream);
       when(() => mockSub.subscribe()).thenAnswer((_) async {});
       when(() => mockSub.unsubscribe()).thenAnswer((_) async {});
     });
@@ -135,14 +135,14 @@ void main() {
   });
 
   group('CentrifugeService disconnect with subscriptions', () {
-    final _pubController =
+    final pubController0 =
         StreamController<centrifuge.PublicationEvent>.broadcast();
 
     test('disconnect unsubscribes all active subscriptions', () async {
       when(() => mockClient.connect()).thenAnswer((_) async {});
       when(() => mockClient.disconnect()).thenAnswer((_) async {});
       when(() => mockClient.newSubscription(any())).thenReturn(mockSub);
-      when(() => mockSub.publication).thenAnswer((_) => _pubController.stream);
+      when(() => mockSub.publication).thenAnswer((_) => pubController0.stream);
       when(() => mockSub.subscribe()).thenAnswer((_) async {});
       when(() => mockSub.unsubscribe()).thenAnswer((_) async {});
 

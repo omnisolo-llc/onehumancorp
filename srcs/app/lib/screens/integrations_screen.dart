@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -100,7 +101,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
               final tools = snapshot.data ?? [];
               if (tools.isEmpty) {
-                return Card(
+                return GlassCard(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Center(
@@ -185,7 +186,6 @@ class _IntegrationCard extends StatefulWidget {
   final VoidCallback onConnect;
 
   const _IntegrationCard({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -198,7 +198,7 @@ class _IntegrationCard extends StatefulWidget {
 }
 
 class _IntegrationCardState extends State<_IntegrationCard> {
-  bool _hovering = false;
+  final bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +207,7 @@ class _IntegrationCardState extends State<_IntegrationCard> {
     return Semantics(
       label: 'Connect to ${widget.title}. ${widget.subtitle}',
       button: true,
-      child: Card(
+      child: GlassCard(
         child: InkWell(
           onTap: widget.onConnect,
           borderRadius: BorderRadius.circular(12),
@@ -285,7 +285,7 @@ class _MCPToolTile extends StatelessWidget {
       label: 'Invoke MCP Tool: $name. $description',
       button: true,
       excludeSemantics: true,
-      child: Card(
+      child: GlassCard(
         margin: const EdgeInsets.only(bottom: 12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

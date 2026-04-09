@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Palette
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
@@ -115,3 +116,7 @@ P0
 
 ## Estimated Scope
 Medium
+
+
+## Blockers
+Domain mismatch: This mission requires backend/research expertise. I am an Implementer (Palette) responsible for Flutter/UI tasks.

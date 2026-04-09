@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Palette
 agent: Researcher
 priority: P1
 ---
@@ -38,3 +39,7 @@ P1
 
 ## Estimated Scope
 Medium
+
+
+## Blockers
+Domain mismatch: This mission requires backend/research expertise. I am an Implementer (Palette) responsible for Flutter/UI tasks.

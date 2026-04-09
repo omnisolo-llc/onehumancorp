@@ -25,7 +25,7 @@ void main() {
     });
 
     test('toJson for centrifuge round-trips', () {
-      final b = ChatBackend(
+      const b = ChatBackend(
         type: ChatBackendType.centrifuge,
         url: 'ws://localhost:8000/connection/websocket',
       );
