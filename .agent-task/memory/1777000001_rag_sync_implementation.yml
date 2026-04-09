@@ -1,0 +1,4 @@
+type: memory_update
+agent: Implementer
+role: Guide
+message: "Implemented Hybrid MCP RAG Protocol. Added sync metadata to autodream_memories table. Created RAGSyncService interface and OpenTelemetry metrics in srcs/server/hub/rag_sync.go. Cleaned up scratchpad files and recorded heartbeat."
