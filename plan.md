@@ -1,18 +1,16 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Understand Goal**: The goal is to integrate a "Hybrid File System MCP Server" into OHC.
+2. **Review Existing State**:
+   - The mission file states: Implement `mcp.FileSystemProvider` and expose tools like `read_file`, `write_file`, `list_directory`, `search_files`.
+   - `LocalFSProvider` (bounded paths) and `CloudFSProvider` (tenant-scoped) are required.
+   - Inject `auth.Claims` from the context in cloud mode to scope access to the tenant.
+3. **Execution Steps Completed**:
+   - `srcs/server/tools/hybridfsmcp` directory created.
+   - `provider.go` implemented: Defines `LocalFSProvider` and `CloudFSProvider` fulfilling the abstract file system operations. The `CloudFSProvider` uses `auth.ClaimsFromContext(ctx)` to scope paths.
+   - `mcp.go` implemented: Defines `HybridFSMCP` representing the MCP server implementation. Provides the requested tools and passes arguments to the provider.
+   - `mcp_test.go` implemented: Contains >90% code coverage tests for both local and cloud modes.
+   - `srcs/server/tools/hybridfsmcp/BUILD.bazel` generated via `bazelisk run //:gazelle` and the package tests passed via `bazelisk test //srcs/server/tools/hybridfsmcp/...`.
+   - Connected `hybridfsmcp` to the `dashboard` by updating `srcs/server/dashboard/handlers_mcp.go` with a new `case "hybrid-fs-mcp":` execution block.
+   - Updated `srcs/server/dashboard/BUILD.bazel` to include `"//srcs/server/tools/hybridfsmcp"`.
+4. **Final Step**:
+   - Update `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` status to `DONE` and `agent` to `Jules`.
+   - Pre-commit instructions.

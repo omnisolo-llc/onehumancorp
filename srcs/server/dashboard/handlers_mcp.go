@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -376,15 +377,32 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			return nil, fmt.Errorf("invalid blob-mcp parameters: %w", err)
 		}
 
-		// In a real execution environment, the HTTP middleware sets context values for auth.
-		// However, for MCP tool invocation inside the server loop, we recreate claims if known.
-		// For simplicity we create a dummy claim just for testing out the cloud mode scoping.
-		claims := &auth.Claims{
-			OrganizationID: s.org.ID,
+		res, err := inspector.CallTool(r.Context(), req.Action, params)
+		if err != nil {
+			return nil, err
 		}
 
-		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
-		res, err := inspector.CallTool(ctx, req.Action, params)
+		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
+	// ── Hybrid File System tool ───────────────────────────────────────────────
+	case "hybrid-fs-mcp":
+		baseDir := s.cfg.DataDir
+		if baseDir == "" {
+			baseDir = "/tmp/ohc_workspace"
+		}
+		isCloud := s.hub.DB() != nil && !s.hub.DB().IsSQLite()
+		fsProvider := hybridfsmcp.NewProviderFactory(isCloud, baseDir)
+		inspector := hybridfsmcp.NewHybridFSMCP(fsProvider)
+
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid hybrid-fs-mcp parameters: %w", err)
+		}
+
+		res, err := inspector.CallTool(r.Context(), req.Action, params)
 		if err != nil {
 			return nil, err
 		}
