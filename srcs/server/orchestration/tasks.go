@@ -43,6 +43,7 @@ type TaskManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // For Teammate Mesh broadcast
+	mesh        MeshTransport
 	stopChan    chan struct{}
 	stateMachine *statemachine.StateMachine
 	taskQueue   queue.TaskQueue
@@ -50,7 +51,7 @@ type TaskManager struct {
 }
 
 // NewTaskManager creates a new TaskManager.
-func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
+func NewTaskManager(provider db.Provider, hub *CentrifugeNode, mesh MeshTransport) *TaskManager {
 	var broadcast func(string, map[string]interface{})
 	if hub != nil {
 		broadcast = hub.PublishTaskBroadcast
@@ -59,6 +60,7 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 	tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
+		mesh:         mesh,
 		stateMachine: statemachine.NewStateMachine(provider, broadcast),
 	}
 

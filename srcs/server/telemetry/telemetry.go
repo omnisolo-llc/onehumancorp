@@ -21,6 +21,7 @@ import (
 
 var (
 	meter            metric.Meter
+	MeshMessageThroughputCounter metric.Int64Counter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
@@ -167,6 +168,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+		MeshMessageThroughputCounter, err = m.Int64Counter(
+		"ohc_mesh_message_throughput",
+		metric.WithDescription("Total number of Teammate Mesh messages processed"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1010,5 +1019,21 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+func RecordMeshMessageThroughput(ctx context.Context, operation string) {
+	if MeshMessageThroughputCounter != nil {
+		MeshMessageThroughputCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("operation", operation),
+		))
+	}
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+			"count": 1,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "mesh_message_throughput", string(payloadBytes))
 	}
 }

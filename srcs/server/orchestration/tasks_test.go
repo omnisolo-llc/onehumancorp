@@ -43,7 +43,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
-	tm := NewTaskManager(prov, nil)
+	tm := NewTaskManager(prov, nil, nil)
 
 	return tm, func() {
 		prov.Close()

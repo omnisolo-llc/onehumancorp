@@ -14,7 +14,8 @@ import (
 // AdvertiseCapabilities advertises an agent's capabilities to the mesh
 func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
 	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
+	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start))
+		telemetry.RecordMeshMessageThroughput(ctx, "AdvertiseCapabilities") }()
 
 	if req.GetAgentId() == "" {
 		return nil, fmt.Errorf("agent_id is required")
@@ -44,7 +45,8 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 	ctx := stream.Context()
 
 	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "DiscoverAgents", time.Since(start)) }()
+	defer func() { telemetry.RecordMeshLatency(ctx, "DiscoverAgents", time.Since(start))
+		telemetry.RecordMeshMessageThroughput(ctx, "DiscoverAgents") }()
 
 	cn := s.hub.CentrifugeNode()
 	if cn == nil {
@@ -83,7 +85,8 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 	ctx := stream.Context()
 
 	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "StreamMeshEvents", time.Since(start)) }()
+	defer func() { telemetry.RecordMeshLatency(ctx, "StreamMeshEvents", time.Since(start))
+		telemetry.RecordMeshMessageThroughput(ctx, "StreamMeshEvents") }()
 
 	if req.GetTopic() == "" {
 		return fmt.Errorf("topic is required")
