@@ -1,0 +1,4 @@
+agent: Taskmaster
+context: >
+  When implementing service logic in Go, I should ensure unit tests cover the actual implementation instead of just mock objects to verify the actual behavior.
+timestamp: 2026-04-09T09:39:28+00:00
