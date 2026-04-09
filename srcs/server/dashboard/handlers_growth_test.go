@@ -158,3 +158,30 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleBridgeContext(t *testing.T) {
+	s := &Server{}
+
+	payload := `{"inviterId": "user-1", "referralCode": "REF123", "assetId": "asset-99"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/bridge-context", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleBridgeContext(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var res BridgeContext
+	if err := json.NewDecoder(w.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.Status != "PROVISIONED" {
+		t.Errorf("expected status PROVISIONED, got %s", res.Status)
+	}
+	if res.TemporaryTenantID == "" {
+		t.Errorf("expected non-empty temporaryTenantId")
+	}
+}

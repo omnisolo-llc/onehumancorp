@@ -188,3 +188,56 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// BridgeContext defines a temporary multi-tenant context for referral bridges.
+type BridgeContext struct {
+	ID                string    `json:"id"`
+	InviterID         string    `json:"inviterId"`
+	ReferralCode      string    `json:"referralCode"`
+	AssetID           string    `json:"assetId"`
+	TemporaryTenantID string    `json:"temporaryTenantId"`
+	Status            string    `json:"status"`
+	CreatedAt         time.Time `json:"createdAt"`
+	ExpiresAt         time.Time `json:"expiresAt"`
+}
+
+type bridgeContextRequest struct {
+	InviterID    string `json:"inviterId"`
+	ReferralCode string `json:"referralCode"`
+	AssetID      string `json:"assetId"`
+}
+
+func (s *Server) handleBridgeContext(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req bridgeContextRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if req.InviterID == "" || req.ReferralCode == "" || req.AssetID == "" {
+		http.Error(w, "inviterId, referralCode, and assetId are required", http.StatusBadRequest)
+		return
+	}
+
+	ctx := BridgeContext{
+		ID:                "ctx-" + time.Now().UTC().Format("20060102150405"),
+		InviterID:         req.InviterID,
+		ReferralCode:      req.ReferralCode,
+		AssetID:           req.AssetID,
+		TemporaryTenantID: "tenant-temp-" + time.Now().UTC().Format("150405"),
+		Status:            "PROVISIONED",
+		CreatedAt:         time.Now().UTC(),
+		ExpiresAt:         time.Now().UTC().Add(24 * time.Hour),
+	}
+
+	s.mu.Lock()
+	s.bridgeContexts = append(s.bridgeContexts, ctx)
+	s.mu.Unlock()
+
+	writeJSON(w, ctx)
+}
