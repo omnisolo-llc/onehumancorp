@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: MAINTAINER
+role: Reliability Engineer & Triage Lead (L7)
+status: HEALTHY
+metrics:
+  tasks_completed: 1
+  uptime: 100
