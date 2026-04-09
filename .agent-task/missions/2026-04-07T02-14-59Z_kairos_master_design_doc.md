@@ -1,5 +1,7 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: |
+  Domain mismatch: requires backend Go development, which is outside the domain expertise of Scribe.
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"

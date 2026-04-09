@@ -1,5 +1,7 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: |
+  Domain mismatch: requires backend Go development, which is outside the domain expertise of Scribe.
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"

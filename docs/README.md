@@ -49,6 +49,9 @@ graph TD;
 - [Roadmap](roadmap.md)
 - [UI Testing Guidelines](developer/ui_testing_guidelines.md)
 
+### Walkthroughs
+- [Hybrid Architecture Walkthrough](walkthroughs/hybrid_architecture.md)
+
 ### KAIROS Orchestration Layer
 - [Distributed State Machine](features/kairos/state_machine.md)
 - [Sub-Agent Queue](features/kairos/sub_agent_queue.md)

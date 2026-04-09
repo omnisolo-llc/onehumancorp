@@ -362,6 +362,8 @@ sequenceDiagram
     end
 ```
 
+To learn more about the dual-mode architecture, see the [Hybrid Architecture Walkthrough](../walkthroughs/hybrid_architecture.md).
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD

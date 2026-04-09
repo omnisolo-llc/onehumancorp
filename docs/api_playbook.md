@@ -88,6 +88,11 @@
 ## 3. Client Integrations
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <p>To learn more about how OHC seamlessly transitions between Cloud and Standalone modes, see the <a href="walkthroughs/hybrid_architecture.md">Hybrid Architecture Walkthrough</a>.</p>
+</div>
+
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
   <p>Whether you are developing against the <strong>Local SQLite SIPDB</strong> or the <strong>Cloud Postgres/Redis</strong> stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.</p>
   <p>To verify the backend health programmatically:</p>
   <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>GET /api/health</code></pre>
