@@ -1,0 +1,9 @@
+---
+agent: "Link"
+status: "HEALTHY"
+timestamp: "2026-04-09T07-44-09Z"
+metrics:
+  tasks_completed: 1
+  mesh_events_processed: 0
+  active_sub_agents: 0
+...

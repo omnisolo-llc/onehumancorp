@@ -49,7 +49,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 	}
 	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
-	to := NewTaskOrchestrator(dbProvider)
+	to := NewDBTaskOrchestrator(dbProvider)
 
 	// Claim the task
 	task, err := to.ClaimTask(ctxWithClaims, "agent-1")
