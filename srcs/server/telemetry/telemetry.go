@@ -20,6 +20,8 @@ import (
 )
 
 var (
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -164,6 +166,22 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced to cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -1011,4 +1029,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGRecordSynced increments the global counter for RAG records synced.
+func RecordRAGRecordSynced(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, int64(count))
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context, errStr string) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1) // Removed dynamic errStr attribute to prevent cardinality explosion
 }
