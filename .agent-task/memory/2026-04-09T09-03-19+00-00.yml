@@ -1,0 +1,5 @@
+---
+agent: Maintainer
+timestamp: 2026-04-09T09-03-19+00-00
+---
+Fixed db.NewSQLiteProvider to db.NewSqliteProvider in health_test.go so bazelisk test passes.

@@ -45,7 +45,7 @@ func TestCheckHealthDegraded_NoDB(t *testing.T) {
 func TestCheckHealth_SQLite(t *testing.T) {
 	// Setup a temporary in-memory sqlite
 	ctx := context.Background()
-	provider, err := db.NewSQLiteProvider(":memory:")
+	provider, err := db.NewSqliteProvider(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to create sqlite provider: %v", err)
 	}
