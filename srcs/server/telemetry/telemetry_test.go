@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -636,4 +637,40 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
+}
+
+func TestCompressTelemetryPayload(t *testing.T) {
+	data := "{\"agent_id\":\"test-123\",\"event\":\"login\"}"
+	compressed, _, _ := CompressTelemetryPayload(data)
+	if compressed == data {
+		t.Logf("Data not compressed, either it was too small or compression failed.")
+	}
+
+	// Test decompression
+	decomp := DecompressTelemetryPayload(compressed)
+	if decomp != data {
+		t.Errorf("Expected decompressed data to match original, got %v", decomp)
+	}
+
+	largeData := strings.Repeat(data, 100)
+	compressedLarge, oLen, cLen := CompressTelemetryPayload(largeData)
+	if cLen >= oLen {
+		t.Errorf("Expected large data to compress efficiently")
+	}
+	if !strings.HasPrefix(compressedLarge, "gzip+base64:") {
+		t.Errorf("Expected compression prefix")
+	}
+
+	decompLarge := DecompressTelemetryPayload(compressedLarge)
+	if decompLarge != largeData {
+		t.Errorf("Expected large data to decompress correctly")
+	}
+}
+
+func TestDecompressTelemetryPayloadFallback(t *testing.T) {
+	data := "raw uncompressed data"
+	decomp := DecompressTelemetryPayload(data)
+	if decomp != data {
+		t.Errorf("Expected raw data to pass through unaltered, got %v", decomp)
+	}
 }

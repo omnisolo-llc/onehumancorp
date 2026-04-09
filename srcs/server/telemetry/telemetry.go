@@ -10,6 +10,9 @@ import (
 	"regexp"
 	"time"
 
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
@@ -17,50 +20,54 @@ import (
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"io"
+	"strings"
 )
 
 var (
-	meter            metric.Meter
-	requestCounter   metric.Int64Counter
-	latencyHistogram metric.Float64Histogram
+	meter               metric.Meter
+	requestCounter      metric.Int64Counter
+	latencyHistogram    metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
 
-	tokenUsageCounter          metric.Int64Counter
-	tokenBurnRateGauge         metric.Float64Gauge
-	agentApiCallsCounter       metric.Int64Counter
-	agentApiErrorsCounter      metric.Int64Counter
-	humanInteractionsCounter   metric.Int64Counter
-	meetingEventsCounter       metric.Int64Counter
-	swarmTasksCompletedCounter metric.Int64Counter
+	tokenUsageCounter           metric.Int64Counter
+	tokenBurnRateGauge          metric.Float64Gauge
+	agentApiCallsCounter        metric.Int64Counter
+	agentApiErrorsCounter       metric.Int64Counter
+	humanInteractionsCounter    metric.Int64Counter
+	meetingEventsCounter        metric.Int64Counter
+	swarmTasksCompletedCounter  metric.Int64Counter
 	swarmTaskTransitionsCounter metric.Int64Counter
 	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
-	swarmTaskProcessingLatency  metric.Float64Histogram
-	taskEnqueuedCounter metric.Int64Counter
-	taskFailedCounter metric.Int64Counter
-	cacheHitsCounter           metric.Int64Counter
-	cacheMissesCounter         metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
-	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	TeammateMeshBroadcastsCounter    metric.Int64Counter
-	TeammateMeshDirectMessagesCounter metric.Int64Counter
-	TaskQueueLengthGauge       metric.Int64UpDownCounter
-	TaskProcessingLatency      metric.Float64Histogram
-	AgentTransitionLatency     metric.Float64Histogram
 
-	SyncCompletedCount metric.Int64Counter
-	SyncFailedCount    metric.Int64Counter
-	SyncEscalationsCount metric.Int64Counter
-	SyncLatency metric.Float64Histogram
-	SyncPayloadSize metric.Int64Histogram
+	observabilityCompressionRatioCounter metric.Int64Counter
+	swarmTaskProcessingLatency           metric.Float64Histogram
+	taskEnqueuedCounter                  metric.Int64Counter
+	taskFailedCounter                    metric.Int64Counter
+	cacheHitsCounter                     metric.Int64Counter
+	cacheMissesCounter                   metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter     metric.Int64Counter
+	AutoDreamMemoriesCompressedCounter   metric.Int64Counter
+	TeammateMeshBroadcastsCounter        metric.Int64Counter
+	TeammateMeshDirectMessagesCounter    metric.Int64Counter
+	TaskQueueLengthGauge                 metric.Int64UpDownCounter
+	TaskProcessingLatency                metric.Float64Histogram
+	AgentTransitionLatency               metric.Float64Histogram
+
+	SyncCompletedCount     metric.Int64Counter
+	SyncFailedCount        metric.Int64Counter
+	SyncEscalationsCount   metric.Int64Counter
+	SyncLatency            metric.Float64Histogram
+	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
-	syncDaemonBatchSize metric.Int64Histogram
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
-	autoDreamSyncDuration       metric.Float64Histogram
-	autoDreamQueryDuration      metric.Float64Histogram
-	meshBroadcastTotal          metric.Int64Counter
+	autoDreamSyncDuration  metric.Float64Histogram
+	autoDreamQueryDuration metric.Float64Histogram
+	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -184,6 +191,15 @@ func InitWithMeter(m mockableMeter) error {
 	swarmTaskQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_swarm_task_queue_length",
 		metric.WithDescription("Current number of pending swarm tasks"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	observabilityCompressionRatioCounter, err = m.Int64Counter(
+		"observability_compression_ratio",
+		metric.WithDescription("Total bytes saved through JSON observability payload compression"),
+		metric.WithUnit("By"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1027,72 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordObservabilityBytesSaved records the number of bytes saved by compressing telemetry JSON payloads.
+func RecordObservabilityBytesSaved(ctx context.Context, bytes int64) {
+	if observabilityCompressionRatioCounter != nil {
+		observabilityCompressionRatioCounter.Add(ctx, bytes)
+	}
+}
+
+// CompressTelemetryPayload compresses a raw JSON string using gzip and encodes it as base64, returning the result and original/compressed sizes.
+// If compression fails or the result is larger, it returns the original string.
+func CompressTelemetryPayload(data string) (string, int64, int64) {
+	if data == "" {
+		return data, 0, 0
+	}
+	originalLen := int64(len(data))
+
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write([]byte(data)); err != nil {
+		return data, originalLen, originalLen
+	}
+	if err := gz.Close(); err != nil {
+		return data, originalLen, originalLen
+	}
+
+	compressedBytes := buf.Bytes()
+	b64 := base64.StdEncoding.EncodeToString(compressedBytes)
+	result := "gzip+base64:" + b64
+	compressedLen := int64(len(result))
+
+	if compressedLen >= originalLen {
+		return data, originalLen, originalLen
+	}
+
+	return result, originalLen, compressedLen
+}
+
+// DecompressTelemetryPayload attempts to decode and decompress a payload if it is compressed.
+// Otherwise, it returns the raw payload.
+func DecompressTelemetryPayload(data string) string {
+	if !strings.HasPrefix(data, "gzip+base64:") {
+		return data
+	}
+
+	b64 := strings.TrimPrefix(data, "gzip+base64:")
+	compressedBytes, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return data // fallback
+	}
+
+	// Check magic bytes
+	if len(compressedBytes) < 2 || compressedBytes[0] != 0x1f || compressedBytes[1] != 0x8b {
+		return data
+	}
+
+	r, err := gzip.NewReader(bytes.NewReader(compressedBytes))
+	if err != nil {
+		return data
+	}
+	defer r.Close()
+
+	decompressed, err := io.ReadAll(r)
+	if err != nil {
+		return data
+	}
+
+	return string(decompressed)
 }

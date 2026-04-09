@@ -846,10 +846,14 @@ func (s *SIPDB) Provider() db.Provider {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the telemetry_buffer table.
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
+	compressedPayload, origLen, compLen := telemetry.CompressTelemetryPayload(payload)
+	if compLen < origLen {
+		telemetry.RecordObservabilityBytesSaved(ctx, origLen-compLen)
+	}
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3)",
-			metricType, payload, s.orgID,
+			metricType, compressedPayload, s.orgID,
 		)
 		return err
 	})
@@ -883,11 +887,12 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 			if err := rows.Scan(&id, &metricType, &payload); err != nil {
 				return err
 			}
+			decompressedPayload := telemetry.DecompressTelemetryPayload(payload)
 			records = append(records, struct {
 				id         int64
 				metricType string
 				payload    string
-			}{id, metricType, payload})
+			}{id, metricType, decompressedPayload})
 		}
 		return nil
 	})
