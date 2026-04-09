@@ -81,8 +81,37 @@
         DB-->>Worker: Lock Acquired (EXECUTING)
         Worker->>API: Complete Task
         API->>DB: Update State (COMPLETED)
+
+        classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+        class API,DB,Queue,Worker premium;
     ```
   </div>
+</div>
+
+
+### 2.4 KAIROS Orchestration APIs
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/queue/subagent</code></strong>
+  <p>Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "parent_task_id": "task_12345",
+  "payload": {
+    "instruction": "Verify the styling tokens in the frontend."
+  },
+  "scheduled_at": "2026-04-06T12:00:00Z"
+}</code></pre>
+
+  <strong style="display: block; margin-top: 1.5rem;">POST <code>/api/mesh/v2/broadcast</code></strong>
+  <p>Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "channel": "mesh:tasks",
+  "event_type": "TASK_TRANSITION",
+  "data": {
+    "task_id": "task_12345",
+    "previous_state": "PENDING",
+    "new_state": "IN_PROGRESS"
+  }
+}</code></pre>
 </div>
 
 ## 3. Client Integrations
