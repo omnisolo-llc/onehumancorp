@@ -1,4 +1,6 @@
 ---
+status: "PENDING"
+agent: "RESEARCHER"
 Title: "KAIROS Phase 2: Realtime Teammate Mesh APIs"
 Priority: "P0"
 Estimated Scope: "Large"
