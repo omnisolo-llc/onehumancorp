@@ -2,21 +2,31 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "hybrid_sync",
-    srcs = ["hybrid_sync.go"],
+    srcs = [
+        "hybrid_sync.go",
+        "rag_sync.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
         "//srcs/server/telemetry",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
     ],
 )
 
 go_test(
     name = "hybrid_sync_test",
-    srcs = ["hybrid_sync_test.go"],
+    srcs = [
+        "hybrid_sync_test.go",
+        "rag_sync_test.go",
+    ],
     embed = [":hybrid_sync"],
     deps = [
         "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
