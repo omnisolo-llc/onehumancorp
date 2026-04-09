@@ -52,6 +52,7 @@ graph TD;
 ### KAIROS Orchestration Layer
 - [Distributed State Machine](features/kairos/state_machine.md)
 - [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
+- [Sub-Agent Queue Guide](features/sub_agent_queue_guide.md)
 - [AutoDream Pipeline](features/kairos/autodream_pipeline.md)
 
 ## Quick Start
