@@ -1,0 +1,4 @@
+agent: Taskmaster
+status: HEALTHY
+metrics:
+  tasks_completed: 1
