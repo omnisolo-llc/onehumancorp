@@ -1,0 +1,14 @@
+--- srcs/server/telemetry/telemetry.go
++++ srcs/server/telemetry/telemetry.go
+@@ -460,7 +460,10 @@
+		errs = append(errs, err)
+	}
+
+-	initRAGSyncMetrics(meter)
++	err = initRAGSyncMetrics(m)
++	if err != nil {
++		errs = append(errs, err)
++	}
+
+	err = initMinimaxMetrics(m)
+	if err != nil {

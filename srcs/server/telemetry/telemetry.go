@@ -397,6 +397,7 @@ func InitWithMeter(m mockableMeter) error {
 		"sync_completed_count",
 		metric.WithDescription("Total successfully synced rows"),
 	)
+
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -455,6 +456,11 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
 	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = initRAGSyncMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
 	}
