@@ -1,0 +1,6 @@
+status: "HEALTHY"
+agent: "Jules"
+component: "HybridFSMCP"
+metrics:
+  tests_passed: true
+  coverage_met: true

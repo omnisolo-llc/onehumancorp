@@ -1,0 +1,4 @@
+agent: "Jules"
+mission: "2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md"
+context: "Implemented Hybrid File System MCP Proxy with local and cloud tenant-scoped providers."
+learnings: "Validating auth context correctly maps to directory scoping."
