@@ -320,3 +320,7 @@ func redactDSN(dsn string) string {
 	}
 	return dsn
 }
+
+func (d *DB) Ping(ctx context.Context) error {
+	return d.Provider.Ping(ctx)
+}
