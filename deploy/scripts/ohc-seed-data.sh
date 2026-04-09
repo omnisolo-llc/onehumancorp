@@ -29,16 +29,12 @@ API_URL="http://127.0.0.1:${PORT}/api/dev/seed"
 
 echo -e "${DIM}[Calling API to seed data: ${API_URL}]${RESET}"
 
-# Use curl to trigger the seeder
-RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"scenario": "launch-readiness"}' "$API_URL" || echo "failed")
+# Execute the Go seeder binary
+bazelisk run //srcs/server/seeder -- -scenario "launch-readiness"
 
-if [ "$RESPONSE" == "200" ]; then
-    echo -e "${GREEN}✓ Mock Data seeded successfully!${RESET}"
+if [ $? -eq 0 ]; then
     echo -e "${DIM}Your dashboard is now populated with 'Launch Readiness' demo data.${RESET}"
-elif [ "$RESPONSE" == "failed" ]; then
-    echo -e "${PURPLE}✗ Failed to connect to OHC Backend on port ${PORT}.${RESET}"
-    echo -e "${DIM}Please ensure the server is running (e.g., using 'Launch Standalone Desktop Mode').${RESET}"
 else
-    echo -e "${PURPLE}✗ Failed to seed data. Server returned HTTP ${RESPONSE}.${RESET}"
+    echo -e "${DIM}Please ensure the server is running (e.g., using 'Launch Standalone Desktop Mode').${RESET}"
 fi
 echo ""
