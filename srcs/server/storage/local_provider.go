@@ -20,7 +20,7 @@ func NewLocalProvider(basePath string) (*LocalProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(absPath, 0755); err != nil {
+	if err := os.MkdirAll(absPath, 0700); err != nil {
 		return nil, err
 	}
 	return &LocalProvider{basePath: absPath}, nil
