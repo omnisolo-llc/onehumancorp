@@ -10,6 +10,7 @@ import (
 )
 
 // OpenAIClient implements LLMClient for OpenAI API.
+
 type OpenAIClient struct {
 	APIKey string
 	Client *http.Client
@@ -23,6 +24,7 @@ func NewOpenAIClient(apiKey string) *OpenAIClient {
 }
 
 func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	req.Messages = truncateMessages(req.Messages)
 	// Map our ChatRequest to OpenAI's payload
 	type openaiMessage struct {
 		Role    string `json:"role"`
@@ -42,8 +44,8 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	}
 
 	payload := map[string]interface{}{
-		"model":       req.Model,
-		"messages":    messages,
+		"model":    req.Model,
+		"messages": messages,
 	}
 
 	body, _ := json.Marshal(payload)

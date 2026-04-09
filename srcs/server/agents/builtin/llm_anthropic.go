@@ -10,6 +10,45 @@ import (
 )
 
 // AnthropicClient implements LLMClient for Anthropic's Claude API.
+
+const MaxHistoryMessages = 40
+
+func truncateMessages(msgs []Message) []Message {
+	if len(msgs) <= MaxHistoryMessages {
+		return msgs
+	}
+
+	// For Anthropic, system prompt is sent separately, so we just need to ensure
+	// we don't orphan tool results from their tool calls.
+	// Anthropic requires alternating roles in older APIs but allows adjacent same roles sometimes,
+	// but strictly requires the first message to be "user" and tool results to follow tool calls.
+
+	// Start by finding a safe boundary near the target length.
+	targetCut := len(msgs) - MaxHistoryMessages
+
+	// Walk forward to find a safe cut point where we don't start in the middle of a tool use sequence
+	safeCut := targetCut
+	for i := targetCut; i < len(msgs); i++ {
+		// A safe cut point is a user message that does NOT contain tool results (unless we kept the assistant's tool call)
+		if msgs[i].Role == RoleUser && len(msgs[i].ToolResults) == 0 {
+			safeCut = i
+			break
+		}
+	}
+
+	if safeCut == targetCut && msgs[safeCut].Role != RoleUser {
+		// If we didn't find a clean break, just walk forward to the next user message
+		for i := targetCut; i < len(msgs); i++ {
+			if msgs[i].Role == RoleUser {
+				safeCut = i
+				break
+			}
+		}
+	}
+
+	return msgs[safeCut:]
+}
+
 type AnthropicClient struct {
 	APIKey string
 	Client *http.Client
@@ -23,6 +62,7 @@ func NewAnthropicClient(apiKey string) *AnthropicClient {
 }
 
 func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	req.Messages = truncateMessages(req.Messages)
 	// Anthropic Messages API expects system prompt as a separate field, not in messages
 	// For simplicity, we assume req structure aligns with a translation layer, or we map it here.
 
