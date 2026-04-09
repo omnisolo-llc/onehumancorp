@@ -983,16 +983,32 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 			attribute.String("deployment_mode", mode),
 		))
 	}
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"deployment_mode": mode,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
+	}
 }
 
 // RecordQueueLength adds a delta to the current queue length gauge.
 func RecordMeshLatency(ctx context.Context, operation string, latency time.Duration) {
-	if MeshLatencyRecorder == nil {
-		return
+	if MeshLatencyRecorder != nil {
+		MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
+			attribute.String("operation", operation),
+		))
 	}
-	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
-		attribute.String("operation", operation),
-	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+			"latency":   latency.Seconds(),
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "mesh_latency", string(payloadBytes))
+	}
 }
 
 func RecordQueueLength(ctx context.Context, delta int) {

@@ -9,15 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -40,13 +40,13 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode // For Teammate Mesh broadcast
-	stopChan    chan struct{}
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode // For Teammate Mesh broadcast
+	stopChan     chan struct{}
 	stateMachine *statemachine.StateMachine
-	taskQueue   queue.TaskQueue
-	mu          sync.Mutex // For Standalone mode SQLite locking
+	taskQueue    queue.TaskQueue
+	mu           sync.Mutex // For Standalone mode SQLite locking
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -228,7 +228,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	telemetry.RecordSwarmTaskQueueLength(ctx, 1)
 
 	// Broadcast task creation
-	if tm.hub != nil {
+	if tm.hub != nil && tm.hub.meshTransport != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":         task.ID,
@@ -243,7 +243,6 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
-
 	return &task, nil
 }
 
@@ -374,7 +373,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
-	if tm.hub != nil {
+	if tm.hub != nil && tm.hub.meshTransport != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  task.ID,
@@ -385,7 +384,6 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
-
 	return &task, nil
 }
 
@@ -422,7 +420,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
 
 	// Broadcast task review
-	if tm.hub != nil {
+	if tm.hub != nil && tm.hub.meshTransport != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  taskID,
@@ -433,7 +431,6 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
-
 	return nil
 }
 
@@ -473,7 +470,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
 	// Broadcast task completion
-	if tm.hub != nil {
+	if tm.hub != nil && tm.hub.meshTransport != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  taskID,
@@ -484,7 +481,6 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
-
 	return nil
 }
 
@@ -743,7 +739,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for _, task := range claimedTasks {
 		// Broadcast task claim
-		if tm.hub != nil {
+		if tm.hub != nil && tm.hub.meshTransport != nil {
 			go func(t *SharedTask) {
 				payload := map[string]interface{}{
 					"task_id":  t.ID,
@@ -758,7 +754,6 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	return claimedTasks, nil
 }
-
 
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {
