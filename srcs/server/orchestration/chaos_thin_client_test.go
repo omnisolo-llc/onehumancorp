@@ -58,6 +58,29 @@ func TestSIPDB_ThinClient_LatencySpike(t *testing.T) {
 		t.Logf("Thin client fail-safe triggered successfully in %v: %v", duration, err)
 	}
 
+	// Test SyncMissions fail-safe
+	err = dbInstance.UpsertMission(ctx, "mission-1", "PENDING", "{\"val\": 1}", false)
+	if err != nil {
+		t.Fatalf("Failed to upsert mission: %v", err)
+	}
+
+	shortCtx4, shortCancel4 := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer shortCancel4()
+
+	start4 := time.Now()
+	_, err = dbInstance.SyncMissions(shortCtx4, slowServer.URL)
+	duration4 := time.Since(start4)
+
+	if err == nil {
+		t.Fatalf("Expected SyncMissions to fail due to context deadline exceeded, but it succeeded")
+	}
+
+	if duration4 > 1*time.Second {
+		t.Errorf("SyncMissions took too long to fail-safe (%v), expected to timeout quickly", duration4)
+	} else {
+		t.Logf("SyncMissions fail-safe triggered successfully in %v: %v", duration4, err)
+	}
+
 	// 2. Test SyncContextSync fail-safe
 	err = dbInstance.StoreEpisodicMemory(ctx, EpisodicMemory{
 		MemoryID: "mem-1",
@@ -104,32 +127,62 @@ func TestSIPDB_ThinClient_LatencySpike(t *testing.T) {
 
 // TestSIPDB_ThinClient_ConnectionDrop verifies behavior when the connection is refused.
 func TestSIPDB_ThinClient_ConnectionDrop(t *testing.T) {
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "thin_client_conn_drop.db")
+	t.Run("SyncBufferedMetrics", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "thin_client_conn_drop.db")
 
-	dbInstance, err := NewSIPDB(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create SIPDB: %v", err)
-	}
-	defer dbInstance.Close()
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
 
-	// Use a non-routable / non-listening port
-	badURL := "http://127.0.0.1:0"
+		badURL := "http://127.0.0.1:0"
 
-	err = dbInstance.BufferMetric(ctx, "test-metric", "{\"val\": 1}")
-	if err != nil {
-		t.Fatalf("Failed to buffer metric: %v", err)
-	}
+		err = dbInstance.BufferMetric(ctx, "test-metric", "{\"val\": 1}")
+		if err != nil {
+			t.Fatalf("Failed to buffer metric: %v", err)
+		}
 
-	start := time.Now()
-	_, err = dbInstance.SyncBufferedMetrics(ctx, badURL)
-	duration := time.Since(start)
+		start := time.Now()
+		_, err = dbInstance.SyncBufferedMetrics(ctx, badURL)
+		duration := time.Since(start)
 
-	if err == nil {
-		t.Fatalf("Expected SyncBufferedMetrics to fail due to connection refused, but it succeeded")
-	}
-	t.Logf("SyncBufferedMetrics fail-safe on connection drop triggered successfully in %v: %v", duration, err)
+		if err == nil {
+			t.Fatalf("Expected SyncBufferedMetrics to fail due to connection refused, but it succeeded")
+		}
+		t.Logf("SyncBufferedMetrics fail-safe on connection drop triggered successfully in %v: %v", duration, err)
+	})
+
+	t.Run("SyncMissions", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "thin_client_conn_drop_missions.db")
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		badURL := "http://127.0.0.1:0"
+
+		err = dbInstance.UpsertMission(ctx, "mission-1", "PENDING", "{\"val\": 1}", false)
+		if err != nil {
+			t.Fatalf("Failed to upsert mission: %v", err)
+		}
+
+		start := time.Now()
+		_, err = dbInstance.SyncMissions(ctx, badURL)
+		duration := time.Since(start)
+		if err == nil {
+			t.Fatalf("Expected SyncMissions to fail due to connection refused, but it succeeded")
+		}
+		t.Logf("SyncMissions fail-safe on connection drop triggered successfully in %v: %v", duration, err)
+	})
 }
