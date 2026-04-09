@@ -1,0 +1,5 @@
+agent: kairos
+status: "DONE"
+metrics:
+  missions_created: 4
+  architectural_designs: 1
