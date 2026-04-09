@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Sentry
+role: MAINTAINER
+status: healthy
+metrics:
+  mode_parity_audits_passed: 1
+  livelocks_resolved: 1

@@ -504,84 +504,25 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		// Fetch previous state for telemetry
 		_ = tx.QueryRow(ctx, "SELECT status, COALESCE(updated_at, created_at) FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&oldStatus, &prevTime)
 
-		if s.db.IsSQLite() {
-			// SQLite simple UPSERT
-			upsertQuery := `
+		// Standard UPSERT compatible with both SQLite and Postgres
+		upsertQuery := `
+			INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+			VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+			ON CONFLICT(id) DO NOTHING
+		`
+		if forceLocal {
+			upsertQuery = `
 				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
 				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-				ON CONFLICT(id) DO NOTHING
+				ON CONFLICT(id) DO UPDATE SET
+					status=EXCLUDED.status,
+					payload=EXCLUDED.payload,
+					updated_at=CURRENT_TIMESTAMP
 			`
-			if forceLocal {
-				upsertQuery = `
-					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-					ON CONFLICT(id) DO UPDATE SET
-						status=EXCLUDED.status,
-						payload=EXCLUDED.payload,
-						updated_at=CURRENT_TIMESTAMP
-				`
-			}
-			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Postgres with FOR UPDATE SKIP LOCKED
-			// Try to select existing row for update
-			var existingID string
-			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
-
-			if err != nil {
-				// Record doesn't exist or is locked by someone else.
-				// Since we skip locked, if it's locked we might just skip the insert/update to avoid contention,
-				// or we try inserting. For standard upsert logic without waiting:
-				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-					ON CONFLICT(id) DO NOTHING
-				`
-				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
-				if errInsert != nil {
-					return errInsert
-				}
-				// If forceLocal, we still want to update it if it was inserted successfully but not updated.
-				// However ON CONFLICT DO NOTHING will skip if it exists and wasn't locked.
-				// Actually, a simpler standard approach for Postgres with FOR UPDATE SKIP LOCKED is:
-			}
-
-			if forceLocal && existingID != "" {
-				updateQuery := `
-					UPDATE agent_missions
-					SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP
-					WHERE id = $3 AND organization_id = $4
-				`
-				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)
-				if errUpdate != nil {
-					return errUpdate
-				}
-			} else if existingID == "" {
-				// We tried to select and it failed (either not found or locked).
-				// We will try an insert ON CONFLICT.
-				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-					ON CONFLICT(id) DO NOTHING
-				`
-				if forceLocal {
-					insertQuery = `
-						INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-						ON CONFLICT(id) DO UPDATE SET
-							status=EXCLUDED.status,
-							payload=EXCLUDED.payload,
-							updated_at=CURRENT_TIMESTAMP
-					`
-				}
-				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
-				if errInsert != nil {
-					return errInsert
-				}
-			}
+		}
+		_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
+		if err != nil {
+			return err
 		}
 
 		return tx.Commit(ctx)
@@ -676,11 +617,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 		// 2. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
-		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
-		} else {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
-		}
+		_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 
 		return err
 	})

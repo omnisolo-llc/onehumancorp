@@ -1,0 +1,5 @@
+type: memory
+context: "Addressed SQLite and Postgres implementation parity in OHC Hybrid Architecture."
+observations:
+  - "Postgres branch of UpsertMission was using FOR UPDATE SKIP LOCKED which resulted in dropped updates under concurrent load because it skipped locked rows during upsert. Standardized on a consistent UPSERT strategy across both Postgres and SQLite."
+  - "Consolidated divergent logic blocks in UpsertMission and PruneStaleMissions to ensure absolute mode parity and reduce chaos-related bugs."

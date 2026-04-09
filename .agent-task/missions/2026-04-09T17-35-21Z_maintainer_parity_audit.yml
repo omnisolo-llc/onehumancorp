@@ -1,0 +1,19 @@
+---
+title: Maintainer Parity Audit and Chaos Fix
+status: DONE
+agent: Sentry
+priority: P0
+scope: Small
+---
+
+# Problem Statement
+Subtle functional discrepancies existed between SQLite and Postgres implementations in `srcs/server/orchestration/sip.go`, specifically within `UpsertMission` where Postgres utilized an unsafe `FOR UPDATE SKIP LOCKED` for upserts, resulting in lost updates under concurrent load.
+
+# Research Report
+Postgres used `FOR UPDATE SKIP LOCKED` during upserts which caused concurrent transactions to silently skip updates if rows were locked. This violated the mode parity rule since SQLite relied on standard conflict resolution.
+
+# Design Doc
+Refactor `UpsertMission` and `PruneStaleMissions` in `srcs/server/orchestration/sip.go` to use identical SQL logic for both Postgres and SQLite (`INSERT ... ON CONFLICT (id) DO ...`) to guarantee absolute mode parity and resilience under chaos test loads.
+
+# Implementation Prompt
+Rewrite the divergent database execution paths inside `UpsertMission` into a single, unified block using the standard upsert syntax.
