@@ -1,0 +1,6 @@
+description: "Implementation of HybridFSMCP, resolving path traversal, cloud multi-tenant directory scoping, and error message masking."
+module: hybridfsmcp
+agent: Taskmaster
+learnings:
+  - "When adding new MCP tools to mono repo, the standard definition is a `Tool` struct specific to that package."
+  - "Always mask out sensitive or fully qualified server paths from `error.Error()` output returned via MCP using `strings.ReplaceAll`."
