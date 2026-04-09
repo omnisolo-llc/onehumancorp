@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"google.golang.org/protobuf/proto"
+
 	"context"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"encoding/json"
@@ -296,8 +298,9 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 	return ch, nil
 }
 
+
 func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
-	data, err := json.Marshal(caps)
+	data, err := proto.Marshal(&caps)
 	if err != nil {
 		return err
 	}
@@ -312,7 +315,7 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:capabilities").Build(), func(msg rueidis.PubSubMessage) {
 			var c pb.AgentCapabilities
-			if err := json.Unmarshal([]byte(msg.Message), &c); err == nil {
+			if err := proto.Unmarshal([]byte(msg.Message), &c); err == nil {
 				select {
 				case ch <- c:
 				default:
@@ -352,7 +355,6 @@ func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic str
 	}()
 	return ch, nil
 }
-
 
 func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 	opt, err := rueidis.ParseURL(redisURL)

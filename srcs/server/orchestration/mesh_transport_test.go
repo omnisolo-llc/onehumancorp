@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"context"
 	"encoding/json"
 	"testing"
@@ -107,3 +109,80 @@ func TestMemoryMeshTransport_MeshEvents(t *testing.T) {
 // Minimal placeholder for Redis tests.
 // Full integration test for Redis mesh requires a running Redis instance,
 // which is usually handled in chaos_mesh_test.go or similar integration suites.
+
+func TestRedisMeshTransport_Capabilities(t *testing.T) {
+	if os.Getenv("REDIS_URL") == "" {
+		t.Skip("Skipping RedisMeshTransport capabilities test (REDIS_URL not set)")
+	}
+
+	transport, err := NewRedisMeshTransport(os.Getenv("REDIS_URL"))
+	if err != nil {
+		t.Fatalf("Failed to create RedisMeshTransport: %v", err)
+	}
+	defer transport.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	capsChan, err := transport.SubscribeCapabilities(ctx)
+	if err != nil {
+		t.Fatalf("Failed to subscribe to capabilities: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	testCaps := pb.AgentCapabilities{
+		AgentId: "test-agent-1",
+		SupportedSkills: []string{"skill1", "skill2"},
+	}
+
+	if err := transport.AdvertiseCapabilities(ctx, testCaps); err != nil {
+		t.Fatalf("Failed to advertise capabilities: %v", err)
+	}
+
+	select {
+	case receivedCaps := <-capsChan:
+		if receivedCaps.AgentId != "test-agent-1" {
+			t.Errorf("Expected AgentId 'test-agent-1', got '%s'", receivedCaps.AgentId)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for capability advertisement")
+	}
+}
+
+func TestRedisMeshTransport_MeshEvents(t *testing.T) {
+	if os.Getenv("REDIS_URL") == "" {
+		t.Skip("Skipping RedisMeshTransport mesh events test (REDIS_URL not set)")
+	}
+
+	transport, err := NewRedisMeshTransport(os.Getenv("REDIS_URL"))
+	if err != nil {
+		t.Fatalf("Failed to create RedisMeshTransport: %v", err)
+	}
+	defer transport.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	eventsChan, err := transport.SubscribeMeshEvents(ctx, "test_topic")
+	if err != nil {
+		t.Fatalf("Failed to subscribe to mesh events: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	payload := []byte("test-payload")
+
+	if err := transport.BroadcastMeshEvent(ctx, "test_topic", payload); err != nil {
+		t.Fatalf("Failed to broadcast mesh event: %v", err)
+	}
+
+	select {
+	case receivedPayload := <-eventsChan:
+		if string(receivedPayload) != string(payload) {
+			t.Errorf("Expected payload '%s', got '%s'", payload, string(receivedPayload))
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for mesh event")
+	}
+}
