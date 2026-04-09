@@ -13,6 +13,9 @@
 package orchestration
 
 import (
+	"time"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -189,6 +192,13 @@ func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
 // PublishTaskBroadcast fans out a task update to all subscribers of the
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(context.Background(), "PublishTaskBroadcast", time.Since(start))
+	}()
+
+	telemetry.RecordTeammateMeshBroadcast(context.Background(), "mesh:tasks")
+
 	if cn.meshTransport != nil {
 		data, err := json.Marshal(payload)
 		if err == nil {

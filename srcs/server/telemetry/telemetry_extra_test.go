@@ -176,3 +176,23 @@ func TestMinimaxMetricsUninitialized(t *testing.T) {
 	RecordMinimaxCall(context.Background(), "model1", 1.5, nil)
 	minimaxCallsCounter = origMinimaxCalls
 }
+
+func TestRecordTeammateMeshBroadcast(t *testing.T) {
+	// Setup dummy counter
+	InitTelemetry()
+	RecordTeammateMeshBroadcast(context.Background(), "test-channel")
+	// If it doesn't panic, it passes.
+}
+
+func TestRecordMeshBroadcast(t *testing.T) {
+	// Setup dummy counter
+	InitTelemetry()
+	RecordMeshBroadcast(context.Background(), "test-mode")
+	// If it doesn't panic, it passes.
+}
+
+func TestRecordMeshLatency(t *testing.T) {
+	InitTelemetry()
+	RecordMeshLatency(context.Background(), "test-op", 100*time.Millisecond)
+	// If it doesn't panic, it passes.
+}

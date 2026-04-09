@@ -387,6 +387,11 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 }
 
 func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordMeshLatency(stream.Context(), "StreamMeshEvents", time.Since(start))
+	}()
+
 	if s.mesh == nil {
 		return fmt.Errorf("mesh transport not configured")
 	}
@@ -413,6 +418,7 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			if err := stream.Send(event); err != nil {
 				return err
 			}
+			telemetry.RecordMeshBroadcast(ctx, "stream")
 		}
 	}
 }
