@@ -21,6 +21,8 @@ import (
 
 var (
 	meter            metric.Meter
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal    metric.Int64Counter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
@@ -135,6 +137,15 @@ func InitTelemetry() (func(), error) {
 	otel.SetMeterProvider(provider)
 
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
+	RAGRecordsSyncedTotal, _ = meter.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	RAGSyncErrorsTotal, _ = meter.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+
 
 	err = InitWithMeter(meter)
 	if err != nil {
@@ -1011,4 +1022,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGSyncSuccess increments the global counter for successful RAG syncs.
+func RecordRAGSyncSuccess(ctx context.Context) {
+	if RAGRecordsSyncedTotal == nil {
+		return
+	}
+	RAGRecordsSyncedTotal.Add(ctx, 1)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if RAGSyncErrorsTotal == nil {
+		return
+	}
+	RAGSyncErrorsTotal.Add(ctx, 1)
 }
