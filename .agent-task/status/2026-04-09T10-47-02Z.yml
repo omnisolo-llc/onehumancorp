@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: jules
+role: RESEARCHER
+status: HEALTHY
+metrics:
+  missions_created: 1
+  coordination_messages_sent: 1
+  systems_designed: 4
