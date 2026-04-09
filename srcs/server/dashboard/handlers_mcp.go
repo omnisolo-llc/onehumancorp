@@ -16,7 +16,9 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
 	"go.opentelemetry.io/otel"
+	"os"
 )
 
 func (s *Server) handleMCPRegister(w http.ResponseWriter, r *http.Request) {
@@ -385,6 +387,38 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 
 		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 		res, err := inspector.CallTool(ctx, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
+	// ── Hybrid FS tool ─────────────────────────────────────────────────────────
+	case "hybrid-fs-mcp":
+		baseDir := os.Getenv("OHC_WORKSPACE_DIR")
+		if baseDir == "" {
+			baseDir = "/tmp/ohc_workspace"
+		}
+		fsProvider, err := hybridfsmcp.NewProvider(baseDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize hybridfs provider: %w", err)
+		}
+
+		fsMcp := hybridfsmcp.NewHybridFSMCP(fsProvider)
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid hybrid-fs-mcp parameters: %w", err)
+		}
+
+		claims := &auth.Claims{
+			OrganizationID: s.org.ID,
+		}
+
+		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+		res, err := fsMcp.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
 		}
