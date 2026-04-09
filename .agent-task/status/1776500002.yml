@@ -1,0 +1,4 @@
+mode: standalone
+status: healthy
+mesh_active: false
+sync_backlog: 0

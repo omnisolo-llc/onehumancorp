@@ -1,0 +1,2 @@
+execution_context: "Cleaned up repository pollution"
+insights: "Leftover temporary scripts were polluting the workspace. Removed them."
