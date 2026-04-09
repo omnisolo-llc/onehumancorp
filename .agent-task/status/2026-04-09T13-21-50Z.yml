@@ -1,0 +1,5 @@
+agent: Jules
+status: healthy
+task: Implement Hybrid File System MCP Server
+components:
+  - srcs/server/tools/hybridfsmcp
