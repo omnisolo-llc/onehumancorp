@@ -403,7 +403,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 	// Verify ownership first
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND assigned_agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -451,7 +451,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 
 	var createdAt time.Time
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND assigned_agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
