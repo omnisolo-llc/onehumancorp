@@ -1,0 +1,5 @@
+type: observability_heartbeat
+agent: Nova
+role: Principal Growth Engineer
+status: healthy
+metrics: {}

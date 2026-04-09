@@ -25,7 +25,7 @@ void main() {
     );
   }
 
-  testWidgets('displays list of referrals', (tester) async {
+  testWidgets('displays list of referrals and K-Factor', (tester) async {
     when(() => mockApiService.listReferrals()).thenAnswer(
       (_) async => [
         {
@@ -38,6 +38,14 @@ void main() {
         },
       ],
     );
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {
+        'totalReferrals': 100,
+        'totalConversions': 25,
+        'uniqueInviters': 10,
+        'kFactor': 2.5,
+      },
+    );
 
     await tester.pumpWidget(buildTestWidget());
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -45,6 +53,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Viral Loop Dashboard'), findsOneWidget);
+
+    // K-Factor checks
+    expect(find.text('Viral Coefficient (K-Factor)'), findsOneWidget);
+    expect(find.text('2.50'), findsOneWidget);
+    expect(find.text('100'), findsOneWidget);
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('10'), findsOneWidget);
+
+    // Referral card checks
     expect(find.text('Ref: JULES2026'), findsOneWidget);
     expect(find.text('User: jules'), findsOneWidget);
     expect(find.text('42'), findsOneWidget);
@@ -55,15 +72,26 @@ void main() {
 
   testWidgets('displays empty state', (tester) async {
     when(() => mockApiService.listReferrals()).thenAnswer((_) async => []);
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {
+        'totalReferrals': 0,
+        'totalConversions': 0,
+        'uniqueInviters': 0,
+        'kFactor': 0.0,
+      },
+    );
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
     expect(find.text('No referrals tracked yet.'), findsOneWidget);
+    expect(find.text('0.00'), findsOneWidget);
   });
 
   testWidgets('displays error state', (tester) async {
     when(() => mockApiService.listReferrals())
+        .thenAnswer((_) => Future.error(Exception('API failure')));
+    when(() => mockApiService.getViralCoefficient())
         .thenAnswer((_) => Future.error(Exception('API failure')));
 
     await tester.pumpWidget(buildTestWidget());
