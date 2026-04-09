@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
+	"time"
 )
 
 func TestHandleLandingPageExperiments(t *testing.T) {
@@ -156,5 +156,46 @@ func TestHandleReferrals(t *testing.T) {
 	}
 	if list[0].ID != created.ID {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
+func TestHandleViralCoefficientTimeSeries(t *testing.T) {
+	now := time.Now().UTC()
+	yesterday := now.Add(-24 * time.Hour)
+
+	s := &Server{
+		referrals: []Referral{
+			{UserID: "user-1", Conversions: 2, CreatedAt: now},
+			{UserID: "user-2", Conversions: 4, CreatedAt: now},
+			{UserID: "user-1", Conversions: 1, CreatedAt: yesterday},
+		},
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/viral-coefficient/timeseries", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleViralCoefficientTimeSeries(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var res ViralCoefficientTimeSeriesResponse
+	if err := json.NewDecoder(wGet.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(res.Data) != 2 {
+		t.Fatalf("expected 2 days of data, got %d", len(res.Data))
+	}
+
+	// yesterday's stats (first because sorted by date)
+	if res.Data[0].TotalConversions != 1 || res.Data[0].UniqueInviters != 1 || res.Data[0].KFactor != 1.0 {
+		t.Errorf("yesterday's stats wrong: %+v", res.Data[0])
+	}
+
+	// today's stats
+	if res.Data[1].TotalConversions != 6 || res.Data[1].UniqueInviters != 2 || res.Data[1].KFactor != 3.0 {
+		t.Errorf("today's stats wrong: %+v", res.Data[1])
 	}
 }

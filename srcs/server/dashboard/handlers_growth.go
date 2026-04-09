@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -186,5 +187,65 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 		UniqueInviters:   uniqueInviters,
 		KFactor:          kFactor,
 	}
+	writeJSON(w, res)
+}
+
+type ViralCoefficientTimeSeriesData struct {
+	Date             string  `json:"date"`
+	TotalReferrals   int     `json:"totalReferrals"`
+	TotalConversions int     `json:"totalConversions"`
+	UniqueInviters   int     `json:"uniqueInviters"`
+	KFactor          float64 `json:"kFactor"`
+}
+
+type ViralCoefficientTimeSeriesResponse struct {
+	Data []ViralCoefficientTimeSeriesData `json:"data"`
+}
+
+func (s *Server) handleViralCoefficientTimeSeries(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	refs := append([]Referral(nil), s.referrals...)
+	s.mu.RUnlock()
+
+	dailyStats := make(map[string]*ViralCoefficientTimeSeriesData)
+
+	for _, ref := range refs {
+		dateStr := ref.CreatedAt.Format("2006-01-02")
+		if dailyStats[dateStr] == nil {
+			dailyStats[dateStr] = &ViralCoefficientTimeSeriesData{Date: dateStr}
+		}
+		dailyStats[dateStr].TotalReferrals++
+		dailyStats[dateStr].TotalConversions += ref.Conversions
+	}
+
+	dailyInviters := make(map[string]map[string]bool)
+	for _, ref := range refs {
+		dateStr := ref.CreatedAt.Format("2006-01-02")
+		if dailyInviters[dateStr] == nil {
+			dailyInviters[dateStr] = make(map[string]bool)
+		}
+		dailyInviters[dateStr][ref.UserID] = true
+	}
+
+	var resData []ViralCoefficientTimeSeriesData
+	for dateStr, stats := range dailyStats {
+		stats.UniqueInviters = len(dailyInviters[dateStr])
+		if stats.UniqueInviters > 0 {
+			stats.KFactor = float64(stats.TotalConversions) / float64(stats.UniqueInviters)
+		}
+		resData = append(resData, *stats)
+	}
+
+	// Sort resData by date ascending
+	sort.Slice(resData, func(i, j int) bool {
+		return resData[i].Date < resData[j].Date
+	})
+
+	res := ViralCoefficientTimeSeriesResponse{Data: resData}
 	writeJSON(w, res)
 }
