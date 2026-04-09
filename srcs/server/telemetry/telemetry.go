@@ -51,6 +51,9 @@ var (
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal metric.Int64Counter
+
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
@@ -172,6 +175,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	MeshLatencyRecorder, err = m.Float64Histogram(
 		"ohc_mesh_latency",
 		metric.WithDescription("Latency of Teammate Mesh RPC operations"),
