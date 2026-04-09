@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS shared_tasks (
+    organization_id VARCHAR NOT NULL DEFAULT 'system',
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mission_id TEXT NOT NULL,
     title TEXT NOT NULL,

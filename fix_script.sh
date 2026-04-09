@@ -1,0 +1,1 @@
+sed -i 's/CREATE TABLE IF NOT EXISTS shared_tasks (/CREATE TABLE IF NOT EXISTS shared_tasks (\n    organization_id VARCHAR NOT NULL DEFAULT '"'"'system'"'"',/' srcs/server/db/migrations/007_teammate_mesh_and_autodream.sql
