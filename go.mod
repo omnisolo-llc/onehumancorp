@@ -11,9 +11,9 @@ require (
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/redis/rueidis v1.0.68
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.42.0
+	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.53.0
-	go.opentelemetry.io/otel/metric v1.42.0
+	go.opentelemetry.io/otel/metric v1.43.0
 	go.opentelemetry.io/otel/sdk/metric v1.39.0
 	golang.org/x/crypto v0.46.0
 	google.golang.org/grpc v1.79.3
@@ -57,7 +57,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/sdk v1.39.0 // indirect
-	go.opentelemetry.io/otel/trace v1.42.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/net v0.48.0 // indirect
