@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: jules
+role: IMPLEMENTER
+status: "HEALTHY"
+metrics:
+  tasks_completed: 1
+  uptime: "1h"
