@@ -363,6 +363,21 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 	}
 }
 
+
+// AdvertiseCapabilities implementation
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.mesh == nil {
+		return nil, status.Errorf(codes.Internal, "mesh transport not configured")
+	}
+
+	err := s.mesh.AdvertiseCapabilities(ctx, *req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to advertise capabilities: %v", err)
+	}
+
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
 func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
 	if s.mesh == nil {
 		return fmt.Errorf("mesh transport not configured")
