@@ -1,0 +1,36 @@
+package hub
+
+import (
+	"context"
+	"time"
+
+	"go.opentelemetry.io/otel"
+)
+
+var (
+	meter                    = otel.Meter("github.com/onehumancorp/mono/srcs/server/hub")
+	ragRecordsSyncedTotal, _ = meter.Int64Counter("rag_records_synced_total")
+	ragSyncErrorsTotal, _    = meter.Int64Counter("rag_sync_errors_total")
+)
+
+type SyncStatus string
+
+const (
+	SyncStatusPending SyncStatus = "pending"
+	SyncStatusSynced  SyncStatus = "synced"
+	SyncStatusError   SyncStatus = "error"
+)
+
+type RAGSyncRecord struct {
+	ID         string
+	Context    string
+	Vector     []float32
+	SyncStatus SyncStatus
+	LastSyncAt time.Time
+}
+
+type RAGSyncService interface {
+	FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error)
+	MarkSynced(ctx context.Context, ids []string) error
+	ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
+}
