@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Guide
+role: IMPLEMENTER
+status: HEALTHY
+metrics:
+  tests_passed: true
+  rag_sync_implemented: true
