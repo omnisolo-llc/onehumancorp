@@ -1,0 +1,16 @@
+--- srcs/server/orchestration/tasks_db_test.go
++++ srcs/server/orchestration/tasks_db_test.go
+@@ -9,10 +9,12 @@
+ )
+
+ func TestClaimTask_SQLite(t *testing.T) {
+-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
++	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	if err != nil {
+-		t.Fatalf("failed to create sqlite provider: %v", err)
++		t.Fatalf("failed to open sqlite connection: %v", err)
+	}
++	defer sqlDB.Close()
++	dbProvider := db.NewSqliteProvider(sqlDB)
+
+	ctx := context.Background()

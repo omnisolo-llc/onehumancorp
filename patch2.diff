@@ -1,0 +1,33 @@
+--- srcs/server/orchestration/tasks_db_test.go
++++ srcs/server/orchestration/tasks_db_test.go
+@@ -3,17 +3,20 @@
+ import (
+	"context"
+	"testing"
++	"database/sql"
+
+	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/db"
+ )
+
+ func TestClaimTask_SQLite(t *testing.T) {
+-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
++	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	if err != nil {
+-		t.Fatalf("failed to create sqlite provider: %v", err)
++		t.Fatalf("failed to open sqlite connection: %v", err)
+	}
++	defer sqlDB.Close()
++	dbProvider := db.NewSqliteProvider(sqlDB)
+
+	ctx := context.Background()
+@@ -47,7 +50,7 @@
+	claims := &auth.Claims{
+		OrganizationID: "org-1",
+	}
+	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+
+-	to := NewTaskOrchestrator(dbProvider)
++	to := NewSharedTaskDBManager(dbProvider)
+
+	// Claim the task

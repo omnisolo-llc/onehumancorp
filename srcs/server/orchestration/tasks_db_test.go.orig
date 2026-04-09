@@ -10,12 +10,10 @@ import (
 )
 
 func TestClaimTask_SQLite(t *testing.T) {
-	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
 	if err != nil {
-		t.Fatalf("failed to open sqlite connection: %v", err)
+		t.Fatalf("failed to create sqlite provider: %v", err)
 	}
-	defer sqlDB.Close()
-	dbProvider := db.NewSqliteProvider(sqlDB)
 
 	ctx := context.Background()
 
@@ -52,7 +50,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 	}
 	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
-	to := NewSharedTaskDBManager(dbProvider)
+	to := NewTaskOrchestrator(dbProvider)
 
 	// Claim the task
 	task, err := to.ClaimTask(ctxWithClaims, "agent-1")
