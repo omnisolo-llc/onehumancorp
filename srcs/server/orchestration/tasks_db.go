@@ -23,35 +23,35 @@ type SharedTaskDB struct {
 	UpdatedAt       string
 }
 
-type TaskOrchestrator struct {
+type SharedTaskRepository struct {
 	dbProvider db.Provider
 	mu         sync.Mutex // For SQLite concurrent assignment locking
 }
 
-func NewTaskOrchestrator(dbProvider db.Provider) *TaskOrchestrator {
-	return &TaskOrchestrator{
+func NewSharedTaskRepository(dbProvider db.Provider) *SharedTaskRepository {
+	return &SharedTaskRepository{
 		dbProvider: dbProvider,
 	}
 }
 
 // ClaimTask attempts to claim a task. Returns the task ID and an error if one occurred.
-func (to *TaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
+func (r *SharedTaskRepository) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized: missing claims")
 	}
 
-	if to.dbProvider.IsSQLite() {
-		return to.claimTaskSQLite(ctx, claims.OrganizationID, agentID)
+	if r.dbProvider.IsSQLite() {
+		return r.claimTaskSQLite(ctx, claims.OrganizationID, agentID)
 	}
-	return to.claimTaskPostgres(ctx, claims.OrganizationID, agentID)
+	return r.claimTaskPostgres(ctx, claims.OrganizationID, agentID)
 }
 
-func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-	to.mu.Lock()
-	defer to.mu.Unlock()
+func (r *SharedTaskRepository) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	tx, err := to.dbProvider.Begin(ctx)
+	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -59,7 +59,7 @@ func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID 
 
 	// In SQLite we use a simple SELECT then UPDATE in a transaction, protected by application mutex
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
+		SELECT id, organization_id, parent_plan_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
 		FROM shared_tasks
 		WHERE organization_id = $1 AND status = 'PENDING'
 		LIMIT 1
@@ -81,7 +81,7 @@ func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID 
 
 	updateQuery := `
 		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
@@ -98,8 +98,8 @@ func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID 
 	return task, nil
 }
 
-func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-	tx, err := to.dbProvider.Begin(ctx)
+func (r *SharedTaskRepository) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -107,7 +107,7 @@ func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentI
 
 	// In Postgres we can use FOR UPDATE SKIP LOCKED
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
+		SELECT id, organization_id, parent_plan_id, title, description, status, assigned_agent_id, dependencies, created_at, updated_at
 		FROM shared_tasks
 		WHERE organization_id = $1 AND status = 'PENDING'
 		LIMIT 1
@@ -129,7 +129,7 @@ func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentI
 
 	updateQuery := `
 		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)

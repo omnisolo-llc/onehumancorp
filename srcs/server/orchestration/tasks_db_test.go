@@ -2,18 +2,22 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
 
 func TestClaimTask_SQLite(t *testing.T) {
-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+	sqliteDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		t.Fatalf("failed to create sqlite provider: %v", err)
+		t.Fatalf("failed to open sqlite: %v", err)
 	}
+	defer sqliteDB.Close()
 
+	dbProvider := db.NewSqliteProvider(sqliteDB)
 	ctx := context.Background()
 
 	// Create table manually since we might not run migrations in this test or wait for them
@@ -25,7 +29,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			dependencies JSONB,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -49,10 +53,10 @@ func TestClaimTask_SQLite(t *testing.T) {
 	}
 	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
-	to := NewTaskOrchestrator(dbProvider)
+	r := NewSharedTaskRepository(dbProvider)
 
 	// Claim the task
-	task, err := to.ClaimTask(ctxWithClaims, "agent-1")
+	task, err := r.ClaimTask(ctxWithClaims, "agent-1")
 	if err != nil {
 		t.Fatalf("ClaimTask failed: %v", err)
 	}
@@ -74,7 +78,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 	}
 
 	// Try to claim another task, should return nil
-	task2, err := to.ClaimTask(ctxWithClaims, "agent-2")
+	task2, err := r.ClaimTask(ctxWithClaims, "agent-2")
 	if err != nil {
 		t.Fatalf("ClaimTask failed: %v", err)
 	}
