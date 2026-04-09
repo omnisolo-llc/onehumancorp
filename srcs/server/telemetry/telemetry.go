@@ -59,6 +59,8 @@ var (
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
 	autoDreamSyncDuration       metric.Float64Histogram
+	ragRecordsSyncedTotal       metric.Int64Counter
+	ragSyncErrorsTotal          metric.Int64Counter
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
 
@@ -428,6 +430,22 @@ func InitWithMeter(m mockableMeter) error {
 	sqliteRetryExhaustedCounter, err = m.Int64Counter(
 		"ohc_sqlite_retry_exhausted_total",
 		metric.WithDescription("Total times an SQLite transaction failed after exhausting retries."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced to cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1010,5 +1028,19 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordRAGRecordsSynced increments the total count of successfully synced RAG records.
+func RecordRAGRecordsSynced(ctx context.Context, count int) {
+	if ragRecordsSyncedTotal != nil {
+		ragRecordsSyncedTotal.Add(ctx, int64(count))
+	}
+}
+
+// RecordRAGSyncError increments the total count of errors during RAG sync.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal != nil {
+		ragSyncErrorsTotal.Add(ctx, 1)
 	}
 }
