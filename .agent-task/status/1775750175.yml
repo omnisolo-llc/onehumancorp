@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Jules
+role: Maintainer
+status: OK
+metrics:
+  health: 100
+  tasks_cleaned: 18
