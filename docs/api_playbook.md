@@ -93,4 +93,33 @@
   <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>GET /api/health</code></pre>
 </div>
 
+## Model Context Protocol (MCP)
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <p>The Model Context Protocol (MCP) bridges the gap between agentic reasoning and external system tools. Within the OHC Hybrid Architecture, MCP tools dynamically adapt based on the deployment mode.</p>
+</div>
+
+### BlobInspector MCP
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <p>The BlobInspector MCP exposes unstructured storage capabilities safely across both Cloud and Standalone environments.</p>
+  <ul>
+    <li><code>list_blobs</code>: Lists blobs under a given prefix. In Cloud Mode, results are securely scoped to the tenant's virtual directory.</li>
+    <li><code>read_blob_metadata</code>: Retrieves metadata for a specific blob.</li>
+    <li><code>get_blob_url</code>: Retrieves an accessible URL for a specific blob.</li>
+  </ul>
+
+  <h4 style="margin-top: 1rem;">Hybrid Architecture Routing</h4>
+  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;" markdown="1">
+    ```mermaid
+    graph TD
+      A[Agent Context] -->|MCP Tool Call| B(BlobInspector MCP)
+      B --> C{Deployment Mode}
+      C -->|Cloud Mode| D[Tenant Auth Scoped Prefix]
+      D --> E[Multi-Tenant S3/Blob Storage]
+      C -->|Standalone Mode| F[Local Workspace Directory]
+      F --> G[Local SQLite/File System]
+    ```
+  </div>
+</div>
+
 </div>

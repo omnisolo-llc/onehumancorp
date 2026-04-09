@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: Scribe
+role: Principal Technical Writer
+status: HEALTHY
+metrics:
+  missions_blocked: 2
+  missions_completed: 1
+  uptime_seconds: 3600
