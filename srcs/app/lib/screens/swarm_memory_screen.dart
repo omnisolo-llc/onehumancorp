@@ -5,6 +5,7 @@ import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart' hide Column, Row;
 // import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:ohc_app/widgets/glass_card.dart';
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
   const SwarmMemoryScreen({super.key});
