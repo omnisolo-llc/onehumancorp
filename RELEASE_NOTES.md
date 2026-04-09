@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
+- Scaling (Cloud): Added Hybrid Local-to-Cloud State Sync MCP Proxy for standalone contexts, allowing tools to sync localized insights directly to the cloud Postgres state seamlessly.
+- Privacy/Offline (Standalone): Extended Standalone desktop wrapper to support secure payload sync protocols for OHC-SIP telemetry bridging.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.9] - 2026-04-09
+
+### Added
+- Added Hybrid Local-to-Cloud State Sync MCP Proxy for standalone contexts.
+
 ## [0.2.8] - 2026-04-03
 
 ### Added
