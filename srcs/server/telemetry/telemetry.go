@@ -47,6 +47,9 @@ var (
 	TaskProcessingLatency      metric.Float64Histogram
 	AgentTransitionLatency     metric.Float64Histogram
 
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal    metric.Int64Counter
+
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
@@ -208,6 +211,22 @@ func InitWithMeter(m mockableMeter) error {
 	SyncEscalationsCount, err = m.Int64Counter(
 		"ohc.sync.escalations.count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -983,6 +1002,22 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 			attribute.String("deployment_mode", mode),
 		))
 	}
+}
+
+// RecordRAGRecordSynced increments the global counter for successful RAG syncs.
+func RecordRAGRecordSynced(ctx context.Context) {
+	if RAGRecordsSyncedTotal == nil {
+		return
+	}
+	RAGRecordsSyncedTotal.Add(ctx, 1)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if RAGSyncErrorsTotal == nil {
+		return
+	}
+	RAGSyncErrorsTotal.Add(ctx, 1)
 }
 
 // RecordQueueLength adds a delta to the current queue length gauge.
