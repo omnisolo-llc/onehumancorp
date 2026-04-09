@@ -93,7 +93,7 @@ func (m *BlobInspectorMCP) resolveKey(claims *auth.Claims, key string) string {
 	cleanKey = strings.TrimPrefix(cleanKey, "/")
 
 	// Ensure we don't prepend if it already starts with it (which would be weird, but defensive)
-	if strings.HasPrefix(cleanKey, claims.OrganizationID+"/") {
+	if cleanKey == claims.OrganizationID || strings.HasPrefix(cleanKey, claims.OrganizationID+"/") {
 		return cleanKey
 	}
 
