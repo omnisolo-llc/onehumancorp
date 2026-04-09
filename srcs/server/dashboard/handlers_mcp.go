@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"context"
+	"os"
+	"github.com/onehumancorp/mono/srcs/server/agents/mcp/hybridfsmcp"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
@@ -247,6 +249,26 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 
 	switch req.ToolID {
 	// ── Communication tools ───────────────────────────────────────────────────
+	case "hybrid-fs-mcp":
+		var provider hybridfsmcp.FileSystemProvider
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			// Using os.TempDir as a fallback workspace
+			provider = &hybridfsmcp.LocalFSProvider{WorkspaceDir: os.TempDir()}
+		} else {
+			if req.AgentID == "" {
+				return nil, errors.New("unauthorized: missing agent/tenant ID")
+			}
+			provider = &hybridfsmcp.CloudFSProvider{TenantID: req.AgentID, BaseDir: os.TempDir()}
+		}
+
+		server := &hybridfsmcp.HybridFSServer{Provider: provider}
+		res, err := server.HandleToolCall(req.Params)
+		if err != nil {
+			return nil, err
+		}
+		res["HybridEscalation"] = true
+		return res, nil
+
 	case "telegram-mcp", "slack-mcp", "teams-mcp":
 		var p chatToolParams
 		// ⚡ BOLT: [JSON serialization thrashing on tool payloads] - Randomized Selection from Top 5
