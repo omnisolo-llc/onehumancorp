@@ -27,6 +27,8 @@ var (
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
+	RAGRecordsSyncedTotal      metric.Int64Counter
+	RAGSyncErrorsTotal         metric.Int64Counter
 	agentApiCallsCounter       metric.Int64Counter
 	agentApiErrorsCounter      metric.Int64Counter
 	humanInteractionsCounter   metric.Int64Counter
@@ -167,6 +169,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -716,6 +734,20 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
+// RecordRAGRecordsSynced updates the count of RAG records synced successfully
+func RecordRAGRecordsSynced(ctx context.Context, count int64) {
+	if RAGRecordsSyncedTotal != nil {
+		RAGRecordsSyncedTotal.Add(ctx, count)
+	}
+}
+
+// RecordRAGSyncErrors updates the count of RAG sync errors
+func RecordRAGSyncErrors(ctx context.Context, count int64) {
+	if RAGSyncErrorsTotal != nil {
+		RAGSyncErrorsTotal.Add(ctx, count)
+	}
+}
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
