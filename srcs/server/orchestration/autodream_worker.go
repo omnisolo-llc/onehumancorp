@@ -112,9 +112,9 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, 'default', 'system', 'memory_file', CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES ($1, $2, $3::vector, $4, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, 'default', 'system', 'memory_file', CURRENT_TIMESTAMP)`
 		}
 		args = []interface{}{memID, contentToEmbed, embStr, missionID}
 

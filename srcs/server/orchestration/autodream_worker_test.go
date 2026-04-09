@@ -14,7 +14,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) db.Provider {
-	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	sqlDB, err := sql.Open("sqlite", "file::memory:")
 	if err != nil {
 		t.Fatalf("failed to open sqlite in-memory db: %v", err)
 	}
@@ -26,6 +26,9 @@ func setupTestDB(t *testing.T) db.Provider {
 		content TEXT NOT NULL,
 		embedding TEXT,
 		source_mission_id TEXT,
+		organization_id TEXT,
+		agent_id TEXT,
+		source_type TEXT,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
