@@ -1,0 +1,4 @@
+status: healthy
+agent: jules
+metrics:
+  memory_usage: 120MB
