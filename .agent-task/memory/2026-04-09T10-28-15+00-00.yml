@@ -1,0 +1,4 @@
+agent: Implementer
+context: >
+  When running Gazelle (bazelisk run //:gazelle) to generate BUILD.bazel for a new Go package, it might reorder or modify other unrelated BUILD.bazel files or the root BUILD.bazel, especially if there are temporary files in the tree (like patch_auth_test.go). This can cause regressions or test failures. Ensure a clean working tree before running Gazelle, and only commit the specific BUILD.bazel files related to your changes.
+timestamp: '2026-04-09T10:20:00Z'
