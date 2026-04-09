@@ -275,10 +275,10 @@ class _LocalBackendStatusCardState
                 child: BackdropFilter(
                   filter: ImageFilter.compose(
                     outer: ColorFilter.matrix(const <double>[
-                      1.168, -0.153, -0.015, 0, 0,
-                      -0.046, 1.061, -0.015, 0, 0,
-                      -0.046, -0.152, 1.198, 0, 0,
-                      0, 0, 0, 1, 0,
+                                        2.168, -0.153, -0.015, 0, 0,
+                  -0.046, 2.061, -0.015, 0, 0,
+                  -0.046, -0.152, 2.198, 0, 0,
+                  0, 0, 0, 1, 0,
                     ]),
                     inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   ),
