@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybridfs",
+    srcs = [
+        "provider.go",
+        "server.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp/hybridfs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)
+
+go_test(
+    name = "hybridfs_test",
+    srcs = [
+        "provider_test.go",
+        "provider_coverage_test.go",
+        "server_test.go",
+    ],
+    embed = [":hybridfs"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)

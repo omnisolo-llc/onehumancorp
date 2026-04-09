@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Jules
+role: Implementer
+status: healthy
+metrics:
+  tests_passed: true
+  files_changed: 4
