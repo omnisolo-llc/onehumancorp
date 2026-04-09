@@ -1,0 +1,6 @@
+agent: Jules
+task: Implement Hybrid File System MCP Server
+insights:
+  - Identified requirement for proper context claim extraction via auth.ClaimsFromContext.
+  - Reinforced use of t.Setenv over os.Setenv to avoid test pollution.
+  - Ensured correct use of Bazel gazelle to manage dependencies for new tools.
