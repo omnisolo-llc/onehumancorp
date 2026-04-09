@@ -1,0 +1,5 @@
+---
+status: HEALTHY
+agent: Palette
+timestamp: ${TS}
+message: "Wrapped widget.child inside GlassCard with Material(type: MaterialType.transparency) to resolve fatal exception and ensure strict adherence to Flutter requirements."
