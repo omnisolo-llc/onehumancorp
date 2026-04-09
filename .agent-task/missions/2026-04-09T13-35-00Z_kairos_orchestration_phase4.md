@@ -1,0 +1,9 @@
+---
+Title: "KAIROS Orchestration Phase 4: Finalize Master Design Doc"
+Problem Statement: "The KAIROS AI OS Orchestration framework lacks a unified Master Design Document detailing Phase 1 (Shared Task List), Phase 2 (Teammate Mesh APIs), and Phase 3 (AutoDream Data Pipelines) for human readability and maintainability. A final premium design document is required."
+Research Report: "Based on `CLAUDE_OHC.md` and `README.md`, OHC operates in a Hybrid Architecture (`OHC-HA`). Features must degrade gracefully in Standalone Mode. The orchestration leverages PostgreSQL `FOR UPDATE SKIP LOCKED` (Cloud) and SQLite transactions (Standalone). Teammate Mesh uses CentrifugeNode/Redis. AutoDream leverages pgvector for embeddings. The Master Design Doc must synthesize these."
+Design Doc: "The Master Design Doc (`docs/KAIROS_ORCHESTRATOR_DESIGN.md`) should synthesize the three core pillars of the Swarm logic: 1. Shared Task List (The Brain): Database schemas like `swarm_tasks` and `state_machine_transitions`. 2. Teammate Mesh (The Nerves): Realtime Pub/Sub via Redis/Centrifuge. 3. AutoDream (The Memory): Vector storage via `consolidated_memory`. The UI/presentation of this doc must include the Visual Excellence Mandate CSS."
+Implementation Prompt: "As an Implementer, your task is to create or update the premium Design Doc at `docs/KAIROS_ORCHESTRATOR_DESIGN.md`. 1. Synthesize Phase 1, Phase 2, and Phase 3 architectures into a single document. 2. Include a Mermaid `sequenceDiagram` for UltraPlan Deliberation. 3. Include a Mermaid `graph TD` for the Unified Architecture Triad. 4. Apply the required Visual Excellence Mandate CSS: `<style>body { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; }</style>`. 5. Ensure all database migration references in Bazel build files (e.g. `srcs/server/db/BUILD.bazel`) are accurate and fully committed."
+Priority: "P0"
+Estimated Scope: "Small"
+---

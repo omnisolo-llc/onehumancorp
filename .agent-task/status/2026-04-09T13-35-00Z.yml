@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: jules
+role: Principal Product Architect & KAIROS Orchestrator (L7)
+status: HEALTHY
+metrics:
+  missions_created: 1
+  uptime_seconds: 3600
