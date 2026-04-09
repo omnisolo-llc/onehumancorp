@@ -1,18 +1,9 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Understand Problem & Setup**: Read the pending mission for "Integrate Hybrid File System MCP Server" at `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`.
+2. **Claim Mission**: Mark the mission as `IN_PROGRESS` and assign it to myself.
+3. **Design & Implementation**: Create `srcs/server/tools/hybridfsmcp` directory. Create `hybridfsmcp.go` with a `FileSystemProvider` interface defining `ReadFile`, `WriteFile`, `ListDir`, and `SearchFiles`. Implement `LocalFSProvider` with safety bounding and `CloudFSProvider` with `auth.Claims` scoping.
+4. **Build MCP Server Wrapper**: Create `mcp_server.go` to expose the providers as MCP tools (`read_file`, `write_file`, `list_directory`, `search_files`).
+5. **Add Tests & Coverage**: Create `hybridfsmcp_test.go` and `mcp_server_test.go` checking isolation bounds, interface usage, json serialization errors, missing claim context, dir traversal errors, testing standard execution flows. Iterate over these until `go tool cover` hits > 90% (achieved: 100%).
+6. **Build Rules**: Create `BUILD.bazel` so it runs natively and successfully over `bazelisk test //srcs/server/tools/hybridfsmcp/...`.
+7. **Complete Mission**: Mark the mission status to `DONE`.
+8. **Pre-commit**: Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+9. **Finalize**: Submit the change.
