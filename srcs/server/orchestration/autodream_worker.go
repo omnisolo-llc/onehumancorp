@@ -46,6 +46,10 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		client = NewMinimaxClient(minimaxKey)
 	}
 
+	if len(matches) > 500 {
+		matches = matches[:500]
+	}
+
 	for _, file := range matches {
 		data, err := os.ReadFile(file)
 		if err != nil {
