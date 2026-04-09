@@ -30,6 +30,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Interactive Welcome Tour"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -168,6 +169,23 @@ seed_mock_data() {
     fi
 }
 
+
+welcome_tour() {
+    echo -e "${BOLD}${BLUE}======================================================${RESET}"
+    echo -e "${BOLD}${CYAN}      Welcome to OHC: The Hybrid Agentic OS           ${RESET}"
+    echo -e "${BOLD}${BLUE}======================================================${RESET}"
+    echo -e "${DIM}Your 'Day One' environment is ready. Here is a quick guide:${RESET}"
+    echo ""
+    echo -e "  ${BOLD}1. Dashboard:${RESET} http://localhost:8080 (Cloud/Standalone)"
+    echo -e "  ${BOLD}2. Logs:${RESET} Check '.agent-task/status/' and '.agent-task/memory/'"
+    echo -e "  ${BOLD}3. Local Data:${RESET} ~/.ohc-local-data/standalone.db"
+    echo ""
+    echo -e "  ${GREEN}Tip:${RESET} Run option (8) to seed mock data for your dashboard."
+    echo -e "  ${GREEN}Tip:${RESET} Run option (6) anytime to verify your environment."
+    echo -e "${BOLD}${BLUE}======================================================${RESET}"
+    echo ""
+}
+
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
     DB_FILE="$HOME/.ohc-local-data/standalone.db"
@@ -212,6 +230,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) welcome_tour ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
