@@ -1,0 +1,4 @@
+context: "Implemented Hybrid FS MCP Server for OHC-HA"
+insights:
+  - "Security check must include trailing slash to prevent partial directory name match vulnerabilities (CWE-22)."
+  - "Ensure base64 encoding/decoding is used for file content transmission over MCP."
