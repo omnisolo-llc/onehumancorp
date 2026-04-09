@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
 
 CREATE TABLE IF NOT EXISTS autodream_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
