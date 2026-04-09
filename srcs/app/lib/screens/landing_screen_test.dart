@@ -4,13 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 
 void main() {
-  testWidgets('Landing screen displays key local-first features', (tester) async {
+  testWidgets('Landing screen displays key local-first features', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: LandingScreen(),
-        ),
-      ),
+      const ProviderScope(child: MaterialApp(home: LandingScreen())),
     );
 
     expect(find.text('The Hybrid Agentic OS'), findsOneWidget);
