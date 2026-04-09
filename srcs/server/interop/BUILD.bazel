@@ -6,18 +6,27 @@ go_library(
         "autogen_adapter.go",
         "crewai_adapter.go",
         "ironclaw_adapter.go",
+        "mesh.go",
+        "mesh_telemetry.go",
         "openclaw_adapter.go",
         "semantickernel_adapter.go",
         "types.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_rueidis//:rueidis",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
 )
 
 go_test(
     name = "interop_test",
     srcs = [
         "ironclaw_adapter_test.go",
+        "mesh_test.go",
         "swarm_test.go",
         "types_test.go",
     ],
