@@ -20,14 +20,24 @@ js_binary(
 
 go_library(
     name = "mcp",
-    srcs = ["client.go"],
+    srcs = ["client.go", "fs_mcp.go", "fs_provider.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
+    deps = [
+        "//srcs/server/auth",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "mcp_test",
-    srcs = ["hybrid_mcp_bridge_test.go"],
+    srcs = ["hybrid_mcp_bridge_test.go", "fs_mcp_test.go"],
     embed = [":mcp"],
-    deps = ["//srcs/server/telemetry"],
+    deps = [
+        "//srcs/server/telemetry",
+        "//srcs/server/auth",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
 )
