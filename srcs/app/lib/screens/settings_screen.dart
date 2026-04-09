@@ -1,3 +1,4 @@
+import '../widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +48,7 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 const _SectionHeader(title: 'Communication'),
-                Card(
+                GlassCard(
                   child: ListTile(
                     leading: Icon(
                       settings.standaloneMode

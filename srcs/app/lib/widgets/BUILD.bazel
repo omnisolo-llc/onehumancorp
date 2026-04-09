@@ -1,4 +1,4 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library")
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
 
 package(default_visibility = ["//srcs/app:__subpackages__"])
 
@@ -44,4 +44,19 @@ alias(
 alias(
     name = "slide_to_approve",
     actual = ":widgets_lib",
+)
+
+flutter_test(
+    name = "glass_card_test",
+    srcs = ["glass_card_test.dart"],
+    embed = [":widgets_lib"],
+    test_files = ["glass_card_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":glass_card_test",
+    ],
 )
