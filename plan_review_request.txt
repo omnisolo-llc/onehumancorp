@@ -1,0 +1,46 @@
+I am working on the mission "Integrate Hybrid File System MCP Server" as an Implementer agent.
+
+My goal is to implement `mcp.FileSystemProvider` interface and provide local and cloud implementations, and expose them via MCP tools (`read_file`, `write_file`, `list_directory`, `search_files`).
+
+Here is the plan I am proposing:
+1. Update the status and agent fields of the mission file.
+   - Use `sed -i 's/status: PENDING/status: IN_PROGRESS/g'` on `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`.
+   - Use `sed -i 's/agent: Researcher/agent: Implementer/g'` on `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`.
+2. Verify the mission file was updated correctly.
+   - Use `cat .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` to ensure the frontmatter correctly reads `status: IN_PROGRESS` and `agent: Implementer`.
+3. Create `srcs/server/tools/hybridfsmcp/provider.go`.
+   - I will use `cat << 'EOF' > srcs/server/tools/hybridfsmcp/provider.go` to create the file.
+   - It will define the `FileSystemProvider` interface with methods `ReadFile(ctx, path)`, `WriteFile(ctx, path, data)`, `ListDir(ctx, path)`, and `SearchFiles(ctx, root, pattern)`.
+   - It will define `LocalFSProvider` (with path bounding to a workspace dir) and `CloudFSProvider` (tenant-scoped via `auth.ClaimsFromContext`). Note the validation for path-bounding using regex (`^[a-zA-Z0-9_-]+$`) on `OrganizationID` as remembered in memory.
+   - It will define `NewFileSystemProvider(workspaceDir string) FileSystemProvider` that returns `LocalFSProvider` if `OHC_STANDALONE` is "true", else `CloudFSProvider`.
+4. Verify `provider.go` was created successfully.
+   - Use `cat srcs/server/tools/hybridfsmcp/provider.go`.
+5. Create `srcs/server/tools/hybridfsmcp/server.go`.
+   - I will use `cat << 'EOF' > srcs/server/tools/hybridfsmcp/server.go` to create the file.
+   - I will model the MCP Tool structure on `srcs/server/tools/blobinspector/mcp.go`, defining `Tool` and `HybridFSMCP`.
+   - It will expose tools: `read_file`, `write_file`, `list_directory`, `search_files` with appropriate JSON `InputSchema`.
+   - It will define `ListTools() []Tool` and `CallTool(ctx, toolName, arguments)`.
+6. Verify `server.go` was created successfully.
+   - Use `cat srcs/server/tools/hybridfsmcp/server.go`.
+7. Create test file `srcs/server/tools/hybridfsmcp/provider_test.go` and `srcs/server/tools/hybridfsmcp/server_test.go`.
+   - I will use `cat << 'EOF' > srcs/server/tools/hybridfsmcp/provider_test.go`.
+   - I will use `cat << 'EOF' > srcs/server/tools/hybridfsmcp/server_test.go`.
+   - `provider_test.go` will include tests for `LocalFSProvider` resolving safe paths and rejecting outside paths, and `CloudFSProvider` scoping paths correctly.
+   - `server_test.go` will include tests for `CallTool` to verify arguments are mapped correctly to the `provider`.
+   - The tests will mock contexts with tenant claims using `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` as per memory.
+8. Verify test files were created successfully.
+   - Use `cat srcs/server/tools/hybridfsmcp/provider_test.go` and `cat srcs/server/tools/hybridfsmcp/server_test.go`.
+9. Create `srcs/server/tools/hybridfsmcp/BUILD.bazel`.
+   - I will use `cat << 'EOF' > srcs/server/tools/hybridfsmcp/BUILD.bazel` to define `go_library(name = "hybridfsmcp", srcs = ["provider.go", "server.go"], importpath = "github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp", deps = ["//srcs/server/auth"])` and a `go_test` target covering the `_test.go` files, embedded with `:hybridfsmcp`.
+10. Verify `BUILD.bazel` was created successfully.
+    - Use `cat srcs/server/tools/hybridfsmcp/BUILD.bazel`.
+11. Update mission file status to `DONE`.
+    - Use `sed -i 's/status: IN_PROGRESS/status: DONE/g'` on `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`.
+12. Verify mission file status is `DONE`.
+    - Use `cat .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`.
+13. Run all unit tests to ensure everything is functioning correctly.
+    - Execute `~/go/bin/bazelisk test //srcs/server/... --test_output=errors` to verify all backend tests pass, explicitly testing the newly added package.
+14. Complete pre commit steps
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+15. Submit PR
+    - I will submit the PR using the `submit` tool with branch `implement-hybrid-fs-mcp`.
