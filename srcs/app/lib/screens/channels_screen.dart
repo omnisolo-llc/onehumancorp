@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/channel.dart';
@@ -255,44 +256,144 @@ class _ChannelList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: channels.length,
-      itemBuilder: (_, i) => _ChannelCard(channel: channels[i]),
+      itemBuilder: (_, i) => _AnimatedChannelCard(
+        key: ValueKey(channels[i].id),
+        channel: channels[i],
+        index: i,
+      ),
     );
   }
 }
 
-class _ChannelCard extends StatelessWidget {
+class _AnimatedChannelCard extends StatefulWidget {
   final ChatChannel channel;
-  const _ChannelCard({required this.channel});
+  final int index;
+  const _AnimatedChannelCard({super.key, required this.channel, required this.index});
+
+  @override
+  State<_AnimatedChannelCard> createState() => _AnimatedChannelCardState();
+}
+
+class _AnimatedChannelCardState extends State<_AnimatedChannelCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   String _icon() {
     for (final def in _channelDefs) {
-      if (def.type == channel.backend.type) return def.icon;
+      if (def.type == widget.channel.backend.type) return def.icon;
     }
     return '💬';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
-        title: Text(
-          channel.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(channel.backend.displayName),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Chip(
-              label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
-              backgroundColor:
-                  channel.enabled
-                      ? Theme.of(context).colorScheme.secondaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      label: 'Channel ${widget.channel.name}, Backend: ${widget.channel.backend.displayName}, Status: ${widget.channel.enabled ? 'Enabled' : 'Disabled'}',
+      button: true,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isHovered = true),
+              onExit: (_) => setState(() => _isHovered = false),
+              child: AnimatedScale(
+                scale: _isHovered ? 1.02 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.compose(
+                      outer: ColorFilter.matrix(const <double>[
+                        1.168, -0.153, -0.015, 0, 0,
+                        -0.046, 1.061, -0.015, 0, 0,
+                        -0.046, -0.152, 1.198, 0, 0,
+                        0, 0, 0, 1, 0,
+                      ]),
+                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                        color: _isHovered
+                            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+                            : colorScheme.surface.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _isHovered
+                              ? colorScheme.outlineVariant
+                              : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          // Optional: Handle channel card tap
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: ListTile(
+                            leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
+                            title: Text(
+                              widget.channel.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(widget.channel.backend.displayName),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Chip(
+                                  label: Text(widget.channel.enabled ? 'Enabled' : 'Disabled'),
+                                  backgroundColor:
+                                      widget.channel.enabled
+                                          ? colorScheme.secondaryContainer
+                                          : colorScheme.surfaceContainerHighest,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
