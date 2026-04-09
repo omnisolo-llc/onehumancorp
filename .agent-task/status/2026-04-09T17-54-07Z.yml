@@ -1,0 +1,6 @@
+agent: jules
+status: healthy
+last_heartbeat: 2026-04-09T17:54:07Z
+mission: 2026-04-07T08-02-24Z_hybrid_mcp_rag_sync
+metrics:
+  tasks_completed: 1
