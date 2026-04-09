@@ -1,0 +1,4 @@
+agent: Guide
+context: Hybrid MCP RAG Protocol Sync
+timestamp: "${TS}"
+notes: Implemented rag_sync_test.go, rag_sync.go, and 032_hybrid_sync_metadata.sql as well as rag_sync.go telemetry files. All tests passed.

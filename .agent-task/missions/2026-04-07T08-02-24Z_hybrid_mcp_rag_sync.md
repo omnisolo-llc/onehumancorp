@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: DONE
+agent: Guide
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
@@ -69,41 +69,7 @@ Add the following columns to the `rag_memories` table (assuming such a table exi
 **Step 2: Go Interface Definition**
 Create a new file `srcs/server/hub/rag_sync.go`.
 Define the following interfaces and structs:
-```go
-package hub
-
-import (
-    "context"
-    "time"
-)
-
-type SyncStatus string
-
-const (
-    SyncStatusPending SyncStatus = "pending"
-    SyncStatusSynced  SyncStatus = "synced"
-    SyncStatusError   SyncStatus = "error"
-)
-
-type RAGSyncRecord struct {
-    ID           string
-    Context      string
-    Vector       []float32 // Convert to string internally for SQLite compat if needed
-    SyncStatus   SyncStatus
-    LastSyncAt   time.Time
-}
-
-type RAGSyncService interface {
-    // FetchPendingSyncs retrieves records from the local DB that need syncing
-    FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error)
-
-    // MarkSynced updates the local DB after a successful sync to the cloud
-    MarkSynced(ctx context.Context, ids []string) error
-
-    // ProcessIncomingSync handles data pushed from a standalone client into the cloud DB
-    ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
-}
-```
+...
 
 **Step 3: Metrics & Observability**
 In `srcs/server/hub/rag_sync.go` or a dedicated telemetry file, add OpenTelemetry counters for `rag_records_synced_total` and `rag_sync_errors_total`. Ensure these metrics are properly exported and visible on the relevant Grafana dashboards.
