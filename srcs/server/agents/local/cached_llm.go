@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -69,19 +70,23 @@ func decompressData(data []byte) ([]byte, error) {
 }
 
 // CachedLLMClient wraps an LLMClient and caches AssistantMessage responses
-// in Redis (if available) and the DB llm_completion_cache table.
+// in an in-memory map, Redis (if available), and the DB llm_completion_cache table.
 type CachedLLMClient struct {
 	client LLMClient
 	db     db.Provider
 	redis  rueidis.Client
+
+	mu       sync.RWMutex
+	memCache map[string][]byte
 }
 
 // NewCachedLLMClient creates a new CachedLLMClient.
 func NewCachedLLMClient(client LLMClient, db db.Provider, redisClient rueidis.Client) LLMClient {
 	return &CachedLLMClient{
-		client: client,
-		db:     db,
-		redis:  redisClient,
+		client:   client,
+		db:       db,
+		redis:    redisClient,
+		memCache: make(map[string][]byte),
 	}
 }
 
@@ -96,7 +101,24 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 	hashBytes := sha256.Sum256(reqBytes)
 	reqHash := hex.EncodeToString(hashBytes[:])
 
-	// 2. Try Redis cache
+	// 2. Try In-Memory cache first
+	c.mu.RLock()
+	if cachedVal, ok := c.memCache[reqHash]; ok {
+		c.mu.RUnlock()
+		decompressed, err := decompressData(cachedVal)
+		if err == nil {
+			var msg AssistantMessage
+			if err := json.Unmarshal(decompressed, &msg); err == nil {
+				slog.Debug("CachedLLMClient: found completion in memory", "hash", reqHash)
+				telemetry.RecordCacheHit(ctx, "llm_completion", "memory")
+				return &msg, nil
+			}
+		}
+	} else {
+		c.mu.RUnlock()
+	}
+
+	// 3. Try Redis cache
 	if c.redis != nil {
 		redisKey := "llm_completion:" + reqHash
 		cmd := c.redis.B().Get().Key(redisKey).Build()
@@ -114,7 +136,7 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 		}
 	}
 
-	// 3. Try DB cache
+	// 4. Try DB cache
 	if c.db != nil {
 		var cachedResponse []byte
 		selectQuery := "SELECT response_payload FROM llm_completion_cache WHERE request_hash = $1"
@@ -141,7 +163,7 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 		}
 	}
 
-	// 4. Cache miss: generate response
+	// 5. Cache miss: generate response
 	telemetry.RecordCacheMiss(ctx, "llm_completion", "all")
 	resp, err := c.client.Complete(ctx, req)
 	if err != nil {
@@ -156,6 +178,15 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 			slog.Warn("CachedLLMClient: failed to compress response", "err", err)
 			compressedBytes = respBytes
 		}
+
+		// Save to In-Memory cache
+		c.mu.Lock()
+		if len(c.memCache) > 1000 {
+			// Simple eviction: clear the map when it gets too large
+			c.memCache = make(map[string][]byte)
+		}
+		c.memCache[reqHash] = compressedBytes
+		c.mu.Unlock()
 
 		// Save to Redis
 		if c.redis != nil {

@@ -81,3 +81,43 @@ func TestCachedLLMClient_DB(t *testing.T) {
 }
 
 // Removing Redis mock test as org_uber_go_mock isn't available in main repository
+
+func TestCachedLLMClient_InMemoryFallback(t *testing.T) {
+	mockClient := &mockLLMClient{
+		resp: &local.AssistantMessage{
+			Text: "Hello in-memory cached world",
+		},
+	}
+
+	// db and redis are nil
+	cachedClient := local.NewCachedLLMClient(mockClient, nil, nil)
+
+	req := local.CompletionRequest{
+		SystemPrompt: "Test memory system prompt",
+		MaxTokens:    200,
+	}
+
+	// First call - should miss cache
+	resp1, err := cachedClient.Complete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if mockClient.callCount != 1 {
+		t.Errorf("Expected 1 call to underlying client, got %d", mockClient.callCount)
+	}
+	if resp1.Text != "Hello in-memory cached world" {
+		t.Errorf("Expected 'Hello in-memory cached world', got %q", resp1.Text)
+	}
+
+	// Second call - should hit in-memory cache
+	resp2, err := cachedClient.Complete(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if mockClient.callCount != 1 {
+		t.Errorf("Expected still 1 call to underlying client (cached), got %d", mockClient.callCount)
+	}
+	if resp2.Text != "Hello in-memory cached world" {
+		t.Errorf("Expected 'Hello in-memory cached world', got %q", resp2.Text)
+	}
+}
