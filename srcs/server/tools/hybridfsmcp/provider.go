@@ -1,11 +1,3 @@
-1. **Update Mission Status (IN_PROGRESS)**
-   - Execute `run_in_bash_session` with `sed -i 's/status: PENDING/status: IN_PROGRESS/' .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`
-   - Execute `run_in_bash_session` with `cat .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md | head -n 5` to verify.
-
-2. **Define `FileSystemProvider` Interface**
-   - Execute `run_in_bash_session` with:
-```bash
-cat << 'EOF' > srcs/server/tools/hybridfsmcp/provider.go
 package hybridfsmcp
 
 import (
