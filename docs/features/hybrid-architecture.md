@@ -1,40 +1,59 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# Hybrid Architecture: The Best of Both Worlds
+# The Hybrid Architecture Playbook
 
-The One Human Corp (OHC) Agentic OS utilizes a unique **Hybrid Architecture (OHC-HA)**, seamlessly transitioning between high-scale cloud deployments and secure, localized execution.
+One Human Corp (OHC) is built on a foundational **Hybrid Architecture (OHC-HA)** designed to provide absolute autonomy, whether you are operating on a completely offline, air-gapped laptop or a massively scalable cloud cluster.
 
-## 1. Operating Modes
+## The Dual Modes
 
-### Cloud-Native Mode
-- **Target:** Enterprise organizations requiring horizontal scale.
-- **Backend:** PostgreSQL (with `pgvector`), Redis for Pub/Sub, Kubernetes orchestration.
-- **Benefits:** Strict multi-tenant isolation, massive parallelism, and high concurrency.
+### 1. Standalone Desktop Mode (Local)
+- **Purpose**: Low resource consumption, absolute data privacy, offline capabilities.
+- **Database**: Uses local **SQLite**. Perfect for single-user contexts and episodic memory storage.
+- **Messaging**: Degrades gracefully to in-memory Go channels instead of requiring complex external messaging brokers.
+- **Vector Search**: Performs exact nearest-neighbor search directly in-memory or via simple disk fallback if `pgvector` is absent.
 
-### Standalone Desktop Mode
-- **Target:** Individuals or air-gapped environments requiring ultimate privacy.
-- **Backend:** SQLite (with fallback BLOB storage for vectors), Local In-Memory Channels.
-- **Benefits:** Zero external dependencies, low resource consumption, works completely offline.
+### 2. Cloud-Native Mode (Distributed)
+- **Purpose**: Multi-tenant orchestration, vertical scaling, high-concurrency pod operations.
+- **Database**: Uses **PostgreSQL** with robust row-level locking (`FOR UPDATE SKIP LOCKED`) to ensure horizontal worker pods do not collide when claiming tasks from the Shared Task List.
+- **Messaging**: Leverages **Redis Pub/Sub** (via `rueidis`) and `CentrifugeNode` to establish a low-latency **Teammate Mesh**.
+- **Vector Search**: Embeds memories into `swarm_memory_embeddings` utilizing the `pgvector` extension for sub-millisecond semantic retrieval across millions of tokens.
 
-## 2. Core Sync Mechanisms
+---
 
-To bridge the gap between these modes, OHC implements two crucial technologies:
+## Core Engines
 
-### AutoDream Sync Engine
-When operating locally, agents generate "memories" and insights. Upon reconnecting to the cloud, the `AutoDreamWorker` synchronizes these local insights (stored in SQLite) directly into the Cloud Postgres instance.
+### The Teammate Mesh
+The Teammate Mesh is the nervous system of the swarm.
 
 ```mermaid
 graph LR
-    Local[(SQLite Local)] -->|Sync Pipeline| Sync[AutoDream Sync Engine]
-    Sync -->|Merge| Cloud[(PgVector Cloud)]
+    A[Agent A] -->|Publish Event| Mesh{Teammate Mesh}
+    Mesh -->|Filter & Route| B[Agent B]
+    Mesh -->|Filter & Route| Dashboard[UI Dashboard]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class A,Mesh,B,Dashboard premium;
 ```
 
-### Teammate Mesh
-Real-time coordination is essential.
-- In the **Cloud**, we utilize Redis Pub/Sub (`mesh:tasks`).
-- In **Standalone Mode**, we fall back to a high-performance, in-memory mutex-backed messaging system.
+In Cloud Mode, this uses Redis. In Standalone Mode, it transparently uses an internal dispatcher.
 
-## 3. Visual Excellence Mandate
-All interfaces interacting with the Hybrid Architecture adhere to strict premium Glassmorphism design tokens to guarantee user delight across all platforms.
+### The AutoDream Sync Engine
+AutoDream serves as the long-term memory consolidator. It prevents context window bloat by continually compressing intermediate agent artifacts into vector embeddings.
+
+```mermaid
+sequenceDiagram
+    participant Agent as Swarm Agent
+    participant Files as Local Memory Files
+    participant AutoDream as AutoDream Engine
+    participant DB as SQLite/PgVector
+
+    Agent->>Files: Write intermediate context
+    AutoDream->>Files: Sweep and Prune
+    AutoDream->>AutoDream: Compress using LLM
+    AutoDream->>DB: Upsert vector embedding
+```
+
+## Syncing State
+The true power of the Hybrid Architecture is the **Hybrid Local-to-Cloud State Sync MCP Proxy**. This allows an agent operating in Standalone Mode to escalate complex workloads to the Cloud-Native Postgres orchestration engine when massive parallel computation is required, completely abstracting the transition from the user.
 
 </div>

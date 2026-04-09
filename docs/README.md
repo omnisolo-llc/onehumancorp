@@ -42,7 +42,7 @@ graph TD;
 ```
 
 ## Quick Links
-- [Hybrid Architecture](features/hybrid-architecture.md)
+- [Hybrid Architecture Playbook](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
 - [System Design](system-design.md)
