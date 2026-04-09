@@ -131,16 +131,16 @@ type anthropicSystem struct {
 }
 
 type anthropicRequest struct {
-	Model     string               `json:"model"`
-	MaxTokens int                  `json:"max_tokens"`
-	System    []anthropicSystem    `json:"system,omitempty"`
-	Messages  []anthropicMessage   `json:"messages"`
-	Tools     []anthropicToolDef   `json:"tools,omitempty"`
+	Model     string             `json:"model"`
+	MaxTokens int                `json:"max_tokens"`
+	System    []anthropicSystem  `json:"system,omitempty"`
+	Messages  []anthropicMessage `json:"messages"`
+	Tools     []anthropicToolDef `json:"tools,omitempty"`
 }
 
 type anthropicMessage struct {
-	Role    string               `json:"role"`
-	Content []anthropicContent   `json:"content"`
+	Role    string             `json:"role"`
+	Content []anthropicContent `json:"content"`
 }
 
 type anthropicContent struct {
@@ -179,6 +179,15 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 		maxTok = 2048
 	} else if maxTok > 4096 {
 		maxTok = 4096
+	}
+
+	// Truncate message history to prevent unbounded context growth
+	if len(req.Messages) > 20 {
+		req.Messages = req.Messages[len(req.Messages)-20:]
+		// Ensure the first message is a user message (Anthropic requirement)
+		if len(req.Messages) > 0 && req.Messages[0].Role != "user" {
+			req.Messages = req.Messages[1:]
+		}
 	}
 
 	msgs := make([]anthropicMessage, 0, len(req.Messages))
@@ -369,17 +378,17 @@ func NewOpenAICompatClient(endpoint, apiKey, model string) LLMClient {
 }
 
 type openAIRequest struct {
-	Model    string          `json:"model"`
-	Messages []openAIMessage `json:"messages"`
-	Tools    []openAITool    `json:"tools,omitempty"`
-	MaxTokens int            `json:"max_tokens,omitempty"`
+	Model     string          `json:"model"`
+	Messages  []openAIMessage `json:"messages"`
+	Tools     []openAITool    `json:"tools,omitempty"`
+	MaxTokens int             `json:"max_tokens,omitempty"`
 }
 
 type openAIMessage struct {
-	Role       string            `json:"role"`
-	Content    interface{}       `json:"content"`
-	ToolCallID string            `json:"tool_call_id,omitempty"`
-	ToolCalls  []openAIToolCall  `json:"tool_calls,omitempty"`
+	Role       string           `json:"role"`
+	Content    interface{}      `json:"content"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+	ToolCalls  []openAIToolCall `json:"tool_calls,omitempty"`
 }
 
 type openAIToolCall struct {
@@ -402,8 +411,8 @@ type openAITool struct {
 
 type openAIResponse struct {
 	Choices []struct {
-		Message    openAIMessage `json:"message"`
-		FinishReason string      `json:"finish_reason"`
+		Message      openAIMessage `json:"message"`
+		FinishReason string        `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int64 `json:"prompt_tokens"`
@@ -417,6 +426,15 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 		maxTok = 2048
 	} else if maxTok > 4096 {
 		maxTok = 4096
+	}
+
+	// Truncate message history to prevent unbounded context growth
+	if len(req.Messages) > 20 {
+		req.Messages = req.Messages[len(req.Messages)-20:]
+		// For consistency, also ensure it starts with a user message
+		if len(req.Messages) > 0 && req.Messages[0].Role != "user" {
+			req.Messages = req.Messages[1:]
+		}
 	}
 
 	var msgs []openAIMessage

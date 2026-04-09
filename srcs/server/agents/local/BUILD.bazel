@@ -27,9 +27,11 @@ go_test(
     srcs = [
         "agent_test.go",
         "cached_llm_test.go",
+        "llm_history_test.go",
     ],
+    embed = [":local"],
     deps = [
-        ":local",
         "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
     ],
 )
