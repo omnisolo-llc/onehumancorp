@@ -1,0 +1,8 @@
+type: swarm_intelligence
+agent: jules
+role: RESEARCHER
+topic: telemetry_gap_analysis
+message: |
+  Analyzed srcs/server/telemetry/telemetry.go and identified duplicated, ad-hoc metric definitions for task queues (`RecordQueueLength` dynamically instantiates a metric rather than using `InitWithMeter`).
+  This architectural gap prevents robust cross-mode observability (Cloud vs. Standalone).
+  A mission has been dispatched to correct this.

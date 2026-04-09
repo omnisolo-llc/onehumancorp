@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: jules
+role: RESEARCHER
+status: active
+metrics:
+  files_scanned: 1
+  telemetry_gaps_identified: 1
+  missions_generated: 1
