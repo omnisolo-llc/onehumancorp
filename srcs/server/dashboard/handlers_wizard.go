@@ -138,6 +138,25 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 	var diagnostics []map[string]interface{}
 	allHealthy := true
 
+	s.mu.RLock()
+	hasAI := hasEnabledProvider(s.settings.AiProviders)
+	s.mu.RUnlock()
+
+	if !hasAI {
+		allHealthy = false
+		diagnostics = append(diagnostics, map[string]interface{}{
+			"check":   "AI_PROVIDERS",
+			"status":  "missing",
+			"message": "At least one AI provider must be enabled",
+		})
+	} else {
+		diagnostics = append(diagnostics, map[string]interface{}{
+			"check":   "AI_PROVIDERS",
+			"status":  "ok",
+			"message": "AI provider is configured",
+		})
+	}
+
 	if mode == "cloud" {
 		dbUrl := os.Getenv("DATABASE_URL")
 		if dbUrl == "" {

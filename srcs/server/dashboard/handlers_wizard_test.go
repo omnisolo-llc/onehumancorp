@@ -123,7 +123,11 @@ func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	server := &Server{}
+	server := &Server{
+		settings: settings.AppSettings{
+			AiProviders: []settings.AiProvider{{Enabled: true, Name: "mock"}},
+		},
+	}
 	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
 	rr := httptest.NewRecorder()
 
@@ -155,7 +159,11 @@ func TestHandleWizardOnboardingVerify_Cloud_MissingVars(t *testing.T) {
 	os.Setenv("REDIS_URL", "")
 	defer os.Unsetenv("REDIS_URL")
 
-	server := &Server{}
+	server := &Server{
+		settings: settings.AppSettings{
+			AiProviders: []settings.AiProvider{{Enabled: true, Name: "mock"}},
+		},
+	}
 	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
 	rr := httptest.NewRecorder()
 
@@ -172,6 +180,26 @@ func TestHandleWizardOnboardingVerify_Cloud_MissingVars(t *testing.T) {
 
 	if resp["mode"] != "cloud" {
 		t.Errorf("Expected mode cloud, got %v", resp["mode"])
+	}
+
+	if resp["status"] != "degraded" {
+		t.Errorf("Expected status degraded, got %v", resp["status"])
+	}
+}
+
+func TestHandleWizardOnboardingVerify_MissingAI(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	server := &Server{} // empty settings
+	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleWizardOnboardingVerify(rr, req)
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
 	}
 
 	if resp["status"] != "degraded" {
