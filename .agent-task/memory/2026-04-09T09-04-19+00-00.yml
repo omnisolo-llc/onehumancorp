@@ -1,0 +1,5 @@
+task_summary: "Implemented Swarm Observability Dashboard UI component."
+learnings:
+  - "When creating high-fidelity Glassmorphism widgets in Flutter, wrapping the BackdropFilter and ClipRRect around a Container with the specified background color provides the correct visual effect."
+  - "When making asynchronous calls that update the UI, such as in WebSocket stream listeners, it is crucial to check `if (mounted)` before calling `setState()` to prevent 'setState() called after dispose()' errors."
+  - "For widget testing components with active continuous animations or pending timers (like connections), calling `await tester.pump(const Duration(seconds: 3))` instead of `tester.pumpAndSettle()` prevents timeout exceptions when tests have pending active timers."
