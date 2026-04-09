@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/security_issue.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
+
 
 final _securityProvider = FutureProvider<List<SecurityIssue>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -172,7 +174,7 @@ class _IssueCardState extends State<_IssueCard> {
     return Semantics(
       label: 'Security issue: ${issue.title}, Severity: ${issue.severity}',
       excludeSemantics: true,
-      child: Card(
+      child: GlassCard(
         margin: const EdgeInsets.only(bottom: 10),
         child: Padding(
           padding: const EdgeInsets.all(16),
