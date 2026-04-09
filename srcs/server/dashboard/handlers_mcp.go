@@ -12,9 +12,11 @@ import (
 	"context"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	"context"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
 	"go.opentelemetry.io/otel"
 )
@@ -390,6 +392,35 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}
 
 		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
+	case "hybrid-fs-mcp":
+		var p map[string]interface{}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, errors.New("invalid hybrid-fs-mcp parameters")
+		}
+
+		toolName, ok := p["action"].(string)
+		if !ok {
+			return nil, errors.New("missing action for hybrid-fs-mcp")
+		}
+
+		fsArgs, ok := p["arguments"].(map[string]interface{})
+		if !ok {
+			fsArgs = map[string]interface{}{}
+		}
+
+		provider := hybridfsmcp.NewFileSystemProvider(s.hub.Config().IsStandalone(), s.hub.Config().StorageDir)
+		server := hybridfsmcp.NewServer(provider)
+
+		res, err := server.CallTool(context.Background(), toolName, fsArgs)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
 			"result":           res,
 			"HybridEscalation": true,
 		}, nil
