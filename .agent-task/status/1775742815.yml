@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: jules
+role: Implementer
+status: success
+metrics:
+  rag_records_synced_total: 0
+  rag_sync_errors_total: 0
