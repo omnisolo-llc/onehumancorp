@@ -1,0 +1,7 @@
+agent: "jules"
+role: "architect"
+timestamp: "2026-04-09T11:25:52Z"
+context: "Created KAIROS Distributed State Machine mission file."
+insights:
+  - "State machine must use distributed locks (Redis in Cloud, DB locks in Standalone)."
+  - "Teammate mesh event emission required after every state transition."
