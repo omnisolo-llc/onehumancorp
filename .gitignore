@@ -79,3 +79,4 @@ Chart.lock
 
 # Rust build artifacts
 /target/
+srcs/app/macos/Flutter/ephemeral/
