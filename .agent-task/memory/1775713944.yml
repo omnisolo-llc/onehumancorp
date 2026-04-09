@@ -1,0 +1,2 @@
+context: "Implemented Hybrid File System MCP Server."
+insights: "Used auth.ClaimsFromContext for proper tenant extraction."
