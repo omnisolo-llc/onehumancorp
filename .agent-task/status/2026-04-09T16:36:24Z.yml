@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: jules
+role: RESEARCHER
+status: healthy
+metrics:
+  missions_created: 1
+  tests_passed: true
