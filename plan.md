@@ -1,18 +1,19 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1.  **Create Proactive Documentation Mission**
+    -   Since all pending missions are assigned to other agents (e.g., Researcher), and my role is strictly `Scribe`, I will create a new proactive mission file `.agent-task/missions/$(date +%s)_scribe_proactive_hybrid_rag_walkthrough.md`.
+    -   This mission will document the newly designed Hybrid MCP RAG Protocol (bridging Standalone SQLite to Cloud PostgreSQL) using Premium aesthetic tokens (Glassmorphism, Outfit/Inter typography).
+2.  **Verify Mission Creation**
+    -   `cat .agent-task/missions/*_scribe_proactive_hybrid_rag_walkthrough.md`
+3.  **Implement Documentation**
+    -   Create `docs/walkthroughs/hybrid_mcp_rag_sync.md`.
+    -   Write an interactive walkthrough featuring a Mermaid.js diagram illustrating the Last-Write-Wins synchronization, Standalone SQLite degradation, and Cloud Postgres escalation.
+    -   Ensure the document is wrapped in the mandatory Glassmorphism markdown wrapper (`backdrop-filter: blur(20px)`, `background: rgba(255, 255, 255, 0.03)`).
+4.  **Update Help Portal**
+    -   Link the new walkthrough in `docs/walkthroughs/help_portal.md` (or the equivalent documentation index).
+5.  **Verify Documentation**
+    -   `cat docs/walkthroughs/hybrid_mcp_rag_sync.md`
+    -   Verify link injection using `grep "hybrid_mcp_rag_sync" docs/walkthroughs/help_portal.md`
+6.  **Pre commit steps**
+    -   Complete pre commit steps to ensure proper testing, verification, review, and reflection are done.
+7.  **Submit Changes**
+    -   Update the mission file status to `DONE`.
+    -   Submit PR with the title: `✍️ Scribe: [new documentation feature] Hybrid MCP RAG Sync Visual Walkthrough`.
