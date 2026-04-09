@@ -1,0 +1,6 @@
+type: observability_heartbeat
+agent: jules
+role: Implementer
+status: healthy
+metrics:
+  tasks_completed: 1

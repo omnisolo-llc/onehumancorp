@@ -25,6 +25,9 @@ var (
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
 
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal    metric.Int64Counter
+
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
 	agentApiCallsCounter       metric.Int64Counter
@@ -156,6 +159,20 @@ type mockableMeter interface {
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
 }
 
+// RecordRAGSyncSuccess increments the RAG sync success counter
+func RecordRAGSyncSuccess(ctx context.Context, count int64) {
+	if ragRecordsSyncedTotal != nil {
+		ragRecordsSyncedTotal.Add(ctx, count)
+	}
+}
+
+// RecordRAGSyncError increments the RAG sync error counter
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal != nil {
+		ragSyncErrorsTotal.Add(ctx, 1)
+	}
+}
+
 // InitWithMeter functionality.
 // Accepts parameters: m mockableMeter (No Constraints).
 // Returns error.
@@ -167,6 +184,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced to cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
