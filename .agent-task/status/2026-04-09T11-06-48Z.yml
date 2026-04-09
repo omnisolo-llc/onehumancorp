@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Researcher
+role: Principal Data Scientist - Agentic Operations (L7)
+status: healthy
+metrics:
+  files_audited: 5
+  gaps_identified: 1
