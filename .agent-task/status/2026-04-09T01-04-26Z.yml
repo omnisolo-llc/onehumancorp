@@ -1,0 +1,7 @@
+# OHC-SIP Observability Heartbeat
+status: HEALTHY
+last_check: "2026-04-09T01:04:26.016235+00:00"
+metrics_recorded:
+  mesh_latency_checked: true
+  transition_latency_checked: true
+mode: hybrid_research

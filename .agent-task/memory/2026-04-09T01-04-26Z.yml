@@ -1,0 +1,6 @@
+# OHC-SIP Global Swarm Intelligence Context Update
+timestamp: "2026-04-09T01:04:26.016235+00:00"
+context_updates:
+  - topic: "Hybrid Observability"
+    insight: "Identified blind spots in Teammate Mesh latency tracking across Cloud and Standalone modes. AutoDream consolidation requires deployment_mode attributes on histograms to accurately restructure agent configurations."
+    action_taken: "Generated mission file to inject deployment_mode into RecordMeshLatency and RecordAgentTransitionLatency."
