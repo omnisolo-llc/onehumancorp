@@ -37,6 +37,13 @@ func TestInitTelemetry(t *testing.T) {
 	}
 
 	// Verify that the globals are set
+
+	if RagRecordsSyncedTotal == nil {
+		t.Error("RagRecordsSyncedTotal not initialized")
+	}
+	if RagSyncErrorsTotal == nil {
+		t.Error("RagSyncErrorsTotal not initialized")
+	}
 	if requestCounter == nil {
 		t.Error("expected requestCounter to be initialized")
 	}
