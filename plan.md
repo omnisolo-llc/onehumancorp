@@ -1,18 +1,24 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Mark Mission as PENDING -> IN_PROGRESS**
+   - The mission file `.agent-task/missions/2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md` has been marked as IN_PROGRESS and agent as Implementer.
+
+2. **Add Hybrid Sync Metadata Database Migration**
+   - Create migration `srcs/server/db/migrations/032_hybrid_sync_metadata.sql`.
+   - The table `swarm_memory_embeddings` will have columns `sync_status` and `last_sync_at` added via standard `ALTER TABLE ADD COLUMN`.
+   - Update `srcs/server/db/BUILD.bazel` to include this migration.
+
+3. **Implement RAGSyncService Interface**
+   - Create `srcs/server/hub/rag_sync.go` with the requested interface definition `RAGSyncService`, `SyncStatus`, and `RAGSyncRecord`.
+   - Write a mock implementation and flow test in `srcs/server/hub/rag_sync_test.go`.
+   - Add `srcs/server/hub/BUILD.bazel` to build and test this logic.
+
+4. **Add Metrics for Sync Mechanism**
+   - Update `srcs/server/telemetry/telemetry.go` to add `RagRecordsSyncedTotal` and `RagSyncErrorsTotal` counters.
+   - Initialize these metrics in `InitWithMeter`.
+
+5. **Verify and Pre-Commit**
+   - Run `bazelisk test //...` to ensure there are no build failures or broken tests.
+   - Run the pre-commit instructions as mandated.
+
+6. **Complete Mission & Submit PR**
+   - Update the mission file status from `IN_PROGRESS` to `DONE`.
+   - Commit the changes and submit the PR.
