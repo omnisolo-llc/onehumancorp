@@ -53,6 +53,7 @@ graph TD;
 - [Distributed State Machine](features/kairos/state_machine.md)
 - [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
 - [AutoDream Pipeline](features/kairos/autodream_pipeline.md)
+- [AutoDream Walkthrough](walkthroughs/autodream_pipeline.md)
 
 ## Quick Start
 1. Ensure you have `bazelisk` and `npm` installed.
