@@ -1,0 +1,5 @@
+status: HEALTHY
+role: KAIROS Orchestrator (L7)
+metrics:
+  missions_created: 1
+  uptime: PT1H
