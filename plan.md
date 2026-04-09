@@ -1,18 +1,36 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Mark Mission In Progress**
+   - Run `sed -i 's/^status: PENDING/status: IN_PROGRESS\nagent: Jules/' .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` to mark the mission as IN_PROGRESS.
+   - Run `cat .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` to verify the frontmatter modification.
+
+2. **Create `FileSystemProvider` Interface**
+   - Run `run_in_bash_session` to write the interface definition to `srcs/server/tools/hybridfsmcp/provider.go` using `cat << 'EOF'`.
+   - Run `ls -l srcs/server/tools/hybridfsmcp/provider.go` to verify creation.
+
+3. **Create `LocalFSProvider`**
+   - Run `run_in_bash_session` to write `LocalFSProvider` implementation to `srcs/server/tools/hybridfsmcp/local_provider.go` using `cat << 'EOF'`.
+   - Run `ls -l srcs/server/tools/hybridfsmcp/local_provider.go` to verify creation.
+
+4. **Create `CloudFSProvider`**
+   - Run `run_in_bash_session` to write `CloudFSProvider` implementation to `srcs/server/tools/hybridfsmcp/cloud_provider.go` using `cat << 'EOF'`.
+   - Run `ls -l srcs/server/tools/hybridfsmcp/cloud_provider.go` to verify creation.
+
+5. **Create `HybridFSMCP` Server**
+   - Run `run_in_bash_session` to write `HybridFSMCP` implementation to `srcs/server/tools/hybridfsmcp/mcp.go` using `cat << 'EOF'`.
+   - Run `ls -l srcs/server/tools/hybridfsmcp/mcp.go` to verify creation.
+
+6. **Create Test File**
+   - Run `run_in_bash_session` to write test implementations to `srcs/server/tools/hybridfsmcp/mcp_test.go` using `cat << 'EOF'`.
+   - Run `ls -l srcs/server/tools/hybridfsmcp/mcp_test.go` to verify creation.
+
+7. **Generate Bazel Build File**
+   - Run `bazelisk run //:gazelle` to generate `BUILD.bazel` for `srcs/server/tools/hybridfsmcp`.
+   - Run `git status` and `cat srcs/server/tools/hybridfsmcp/BUILD.bazel` to verify the generated output.
+
+8. **Run Tests**
+   - Run `bazelisk test //srcs/server/tools/hybridfsmcp/...` to verify the implementation.
+
+9. **Complete pre commit steps**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+10. **Mark mission DONE**
+    - Run `sed -i 's/^status: IN_PROGRESS/status: DONE/' .agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` to mark the mission as DONE.
