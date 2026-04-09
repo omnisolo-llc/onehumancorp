@@ -1,18 +1,32 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Define `FileSystemProvider` interface**
+   - Create `srcs/server/tools/hybridfsmcp/provider.go`.
+   - Add `package hybridfsmcp`.
+   - Define `FileSystemProvider` interface with `ReadFile`, `WriteFile`, and `ListDir` methods taking `context.Context` and path.
+
+2. **Implement `LocalFSProvider` and `CloudFSProvider`**
+   - Create `srcs/server/tools/hybridfsmcp/local_provider.go`
+     - Struct `LocalFSProvider` with `basePath string`.
+     - Implement `ReadFile`, `WriteFile`, `ListDir`.
+     - Ensure path bounding (prevent directory traversal outside `basePath`).
+   - Create `srcs/server/tools/hybridfsmcp/cloud_provider.go`
+     - Struct `CloudFSProvider` with `basePath string`.
+     - Implement methods. It should extract `auth.Claims` from the `context.Context` and scope the file operations to `filepath.Join(basePath, claims.OrganizationID)`. If there are no claims, it should return an error.
+
+3. **Implement MCP Server**
+   - Create `srcs/server/tools/hybridfsmcp/mcp.go`.
+   - The MCP server needs a factory method `NewHybridFSMCPServer(ctx context.Context, provider FileSystemProvider) *Server` (or similar depending on MCP interfaces in `srcs/server/agents/mcp`).
+   - The server must expose standard tools: `read_file`, `write_file`, `list_directory`.
+   - Create a factory `NewFileSystemProvider(ctx context.Context, basePath string) FileSystemProvider` that returns `LocalFSProvider` if `OHC_STANDALONE` is true, otherwise `CloudFSProvider`.
+
+4. **Implement Tests**
+   - Create `srcs/server/tools/hybridfsmcp/provider_test.go` to test `LocalFSProvider` and `CloudFSProvider`.
+   - Create `srcs/server/tools/hybridfsmcp/mcp_test.go` to test the MCP server and tool execution.
+   - Maintain high code coverage (>90%).
+
+5. **Generate `BUILD.bazel`**
+   - Run `bazelisk run //:gazelle` to generate `BUILD.bazel` for `srcs/server/tools/hybridfsmcp`.
+
+6. **Pre-commit and Submit**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+   - Mark the `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` status to DONE and agent to Jules.
+   - Run tests `bazelisk test //srcs/server/...`
