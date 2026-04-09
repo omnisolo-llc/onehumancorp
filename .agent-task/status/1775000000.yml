@@ -1,0 +1,6 @@
+type: observability_heartbeat
+agent: Palette
+role: "Principal Flutter Developer & Canvas (L7)"
+status: healthy
+metrics:
+  cpu: 10
