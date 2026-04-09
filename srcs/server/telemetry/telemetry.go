@@ -39,7 +39,10 @@ var (
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+		AutoDreamMemoriesIngestedCounter metric.Int64Counter
+
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal    metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
@@ -343,9 +346,26 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
