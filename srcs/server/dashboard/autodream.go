@@ -102,10 +102,15 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 5
 	}
 
+	if s.hub == nil || s.hub.SIPDB() == nil {
+		http.Error(w, "AutoDream Query requires a configured Hub and SIPDB", http.StatusServiceUnavailable)
+		return
+	}
+
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var embedding string
 	if minimaxKey != "" {
-		client := orchestration.NewMinimaxClient(minimaxKey)
+		client := orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), s.hub.SIPDB().Provider(), nil)
 		emb, err := client.GenerateEmbedding(r.Context(), req.QueryText)
 		if err == nil {
 			bytesEmb, _ := json.Marshal(emb)
@@ -115,11 +120,6 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		embedding = "[0.0, 0.0, 0.0]"
-	}
-
-	if s.hub == nil || s.hub.SIPDB() == nil {
-		http.Error(w, "AutoDream Query requires a configured Hub and SIPDB", http.StatusServiceUnavailable)
-		return
 	}
 
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
