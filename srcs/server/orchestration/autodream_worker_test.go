@@ -129,3 +129,40 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 		t.Fatalf("ProcessMemories failed on empty dir: %v", err)
 	}
 }
+
+func TestAutoDreamWorker_ProcessMemories_WithMinimaxKey(t *testing.T) {
+	provider := setupTestDB(t)
+	setupMockMemories(t, 1)
+	// Clear existing rows first to prevent flakiness
+	provider.Exec(context.Background(), "DELETE FROM autodream_memories")
+
+	// Set a dummy api key to trigger client creation
+	os.Setenv("MINIMAX_API_KEY", "dummy-key-for-test")
+	t.Cleanup(func() { os.Unsetenv("MINIMAX_API_KEY") })
+
+	worker := NewAutoDreamWorker(provider)
+	ctx := context.Background()
+
+	err := worker.ProcessMemories(ctx)
+	if err != nil {
+		t.Fatalf("ProcessMemories failed with dummy key: %v", err)
+	}
+
+	// Verify insertion
+	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories")
+	if err != nil {
+		t.Fatalf("failed to query memories: %v", err)
+	}
+	defer rows.Close()
+
+	var count int
+	if rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			t.Fatalf("failed to scan count: %v", err)
+		}
+	}
+
+	if count != 1 {
+		t.Errorf("expected 1 memory inserted, got %d", count)
+	}
+}

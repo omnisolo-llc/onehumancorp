@@ -1,0 +1,4 @@
+title: "Miser Proactive AutoDream Cache - Memory"
+insights:
+  - "When adding dependencies like CachedMinimaxClient in an existing function like NewAutoDreamWorker, ensure tests that previously instantiated a direct client (e.g., via dummy api keys) are either removed or appropriately mocked to handle the DB dependencies required by the cached client."
+  - "For DB-based features in tests, explicitly clear table state (e.g., DELETE FROM) between test functions if setup methods like setupMockMemories don't inherently reset table state, avoiding row count flakiness."
