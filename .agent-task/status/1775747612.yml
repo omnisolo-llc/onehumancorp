@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: jules
+role: IMPLEMENTER
+status: healthy
+metrics:
+  missions_completed: 1
+  hybrid_mcp_fs_created: true
