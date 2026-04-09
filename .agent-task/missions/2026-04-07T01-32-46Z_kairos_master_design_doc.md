@@ -1,4 +1,5 @@
 ---
+status: "DONE"
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"
