@@ -42,6 +42,8 @@ type ChatRequest struct {
 	Tools       []Tool    `json:"tools,omitempty"`
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Temperature float32   `json:"temperature,omitempty"`
+	Stream      bool      `json:"stream,omitempty"`
+	MaxRetries  int       `json:"max_retries,omitempty"`
 }
 
 // ChatResponse is the payload received from the LLM.

@@ -1,6 +1,8 @@
 package agents
 
 import (
+	"os"
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -191,7 +193,40 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				// Handle Builtin agent logic
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
 					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
-					// In a full implementation, we'd spawn the BuiltinAgent loop asynchronously here.
+
+					go func(agentId string, issuePayload string) {
+						client := getLLMClient()
+						bAgent := &builtin.BuiltinAgent{
+							Client:      client,
+							Model:       getLLMModel(),
+							System:      builtin.GetSystemPrompt(),
+							Tools:       []builtin.Tool{
+								builtin.BashTool,
+								builtin.FileReadTool,
+								builtin.FileWriteTool,
+								builtin.GlobTool,
+								builtin.GrepTool,
+								builtin.WebFetchTool,
+								builtin.WebSearchTool,
+								builtin.SendMessageTool,
+								builtin.TodoWriteTool,
+								builtin.ToolSearchTool,
+							},
+							MaxTokens:   4096,
+							Temperature: 0,
+						}
+
+						messages := []builtin.Message{
+							{Role: builtin.RoleUser, Content: issuePayload},
+						}
+
+						_, err := bAgent.Run(context.Background(), messages)
+						if err != nil {
+							slog.Error("builtin agent loop failed", "agent_id", agentId, "error", err)
+						} else {
+							slog.Info("builtin agent loop completed successfully", "agent_id", agentId)
+						}
+					}(a.ID, msg.Content)
 				}
 
 				agentFound = true
@@ -203,4 +238,34 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 	if !agentFound {
 		slog.Warn("agent task worker: issue marked in_progress but no available agents to delegate to")
 	}
+}
+
+func getLLMClient() builtin.LLMClient {
+	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
+		return builtin.NewAnthropicClient(key)
+	}
+	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
+		return builtin.NewOpenAIClient(key)
+	}
+	endpoint := os.Getenv("OHC_LOCAL_LLM_ENDPOINT")
+	return builtin.NewOllamaClient(endpoint)
+}
+
+func getLLMModel() string {
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		if m := os.Getenv("ANTHROPIC_MODEL"); m != "" {
+			return m
+		}
+		return "claude-3-7-sonnet-20250219"
+	}
+	if os.Getenv("OPENAI_API_KEY") != "" {
+		if m := os.Getenv("OPENAI_MODEL"); m != "" {
+			return m
+		}
+		return "gpt-4o"
+	}
+	if m := os.Getenv("OLLAMA_MODEL"); m != "" {
+		return m
+	}
+	return "llama3"
 }

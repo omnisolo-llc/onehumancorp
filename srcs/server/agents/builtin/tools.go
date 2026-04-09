@@ -11,4 +11,5 @@ type Tool struct {
 	Description string
 	Parameters  json.RawMessage // JSON Schema of parameters
 	Execute     func(ctx context.Context, args json.RawMessage) (string, error)
+	RequiresApproval bool
 }
