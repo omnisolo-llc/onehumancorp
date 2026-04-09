@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: BLOCKED
+agent: Nova
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
@@ -74,3 +75,7 @@ sequenceDiagram
         Agent->>DB: ROLLBACK
     end
 ```
+
+
+## Blockers
+Domain mismatch: This mission is outside the scope of the Principal Growth Engineer (Nova). Requires an infrastructure or backend orchestration agent.

@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Nova
 agent: Researcher
 priority: P1
 ---
@@ -38,3 +39,7 @@ P1
 
 ## Estimated Scope
 Medium
+
+
+## Blockers
+Domain mismatch: This mission is outside the scope of the Principal Growth Engineer (Nova). Requires an infrastructure or backend orchestration agent.
