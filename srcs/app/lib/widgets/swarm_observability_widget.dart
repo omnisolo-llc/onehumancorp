@@ -25,13 +25,10 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
     // Extract agent name and action from the payload
     // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
     final agentName = json['agent_id'] as String? ?? 'System';
-    final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
+    final action =
+        json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
 
-    return MeshMessage(
-      agentName,
-      action,
-      DateTime.now(),
-    );
+    return MeshMessage(agentName, action, DateTime.now());
   });
 });
 
@@ -39,10 +36,12 @@ class SwarmObservabilityWidget extends ConsumerStatefulWidget {
   const SwarmObservabilityWidget({super.key});
 
   @override
-  ConsumerState<SwarmObservabilityWidget> createState() => _SwarmObservabilityWidgetState();
+  ConsumerState<SwarmObservabilityWidget> createState() =>
+      _SwarmObservabilityWidgetState();
 }
 
-class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWidget> {
+class _SwarmObservabilityWidgetState
+    extends ConsumerState<SwarmObservabilityWidget> {
   final List<MeshMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -74,10 +73,26 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
         child: BackdropFilter(
           filter: ImageFilter.compose(
             outer: const ColorFilter.matrix(<double>[
-              1.168, -0.153, -0.015, 0, 0,
-              -0.046, 1.061, -0.015, 0, 0,
-              -0.046, -0.152, 1.198, 0, 0,
-              0, 0, 0, 1, 0,
+              1.168,
+              -0.153,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              1.061,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              -0.152,
+              1.198,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
             ]),
             inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
           ),
@@ -101,7 +116,11 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                           color: colors.primary.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
+                        child: Icon(
+                          Icons.wifi_tethering,
+                          color: colors.primary,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       const Text(
@@ -135,7 +154,9 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                             itemBuilder: (context, index) {
                               final msg = _messages[index];
                               return _AnimatedMessageItem(
-                                key: ValueKey(msg.timestamp.millisecondsSinceEpoch),
+                                key: ValueKey(
+                                  msg.timestamp.millisecondsSinceEpoch,
+                                ),
                                 message: msg,
                               );
                             },
@@ -153,10 +174,12 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
 
 class _PulsingStatusIndicator extends StatefulWidget {
   @override
-  State<_PulsingStatusIndicator> createState() => _PulsingStatusIndicatorState();
+  State<_PulsingStatusIndicator> createState() =>
+      _PulsingStatusIndicatorState();
 }
 
-class _PulsingStatusIndicatorState extends State<_PulsingStatusIndicator> with SingleTickerProviderStateMixin {
+class _PulsingStatusIndicatorState extends State<_PulsingStatusIndicator>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
 
@@ -167,7 +190,10 @@ class _PulsingStatusIndicatorState extends State<_PulsingStatusIndicator> with S
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat(reverse: true);
-    _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
+    _opacityAnimation = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(_controller);
   }
 
   @override
@@ -215,7 +241,8 @@ class _AnimatedMessageItem extends StatefulWidget {
   State<_AnimatedMessageItem> createState() => _AnimatedMessageItemState();
 }
 
-class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleTickerProviderStateMixin {
+class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -233,8 +260,14 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
       begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _scaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _controller.forward();
   }
 
@@ -259,20 +292,41 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: const ColorFilter.matrix(<double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color.fromRGBO(255, 255, 255, 0.03),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

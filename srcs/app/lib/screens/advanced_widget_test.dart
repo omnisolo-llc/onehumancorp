@@ -39,7 +39,10 @@ class FakeClientConfig extends Fake implements centrifuge.ClientConfig {}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
-  return ProviderScope(overrides: overrides, child: MaterialApp(home: child));
+  return ProviderScope(
+    overrides: overrides,
+    child: MaterialApp(home: child),
+  );
 }
 
 ApiService _mockApi(MockHttpClient client) =>

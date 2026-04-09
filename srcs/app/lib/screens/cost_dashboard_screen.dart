@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ohc_app/models/agent.dart';
@@ -45,14 +47,13 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                   snapshot.connectionState == ConnectionState.waiting;
               return IconButton(
                 onPressed: isRefreshing ? null : _refresh,
-                icon:
-                    isRefreshing
-                        ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                        : const Icon(Icons.refresh),
+                icon: isRefreshing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
                 tooltip: 'Refresh costs',
               );
             },
@@ -112,95 +113,86 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
-                    children:
-                        costs.agents.map((agentCost) {
-                          final agent = data.agents.firstWhere(
-                            (a) => a.id == agentCost.agentId,
-                            orElse:
-                                () => Agent(
-                                  id: agentCost.agentId,
-                                  name: 'Unknown Agent',
-                                  role: '',
-                                  status: '',
-                                  organizationId: '',
-                                  createdAt: DateTime.now(),
-                                ),
-                          );
+                    children: costs.agents.map((agentCost) {
+                      final agent = data.agents.firstWhere(
+                        (a) => a.id == agentCost.agentId,
+                        orElse: () => Agent(
+                          id: agentCost.agentId,
+                          name: 'Unknown Agent',
+                          role: '',
+                          status: '',
+                          organizationId: '',
+                          createdAt: DateTime.now(),
+                        ),
+                      );
 
-                          final ratio =
-                              costs.totalCostUSD > 0
-                                  ? agentCost.costUSD / costs.totalCostUSD
-                                  : 0.0;
+                      final ratio = costs.totalCostUSD > 0
+                          ? agentCost.costUSD / costs.totalCostUSD
+                          : 0.0;
 
-                          return Semantics(
-                            label:
-                                'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                      return Semantics(
+                        label:
+                            'Usage for ${agent.name}: ${currencyFormat.format(agentCost.costUSD)}, ${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        agent.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      Text(
-                                        currencyFormat.format(
-                                          agentCost.costUSD,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Stack(
-                                    children: [
-                                      Container(
-                                        height: 8,
-                                        width: double.infinity,
-                                        decoration: BoxDecoration(
-                                          color: colors.surfaceContainerHighest,
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                      ),
-                                      FractionallySizedBox(
-                                        widthFactor: ratio.clamp(0.0, 1.0),
-                                        child: Container(
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: colors.primary,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
                                   Text(
-                                    '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: colors.onSurfaceVariant,
+                                    agent.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    currencyFormat.format(agentCost.costUSD),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Stack(
+                                children: [
+                                  Container(
+                                    height: 8,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: colors.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  FractionallySizedBox(
+                                    widthFactor: ratio.clamp(0.0, 1.0),
+                                    child: Container(
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: colors.primary,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          );
-                        }).toList(),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${NumberFormat.compact().format(agentCost.tokenUsed)} tokens',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
@@ -214,7 +206,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -284,7 +276,7 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
-      child: Card(
+      child: GlassCard(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(

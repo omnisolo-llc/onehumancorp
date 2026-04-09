@@ -32,24 +32,23 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Future<void> _handleDeleteUser(String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete User?'),
-            content: const Text('This action cannot be undone.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Delete User?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -97,95 +96,95 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           ),
           Expanded(
             child: FutureBuilder<List<UserPublic>>(
-        future: _usersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final users = snapshot.data ?? [];
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(24),
-            itemCount: users.length,
-            separatorBuilder: (context, index) => const Divider(),
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                      user.isAdmin ? colors.primary : colors.secondaryContainer,
-                  child: Text(
-                    user.username[0].toUpperCase(),
-                    style: TextStyle(
-                      color:
-                          user.isAdmin
-                              ? colors.onPrimary
-                              : colors.onSecondaryContainer,
+              future: _usersFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                  ),
-                ),
-                title: Row(
-                  children: [
-                    Text(
-                      user.username,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(width: 8),
-                    if (user.isAdmin)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final users = snapshot.data ?? [];
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(24),
+                  itemCount: users.length,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: user.isAdmin
+                            ? colors.primary
+                            : colors.secondaryContainer,
                         child: Text(
-                          'ADMIN',
+                          user.username[0].toUpperCase(),
                           style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: colors.primary,
+                            color: user.isAdmin
+                                ? colors.onPrimary
+                                : colors.onSecondaryContainer,
                           ),
                         ),
                       ),
-                  ],
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(user.email),
-                    Text(
-                      'Joined: ${DateFormat.yMMMd().format(user.createdAt)}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-                trailing: Semantics(
-                  button: true,
-                  label: 'Delete user',
-                  child: IconButton(
-                    icon: Icon(Icons.delete_outline, color: colors.error),
-                    tooltip: 'Delete user',
-                    onPressed: () => _handleDeleteUser(user.id),
-                  ),
-                ),
-                isThreeLine: true,
-              );
-            },
-          );
-        },
-      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            user.username,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          if (user.isAdmin)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'ADMIN',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(user.email),
+                          Text(
+                            'Joined: ${DateFormat.yMMMd().format(user.createdAt)}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      trailing: Semantics(
+                        button: true,
+                        label: 'Delete user',
+                        child: IconButton(
+                          icon: Icon(Icons.delete_outline, color: colors.error),
+                          tooltip: 'Delete user',
+                          onPressed: () => _handleDeleteUser(user.id),
+                        ),
+                      ),
+                      isThreeLine: true,
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -197,7 +196,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.2), // Semi-transparent barrier for glass effect
+      barrierColor: Colors.black.withValues(
+        alpha: 0.2,
+      ), // Semi-transparent barrier for glass effect
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -207,10 +208,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
               ),
@@ -264,23 +269,33 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                       FilledButton(
                         onPressed: () async {
                           try {
-                            await ref.read(apiServiceProvider)!.createReferral(
-                              usernameController.text.isNotEmpty ? usernameController.text : "anonymous",
-                              "xYz8vQ_local_sovereign",
-                            );
+                            await ref
+                                .read(apiServiceProvider)!
+                                .createReferral(
+                                  usernameController.text.isNotEmpty
+                                      ? usernameController.text
+                                      : "anonymous",
+                                  "xYz8vQ_local_sovereign",
+                                );
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                      fontFamily: 'Inter',
-                                    ),
+                                  'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
                                 behavior: SnackBarBehavior.floating,
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(snackBar);
                               Navigator.pop(context);
                             }
                           } catch (e) {
@@ -288,7 +303,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Error: $e'),
-                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.error,
                                 ),
                               );
                             }
@@ -339,17 +356,15 @@ class _GrowthReferralWidgetState extends State<GrowthReferralWidget> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: const Color.fromRGBO(255, 255, 255, 0.03),
-                border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: colorScheme.outline.withValues(alpha: 0.2),
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.group_add,
-                    size: 48,
-                    color: colorScheme.primary,
-                  ),
+                  Icon(Icons.group_add, size: 48, color: colorScheme.primary),
                   const SizedBox(width: 24),
                   Expanded(
                     child: Column(
