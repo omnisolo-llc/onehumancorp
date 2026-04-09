@@ -1,0 +1,7 @@
+task: "Implement Hybrid MCP RAG Protocol"
+agent: "jules"
+timestamp: "2026-04-09T11-52-58Z"
+insights:
+  - "Created RAGSyncService interface and metrics in srcs/server/hub/rag_sync.go"
+  - "Created database migration 032_add_hybrid_sync_metadata.sql to add sync_status and last_sync_at to swarm_memory_embeddings"
+  - "Discovered missing table 'telemetry_buffer' in earlier migration test; renamed 013_tenant_isolation_sip.sql to 027_tenant_isolation_sip.sql so it runs after telemetry_buffer is created in 026."
