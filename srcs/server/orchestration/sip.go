@@ -228,6 +228,8 @@ func initializeTables(provider db.Provider) error {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			sync_status VARCHAR(50) DEFAULT 'pending',
+			last_sync_timestamp TIMESTAMP NULL,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
 			synced_to_cloud BOOLEAN DEFAULT FALSE
@@ -254,6 +256,8 @@ func initializeTables(provider db.Provider) error {
 			vector_embedding BLOB,
 			source_plugin TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			sync_status VARCHAR(50) DEFAULT 'pending',
+			last_sync_timestamp TIMESTAMP NULL,
 			organization_id TEXT DEFAULT 'system'
 		);`,
 		`CREATE TABLE IF NOT EXISTS telemetry_buffer (
@@ -261,6 +265,8 @@ func initializeTables(provider db.Provider) error {
 			metric_type TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			sync_status VARCHAR(50) DEFAULT 'pending',
+			last_sync_timestamp TIMESTAMP NULL,
 			organization_id TEXT DEFAULT 'system'
 		);`,
 	}

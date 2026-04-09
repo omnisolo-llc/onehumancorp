@@ -24,7 +24,13 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	_, err = sqlDB.Exec(`
 		CREATE TABLE swarm_memory_embeddings (
 			memory_id TEXT PRIMARY KEY,
-			context TEXT NOT NULL
+			context TEXT NOT NULL,
+			sync_status VARCHAR(50) DEFAULT 'pending',
+			last_sync_timestamp TIMESTAMP NULL,
+			vector_embedding BLOB,
+			source_plugin TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			organization_id TEXT DEFAULT 'system'
 		)
 	`)
 	if err != nil {

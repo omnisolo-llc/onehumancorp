@@ -205,7 +205,7 @@ func TestSIPDB_GetEpisodicMemoriesByPlugin_ScanError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.db.Exec(ctx, "CREATE TABLE swarm_memory_embeddings (memory_id TEXT, context TEXT, vector_embedding BLOB, source_plugin TEXT, created_at TEXT)")
+	_, err = db.db.Exec(ctx, "CREATE TABLE swarm_memory_embeddings (memory_id TEXT, context TEXT, vector_embedding BLOB, source_plugin TEXT, created_at TEXT, sync_status VARCHAR(50) DEFAULT 'pending', last_sync_timestamp TIMESTAMP NULL, organization_id TEXT DEFAULT 'system')")
 	if err != nil {
 		t.Fatal(err)
 	}
