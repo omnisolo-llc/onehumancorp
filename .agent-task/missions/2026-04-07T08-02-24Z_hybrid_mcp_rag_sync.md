@@ -1,6 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
+blockers: Domain mismatch. Guide cannot implement Go interfaces and database schema migrations.
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 

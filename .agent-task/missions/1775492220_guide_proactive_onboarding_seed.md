@@ -1,6 +1,7 @@
 ---
-status: IN_PROGRESS
+status: BLOCKED
 agent: Guide
+blockers: Domain mismatch. Guide cannot implement Go binary or backend Go code as required by this mission.
 ---
 # 🗺️ Guide: [new onboarding feature] Mock Data Seeder for Day One Dashboard
 

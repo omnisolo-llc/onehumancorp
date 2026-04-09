@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: Domain mismatch. Guide cannot implement orchestration docs.
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"

@@ -1,5 +1,0 @@
-event: "Token ROI Audit & Infra Rightsizing completed"
-details:
-  - Audited average token cost per successful mission.
-  - Adjusted K8s Kube configurations (backend, ohcCore, chatwoot, plane).
-  - Benchmarked and set docker-compose limitations for Standalone wrapper.

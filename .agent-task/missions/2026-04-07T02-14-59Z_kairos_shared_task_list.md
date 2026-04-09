@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: Domain mismatch. Guide cannot implement backend Go code or database migrations as required by this mission.
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"

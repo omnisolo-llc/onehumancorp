@@ -30,6 +30,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Factory Reset / Clean Reinstall"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -192,6 +193,22 @@ standalone_db_check() {
     fi
 }
 
+factory_reset() {
+    echo -e "${BOLD}${PURPLE}[WARNING] This will destroy all local data, environments, and agent memory.${RESET}"
+    read -p "Are you absolutely sure you want to Factory Reset? (type 'yes' to confirm): " confirm
+    if [ "$confirm" == "yes" ]; then
+        echo -e "${DIM}[Removing \$HOME/.ohc-local-data/]${RESET}"
+        rm -rf "$HOME/.ohc-local-data"
+        echo -e "${DIM}[Removing .env]${RESET}"
+        rm -f .env
+        echo -e "${DIM}[Removing .agent-task/memory/ and .agent-task/status/]${RESET}"
+        rm -rf .agent-task/memory .agent-task/status
+        echo -e "${GREEN}✓ Factory Reset complete. Please run '1) Run Initial Setup' again.${RESET}\n"
+    else
+        echo -e "${DIM}Factory Reset aborted.${RESET}\n"
+    fi
+}
+
 
 if [ "$1" == "--non-interactive" ]; then
     echo "Running in non-interactive verification mode."
@@ -212,6 +229,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) factory_reset ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac

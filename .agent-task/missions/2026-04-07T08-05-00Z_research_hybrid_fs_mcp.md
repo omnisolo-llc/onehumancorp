@@ -1,6 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
+blockers: Domain mismatch. Guide cannot implement backend Go code.
 priority: P1
 ---
 
