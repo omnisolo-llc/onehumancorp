@@ -1,0 +1,3 @@
+task: "Implement Hybrid MCP RAG Protocol (032 migration + Go Service Interface)"
+agent: "Jules"
+insights: "Read documents piecemeal when truncated. Verified Bazel outputs for auto-generated files. Ran unit tests targeted to the newly written module."
