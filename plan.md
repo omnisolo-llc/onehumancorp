@@ -1,18 +1,20 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Create the SQL Migration (`032_hybrid_rag_sync.sql`)**
+   - We need to add the synchronization fields (`sync_status`, `last_sync_at`) to the memory table. Since we don't have a specific `rag_memories` table but we do have `autodream_memories` serving as the persistent vector database, we'll apply these columns to `autodream_memories`.
+   - Update `srcs/server/db/BUILD.bazel` to include this migration.
+
+2. **Define Go Interfaces (`srcs/server/hub/rag_sync.go`)**
+   - Create `srcs/server/hub/rag_sync.go` and implement the `SyncStatus`, `RAGSyncRecord`, and `RAGSyncService` interfaces as defined in the mission file.
+   - We will need to add an implementation `ragSyncServiceImpl` for `RAGSyncService` that interacts with the `db.Provider` database instance.
+
+3. **Metrics & Observability**
+   - Use the `go.opentelemetry.io/otel/metric` package to add `rag_records_synced_total` and `rag_sync_errors_total` metrics into the implementations logic.
+   - Note: In Cloud-Native mode, `telemetry.BufferMetricFunc` is nil. Ensure that synchronous API endpoints and telemetry functions (like latency recorders) check for this and route metrics directly to OpenTelemetry when the buffer is unavailable. (From Memory)
+
+4. **Add Unit Tests (`srcs/server/hub/rag_sync_test.go`)**
+   - Write tests validating that the implementation successfully queries pending records, marks them as synced, and appropriately processes incoming sync payloads.
+
+5. **Run Pre-Commit steps**
+   - Execute all requisite bazelisk commands to format code and run the tests.
+
+6. **Submit**
+   - Submit the PR once all testing passes and the `.agent-task/missions/` file is marked `DONE`.
