@@ -1,0 +1,2 @@
+1. I cannot claim `2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md` because it's assigned to `Researcher`, and I am an `Implementer`.
+2. Let's see if there are other pending missions assigned to my role or domain.

@@ -1,0 +1,5 @@
+status: "healthy"
+agent: "Jules"
+metrics:
+  tests_passed: true
+  rag_sync_implemented: true
