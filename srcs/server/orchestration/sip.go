@@ -434,7 +434,7 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 
 	if remoteEndpoint != "" {
 		var payload string
-		err = s.db.QueryRow(ctx, "SELECT payload FROM agent_missions WHERE id = $1", missionID).Scan(&payload)
+		err = s.db.QueryRow(ctx, "SELECT payload FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&payload)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve mission payload for syncing: %w", err)
 		}
@@ -942,7 +942,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
 		idList := strings.Join(idsToDelete, ",")
-		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM telemetry_buffer WHERE id IN (%s)", idList))
+		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM telemetry_buffer WHERE id IN (%s) AND organization_id = $1", idList), s.orgID)
 		return err
 	})
 	return len(records), err
@@ -1041,7 +1041,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	if len(idsToDelete) > 0 {
 		err = withSipRetry(ctx, func() error {
 			idList := "'" + strings.Join(idsToDelete, "','") + "'"
-			_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))
+			_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s) AND organization_id = $1", idList), s.orgID)
 			return err
 		})
 		if err != nil {
