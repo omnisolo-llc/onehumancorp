@@ -1,3 +1,3 @@
 package main
-import "fmt"
-func main() {}
+import "testing"
+func TestDummy(t *testing.T) {}

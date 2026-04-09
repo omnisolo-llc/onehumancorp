@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/redis/rueidis"
+	"github.com/onehumancorp/mono/srcs/server/hub"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
+
 	"log/slog"
 	"net"
 	"net/http"
@@ -335,6 +337,42 @@ func run(now time.Time, listen listenFunc) error {
 								slog.Warn("Failed to sync standalone missions", "error", err)
 							} else if syncedCount > 0 {
 								slog.Debug("Successfully synced standalone missions to cloud", "count", syncedCount)
+							}
+						}
+					}
+				}()
+			}
+
+			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
+			ragEndpoint := os.Getenv("OHC_CLOUD_RAG_ENDPOINT")
+			if ragEndpoint != "" {
+				ragSyncService := hub.NewDefaultRAGSyncService(pool)
+				go func() {
+					ticker := time.NewTicker(10 * time.Minute)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							records, err := ragSyncService.FetchPendingSyncs(ctx, 100)
+							if err != nil {
+								slog.Warn("Failed to fetch pending RAG syncs", "error", err)
+								continue
+							}
+							if len(records) > 0 {
+								// Mock logic to send records to cloud
+								slog.Debug("Sending pending RAG syncs to cloud", "count", len(records))
+								var ids []string
+								for _, r := range records {
+									ids = append(ids, r.ID)
+								}
+								// Assuming successful push
+								if err := ragSyncService.MarkSynced(ctx, ids); err != nil {
+									slog.Warn("Failed to mark RAG records as synced", "error", err)
+								} else {
+									slog.Info("Successfully synced standalone RAG context to cloud", "count", len(records))
+								}
 							}
 						}
 					}

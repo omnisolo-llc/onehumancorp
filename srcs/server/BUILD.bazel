@@ -17,9 +17,10 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/sync",
+        "//srcs/server/hub",
         "//srcs/server/telemetry",
-        "@org_golang_google_grpc//:grpc",
         "@com_github_redis_rueidis//:rueidis",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
 
