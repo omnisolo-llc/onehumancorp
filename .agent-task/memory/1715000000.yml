@@ -1,0 +1,2 @@
+task: Integrate Hybrid File System MCP Server
+learnings: Implemented FileSystemProvider to abstract local vs cloud storage, adhering to OHC Hybrid Architecture.
