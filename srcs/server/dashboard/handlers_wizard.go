@@ -176,6 +176,25 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 			"status":  "ok",
 			"message": "Standalone mode active",
 		})
+
+		s.mu.RLock()
+		dbPath := s.settings.DBPath
+		s.mu.RUnlock()
+
+		if dbPath == "" {
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DBPath",
+				"status":  "missing",
+				"message": "DBPath is required in standalone mode",
+			})
+		} else {
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DBPath",
+				"status":  "ok",
+				"message": "DBPath is configured",
+			})
+		}
 	}
 
 	respStatus := "healthy"
