@@ -9,15 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -40,17 +40,18 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode // For Teammate Mesh broadcast
-	stopChan    chan struct{}
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode // For Teammate Mesh broadcast
+	mesh         MeshTransport   // For realtime Teammate Mesh APIs
+	stopChan     chan struct{}
 	stateMachine *statemachine.StateMachine
-	taskQueue   queue.TaskQueue
-	mu          sync.Mutex // For Standalone mode SQLite locking
+	taskQueue    queue.TaskQueue
+	mu           sync.Mutex // For Standalone mode SQLite locking
 }
 
 // NewTaskManager creates a new TaskManager.
-func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
+func NewTaskManager(provider db.Provider, hub *CentrifugeNode, mesh MeshTransport) *TaskManager {
 	var broadcast func(string, map[string]interface{})
 	if hub != nil {
 		broadcast = hub.PublishTaskBroadcast
@@ -59,6 +60,7 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 	tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
+		mesh:         mesh,
 		stateMachine: statemachine.NewStateMachine(provider, broadcast),
 	}
 
@@ -243,6 +245,12 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
+	if tm.mesh != nil {
+		go func() {
+			// Broadcast via Mesh Transport
+			tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", []byte(fmt.Sprintf(`{"action":"CREATE","task_id":"%s"}`, task.ID)))
+		}()
+	}
 
 	return &task, nil
 }
@@ -385,6 +393,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
+	if tm.mesh != nil {
+		go func() {
+			tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", []byte(fmt.Sprintf(`{"action":"CLAIM","task_id":"%s","agent_id":"%s"}`, task.ID, agentID)))
+		}()
+	}
 
 	return &task, nil
 }
@@ -431,6 +444,11 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 				"status":   "REVIEW",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+	if tm.mesh != nil {
+		go func() {
+			tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", []byte(fmt.Sprintf(`{"action":"REVIEW","task_id":"%s"}`, taskID)))
 		}()
 	}
 
@@ -482,6 +500,11 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+	if tm.mesh != nil {
+		go func() {
+			tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", []byte(fmt.Sprintf(`{"action":"COMPLETE","task_id":"%s"}`, taskID)))
 		}()
 	}
 
@@ -754,11 +777,15 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				tm.hub.PublishTaskBroadcast(t.ID, payload)
 			}(task)
 		}
+		if tm.mesh != nil {
+			go func(t *SharedTask) {
+				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", []byte(fmt.Sprintf(`{"action":"CLAIM","task_id":"%s","agent_id":"%s"}`, t.ID, agentID)))
+			}(task)
+		}
 	}
 
 	return claimedTasks, nil
 }
-
 
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {

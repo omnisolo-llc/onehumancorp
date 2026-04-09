@@ -1,18 +1,17 @@
 package orchestration
 
 import (
-
 	"bytes"
-	"database/sql"
-	"github.com/onehumancorp/mono/srcs/server/db"
-	_ "modernc.org/sqlite"
-	"path/filepath"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1501,7 +1500,7 @@ func TestHandleSyncMissions(t *testing.T) {
 
 	provider := db.NewSqliteProvider(sqlDB)
 	hub, _ := NewCentrifugeNode()
-	tm := NewTaskManager(provider, hub)
+	tm := NewTaskManager(provider, hub, nil)
 
 	payloads := []SyncDaemonPayload{
 		{ID: "m1", Status: "SYNCED", Payload: `{"data": "test"}`},

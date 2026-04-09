@@ -1,13 +1,8 @@
 package orchestration
 
-
 import (
 	"google.golang.org/protobuf/proto"
 
-
-
-
-	"strings"
 	"bufio"
 	"bytes"
 	"context"
@@ -21,24 +16,23 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/storage"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 )
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -330,7 +324,6 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
-
 	// Default to a stub S3 provider if we can't initialize a local one
 	h.storage = storage.NewS3Provider("ohc-blobs")
 	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
@@ -404,15 +397,22 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 		case <-ctx.Done():
 			return ctx.Err()
 		case payload := <-eventsCh:
+			start := time.Now()
 			timestamp := time.Now().UnixNano()
 			event := pb.MeshEvent_builder{
 				Topic:     &topic,
 				Payload:   payload,
 				Timestamp: &timestamp,
 			}.Build()
+
+			// Instrument mesh latency directly to OpenTelemetry since BufferMetricFunc is nil in Cloud-Native mode
 			if err := stream.Send(event); err != nil {
 				return err
 			}
+
+			// Note: BufferMetricFunc is nil in Cloud-Native, so we route directly to OpenTelemetry
+			telemetry.RecordMeshLatency(ctx, "StreamMeshEvents_Send", time.Since(start))
+			telemetry.RecordMeshBroadcast(ctx, "Cloud-Native")
 		}
 	}
 }
@@ -1926,10 +1926,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action": "sync",
-			"status": payload.Status,
+			"action":   "sync",
+			"status":   payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload": payload.Payload,
+			"payload":  payload.Payload,
 		})
 	}
 
@@ -2017,6 +2017,3 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 	w.WriteHeader(http.StatusOK)
 }
-
-
-
