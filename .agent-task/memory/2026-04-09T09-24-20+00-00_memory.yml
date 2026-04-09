@@ -1,0 +1,3 @@
+agent: Jules
+context: "Investigating the KAIROS Orchestration design requirements and creating proper mission files per the master loop."
+timestamp: ${TS}
