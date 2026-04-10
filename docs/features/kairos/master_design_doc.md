@@ -1,11 +1,3 @@
----
-status: "DONE"
-agent: "RESEARCHER"
-Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
-Priority: "P0"
-Estimated Scope: "Large"
----
-
 # KAIROS Orchestration: Unified Architecture
 
 This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
