@@ -20,6 +20,9 @@ import (
 )
 
 var (
+
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal    metric.Int64Counter
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -162,6 +165,10 @@ type mockableMeter interface {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitWithMeter(m mockableMeter) error {
+
+	ragRecordsSyncedTotal, _ = m.Int64Counter("ohc.rag_sync.synced.count", metric.WithDescription("Total RAG records synced to cloud"))
+	ragSyncErrorsTotal, _ = m.Int64Counter("ohc.rag_sync.errors.count", metric.WithDescription("Total RAG sync errors"))
+
 	var err error
 	var errs []error
 	requestCounter, err = m.Int64Counter(
@@ -1010,5 +1017,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+
+// RecordRAGRecordsSynced increments the count of RAG records successfully synced.
+func RecordRAGRecordsSynced(ctx context.Context, count int64) {
+	if ragRecordsSyncedTotal != nil {
+		ragRecordsSyncedTotal.Add(ctx, count)
+	}
+}
+
+// RecordRAGSyncError increments the count of RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal != nil {
+		ragSyncErrorsTotal.Add(ctx, 1)
 	}
 }
