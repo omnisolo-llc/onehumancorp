@@ -9,6 +9,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"go.opentelemetry.io/otel"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
@@ -39,6 +40,17 @@ func HandleSyncEscalation(hub *orchestration.Hub) http.HandlerFunc {
 			for _, p := range payloads {
 				if p.MemoryID == "" {
 					continue
+				}
+
+				// Redact PII from the context string before enqueueing
+				var parsedContext interface{}
+				if err := json.Unmarshal([]byte(p.Context), &parsedContext); err == nil {
+					redactedContext := telemetry.RedactInterfacePII(parsedContext)
+					if redactedBytes, err := json.Marshal(redactedContext); err == nil {
+						p.Context = string(redactedBytes)
+					}
+				} else {
+					p.Context = telemetry.RedactPII(p.Context)
 				}
 
 				job := &queue.Job{

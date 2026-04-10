@@ -85,6 +85,12 @@ func RedactInterfacePII(val interface{}) interface{} {
 			res[k] = RedactInterfacePII(val)
 		}
 		return res
+	case map[string]string:
+		res := make(map[string]string, len(v))
+		for k, val := range v {
+			res[k] = RedactPII(val)
+		}
+		return res
 	case []interface{}:
 		res := make([]interface{}, len(v))
 		for i, val := range v {
