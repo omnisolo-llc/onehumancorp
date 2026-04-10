@@ -12,7 +12,8 @@ class LandingPageExperimentsScreen extends ConsumerStatefulWidget {
       _LandingPageExperimentsScreenState();
 }
 
-class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperimentsScreen> {
+class _LandingPageExperimentsScreenState
+    extends ConsumerState<LandingPageExperimentsScreen> {
   late Future<List<Map<String, dynamic>>> _experimentsFuture;
 
   @override
@@ -23,7 +24,9 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
 
   void _refresh() {
     setState(() {
-      _experimentsFuture = ref.read(apiServiceProvider)!.listLandingPageExperiments();
+      _experimentsFuture = ref
+          .read(apiServiceProvider)!
+          .listLandingPageExperiments();
     });
   }
 
@@ -43,10 +46,14 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
             filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             child: Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
               ),
@@ -74,7 +81,9 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
                   const SizedBox(height: 16),
                   TextField(
                     controller: trafficSplitController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(
                       labelText: 'Traffic Split (0.0 to 1.0)',
                       border: OutlineInputBorder(),
@@ -91,9 +100,13 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
                       const SizedBox(width: 8),
                       FilledButton(
                         onPressed: () async {
-                          final split = double.tryParse(trafficSplitController.text) ?? 0.5;
+                          final split =
+                              double.tryParse(trafficSplitController.text) ??
+                              0.5;
                           try {
-                            await ref.read(apiServiceProvider)!.createLandingPageExperiment(
+                            await ref
+                                .read(apiServiceProvider)!
+                                .createLandingPageExperiment(
                                   titleController.text,
                                   split,
                                 );
@@ -106,7 +119,9 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Error: $e'),
-                                  backgroundColor: Theme.of(context).colorScheme.error,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.error,
                                 ),
                               );
                             }
@@ -168,8 +183,8 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
               child: Text(
                 'No active growth experiments. Start A/B testing your funnel!',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             );
           }
@@ -182,12 +197,20 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
               final exp = experiments[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(Icons.science, color: Theme.of(context).colorScheme.primary),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  child: Icon(
+                    Icons.science,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 title: Text(
                   exp['title'] ?? 'Unknown',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                  ),
                 ),
                 subtitle: Text(
                   'Traffic Split: ${(exp['trafficSplit'] * 100).toStringAsFixed(1)}% | Status: ${exp['status']}',
