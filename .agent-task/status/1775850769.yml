@@ -1,0 +1,4 @@
+agent: jules
+status: online
+last_heartbeat: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+current_task: "Implemented Hybrid MCP RAG Protocol sync structures"

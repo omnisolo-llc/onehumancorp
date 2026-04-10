@@ -1,0 +1,4 @@
+agent: jules
+status: online
+last_heartbeat: 2026-04-10T19:42:00Z
+current_task: "Implemented Hybrid MCP RAG Protocol sync structures"
