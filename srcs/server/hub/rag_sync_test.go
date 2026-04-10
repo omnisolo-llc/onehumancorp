@@ -50,9 +50,9 @@ func TestRAGSyncService(t *testing.T) {
 	ctx := context.Background()
 	mockService := &MockRAGSyncService{
 		records: []RAGSyncRecord{
-			{ID: "1", Context: "Test Context 1", Vector: []float32{0.1, 0.2}, SyncStatus: SyncStatusPending},
-			{ID: "2", Context: "Test Context 2", Vector: []float32{0.3, 0.4}, SyncStatus: SyncStatusSynced},
-			{ID: "3", Context: "Test Context 3", Vector: []float32{0.5, 0.6}, SyncStatus: SyncStatusPending},
+			{ID: "1", Context: "Test Context 1", Vector: []byte{0x01, 0x02}, SyncStatus: SyncStatusPending},
+			{ID: "2", Context: "Test Context 2", Vector: []byte{0x03, 0x04}, SyncStatus: SyncStatusSynced},
+			{ID: "3", Context: "Test Context 3", Vector: []byte{0x05, 0x06}, SyncStatus: SyncStatusPending},
 		},
 	}
 
@@ -86,7 +86,7 @@ func TestRAGSyncService(t *testing.T) {
 
 	// Test ProcessIncomingSync
 	incoming := []RAGSyncRecord{
-		{ID: "4", Context: "Test Context 4", Vector: []float32{0.7, 0.8}, SyncStatus: SyncStatusSynced},
+		{ID: "4", Context: "Test Context 4", Vector: []byte{0x07, 0x08}, SyncStatus: SyncStatusSynced},
 	}
 	err = mockService.ProcessIncomingSync(ctx, incoming)
 	if err != nil {
