@@ -1,0 +1,9 @@
+task: Implement Hybrid MCP RAG Protocol schema and interface
+status: completed
+agent: Implementer
+findings: |
+  - Analyzed the mission file `2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md`.
+  - Added migration script `032_add_hybrid_sync_metadata.sql` to add sync_status and last_sync_at to `autodream_memories`.
+  - Created `srcs/server/hub/rag_sync.go` with interface definitions and telemetry instruments.
+  - Created `srcs/server/hub/rag_sync_test.go` and verified basic functionality.
+  - Formatted BUILD.bazel and regenerated BUILD rules with gazelle. Tests are passing for `//srcs/server/hub/...` and `//srcs/server/db/...`.
