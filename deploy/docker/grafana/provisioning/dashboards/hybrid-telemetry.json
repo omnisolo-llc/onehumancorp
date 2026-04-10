@@ -23,11 +23,54 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "stat",
+      "title": "Hybrid MCP RAG Protocol Sync Metrics",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10000,
+      "targets": [
+        {
+          "expr": "sum(rag_records_synced_total)",
+          "refId": "A",
+          "legendFormat": "Synced Records"
+        },
+        {
+          "expr": "sum(rag_sync_errors_total)",
+          "refId": "B",
+          "legendFormat": "Sync Errors"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "transparent": true,
+      "styles": {
+        "backdrop-filter": "blur(20px)",
+        "background": "rgba(255, 255, 255, 0.03)",
+        "font-family": "'Outfit', 'Inter', sans-serif"
+      }
+    },
+    {
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 12
       },
       "id": 100,
       "options": {
@@ -101,7 +144,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 15
       },
       "id": 1,
       "options": {
@@ -141,7 +184,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 15
       },
       "id": 2,
       "targets": [
@@ -168,7 +211,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 23
       },
       "id": 3,
       "targets": [
@@ -195,7 +238,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 23
       },
       "id": 4,
       "targets": [
@@ -222,7 +265,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 31
       },
       "id": 7,
       "targets": [
@@ -249,7 +292,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 31
       },
       "id": 6,
       "targets": [
@@ -274,7 +317,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 39
       },
       "targets": [
         {
@@ -292,7 +335,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 39
       },
       "id": 8,
       "options": {
@@ -322,7 +365,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 47
       },
       "type": "timeseries",
       "title": "Task Queue Length",
@@ -347,7 +390,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 47
       },
       "type": "timeseries",
       "title": "Task Processing Latency",
@@ -372,7 +415,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 55
       },
       "type": "timeseries",
       "title": "Task Failed Rate",
@@ -398,7 +441,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 55
       },
       "type": "timeseries",
       "title": "SQLite Retry Exhaustion",
@@ -427,7 +470,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 51
+        "y": 63
       },
       "id": 999,
       "targets": [
@@ -454,7 +497,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 63
       },
       "id": 1000,
       "targets": [
