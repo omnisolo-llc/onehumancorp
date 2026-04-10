@@ -1,0 +1,5 @@
+status: HEALTHY
+metrics:
+  cpu_usage: 12%
+  memory_usage: 140MB
+  active_agents: 3
