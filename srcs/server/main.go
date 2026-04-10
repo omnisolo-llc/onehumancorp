@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
+	"github.com/onehumancorp/mono/srcs/server/hub"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
@@ -285,6 +286,10 @@ func run(now time.Time, listen listenFunc) error {
 	if pool != nil {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
+
+		// RAGSync Service wiring
+		ragSyncProvider := hub.NewRAGSyncProvider(pool.Provider)
+		_ = ragSyncProvider
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)

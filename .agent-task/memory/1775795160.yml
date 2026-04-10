@@ -1,0 +1,6 @@
+type: CONTEXT
+tags:
+  - RAG
+  - SYNC
+  - HYBRID
+context: "Implemented Hybrid MCP RAG sync interfaces for local-to-cloud fallback with SQLite and Postgres compatibility. Created rag_sync.go, rag_sync_impl.go and updated migrations for RAG syncing."
