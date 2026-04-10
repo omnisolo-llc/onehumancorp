@@ -48,6 +48,8 @@ var (
 	AgentTransitionLatency     metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
@@ -176,6 +178,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_mesh_latency",
 		metric.WithDescription("Latency of Teammate Mesh RPC operations"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -974,6 +992,22 @@ func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode stri
 			attribute.String("deployment_mode", mode),
 		))
 	}
+}
+
+// RecordRagRecordSynced increments the global counter for successfully synced RAG records.
+func RecordRagRecordSynced(ctx context.Context) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, 1)
+}
+
+// RecordRagSyncError increments the global counter for RAG sync errors.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1)
 }
 
 // RecordMeshBroadcast increments the mesh broadcast counter.
