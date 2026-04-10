@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -650,7 +651,7 @@ func TestInvokeMCPToolTelegram(t *testing.T) {
 		ToolID: "telegram-mcp",
 		Params: json.RawMessage(`{}`),
 	}
-	_, err := app.invokeMCPTool(req)
+	_, err := app.invokeMCPTool(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error for missing content")
 	}
@@ -660,7 +661,7 @@ func TestInvokeMCPToolTelegram(t *testing.T) {
 		ToolID: "telegram-mcp",
 		Params: json.RawMessage(`{"content": "hello"}`),
 	}
-	_, err = app.invokeMCPTool(req)
+	_, err = app.invokeMCPTool(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error for missing channel")
 	}
@@ -670,7 +671,7 @@ func TestInvokeMCPToolTelegram(t *testing.T) {
 		ToolID: "telegram-mcp",
 		Params: json.RawMessage(`{"content": "hello", "channel": "test-channel"}`),
 	}
-	res, err := app.invokeMCPTool(req)
+	res, err := app.invokeMCPTool(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}
@@ -687,7 +688,7 @@ func TestInvokeMCPToolSlack(t *testing.T) {
 		ToolID: "slack-mcp",
 		Params: json.RawMessage(`{"content": "hello"}`),
 	}
-	_, err := app.invokeMCPTool(req)
+	_, err := app.invokeMCPTool(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error for missing channel")
 	}
@@ -697,7 +698,7 @@ func TestInvokeMCPToolSlack(t *testing.T) {
 		ToolID: "slack-mcp",
 		Params: json.RawMessage(`{"content": "hello", "channel": "test-channel"}`),
 	}
-	res, err := app.invokeMCPTool(req)
+	res, err := app.invokeMCPTool(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}
@@ -714,7 +715,7 @@ func TestInvokeMCPToolTeams(t *testing.T) {
 		ToolID: "teams-mcp",
 		Params: json.RawMessage(`{"content": "hello"}`),
 	}
-	_, err := app.invokeMCPTool(req)
+	_, err := app.invokeMCPTool(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error for missing channel")
 	}
@@ -724,7 +725,7 @@ func TestInvokeMCPToolTeams(t *testing.T) {
 		ToolID: "teams-mcp",
 		Params: json.RawMessage(`{"content": "hello", "channel": "test-channel"}`),
 	}
-	res, err := app.invokeMCPTool(req)
+	res, err := app.invokeMCPTool(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}
@@ -741,7 +742,7 @@ func TestInvokeMCPToolGit(t *testing.T) {
 		ToolID: "git-mcp",
 		Params: json.RawMessage(`{"repository": "test-repo", "title": "test-title", "body": "test-body", "sourceBranch": "feat-branch"}`),
 	}
-	res, err := app.invokeMCPTool(req)
+	res, err := app.invokeMCPTool(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}
@@ -758,7 +759,7 @@ func TestInvokeMCPToolJira(t *testing.T) {
 		ToolID: "jira-mcp",
 		Params: json.RawMessage(`{"project": "test-project", "title": "test-title"}`),
 	}
-	res, err := app.invokeMCPTool(req)
+	res, err := app.invokeMCPTool(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}
@@ -775,7 +776,7 @@ func TestInvokeMCPToolLinear(t *testing.T) {
 		ToolID: "linear-mcp",
 		Params: json.RawMessage(`{"project": "test-project", "title": "test-title"}`),
 	}
-	res, err := app.invokeMCPTool(req)
+	res, err := app.invokeMCPTool(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected success, got err: %v", err)
 	}

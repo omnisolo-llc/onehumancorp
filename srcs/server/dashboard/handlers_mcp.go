@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -143,7 +145,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.RUnlock()
 
-	result, err := s.invokeMCPTool(req)
+	result, err := s.invokeMCPTool(r.Context(), req)
 
 	s.mu.Lock()
 	if err != nil {
@@ -234,7 +236,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, result)
 }
 
-func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
+func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[string]any, error) {
 	// Emit structured trace for MCP tool invocation
 	if telemetry.Verbosity >= 2 {
 		slog.Info("agent execution trace",
@@ -365,6 +367,55 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}, nil
 
 	// ── Hybrid Blob Storage tool ──────────────────────────────────────────────
+	case "fs-mcp":
+		var p struct {
+			WorkspaceDir string `json:"workspace_dir"`
+		}
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return nil, fmt.Errorf("invalid fs-mcp parameters: %w", err)
+		}
+		if p.WorkspaceDir == "" {
+			p.WorkspaceDir = "/tmp/ohc-workspace"
+		}
+
+		isMultiTenant := os.Getenv("OHC_MULTITENANT") == "true"
+		provider := hybridfsmcp.NewFileSystemProvider(isMultiTenant, p.WorkspaceDir)
+		mcpServer := hybridfsmcp.NewHybridFSMCP(provider)
+
+		var args map[string]interface{}
+		if err := json.Unmarshal(req.Params, &args); err != nil {
+			return nil, err
+		}
+
+		actionArgs, _ := args["arguments"].(map[string]interface{})
+		if actionArgs == nil {
+			actionArgs = args // Fallback
+		}
+
+		result, err := mcpServer.CallTool(ctx, req.Action, actionArgs)
+		if err != nil {
+			return nil, err
+		}
+
+		var resultBytes []byte
+		switch v := result.(type) {
+		case []byte:
+			resultBytes = v
+		case string:
+			resultBytes = []byte(v)
+		default:
+			b, merr := json.Marshal(v)
+			if merr != nil {
+				return nil, merr
+			}
+			resultBytes = b
+		}
+
+		return map[string]interface{}{
+			"status": "success",
+			"data":   string(resultBytes),
+		}, nil
+
 	case "blob-mcp":
 		if s.hub.Storage() == nil {
 			return nil, errors.New("storage provider not configured")
