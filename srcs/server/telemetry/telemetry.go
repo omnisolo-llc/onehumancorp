@@ -55,6 +55,9 @@ var (
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
+	ragRecordsSyncedCounter metric.Int64Counter
+	ragSyncErrorsCounter    metric.Int64Counter
+
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
@@ -167,6 +170,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedCounter, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synchronized"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsCounter, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of errors during RAG synchronization"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -896,6 +915,22 @@ func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	syncDaemonBatchSize.Record(ctx, size)
+}
+
+// RecordRAGRecordsSynced increments the global counter for RAG records successfully synced.
+func RecordRAGRecordsSynced(ctx context.Context, count int64) {
+	if ragRecordsSyncedCounter == nil {
+		return
+	}
+	ragRecordsSyncedCounter.Add(ctx, count)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsCounter == nil {
+		return
+	}
+	ragSyncErrorsCounter.Add(ctx, 1)
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
