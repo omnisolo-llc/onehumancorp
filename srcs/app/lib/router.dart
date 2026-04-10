@@ -42,7 +42,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
+      GoRoute(
+        path: '/landing',
+        builder: (context, state) => const LandingScreen(),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
@@ -168,7 +171,11 @@ class _Sidebar extends StatelessWidget {
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
-        _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
+        _NavItem(
+          icon: Icons.memory,
+          label: 'Swarm Memory',
+          path: '/swarm-memory',
+        ),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(

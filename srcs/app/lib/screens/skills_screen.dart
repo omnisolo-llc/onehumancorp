@@ -212,10 +212,26 @@ class _SkillCardState extends State<_SkillCard> {
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: ColorFilter.matrix(const <double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
@@ -223,14 +239,18 @@ class _SkillCardState extends State<_SkillCard> {
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _isHovered
-                      ? colors.surfaceContainerHighest.withValues(alpha: 0.3)
-                      : colors.surface.withValues(alpha: 0.1),
+                  color:
+                      _isHovered
+                          ? colors.surfaceContainerHighest.withValues(
+                            alpha: 0.3,
+                          )
+                          : colors.surface.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _isHovered
-                        ? colors.outlineVariant
-                        : colors.outlineVariant.withValues(alpha: 0.5),
+                    color:
+                        _isHovered
+                            ? colors.outlineVariant
+                            : colors.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
                 child: Column(
@@ -239,8 +259,16 @@ class _SkillCardState extends State<_SkillCard> {
                     Row(
                       children: [
                         Chip(
-                          label: Text(s.category, style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                          backgroundColor: _categoryColor(context).withValues(alpha: 0.15),
+                          label: Text(
+                            s.category,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                            ),
+                          ),
+                          backgroundColor: _categoryColor(
+                            context,
+                          ).withValues(alpha: 0.15),
                           labelStyle: TextStyle(color: _categoryColor(context)),
                           visualDensity: VisualDensity.compact,
                           side: BorderSide.none,
@@ -280,7 +308,9 @@ class _SkillCardState extends State<_SkillCard> {
                             : OutlinedButton(
                               onPressed: _toggleInstall,
                               style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
+                                side: BorderSide(
+                                  color: colors.primary.withValues(alpha: 0.5),
+                                ),
                               ),
                               child: Text(_installed ? 'Remove' : 'Install'),
                             ),
