@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Guide
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
@@ -115,3 +116,5 @@ P0
 
 ## Estimated Scope
 Medium
+blockers:
+  - Domain mismatch. Modifies srcs/server/db and srcs/server/hub, which are outside my domain of apps/onboarding/ and services/onboarding/.
