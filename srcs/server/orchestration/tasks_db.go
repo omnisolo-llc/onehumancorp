@@ -105,15 +105,20 @@ func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentI
 	}
 	defer tx.Rollback(ctx)
 
-	// In Postgres we can use FOR UPDATE SKIP LOCKED
+	// In Postgres we use a single UPDATE with a subquery using FOR UPDATE SKIP LOCKED
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
+		UPDATE shared_tasks
+		SET status = 'ASSIGNED', agent_id = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT id
+			FROM shared_tasks
+			WHERE organization_id = $1 AND status = 'PENDING'
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+		RETURNING id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
 	`
-	row := tx.QueryRow(ctx, query, orgID)
+	row := tx.QueryRow(ctx, query, orgID, agentID)
 
 	task := &SharedTaskDB{}
 	if err := row.Scan(
@@ -127,21 +132,9 @@ func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentI
 		return nil, fmt.Errorf("failed to query pending task: %w", err)
 	}
 
-	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2
-	`
-	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	task.Status = "ASSIGNED"
-	task.AssignedAgentID = &agentID
 	return task, nil
 }
