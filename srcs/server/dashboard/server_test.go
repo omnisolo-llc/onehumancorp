@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"os"
 	"testing"
 	"time"
 
@@ -4128,5 +4129,27 @@ func TestHandleSyncRAG(t *testing.T) {
 	}
 	if !strings.Contains(memories[0].Context, "test sensitive context") {
 		t.Errorf("Expected context to contain 'test sensitive context', got '%s'", memories[0].Context)
+	}
+}
+
+
+func TestHandleDevSeed_Standalone(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	s := &Server{
+		org: domain.Organization{ID: "test-org"},
+		hub: orchestration.NewHub(),
+	}
+
+	body := []byte(`{"scenario": "launch-readiness"}`)
+	req, _ := http.NewRequest(http.MethodPost, "/api/dev/seed", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	s.handleDevSeed(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
