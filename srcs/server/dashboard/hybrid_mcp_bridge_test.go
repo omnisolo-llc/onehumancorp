@@ -25,10 +25,10 @@ func TestHybridMCPBridge_InvokeTool_EscalationFlag(t *testing.T) {
 
 	// We'll invoke the git-mcp tool that we modified to return HybridEscalation.
 	payload := mcpInvokeRequest{
-		ToolID: "git-mcp",
+		ToolID:  "git-mcp",
 		AgentID: "agent-1",
-		Action: "execute",
-		Params: json.RawMessage(`{"repository": "org/repo", "title": "Fix bug", "body": "Fixed", "sourceBranch": "feature", "targetBranch": "main", "createdBy": "user"}`),
+		Action:  "execute",
+		Params:  json.RawMessage(`{"repository": "org/repo", "title": "Fix bug", "body": "Fixed", "sourceBranch": "feature", "targetBranch": "main", "createdBy": "user"}`),
 	}
 
 	// Create mock integration for github
@@ -47,11 +47,15 @@ func TestHybridMCPBridge_InvokeTool_EscalationFlag(t *testing.T) {
 type mockGitHubIntegration struct{}
 
 func (m *mockGitHubIntegration) ID() string { return "github" }
-func (m *mockGitHubIntegration) Type() integrations.IntegrationType { return integrations.TypeSourceControl }
-func (m *mockGitHubIntegration) Init() error { return nil }
-func (m *mockGitHubIntegration) Connect() error { return nil }
+func (m *mockGitHubIntegration) Type() integrations.IntegrationType {
+	return integrations.TypeSourceControl
+}
+func (m *mockGitHubIntegration) Init() error       { return nil }
+func (m *mockGitHubIntegration) Connect() error    { return nil }
 func (m *mockGitHubIntegration) Disconnect() error { return nil }
-func (m *mockGitHubIntegration) Status() integrations.IntegrationStatus { return integrations.StatusConnected }
+func (m *mockGitHubIntegration) Status() integrations.IntegrationStatus {
+	return integrations.StatusConnected
+}
 func (m *mockGitHubIntegration) Configure(config map[string]interface{}) error { return nil }
 
 func (m *mockGitHubIntegration) ListPullRequests(repo string) ([]integrations.PullRequest, error) {
@@ -59,7 +63,7 @@ func (m *mockGitHubIntegration) ListPullRequests(repo string) ([]integrations.Pu
 }
 func (m *mockGitHubIntegration) CreatePullRequest(repo, title, body, sourceBranch, targetBranch, createdBy string, ts time.Time) (integrations.PullRequest, error) {
 	return integrations.PullRequest{
-		ID: "pr-1",
+		ID:    "pr-1",
 		Title: title,
 	}, nil
 }

@@ -314,7 +314,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 				return err
 			}
 
-		telemetry.RecordAutoDreamMemoryCompressed(ctx, s.AgentID)
+			telemetry.RecordAutoDreamMemoryCompressed(ctx, s.AgentID)
 
 			// Delete from agent_session_data
 			var delQuery string

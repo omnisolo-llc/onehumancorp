@@ -130,8 +130,8 @@ func (m *BlobInspectorMCP) listBlobs(ctx context.Context, claims *auth.Claims, p
 	}
 
 	return map[string]interface{}{
-		"status": "success",
-		"mode":   mode,
+		"status":  "success",
+		"mode":    mode,
 		"results": results,
 	}, nil
 }

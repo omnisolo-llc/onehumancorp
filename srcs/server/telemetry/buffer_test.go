@@ -3,7 +3,6 @@ package telemetry
 import (
 	"context"
 	"testing"
-
 )
 
 func TestBufferMetricFunc(t *testing.T) {
@@ -29,27 +28,39 @@ func TestBufferMetricFunc(t *testing.T) {
 	_ = InitWithMeter(mockM)
 
 	RecordTokenUsage(ctx, "agent1", "role", "model", "type", 10)
-	if !called { t.Errorf("expected buffer call") }
+	if !called {
+		t.Errorf("expected buffer call")
+	}
 	called = false
 
 	RecordAgentApiCall(ctx, "agent1", "role", "api")
-	if !called { t.Errorf("expected buffer call") }
+	if !called {
+		t.Errorf("expected buffer call")
+	}
 	called = false
 
 	RecordAgentApiError(ctx, "agent1", "role", "api")
-	if !called { t.Errorf("expected buffer call") }
+	if !called {
+		t.Errorf("expected buffer call")
+	}
 	called = false
 
 	RecordHumanInteraction(ctx, "type")
-	if !called { t.Errorf("expected buffer call") }
+	if !called {
+		t.Errorf("expected buffer call")
+	}
 	called = false
 
 	RecordMeetingEvent(ctx, "type")
-	if !called { t.Errorf("expected buffer call") }
+	if !called {
+		t.Errorf("expected buffer call")
+	}
 	called = false
 
 	RecordSwarmTaskCompleted(ctx, "mission1")
-	if !called { t.Errorf("expected buffer call") }
+	if !called {
+		t.Errorf("expected buffer call")
+	}
 	called = false
 
 	// Restore

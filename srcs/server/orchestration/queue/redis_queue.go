@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/redis/rueidis"
 )
 
 // RedisClient defines the subset of rueidis.Client needed by the queue.

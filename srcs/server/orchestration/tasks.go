@@ -9,15 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -40,13 +40,13 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode // For Teammate Mesh broadcast
-	stopChan    chan struct{}
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode // For Teammate Mesh broadcast
+	stopChan     chan struct{}
 	stateMachine *statemachine.StateMachine
-	taskQueue   queue.TaskQueue
-	mu          sync.Mutex // For Standalone mode SQLite locking
+	taskQueue    queue.TaskQueue
+	mu           sync.Mutex // For Standalone mode SQLite locking
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -758,7 +758,6 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	return claimedTasks, nil
 }
-
 
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {

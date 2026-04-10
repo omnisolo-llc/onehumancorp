@@ -185,8 +185,8 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 			Text: "Reading file.",
 			ToolUses: []local.ToolUseRequest{
 				{
-					ID:   "tu1",
-					Name: "file_read",
+					ID:    "tu1",
+					Name:  "file_read",
 					Input: map[string]interface{}{"path": path},
 				},
 			},
@@ -237,11 +237,11 @@ func TestAgentFileEditRoundtrip(t *testing.T) {
 // ─── Hub interface tests ──────────────────────────────────────────────────────
 
 type fakeHub struct {
-	mu       sync.Mutex
-	agents   []local.HubAgent
-	inbox    map[string][]local.HubMessage
+	mu        sync.Mutex
+	agents    []local.HubAgent
+	inbox     map[string][]local.HubMessage
 	published []local.HubMessage
-	subs     map[string][]chan struct{}
+	subs      map[string][]chan struct{}
 }
 
 func newFakeHub() *fakeHub {

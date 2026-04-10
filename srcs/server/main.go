@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 	"log/slog"
 	"net"
 	"net/http"
