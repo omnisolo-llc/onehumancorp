@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: DONE
+agent: Guide
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
@@ -61,10 +61,10 @@ To implement the Hybrid MCP RAG Protocol, we need a robust sync mechanism betwee
 
 **Step 1: Database Migration**
 Create a new SQL migration file in `srcs/server/db/migrations/` (e.g., `0005_add_hybrid_sync_metadata.sql`).
-Add the following columns to the `rag_memories` table (assuming such a table exists, or the primary context table):
+Add the following columns to the `swarm_memory_embeddings` table (which functions as our context table):
 - `sync_status VARCHAR(50) DEFAULT 'pending'`
 - `last_sync_at TIMESTAMP NULL`
-*Crucial Constraint*: Ensure the migration uses standard SQL compatible with both PostgreSQL and SQLite. Use `ALTER TABLE ADD COLUMN` appropriately.
+*Crucial Constraint*: Ensure the migration uses standard SQL compatible with both PostgreSQL and SQLite. Use `ALTER TABLE ADD COLUMN` appropriately. Do not try to add multiple columns in a single ALTER statement, as this breaks SQLite compat. Do not assume sequence numbers. Append the migration to the embedsrcs in `srcs/server/db/BUILD.bazel`.
 
 **Step 2: Go Interface Definition**
 Create a new file `srcs/server/hub/rag_sync.go`.
@@ -106,9 +106,12 @@ type RAGSyncService interface {
 ```
 
 **Step 3: Metrics & Observability**
-In `srcs/server/hub/rag_sync.go` or a dedicated telemetry file, add OpenTelemetry counters for `rag_records_synced_total` and `rag_sync_errors_total`. Ensure these metrics are properly exported and visible on the relevant Grafana dashboards.
+In `srcs/server/hub/rag_sync.go` or a dedicated telemetry file, add OpenTelemetry counters for `rag_records_synced_total` and `rag_sync_errors_total`. Ensure these metrics are properly exported and visible on the relevant Grafana dashboards. Remember that OpenTelemetry metrics in Go should be declared and instantiated directly as global variables within a `var` block.
 
-**Verification:** Write unit tests in `rag_sync_test.go` to mock the interface and verify the basic data flow logic.
+**Step 4: Concrete Implementation**
+Provide the concrete implementation of `RAGSyncService` containing the actual business logic (database operations), rather than only submitting the interface definition and mock structs used for testing.
+
+**Verification:** Write unit tests in `rag_sync_test.go` to mock the interface and verify the basic data flow logic. Run `bazelisk test //...` to ensure no regressions.
 
 ## Priority
 P0

@@ -1,0 +1,4 @@
+type: heartbeat
+status: healthy
+component: Guide
+summary: "Successfully implemented Hybrid MCP RAG Protocol schema and sync logic."
