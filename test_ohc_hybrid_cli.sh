@@ -3,7 +3,7 @@
 
 echo "Running test..."
 export OHC_STANDALONE=true
-export DATABASE_URL=""
+export DATABASE_URL="local_standalone.db"
 
 # Mock sqlite3
 sqlite3() {

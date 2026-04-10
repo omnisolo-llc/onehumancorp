@@ -170,7 +170,7 @@ seed_mock_data() {
 
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
-    DB_FILE="$HOME/.ohc-local-data/standalone.db"
+    DB_FILE="${DATABASE_URL:-$HOME/.ohc-local-data/standalone.db}"
     if [ ! -f "$DB_FILE" ]; then
         echo -e "  ${PURPLE}✗ Database file $DB_FILE not found!${RESET}"
         echo -e "    Migrations have not been executed or db path is incorrect."
