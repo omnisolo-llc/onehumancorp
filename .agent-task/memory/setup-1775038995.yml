@@ -1,7 +1,7 @@
 type: memory
 metadata:
   role: Developer Setup
-  timestamp: $(date +%s)
+  timestamp: 1775837715
 observations:
   - Developer executed ohc-setup.sh
 actions_taken:

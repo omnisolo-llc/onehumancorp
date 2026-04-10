@@ -1,7 +1,7 @@
 type: memory
 metadata:
   role: frontend_dev
-  timestamp: $(date +%s)
+  timestamp: 1775837715
   priority: normal
   title: "Frontend UI Hybrid Sync & Observability Update"
 content: |

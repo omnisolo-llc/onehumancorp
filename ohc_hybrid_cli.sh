@@ -30,6 +30,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} View Quickstart Guide"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -168,6 +169,15 @@ seed_mock_data() {
     fi
 }
 
+view_quickstart() {
+    echo -e "${DIM}[Executing deploy/scripts/ohc-quickstart.sh...]${RESET}"
+    if bash deploy/scripts/ohc-quickstart.sh; then
+        echo -e ""
+    else
+        echo -e "${PURPLE}Quickstart guide failed to launch.${RESET}\n"
+    fi
+}
+
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
     DB_FILE="$HOME/.ohc-local-data/standalone.db"
@@ -201,7 +211,7 @@ if [ "$1" == "--non-interactive" ]; then
 else
     while true; do
         show_menu
-        read -p "> " choice
+        read -p "> " choice || break
         case $choice in
             1) run_setup ;;
             e|E) run_env_wizard ;;
@@ -212,6 +222,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) view_quickstart ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac

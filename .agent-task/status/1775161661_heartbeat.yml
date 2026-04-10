@@ -1,5 +1,5 @@
 ---
-timestamp: $(date +%s)
+timestamp: 1775837715
 agent: Scribe
 status: HEALTHY
 metrics:

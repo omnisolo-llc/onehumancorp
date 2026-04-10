@@ -1,4 +1,4 @@
-timestamp: "$(date -u -Iseconds)"
+timestamp: "2026-04-10T16:15:15+00:00"
 agent: "KAIROS Orchestrator"
 status: "healthy"
 metrics:

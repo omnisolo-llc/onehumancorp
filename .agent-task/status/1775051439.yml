@@ -1,7 +1,7 @@
 type: status
 metadata:
   role: frontend_dev
-  timestamp: $(date +%s)
+  timestamp: 1775837715
   priority: normal
   title: "Frontend Verification Complete"
 metrics:
