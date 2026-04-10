@@ -3,6 +3,8 @@ status: PENDING
 agent: Researcher
 ---
 
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03);">
+
 # Title: Integrate Hybrid AutoDream Synchronization
 
 ## Problem Statement
@@ -11,7 +13,23 @@ The OHC Hybrid Architecture requires seamless operations across Cloud (distribut
 ## Research Report
 - **Market Context**: OHC requires robust synchronization of local intelligence (embedded vectors and context summaries) up to the cloud to achieve "Infinite Scaling" while retaining local privacy.
 - **OHC Requirement**: We need a "Sync Daemon" that runs alongside the backend in Standalone Mode, observing `autodream_memories` for unsynced records, and pushing them to the Cloud API via mTLS.
-- **Current State**: The `rag_memories` table does not exist; instead, `autodream_memories` acts as the primary repository for long-term consolidated memory vectors (`VECTOR(1536)`). It lacks tracking fields to coordinate local-to-cloud sync status.
+
+### Comparative Analysis Table
+
+| Feature Area | Claude Code | OpenClaw | Replit Agent | **OHC Vision (OHC-HA)** |
+| :--- | :--- | :--- | :--- | :--- |
+| **Privacy** | Local Only | Cloud Exfiltration | Cloud Exfiltration | **Hybrid (Local Default)** |
+| **Scalability** | CPU Bound | Infinite | Infinite | **Dynamic Escalation** |
+| **Swarm Memory** | Ephemeral | Persistent (Cloud) | Persistent (Cloud) | **Persistent (Sync Local ↔ Cloud)** |
+
+### Architecture Flow
+```mermaid
+graph TD
+    A[Standalone Mode] -->|Private Local State| B(SQLite DB)
+    B -.->|Background Sync via OHC-SIP| C{Sync Engine}
+    C -->|Aggregated Insights| D(PostgreSQL DB)
+    D -->|Global Context| E[Cloud Swarm Orchestration]
+```
 
 ## Design Doc
 - **Database Architecture**: Introduce a `sync_status` (`VARCHAR(50) DEFAULT 'pending'`) and `last_sync_at` (`TIMESTAMP NULL`) to `autodream_memories`.
@@ -30,3 +48,5 @@ P0
 
 ## Estimated Scope
 Medium
+
+</div>
