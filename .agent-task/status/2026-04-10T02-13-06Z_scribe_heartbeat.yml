@@ -1,0 +1,5 @@
+status: "HEALTHY"
+metrics:
+  uptime_seconds: 120
+  memory_usage_mb: 45
+  tasks_completed: 1

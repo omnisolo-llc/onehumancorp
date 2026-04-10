@@ -40,6 +40,10 @@ graph TD;
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
+### API Documentation
+- **[API Playbook](docs/api/playbook.md):** Interactive API interaction models and workflows.
+- **[Hybrid MCP RAG Protocol](docs/api/hybrid_mcp_rag_protocol.md):** Bridging Standalone SQLite to Cloud PostgreSQL for RAG synchronization.
+
 ### KAIROS Orchestration Documentation
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
 - **[Distributed State Machine](docs/features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.

@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); color: #fff;">
 
 # OHC API Playbook: Interactive Reference
 
@@ -7,6 +7,27 @@
 
 ## 1. Introduction
 The One Human Corp (OHC) API is the central nervous system of the Agentic OS. It bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments via the **Swarm Intelligence Protocol (OHC-SIP)**.
+
+## Overview
+This playbook details the interaction models for the OHC Hybrid Agentic OS API across Cloud and Standalone modes.
+
+
+
+## API Flow
+
+```mermaid
+graph TD
+    Client[Client App] --> Gateway[API Gateway]
+    Gateway --> Auth[Auth Service]
+    Auth --> Orchestrator[KAIROS Orchestrator]
+    Orchestrator --> Agent[Worker Agent]
+```
+## Endpoint Comparison
+
+| Mode | Endpoint | Latency |
+| :--- | :--- | :--- |
+| Cloud | `/api/v1/cloud/orchestrate` | < 50ms |
+| Standalone | `/api/v1/local/orchestrate` | < 5ms |
 
 ## 2. Authentication (Zero Secrets)
 
