@@ -19,7 +19,12 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
+
 var (
+	// Hybrid MCP RAG Protocol Metrics
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
+
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -462,6 +467,22 @@ func InitWithMeter(m mockableMeter) error {
 	err = initMinimaxMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG memory records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create rag_records_synced_total: %w", err))
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG memory sync"),
+	)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to create rag_sync_errors_total: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -1011,4 +1032,21 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+
+// RecordRagRecordsSynced increments the total number of synced RAG records.
+func RecordRagRecordsSynced(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, int64(count))
+}
+
+// RecordRagSyncError increments the total number of RAG sync errors.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1)
 }
