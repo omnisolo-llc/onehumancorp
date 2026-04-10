@@ -40,6 +40,7 @@ func minimaxAPIKey() string {
 //     the round-trip from task dispatch → Minimax reasoning → acknowledgment
 //     works end-to-end.
 func TestMinimaxAgentTaskE2E(t *testing.T) {
+	orchestration.ResetGlobalCircuitBreakerForTest()
 	key := minimaxAPIKey()
 	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
@@ -96,7 +97,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 
 	// SWE uses Minimax to reason about the task and produce an implementation plan.
 	client := orchestration.NewMinimaxClient(key)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	prompt := fmt.Sprintf(
@@ -149,6 +150,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // After the three-turn exchange the test asserts that the meeting transcript
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
+	orchestration.ResetGlobalCircuitBreakerForTest()
 	key := minimaxAPIKey()
 	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
@@ -193,7 +195,7 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	)
 
 	client := orchestration.NewMinimaxClient(key)
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	type turn struct {
