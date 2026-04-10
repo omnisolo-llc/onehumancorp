@@ -1,0 +1,8 @@
+type: observability_heartbeat
+agent: jules
+role: RESEARCHER
+status: healthy
+metrics:
+  missions_defined: 1
+  systems_architected: 3
+  uptime: "1h"
