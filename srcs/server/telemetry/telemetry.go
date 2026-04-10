@@ -41,6 +41,8 @@ var (
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
@@ -200,6 +202,22 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1029,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGRecordSynced increments the global counter for successfully synced RAG records.
+func RecordRAGRecordSynced(ctx context.Context, count int) {
+	if ragRecordsSyncedTotal == nil {
+		return
+	}
+	ragRecordsSyncedTotal.Add(ctx, int64(count))
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal == nil {
+		return
+	}
+	ragSyncErrorsTotal.Add(ctx, 1)
 }
