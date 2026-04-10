@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "agent.go",
         "bash.go",
+        "edit.go",
         "glob.go",
         "grep.go",
         "llm_anthropic.go",
@@ -14,9 +15,10 @@ go_library(
         "prompt.go",
         "read.go",
         "sendmessage.go",
+        "task.go",
         "todowrite.go",
-        "toolsearch.go",
         "tools.go",
+        "toolsearch.go",
         "types.go",
         "webfetch.go",
         "websearch.go",
@@ -28,8 +30,6 @@ go_library(
 
 go_test(
     name = "builtin_test",
-    srcs = [
-        "agent_test.go",
-    ],
+    srcs = ["agent_test.go"],
     embed = [":builtin"],
 )

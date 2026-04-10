@@ -64,6 +64,12 @@ func TestTools(t *testing.T) {
 	if res == "" {
 		t.Fatal("TodoWriteTool returned empty result")
 	}
+
+    // Verify all tools are correctly registered
+    allTools := AllTools()
+    if len(allTools) != 15 {
+        t.Fatalf("Expected 15 tools, got %d", len(allTools))
+    }
 }
 
 // MockClient implements LLMClient for testing.
