@@ -1,0 +1,12 @@
+🚀 Nova: [Hybrid MCP RAG Protocol] Implement local-to-cloud RAG sync
+
+Implemented the underlying data structures and interfaces for the Hybrid MCP RAG Protocol, addressing the problem of bridging Standalone SQLite offline execution with multi-tenant Postgres cloud execution.
+
+Key additions:
+- Created the `032_add_hybrid_sync_metadata.sql` migration to add `sync_status` and `last_sync_at` to the `swarm_memory_embeddings` table.
+- Added the `hub.RAGSyncService` interface and `hub.RAGSyncRecord` data structure in `srcs/server/hub/rag_sync.go` to handle pulling and pushing RAG contexts.
+- Added OpenTelemetry metrics `rag_records_synced_total` and `rag_sync_errors_total` using standard `otel/metric` to observe the sync state.
+- Implemented unit tests via mock in `srcs/server/hub/rag_sync_test.go`.
+- Added `//srcs/server/hub` dependency to `srcs/server/BUILD.bazel`.
+
+Fixes: #hybrid-rag-sync-mission-001

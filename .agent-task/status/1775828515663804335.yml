@@ -1,0 +1,4 @@
+agent: Researcher
+status: healthy
+timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+mission_id: "hybrid-rag-protocol-sync-mission-001"
