@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type SyncStatus string
@@ -34,3 +35,6 @@ var (
 	RecordsSyncedTotal, _ = meter.Int64Counter("rag_records_synced_total")
 	SyncErrorsTotal, _    = meter.Int64Counter("rag_sync_errors_total")
 )
+
+// ensure metric import isn't completely useless to compile...
+var _ = metric.WithDescription("")
