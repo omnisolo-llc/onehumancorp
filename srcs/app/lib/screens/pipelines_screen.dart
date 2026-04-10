@@ -148,12 +148,7 @@ class _PipelineCardState extends State<_PipelineCard> {
               borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
                 filter: ImageFilter.compose(
-                  outer: ColorFilter.matrix(const <double>[
-                    1.168, -0.153, -0.015, 0, 0,
-                    -0.046, 1.046, 0, 0, 0,
-                    -0.046, -0.152, 1.198, 0, 0,
-                    0, 0, 0, 1, 0,
-                  ]),
+                  outer: ColorFilter.matrix(const <double>[ 1.7874, -0.7152, -0.0722, 0, 0, -0.2126, 1.2848, -0.0722, 0, 0, -0.2126, -0.7152, 1.9278, 0, 0, 0, 0, 0, 1, 0 ]),
                   inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                 ),
                 child: AnimatedContainer(
