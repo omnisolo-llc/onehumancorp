@@ -26,10 +26,7 @@ class LocalManagerService {
   Future<String> runDoctor() async => _unsupportedMessage;
 
   Future<Map<String, dynamic>> getSystemInfo() async {
-    return {
-      'os': 'web',
-      'status': _unsupportedMessage,
-    };
+    return {'os': 'web', 'status': _unsupportedMessage};
   }
 }
 
