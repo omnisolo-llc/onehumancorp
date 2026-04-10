@@ -1,0 +1,10 @@
+1. Implement the interface `FileSystemProvider` in `srcs/server/tools/hybridfsmcp/provider.go`.
+2. Implement `LocalFSProvider` (with path bounding to `OHC_FS_ROOT` workspace dir) and `CloudFSProvider` (tenant-scoped via `auth.Claims` and `OHC_FS_ROOT`) in `srcs/server/tools/hybridfsmcp/provider.go`.
+3. Implement `HybridFSMCP` representing the MCP server logic with `read_file`, `write_file`, `list_directory`, and `search_files` tools in `srcs/server/tools/hybridfsmcp/mcp.go`.
+4. Create `srcs/server/tools/hybridfsmcp/provider_test.go` to test `LocalFSProvider` and `CloudFSProvider`.
+5. Create `srcs/server/tools/hybridfsmcp/mcp_test.go` to test the `HybridFSMCP` functionality.
+6. Create factory logic to inject the correct provider based on `OHC_MULTITENANT` in a new file `srcs/server/tools/hybridfsmcp/factory.go`.
+7. Generate `BUILD.bazel` for `srcs/server/tools/hybridfsmcp/` using Gazelle and verify it works by running `bazelisk test //srcs/server/tools/hybridfsmcp/...`.
+8. Complete pre commit instructions.
+9. Mark the mission `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` as DONE.
+10. Submit PR.
