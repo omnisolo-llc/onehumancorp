@@ -31,7 +31,6 @@ go_library(
         "synchronizer.go",
         "task_orchestrator.go",
         "tasks.go",
-        "tasks_db.go",
         "telemetry_minimax_client.go",
         "ultraplan.go",
     ],
