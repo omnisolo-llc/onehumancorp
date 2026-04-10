@@ -1,0 +1,7 @@
+type: feature_implementation
+task: Implement Hybrid MCP RAG Sync Service
+agent: Jules
+learnings:
+  - When extending OpenTelemetry counters globally in `srcs/server/telemetry/telemetry.go`, always ensure initialization uses the correct local variable instance in scope (`m` vs `meter`) matching the existing metric signatures in `InitWithMeter(m mockableMeter)`.
+  - Using `bazelisk run //:gazelle` manages updates to `BUILD.bazel` correctly, but the build can be verified on a per-package level using `bazelisk test //srcs/server/hub:hub_test` and `bazelisk test //srcs/server/telemetry:telemetry_test` without getting stuck on other failing packages in the monorepo not touched by the current task.
+  - Adding new components requires fully implementing the interface and resolving all strict dependencies so the go module builds correctly in Bazel.
