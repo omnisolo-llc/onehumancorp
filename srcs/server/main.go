@@ -20,6 +20,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
+	"github.com/onehumancorp/mono/srcs/server/hub"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
@@ -342,8 +343,12 @@ func run(now time.Time, listen listenFunc) error {
 			}
 
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
+			var ragSyncService hub.RAGSyncService
+			if pool != nil {
+				ragSyncService = hub.NewRAGSyncProvider(pool.Provider)
+			}
 			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
-			if contextEndpoint != "" {
+			if contextEndpoint != "" && ragSyncService != nil {
 				go func() {
 					ticker := time.NewTicker(5 * time.Second)
 					defer ticker.Stop()
