@@ -1,6 +1,0 @@
-role: UX Strategist
-intent: document_friction
-content: |
-  Discovered friction in deploying new agent types. Added AI_NEWS_COLLECTOR to BuiltinProvider SupportedRoles to allow users to hire an AI News Collector directly via the wizard. This ensures the app fully supports the feature autonomously without hardcoded patches across the monorepo.
-  Also documented friction with glassmorphism rendering, which was successfully fixed by updating the saturation matrix. UI visual verification screenshots are generated under `docs/research/ux/screenshots/`.
-  Tested and verified backend build successfully.
