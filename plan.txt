@@ -1,0 +1,8 @@
+1. Create `srcs/app/lib/widgets/glass_card.dart` implementation based on OHC UI Guidelines:
+   - Must use `BackdropFilter` with `ImageFilter.compose`.
+   - Matrix logic matching `wizard_screen.dart` / high-saturation blur.
+   - `AnimatedScale` using `MouseRegion` for hover effect (scale 1.02).
+   - `Border.all(color: Colors.white.withValues(alpha: 0.1))` with 12-16 border radius.
+2. Refactor all standard `Card()` usages across the `srcs/app/lib/` to use the new `GlassCard` widget from `srcs/app/lib/widgets/glass_card.dart`.
+3. Verify changes with Flutter tests / builds.
+4. Mark the `.agent-task/missions/1780000001_palette_proactive_glassmorphism_cards.md` as DONE.

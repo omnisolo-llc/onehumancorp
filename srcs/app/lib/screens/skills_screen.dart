@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 final _skillsProvider = FutureProvider<List<Skill>>((ref) async {
   final api = ref.watch(apiServiceProvider);
