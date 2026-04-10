@@ -79,15 +79,17 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 	}
 
 	if resp["status"] != "healthy" && resp["status"] != "ok" {
-		t.Errorf("Expected status to be healthy or ok, got %s", resp["status"])
+		t.Errorf("Expected status to be healthy or ok, got %v", resp["status"])
 	}
 
-	details, ok := resp["details"].(map[string]interface{})
+	checklist, ok := resp["checklist"].([]interface{})
 	if !ok {
-		t.Fatalf("Expected details in response, got %v", resp)
+		t.Fatalf("Expected checklist in response, got %v", resp)
+	}
+	if len(checklist) != 4 {
+		t.Errorf("Expected checklist to have length 4, got %d", len(checklist))
 	}
 
-	if details["status"] != "healthy" {
-		t.Errorf("Expected details status to be healthy, got %s", details["status"])
-	}
+
+
 }

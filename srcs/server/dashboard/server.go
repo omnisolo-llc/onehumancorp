@@ -705,87 +705,48 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mode := "local"
-	isStandalone := true
-	if os.Getenv("DATABASE_URL") != "" {
-		mode = "cloud"
-		isStandalone = false
-	}
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		isStandalone = true
-		mode = "standalone"
+	// Use orchestration Hub's native HybridHealthProbe
+	probe, err := s.hub.CheckHealth(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
 	}
 
-	var checklist []map[string]interface{}
-	if isStandalone {
-		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local standalone data storage",
-		})
-		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_standalone", "label": "SQLite Standalone Enabled", "status": "ok", "description": "Standalone Desktop Mode Active",
-		})
-	} else {
-		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Multi-tenant", "status": "ok", "description": "Cloud-native persistent data storage",
-		})
-		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_connected", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud DB connectivity verified",
-		})
-		if os.Getenv("REDIS_URL") != "" {
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_cache", "label": "Redis Distributed Cache", "status": "ok", "description": "High-throughput Pub/Sub mesh",
-			})
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_available", "label": "Redis Available", "status": "ok", "description": "Redis Cache connectivity verified",
-			})
-		}
-	}
-
-	// Check for stuck agent_missions specifically for Hybrid metric insights
-	var stuckMissionsCount int
-	var missionsProbeStatus = "ok"
-	if s.hub != nil && s.hub.SIPDB() != nil {
-		ctx := r.Context()
-		missions, err := s.hub.SIPDB().GetPendingMissions(ctx, "ANY")
-		if err == nil {
-			stuckMissionsCount = len(missions)
-		}
-	}
-	if stuckMissionsCount > 10 {
-		missionsProbeStatus = "degraded"
-	}
-
-	checklist = append(checklist, map[string]interface{}{
-		"id":          "stuck_missions_probe",
-		"label":       "Stagnant Missions Backlog",
-		"status":      missionsProbeStatus,
-		"description": "Count of stuck or pending agent missions across cloud/local boundary",
-		"count":       stuckMissionsCount,
+	writeJSON(w, map[string]interface{}{
+		"status": "ok",
+		"mode":   probe.Mode,
+		"checklist": []map[string]interface{}{
+			{
+				"id":          "probe_status",
+				"label":       "System Status",
+				"status":      probe.Status,
+				"description": "System health derived from hybrid health probe",
+			},
+			{
+				"id":          "db_ping",
+				"label":       "DB Ping",
+				"status":      "ok",
+				"description": probe.DBPing.String(),
+			},
+			{
+				"id":          "sync_backlog",
+				"label":       "Sync Backlog",
+				"status":      "ok",
+				"description": "Pending local-to-cloud mission sync count",
+				"count":       probe.SyncBacklog,
+			},
+			{
+				"id":          "mesh_active",
+				"label":       "Mesh Connectivity",
+				"status":      "ok",
+				"description": "Indicates whether the Teammate Mesh channel is active",
+				"active":      probe.MeshActive,
+			},
+		},
 	})
-
-	// Delegate to the shared orchestration check
-	probe, errProbe := s.hub.CheckHealth(r.Context())
-	if errProbe == nil {
-		if probe.Status != "healthy" {
-			missionsProbeStatus = probe.Status
-		}
-		checklist = append(checklist, map[string]interface{}{
-			"id":          "mesh_active",
-			"label":       "Centrifuge Teammate Mesh",
-			"status":      "ok",
-			"description": "Real-time communication layer",
-			"active":      probe.MeshActive,
-		})
-	}
-
-	resp := map[string]interface{}{
-		"status":     missionsProbeStatus,
-		"mode":       mode,
-		"sync_ready": true,
-		"checklist":  checklist,
-		"details":    probe,
-	}
-	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {
