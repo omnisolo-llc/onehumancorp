@@ -1,5 +1,6 @@
 ---
 Title: "KAIROS Phase 2: Realtime Teammate Mesh APIs"
+status: DONE
 Priority: "P0"
 Estimated Scope: "Large"
 ---

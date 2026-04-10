@@ -1,5 +1,6 @@
 ---
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
+status: DONE
 Priority: "P0"
 Estimated Scope: "Medium"
 ---
