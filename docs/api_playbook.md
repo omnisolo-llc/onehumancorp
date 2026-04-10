@@ -85,13 +85,6 @@
   </div>
 </div>
 
-### 2.4 Hybrid Storage Sync
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <strong>POST <code>/api/missions/sync</code></strong>
-  <p>Synchronize local SQLite context to the cloud Postgres orchestration engine using Last-Write-Wins logic.</p>
-  <p>For a detailed architectural overview of the sync process, refer to the <a href="walkthroughs/hybrid_sync.md">Hybrid Storage Sync Walkthrough</a>.</p>
-</div>
-
 ## 3. Client Integrations
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
