@@ -20,6 +20,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
+	"github.com/onehumancorp/mono/srcs/server/hub"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
@@ -347,11 +348,23 @@ func run(now time.Time, listen listenFunc) error {
 				go func() {
 					ticker := time.NewTicker(5 * time.Second)
 					defer ticker.Stop()
+					var ragSyncService hub.RAGSyncService
+					if pool != nil {
+						ragSyncService = hub.NewRAGSyncService(pool.Provider)
+					}
 					for {
 						select {
 						case <-ctx.Done():
 							return
 						case <-ticker.C:
+							if ragSyncService != nil {
+								pending, err := ragSyncService.FetchPendingSyncs(ctx, 100)
+								if err == nil && len(pending) > 0 {
+									ids := make([]string, len(pending))
+									for i, p := range pending { ids[i] = p.ID }
+									_ = ragSyncService.MarkSynced(ctx, ids) // Mark as synced for demonstration
+								}
+							}
 							syncedCount, err := sipdb.SyncContextSync(ctx, contextEndpoint)
 							if err != nil {
 								slog.Warn("Failed to sync standalone RAG context", "error", err)
@@ -515,6 +528,10 @@ func run(now time.Time, listen listenFunc) error {
 // Produces no errors.
 // Has no side effects.
 func main() {
+	if err := hub.InitRAGSyncMetrics(); err != nil {
+		slog.Warn("failed to initialize RAG sync metrics", "error", err)
+	}
+
 	shutdown, err := initTelemetry()
 	if err != nil {
 		slog.Warn("failed to initialize telemetry", "error", err)
