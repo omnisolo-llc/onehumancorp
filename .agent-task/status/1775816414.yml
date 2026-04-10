@@ -1,0 +1,4 @@
+status: HEALTHY
+metrics:
+  files_created: 3
+  tests_passed: 100
