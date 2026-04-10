@@ -96,14 +96,22 @@ func (s *SyncDaemon) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyn
 	var records []RAGSyncRecord
 	for rows.Next() {
 		var rec RAGSyncRecord
-		var lastSyncAt sql.NullTime
+		var lastSyncAt sql.NullString
 		var vectorBytes []byte
 
 		if err := rows.Scan(&rec.ID, &rec.Context, &vectorBytes, &rec.SyncStatus, &lastSyncAt); err != nil {
 			return nil, err
 		}
-		if lastSyncAt.Valid {
-			rec.LastSyncAt = lastSyncAt.Time
+		if lastSyncAt.Valid && lastSyncAt.String != "" {
+			t, err := time.Parse(time.RFC3339, lastSyncAt.String)
+			if err == nil {
+			    rec.LastSyncAt = t
+			} else {
+			    t2, err2 := time.Parse("2006-01-02 15:04:05.999999999-07:00", lastSyncAt.String)
+			    if err2 == nil {
+			        rec.LastSyncAt = t2
+			    }
+			}
 		}
 		rec.Vector = decodeVector(vectorBytes)
 
