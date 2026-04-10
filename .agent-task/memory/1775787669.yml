@@ -1,0 +1,4 @@
+findings:
+  - When running full tests in bazel, unrelated errors caused the build to fail. Focus running isolated tests related to changes, i.e., //srcs/server/hub:hub_test and //srcs/server/db:db_test.
+  - Adding migration files via standard bash outputs successfully completed database modifications.
+  - Mock flows test the `RAGSyncService` functionality thoroughly for the sync status.
