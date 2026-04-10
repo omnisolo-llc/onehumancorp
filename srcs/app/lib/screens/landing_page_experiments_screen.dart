@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'dart:ui';
-import 'package:intl/intl.dart';
 
 class LandingPageExperimentsScreen extends ConsumerStatefulWidget {
   const LandingPageExperimentsScreen({super.key});

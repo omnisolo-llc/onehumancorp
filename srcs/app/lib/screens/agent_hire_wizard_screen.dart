@@ -253,7 +253,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 if (_isLoading)
                   Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
+                      padding: const EdgeInsets.all(32.0),
                       child: CircularProgressIndicator(
                         color: Theme.of(context).colorScheme.primary,
                       ),
@@ -299,9 +299,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text(
+                const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text(
                     'This name will appear in transcripts and the org chart.',
                   ),
                 ),

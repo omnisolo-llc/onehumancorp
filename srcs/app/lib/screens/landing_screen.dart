@@ -42,7 +42,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                       const SizedBox(height: 48),
                       _ValuePropGrid(isVariantB: _showVariantB),
                       const SizedBox(height: 48),
-                      Wrap(
+                      const Wrap(
                         spacing: 16,
                         runSpacing: 16,
                         alignment: WrapAlignment.center,
@@ -141,11 +141,11 @@ class _ValuePropGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isVariantB) {
-      return Wrap(
+      return const Wrap(
         spacing: 24,
         runSpacing: 24,
         alignment: WrapAlignment.center,
-        children: const [
+        children: [
           _GlassCard(
             icon: Icons.speed,
             title: 'Global Performance',
@@ -168,11 +168,11 @@ class _ValuePropGrid extends StatelessWidget {
       );
     }
 
-    return Wrap(
+    return const Wrap(
       spacing: 24,
       runSpacing: 24,
       alignment: WrapAlignment.center,
-      children: const [
+      children: [
         _GlassCard(
           icon: Icons.shield,
           title: 'Zero Data Leakage',

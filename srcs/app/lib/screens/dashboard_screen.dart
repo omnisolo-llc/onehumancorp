@@ -72,7 +72,7 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        _SectionTitle('Overview'),
+        const _SectionTitle('Overview'),
         const SizedBox(height: 16),
         Wrap(
           spacing: 16,
@@ -106,13 +106,13 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Observability'),
+        const _SectionTitle('System Observability'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
         const SwarmObservabilityWidget(),
         const SizedBox(height: 32),
-        _SectionTitle('Company Structure'),
+        const _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
@@ -160,7 +160,7 @@ class _ObservabilityWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
             filter: ImageFilter.compose(
-              outer: ColorFilter.matrix(const <double>[
+              outer: const ColorFilter.matrix(<double>[
                 1.168, -0.153, -0.015, 0, 0,
                 -0.046, 1.061, -0.015, 0, 0,
                 -0.046, -0.152, 1.198, 0, 0,
@@ -393,7 +393,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                 borderRadius: BorderRadius.circular(16),
                 child: BackdropFilter(
                   filter: ImageFilter.compose(
-                    outer: ColorFilter.matrix(<double>[
+                    outer: const ColorFilter.matrix(<double>[
                   1.168,
                   -0.153,
                   -0.015,
@@ -622,7 +622,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                     borderRadius: BorderRadius.circular(16),
                     child: BackdropFilter(
                       filter: ImageFilter.compose(
-                        outer: ColorFilter.matrix(const <double>[
+                        outer: const ColorFilter.matrix(<double>[
                           1.168, -0.153, -0.015, 0, 0,
                           -0.046, 1.061, -0.015, 0, 0,
                           -0.046, -0.152, 1.198, 0, 0,

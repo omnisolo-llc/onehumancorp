@@ -116,7 +116,7 @@ class LocalManagerService {
       lines.add('$key="$value"');
     }
 
-    await _envFile.writeAsString(lines.join('\n') + '\n');
+    await _envFile.writeAsString('${lines.join('\n')}\n');
   }
 
   Future<String> runDoctor() async {

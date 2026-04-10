@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
-import 'package:powersync/powersync.dart' hide Column, Row;
 // import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
@@ -51,18 +50,18 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
           const VerticalDivider(width: 1),
 
           // Right Side: Offline-to-Cloud State Sync for Swarm Memories via PowerSync
-          Expanded(
+          const Expanded(
             flex: 1,
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Durable Swarm Memory', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Offline-to-Cloud State Sync (PowerSync)', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
-                  const SizedBox(height: 16),
-                  const Expanded(
+                  Text('Durable Swarm Memory', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Text('Offline-to-Cloud State Sync (PowerSync)', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
+                  SizedBox(height: 16),
+                  Expanded(
                     child: _DurableMemoryWidget(),
                   ),
                 ],

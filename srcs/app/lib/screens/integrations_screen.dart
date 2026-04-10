@@ -185,7 +185,6 @@ class _IntegrationCard extends StatefulWidget {
   final VoidCallback onConnect;
 
   const _IntegrationCard({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -198,7 +197,7 @@ class _IntegrationCard extends StatefulWidget {
 }
 
 class _IntegrationCardState extends State<_IntegrationCard> {
-  bool _hovering = false;
+  final bool _hovering = false;
 
   @override
   Widget build(BuildContext context) {

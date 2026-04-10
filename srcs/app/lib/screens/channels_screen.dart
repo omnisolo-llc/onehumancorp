@@ -23,7 +23,6 @@ class _FieldDef {
     required this.label,
     this.secret = false,
     this.hint,
-    this.options,
   });
 }
 
@@ -380,7 +379,7 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
             children: [
               // Backend selector
               DropdownButtonFormField<_ChannelDef>(
-                value: _selected,
+                initialValue: _selected,
                 decoration: const InputDecoration(
                   labelText: 'Backend',
                   border: OutlineInputBorder(),

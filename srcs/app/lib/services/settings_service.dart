@@ -66,7 +66,7 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
           'OHC_STANDALONE',
           defaultValue: false,
         );
-        return ClientSettings(
+        return const ClientSettings(
           backendUrl: envUrl,
           standaloneMode: envStandalone,
         );

@@ -95,7 +95,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   const SizedBox(height: 32),
 
                   // Step 1: Role
-                  _SectionHeader(number: 1, title: 'Select Specialization'),
+                  const _SectionHeader(number: 1, title: 'Select Specialization'),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
@@ -117,7 +117,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                   const SizedBox(height: 48),
 
                   // Step 2: Capacity
-                  _SectionHeader(number: 2, title: 'Define Target Capacity'),
+                  const _SectionHeader(number: 2, title: 'Define Target Capacity'),
                   const SizedBox(height: 16),
                   Card(
                     child: Padding(
