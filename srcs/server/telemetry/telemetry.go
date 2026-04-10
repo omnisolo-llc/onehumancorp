@@ -12,6 +12,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/onehumancorp/mono/srcs/server/hub"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
@@ -455,6 +457,11 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
 	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = hub.InitMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
 	}
