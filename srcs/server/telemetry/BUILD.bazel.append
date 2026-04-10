@@ -1,0 +1,1 @@
+# Append to the existing BUILD.bazel instead of overwriting, but for simplicity let's regenerate it

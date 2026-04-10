@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: DONE
+agent: Guide
 priority: P1
 ---
 
