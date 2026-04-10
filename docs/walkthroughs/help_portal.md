@@ -108,6 +108,12 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
 
-*For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
+## 7. Model Context Protocol (MCP) Integration
+The OHC Hybrid Architecture natively bridges traditional local tools with cloud capabilities via the Model Context Protocol.
+
+- **Hybrid File System MCP:** Execute tools (`read_file`, `write_file`) that map contextually to local host directories in Standalone mode, or virtual tenant-scoped volumes in Cloud-Native mode.
+- **DB & Blob Inspectors:** Introspect your environment safely, automatically falling back to robust multi-tenant permissions when escalated to the cloud.
+
+*For more advanced topics, API references, and payload examples, see the [API Playbook](../api_playbook.md).*
 
 </div>
