@@ -1,0 +1,8 @@
+context: "Implemented Hybrid MCP RAG Protocol with sync mechanism between Standalone SQLite and Cloud PostgreSQL"
+files_modified:
+  - srcs/server/db/migrations/032_hybrid_sync_metadata.sql
+  - srcs/server/db/BUILD.bazel
+  - srcs/server/hub/rag_sync.go
+  - srcs/server/hub/rag_sync_test.go
+  - srcs/server/hub/BUILD.bazel
+timestamp: 1775842369
