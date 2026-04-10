@@ -11,6 +11,7 @@ go_library(
         "powersync.go",
         "repository.go",
         "store.go",
+        "test_helper.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/auth",
     visibility = ["//visibility:public"],
