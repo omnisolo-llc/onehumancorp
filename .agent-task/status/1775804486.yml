@@ -1,0 +1,5 @@
+status: "HEALTHY"
+metrics:
+  cpu_usage: 12%
+  memory_usage: 256MB
+last_mission: "2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md"
