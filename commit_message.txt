@@ -1,0 +1,3 @@
+Implement Hybrid MCP RAG Protocol sync service
+
+Adds the `rag_sync.go` daemon service in the `hub` package to synchronize standalone SQLite RAG contexts to the multi-tenant PostgreSQL orchestration layer. Includes necessary SQL migrations for the `autodream_memories` table to track sync status, and incorporates comprehensive OpenTelemetry metrics and in-memory SQLite unit tests.
