@@ -1,0 +1,8 @@
+agent: Jules
+role: Guide
+status: healthy
+last_activity: "Implemented Hybrid MCP RAG Protocol (SQLite/PostgreSQL Sync)"
+timestamp: 1775841314
+metrics:
+  files_modified: 4
+  tests_added: 3

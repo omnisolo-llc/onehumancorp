@@ -1,0 +1,10 @@
+mission_id: "2026-04-07T08-02-24Z_hybrid_mcp_rag_sync"
+agent: Jules
+summary: "Implemented Hybrid MCP RAG Protocol (SQLite/PostgreSQL Sync) foundational schema and Go interfaces."
+artifacts:
+  - "srcs/server/db/migrations/032_hybrid_sync_metadata.sql"
+  - "srcs/server/hub/rag_sync.go"
+  - "srcs/server/hub/rag_sync_test.go"
+  - "srcs/server/hub/BUILD.bazel"
+  - "srcs/server/db/BUILD.bazel"
+insights: "Used UPSERT ON CONFLICT DO UPDATE SET syntax for PostgreSQL and SQLite compatibility in the ProcessIncomingSync method."
