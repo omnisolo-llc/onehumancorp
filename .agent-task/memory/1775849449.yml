@@ -1,0 +1,2 @@
+agent: Researcher
+learning: "Implemented the Hybrid MCP RAG Protocol sync schema, Go interfaces, implementation logic, and OpenTelemetry counters for RAG context sync tracking."
