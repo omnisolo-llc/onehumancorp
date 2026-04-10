@@ -1,96 +1,378 @@
-<div style="font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem;">
 
-# Interactive API Playbook
+# OHC API Playbook: Interactive Reference
 
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);">
-  <h2 style="margin-top: 0;">Welcome to the OHC API</h2>
-  <p>The One Human Corp (OHC) API empowers you to orchestrate the vast AI swarm programmatically. With full support for both <strong>Cloud-Native</strong> and <strong>Standalone</strong> deployments, the routing is seamless and secure.</p>
-</div>
+**Version:** 1.0.0
+**Target Audience:** Orchestration Engineers & Human CEOs
 
-## 1. Authentication & Security
+## 1. Introduction
+The One Human Corp (OHC) API is the central nervous system of the Agentic OS. It bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments via the **Swarm Intelligence Protocol (OHC-SIP)**.
 
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <p>All API endpoints require JWT-based authentication. In Multi-Tenant Cloud Mode, the JWT enforces tenant isolation by routing requests based on the <code>organization_id</code> claim.</p>
-  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>Authorization: Bearer &lt;YOUR_JWT_TOKEN&gt;</code></pre>
-</div>
+## 2. Authentication (Zero Secrets)
 
-## 2. Core Endpoints
+All endpoints are secured via SPIFFE/SPIRE zero-trust principles or an OIDC JWT. We do not use static API keys. Ensure your client provides a valid JWT.
 
-### 2.1 Swarm Orchestration
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
-  <strong>GET <code>/api/orchestration/tasks</code></strong>
-  <p>Retrieves a list of all active orchestration tasks in the queue. Supports pagination.</p>
-</div>
+**Example Request:**
+```bash
+curl -X GET https://api.ohc.local/v1/agents/status \
+  -H "Authorization: Bearer <JWT_OR_SVID>" \
+  -H "X-OHC-Tenant-ID: org_acme_123"
+```
 
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <strong>POST <code>/api/orchestration/tasks</code></strong>
-  <p>Submit a new task to the swarm.</p>
-  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
-  "title": "Analyze market data",
-  "priority": "P0",
+## 3. Core Endpoints
+
+### 3.1 Organization Provisioning
+
+**Endpoint:** `POST /api/orgs/register`
+Provisions a new organization in multi-tenant mode.
+
+**Payload:**
+```json
+{
+  "id": "acme",
+  "name": "Acme Corp",
+  "domain": "acme.com"
+}
+```
+
+### 3.2 Agent Management & Hiring
+
+**Endpoint:** `GET /api/agents`
+Retrieves a list of active agents within the current tenant scope.
+
+**Endpoint:** `POST /api/agents/hire`
+Requests a new agent capability. This triggers dynamic tool registration via MCP.
+
+### 3.3 Task Delegation
+
+**Endpoint:** `POST /api/v1/tasks/delegate`
+Delegate a subtask to an autonomous agent. The Hub handles provisioning and VRAM quota enforcement.
+
+**Payload:**
+```json
+{
+  "target_role": "swe",
+  "instruction": "Implement the new billing module according to docs/features/billing.",
+  "parent_thread_id": "thread_8f92a"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "task_id": "task_99b1x",
+  "status": "PROVISIONING",
+  "assigned_agent": "agent_swe_004"
+}
+```
+
+### 3.4 Dynamic Scaling
+
+**Endpoint:** `POST /api/v1/scale`
+Adjust the number of concurrent agents for a specific role in real-time.
+
+**Payload:**
+```json
+{
+  "role": "sales_rep",
+  "count": 5
+}
+```
+
+### 3.5 Hybrid RAG Sync
+
+**Endpoint:** `POST /api/missions/sync`
+Synchronize local SQLite context to the cloud Postgres orchestration engine.
+
+**Headers:**
+- `X-OHC-Conflict-Resolution: force-local`
+
+**Payload:**
+```json
+{
+  "missions": [
+    {
+      "id": "mission_local_01",
+      "status": "COMPLETED",
+      "context": "..."
+    }
+  ]
+}
+```
+
+## 4. Teammate Mesh, AutoDream & Webhooks
+
+### Centrifuge Realtime Sync
+Channels:
+- `mesh:tasks`: Global task coordination.
+- `mesh:coordination`: Agents announce their presence, request locks, and share immediate findings.
+- `mesh:ultraplan:<plan_id>`: Deliberation cycle realtime updates.
+- `meeting:<meeting_id>`: Transcript sync.
+
+### AutoDream Data Pipelines (pgvector)
+The API supports AutoDream pipelines where the backend background workers process `.agent-task/memory/*.yml` files.
+
+**Endpoint:** `POST /api/mesh/broadcast`
+Allows agents to publish messages to the mesh.
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_004",
+  "action": "completed_task",
+  "status": "success",
   "payload": {
-    "description": "Perform deep market analysis."
+     "details": "Successfully implemented API playbook"
   }
-}</code></pre>
-</div>
+}
+```
 
-### 2.2 Teammate Mesh Communications
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
-  <strong>POST <code>/api/mesh/broadcast</code></strong>
-  <p>Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.</p>
-</div>
+### SSE Stream
+Real-time state changes are pushed via Server-Sent Events (SSE).
 
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <strong>POST <code>/api/mesh/v2/broadcast</code></strong>
-  <p>Advanced routing for State Machine events. Enables directed broadcast across specific CentrifugeNode channels with priority scheduling.</p>
-  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
-  "topic": "state_machine.transition",
-  "priority": "high",
+**Endpoint:** `GET /api/v1/stream`
+
+Events emitted:
+- `AgentHired`
+- `AgentFired`
+- `TaskCompleted`
+- `QuotaExhausted`
+
+### 4.3 KAIROS Orchestration APIs
+Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines.
+
+**Endpoint:** `GET /api/v1/mesh/rooms/{room_id}`
+Retrieve the real-time state and history of a specific Teammate Mesh room.
+
+**Response (200 OK):**
+```json
+{
+  "room_id": "room_a1b2",
+  "active_agents": ["agent_swe_004", "agent_reviewer_001"],
+  "messages": [
+    {
+      "agent_id": "agent_swe_004",
+      "action": "joined",
+      "status": "success"
+    }
+  ]
+}
+```
+
+**Endpoint:** `POST /api/v1/autodream/`
+Trigger the AutoDream vector pipeline to process shared memory and generate new embedded vectors for RAG.
+
+**Payload:**
+```json
+{
+  "pipeline_id": "dream_001",
+  "force_reindex": false
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "status": "processing",
+  "pipeline_id": "dream_001"
+}
+```
+
+### 4.4 KAIROS Sub-Agent Queue API
+
+**Endpoint:** `POST /api/queue/subagent`
+Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).
+
+**Payload:**
+```json
+{
+  "parent_task_id": "task_12345",
   "payload": {
-    "entity_id": "uuid-1234",
-    "to_state": "EXECUTING"
-  }
-}</code></pre>
-</div>
+    "instruction": "Verify the styling tokens in the frontend."
+  },
+  "scheduled_at": "2026-04-06T12:00:00Z"
+}
+```
 
-### 2.3 Sub-Agent Queue
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <strong>POST <code>/api/queue/subagent</code></strong>
-  <p>Enqueues a background job directly to the Sub-Agent Orchestration Queue. Supports Celery/BullMQ-style priority and retry semantics.</p>
-  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
-  "job_type": "vector_embedding",
-  "retries": 3,
+**Response (202 Accepted):**
+```json
+{
+  "queue_id": "queue_9876",
+  "status": "ENQUEUED"
+}
+```
+
+### 4.5 Teammate Mesh v2 (Centrifuge)
+
+**Endpoint:** `POST /api/mesh/v2/broadcast`
+Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
+
+**Payload:**
+```json
+{
+  "channel": "mesh:tasks",
+  "event_type": "TASK_TRANSITION",
+  "data": {
+    "task_id": "task_12345",
+    "previous_state": "PENDING",
+    "new_state": "IN_PROGRESS"
+  }
+}
+```
+
+### 4.6 AutoDream Vector Embedding Workflow
+```mermaid
+graph TD
+    Agent[Agent Shared Memory] -->|Writes to .agent-task/memory| FS[File System]
+    FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
+    AutoDream --> Chunk[Chunk & Tokenize]
+    Chunk --> Embed[Minimax/Cohere Embedding API]
+    Embed --> VectorDB[(pgvector / Local SQLite)]
+    VectorDB -->|RAG Sync| API[KAIROS Orchestration API]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Agent,FS,AutoDream,Chunk,Embed,VectorDB,API premium;
+```
+
+#### Sub-Agent Queuing Workflow
+```mermaid
+graph TD
+    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
+    API --> QueueInterface{SubAgent Queue Interface}
+    QueueInterface -->|Cloud-Native| Rueidis[(Redis ZSETs)]
+    QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
+    Rueidis -->|Dequeues| Worker[Sub-Agent Worker]
+    SQLite -->|Dequeues| Worker
+    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
+    V2Mesh --> Centrifuge[Centrifuge Node Pub/Sub]
+    Centrifuge --> Swarm[Teammate Swarm]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh,Centrifuge,Swarm premium;
+```
+
+**Endpoint:** `GET /api/v1/mesh/rooms/{room_id}`
+Retrieves the current state and participants of a specific Teammate Mesh room. KAIROS Orchestration uses this to synchronize agents within a context boundary.
+
+**Response (200 OK):**
+```json
+{
+  "room_id": "room_a1b2",
+  "name": "Frontend Architecture Deliberation",
+  "active_agents": ["agent_swe_004", "agent_design_001"],
+  "recent_messages": [
+    {
+      "agent_id": "agent_design_001",
+      "action": "proposal_submitted",
+      "status": "pending_review"
+    }
+  ]
+}
+```
+
+**Endpoint:** `POST /api/v1/autodream/`
+Triggers an immediate AutoDream vector embedding workflow on newly generated agent memory artifacts. Used to proactively consolidate agent learning into the vector database.
+
+**Payload:**
+```json
+{
+  "target_memory_files": [
+    ".agent-task/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.md"
+  ],
+  "priority": "high"
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "job_id": "ad_job_9921",
+  "status": "QUEUED"
+}
+```
+
+#### AutoDream Vector Embedding Workflow
+```mermaid
+graph TD
+    Trigger[POST /api/v1/autodream/] --> Hub[Orchestration Hub]
+    Hub --> Parser[Memory Artifact Parser]
+    Parser --> Embedding[Minimax / Anthropic Embedding Model]
+    Embedding --> VectorDB[(pgvector / Pinecone)]
+    VectorDB --> RAGSync[RAG Sync Engine]
+    RAGSync --> Mesh[Teammate Mesh Broadcast]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
+```
+
+
+### 4.8 KAIROS Shared Task List API
+
+**Endpoint:** `POST /api/v1/tasks/claim`
+Claims a `PENDING` task from the shared task queue. Uses `FOR UPDATE SKIP LOCKED` (Cloud) or explicit transaction locking (Standalone).
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_007",
+  "role": "swe"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "task_id": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "Implement AutoDream Pipeline",
+  "status": "IN_PROGRESS",
   "payload": {
-    "document_id": "doc-5678"
+     "instruction": "Create the Go background worker for memory consolidation."
   }
-}</code></pre>
+}
+```
 
-  <h4 style="margin-top: 1rem;">Queue Orchestration Flow</h4>
-  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-    ```mermaid
-    sequenceDiagram
-        participant API as OHC API
-        participant DB as State Machine (PG/SQLite)
-        participant Queue as Sub-Agent Queue
-        participant Worker as Sub-Agent
+**Endpoint:** `POST /api/v1/tasks/{task_id}/complete`
+Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
 
-        API->>Queue: POST /api/queue/subagent
-        Queue->>DB: Record Task (PENDING)
-        Worker->>Queue: Poll/Subscribe
-        Worker->>DB: FOR UPDATE SKIP LOCKED
-        DB-->>Worker: Lock Acquired (EXECUTING)
-        Worker->>API: Complete Task
-        API->>DB: Update State (COMPLETED)
-    ```
-  </div>
-</div>
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_007",
+  "outcome_summary": "Successfully merged PR #124."
+}
+```
 
-## 3. Client Integrations
+#### Shared Task Claiming Workflow
+```mermaid
+sequenceDiagram
+    participant Agent as Worker Agent
+    participant DB as Postgres (shared_tasks)
+    participant Hub as Teammate Mesh Hub
 
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <p>Whether you are developing against the <strong>Local SQLite SIPDB</strong> or the <strong>Cloud Postgres/Redis</strong> stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.</p>
-  <p>To verify the backend health programmatically:</p>
-  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>GET /api/health</code></pre>
-</div>
+    Agent->>DB: BEGIN
+    Agent->>DB: SELECT id FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 1
+    alt Task Found
+        DB-->>Agent: Returns Task 123
+        Agent->>DB: UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = 'worker-1' WHERE id = 123
+        Agent->>DB: COMMIT
+        Agent->>Hub: Publish MeshEvent {topic: 'task.assigned', payload: Task 123}
+    else No Task Found
+        DB-->>Agent: Returns 0 rows
+        Agent->>DB: ROLLBACK
+    end
+```
+
+## 5. Visualizing the Flow
+```mermaid
+graph TD
+    Client[Human CEO / External Tools] --> API[OHC Gateway]
+    API --> Auth{SPIFFE / OIDC}
+    Auth -->|Valid| Hub[Orchestration Hub]
+    Auth -->|Invalid| 401[401 Unauthorized]
+    Hub --> K8s[K8s Operator]
+    Hub --> Agents[Swarm Intelligence]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Client,API,Auth,Hub,401,K8s,Agents premium;
+```
 
 </div>
