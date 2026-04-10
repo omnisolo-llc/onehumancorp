@@ -1,0 +1,3 @@
+# 0.2.9 Release Promotion
+Successfully computed versions for 0.2.9 and updated all required configurations (`pubspec.yaml`, `package.json`, `MODULE.bazel`, `deploy/helm/ohc/Chart.yaml`).
+Added notes in `CHANGELOG.md` and `RELEASE_NOTES.md` regarding the local-to-cloud MCP state proxy feature from previous tasks.

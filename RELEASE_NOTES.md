@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
+- Scaling (Cloud): Deployed Hybrid Local-to-Cloud State Sync MCP Proxy (`statesyncmcp`) enabling secure, multi-tenant state propagation with SPIFFE authentication boundaries.
+- Privacy/Offline (Standalone): Extended local synchronization logic via the new MCP Proxy layer, improving the resilience of local-first state offline and its eventual consistency with the cloud.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.

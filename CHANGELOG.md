@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.9] - 2026-04-07
+
+### Added
+- Added `statesyncmcp` MCP package for Hybrid Local-to-Cloud State Sync MCP Proxy with SPIFFE auth support.
+
+### Changed
+- Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries to `0.2.9`.
+- Coordinated promotions across Cloud staging and Local desktop beta builds.
+- Synchronized version configurations across `MODULE.bazel`, `package.json`, `srcs/app/pubspec.yaml`, and `deploy/helm/ohc/Chart.yaml`.
+
 ## [0.2.8] - 2026-04-03
 
 ### Added
