@@ -49,6 +49,10 @@ var (
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
+
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
+
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
@@ -388,6 +392,23 @@ func InitWithMeter(m mockableMeter) error {
 	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
 		"teammate_mesh_direct_messages_total",
 		metric.WithDescription("Total number of Teammate Mesh direct messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total successfully synced RAG records"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1032,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRagRecordsSynced increments the global counter for successfully synced RAG records.
+func RecordRagRecordsSynced(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, int64(count))
+}
+
+// RecordRagSyncError increments the global counter for RAG sync errors.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1)
 }
