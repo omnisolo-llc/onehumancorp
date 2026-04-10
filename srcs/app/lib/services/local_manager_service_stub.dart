@@ -31,6 +31,22 @@ class LocalManagerService {
       'status': _unsupportedMessage,
     };
   }
+
+  Future<dynamic> processStart(
+    String executable,
+    List<String> arguments, {
+    bool runInShell = true,
+  }) async {
+    throw UnsupportedError(_unsupportedMessage);
+  }
+
+  Future<dynamic> processRun(
+    String executable,
+    List<String> arguments, {
+    bool runInShell = true,
+  }) async {
+    throw UnsupportedError(_unsupportedMessage);
+  }
 }
 
 final localManagerServiceProvider = Provider((ref) => LocalManagerService());

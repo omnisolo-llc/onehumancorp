@@ -148,10 +148,14 @@ class SettingsScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
                   child: Column(
@@ -192,17 +196,24 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
+                            onPressed:
+                                () => Navigator.pop(context, controller.text),
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
+                            child: const Text(
+                              'Save',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                           ),
                         ],
                       ),
@@ -275,10 +286,26 @@ class _LocalBackendStatusCardState
                 child: BackdropFilter(
                   filter: ImageFilter.compose(
                     outer: ColorFilter.matrix(const <double>[
-                      1.168, -0.153, -0.015, 0, 0,
-                      -0.046, 1.061, -0.015, 0, 0,
-                      -0.046, -0.152, 1.198, 0, 0,
-                      0, 0, 0, 1, 0,
+                      1.7874,
+                      -0.7152,
+                      -0.0722,
+                      0,
+                      0,
+                      -0.2126,
+                      1.2848,
+                      -0.0722,
+                      0,
+                      0,
+                      -0.2126,
+                      -0.7152,
+                      1.9278,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      1,
+                      0,
                     ]),
                     inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   ),
@@ -294,103 +321,119 @@ class _LocalBackendStatusCardState
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        running ? Icons.check_circle : Icons.error,
-                        color:
-                            running
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.error,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(running ? 'Service Running' : 'Service Stopped'),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed:
-                            _isToggling
-                                ? null
-                                : () async {
-                                  setState(() => _isToggling = true);
-                                  try {
-                                    if (running) {
-                                      await manager.stopService();
-                                    } else {
-                                      await manager.startService();
-                                    }
-                                  } finally {
-                                    if (mounted) {
-                                      setState(() => _isToggling = false);
-                                    }
-                                  }
-                                },
-                        child:
-                            _isToggling
-                                ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : Text(running ? 'Stop' : 'Start'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed:
-                        _isRunningDoctor
-                            ? null
-                            : () async {
-                              setState(() => _isRunningDoctor = true);
-                              try {
-                                final report = await manager.runDoctor();
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    builder:
-                                        (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
-                                          content: SingleChildScrollView(
-                                            child: Text(report),
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                running ? Icons.check_circle : Icons.error,
+                                color:
+                                    running
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.error,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                running ? 'Service Running' : 'Service Stopped',
+                              ),
+                              const Spacer(),
+                              ElevatedButton(
+                                onPressed:
+                                    _isToggling
+                                        ? null
+                                        : () async {
+                                          setState(() => _isToggling = true);
+                                          try {
+                                            if (running) {
+                                              await manager.stopService();
+                                            } else {
+                                              await manager.startService();
+                                            }
+                                          } finally {
+                                            if (mounted) {
+                                              setState(
+                                                () => _isToggling = false,
+                                              );
+                                            }
+                                          }
+                                        },
+                                child:
+                                    _isToggling
+                                        ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(context),
-                                              child: const Text('Close'),
-                                            ),
-                                          ],
-                                        ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isRunningDoctor = false);
-                                }
-                              }
-                            },
-                    icon:
-                        _isRunningDoctor
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.medical_services),
-                    label: const Text('Run Doctor Diagnostics'),
+                                        )
+                                        : Text(running ? 'Stop' : 'Start'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed:
+                                _isRunningDoctor
+                                    ? null
+                                    : () async {
+                                      setState(() => _isRunningDoctor = true);
+                                      try {
+                                        final report =
+                                            await manager.runDoctor();
+                                        if (context.mounted) {
+                                          showDialog(
+                                            context: context,
+                                            builder:
+                                                (context) => AlertDialog(
+                                                  title: const Text(
+                                                    'System Doctor',
+                                                  ),
+                                                  content:
+                                                      SingleChildScrollView(
+                                                        child: Text(report),
+                                                      ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                          ),
+                                                      child: const Text(
+                                                        'Close',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(
+                                            () => _isRunningDoctor = false,
+                                          );
+                                        }
+                                      }
+                                    },
+                            icon:
+                                _isRunningDoctor
+                                    ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : const Icon(Icons.medical_services),
+                            label: const Text('Run Doctor Diagnostics'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    ),
-  ),
-);
+        );
       },
     );
   }

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ohc_app/services/local_manager_service.dart';
+import 'package:ohc_app/services/local_manager_service_io.dart';
 
 class _CommandTestService extends LocalManagerService {
   _CommandTestService({required this.running}) : super(homeOverride: '/tmp');

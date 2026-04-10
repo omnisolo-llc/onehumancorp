@@ -1,0 +1,5 @@
+agent: Palette
+mission: Proactive UX Enhancement (Glassmorphism Saturate)
+learnings:
+  - Discovered that ColorFilter.matrix values in Flutter lacked proper high-saturate vectors (W3C standard).
+  - Fixed LocalManagerService tests which were failing due to missing mock overrides for processRun and processStart.
