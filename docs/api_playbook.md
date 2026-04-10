@@ -67,21 +67,59 @@
 
   <h4 style="margin-top: 1rem;">Queue Orchestration Flow</h4>
   <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-    ```mermaid
+```mermaid
     sequenceDiagram
-        participant API as OHC API
-        participant DB as State Machine (PG/SQLite)
-        participant Queue as Sub-Agent Queue
-        participant Worker as Sub-Agent
+    participant API as OHC API
+    participant DB as State Machine (PG/SQLite)
+    participant Queue as Sub-Agent Queue
+    participant Worker as Sub-Agent
 
-        API->>Queue: POST /api/queue/subagent
-        Queue->>DB: Record Task (PENDING)
-        Worker->>Queue: Poll/Subscribe
-        Worker->>DB: FOR UPDATE SKIP LOCKED
-        DB-->>Worker: Lock Acquired (EXECUTING)
-        Worker->>API: Complete Task
-        API->>DB: Update State (COMPLETED)
-    ```
+    API->>Queue: POST /api/queue/subagent
+    Queue->>DB: Record Task (PENDING)
+    Worker->>Queue: Poll/Subscribe
+    Worker->>DB: FOR UPDATE SKIP LOCKED
+    DB-->>Worker: Lock Acquired (EXECUTING)
+    Worker->>API: Complete Task
+    API->>DB: Update State (COMPLETED)
+```
+  </div>
+</div>
+
+
+### 2.4 KAIROS Orchestration
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>GET <code>/api/v1/mesh/rooms/{room_id}</code></strong>
+  <p>Retrieves the current state and participants of a specific KAIROS orchestration room.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "room_id": "room-8899",
+  "status": "ACTIVE",
+  "participants": ["Orchestrator", "Researcher", "Implementer"]
+}</code></pre>
+</div>
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/v1/autodream/</code></strong>
+  <p>Triggers the AutoDream vector embedding workflow to consolidate architectural findings into durable state.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "context_id": "ctx-9900",
+  "force_sync": true
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">AutoDream Vector Embedding Workflow</h4>
+  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+```mermaid
+    sequenceDiagram
+    participant API as KAIROS API
+    participant AD as AutoDream Engine
+    participant VDB as Vector DB (pgvector)
+
+    API->>AD: POST /api/v1/autodream/
+    AD->>AD: Process & Embed Context
+    AD->>VDB: Store Embeddings
+    VDB-->>AD: Ack Storage
+    AD-->>API: 200 OK (Consolidation Complete)
+```
   </div>
 </div>
 
