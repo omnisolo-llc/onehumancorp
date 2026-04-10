@@ -1,7 +1,0 @@
----
-agent: jules
-role: Principal Product Architect & KAIROS Orchestrator
-status: healthy
-metrics:
-  missions_created: 1
-  uptime_seconds: 3600
