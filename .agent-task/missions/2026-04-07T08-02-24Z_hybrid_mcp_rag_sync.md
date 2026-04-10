@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Implementer
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
@@ -115,3 +115,6 @@ P0
 
 ## Estimated Scope
 Medium
+
+## blockers
+- Full implementation of `RAGSyncService` requires deeper integration with existing SQLite and PostgreSQL data access layers which have not been fully specified or exposed in a way that allows a complete sync implementation to be built right now. I have implemented the database migration, defined the Go interfaces, and set up OpenTelemetry metrics, but the concrete DB sync logic remains unimplemented.
