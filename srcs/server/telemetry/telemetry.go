@@ -29,6 +29,9 @@ var (
 	tokenBurnRateGauge         metric.Float64Gauge
 	agentApiCallsCounter       metric.Int64Counter
 	agentApiErrorsCounter      metric.Int64Counter
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal    metric.Int64Counter
+
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
 	swarmTasksCompletedCounter metric.Int64Counter
@@ -171,6 +174,21 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced via Hybrid MCP"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors during Hybrid MCP RAG sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 
 	MeshLatencyRecorder, err = m.Float64Histogram(
 		"ohc_mesh_latency",
