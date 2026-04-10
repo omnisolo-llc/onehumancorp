@@ -1,15 +1,6 @@
-1. **Fix BUILD.bazel**
-   - Use `git restore srcs/server/db/BUILD.bazel` to revert any hallucinated changes.
-   - Use `sed -i '/"migrations\/031_agent_missions_updated_at.sql",/a \        "migrations/032_hybrid_rag_sync.sql",' srcs/server/db/BUILD.bazel` to re-add ONLY the `032_hybrid_rag_sync.sql` file.
-   - Verify with `git diff srcs/server/db/BUILD.bazel`.
+package hub
 
-2. **Fix Telemetry Metrics Logic**
-   - Execute the following command to update `rag_sync.go`:
-     ```bash
-     cat << 'EOF' > srcs/server/hub/rag_sync.go
-     package hub
-
-     import (
+import (
 	"context"
 	"database/sql"
 	"encoding/binary"
@@ -17,30 +8,30 @@
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"go.opentelemetry.io/otel/metric"
-     )
+)
 
-     type SyncStatus string
+type SyncStatus string
 
-     const (
+const (
 	SyncStatusPending SyncStatus = "pending"
 	SyncStatusSynced  SyncStatus = "synced"
 	SyncStatusError   SyncStatus = "error"
-     )
+)
 
-     type RAGSyncRecord struct {
+type RAGSyncRecord struct {
 	ID         string
 	Context    string
 	Vector     []float32
 	SyncStatus SyncStatus
 	LastSyncAt sql.NullString // Handle both nil and SQLite timestamps
-     }
+}
 
-     var (
+var (
 	ragRecordsSyncedTotal metric.Int64Counter
 	ragSyncErrorsTotal    metric.Int64Counter
-     )
+)
 
-     func InitRAGSyncMetrics(meter metric.Meter) error {
+func InitRAGSyncMetrics(meter metric.Meter) error {
 	var err error
 	ragRecordsSyncedTotal, err = meter.Int64Counter("rag_records_synced_total")
 	if err != nil {
@@ -51,39 +42,39 @@
 		return err
 	}
 	return nil
-     }
+}
 
-     type RAGSyncService interface {
+type RAGSyncService interface {
 	FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error)
 	MarkSynced(ctx context.Context, ids []string) error
 	ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
-     }
+}
 
-     type DefaultRAGSyncService struct {
+type DefaultRAGSyncService struct {
 	dbProvider db.Provider
-     }
+}
 
-     func NewDefaultRAGSyncService(provider db.Provider) *DefaultRAGSyncService {
+func NewDefaultRAGSyncService(provider db.Provider) *DefaultRAGSyncService {
 	return &DefaultRAGSyncService{dbProvider: provider}
-     }
+}
 
-     func encodeVector(v []float32) []byte {
+func encodeVector(v []float32) []byte {
 	buf := make([]byte, len(v)*4)
 	for i, f := range v {
 		binary.LittleEndian.PutUint32(buf[i*4:], math.Float32bits(f))
 	}
 	return buf
-     }
+}
 
-     func decodeVector(b []byte) []float32 {
+func decodeVector(b []byte) []float32 {
 	v := make([]float32, len(b)/4)
 	for i := 0; i < len(v); i++ {
 		v[i] = math.Float32frombits(binary.LittleEndian.Uint32(b[i*4:]))
 	}
 	return v
-     }
+}
 
-     func (s *DefaultRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
+func (s *DefaultRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
 	query := `
 		SELECT memory_id, context, vector_embedding, sync_status, last_sync_at
 		FROM swarm_memory_embeddings
@@ -129,9 +120,9 @@
 	}
 
 	return records, nil
-     }
+}
 
-     func (s *DefaultRAGSyncService) MarkSynced(ctx context.Context, ids []string) error {
+func (s *DefaultRAGSyncService) MarkSynced(ctx context.Context, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -180,9 +171,9 @@
 	}
 
 	return nil
-     }
+}
 
-     func (s *DefaultRAGSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
+func (s *DefaultRAGSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -240,19 +231,4 @@
 	}
 
 	return nil
-     }
-     EOF
-     ```
-   - Verify with `cat srcs/server/hub/rag_sync.go`.
-
-3. **Re-request Code Review**
-   - Run `request_code_review` again to ensure the changes are correct and address the previous feedback.
-
-4. **Run Tests**
-   - Run all relevant tests using `export PATH="$PATH:$HOME/go/bin" && bazelisk test //...` to ensure no regressions are introduced.
-
-5. **Complete Pre-commit Steps**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-6. **Submit Changes**
-   - Submit the PR using the `submit` tool with title `feat: Implement Hybrid MCP RAG Protocol Sync`.
+}
