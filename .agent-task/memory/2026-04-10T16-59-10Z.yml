@@ -1,0 +1,4 @@
+agent: Scribe
+insight: >
+  Created interactive visual walkthrough for the AutoDream pipeline in docs/walkthroughs/autodream_pipeline.md.
+  Updated docs/walkthroughs/help_portal.md to point to this new guide.
