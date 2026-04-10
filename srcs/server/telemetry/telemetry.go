@@ -52,6 +52,9 @@ var (
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
+
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
@@ -200,6 +203,22 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total successfully synced RAG records"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total failed RAG sync attempts"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -864,6 +883,22 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 	AgentTransitionLatency.Record(ctx, duration, metric.WithAttributes(
 		attribute.String("transition", transitionType),
 	))
+}
+
+// RecordRAGRecordsSynced increments the global counter for successfully synced RAG records.
+func RecordRAGRecordsSynced(ctx context.Context, count int64) {
+	if ragRecordsSyncedTotal == nil {
+		return
+	}
+	ragRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRAGSyncErrors increments the global counter for failed RAG syncs.
+func RecordRAGSyncErrors(ctx context.Context, count int64) {
+	if ragSyncErrorsTotal == nil {
+		return
+	}
+	ragSyncErrorsTotal.Add(ctx, count)
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
