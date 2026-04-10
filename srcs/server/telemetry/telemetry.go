@@ -20,6 +20,9 @@ import (
 )
 
 var (
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
+
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -454,6 +457,23 @@ func InitWithMeter(m mockableMeter) error {
 	meshBroadcastTotal, err = m.Int64Counter(
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors encountered"),
 	)
 	if err != nil {
 		errs = append(errs, err)
