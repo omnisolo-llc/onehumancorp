@@ -9,6 +9,7 @@ import (
 )
 
 // NewTestProvider creates a new in-memory SQLite database provider for testing.
+// This needs to be in a non-test file so other packages can use it.
 func NewTestProvider(t *testing.T) Provider {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")

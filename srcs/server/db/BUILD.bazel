@@ -8,6 +8,7 @@ go_library(
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
+        "test_provider_test.go",
     ],
     embedsrcs = [
         "migrations/001_users.sql",
@@ -42,6 +43,7 @@ go_library(
         "migrations/029_autodream_memories.sql",
         "migrations/030_kairos_shared_tasks.sql",
         "migrations/031_agent_missions_updated_at.sql",
+        "migrations/032_hybrid_sync_metadata.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
@@ -59,7 +61,6 @@ go_test(
     name = "db_test",
     srcs = [
         "provider_test.go",
-        "test_provider_test.go",
     ],
     embed = [":db"],
     deps = ["@org_modernc_sqlite//:sqlite"],
