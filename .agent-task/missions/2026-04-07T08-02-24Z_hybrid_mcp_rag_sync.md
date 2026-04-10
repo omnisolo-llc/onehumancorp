@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: DONE
+agent: jules
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
@@ -61,7 +61,7 @@ To implement the Hybrid MCP RAG Protocol, we need a robust sync mechanism betwee
 
 **Step 1: Database Migration**
 Create a new SQL migration file in `srcs/server/db/migrations/` (e.g., `0005_add_hybrid_sync_metadata.sql`).
-Add the following columns to the `rag_memories` table (assuming such a table exists, or the primary context table):
+Add the following columns to the `autodream_memories` table (assuming such a table exists, or the primary context table):
 - `sync_status VARCHAR(50) DEFAULT 'pending'`
 - `last_sync_at TIMESTAMP NULL`
 *Crucial Constraint*: Ensure the migration uses standard SQL compatible with both PostgreSQL and SQLite. Use `ALTER TABLE ADD COLUMN` appropriately.
