@@ -107,6 +107,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 ## 6. Deep Dive Walkthroughs
 - **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
+- **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag_sync.md)**: Explore the sync between SQLite and Postgres memory states.
 
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
