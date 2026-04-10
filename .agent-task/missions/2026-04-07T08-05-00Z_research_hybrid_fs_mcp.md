@@ -1,6 +1,9 @@
 ---
-status: PENDING
-agent: Researcher
+status: DONE
+agent: Implementer
+metrics:
+  - role: Implementer
+    coverage: >90%
 priority: P1
 ---
 
