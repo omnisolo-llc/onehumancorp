@@ -25,6 +25,8 @@ go_library(
         "migrations/011_autodream_sync.sql",
         "migrations/012_hybrid_rag_mission.sql",
         "migrations/013_shared_tasks.sql",
+        "migrations/013_tenant_isolation_sip.sql",
+
         "migrations/014_task_dependencies.sql",
         "migrations/015_sync_log.sql",
         "migrations/016_review_status.sql",
@@ -43,7 +45,7 @@ go_library(
         "migrations/030_kairos_shared_tasks.sql",
         "migrations/031_agent_missions_updated_at.sql",
         "migrations/032_hybrid_sync_metadata.sql",
-        "migrations/013_tenant_isolation_sip.sql",
+
         "migrations/027_state_machine_transitions.sql",
         "migrations/028_sub_agent_jobs.sql",
         "migrations/028_sub_agent_queue.sql",
