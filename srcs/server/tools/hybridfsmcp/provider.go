@@ -32,7 +32,7 @@ func NewLocalFSProvider() *LocalFSProvider {
 		baseDir = "/tmp/ohc_workspace"
 	}
 	// Ensure base dir exists
-	os.MkdirAll(baseDir, 0755)
+	os.MkdirAll(baseDir, 0700)
 	return &LocalFSProvider{baseDir: baseDir}
 }
 
@@ -67,7 +67,7 @@ func (p *LocalFSProvider) WriteFile(ctx context.Context, path string, content st
 	}
 	// ensure dir exists
 	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
 	return os.WriteFile(fullPath, []byte(content), 0644)
@@ -116,7 +116,7 @@ func (p *CloudFSProvider) resolvePath(ctx context.Context, reqPath string) (stri
 	}
 	tenantDir := filepath.Join(p.baseDir, claims.OrganizationID)
 	// Ensure tenant dir exists
-	os.MkdirAll(tenantDir, 0755)
+	os.MkdirAll(tenantDir, 0700)
 
 	cleanPath := filepath.Clean(filepath.Join(tenantDir, reqPath))
 	if !strings.HasPrefix(cleanPath, filepath.Clean(tenantDir)+string(filepath.Separator)) && cleanPath != tenantDir {
@@ -144,7 +144,7 @@ func (p *CloudFSProvider) WriteFile(ctx context.Context, path string, content st
 	}
 	// ensure dir exists
 	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
 	return os.WriteFile(fullPath, []byte(content), 0644)
