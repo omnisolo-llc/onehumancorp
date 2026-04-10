@@ -1,0 +1,3 @@
+type: memory
+context: "Learned that in this codebase, when `rowsAffected` is not retrieved properly from `res.RowsAffected()` for a sql execution result object, it should be retrieved as the first return value `rowsAffected, err := ...` from the executing command if it is from an interface like `db.Exec`. Also learned to always check for compilation errors via `bazelisk test //...` before finalizing a mission, as unexpected changes elsewhere (or poorly constructed git restores) might break the build."
+timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
