@@ -1,0 +1,3 @@
+type: memory
+context: Successfully bridged local SQLite RAG state to cloud Postgres using Last-Write-Wins logic and explicit float32 vector handling. Added OpenTelemetry counters.
+tags: [rag, sync, telemetry, mcp, sqlite, postgres]

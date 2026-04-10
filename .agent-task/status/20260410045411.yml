@@ -1,0 +1,4 @@
+type: status
+status: DONE
+component: rag_sync
+summary: Implemented Hybrid MCP RAG Protocol schema migrations and RAGSyncService.
