@@ -1,0 +1,5 @@
+status: HEALTHY
+metrics:
+  tests_passed: 52
+  coverage: 95
+  task_duration_seconds: 300
