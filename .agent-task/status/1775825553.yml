@@ -1,0 +1,4 @@
+status: healthy
+metrics:
+  feature: HybridFSProxyMCP
+  tests_passed: true

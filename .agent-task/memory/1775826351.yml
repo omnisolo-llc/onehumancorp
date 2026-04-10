@@ -1,0 +1,1 @@
+context: "Learned that appending the path separator when checking prefix for isolation boundaries prevents hijacking cross-tenant attacks (e.g. tenant1 vs tenant10). Fixed the bug in LocalFSProvider and CloudFSProvider."
