@@ -1,0 +1,19 @@
+load("@rules_flutter//flutter:defs.bzl", "flutter_test")
+
+package(default_visibility = ["//srcs/app:__subpackages__"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["*.dart"]) + ["BUILD.bazel"],
+)
+
+flutter_test(
+    name = "glass_card_test",
+    srcs = ["glass_card_test.dart"],
+    deps = [
+        "//srcs/app/lib/widgets:widgets_lib",
+        "@flutter_sdk//flutter/packages/flutter_test",
+        "@flutter_sdk//flutter/packages/flutter",
+    ],
+    workspace_pubspec = "//:pubspec.yaml",
+)
