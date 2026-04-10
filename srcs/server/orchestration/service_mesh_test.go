@@ -12,10 +12,10 @@ import (
 
 // MockStream for DiscoverAgents
 type mockDiscoverAgentsStream struct {
-	ctx      context.Context
-	sent     []*pb.AgentCapabilities
-	sendErr  error
-	recvErr  error
+	ctx     context.Context
+	sent    []*pb.AgentCapabilities
+	sendErr error
+	recvErr error
 }
 
 func (m *mockDiscoverAgentsStream) Send(caps *pb.AgentCapabilities) error {
@@ -35,10 +35,10 @@ func (m *mockDiscoverAgentsStream) RecvMsg(m_ interface{}) error { return nil }
 
 // MockStream for StreamMeshEvents
 type mockStreamMeshEventsStream struct {
-	ctx      context.Context
-	sent     []*pb.MeshEvent
-	sendErr  error
-	recvErr  error
+	ctx     context.Context
+	sent    []*pb.MeshEvent
+	sendErr error
+	recvErr error
 }
 
 func (m *mockStreamMeshEventsStream) Send(event *pb.MeshEvent) error {
@@ -55,7 +55,6 @@ func (m *mockStreamMeshEventsStream) SetTrailer(metadata.MD)       {}
 func (m *mockStreamMeshEventsStream) Context() context.Context     { return m.ctx }
 func (m *mockStreamMeshEventsStream) SendMsg(m_ interface{}) error { return nil }
 func (m *mockStreamMeshEventsStream) RecvMsg(m_ interface{}) error { return nil }
-
 
 func TestHubServiceServer_AdvertiseCapabilities(t *testing.T) {
 	hub := NewHub()
@@ -206,5 +205,44 @@ func TestHubServiceServer_Errors(t *testing.T) {
 	err = srv.StreamMeshEvents(&pb.EventStreamRequest{Topic: "test"}, &mockStreamMeshEventsStream{ctx: context.Background()})
 	if err == nil {
 		t.Errorf("expected error for missing MeshTransport")
+	}
+
+	_, err = srv.PublishMeshEvent(context.Background(), &pb.MeshEvent{Topic: "test", Payload: []byte("test")})
+	if err == nil {
+		t.Errorf("expected error for missing MeshTransport")
+	}
+}
+
+func TestHubServiceServer_PublishMeshEvent(t *testing.T) {
+	hub := NewHub()
+	defer hub.Close()
+
+	cn, _ := NewCentrifugeNode()
+	mt := NewMemoryMeshTransport(nil)
+	cn.SetMeshTransport(mt)
+	hub.SetCentrifugeNode(cn)
+
+	srv := NewHubServiceServer(hub)
+
+	// Test missing topic
+	req := &pb.MeshEvent{
+		Payload: []byte("payload"),
+	}
+	_, err := srv.PublishMeshEvent(context.Background(), req)
+	if err == nil {
+		t.Errorf("expected error for missing topic")
+	}
+
+	// Test successful publish
+	req = &pb.MeshEvent{
+		Topic:   "tasks",
+		Payload: []byte("success-payload"),
+	}
+	resp, err := srv.PublishMeshEvent(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.Success {
+		t.Errorf("expected success")
 	}
 }

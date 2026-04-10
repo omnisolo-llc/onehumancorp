@@ -78,6 +78,34 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 	}
 }
 
+// PublishMeshEvent publishes a real-time event to the mesh
+func (s *HubServiceServer) PublishMeshEvent(ctx context.Context, req *pb.MeshEvent) (*pb.PublishMessageResponse, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "PublishMeshEvent", time.Since(start)) }()
+
+	if req.GetTopic() == "" {
+		return nil, fmt.Errorf("topic is required")
+	}
+
+	cn := s.hub.CentrifugeNode()
+	if cn == nil {
+		return nil, fmt.Errorf("CentrifugeNode is nil")
+	}
+
+	if cn.meshTransport == nil {
+		return nil, fmt.Errorf("meshTransport is not configured")
+	}
+
+	if err := cn.meshTransport.BroadcastMeshEvent(ctx, req.GetTopic(), req.GetPayload()); err != nil {
+		slog.Error("Failed to publish mesh event", "error", err, "topic", req.GetTopic())
+		return nil, fmt.Errorf("failed to broadcast mesh event: %w", err)
+	}
+
+	telemetry.RecordMeshBroadcast(ctx, "events")
+
+	return &pb.PublishMessageResponse{Success: true}, nil
+}
+
 // StreamMeshEvents streams real-time events from the mesh
 func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
 	ctx := stream.Context()
