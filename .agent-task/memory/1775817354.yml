@@ -1,0 +1,1 @@
+memory: "The RAGSyncService mock implementation was rejected in review because mock code adds no real value and the business logic was missing. It has been replaced with a BasicRAGSyncService struct providing the basic implementation satisfying the interface, tracking sync metrics via OpenTelemetry."
