@@ -35,6 +35,7 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 	}
 
 	telemetry.RecordMeshBroadcast(ctx, "capabilities")
+	telemetry.RecordMeshMessageThroughput(ctx, len(req.String()), "capabilities")
 
 	return &pb.PublishMessageResponse{Success: true}, nil
 }
@@ -74,6 +75,8 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 			if err := stream.Send(&caps); err != nil {
 				return err
 			}
+
+			telemetry.RecordMeshMessageThroughput(ctx, len(caps.String()), "capabilities")
 		}
 	}
 }
@@ -124,6 +127,7 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			}
 
 			telemetry.RecordMeshBroadcast(ctx, "events")
+			telemetry.RecordMeshMessageThroughput(ctx, len(payload), req.GetTopic())
 		}
 	}
 }

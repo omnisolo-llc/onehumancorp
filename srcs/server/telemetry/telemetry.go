@@ -61,6 +61,7 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
+	meshMessageThroughput       metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -454,6 +455,14 @@ func InitWithMeter(m mockableMeter) error {
 	meshBroadcastTotal, err = m.Int64Counter(
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	meshMessageThroughput, err = m.Int64Counter(
+		"ohc_mesh_message_throughput",
+		metric.WithDescription("Total number of bytes of Teammate Mesh messages processed"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -982,6 +991,25 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
 		))
+	}
+}
+
+// RecordMeshMessageThroughput records the throughput of mesh messages.
+func RecordMeshMessageThroughput(ctx context.Context, bytesCount int, topic string) {
+	if meshMessageThroughput != nil {
+		meshMessageThroughput.Add(ctx, int64(bytesCount), metric.WithAttributes(
+			attribute.String("topic", topic),
+		))
+	}
+	if BufferMetricFunc != nil {
+		// Fallback for Standalone or tests.
+		// Construct the payload mapping.
+		payloadMap := map[string]interface{}{
+			"topic": topic,
+			"bytes": bytesCount,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "mesh_message_throughput", string(payloadBytes))
 	}
 }
 
