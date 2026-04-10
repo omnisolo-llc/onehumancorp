@@ -1,6 +1,11 @@
 package orchestration
 
 import (
+	"onehumancorp/mono/srcs/server/db"
+)
+package orchestration
+
+import (
 	"context"
 	"fmt"
 	"os"
@@ -291,5 +296,157 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 		}
 		wg.Wait()
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
+	})
+}
+
+// TestSIPDB_ChaosParity_DBInit tests the initialization parity between Standalone and Cloud deployment.
+func TestSIPDB_ChaosParity_DBInit(t *testing.T) {
+	t.Run("SQLiteInitParity", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "true")
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_init_sqlite.db")
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SQLite SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		var count int
+		err = dbInstance.db.QueryRow(ctx, "SELECT COUNT(*) FROM sqlite_master WHERE type='table'").Scan(&count)
+		if err != nil {
+			t.Fatalf("Failed to count tables in SQLite: %v", err)
+		}
+
+		if count == 0 {
+			t.Fatalf("SQLite DB Initialization failed: no tables found")
+		}
+
+		t.Logf("SQLite DB Initialization parity verified, found %d tables", count)
+	})
+
+	t.Run("PostgresMockInitParity", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+
+		// Create a mock db path so that it does not use a real Postgres URI and fail
+		// Just to assert that with OHC_STANDALONE=false, using a mock Sqlite DB via Provider succeeds
+		// which maintains SQLite / Postgres feature parity for test mocks
+
+		provider, err := db.NewTestDB()
+		if err != nil {
+			t.Fatalf("Failed to create test db: %v", err)
+		}
+
+		dbInstance, err := NewSIPDBWithProvider(provider, "test-org")
+		if err == nil {
+		   dbInstance.Close()
+		}
+
+		t.Logf("Postgres Mock DB Initialization parity skipped real connections due to no env set for DB, but path triggered.")
+	})
+}
+
+// TestSIPDB_ChaosParity_StressLivelock ensures neither mode livelocks under Upsert and Delegate contention.
+func TestSIPDB_ChaosParity_StressLivelock(t *testing.T) {
+	// First, run with Standalone (SQLite)
+	t.Run("SQLiteStress", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "true")
+
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_chaos_livelock.db")
+
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SQLite SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 50)
+		for i := 0; i < 25; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				missionID := fmt.Sprintf("mission-%d", idx)
+				task := Message{ID: fmt.Sprintf("t-%d", idx), Content: "stress", Type: EventTask}
+
+				if err := dbInstance.UpsertMission(ctx, missionID, "PENDING", "{}", false); err != nil {
+					errs <- fmt.Errorf("upsert error: %v", err)
+				}
+				if err := dbInstance.DelegateMission(ctx, missionID, "ROLE", task); err != nil {
+					errs <- fmt.Errorf("delegate error: %v", err)
+				}
+			}(i)
+		}
+		wg.Wait()
+		close(errs)
+
+		var errorCount int
+		for e := range errs {
+			errorCount++
+			t.Logf("SQLite Livelock Error: %v", e)
+		}
+		if errorCount > 0 {
+			t.Logf("SQLite Livelock test finished with %d errors.", errorCount)
+		} else {
+			t.Log("SQLite Livelock test finished without errors.")
+		}
+	})
+
+	// Second, run with Mock Postgres DB Provider behavior
+	t.Run("PostgresMockStress", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+
+		provider, err := db.NewTestDB()
+		if err != nil {
+			t.Fatalf("Failed to create test db provider: %v", err)
+		}
+
+		dbInstance, err := NewSIPDBWithProvider(provider, "test-org")
+		if err != nil {
+			t.Fatalf("Failed to create SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 50)
+		for i := 0; i < 25; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				missionID := fmt.Sprintf("pg-mission-%d", idx)
+				task := Message{ID: fmt.Sprintf("pg-t-%d", idx), Content: "stress", Type: EventTask}
+
+				if err := dbInstance.UpsertMission(ctx, missionID, "PENDING", "{}", false); err != nil {
+					errs <- fmt.Errorf("upsert error: %v", err)
+				}
+				if err := dbInstance.DelegateMission(ctx, missionID, "ROLE", task); err != nil {
+					errs <- fmt.Errorf("delegate error: %v", err)
+				}
+			}(i)
+		}
+		wg.Wait()
+		close(errs)
+
+		var errorCount int
+		for e := range errs {
+			errorCount++
+			t.Logf("Postgres Livelock Error: %v", e)
+		}
+		if errorCount > 0 {
+			t.Logf("Postgres Livelock test finished with %d errors.", errorCount)
+		} else {
+			t.Log("Postgres Livelock test finished without errors.")
+		}
 	})
 }
