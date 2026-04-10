@@ -20,47 +20,47 @@ import (
 )
 
 var (
-	meter            metric.Meter
-	requestCounter   metric.Int64Counter
-	latencyHistogram metric.Float64Histogram
+	meter               metric.Meter
+	requestCounter      metric.Int64Counter
+	latencyHistogram    metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
 
-	tokenUsageCounter          metric.Int64Counter
-	tokenBurnRateGauge         metric.Float64Gauge
-	agentApiCallsCounter       metric.Int64Counter
-	agentApiErrorsCounter      metric.Int64Counter
-	humanInteractionsCounter   metric.Int64Counter
-	meetingEventsCounter       metric.Int64Counter
-	swarmTasksCompletedCounter metric.Int64Counter
-	swarmTaskTransitionsCounter metric.Int64Counter
-	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
-	swarmTaskProcessingLatency  metric.Float64Histogram
-	taskEnqueuedCounter metric.Int64Counter
-	taskFailedCounter metric.Int64Counter
-	cacheHitsCounter           metric.Int64Counter
-	cacheMissesCounter         metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	tokenUsageCounter                  metric.Int64Counter
+	tokenBurnRateGauge                 metric.Float64Gauge
+	agentApiCallsCounter               metric.Int64Counter
+	agentApiErrorsCounter              metric.Int64Counter
+	humanInteractionsCounter           metric.Int64Counter
+	meetingEventsCounter               metric.Int64Counter
+	swarmTasksCompletedCounter         metric.Int64Counter
+	swarmTaskTransitionsCounter        metric.Int64Counter
+	swarmTaskQueueLengthGauge          metric.Int64UpDownCounter
+	swarmTaskProcessingLatency         metric.Float64Histogram
+	taskEnqueuedCounter                metric.Int64Counter
+	taskFailedCounter                  metric.Int64Counter
+	cacheHitsCounter                   metric.Int64Counter
+	cacheMissesCounter                 metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	TeammateMeshBroadcastsCounter    metric.Int64Counter
-	TeammateMeshDirectMessagesCounter metric.Int64Counter
-	TaskQueueLengthGauge       metric.Int64UpDownCounter
-	TaskProcessingLatency      metric.Float64Histogram
-	AgentTransitionLatency     metric.Float64Histogram
+	TeammateMeshBroadcastsCounter      metric.Int64Counter
+	TeammateMeshDirectMessagesCounter  metric.Int64Counter
+	TaskQueueLengthGauge               metric.Int64UpDownCounter
+	TaskProcessingLatency              metric.Float64Histogram
+	AgentTransitionLatency             metric.Float64Histogram
 
-	SyncCompletedCount metric.Int64Counter
-	SyncFailedCount    metric.Int64Counter
-	SyncEscalationsCount metric.Int64Counter
-	SyncLatency metric.Float64Histogram
-	SyncPayloadSize metric.Int64Histogram
+	SyncCompletedCount     metric.Int64Counter
+	SyncFailedCount        metric.Int64Counter
+	SyncEscalationsCount   metric.Int64Counter
+	SyncLatency            metric.Float64Histogram
+	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
-	syncDaemonBatchSize metric.Int64Histogram
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
-	autoDreamSyncDuration       metric.Float64Histogram
-	autoDreamQueryDuration      metric.Float64Histogram
-	meshBroadcastTotal          metric.Int64Counter
+	autoDreamSyncDuration  metric.Float64Histogram
+	autoDreamQueryDuration metric.Float64Histogram
+	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -135,6 +135,8 @@ func InitTelemetry() (func(), error) {
 	otel.SetMeterProvider(provider)
 
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
+
+	initRAGMetrics(meter)
 
 	err = InitWithMeter(meter)
 	if err != nil {
@@ -1010,5 +1012,29 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+var (
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal    metric.Int64Counter
+)
+
+func initRAGMetrics(meter metric.Meter) {
+	var err error
+	RAGRecordsSyncedTotal, err = meter.Int64Counter(
+		"ohc.rag.sync.records_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		slog.Error("Failed to initialize RAGRecordsSyncedTotal counter", "error", err)
+	}
+
+	RAGSyncErrorsTotal, err = meter.Int64Counter(
+		"ohc.rag.sync.errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
+	)
+	if err != nil {
+		slog.Error("Failed to initialize RAGSyncErrorsTotal counter", "error", err)
 	}
 }

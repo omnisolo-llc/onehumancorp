@@ -1,0 +1,4 @@
+status: HEALTHY
+metrics:
+  rag_sync_implemented: true
+  tests_passing: true
