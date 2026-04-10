@@ -122,8 +122,6 @@ func InitTelemetry() (func(), error) {
 	if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
 		// Enforce user data privacy and local sovereignty in Standalone Mode.
 		// Exporter is strictly opt-in and disabled by default.
-		// Also disable the buffer func so we don't save telemetry locally if opted-out.
-		BufferMetricFunc = nil
 		BufferMetricFunc = nil // Disable local buffer when opt-out
 		return func() {}, nil
 	}
