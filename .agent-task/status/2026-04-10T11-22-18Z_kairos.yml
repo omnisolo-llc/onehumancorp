@@ -1,0 +1,4 @@
+status: HEALTHY
+metrics:
+  tasks_orchestrated: 3
+  heartbeats_sent: 1

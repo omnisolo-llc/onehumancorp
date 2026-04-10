@@ -1,0 +1,4 @@
+context: KAIROS Orchestration
+observations:
+  - OHC Hybrid Architecture requires a multi-tenant PostgreSQL Cloud Mode and a single-user SQLite Standalone Mode.
+  - Decomposing the OHC Hybrid Agentic OS into Shared Task List, Teammate Mesh, and AutoDream Data Pipelines.
