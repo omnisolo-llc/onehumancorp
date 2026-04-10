@@ -63,8 +63,6 @@ func (s *DefaultRAGSyncService) MarkSynced(ctx context.Context, ids []string) er
         return nil
     }
 
-    // Since DB wrapper doesn't have BeginTx, we will just execute them contextually
-    // Or we should update the mock if needed, but lets just use Exec
     for _, id := range ids {
         _, err := s.db.Exec(ctx, `
             UPDATE autodream_memories
