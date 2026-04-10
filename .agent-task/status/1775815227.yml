@@ -1,0 +1,4 @@
+status: HEALTHY
+metrics:
+  tasks_completed: 1
+  uptime_seconds: 3600
