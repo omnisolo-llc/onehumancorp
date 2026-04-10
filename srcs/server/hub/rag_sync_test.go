@@ -2,122 +2,141 @@ package hub
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
 
-type mockRAGSyncService struct {
-	pending []RAGSyncRecord
-	synced  []string
-	cloud   []RAGSyncRecord
-	err     error
-}
+func setupTestDB(t *testing.T) db.Provider {
+	sqliteDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite: %v", err)
+	}
 
-func (m *mockRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
-	if m.err != nil {
-		return nil, m.err
+	_, err = sqliteDB.Exec(`
+		CREATE TABLE consolidated_memory (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			agent_id TEXT,
+			content TEXT NOT NULL,
+			embedding TEXT,
+			source_type TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			sync_status VARCHAR(50) DEFAULT 'pending',
+			last_sync_at TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
 	}
-	if limit > len(m.pending) {
-		limit = len(m.pending)
-	}
-	res := m.pending[:limit]
-	m.pending = m.pending[limit:]
-	return res, nil
-}
 
-func (m *mockRAGSyncService) MarkSynced(ctx context.Context, ids []string) error {
-	if m.err != nil {
-		return m.err
-	}
-	m.synced = append(m.synced, ids...)
-	return nil
-}
-
-func (m *mockRAGSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
-	if m.err != nil {
-		return m.err
-	}
-	m.cloud = append(m.cloud, records...)
-	return nil
+	return db.NewSqliteProvider(sqliteDB)
 }
 
 func TestRAGSyncService_FetchPendingSyncs(t *testing.T) {
-	mock := &mockRAGSyncService{
-		pending: []RAGSyncRecord{
-			{ID: "1", Context: "test 1", SyncStatus: SyncStatusPending},
-			{ID: "2", Context: "test 2", SyncStatus: SyncStatusPending},
-		},
-	}
+	provider := setupTestDB(t)
+	defer provider.Close()
 
 	ctx := context.Background()
-	records, err := mock.FetchPendingSyncs(ctx, 1)
+	service := NewRAGSyncService(provider)
+
+	_, err := provider.Exec(ctx, `
+		INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type, sync_status)
+		VALUES
+		('1', 'org1', 'test context 1', '[0.1, 0.2]', 'test', 'pending'),
+		('2', 'org1', 'test context 2', null, 'test', 'synced')
+	`)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf("insert failed: %v", err)
 	}
+
+	records, err := service.FetchPendingSyncs(ctx, 10)
+	if err != nil {
+		t.Fatalf("FetchPendingSyncs failed: %v", err)
+	}
+
 	if len(records) != 1 {
 		t.Fatalf("expected 1 record, got %d", len(records))
 	}
-	if records[0].ID != "1" {
-		t.Errorf("expected ID 1, got %s", records[0].ID)
+
+	rec := records[0]
+	if rec.ID != "1" {
+		t.Errorf("expected ID '1', got %s", rec.ID)
+	}
+	if rec.Context != "test context 1" {
+		t.Errorf("expected context 'test context 1', got %s", rec.Context)
+	}
+	if len(rec.Vector) != 2 || rec.Vector[0] != 0.1 || rec.Vector[1] != 0.2 {
+		t.Errorf("unexpected vector: %v", rec.Vector)
 	}
 }
 
 func TestRAGSyncService_MarkSynced(t *testing.T) {
-	mock := &mockRAGSyncService{}
+	provider := setupTestDB(t)
+	defer provider.Close()
 
 	ctx := context.Background()
-	err := mock.MarkSynced(ctx, []string{"1", "2"})
+	service := NewRAGSyncService(provider)
+
+	_, err := provider.Exec(ctx, `
+		INSERT INTO consolidated_memory (id, organization_id, content, source_type, sync_status)
+		VALUES ('1', 'org1', 'test context 1', 'test', 'pending')
+	`)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Fatalf("insert failed: %v", err)
 	}
-	if len(mock.synced) != 2 {
-		t.Fatalf("expected 2 synced IDs, got %d", len(mock.synced))
+
+	err = service.MarkSynced(ctx, []string{"1"})
+	if err != nil {
+		t.Fatalf("MarkSynced failed: %v", err)
 	}
-	if mock.synced[0] != "1" || mock.synced[1] != "2" {
-		t.Errorf("expected [1 2], got %v", mock.synced)
+
+	row := provider.QueryRow(ctx, "SELECT sync_status FROM consolidated_memory WHERE id = '1'")
+	var status string
+	if err := row.Scan(&status); err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+
+	if status != "synced" {
+		t.Errorf("expected status 'synced', got %s", status)
 	}
 }
 
 func TestRAGSyncService_ProcessIncomingSync(t *testing.T) {
-	mock := &mockRAGSyncService{}
+	provider := setupTestDB(t)
+	defer provider.Close()
 
 	ctx := context.Background()
-	now := time.Now()
+	service := NewRAGSyncService(provider)
+
 	records := []RAGSyncRecord{
-		{ID: "1", Context: "cloud 1", SyncStatus: SyncStatusSynced, LastSyncAt: now},
+		{
+			ID:         "new-1",
+			Context:    "cloud context",
+			Vector:     []float32{0.5, 0.6},
+			SyncStatus: SyncStatusSynced,
+			LastSyncAt: time.Now(),
+		},
 	}
 
-	err := mock.ProcessIncomingSync(ctx, records)
+	err := service.ProcessIncomingSync(ctx, records)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if len(mock.cloud) != 1 {
-		t.Fatalf("expected 1 cloud record, got %d", len(mock.cloud))
-	}
-	if mock.cloud[0].Context != "cloud 1" {
-		t.Errorf("expected context 'cloud 1', got %s", mock.cloud[0].Context)
-	}
-}
-
-func TestRAGSyncService_Error(t *testing.T) {
-	mock := &mockRAGSyncService{
-		err: errors.New("simulated error"),
+		t.Fatalf("ProcessIncomingSync failed: %v", err)
 	}
 
-	ctx := context.Background()
-	_, err := mock.FetchPendingSyncs(ctx, 10)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	row := provider.QueryRow(ctx, "SELECT content, sync_status FROM consolidated_memory WHERE id = 'new-1'")
+	var content, status string
+	if err := row.Scan(&content, &status); err != nil {
+		t.Fatalf("query failed: %v", err)
 	}
 
-	err = mock.MarkSynced(ctx, []string{"1"})
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	if content != "cloud context" {
+		t.Errorf("expected content 'cloud context', got %s", content)
 	}
-
-	err = mock.ProcessIncomingSync(ctx, []RAGSyncRecord{})
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	if status != "synced" {
+		t.Errorf("expected status 'synced', got %s", status)
 	}
 }
