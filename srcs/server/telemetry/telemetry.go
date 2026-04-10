@@ -19,6 +19,12 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
+
+var (
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal    metric.Int64Counter
+)
+
 var (
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
@@ -388,6 +394,22 @@ func InitWithMeter(m mockableMeter) error {
 	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
 		"teammate_mesh_direct_messages_total",
 		metric.WithDescription("Total number of Teammate Mesh direct messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc.rag.records_synced.total",
+		metric.WithDescription("Total number of RAG records successfully synced to the cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"ohc.rag.sync_errors.total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1033,21 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+
+// RecordRAGSyncSuccess increments the global counter for successful RAG syncs.
+func RecordRAGSyncSuccess(ctx context.Context, count int64) {
+	if RAGRecordsSyncedTotal == nil {
+		return
+	}
+	RAGRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context, count int64) {
+	if RAGSyncErrorsTotal == nil {
+		return
+	}
+	RAGSyncErrorsTotal.Add(ctx, count)
 }
