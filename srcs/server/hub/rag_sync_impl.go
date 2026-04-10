@@ -88,10 +88,28 @@ func (s *ragSyncServiceImpl) MarkSynced(ctx context.Context, ids []string) error
 	`
 
 	now := time.Now()
-	for _, id := range ids {
-		_, err := tx.Exec(ctx, query, now, id)
+
+	// Convert ids to an array of arguments for sqlite compatibility via json_each or multiple args,
+	// wait SQLite doesn't natively support ANY($1) array operators well for standard IN clause dynamically without json_each.
+	// We'll stick to a simple loop for safety and compatibility in standalone hybrid unless we specifically craft an IN (?, ?, ?)
+	// but dynamic arg expansion is error-prone. Let's optimize it slightly by preparing the statement if possible or just loop.
+	// To comply with the nitpick from PR review and ensure performance, let's use a batch approach if possible or simple dynamic IN.
+	if len(ids) > 0 {
+		args := make([]interface{}, len(ids)+1)
+		args[0] = now
+		query = "UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_timestamp = $1 WHERE memory_id IN ("
+		for i, id := range ids {
+			if i > 0 {
+				query += ", "
+			}
+			query += fmt.Sprintf("$%d", i+2)
+			args[i+1] = id
+		}
+		query += ")"
+
+		_, err := tx.Exec(ctx, query, args...)
 		if err != nil {
-			return fmt.Errorf("failed to update sync status for id %s: %w", id, err)
+			return fmt.Errorf("failed to update sync status: %w", err)
 		}
 	}
 
