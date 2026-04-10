@@ -50,6 +50,8 @@ var (
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
@@ -208,6 +210,22 @@ func InitWithMeter(m mockableMeter) error {
 	SyncEscalationsCount, err = m.Int64Counter(
 		"ohc.sync.escalations.count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -872,6 +890,22 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
+}
+
+// RecordRagRecordSynced increments the counter for successfully synced RAG records.
+func RecordRagRecordSynced(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, int64(count))
+}
+
+// RecordRagSyncError increments the counter for errors encountered during RAG sync.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1)
 }
 
 // RecordSyncLatency records the latency of the sync process.
