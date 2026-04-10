@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
@@ -34,24 +35,20 @@ class AgentsScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-        error:
-            (e, _) => Center(
-              child: Text(
-                'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-        data:
-            (agents) =>
-                agents.isEmpty
-                    ? _EmptyAgents(onHire: () => context.go('/agents/hire'))
-                    : _AgentList(agents: agents),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            'Error: $e',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+        data: (agents) => agents.isEmpty
+            ? _EmptyAgents(onHire: () => context.go('/agents/hire'))
+            : _AgentList(agents: agents),
       ),
     );
   }
@@ -91,8 +88,6 @@ class _EmptyAgents extends StatelessWidget {
   }
 }
 
-
-
 class _AgentList extends StatelessWidget {
   final List<Agent> agents;
   const _AgentList({required this.agents});
@@ -114,13 +109,18 @@ class _AgentList extends StatelessWidget {
 class _AnimatedAgentCard extends StatefulWidget {
   final Agent agent;
   final int index;
-  const _AnimatedAgentCard({super.key, required this.agent, required this.index});
+  const _AnimatedAgentCard({
+    super.key,
+    required this.agent,
+    required this.index,
+  });
 
   @override
   State<_AnimatedAgentCard> createState() => _AnimatedAgentCardState();
 }
 
-class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTickerProviderStateMixin {
+class _AnimatedAgentCardState extends State<_AnimatedAgentCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -137,8 +137,10 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
       begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     Future.delayed(Duration(milliseconds: 100 * widget.index), () {
       if (mounted) {
@@ -156,23 +158,22 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isRunningColor =
-        widget.agent.isRunning
-            ? colorScheme.primary
-            : colorScheme.surfaceContainerHighest;
-    final isRunningIconColor =
-        widget.agent.isRunning ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
-    final chipBgColor =
-        widget.agent.isRunning
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest;
-    final chipTextColor =
-        widget.agent.isRunning
-            ? colorScheme.onPrimaryContainer
-            : colorScheme.onSurfaceVariant;
+    final isRunningColor = widget.agent.isRunning
+        ? colorScheme.primary
+        : colorScheme.surfaceContainerHighest;
+    final isRunningIconColor = widget.agent.isRunning
+        ? colorScheme.onPrimary
+        : colorScheme.onSurfaceVariant;
+    final chipBgColor = widget.agent.isRunning
+        ? colorScheme.primaryContainer
+        : colorScheme.surfaceContainerHighest;
+    final chipTextColor = widget.agent.isRunning
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onSurfaceVariant;
 
     return Semantics(
-      label: 'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
+      label:
+          'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
       button: true,
       child: SlideTransition(
         position: _slideAnimation,
@@ -192,10 +193,26 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
                       outer: ColorFilter.matrix(const <double>[
-                        1.168, -0.153, -0.015, 0, 0,
-                        -0.046, 1.061, -0.015, 0, 0,
-                        -0.046, -0.152, 1.198, 0, 0,
-                        0, 0, 0, 1, 0,
+                        1.168,
+                        -0.153,
+                        -0.015,
+                        0,
+                        0,
+                        -0.046,
+                        1.061,
+                        -0.015,
+                        0,
+                        0,
+                        -0.046,
+                        -0.152,
+                        1.198,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
                       ]),
                       inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     ),
@@ -203,13 +220,17 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                       duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
                         color: _isHovered
-                            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+                            ? colorScheme.surfaceContainerHighest.withValues(
+                                alpha: 0.3,
+                              )
                             : colorScheme.surface.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: _isHovered
                               ? colorScheme.outlineVariant
-                              : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              : colorScheme.outlineVariant.withValues(
+                                  alpha: 0.5,
+                                ),
                         ),
                       ),
                       child: InkWell(
@@ -231,14 +252,20 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: isRunningColor.withValues(alpha: 0.8),
+                                    color: isRunningColor.withValues(
+                                      alpha: 0.8,
+                                    ),
                                   ),
-                                  child: Icon(Icons.smart_toy, color: isRunningIconColor),
+                                  child: Icon(
+                                    Icons.smart_toy,
+                                    color: isRunningIconColor,
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         widget.agent.name,
@@ -265,7 +292,10 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                 AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
                                   curve: Curves.easeInOut,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: chipBgColor.withValues(alpha: 0.8),
                                     borderRadius: BorderRadius.circular(16),

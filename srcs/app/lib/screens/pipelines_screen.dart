@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ohc_app/models/pipeline.dart';
@@ -149,10 +150,26 @@ class _PipelineCardState extends State<_PipelineCard> {
               child: BackdropFilter(
                 filter: ImageFilter.compose(
                   outer: ColorFilter.matrix(const <double>[
-                    1.168, -0.153, -0.015, 0, 0,
-                    -0.046, 1.046, 0, 0, 0,
-                    -0.046, -0.152, 1.198, 0, 0,
-                    0, 0, 0, 1, 0,
+                    1.168,
+                    -0.153,
+                    -0.015,
+                    0,
+                    0,
+                    -0.046,
+                    1.046,
+                    0,
+                    0,
+                    0,
+                    -0.046,
+                    -0.152,
+                    1.198,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
                   ]),
                   inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                 ),
@@ -232,7 +249,9 @@ class _PipelineCardState extends State<_PipelineCard> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: colors.secondaryContainer.withValues(alpha: 0.3),
+                            color: colors.secondaryContainer.withValues(
+                              alpha: 0.3,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -253,10 +272,7 @@ class _PipelineCardState extends State<_PipelineCard> {
                                 button: true,
                                 label: 'Open staging URL',
                                 child: IconButton(
-                                  icon: const Icon(
-                                    Icons.open_in_new,
-                                    size: 16,
-                                  ),
+                                  icon: const Icon(Icons.open_in_new, size: 16),
                                   tooltip: 'Open staging URL',
                                   onPressed: () {}, // Link preview
                                 ),
