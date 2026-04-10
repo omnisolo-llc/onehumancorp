@@ -46,12 +46,13 @@ class PowerSyncService {
         Column.text('payload'),
         Column.text('created_at'),
       ]),
-      Table('swarm_memory', [
-        Column.text('value'),
-        Column.text('updated_at'),
-      ], indexes: [
-        Index('idx_swarm_memory_updated_at', [IndexedColumn('updated_at')])
-      ]),
+      Table(
+        'swarm_memory',
+        [Column.text('value'), Column.text('updated_at')],
+        indexes: [
+          Index('idx_swarm_memory_updated_at', [IndexedColumn('updated_at')]),
+        ],
+      ),
       Table('capability_plugins', [
         Column.text('name'),
         Column.text('version'),
@@ -109,10 +110,7 @@ class _BackendConnector extends PowerSyncBackendConnector {
       return null;
     }
 
-    return PowerSyncCredentials(
-      endpoint: backendUrl,
-      token: user.token,
-    );
+    return PowerSyncCredentials(endpoint: backendUrl, token: user.token);
   }
 
   @override

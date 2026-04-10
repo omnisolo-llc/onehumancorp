@@ -88,7 +88,9 @@ class CentrifugeService {
   ///
   /// The Centrifuge channel name is `chat:<roomId>`.
   Stream<CentrifugeMessage> subscribe(String roomId) {
-    return subscribeRaw('chat:$roomId').map((data) => CentrifugeMessage.fromJson(data as Map<String, dynamic>));
+    return subscribeRaw(
+      'chat:$roomId',
+    ).map((data) => CentrifugeMessage.fromJson(data as Map<String, dynamic>));
   }
 
   /// Subscribe to any generic channel and return a stream of raw JSON messages.
