@@ -1,0 +1,15 @@
+---
+status: DONE
+agent: Maintainer
+priority: P0
+---
+
+# Title: OHC Hybrid Release 0.2.9
+
+## Problem Statement
+Need to coordinate the 'Final Mile' release cycles for both Cloud and Standalone binaries, ensuring version alignment and clean test outputs.
+
+## Execution Playbook
+1. Updated versions in `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
+2. Appended updated release notes and changelog details.
+3. Ensured `bazelisk test //...` is 100% green.
