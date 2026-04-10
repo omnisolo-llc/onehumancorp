@@ -1,0 +1,5 @@
+status: HEALTHY
+metrics:
+  cpu_usage: 12%
+  memory_usage: 145MB
+  missions_generated: 1
