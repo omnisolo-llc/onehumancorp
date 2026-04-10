@@ -244,6 +244,8 @@ func TestIntegrationsByCategoryUnknown(t *testing.T) {
 // ── Connect / Disconnect ──────────────────────────────────────────────────────
 
 func TestConnectUpdatesStatus(t *testing.T) {
+	AllowLocalIPsForTesting = true
+	defer func() { AllowLocalIPsForTesting = false }()
 	r := NewRegistry()
 
 	updated, err := r.Connect("slack", "https://hooks.slack.com/services/test")
