@@ -50,6 +50,8 @@ var (
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
@@ -460,6 +462,22 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1011,4 +1029,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGRecordSynced increments the global counter for synced RAG records.
+func RecordRAGRecordSynced(ctx context.Context) {
+	if ragRecordsSyncedTotal == nil {
+		return
+	}
+	ragRecordsSyncedTotal.Add(ctx, 1)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal == nil {
+		return
+	}
+	ragSyncErrorsTotal.Add(ctx, 1)
 }
