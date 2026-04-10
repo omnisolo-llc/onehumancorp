@@ -15,8 +15,8 @@ go_library(
         "read.go",
         "sendmessage.go",
         "todowrite.go",
-        "tools.go",
         "toolsearch.go",
+        "tools.go",
         "types.go",
         "webfetch.go",
         "websearch.go",
@@ -28,6 +28,8 @@ go_library(
 
 go_test(
     name = "builtin_test",
-    srcs = ["agent_test.go"],
+    srcs = [
+        "agent_test.go",
+    ],
     embed = [":builtin"],
 )

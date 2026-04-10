@@ -36,10 +36,6 @@ func TestAnthropicClient_HistoryTruncation(t *testing.T) {
 		})
 	}
 
-	// 25 messages, ends with user message at index 24 (since 0 is user, even is user).
-	// Truncate to 20: index 5 to 24.
-	// Index 5 is assistant. It should be removed, leaving 19 messages starting from index 6 (user).
-	// Let's verify.
 	_, err := client.Complete(context.Background(), CompletionRequest{
 		Messages: msgs,
 	})
@@ -54,7 +50,6 @@ func TestOpenAIClient_HistoryTruncation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&capturedBody)
 
-		// Create a valid dummy response
 		var resp openAIResponse
 		resp.Choices = append(resp.Choices, struct{
 			Message      openAIMessage `json:"message"`

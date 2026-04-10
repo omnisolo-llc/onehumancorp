@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "agent.go",
         "cached_llm.go",
+        "hub_adapter.go",
         "llm.go",
         "output.go",
         "runner.go",
@@ -14,7 +15,9 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/local",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/auth",
         "//srcs/server/db",
+        "//srcs/server/orchestration",
         "//srcs/server/telemetry",
         "//srcs/server/utils",
         "@com_github_google_uuid//:uuid",
