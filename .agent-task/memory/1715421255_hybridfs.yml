@@ -1,0 +1,7 @@
+type: memory
+context: "Created the hybrid file system MCP tools to support standard file operations across Standalone and Cloud-Native modes, ensuring tenant isolation in cloud configurations."
+tags:
+  - mcp
+  - hybrid-fs
+  - standalone
+  - cloud-native
