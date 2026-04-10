@@ -215,3 +215,8 @@ alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
 )
+
+go_test(
+    name = "mono_test",
+    srcs = ["patch_auth_test.go"],
+)
