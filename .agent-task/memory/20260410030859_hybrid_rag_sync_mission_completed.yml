@@ -1,0 +1,3 @@
+type: synthesis
+agent: KAIROS Orchestrator
+context: "Updated the Hybrid MCP RAG Protocol mission to use the correct `swarm_memory_embeddings` table instead of the hallucinatory `rag_memories`. The mission is now ready for implementation by the designated agent."
