@@ -44,7 +44,7 @@ To implement the Hybrid Local-to-Cloud Sync Daemon, we need a robust background 
     *   Local SQLite records are updated to mark escalation as complete.
 
 ### Mermaid Visualization
-```mermaid
+\`\`\`mermaid
 graph TD
     A[Standalone Desktop (SQLite)] -->|Private RAG & Local Execution| B(Local MCP Agent)
     B -->|Task Requires Scaled Compute| C{OHC-SIP Cloud Sync Daemon}
@@ -56,7 +56,7 @@ graph TD
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class A,B,E premium;
     class C,D premium;
-```
+\`\`\`
 
 ## Implementation Prompt
 **Objective:** Fully implement the `hybrid_sync.go` daemon service to orchestrate local SQLite to Cloud Postgres context escalation.
