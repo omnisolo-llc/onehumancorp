@@ -2,6 +2,7 @@ package dbinspector
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -30,9 +31,9 @@ func NewDBInspectorMCP(provider db.Provider) *DBInspectorMCP {
 
 // Tool represents an MCP tool definition.
 type Tool struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	InputSchema string `json:"inputSchema"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	InputSchema json.RawMessage `json:"inputSchema"`
 }
 
 // ListTools returns the list of available tools.
@@ -41,17 +42,17 @@ func (m *DBInspectorMCP) ListTools() []Tool {
 		{
 			Name:        "inspect_schema",
 			Description: "Inspects the database schema (tables, columns, types).",
-			InputSchema: `{"type": "object", "properties": {"table_name": {"type": "string"}}}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {"table_name": {"type": "string"}}}`),
 		},
 		{
 			Name:        "run_query",
 			Description: "Executes a READ-ONLY diagnostic query.",
-			InputSchema: `{"type": "object", "properties": {"query": {"type": "string"}, "override_safety_lock": {"type": "boolean"}}, "required": ["query"]}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {"query": {"type": "string"}, "override_safety_lock": {"type": "boolean"}}, "required": ["query"]}`),
 		},
 		{
 			Name:        "get_stats",
 			Description: "Retrieves active connections and basic stats.",
-			InputSchema: `{"type": "object", "properties": {}}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {}}`),
 		},
 	}
 }

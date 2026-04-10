@@ -2,6 +2,7 @@ package statesyncmcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,9 +18,9 @@ type StateSyncProvider interface {
 
 // Tool represents an MCP tool definition.
 type Tool struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	InputSchema string `json:"inputSchema"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	InputSchema json.RawMessage `json:"inputSchema"`
 }
 
 // StateSyncMCP implements the MCP interface for local-to-cloud state sync.
@@ -42,17 +43,17 @@ func (m *StateSyncMCP) ListTools() []Tool {
 		{
 			Name:        "sync_local_to_cloud",
 			Description: "Synchronize local offline state to the cloud.",
-			InputSchema: `{"type": "object", "properties": {}}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {}}`),
 		},
 		{
 			Name:        "sync_cloud_to_local",
 			Description: "Fetch completed tasks or delegations from the cloud.",
-			InputSchema: `{"type": "object", "properties": {}}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {}}`),
 		},
 		{
 			Name:        "get_sync_status",
 			Description: "Get the current synchronization status.",
-			InputSchema: `{"type": "object", "properties": {}}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {}}`),
 		},
 	}
 }
@@ -61,7 +62,7 @@ func (m *StateSyncMCP) ListTools() []Tool {
 func (m *StateSyncMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
 	if !m.isLocal {
 		return map[string]interface{}{
-			"status": "skipped",
+			"status":  "skipped",
 			"message": "Not running in Standalone/Local mode. Sync is a no-op.",
 		}, nil
 	}

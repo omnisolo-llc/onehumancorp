@@ -2,6 +2,7 @@ package blobinspector
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -26,9 +27,9 @@ func NewBlobInspectorMCP(provider storage.Provider) *BlobInspectorMCP {
 
 // Tool represents an MCP tool definition.
 type Tool struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	InputSchema string `json:"inputSchema"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	InputSchema json.RawMessage `json:"inputSchema"`
 }
 
 // ListTools returns the list of available tools.
@@ -37,17 +38,17 @@ func (m *BlobInspectorMCP) ListTools() []Tool {
 		{
 			Name:        "list_blobs",
 			Description: "Lists blobs under a given prefix.",
-			InputSchema: `{"type": "object", "properties": {"prefix": {"type": "string"}}}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {"prefix": {"type": "string"}}}`),
 		},
 		{
 			Name:        "read_blob_metadata",
 			Description: "Retrieves metadata for a specific blob.",
-			InputSchema: `{"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}`),
 		},
 		{
 			Name:        "get_blob_url",
 			Description: "Retrieves an accessible URL for a specific blob.",
-			InputSchema: `{"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}`,
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}`),
 		},
 	}
 }
@@ -130,8 +131,8 @@ func (m *BlobInspectorMCP) listBlobs(ctx context.Context, claims *auth.Claims, p
 	}
 
 	return map[string]interface{}{
-		"status": "success",
-		"mode":   mode,
+		"status":  "success",
+		"mode":    mode,
 		"results": results,
 	}, nil
 }
