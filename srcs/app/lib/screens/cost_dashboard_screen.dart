@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -112,7 +113,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassCard(margin: EdgeInsets.zero, padding: EdgeInsets.zero,
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -214,7 +215,7 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Card(
+              GlassCard(margin: EdgeInsets.zero, padding: EdgeInsets.zero,
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -284,7 +285,7 @@ class _SummaryCard extends StatelessWidget {
 
     return Semantics(
       label: '$title: $value',
-      child: Card(
+      child: GlassCard(margin: EdgeInsets.zero, padding: EdgeInsets.zero,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(

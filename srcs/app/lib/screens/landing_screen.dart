@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -211,22 +212,11 @@ class _GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.primary;
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 350),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    return GlassCard(
+      maxWidth: 350,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
                 Icon(icon, size: 40, color: color),
                 const SizedBox(height: 16),
                 Text(
@@ -242,9 +232,6 @@ class _GlassCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
     );
   }
 }

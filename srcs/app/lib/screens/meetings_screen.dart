@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -197,7 +198,7 @@ class _RoomCardState extends State<_RoomCard> {
   Widget build(BuildContext context) {
     final room = widget.room;
     final participantCount = room['participant_count'] as int? ?? 0;
-    return Card(
+    return GlassCard( padding: EdgeInsets.zero,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),

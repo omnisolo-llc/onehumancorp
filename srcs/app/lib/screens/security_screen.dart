@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/security_issue.dart';
@@ -172,7 +173,7 @@ class _IssueCardState extends State<_IssueCard> {
     return Semantics(
       label: 'Security issue: ${issue.title}, Severity: ${issue.severity}',
       excludeSemantics: true,
-      child: Card(
+      child: GlassCard( padding: EdgeInsets.zero,
         margin: const EdgeInsets.only(bottom: 10),
         child: Padding(
           padding: const EdgeInsets.all(16),

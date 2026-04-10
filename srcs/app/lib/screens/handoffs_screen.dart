@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -164,7 +165,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               return Semantics(
                 label: 'Handoff from agent to human. Intent: ${handoff.intent}',
                 excludeSemantics: true,
-                child: Card(
+                child: GlassCard(padding: EdgeInsets.zero,
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
