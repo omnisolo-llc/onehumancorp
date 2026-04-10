@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart' hide Column, Row;
+import 'package:ohc_app/widgets/glass_card.dart';
 // import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
