@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
+
 import 'package:ohc_app/services/local_manager_service.dart';
 
 class ServiceScreen extends ConsumerStatefulWidget {
@@ -75,17 +77,16 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
   }
 
   Widget _buildStatusCard() {
-    return Card(
+    return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             Icon(
               _isRunning ? Icons.check_circle : Icons.error_outline,
-              color:
-                  _isRunning
-                      ? Theme.of(context).colorScheme.secondary
-                      : Theme.of(context).colorScheme.tertiary,
+              color: _isRunning
+                  ? Theme.of(context).colorScheme.secondary
+                  : Theme.of(context).colorScheme.tertiary,
               size: 64,
             ),
             const SizedBox(height: 16),
@@ -115,22 +116,21 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
       children: [
         ElevatedButton.icon(
           onPressed: _isLoading ? null : _toggleService,
-          icon:
-              _isLoading
-                  ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : Icon(_isRunning ? Icons.stop : Icons.play_arrow),
+          icon: _isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(_isRunning ? Icons.stop : Icons.play_arrow),
           label: Text(_isRunning ? 'Stop Service' : 'Start Service'),
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-                _isRunning
-                    ? Theme.of(context).colorScheme.errorContainer
-                    : null,
-            foregroundColor:
-                _isRunning ? Theme.of(context).colorScheme.error : null,
+            backgroundColor: _isRunning
+                ? Theme.of(context).colorScheme.errorContainer
+                : null,
+            foregroundColor: _isRunning
+                ? Theme.of(context).colorScheme.error
+                : null,
           ),
         ),
         OutlinedButton.icon(
@@ -139,8 +139,8 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
           label: const Text('Run Health Check'),
         ),
         OutlinedButton.icon(
-          onPressed:
-              () => ref.read(localManagerServiceProvider).restartService(),
+          onPressed: () =>
+              ref.read(localManagerServiceProvider).restartService(),
           icon: const Icon(Icons.refresh),
           label: const Text('Force Restart'),
         ),

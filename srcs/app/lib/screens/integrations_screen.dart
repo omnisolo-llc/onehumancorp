@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
+
 import 'package:ohc_app/services/api_service.dart';
 
 /// Screen for managing external integrations and MCP tools.
@@ -100,7 +102,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
 
               final tools = snapshot.data ?? [];
               if (tools.isEmpty) {
-                return Card(
+                return GlassCard(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Center(
@@ -109,7 +111,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
                           Icon(
                             Icons.construction,
                             size: 48,
-                            color: colors.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: colors.onSurfaceVariant.withValues(
+                              alpha: 0.3,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           const Text('No MCP tools active'),
@@ -128,8 +132,9 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               }
 
               return Column(
-                children:
-                    tools.map((tool) => _MCPToolTile(tool: tool)).toList(),
+                children: tools
+                    .map((tool) => _MCPToolTile(tool: tool))
+                    .toList(),
               );
             },
           ),
@@ -141,38 +146,37 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
   void _showConnectionDialog(String platform) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Connect to $platform'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: '$platform Bot Token',
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Channel ID / Chat ID',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: Text('Connect to $platform'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                labelText: '$platform Bot Token',
+                border: const OutlineInputBorder(),
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Channel ID / Chat ID',
+                border: OutlineInputBorder(),
               ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Save Integration'),
-              ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Save Integration'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -207,7 +211,7 @@ class _IntegrationCardState extends State<_IntegrationCard> {
     return Semantics(
       label: 'Connect to ${widget.title}. ${widget.subtitle}',
       button: true,
-      child: Card(
+      child: GlassCard(
         child: InkWell(
           onTap: widget.onConnect,
           borderRadius: BorderRadius.circular(12),
@@ -285,7 +289,7 @@ class _MCPToolTile extends StatelessWidget {
       label: 'Invoke MCP Tool: $name. $description',
       button: true,
       excludeSemantics: true,
-      child: Card(
+      child: GlassCard(
         margin: const EdgeInsets.only(bottom: 12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

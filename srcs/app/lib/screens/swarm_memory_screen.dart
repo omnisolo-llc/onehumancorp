@@ -21,7 +21,10 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Swarm Memory Mesh', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Swarm Memory Mesh',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        ),
       ),
       body: Row(
         children: [
@@ -33,9 +36,19 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Live Mesh Activity', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Live Mesh Activity',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('Real-time websocket feed from the Teammate Mesh', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
+                  const Text(
+                    'Real-time websocket feed from the Teammate Mesh',
+                    style: TextStyle(fontFamily: 'Inter', color: Colors.grey),
+                  ),
                   const SizedBox(height: 16),
                   Expanded(
                     child: _LiveMeshWidget(
@@ -58,13 +71,21 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Durable Swarm Memory', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Offline-to-Cloud State Sync (PowerSync)', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
-                  const SizedBox(height: 16),
-                  const Expanded(
-                    child: _DurableMemoryWidget(),
+                  const Text(
+                    'Durable Swarm Memory',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Offline-to-Cloud State Sync (PowerSync)',
+                    style: TextStyle(fontFamily: 'Inter', color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  const Expanded(child: _DurableMemoryWidget()),
                 ],
               ),
             ),
@@ -102,7 +123,10 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
           // We only insert if it's not already there
           if (!widget.liveMessages.any((m) => m.id == msg.id)) {
             widget.liveMessages.insert(0, msg);
-            widget.listKey.currentState?.insertItem(0, duration: const Duration(milliseconds: 500));
+            widget.listKey.currentState?.insertItem(
+              0,
+              duration: const Duration(milliseconds: 500),
+            );
           }
         }
 
@@ -112,7 +136,12 @@ class _LiveMeshWidgetState extends ConsumerState<_LiveMeshWidget> {
           itemBuilder: (context, index, animation) {
             final msg = widget.liveMessages[index];
             return SlideTransition(
-              position: animation.drive(Tween(begin: const Offset(-1, 0), end: Offset.zero).chain(CurveTween(curve: Curves.easeOutQuart))),
+              position: animation.drive(
+                Tween(
+                  begin: const Offset(-1, 0),
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutQuart)),
+              ),
               child: FadeTransition(
                 opacity: animation,
                 child: Padding(
@@ -146,7 +175,9 @@ class _GlassMessageCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.surfaceContainerHighest.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.4),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.05),
@@ -174,7 +205,12 @@ class _GlassMessageCard extends StatelessWidget {
                   children: [
                     Text(
                       message.authorName,
-                      style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: colors.primary, fontSize: 16),
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.bold,
+                        color: colors.primary,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -204,7 +240,9 @@ class _DurableMemoryWidget extends ConsumerWidget {
     }
 
     return StreamBuilder<List<dynamic>>(
-      stream: db.watch('SELECT * FROM swarm_memory ORDER BY updated_at DESC LIMIT 50'),
+      stream: db.watch(
+        'SELECT * FROM swarm_memory ORDER BY updated_at DESC LIMIT 50',
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -217,19 +255,31 @@ class _DurableMemoryWidget extends ConsumerWidget {
         final rows = snapshot.data ?? [];
 
         if (rows.isEmpty) {
-          return const Center(child: Text('No memories found.', style: TextStyle(fontFamily: 'Inter')));
+          return const Center(
+            child: Text(
+              'No memories found.',
+              style: TextStyle(fontFamily: 'Inter'),
+            ),
+          );
         }
 
         return ListView.builder(
           itemCount: rows.length,
           itemBuilder: (context, index) {
             final row = rows[index];
-            final value = (row is Map) ? row['value'] as String? : (row as dynamic).read('value') as String?;
-            final updatedAt = (row is Map) ? row['updated_at'] as String? : (row as dynamic).read('updated_at') as String?;
+            final value = (row is Map)
+                ? row['value'] as String?
+                : (row as dynamic).read('value') as String?;
+            final updatedAt = (row is Map)
+                ? row['updated_at'] as String?
+                : (row as dynamic).read('updated_at') as String?;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
-              child: _MemoryCard(value: value ?? '', updatedAt: updatedAt ?? ''),
+              child: _MemoryCard(
+                value: value ?? '',
+                updatedAt: updatedAt ?? '',
+              ),
             );
           },
         );
@@ -257,7 +307,9 @@ class _MemoryCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.secondaryContainer.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.3),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +326,11 @@ class _MemoryCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     updatedAt,
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: colors.onSurfaceVariant),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
