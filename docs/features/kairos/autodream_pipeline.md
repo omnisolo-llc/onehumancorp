@@ -2,7 +2,7 @@
 
 # AutoDream Data Pipelines
 
-The AutoDream Data Pipeline is the long-term memory consolidation engine of the KAIROS Orchestrator. It fulfills the Swarm Intelligence Protocol (OHC-SIP) mandate that all agents share memory by asynchronously processing ephemeral session data into queryable vector embeddings.
+The AutoDream Data Pipeline is the long-term memory consolidation engine of the KAIROS Orchestration. It fulfills the Swarm Intelligence Protocol (OHC-SIP) mandate that all agents share memory by asynchronously processing ephemeral session data into queryable vector embeddings.
 
 ## 1. The Need for AutoDream
 
@@ -12,7 +12,7 @@ During task execution, agents generate significant amounts of context (`agent_se
 
 AutoDream adapts its storage mechanism based on the OHC operating mode:
 
-- **Cloud-Native Mode:** Utilizes PostgreSQL with the `pgvector` extension for exact Nearest Neighbor search on 1536-dimensional embeddings.
+- **Cloud-Native Mode:** Utilizes PostgreSQL with the `pgvector` extension for exact Nearest Neighbor search on embeddings (using `swarm_memory` and `swarm_memory_embeddings`).
 - **Standalone Mode:** Degrades gracefully to SQLite. Embeddings are stored as JSON text blobs, with fallback search mechanisms if vector extensions are unavailable in the local SQLite distribution.
 
 ### Pipeline Workflow
@@ -20,9 +20,9 @@ AutoDream adapts its storage mechanism based on the OHC operating mode:
 ```mermaid
 graph TD
     A[Agent Session Data / Memory Files] -->|Periodic Sweep| B(AutoDream Worker)
-    B -->|Chunking & Tokenization| C[Minimax / Cohere Embedding API]
-    C -->|Generate 1536-dim Vector| D{Storage Engine}
-    D -->|Cloud| E[(pgvector: autodream_memories)]
+    B -->|Chunking & Tokenization| C[existing LLM clients srcs/server/agents/local/llm.go]
+    C -->|Generate Vector| D{Storage Engine}
+    D -->|Cloud| E[(pgvector: swarm_memory_embeddings)]
     D -->|Standalone| F[(SQLite: JSON Blobs)]
 
     E -->|Semantic Search| G[Agent Context Window]
@@ -34,21 +34,7 @@ graph TD
 
 ## 3. Database Schema
 
-The persistent vector database schema (Cloud mode) is structured as follows:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE TABLE IF NOT EXISTS autodream_memories (
-    id TEXT PRIMARY KEY,
-    organization_id TEXT NOT NULL,
-    agent_id TEXT,
-    content TEXT NOT NULL,
-    embedding vector(1536),
-    source_type TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);
-```
+The persistent vector database schema (Cloud mode) is structured around `swarm_memory` and `swarm_memory_embeddings` as verified in Phase 4 design docs.
 
 ## 4. Implementation Details
 
