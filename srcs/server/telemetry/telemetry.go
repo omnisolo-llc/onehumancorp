@@ -61,6 +61,8 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
+	RagRecordsSyncedTotal       metric.Int64Counter
+	RagSyncErrorsTotal          metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -459,6 +461,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	err = initMinimaxMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
@@ -507,6 +525,20 @@ func Middleware(next http.Handler) http.Handler {
 // Accepts no parameters.
 // Returns nothing.
 // Produces no errors.
+func RecordRagRecordSynced(ctx context.Context, count int64) {
+	if RagRecordsSyncedTotal != nil {
+		RagRecordsSyncedTotal.Add(ctx, count)
+	}
+}
+
+func RecordRagSyncError(ctx context.Context, errStr string) {
+	if RagSyncErrorsTotal != nil {
+		RagSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("error", errStr),
+		))
+	}
+}
+
 // Has no side effects.
 var Verbosity = 1 // Default level
 
