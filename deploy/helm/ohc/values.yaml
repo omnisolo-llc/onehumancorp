@@ -122,3 +122,33 @@ powersync:
     limits:
       cpu: "250m"
       memory: "256Mi"
+
+# Prometheus observability stack
+prometheus:
+  enabled: true
+  image: prom/prometheus:latest
+  replicas: 1
+  service:
+    port: 9090
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
+
+# Grafana dashboards stack
+grafana:
+  enabled: true
+  image: grafana/grafana:latest
+  replicas: 1
+  service:
+    port: 3000
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"

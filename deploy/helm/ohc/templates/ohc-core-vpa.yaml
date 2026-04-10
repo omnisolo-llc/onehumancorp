@@ -1,0 +1,25 @@
+{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-ohc-core-vpa
+  labels:
+    app: {{ .Release.Name }}-ohc-core
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ .Release.Name }}-ohc-core
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: ohc-core
+        controlledResources: ["cpu", "memory"]
+        minAllowed:
+          cpu: {{ .Values.ohcCore.resources.requests.cpu }}
+          memory: {{ .Values.ohcCore.resources.requests.memory }}
+        maxAllowed:
+          cpu: {{ .Values.ohcCore.resources.limits.cpu }}
+          memory: {{ .Values.ohcCore.resources.limits.memory }}
+{{- end }}
