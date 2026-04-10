@@ -741,40 +741,40 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Check for stuck agent_missions specifically for Hybrid metric insights
-	var stuckMissionsCount int
-	var missionsProbeStatus = "ok"
-	if s.hub != nil && s.hub.SIPDB() != nil {
-		ctx := r.Context()
-		missions, err := s.hub.SIPDB().GetPendingMissions(ctx, "ANY")
-		if err == nil {
-			stuckMissionsCount = len(missions)
-		}
-	}
-	if stuckMissionsCount > 10 {
-		missionsProbeStatus = "degraded"
-	}
-
-	checklist = append(checklist, map[string]interface{}{
-		"id":          "stuck_missions_probe",
-		"label":       "Stagnant Missions Backlog",
-		"status":      missionsProbeStatus,
-		"description": "Count of stuck or pending agent missions across cloud/local boundary",
-		"count":       stuckMissionsCount,
-	})
-
 	// Delegate to the shared orchestration check
 	probe, errProbe := s.hub.CheckHealth(r.Context())
+	var missionsProbeStatus = "ok"
+
 	if errProbe == nil {
+		if probe.SyncBacklog > 10 {
+			missionsProbeStatus = "degraded"
+		}
 		if probe.Status != "healthy" {
 			missionsProbeStatus = probe.Status
 		}
+
+		checklist = append(checklist, map[string]interface{}{
+			"id":          "stuck_missions_probe",
+			"label":       "Stagnant Missions Backlog",
+			"status":      missionsProbeStatus,
+			"description": "Count of stuck or pending agent missions across cloud/local boundary",
+			"count":       probe.SyncBacklog,
+		})
+
 		checklist = append(checklist, map[string]interface{}{
 			"id":          "mesh_active",
 			"label":       "Centrifuge Teammate Mesh",
 			"status":      "ok",
 			"description": "Real-time communication layer",
 			"active":      probe.MeshActive,
+		})
+	} else {
+		checklist = append(checklist, map[string]interface{}{
+			"id":          "stuck_missions_probe",
+			"label":       "Stagnant Missions Backlog",
+			"status":      "degraded",
+			"description": "Count of stuck or pending agent missions across cloud/local boundary",
+			"count":       0,
 		})
 	}
 

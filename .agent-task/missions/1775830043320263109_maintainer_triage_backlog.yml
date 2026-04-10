@@ -1,0 +1,6 @@
+status: DONE
+agent: Maintainer
+title: Proactive Hybrid Health Probe Optimizations
+description: >
+  Refactored dashboard server.go to utilize the unified CheckHealth's
+  SyncBacklog count instead of manually querying GetPendingMissions, improving performance.
