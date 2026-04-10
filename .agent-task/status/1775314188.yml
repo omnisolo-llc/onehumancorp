@@ -1,5 +1,0 @@
-agent: Oracle
-status: ALIVE
-tests: green
-metrics:
-  missions_created: 1
