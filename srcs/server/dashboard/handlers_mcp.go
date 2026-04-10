@@ -246,6 +246,9 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 	}
 
 	switch req.ToolID {
+	case "rag_sync":
+		// Placeholder for RAGSyncTool execution
+		return map[string]interface{}{"status": "success"}, nil
 	// ── Communication tools ───────────────────────────────────────────────────
 	case "telegram-mcp", "slack-mcp", "teams-mcp":
 		var p chatToolParams
@@ -258,6 +261,9 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		integrationID := p.IntegrationID
 		if integrationID == "" {
 			switch req.ToolID {
+	case "rag_sync":
+		// Placeholder for RAGSyncTool execution
+		return map[string]interface{}{"status": "success"}, nil
 			case "telegram-mcp":
 				integrationID = "telegram"
 			case "slack-mcp":
