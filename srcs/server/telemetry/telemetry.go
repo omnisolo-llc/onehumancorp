@@ -38,6 +38,8 @@ var (
 	taskEnqueuedCounter metric.Int64Counter
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
+	RAGRecordsSyncedTotal      metric.Int64Counter
+	RAGSyncErrorsTotal         metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
@@ -460,6 +462,22 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}
