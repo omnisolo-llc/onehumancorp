@@ -115,6 +115,56 @@ type downloadCreateRequest struct {
 	Version string `json:"version"`
 }
 
+// TeamInvite defines a team invitation.
+type TeamInvite struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type teamInviteCreateRequest struct {
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+func (s *Server) handleTeamInvites(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		invites := append([]TeamInvite(nil), s.teamInvites...)
+		s.mu.RUnlock()
+		writeJSON(w, invites)
+	case http.MethodPost:
+		var req teamInviteCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.Email == "" {
+			http.Error(w, "email is required", http.StatusBadRequest)
+			return
+		}
+		invite := TeamInvite{
+			ID:        "inv-" + time.Now().UTC().Format("20060102150405"),
+			Email:     req.Email,
+			Role:      req.Role,
+			Status:    "PENDING",
+			CreatedAt: time.Now().UTC(),
+		}
+		if invite.Role == "" {
+			invite.Role = "MEMBER"
+		}
+		s.mu.Lock()
+		s.teamInvites = append(s.teamInvites, invite)
+		s.mu.Unlock()
+		writeJSON(w, invite)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // ViralCoefficientResponse represents the computed K-factor for growth.
 type ViralCoefficientResponse struct {
 	TotalReferrals   int     `json:"totalReferrals"`
