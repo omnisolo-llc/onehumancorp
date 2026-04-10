@@ -1,9 +1,12 @@
 package hub
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -37,6 +40,9 @@ type RAGSyncService interface {
 
 	// ProcessIncomingSync handles data pushed from a standalone client into the cloud DB
 	ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
+
+	// PushPendingSyncs pushes local pending records to the cloud API
+	PushPendingSyncs(ctx context.Context, limit int) error
 }
 
 var (
@@ -173,5 +179,57 @@ func (s *defaultRAGSyncService) ProcessIncomingSync(ctx context.Context, records
 	}
 
 	RAGRecordsSyncedTotal.Add(ctx, int64(len(records)))
+	return nil
+}
+
+func (s *defaultRAGSyncService) PushPendingSyncs(ctx context.Context, limit int) error {
+	records, err := s.FetchPendingSyncs(ctx, limit)
+	if err != nil {
+		return fmt.Errorf("fetch pending syncs: %w", err)
+	}
+
+	if len(records) == 0 {
+		return nil
+	}
+
+	payload, err := json.Marshal(records)
+	if err != nil {
+		return fmt.Errorf("marshal records: %w", err)
+	}
+
+	syncEndpoint := fmt.Sprintf("%s/api/sync/rag", s.cloudAPIURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
+		req.Header.Set("Authorization", "Bearer "+spiffeToken)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		RAGSyncErrorsTotal.Add(ctx, 1)
+		return fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		RAGSyncErrorsTotal.Add(ctx, 1)
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var syncedIDs []string
+	for _, r := range records {
+		syncedIDs = append(syncedIDs, r.ID)
+	}
+
+	if err := s.MarkSynced(ctx, syncedIDs); err != nil {
+		return fmt.Errorf("mark synced: %w", err)
+	}
+
 	return nil
 }

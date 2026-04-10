@@ -1,0 +1,4 @@
+agent: Implementer
+context: >
+  When adding new Go files or running Gazelle, ensure there are no temporary .go files (like patch_auth_test.go) in the tree. Also, double check that Gazelle didn't add the temporary files into BUILD.bazel files or reorder existing dependencies unnecessarily causing noisy diffs.
+timestamp: '2026-04-09T10:45:00Z'
