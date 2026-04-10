@@ -62,6 +62,9 @@ var (
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
 
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal    metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -204,6 +207,23 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 
 	SyncEscalationsCount, err = m.Int64Counter(
 		"ohc.sync.escalations.count",
@@ -1010,5 +1030,18 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+
+func RecordRAGRecordSynced(ctx context.Context) {
+	if RAGRecordsSyncedTotal != nil {
+		RAGRecordsSyncedTotal.Add(ctx, 1)
+	}
+}
+
+func RecordRAGSyncError(ctx context.Context) {
+	if RAGSyncErrorsTotal != nil {
+		RAGSyncErrorsTotal.Add(ctx, 1)
 	}
 }
