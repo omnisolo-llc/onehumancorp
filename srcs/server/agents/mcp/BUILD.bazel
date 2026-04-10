@@ -20,7 +20,10 @@ js_binary(
 
 go_library(
     name = "mcp",
-    srcs = ["client.go"],
+    srcs = [
+        "client.go",
+        "tool.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
     visibility = ["//visibility:public"],
 )
