@@ -107,3 +107,38 @@ func TestMemoryMeshTransport_MeshEvents(t *testing.T) {
 // Minimal placeholder for Redis tests.
 // Full integration test for Redis mesh requires a running Redis instance,
 // which is usually handled in chaos_mesh_test.go or similar integration suites.
+
+func TestRedisMeshTransport_MeshEvents(t *testing.T) {
+	// Only run if Redis is available, or mock. Here we mock or skip.
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("Skipping Redis tests, REDIS_URL not set")
+	}
+	rm, err := NewRedisMeshTransport(redisURL)
+	if err != nil {
+		t.Fatalf("Failed to create RedisMeshTransport: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	topic := "tasks"
+	ch, err := rm.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		t.Fatalf("SubscribeMeshEvents failed: %v", err)
+	}
+
+	payload := []byte("test payload")
+	err = rm.BroadcastMeshEvent(ctx, topic, payload)
+	if err != nil {
+		t.Fatalf("BroadcastMeshEvent failed: %v", err)
+	}
+
+	select {
+	case msg := <-ch:
+		if string(msg) != string(payload) {
+			t.Errorf("Expected payload %s, got %s", payload, msg)
+		}
+	case <-time.After(time.Second):
+		t.Errorf("Timeout waiting for MeshEvent")
+	}
+}

@@ -404,15 +404,18 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 		case <-ctx.Done():
 			return ctx.Err()
 		case payload := <-eventsCh:
+			start := time.Now()
 			timestamp := time.Now().UnixNano()
 			event := pb.MeshEvent_builder{
 				Topic:     &topic,
 				Payload:   payload,
 				Timestamp: &timestamp,
 			}.Build()
+
 			if err := stream.Send(event); err != nil {
 				return err
 			}
+			telemetry.RecordMeshEvent(ctx, topic, time.Since(start), len(payload))
 		}
 	}
 }

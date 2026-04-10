@@ -62,6 +62,9 @@ var (
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
 
+	meshEventLatency     metric.Float64Histogram
+	meshEventThroughput  metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -454,6 +457,24 @@ func InitWithMeter(m mockableMeter) error {
 	meshBroadcastTotal, err = m.Int64Counter(
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+		meshEventLatency, err = m.Float64Histogram(
+		"ohc_mesh_event_latency_seconds",
+		metric.WithDescription("Latency of Teammate Mesh event operations"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	meshEventThroughput, err = m.Int64Counter(
+		"ohc_mesh_event_throughput_bytes",
+		metric.WithDescription("Throughput of Teammate Mesh events in bytes"),
+		metric.WithUnit("By"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -993,6 +1014,26 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+}
+
+// RecordMeshEvent records the latency and throughput of a mesh event.
+func RecordMeshEvent(ctx context.Context, topic string, latency time.Duration, size int) {
+	if BufferMetricFunc != nil {
+		BufferMetricFunc(ctx, "mesh_event_latency", fmt.Sprintf("%f", latency.Seconds()))
+		BufferMetricFunc(ctx, "mesh_event_throughput", fmt.Sprintf("%d", size))
+		return
+	}
+
+	if meshEventLatency != nil {
+		meshEventLatency.Record(ctx, latency.Seconds(), metric.WithAttributes(
+			attribute.String("topic", topic),
+		))
+	}
+	if meshEventThroughput != nil {
+		meshEventThroughput.Add(ctx, int64(size), metric.WithAttributes(
+			attribute.String("topic", topic),
+		))
+	}
 }
 
 func RecordQueueLength(ctx context.Context, delta int) {
