@@ -44,10 +44,9 @@ class SecurityScreen extends ConsumerWidget {
               if (open.isNotEmpty) ...[
                 _SectionHeader(
                   '${open.length} open issue${open.length != 1 ? 's' : ''}',
-                  color:
-                      open.any((i) => i.severity == 'high')
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.tertiary,
+                  color: open.any((i) => i.severity == 'high')
+                      ? Theme.of(context).colorScheme.error
+                      : Theme.of(context).colorScheme.tertiary,
                 ),
                 ...open.map((i) => _IssueCard(issue: i, ref: ref)),
                 const SizedBox(height: 16),
@@ -183,10 +182,9 @@ class _IssueCardState extends State<_IssueCard> {
                 children: [
                   Icon(
                     _fixed ? Icons.check_circle : Icons.warning_amber,
-                    color:
-                        _fixed
-                            ? Theme.of(context).colorScheme.secondary
-                            : _severityColor(context),
+                    color: _fixed
+                        ? Theme.of(context).colorScheme.secondary
+                        : _severityColor(context),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -226,14 +224,13 @@ class _IssueCardState extends State<_IssueCard> {
               if (issue.fixable && !_fixed) ...[
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  icon:
-                      _busy
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Icon(Icons.build, size: 16),
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.build, size: 16),
                   label: const Text('Auto-fix'),
                   onPressed: _busy ? null : _fix,
                 ),

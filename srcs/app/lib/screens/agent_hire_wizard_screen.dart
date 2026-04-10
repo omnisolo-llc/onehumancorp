@@ -153,10 +153,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     child: Tooltip(
                       message: 'Next step',
                       child: ElevatedButton(
-                        onPressed:
-                            (_step == 0 && _selectedRole.isEmpty)
-                                ? null
-                                : details.onStepContinue,
+                        onPressed: (_step == 0 && _selectedRole.isEmpty)
+                            ? null
+                            : details.onStepContinue,
                         child: const Text('Next'),
                       ),
                     ),
@@ -168,16 +167,15 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                       message: 'Deploy agent to orchestration hub',
                       child: ElevatedButton(
                         onPressed: _isDeploying ? null : _handleDeploy,
-                        child:
-                            _isDeploying
-                                ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : const Text('Deploy Agent'),
+                        child: _isDeploying
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Deploy Agent'),
                       ),
                     ),
                   ),
@@ -216,23 +214,19 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children:
-                      _roles.map((role) {
-                        final isSelected = _selectedRole == role;
-                        return ChoiceChip(
-                          label: Text(_formatRole(role)),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(
-                              () => _selectedRole = selected ? role : '',
-                            );
-                            if (selected && _nameController.text.isEmpty) {
-                              _nameController.text =
-                                  'Senior ${_formatRole(role)}';
-                            }
-                          },
-                        );
-                      }).toList(),
+                  children: _roles.map((role) {
+                    final isSelected = _selectedRole == role;
+                    return ChoiceChip(
+                      label: Text(_formatRole(role)),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() => _selectedRole = selected ? role : '');
+                        if (selected && _nameController.text.isEmpty) {
+                          _nameController.text = 'Senior ${_formatRole(role)}';
+                        }
+                      },
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -272,8 +266,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                       subtitle: Text(p.description),
                       value: p.type,
                       groupValue: _selectedProvider,
-                      onChanged:
-                          (val) => setState(() => _selectedProvider = val!),
+                      onChanged: (val) =>
+                          setState(() => _selectedProvider = val!),
                     ),
                   ),
               ],
@@ -324,25 +318,47 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
                       outer: const ColorFilter.matrix(<double>[
-                        1.168, -0.153, -0.015, 0, 0,
-                        -0.046, 1.061, -0.015, 0, 0,
-                        -0.046, -0.152, 1.198, 0, 0,
-                        0, 0, 0, 1, 0,
+                        1.168,
+                        -0.153,
+                        -0.015,
+                        0,
+                        0,
+                        -0.046,
+                        1.061,
+                        -0.015,
+                        0,
+                        0,
+                        -0.046,
+                        -0.152,
+                        1.198,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
                       ]),
                       inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.2),
                           child: Text(
                             _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
                             style: TextStyle(
@@ -364,9 +380,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                           style: const TextStyle(fontFamily: 'Inter'),
                         ),
                         trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
