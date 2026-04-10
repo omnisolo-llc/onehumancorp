@@ -67,6 +67,7 @@ func TestHandleSyncRules(t *testing.T) {
 			}
 
 			foundMeetingRooms := false
+			foundAgentMissions := false
 			for _, rule := range response.Rules {
 				if rule.Table == "meeting_rooms" {
 					foundMeetingRooms = true
@@ -74,10 +75,25 @@ func TestHandleSyncRules(t *testing.T) {
 						t.Errorf("expected meeting_rooms query to contain %q, but got %q", tt.expectedQueryMatch, rule.Query)
 					}
 				}
+				if rule.Table == "agent_missions" {
+					foundAgentMissions = true
+					if tt.standaloneMode == "true" {
+						if !strings.Contains(rule.Query, "json_extract(am.payload, '$.agent_id')") {
+							t.Errorf("expected agent_missions query to contain json_extract, but got %q", rule.Query)
+						}
+					} else {
+						if !strings.Contains(rule.Query, "am.payload->>'agent_id'") {
+							t.Errorf("expected agent_missions query to contain ->>, but got %q", rule.Query)
+						}
+					}
+				}
 			}
 
 			if !foundMeetingRooms {
 				t.Errorf("meeting_rooms rule not found in response")
+			}
+			if !foundAgentMissions {
+				t.Errorf("agent_missions rule not found in response")
 			}
 		})
 	}

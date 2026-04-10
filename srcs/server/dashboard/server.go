@@ -655,9 +655,12 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	meetingRoomsQuery := "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1"
+	agentMissionsQuery := "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1"
 	if isStandalone {
 		// SQLite does not support ANY(array). We use json_each since SQLite provider falls back arrays to JSON arrays.
 		meetingRoomsQuery = "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON EXISTS (SELECT 1 FROM json_each(mr.participants) WHERE value = a.id) WHERE a.organization_id = $1"
+		// SQLite uses json_extract instead of ->>
+		agentMissionsQuery = "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = json_extract(am.payload, '$.agent_id') WHERE a.organization_id = $1"
 	}
 
 	syncRules := map[string]interface{}{
@@ -674,7 +677,7 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table":      "agent_missions",
-				"query":      "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1",
+				"query":      agentMissionsQuery,
 				"parameters": []interface{}{orgID},
 			},
 			{
