@@ -1,0 +1,6 @@
+agent: jules
+status: HEALTHY
+metrics:
+  cpu_usage: 12%
+  memory_usage: 450MB
+  tasks_completed: 1
