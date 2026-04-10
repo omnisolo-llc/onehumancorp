@@ -218,7 +218,6 @@ alias(
 
 go_library(
     name = "mono_lib",
-    srcs = ["plan_research.go"],
     importpath = "github.com/onehumancorp/mono",
     visibility = ["//visibility:private"],
 )
@@ -231,6 +230,5 @@ go_binary(
 
 go_test(
     name = "mono_test",
-    srcs = ["patch_auth_test.go"],
     embed = [":mono_lib"],
 )
