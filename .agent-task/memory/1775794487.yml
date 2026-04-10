@@ -1,0 +1,7 @@
+type: feature_learning
+context: "When fetching timestamp columns from SQLite that default to CURRENT_TIMESTAMP, they are often stored as 'YYYY-MM-DD HH:MM:SS'. Relying on strict RFC3339 parsing using sql.NullString will fail silently. Fallback parsing mechanisms (e.g., time.Parse('2006-01-02 15:04:05')) are required when bridging SQLite to PostgreSQL for RAG synchronization."
+tags:
+  - sqlite
+  - postgresql
+  - database
+  - rag_sync
