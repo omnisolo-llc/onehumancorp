@@ -1,18 +1,40 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Mark Mission In-Progress**
+   - Update `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` to have `status: IN_PROGRESS` and `agent: Implementer` using `replace_with_git_merge_diff` or `run_in_bash_session` with sed.
+   - Verify changes using `git diff`.
+
+2. **Create `srcs/server/tools/hybridfsmcp/provider.go`**:
+    - Use the `write_file` tool to define `FileSystemProvider` interface with `ReadFile(ctx, path)`, `WriteFile(ctx, path, data)`, `ListDir(ctx, path)` methods. Implement `LocalFSProvider` taking a base workspace path, preventing path traversal using `target == base || strings.HasPrefix(target, base+string(filepath.Separator))`. Implement `CloudFSProvider` pulling tenant info using `auth.ClaimsFromContext(ctx)` to prepend tenant-specific directories, and prevent traversal. Implement a `NewProvider(ctx)` factory that checks `os.Getenv("OHC_MULTITENANT") == "true"` to determine whether to return `CloudFSProvider` or `LocalFSProvider`. Use `os.Getenv("OHC_FS_ROOT")` as base directory.
+
+3. **Verify `provider.go` creation**:
+    - Use `cat` or `read_file` to verify the contents of `srcs/server/tools/hybridfsmcp/provider.go`.
+
+4. **Create `srcs/server/tools/hybridfsmcp/server.go`**:
+    - Use the `write_file` tool to create `HybridFSServer` wrapping `FileSystemProvider`. Expose MCP tools: `read_file`, `write_file`, `list_directory`. Format outputs correctly.
+
+5. **Verify `server.go` creation**:
+    - Use `cat` or `read_file` to verify the contents of `srcs/server/tools/hybridfsmcp/server.go`.
+
+6. **Create tests in `srcs/server/tools/hybridfsmcp/provider_test.go` and `server_test.go`**:
+    - Use `write_file` tool to create tests. Test `LocalFSProvider` ensuring bounds and read/write. Test `CloudFSProvider` using `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` to inject test auth claims. Ensure >90% test coverage.
+
+7. **Verify test files creation**:
+    - Use `cat` or `read_file` to verify the contents of `srcs/server/tools/hybridfsmcp/provider_test.go` and `srcs/server/tools/hybridfsmcp/server_test.go`.
+
+8. **Create `srcs/server/tools/hybridfsmcp/BUILD.bazel`**:
+    - Use `write_file` tool to add `go_library` for `hybridfsmcp` and `go_test` for the tests.
+
+9. **Verify `BUILD.bazel` creation**:
+    - Use `cat` or `read_file` to verify the contents of `srcs/server/tools/hybridfsmcp/BUILD.bazel`.
+
+10. **Mark Mission Done**:
+    - Update `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` to `status: DONE` using `run_in_bash_session` with sed.
+    - Verify with `git diff`.
+
+11. **Run tests**:
+    - Run `bazelisk test //srcs/server/tools/hybridfsmcp/... --test_output=all` to ensure everything compiles and tests pass.
+
+12. **Complete pre commit steps**
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+13. **Submit PR**:
+    - Use `submit` to commit the code and submit.
