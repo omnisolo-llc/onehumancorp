@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 class ReferralsDashboardScreen extends ConsumerStatefulWidget {
   const ReferralsDashboardScreen({super.key});
@@ -12,7 +13,8 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
       _ReferralsDashboardScreenState();
 }
 
-class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
+class _ReferralsDashboardScreenState
+    extends ConsumerState<ReferralsDashboardScreen> {
   late Future<List<Map<String, dynamic>>> _referralsFuture;
 
   @override
@@ -35,10 +37,7 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
       appBar: AppBar(
         title: const Text('Viral Loop Dashboard'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
         ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -91,7 +90,8 @@ class _ReferralCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final createdAt = DateTime.tryParse(referral['createdAt'] ?? '') ?? DateTime.now();
+    final createdAt =
+        DateTime.tryParse(referral['createdAt'] ?? '') ?? DateTime.now();
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
@@ -123,10 +123,7 @@ class _ReferralCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Icon(
-                      Icons.group_add,
-                      color: colors.primary,
-                    ),
+                    Icon(Icons.group_add, color: colors.primary),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -142,8 +139,14 @@ class _ReferralCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _StatColumn(label: 'Clicks', value: '${referral['clicks']}'),
-                    _StatColumn(label: 'Conversions', value: '${referral['conversions']}'),
+                    _StatColumn(
+                      label: 'Clicks',
+                      value: '${referral['clicks']}',
+                    ),
+                    _StatColumn(
+                      label: 'Conversions',
+                      value: '${referral['conversions']}',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

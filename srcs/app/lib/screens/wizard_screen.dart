@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:http/http.dart' as http;
@@ -167,17 +168,15 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         ),
         actions: [
           statusAsync.maybeWhen(
-            data:
-                (s) =>
-                    s.configured
-                        ? Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: Icon(
-                            Icons.check_circle,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        )
-                        : const SizedBox.shrink(),
+            data: (s) => s.configured
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
+                : const SizedBox.shrink(),
             orElse: () => const SizedBox.shrink(),
           ),
         ],
@@ -261,16 +260,15 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                       message: 'Save all configuration settings',
                       child: FilledButton(
                         onPressed: _saving ? null : _save,
-                        child:
-                            _saving
-                                ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : const Text('Save Configuration'),
+                        child: _saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Save Configuration'),
                       ),
                     ),
                   ),
@@ -309,33 +307,26 @@ class _StepIndicator extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor:
-                      done
-                          ? Theme.of(context).colorScheme.primary
-                          : active
-                          ? Theme.of(context).colorScheme.secondary
-                          : Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                  child:
-                      done
-                          ? Icon(
-                            Icons.check,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          )
-                          : Text(
-                            '${i + 1}',
-                            style: TextStyle(
-                              color:
-                                  active
-                                      ? Theme.of(
-                                        context,
-                                      ).colorScheme.onSecondary
-                                      : null,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  backgroundColor: done
+                      ? Theme.of(context).colorScheme.primary
+                      : active
+                      ? Theme.of(context).colorScheme.secondary
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: done
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        )
+                      : Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            color: active
+                                ? Theme.of(context).colorScheme.onSecondary
+                                : null,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -362,52 +353,10 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget buildGlassCard({required Color color, required Widget child}) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.compose(
-            outer: ColorFilter.matrix(<double>[
-              1.168,
-              -0.153,
-              -0.015,
-              0,
-              0,
-              -0.046,
-              1.061,
-              -0.015,
-              0,
-              0,
-              -0.046,
-              -0.152,
-              1.198,
-              0,
-              0,
-              0,
-              0,
-              0,
-              1,
-              0,
-            ]),
-            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.03),
-              border: Border.all(color: color.withValues(alpha: 0.08)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: child,
-          ),
-        ),
-      );
-    }
-
     if (status.configured) {
       return Semantics(
         label: 'Platform is fully configured',
-        child: buildGlassCard(
-          color: Theme.of(context).colorScheme.primary,
+        child: GlassCard(
           child: ListTile(
             leading: Icon(
               Icons.check_circle,
@@ -428,8 +377,7 @@ class _StatusBanner extends StatelessWidget {
     if (!status.centrifugeStep) missing.add('Centrifuge');
     return Semantics(
       label: 'Configuration incomplete. Remaining: ${missing.join(', ')}',
-      child: buildGlassCard(
-        color: Theme.of(context).colorScheme.error,
+      child: GlassCard(
         child: ListTile(
           leading: Icon(
             Icons.warning_amber,
@@ -603,10 +551,26 @@ class _CentrifugeStep extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: ColorFilter.matrix(const <double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),

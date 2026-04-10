@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
@@ -49,7 +50,10 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         children: [
                           _DownloadButton(os: 'Mac', icon: Icons.apple),
                           _DownloadButton(os: 'Windows', icon: Icons.window),
-                          _DownloadButton(os: 'Linux', icon: Icons.laptop_chromebook),
+                          _DownloadButton(
+                            os: 'Linux',
+                            icon: Icons.laptop_chromebook,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -108,9 +112,9 @@ class _HeaderSection extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           'One Human Corp',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -146,19 +150,19 @@ class _ValuePropGrid extends StatelessWidget {
         runSpacing: 24,
         alignment: WrapAlignment.center,
         children: const [
-          _GlassCard(
+          _LandingFeatureCard(
             icon: Icons.speed,
             title: 'Global Performance',
             description:
                 'Deploy agents in a horizontally scalable multi-tenant environment. High-concurrency ready.',
           ),
-          _GlassCard(
+          _LandingFeatureCard(
             icon: Icons.people,
             title: 'Instant Collaboration',
             description:
                 'Invite team members instantly. Shared intelligence across your entire organization.',
           ),
-          _GlassCard(
+          _LandingFeatureCard(
             icon: Icons.sync,
             title: 'Always Connected',
             description:
@@ -173,78 +177,25 @@ class _ValuePropGrid extends StatelessWidget {
       runSpacing: 24,
       alignment: WrapAlignment.center,
       children: const [
-        _GlassCard(
+        _LandingFeatureCard(
           icon: Icons.shield,
           title: 'Zero Data Leakage',
           description:
               'All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP.',
         ),
-        _GlassCard(
+        _LandingFeatureCard(
           icon: Icons.cloud_off,
           title: 'Air-Gapped Autonomy',
           description:
               'Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies.',
         ),
-        _GlassCard(
+        _LandingFeatureCard(
           icon: Icons.group_add,
           title: 'Viral Referral Loop',
           description:
               'Seamlessly bridge to the Cloud to collaborate with human team members when ready.',
         ),
       ],
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-
-  const _GlassCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 350),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 40, color: color),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -283,13 +234,45 @@ class _DownloadButton extends ConsumerWidget {
       icon: Icon(icon),
       label: Text('Download for $os'),
       style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 16,
-        ),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _LandingFeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _LandingFeatureCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 350),
+      child: GlassCard(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(description, style: Theme.of(context).textTheme.bodyMedium),
+          ],
         ),
       ),
     );
