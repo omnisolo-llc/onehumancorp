@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/dbtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSQLiteMutex_LockUnlock(t *testing.T) {
 	ctx := context.Background()
-	provider := db.NewTestProvider(t)
+	provider := dbtest.NewTestProvider(t)
 	defer provider.Close()
 
 	mutexProvider, err := NewMutexProvider(ctx, provider, nil)
@@ -43,7 +43,7 @@ func TestSQLiteMutex_LockUnlock(t *testing.T) {
 
 func TestSQLiteMutex_Expiration(t *testing.T) {
 	ctx := context.Background()
-	provider := db.NewTestProvider(t)
+	provider := dbtest.NewTestProvider(t)
 	defer provider.Close()
 
 	mutexProvider, err := NewMutexProvider(ctx, provider, nil)

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/dbtest"
 )
 
 func TestLocalTeammateMesh_BroadcastAndSubscribe(t *testing.T) {
-	provider := db.NewTestProvider(t)
+	provider := dbtest.NewTestProvider(t)
 	_, err := provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,

@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/dbtest"
 )
 
 func TestSQLiteTaskQueue(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := dbtest.NewTestProvider(t)
 	defer prov.Close()
 
 	q := NewTaskQueue(prov, nil)
@@ -64,7 +64,7 @@ func TestSQLiteTaskQueue_Delayed(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
 
-	prov := db.NewTestProvider(t)
+	prov := dbtest.NewTestProvider(t)
 	defer prov.Close()
 
 	q := NewTaskQueue(prov, nil)

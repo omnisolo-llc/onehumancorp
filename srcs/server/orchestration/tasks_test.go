@@ -2,18 +2,16 @@ package orchestration
 
 import (
 	"context"
-	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/dbtest"
 )
 
 func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	// Create an in-memory SQLite database
-	prov := db.NewTestProvider(t)
+	prov := dbtest.NewTestProvider(t)
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
@@ -296,7 +294,7 @@ func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
 			} else {
 				errCh <- nil // nil task means it couldn't claim, which is fine
 			}
-		}( "agent-" + string(rune('A'+i)))
+		}("agent-" + string(rune('A'+i)))
 	}
 
 	for i := 0; i < 10; i++ {

@@ -2,8 +2,9 @@ package orchestration
 
 import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
-
-	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/dbtest"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"context"
 	"net/http"
@@ -121,7 +122,7 @@ func TestLocalTeammateMesh(t *testing.T) {
 	// Use NewTestProvider or db.New to init db
 	ctx := context.Background()
 
-	provider := db.NewTestProvider(t)
+	provider := dbtest.NewTestProvider(t)
 	defer provider.Close()
 
 	// Explicitly define the schema within the test initialization
@@ -186,7 +187,7 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pool := db.NewTestProvider()
+	pool := dbtest.NewTestProvider()
 	defer pool.Close()
 	mt := NewMemoryMeshTransport(pool)
 

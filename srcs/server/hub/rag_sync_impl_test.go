@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/onehumancorp/mono/srcs/server/dbtest"
 	"github.com/onehumancorp/mono/srcs/server/hub"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultRAGSyncService(t *testing.T) {
