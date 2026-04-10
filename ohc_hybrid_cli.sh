@@ -30,6 +30,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Run Setup Diagnostic Agent"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -168,6 +169,46 @@ seed_mock_data() {
     fi
 }
 
+run_diagnostic_agent() {
+    echo -e "${DIM}[Running Diagnostic Agent...]${RESET}"
+    echo -e "${BOLD}Analyzing system state...${RESET}"
+
+    local ISSUES=0
+
+    # Go
+    if ! command -v go >/dev/null 2>&1; then
+        echo -e "  ${PURPLE}✗ Go is not installed. Fix: Install Go >= 1.22${RESET}"
+        ISSUES=$((ISSUES+1))
+    fi
+
+    # Bazelisk
+    if ! command -v bazelisk >/dev/null 2>&1; then
+        echo -e "  ${PURPLE}✗ Bazelisk is not installed. Fix: Download from github.com/bazelbuild/bazelisk${RESET}"
+        ISSUES=$((ISSUES+1))
+    fi
+
+    if [[ "$OHC_STANDALONE" != "true" ]]; then
+        # Docker
+        if ! docker info >/dev/null 2>&1; then
+            echo -e "  ${PURPLE}✗ Docker daemon is not running. Fix: Start Docker Desktop or systemctl start docker${RESET}"
+            ISSUES=$((ISSUES+1))
+        fi
+
+        # Redis
+        if ! redis-cli ping >/dev/null 2>&1; then
+            echo -e "  ${PURPLE}✗ Redis is not reachable. Fix: Start redis-server or run in Standalone mode${RESET}"
+            ISSUES=$((ISSUES+1))
+        fi
+    fi
+
+    echo ""
+    if [ $ISSUES -eq 0 ]; then
+        echo -e "${GREEN}Diagnostic Agent: No friction points found. System is ready!${RESET}\n"
+    else
+        echo -e "${PURPLE}Diagnostic Agent: Found $ISSUES friction point(s). Please resolve them before proceeding.${RESET}\n"
+    fi
+}
+
 standalone_db_check() {
     echo -e "${DIM}[Standalone DB Health Check]${RESET}"
     DB_FILE="$HOME/.ohc-local-data/standalone.db"
@@ -212,6 +253,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) run_diagnostic_agent ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
