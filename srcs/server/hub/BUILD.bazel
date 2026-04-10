@@ -5,10 +5,12 @@ go_library(
     srcs = ["rag_sync.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/hub",
     visibility = ["//visibility:public"],
+    deps = ["//srcs/server/telemetry"],
 )
 
 go_test(
     name = "hub_test",
     srcs = ["rag_sync_test.go"],
     embed = [":hub"],
+    deps = ["@org_modernc_sqlite//:sqlite"],
 )

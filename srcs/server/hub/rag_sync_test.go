@@ -1,73 +1,92 @@
 package hub
 
 import (
-    "context"
-    "testing"
-    "time"
+	"context"
+	"database/sql"
+	"testing"
+	"time"
+
+	_ "modernc.org/sqlite"
 )
 
-// MockRAGSyncService is a mock implementation of RAGSyncService for testing.
-type MockRAGSyncService struct {
-    PendingRecords []RAGSyncRecord
-    MarkedIDs      []string
-    ProcessedRecords []RAGSyncRecord
-}
+func TestRAGSyncService(t *testing.T) {
+	sqliteDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite in-memory db: %v", err)
+	}
+	defer sqliteDB.Close()
 
-func (m *MockRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
-    if len(m.PendingRecords) > limit {
-        return m.PendingRecords[:limit], nil
-    }
-    return m.PendingRecords, nil
-}
+	// Initialize schema for test
+	_, err = sqliteDB.Exec(`
+		CREATE TABLE autodream_memories (
+			id TEXT PRIMARY KEY,
+			content TEXT NOT NULL,
+			embedding TEXT,
+			sync_status VARCHAR(50) DEFAULT 'pending',
+			last_sync_at TIMESTAMP NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
 
-func (m *MockRAGSyncService) MarkSynced(ctx context.Context, ids []string) error {
-    m.MarkedIDs = append(m.MarkedIDs, ids...)
-    return nil
-}
+	svc := NewRAGSyncService(sqliteDB)
+	ctx := context.Background()
 
-func (m *MockRAGSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
-    m.ProcessedRecords = append(m.ProcessedRecords, records...)
-    return nil
-}
+	// Insert test data
+	_, err = sqliteDB.Exec(`
+		INSERT INTO autodream_memories (id, content, sync_status) VALUES
+		('1', 'test context 1', 'pending'),
+		('2', 'test context 2', 'pending'),
+		('3', 'test context 3', 'synced')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
 
-func TestMockRAGSyncService(t *testing.T) {
-    mockSvc := &MockRAGSyncService{
-        PendingRecords: []RAGSyncRecord{
-            {ID: "1", Context: "test context 1", SyncStatus: SyncStatusPending, LastSyncAt: time.Now()},
-            {ID: "2", Context: "test context 2", SyncStatus: SyncStatusPending, LastSyncAt: time.Now()},
-        },
-    }
+	// Test FetchPendingSyncs
+	records, err := svc.FetchPendingSyncs(ctx, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(records) != 2 {
+		t.Errorf("expected 2 pending records, got %d", len(records))
+	}
 
-    ctx := context.Background()
+	// Test MarkSynced
+	idsToMark := []string{"1", "2"}
+	err = svc.MarkSynced(ctx, idsToMark)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-    // Test FetchPendingSyncs
-    records, err := mockSvc.FetchPendingSyncs(ctx, 10)
-    if err != nil {
-        t.Fatalf("unexpected error: %v", err)
-    }
-    if len(records) != 2 {
-        t.Errorf("expected 2 pending records, got %d", len(records))
-    }
+	// Verify MarkSynced worked
+	recordsAfterMark, err := svc.FetchPendingSyncs(ctx, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(recordsAfterMark) != 0 {
+		t.Errorf("expected 0 pending records after MarkSynced, got %d", len(recordsAfterMark))
+	}
 
-    // Test MarkSynced
-    idsToMark := []string{"1", "2"}
-    err = mockSvc.MarkSynced(ctx, idsToMark)
-    if err != nil {
-        t.Fatalf("unexpected error: %v", err)
-    }
-    if len(mockSvc.MarkedIDs) != 2 {
-        t.Errorf("expected 2 marked IDs, got %d", len(mockSvc.MarkedIDs))
-    }
+	// Test ProcessIncomingSync
+	incomingRecords := []RAGSyncRecord{
+		{ID: "4", Context: "test context 4", SyncStatus: SyncStatusSynced, LastSyncAt: time.Now()}, // new record (insert)
+		{ID: "1", Context: "test context 1 updated", SyncStatus: SyncStatusSynced, LastSyncAt: time.Now()}, // existing record (update)
+	}
+	err = svc.ProcessIncomingSync(ctx, incomingRecords)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-    // Test ProcessIncomingSync
-    incomingRecords := []RAGSyncRecord{
-        {ID: "3", Context: "test context 3", SyncStatus: SyncStatusSynced, LastSyncAt: time.Now()},
-    }
-    err = mockSvc.ProcessIncomingSync(ctx, incomingRecords)
-    if err != nil {
-        t.Fatalf("unexpected error: %v", err)
-    }
-    if len(mockSvc.ProcessedRecords) != 1 {
-        t.Errorf("expected 1 processed record, got %d", len(mockSvc.ProcessedRecords))
-    }
+	// Verify ProcessIncomingSync
+	var count int
+	err = sqliteDB.QueryRow(`SELECT count(*) FROM autodream_memories WHERE id IN ('4', '1') AND sync_status = 'synced'`).Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected 2 records updated/inserted, got %d", count)
+	}
 }
