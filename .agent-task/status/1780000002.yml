@@ -1,0 +1,4 @@
+type: health
+status: healthy
+component: flutter_ui
+summary: "Refactored flat cards to GlassCard across the app"
