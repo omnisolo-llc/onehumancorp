@@ -293,16 +293,6 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
 	})
 }
-package orchestration
-
-import (
-	"context"
-	"net/http"
-	"net/http/httptest"
-	"path/filepath"
-	"testing"
-	"time"
-)
 
 // TestSIPDB_ThinClientFailSafe simulates Thin Client sync degradation.
 func TestSIPDB_ThinClientFailSafe(t *testing.T) {
