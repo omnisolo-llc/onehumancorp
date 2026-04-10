@@ -49,9 +49,9 @@ func TestSetupAuditService(t *testing.T) {
 		t.Errorf("Expected success, got success=%v, err=%v", success, err)
 	}
 
-    // Test: Path escapes boundary
-    _, err = service.VerifySetup(ctx, "../outside_dir")
-    if err == nil {
-        t.Errorf("Expected error for path escaping boundary, got nil")
-    }
+	// Test: Path escapes boundary
+	_, err = service.VerifySetup(ctx, "../outside_dir")
+	if err == nil {
+		t.Errorf("Expected error for path escaping boundary, got nil")
+	}
 }

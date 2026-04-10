@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	meter                   = otel.Meter("github.com/onehumancorp/mono/srcs/server/onboarding")
+	meter                 = otel.Meter("github.com/onehumancorp/mono/srcs/server/onboarding")
 	AuditAttemptsTotal, _ = meter.Int64Counter("onboarding_audit_attempts_total", metric.WithDescription("Total setup audit attempts"))
 	AuditErrorsTotal, _   = meter.Int64Counter("onboarding_audit_errors_total", metric.WithDescription("Total setup audit errors"))
 )
@@ -48,7 +48,7 @@ func (s *setupAuditServiceImpl) VerifySetup(ctx context.Context, targetDir strin
 		path := filepath.Clean(filepath.Join(cleanDir, f))
 
 		// boundary check enforcing exact equality or prefix with trailing slash
-		if path != cleanDir && !strings.HasPrefix(path, cleanDir + string(os.PathSeparator)) {
+		if path != cleanDir && !strings.HasPrefix(path, cleanDir+string(os.PathSeparator)) {
 			// Special case for root directory `.`
 			if cleanDir != "." {
 				AuditErrorsTotal.Add(ctx, 1)
