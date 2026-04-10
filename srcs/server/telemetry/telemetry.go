@@ -58,6 +58,8 @@ var (
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
@@ -428,6 +430,22 @@ func InitWithMeter(m mockableMeter) error {
 	sqliteRetryExhaustedCounter, err = m.Int64Counter(
 		"ohc_sqlite_retry_exhausted_total",
 		metric.WithDescription("Total times an SQLite transaction failed after exhausting retries."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
