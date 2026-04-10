@@ -1,3 +1,4 @@
+import "../widgets/glass_card.dart";
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,19 +147,19 @@ class _ValuePropGrid extends StatelessWidget {
         runSpacing: 24,
         alignment: WrapAlignment.center,
         children: const [
-          _GlassCard(
+          _FeatureGlassCard(
             icon: Icons.speed,
             title: 'Global Performance',
             description:
                 'Deploy agents in a horizontally scalable multi-tenant environment. High-concurrency ready.',
           ),
-          _GlassCard(
+          _FeatureGlassCard(
             icon: Icons.people,
             title: 'Instant Collaboration',
             description:
                 'Invite team members instantly. Shared intelligence across your entire organization.',
           ),
-          _GlassCard(
+          _FeatureGlassCard(
             icon: Icons.sync,
             title: 'Always Connected',
             description:
@@ -173,19 +174,19 @@ class _ValuePropGrid extends StatelessWidget {
       runSpacing: 24,
       alignment: WrapAlignment.center,
       children: const [
-        _GlassCard(
+        _FeatureGlassCard(
           icon: Icons.shield,
           title: 'Zero Data Leakage',
           description:
               'All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP.',
         ),
-        _GlassCard(
+        _FeatureGlassCard(
           icon: Icons.cloud_off,
           title: 'Air-Gapped Autonomy',
           description:
               'Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies.',
         ),
-        _GlassCard(
+        _FeatureGlassCard(
           icon: Icons.group_add,
           title: 'Viral Referral Loop',
           description:
@@ -196,12 +197,12 @@ class _ValuePropGrid extends StatelessWidget {
   }
 }
 
-class _GlassCard extends StatelessWidget {
+class _FeatureGlassCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
 
-  const _GlassCard({
+  const _FeatureGlassCard({
     required this.icon,
     required this.title,
     required this.description,
@@ -213,35 +214,26 @@ class _GlassCard extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 350),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 40, color: color),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+      child: GlassCard(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 40, color: color),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                description,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
           ),
         ),
       ),
