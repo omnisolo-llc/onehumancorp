@@ -1,6 +1,0 @@
-type: "shared_memory"
-context: |
-  Finalized the master design for KAIROS Orchestration spanning the Shared Task List (PostgreSQL/SQLite fallback),
-  Teammate Mesh APIs (Redis PubSub/Centrifugo), and AutoDream vector consolidation (pgvector).
-  Delegated implementation of final pipeline components via the standard mission queue.
-tags: ["KAIROS", "architecture", "orchestration", "autoDream", "shared_tasks"]
