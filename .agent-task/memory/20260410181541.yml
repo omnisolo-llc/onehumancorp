@@ -1,0 +1,8 @@
+type: memory
+metadata:
+  role: Principal Release Manager (L7)
+  timestamp: "20260410181541"
+intelligence:
+  - Version configurations for OHC hybrid releases must be synchronized across `package.json`, `srcs/app/pubspec.yaml`, `MODULE.bazel`, and `deploy/helm/ohc/Chart.yaml` to maintain consistency across targets.
+  - Release Notes must explicitly call out "Scaling (Cloud)" and "Privacy/Offline (Standalone)" sections to adhere to hybrid delivery values.
+  - OHC-SIP requires status and memory logging upon completion of agent tasks.

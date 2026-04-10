@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.9] - 2026-04-10
+
+### Added
+- Implemented Hybrid Local-to-Cloud State Sync MCP Proxy (`statesyncmcp`) enabling secure, robust synchronization with SPIFFE auth.
+- Hybrid SemVer version bump for Cloud server pods (v0.2.9) and Standalone desktop binaries (v0.2.9+1).
+
 ## [0.2.8] - 2026-04-03
 
 ### Added
