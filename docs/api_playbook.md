@@ -85,6 +85,39 @@
   </div>
 </div>
 
+### 2.4 Hybrid MCP RAG Sync
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/rag/sync</code></strong>
+  <p>Synchronizes local Standalone SQLite RAG contexts to the multi-tenant Cloud PostgreSQL DB. This is a foundational API for the <strong>Hybrid MCP RAG Protocol</strong>.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "records": [
+    {
+      "id": "mem-1234",
+      "context": "Local insight summary",
+      "vector": [0.1, 0.2, 0.3],
+      "sync_status": "synced",
+      "last_sync_at": "2026-04-07T08:00:00Z"
+    }
+  ]
+}</code></pre>
+
+  <h4 style="margin-top: 1rem;">Hybrid RAG Sync Flow</h4>
+  <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+    ```mermaid
+    sequenceDiagram
+        participant Standalone as Local SQLite
+        participant Sync as Sync Daemon
+        participant Cloud as Cloud Gateway
+
+        Standalone->>Sync: Extract pending records
+        Sync->>Cloud: POST /api/rag/sync (Encrypted SPIFFE/SPIRE)
+        Cloud->>Cloud: Upsert to Multi-Tenant Postgres
+        Cloud-->>Sync: 200 OK
+        Sync->>Standalone: Mark records 'synced'
+    ```
+  </div>
+</div>
+
 ## 3. Client Integrations
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
