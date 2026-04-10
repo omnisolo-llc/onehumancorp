@@ -376,8 +376,6 @@ func run(now time.Time, listen listenFunc) error {
 					// Prune missions older than 7 days or marked COMPLETED
 					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
 						slog.Error("failed to prune stale agent missions", "error", err)
-					} else {
-
 					}
 				}
 			}
