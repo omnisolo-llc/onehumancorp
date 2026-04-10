@@ -1,0 +1,2 @@
+topic: Postgres vs SQLite parity
+insight: Refactored UpsertMission in sip.go to use standard ON CONFLICT upsert, removing divergent conditionals and FOR UPDATE SKIP LOCKED logic to ensure absolute mode parity.
