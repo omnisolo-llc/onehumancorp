@@ -31,10 +31,9 @@ class CentrifugeMessage {
       authorId: json['author_id'] as String? ?? '',
       authorName: json['author_name'] as String? ?? 'Unknown',
       body: json['body'] as String? ?? '',
-      sentAt:
-          json['sent_at'] != null
-              ? DateTime.parse(json['sent_at'] as String)
-              : DateTime.now(),
+      sentAt: json['sent_at'] != null
+          ? DateTime.parse(json['sent_at'] as String)
+          : DateTime.now(),
     );
   }
 
@@ -88,7 +87,9 @@ class CentrifugeService {
   ///
   /// The Centrifuge channel name is `chat:<roomId>`.
   Stream<CentrifugeMessage> subscribe(String roomId) {
-    return subscribeRaw('chat:$roomId').map((data) => CentrifugeMessage.fromJson(data as Map<String, dynamic>));
+    return subscribeRaw(
+      'chat:$roomId',
+    ).map((data) => CentrifugeMessage.fromJson(data as Map<String, dynamic>));
   }
 
   /// Subscribe to any generic channel and return a stream of raw JSON messages.

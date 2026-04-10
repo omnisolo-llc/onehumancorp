@@ -192,17 +192,18 @@ class ChannelsScreen extends ConsumerWidget {
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data:
-            (channels) =>
-                channels.isEmpty
-                    ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
-                    : _ChannelList(channels: channels),
+        data: (channels) => channels.isEmpty
+            ? _EmptyChannels(onAdd: () => _showAddDialog(context, ref))
+            : _ChannelList(channels: channels),
       ),
     );
   }
 
   void _showAddDialog(BuildContext context, WidgetRef ref) {
-    showDialog(context: context, builder: (_) => _AddChannelDialog(ref: ref));
+    showDialog(
+      context: context,
+      builder: (_) => _AddChannelDialog(ref: ref),
+    );
   }
 }
 
@@ -287,10 +288,9 @@ class _ChannelCard extends StatelessWidget {
           children: [
             Chip(
               label: Text(channel.enabled ? 'Enabled' : 'Disabled'),
-              backgroundColor:
-                  channel.enabled
-                      ? Theme.of(context).colorScheme.secondaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+              backgroundColor: channel.enabled
+                  ? Theme.of(context).colorScheme.secondaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
             ),
           ],
         ),
@@ -385,26 +385,25 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                   labelText: 'Backend',
                   border: OutlineInputBorder(),
                 ),
-                items:
-                    _channelDefs
-                        .map(
-                          (d) => DropdownMenuItem(
-                            value: d,
-                            child: Row(
-                              children: [
-                                Text(d.icon),
-                                const SizedBox(width: 8),
-                                Text(
-                                  d.type.name == 'centrifuge'
-                                      ? 'Native (Centrifuge)'
-                                      : d.type.name[0].toUpperCase() +
-                                          d.type.name.substring(1),
-                                ),
-                              ],
+                items: _channelDefs
+                    .map(
+                      (d) => DropdownMenuItem(
+                        value: d,
+                        child: Row(
+                          children: [
+                            Text(d.icon),
+                            const SizedBox(width: 8),
+                            Text(
+                              d.type.name == 'centrifuge'
+                                  ? 'Native (Centrifuge)'
+                                  : d.type.name[0].toUpperCase() +
+                                        d.type.name.substring(1),
                             ),
-                          ),
-                        )
-                        .toList(),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (val) {
                   if (val == null) return;
                   setState(() {
@@ -439,8 +438,9 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                       labelText: f.label,
                       hintText: f.hint,
                       border: const OutlineInputBorder(),
-                      suffixIcon:
-                          f.secret ? const Icon(Icons.lock_outline) : null,
+                      suffixIcon: f.secret
+                          ? const Icon(Icons.lock_outline)
+                          : null,
                     ),
                   ),
                 ),
@@ -456,14 +456,13 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
-          child:
-              _loading
-                  ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Add'),
+          child: _loading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
         ),
       ],
     );
