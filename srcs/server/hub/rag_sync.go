@@ -1,6 +1,7 @@
 package hub
 
-import (	"context"
+import (
+	"context"
 	"time"
 	"strings"
 	"fmt"
@@ -24,7 +25,6 @@ type RAGSyncRecord struct {
 	SyncStatus SyncStatus
 	LastSyncAt time.Time
 }
-
 
 type RAGSyncService interface {
 	// FetchPendingSyncs retrieves records from the local DB that need syncing
@@ -74,7 +74,6 @@ func RecordRAGSyncError(ctx context.Context) {
 	}
 }
 
-
 type DB struct {
 	db db.Provider
 }
@@ -120,7 +119,6 @@ func (s *DB) MarkSynced(ctx context.Context, ids []string) error {
 	_, err := s.db.Exec(ctx, query, string(SyncStatusSynced), time.Now())
 	return err
 }
-
 
 func (s *DB) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
 	tx, err := s.db.Begin(ctx)

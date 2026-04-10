@@ -1,7 +1,6 @@
 package hub
 
 import (
-
 	"context"
 	"testing"
 	"time"
