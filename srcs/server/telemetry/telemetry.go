@@ -43,6 +43,8 @@ var (
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
+	RagRecordsSyncedCounter          metric.Int64Counter
+	RagSyncErrorsCounter             metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 	AgentTransitionLatency     metric.Float64Histogram
@@ -388,6 +390,22 @@ func InitWithMeter(m mockableMeter) error {
 	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
 		"teammate_mesh_direct_messages_total",
 		metric.WithDescription("Total number of Teammate Mesh direct messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedCounter, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synchronized from Standalone to Cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsCounter, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG synchronization"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -802,6 +820,22 @@ func RecordTeammateMeshDirectMessage(ctx context.Context) {
 		return
 	}
 	TeammateMeshDirectMessagesCounter.Add(ctx, 1)
+}
+
+// RecordRagRecordsSynced increments the global counter for synchronized RAG records.
+func RecordRagRecordsSynced(ctx context.Context, count int64) {
+	if RagRecordsSyncedCounter == nil {
+		return
+	}
+	RagRecordsSyncedCounter.Add(ctx, count)
+}
+
+// RecordRagSyncError increments the global counter for RAG synchronization errors.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsCounter == nil {
+		return
+	}
+	RagSyncErrorsCounter.Add(ctx, 1)
 }
 
 // RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.

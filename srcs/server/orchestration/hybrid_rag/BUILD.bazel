@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "hybrid_rag",
+    srcs = ["manager.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_rag",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/hub",
+        "//srcs/server/telemetry",
+    ],
+)
+
+go_test(
+    name = "hybrid_rag_test",
+    srcs = ["manager_test.go"],
+    embed = [":hybrid_rag"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/hub",
+        "@com_github_stretchr_testify//assert",
+    ],
+)

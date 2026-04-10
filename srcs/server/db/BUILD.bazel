@@ -42,6 +42,7 @@ go_library(
         "migrations/029_autodream_memories.sql",
         "migrations/030_kairos_shared_tasks.sql",
         "migrations/031_agent_missions_updated_at.sql",
+        "migrations/032_hybrid_rag_sync_metadata.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
