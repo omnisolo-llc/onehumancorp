@@ -1,0 +1,160 @@
+package hybridfsmcp
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/onehumancorp/mono/srcs/server/auth"
+)
+
+func TestLocalFSProvider(t *testing.T) {
+	tmpDir := t.TempDir()
+	provider, err := NewLocalFSProvider(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Test WriteFile
+	content := []byte("hello local")
+	if err := provider.WriteFile(ctx, "test.txt", content); err != nil {
+		t.Errorf("WriteFile failed: %v", err)
+	}
+
+	// Test ReadFile
+	readContent, err := provider.ReadFile(ctx, "test.txt")
+	if err != nil {
+		t.Errorf("ReadFile failed: %v", err)
+	}
+	if string(readContent) != "hello local" {
+		t.Errorf("expected %q, got %q", "hello local", string(readContent))
+	}
+
+	// Test ListDir
+	entries, err := provider.ListDir(ctx, ".")
+	if err != nil {
+		t.Errorf("ListDir failed: %v", err)
+	}
+	if len(entries) != 1 || entries[0] != "test.txt" {
+		t.Errorf("expected [test.txt], got %v", entries)
+	}
+
+	// Test SearchFiles
+	matches, err := provider.SearchFiles(ctx, ".", "*.txt")
+	if err != nil {
+		t.Errorf("SearchFiles failed: %v", err)
+	}
+	if len(matches) != 1 || matches[0] != "test.txt" {
+		t.Errorf("expected [test.txt], got %v", matches)
+	}
+
+	// Test Path Traversal
+	if err := provider.WriteFile(ctx, "../outside.txt", content); err == nil {
+		t.Errorf("expected error for path traversal, got nil")
+	}
+
+	// Test sibling directory traversal bypass
+	siblingDir := tmpDir + "-sibling"
+	os.MkdirAll(siblingDir, 0755)
+	defer os.RemoveAll(siblingDir)
+
+	if err := provider.WriteFile(ctx, filepath.Join(siblingDir, "sibling.txt"), content); err == nil {
+		t.Errorf("expected error for sibling path traversal, got nil")
+	}
+}
+
+func TestCloudFSProvider(t *testing.T) {
+	tmpDir := t.TempDir()
+	provider, err := NewCloudFSProvider(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create provider: %v", err)
+	}
+
+	// Test missing claims
+	ctx := context.Background()
+	content := []byte("hello cloud")
+	if err := provider.WriteFile(ctx, "test.txt", content); err == nil {
+		t.Errorf("expected error for missing claims, got nil")
+	}
+
+	// Test with valid claims
+	claims := &auth.Claims{OrganizationID: "tenant-1"}
+	ctx = context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+
+	// Test WriteFile
+	if err := provider.WriteFile(ctx, "test.txt", content); err != nil {
+		t.Errorf("WriteFile failed: %v", err)
+	}
+
+	// Verify it wrote to the tenant directory
+	tenantDir := filepath.Join(tmpDir, "tenant-1")
+	if _, err := os.Stat(filepath.Join(tenantDir, "test.txt")); os.IsNotExist(err) {
+		t.Errorf("file was not written to tenant directory")
+	}
+
+	// Test ReadFile
+	readContent, err := provider.ReadFile(ctx, "test.txt")
+	if err != nil {
+		t.Errorf("ReadFile failed: %v", err)
+	}
+	if string(readContent) != "hello cloud" {
+		t.Errorf("expected %q, got %q", "hello cloud", string(readContent))
+	}
+
+	// Test ListDir
+	entries, err := provider.ListDir(ctx, ".")
+	if err != nil {
+		t.Errorf("ListDir failed: %v", err)
+	}
+	if len(entries) != 1 || entries[0] != "test.txt" {
+		t.Errorf("expected [test.txt], got %v", entries)
+	}
+
+	// Test SearchFiles
+	matches, err := provider.SearchFiles(ctx, ".", "*.txt")
+	if err != nil {
+		t.Errorf("SearchFiles failed: %v", err)
+	}
+	if len(matches) != 1 || matches[0] != "test.txt" {
+		t.Errorf("expected [test.txt], got %v", matches)
+	}
+
+	// Test Path Traversal
+	if err := provider.WriteFile(ctx, "../outside.txt", content); err == nil {
+		t.Errorf("expected error for path traversal, got nil")
+	}
+
+	// Test sibling directory traversal bypass
+	siblingDir := filepath.Join(tmpDir, "tenant-1-sibling")
+	os.MkdirAll(siblingDir, 0755)
+	defer os.RemoveAll(siblingDir)
+
+	if err := provider.WriteFile(ctx, filepath.Join(siblingDir, "sibling.txt"), content); err == nil {
+		t.Errorf("expected error for sibling path traversal, got nil")
+	}
+}
+
+func TestNewFileSystemProvider(t *testing.T) {
+	// Test Standalone
+	t.Setenv("OHC_STANDALONE", "true")
+	provider, err := NewFileSystemProvider(".")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	if _, ok := provider.(*LocalFSProvider); !ok {
+		t.Errorf("expected LocalFSProvider, got %T", provider)
+	}
+	t.Setenv("OHC_STANDALONE", "false")
+
+	// Test Cloud
+	provider, err = NewFileSystemProvider(".")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	if _, ok := provider.(*CloudFSProvider); !ok {
+		t.Errorf("expected CloudFSProvider, got %T", provider)
+	}
+}
