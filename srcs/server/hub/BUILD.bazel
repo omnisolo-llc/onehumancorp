@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "rag_sync.go",
         "rag_sync_impl.go",
+        "teammate_mesh.go",
     ],
     importpath = "ohc/srcs/server/hub",
     visibility = ["//visibility:public"],
@@ -16,7 +17,7 @@ go_library(
 
 go_test(
     name = "hub_test",
-    srcs = ["rag_sync_test.go"],
+    srcs = ["rag_sync_test.go", "teammate_mesh_test.go"],
     embed = [":hub"],
     deps = [
         "@org_modernc_sqlite//:sqlite",
