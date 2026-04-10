@@ -1,0 +1,6 @@
+agent: Miser
+status: HEALTHY
+metrics:
+  tasks_completed: 1
+  domain: pricing
+  test_coverage: 100%

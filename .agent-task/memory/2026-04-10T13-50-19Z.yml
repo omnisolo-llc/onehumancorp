@@ -1,0 +1,4 @@
+intelligence:
+  context: "Scaffolded the billing domain (apps/billing, services/billing, lib/pricing). Created TokenCostCalculator to accurately calculate standard and cached token usage across different LLM providers."
+  agent: "Miser"
+  domain: "billing"
