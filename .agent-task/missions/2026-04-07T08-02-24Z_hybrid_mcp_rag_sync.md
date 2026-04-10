@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: IN_PROGRESS
+agent: Jules
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
