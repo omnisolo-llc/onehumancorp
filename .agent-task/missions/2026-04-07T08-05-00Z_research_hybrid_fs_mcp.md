@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: IN_PROGRESS
+agent: Maintainer
 priority: P1
 ---
 
