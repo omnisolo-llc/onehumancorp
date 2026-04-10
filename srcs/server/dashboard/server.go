@@ -864,10 +864,12 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Path != "/" {
-		assetPath := filepath.Join(s.staticDir, strings.TrimPrefix(filepath.Clean(r.URL.Path), "/"))
-		if info, err := os.Stat(assetPath); err == nil && !info.IsDir() {
-			http.ServeFile(w, r, assetPath)
-			return
+		cleanPath := filepath.Clean(filepath.Join(s.staticDir, r.URL.Path))
+		if cleanPath == s.staticDir || strings.HasPrefix(cleanPath, s.staticDir+string(filepath.Separator)) {
+			if info, err := os.Stat(cleanPath); err == nil && !info.IsDir() {
+				http.ServeFile(w, r, cleanPath)
+				return
+			}
 		}
 	}
 

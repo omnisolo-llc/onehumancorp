@@ -31,10 +31,12 @@ func (p *LocalProvider) IsLocal() bool {
 }
 
 func (p *LocalProvider) getLocalPath(key string) string {
-	// Clean the key to prevent directory traversal
-	cleanKey := filepath.Clean("/" + key)
-	cleanKey = strings.TrimPrefix(cleanKey, "/")
-	return filepath.Join(p.basePath, cleanKey)
+	cleanPath := filepath.Clean(filepath.Join(p.basePath, key))
+	if cleanPath != p.basePath && !strings.HasPrefix(cleanPath, p.basePath+string(filepath.Separator)) {
+		// Prevent directory traversal
+		return p.basePath
+	}
+	return cleanPath
 }
 
 func (p *LocalProvider) ListBlobs(ctx context.Context, prefix string) ([]BlobMetadata, error) {
