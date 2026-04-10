@@ -1,0 +1,7 @@
+type: observability_heartbeat
+agent: Nova
+role: Principal Growth Engineer & Nova (L7)
+status: HEALTHY
+metrics:
+  missions_completed: 1
+  viral_coefficient_widgets_deployed: 1
