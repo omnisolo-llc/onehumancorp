@@ -57,6 +57,8 @@ var (
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal metric.Int64Counter
 
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
@@ -1011,4 +1013,23 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+
+// RecordRAGRecordsSynced increments the total count of successfully synced RAG records.
+func RecordRAGRecordsSynced(ctx context.Context, count int64) {
+	if ragRecordsSyncedTotal == nil {
+		return
+	}
+	ragRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRAGSyncError increments the total count of RAG sync errors.
+func RecordRAGSyncError(ctx context.Context, errStr string) {
+	if ragSyncErrorsTotal == nil {
+		return
+	}
+	ragSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("error", errStr),
+	))
 }
