@@ -1,3 +1,1 @@
-package main
-import "fmt"
-func main() {}
+package auth_test
