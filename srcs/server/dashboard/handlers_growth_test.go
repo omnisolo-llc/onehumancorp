@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
 )
 
 func TestHandleLandingPageExperiments(t *testing.T) {
@@ -156,5 +155,46 @@ func TestHandleReferrals(t *testing.T) {
 	}
 	if list[0].ID != created.ID {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
+func TestHandleTeamInvite(t *testing.T) {
+	s := &Server{}
+
+	reqBody := InviteRequest{
+		Emails: []string{"test1@example.com", "test2@example.com"},
+	}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/invite", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	s.handleTeamInvite(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status OK, got %v", w.Code)
+	}
+
+	var res InviteResponse
+	if err := json.NewDecoder(w.Body).Decode(&res); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	if !res.Success || res.InvitedCount != 2 {
+		t.Errorf("Unexpected response: %+v", res)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/growth/invite", nil)
+	w = httptest.NewRecorder()
+	s.handleTeamInvite(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status MethodNotAllowed, got %v", w.Code)
+	}
+
+	reqBody = InviteRequest{Emails: []string{}}
+	body, _ = json.Marshal(reqBody)
+	req = httptest.NewRequest(http.MethodPost, "/api/growth/invite", bytes.NewReader(body))
+	w = httptest.NewRecorder()
+	s.handleTeamInvite(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status BadRequest for empty emails, got %v", w.Code)
 	}
 }

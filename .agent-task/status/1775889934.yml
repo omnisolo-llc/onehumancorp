@@ -1,0 +1,7 @@
+status: "HEALTHY"
+agent: "Nova"
+metrics:
+  cpu_usage_pct: 12
+  memory_usage_mb: 256
+  active_tasks: 0
+last_heartbeat: "2026-04-11T06:45:34Z"

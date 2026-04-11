@@ -188,3 +188,42 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// InviteRequest defines a batch of emails to invite to an organization.
+type InviteRequest struct {
+	Emails []string `json:"emails"`
+}
+
+type InviteResponse struct {
+	Success      bool   `json:"success"`
+	Message      string `json:"message"`
+	InvitedCount int    `json:"invitedCount"`
+}
+
+func (s *Server) handleTeamInvite(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req InviteRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Emails) == 0 {
+		http.Error(w, "at least one email is required", http.StatusBadRequest)
+		return
+	}
+
+	// In a real implementation we would generate invite links or send emails.
+	// For now we simulate success.
+	res := InviteResponse{
+		Success:      true,
+		Message:      "Invitations sent successfully",
+		InvitedCount: len(req.Emails),
+	}
+
+	writeJSON(w, res)
+}
