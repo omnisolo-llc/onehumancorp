@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "Requires backend Go expertise"
 agent: Researcher
 priority: P1
 ---

@@ -305,6 +305,48 @@ graph TD
     class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
 ```
 
+### 4.7 Hybrid MCP RAG Protocol Sync
+
+**Endpoint:** `POST /api/v1/rag/sync`
+Synchronizes the local Standalone SQLite RAG state with the Cloud PostgreSQL instance to enable seamless hybrid operations.
+
+**Payload:**
+```json
+{
+  "sync_records": [
+    {
+      "id": "mem_123",
+      "context": "Local analysis of frontend architecture.",
+      "status": "pending",
+      "vector_fallback": "[...]"
+    }
+  ],
+  "agent_id": "jules"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "synced_count": 1,
+  "conflicts": []
+}
+```
+
+#### Synchronization Workflow
+```mermaid
+graph TD
+    Local[Standalone Agent (SQLite)] -->|Extract Insights| DB_Local[(Local SQLite)]
+    DB_Local -->|Polls| Sync[Sync Daemon]
+    Sync -->|Encrypted Payload| API[POST /api/v1/rag/sync]
+    API --> Cloud[(Cloud PostgreSQL)]
+    Cloud --> Swarm[Cloud Swarm Orchestration]
+    API -->|Ack/Merge| Sync
+    Sync -->|Mark Synced| DB_Local
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Local,DB_Local,Sync,API,Cloud,Swarm premium;
+```
 
 ### 4.8 KAIROS Shared Task List API
 
