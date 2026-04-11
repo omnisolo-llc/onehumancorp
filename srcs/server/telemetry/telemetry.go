@@ -31,6 +31,9 @@ var (
 	agentApiErrorsCounter      metric.Int64Counter
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
+	RagRecordsSyncedTotalCounter metric.Int64Counter
+	RagSyncErrorsTotalCounter    metric.Int64Counter
+
 	swarmTasksCompletedCounter metric.Int64Counter
 	swarmTaskTransitionsCounter metric.Int64Counter
 	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
@@ -167,6 +170,23 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+
+	RagRecordsSyncedTotalCounter, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotalCounter, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1011,4 +1031,21 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+
+// RecordRagRecordsSynced increments the global counter for successful RAG syncs.
+func RecordRagRecordsSynced(ctx context.Context, count int64) {
+	if RagRecordsSyncedTotalCounter == nil {
+		return
+	}
+	RagRecordsSyncedTotalCounter.Add(ctx, count)
+}
+
+// RecordRagSyncError increments the global counter for RAG sync errors.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotalCounter == nil {
+		return
+	}
+	RagSyncErrorsTotalCounter.Add(ctx, 1)
 }
