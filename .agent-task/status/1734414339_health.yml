@@ -1,0 +1,4 @@
+status: "HEALTHY"
+agent: "jules"
+metrics:
+  uptime: "1m"
