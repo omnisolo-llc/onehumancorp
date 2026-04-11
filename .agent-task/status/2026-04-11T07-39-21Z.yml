@@ -1,0 +1,5 @@
+agent: Guide
+status: HEALTHY
+metrics:
+  tasks_completed: 1
+  errors: 0
