@@ -1,4 +1,7 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+
+# ── Go targets (unchanged) ────────────────────────────────────────────────────
 
 go_library(
     name = "builtin",
@@ -32,4 +35,165 @@ go_test(
         "agent_test.go",
     ],
     embed = [":builtin"],
+)
+
+# ── Common copts for all C++ targets ─────────────────────────────────────────
+
+_COPTS = ["-std=c++20", "-Wall", "-Wextra", "-Wpedantic"]
+
+# ── C++ core libraries ────────────────────────────────────────────────────────
+
+cc_library(
+    name = "types",
+    hdrs = ["types.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/container:inlined_vector",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "llm_client",
+    hdrs = ["llm_client.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":types",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "http_client",
+    srcs = ["http_client.cc"],
+    hdrs = ["http_client.h"],
+    copts = _COPTS,
+    # libcurl is expected to be installed on the host (standard on Linux/Pi).
+    # `apt install libcurl4-openssl-dev` if not present.
+    linkopts = ["-lcurl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "prompt",
+    hdrs = ["prompt.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = ["@com_google_absl//absl/strings"],
+)
+
+cc_library(
+    name = "llm_openai",
+    srcs = ["llm_openai.cc"],
+    hdrs = ["llm_openai.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":http_client",
+        ":llm_client",
+        ":types",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "llm_anthropic",
+    srcs = ["llm_anthropic.cc"],
+    hdrs = ["llm_anthropic.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":http_client",
+        ":llm_client",
+        ":types",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "llm_ollama",
+    srcs = ["llm_ollama.cc"],
+    hdrs = ["llm_ollama.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":http_client",
+        ":llm_client",
+        ":types",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "agent",
+    srcs = ["agent.cc"],
+    hdrs = ["agent.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":llm_client",
+        ":types",
+        "//srcs/server/agents/builtin/tools:tool",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:inlined_vector",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+# ── C++ agent binary ──────────────────────────────────────────────────────────
+
+cc_binary(
+    name = "agent_bin",
+    srcs = ["main.cc"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/agents/builtin/grpc:agent_service",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/flags:usage",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/strings",
+        "@grpc//:grpc++",
+    ],
+)
+
+# ── C++ tests (gtest + gmock) ─────────────────────────────────────────────────
+
+cc_test(
+    name = "agent_cc_test",
+    srcs = ["agent_cc_test.cc"],
+    copts = _COPTS,
+    deps = [
+        ":agent",
+        ":types",
+        "//srcs/server/agents/builtin/tools:tools",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/types:span",
+        "@googletest//:gmock",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
 )
