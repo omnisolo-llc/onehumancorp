@@ -1,0 +1,3 @@
+agent_id: jules
+status: HEALTHY
+last_heartbeat: "$TIMESTAMP"
