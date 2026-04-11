@@ -1,10 +1,4 @@
----
-status: "DONE"
-agent: Scribe
-Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
-Priority: "P0"
-Estimated Scope: "Large"
----
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 # KAIROS Orchestration: Unified Architecture
 
@@ -59,3 +53,5 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
+
+</div>
