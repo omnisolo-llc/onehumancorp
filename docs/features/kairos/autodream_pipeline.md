@@ -1,59 +1,19 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; font-family: 'Outfit', 'Inter', sans-serif;">
 
-# AutoDream Data Pipelines
+# AutoDream Pipeline
 
-The AutoDream Data Pipeline is the long-term memory consolidation engine of the KAIROS Orchestrator. It fulfills the Swarm Intelligence Protocol (OHC-SIP) mandate that all agents share memory by asynchronously processing ephemeral session data into queryable vector embeddings.
+The AutoDream Pipeline acts as the long-term memory consolidation mechanism for the OHC Swarm. It processes ephemeral agent context and transforms it into durable semantic knowledge.
 
-## 1. The Need for AutoDream
+## Mechanism
 
-During task execution, agents generate significant amounts of context (`agent_session_data` and `.agent-task/memory/*.yml` files). To prevent context window overflow and enable long-term reasoning, AutoDream sweeps this data, prunes redundancies, and injects the consolidated "truth" into a durable vector database.
+1. **Extraction**: A background worker (`AutoDreamWorker`) periodically scans ephemeral session contexts (`.agent-task/memory/*.yml` and session data).
+2. **Compression & Embedding**: The pipeline uses LLMs (e.g., Minimax) to summarize these logs and generate high-dimensional vector embeddings.
+3. **Persistence**:
+    - **Cloud-Native Mode**: Embeddings are stored in PostgreSQL using the `pgvector` extension within the `autodream_memories` table, allowing for precise Nearest Neighbor (semantic) searches.
+    - **Standalone Mode**: Embeddings and summaries are saved in the local SQLite database, supporting a fallback search mechanism.
 
-## 2. Architecture and Storage
+## Semantic Retrieval
 
-AutoDream adapts its storage mechanism based on the OHC operating mode:
-
-- **Cloud-Native Mode:** Utilizes PostgreSQL with the `pgvector` extension for exact Nearest Neighbor search on 1536-dimensional embeddings.
-- **Standalone Mode:** Degrades gracefully to SQLite. Embeddings are stored as JSON text blobs, with fallback search mechanisms if vector extensions are unavailable in the local SQLite distribution.
-
-### Pipeline Workflow
-
-```mermaid
-graph TD
-    A[Agent Session Data / Memory Files] -->|Periodic Sweep| B(AutoDream Worker)
-    B -->|Chunking & Tokenization| C[Minimax / Cohere Embedding API]
-    C -->|Generate 1536-dim Vector| D{Storage Engine}
-    D -->|Cloud| E[(pgvector: autodream_memories)]
-    D -->|Standalone| F[(SQLite: JSON Blobs)]
-
-    E -->|Semantic Search| G[Agent Context Window]
-    F -->|Semantic Search| G
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class A,B,C,D,E,F,G premium;
-```
-
-## 3. Database Schema
-
-The persistent vector database schema (Cloud mode) is structured as follows:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE TABLE IF NOT EXISTS autodream_memories (
-    id TEXT PRIMARY KEY,
-    organization_id TEXT NOT NULL,
-    agent_id TEXT,
-    content TEXT NOT NULL,
-    embedding vector(1536),
-    source_type TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);
-```
-
-## 4. Implementation Details
-
-- **Batch Processing:** The `AutoDreamWorker` daemon processes data in batches (e.g., `LIMIT 500`) to prevent unbound queue growth and ensure stable memory utilization.
-- **LLM Integration:** Utilizes existing LLM clients (`srcs/server/agents/local/llm.go`) to generate embeddings for the consolidated memory chunks.
-- **Graceful Degradation:** Conditional logic (`dbWrapper.Provider().IsSQLite()`) disables PostgreSQL-specific locks or exact-neighbor queries when operating in Standalone mode.
+Agents can perform semantic searches against this database to retrieve historical context, previous solutions, and architectural decisions, thereby preventing the re-learning of information and adhering to the "Shared Memory" principle of the Swarm Intelligence Protocol (OHC-SIP).
 
 </div>

@@ -94,3 +94,22 @@
 </div>
 
 </div>
+
+### 2.2 Sub-Agent Queue
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+  <strong>GET <code>/api/queue/subagent</code></strong>
+  <p>Retrieves the current queue of assigned sub-tasks for the authenticated sub-agent.</p>
+</div>
+
+### 2.3 Teammate Mesh Coordination
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/mesh/v2/broadcast</code></strong>
+  <p>Broadcasts a state change or coordination message to the Realtime Teammate Mesh.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "topic": "task.assigned",
+  "payload": {
+    "task_id": "123",
+    "agent_id": "worker-1"
+  }
+}</code></pre>
+</div>

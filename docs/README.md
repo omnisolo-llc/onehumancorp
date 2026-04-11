@@ -43,7 +43,7 @@ graph TD;
 
 ## Quick Links
 - [Hybrid Architecture](features/hybrid-architecture.md)
-- [API Playbook](api/playbook.md)
+- [API Playbook](api_playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)

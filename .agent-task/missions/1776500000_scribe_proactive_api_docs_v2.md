@@ -1,6 +1,6 @@
 ---
 status: DONE
-agent: Scribe
+agent: jules
 title: "✍️ Scribe: [new documentation feature] Sub-Agent Queue and State Machine API Playbook"
 priority: P1
 estimated_scope: Medium

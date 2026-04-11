@@ -1,53 +1,33 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; font-family: 'Outfit', 'Inter', sans-serif;">
 
-# Sub-Agent Orchestration Queue
+# Sub-Agent Queue
 
-The Sub-Agent Orchestration Queue is a vital component of the KAIROS Orchestration layer, designed to handle the massive concurrency of sub-tasks delegated by primary agents within the One Human Corp (OHC) Swarm.
+The Sub-Agent Queue facilitates the asynchronous assignment and monitoring of sub-tasks to specialized agents within the OHC Swarm.
 
-## 1. Overview
+## Workflow
 
-When a primary agent (e.g., an Architect) delegates work, the tasks are enqueued into a distributed queue. This queue handles routing, retries, exponential backoffs, and execution timeouts, ensuring at-least-once delivery and resilient task execution.
+When a Director or Lead Agent decomposes a task:
+1. Sub-tasks are created and added to the Queue.
+2. Available agents poll or are pushed tasks based on the operating mode (Cloud vs. Standalone).
+3. The Teammate Mesh broadcasts queue updates in real-time.
 
-## 2. Hybrid Architecture Support
-
-The queue seamlessly transitions between different storage backends depending on the operating mode:
-
-- **Cloud-Native Mode:** Uses Redis (via `rueidis`) Lists (`RPUSH`/`LPOP`) and Sorted Sets (ZSETs) for delayed execution, allowing for horizontal scalability across Kubernetes pods.
-- **Standalone Mode:** Uses an internal SQLite table (`sub_agent_jobs`). Dequeuing relies on explicit transactions with concurrent read/write locks (simulating `FOR UPDATE SKIP LOCKED`) to prevent `SQLITE_BUSY` contention during parallel local processing.
-
-### Architecture Flow
+## Architecture Visualization
 
 ```mermaid
 graph TD
-    subgraph KAIROS Orchestrator
-        A[Task Manager] -->|Enqueue| Q{Sub-Agent Queue Interface}
-    end
-
-    Q -->|Cloud| Redis[(Redis ZSETs)]
-    Q -->|Standalone| DB[(SQLite Mutexed Table)]
-
-    Redis -->|Dequeue| W1[Worker Pod]
-    DB -->|Dequeue| W2[Local Worker]
-
-    W1 -->|Transition Event| M[Teammate Mesh / Centrifuge]
-    W2 -->|Transition Event| M
+    A[Director Agent] -->|Decomposes Task| Q[Sub-Agent Queue]
+    Q -->|Assigns| W1[Worker Agent A]
+    Q -->|Assigns| W2[Worker Agent B]
+    W1 -->|Updates Status| Q
+    W2 -->|Updates Status| Q
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class A,Q,Redis,DB,W1,W2,M premium;
+    class A,Q,W1,W2 premium;
 ```
 
-## 3. Queue Lifecycle and Resiliency
+## Real-time Coordination
+The queue integrates closely with the Teammate Mesh APIs to emit `MeshEvent` objects whenever a queue item changes state. This enables immediate UI updates and agent synchronization.
 
-The queue implements robust error handling and retry mechanisms:
-
-1.  **Enqueue:** A `Job` record is created with `status='QUEUED'`.
-2.  **Dequeue:** Worker sub-agents poll the queue for jobs matching their role.
-3.  **Execution:** The worker executes the task. If successful, it transitions to `COMPLETED`.
-4.  **Failure & Retry:** If the task fails, it is retried up to a configurable `max_attempts`.
-5.  **Poison Pill:** If `max_attempts` is reached, the job is marked as `FAILED` (dead-letter).
-
-## 4. Observability
-
-Both Redis and SQLite queue implementations natively integrate with OpenTelemetry. Metrics such as queue length, processing time, and failure rates are emitted for visualization in Grafana dashboards, adhering to OHC's Full-Spectrum Observability mandate.
+For specific API endpoints, see the [API Playbook](../../api_playbook.md).
 
 </div>
