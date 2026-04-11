@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"go.opentelemetry.io/otel/metric/noop"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,6 +21,8 @@ import (
 )
 
 var (
+	RAGRecordsSyncedTotal, _ = noop.NewMeterProvider().Meter("test").Int64Counter("rag_records_synced_total")
+	RAGSyncErrorsTotal, _ = noop.NewMeterProvider().Meter("test").Int64Counter("rag_sync_errors_total")
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -164,6 +167,22 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
