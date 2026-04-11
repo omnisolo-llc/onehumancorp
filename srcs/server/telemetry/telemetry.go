@@ -53,6 +53,8 @@ var (
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
@@ -412,6 +414,20 @@ func InitWithMeter(m mockableMeter) error {
 	RateLimitExceededCount, err = m.Int64Counter(
 		"api_rate_limit_exceeded_count",
 		metric.WithDescription("Total number of API rate limit exceeded (HTTP 429) occurrences"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)

@@ -1,0 +1,1 @@
+activity: "Implemented RAG sync service between local SQLite and cloud PostgreSQL. Added DB migrations and metrics."
