@@ -184,3 +184,79 @@ func (t *PgTx) Commit(ctx context.Context) error {
 func (t *PgTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback(ctx)
 }
+
+func (p *PgProvider) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
+    // PG is typically the cloud side; this method might be unused or just a stub, but let's implement it for completeness.
+	query := `SELECT memory_id, context, vector_embedding, sync_status, last_sync_at FROM swarm_memory_embeddings WHERE sync_status = 'pending' LIMIT $1`
+	rows, err := p.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []RAGSyncRecord
+	for rows.Next() {
+		var r RAGSyncRecord
+		var status string
+		var lastSync *time.Time
+		if err := rows.Scan(&r.ID, &r.Context, &r.Vector, &status, &lastSync); err != nil {
+			return nil, err
+		}
+		r.SyncStatus = RAGSyncStatus(status)
+		if lastSync != nil {
+			r.LastSyncAt = *lastSync
+		}
+		records = append(records, r)
+	}
+	return records, nil
+}
+
+func (p *PgProvider) MarkSynced(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	// For simplicity in Postgres provider, run multiple updates or use ANY array if driver supports it.
+    // Given the constraints and typical SQL, using a loop inside a transaction is robust.
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	stmt := `UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = NOW() WHERE memory_id = $1`
+	for _, id := range ids {
+		_, err := tx.Exec(ctx, stmt, id)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+func (p *PgProvider) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	stmt := `
+		INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, sync_status, last_sync_at)
+		VALUES ($1, $2, $3, 'synced', NOW())
+		ON CONFLICT (memory_id) DO UPDATE SET
+			context = EXCLUDED.context,
+			vector_embedding = EXCLUDED.vector_embedding,
+			sync_status = 'synced',
+			last_sync_at = NOW()
+	`
+	for _, r := range records {
+		_, err := tx.Exec(ctx, stmt, r.ID, r.Context, r.Vector)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}

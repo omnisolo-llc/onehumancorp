@@ -234,3 +234,76 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback()
 }
+
+func (p *SqliteProvider) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
+	query := `SELECT memory_id, context, vector_embedding, sync_status, last_sync_at FROM swarm_memory_embeddings WHERE sync_status = 'pending' LIMIT ?`
+	rows, err := p.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []RAGSyncRecord
+	for rows.Next() {
+		var r RAGSyncRecord
+		var status string
+		var lastSync *time.Time
+		if err := rows.Scan(&r.ID, &r.Context, &r.Vector, &status, &lastSync); err != nil {
+			return nil, err
+		}
+		r.SyncStatus = RAGSyncStatus(status)
+		if lastSync != nil {
+			r.LastSyncAt = *lastSync
+		}
+		records = append(records, r)
+	}
+	return records, nil
+}
+
+func (p *SqliteProvider) MarkSynced(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	stmt := `UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = CURRENT_TIMESTAMP WHERE memory_id = ?`
+	for _, id := range ids {
+		_, err := tx.Exec(ctx, stmt, id)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+func (p *SqliteProvider) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	stmt := `
+		INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, sync_status, last_sync_at)
+		VALUES (?, ?, ?, 'synced', CURRENT_TIMESTAMP)
+		ON CONFLICT (memory_id) DO UPDATE SET
+			context = EXCLUDED.context,
+			vector_embedding = EXCLUDED.vector_embedding,
+			sync_status = 'synced',
+			last_sync_at = CURRENT_TIMESTAMP
+	`
+	for _, r := range records {
+		_, err := tx.Exec(ctx, stmt, r.ID, r.Context, r.Vector)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
