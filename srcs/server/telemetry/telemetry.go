@@ -45,6 +45,8 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal metric.Int64Counter
 	AgentTransitionLatency     metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
@@ -164,6 +166,14 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+	RAGRecordsSyncedTotal, err = m.Int64Counter("rag_records_synced_total")
+	if err != nil {
+		errs = append(errs, err)
+	}
+	RAGSyncErrorsTotal, err = m.Int64Counter("rag_sync_errors_total")
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),

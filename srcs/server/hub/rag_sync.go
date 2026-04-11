@@ -1,0 +1,29 @@
+package hub
+
+import (
+    "context"
+    "time"
+)
+
+type SyncStatus string
+
+const (
+    SyncStatusPending    SyncStatus = "pending"
+    SyncStatusInProgress SyncStatus = "in_progress"
+    SyncStatusSynced     SyncStatus = "synced"
+    SyncStatusError      SyncStatus = "error"
+)
+
+type RAGSyncRecord struct {
+    ID           string
+    Context      string
+    Vector       []byte
+    SyncStatus   SyncStatus
+    LastSyncAt   time.Time
+}
+
+type RAGSyncService interface {
+    FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error)
+    MarkSynced(ctx context.Context, ids []string) error
+    ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
+}
