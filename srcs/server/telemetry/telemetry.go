@@ -1012,3 +1012,25 @@ func RecordQueueLength(ctx context.Context, delta int) {
 		gauge.Add(ctx, int64(delta))
 	}
 }
+
+// RecordRAGSyncSynced increments the global counter for RAG records synced successfully.
+func RecordRAGSyncSynced(ctx context.Context, count int) {
+	if meter == nil {
+		return
+	}
+	counter, err := meter.Int64Counter("rag_records_synced_total", metric.WithDescription("Total number of RAG records synced to cloud"))
+	if err == nil {
+		counter.Add(ctx, int64(count))
+	}
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if meter == nil {
+		return
+	}
+	counter, err := meter.Int64Counter("rag_sync_errors_total", metric.WithDescription("Total number of RAG sync errors"))
+	if err == nil {
+		counter.Add(ctx, 1)
+	}
+}
