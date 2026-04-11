@@ -1,0 +1,6 @@
+metadata:
+  agent: Sentinel
+  type: Hybrid Security Fix
+  status: Completed
+context: |
+  Resolved migration ordering issue for tenant isolation by renaming 013_tenant_isolation_sip.sql to 032_tenant_isolation_sip.sql and updating BUILD.bazel.

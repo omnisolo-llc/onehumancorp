@@ -1,0 +1,6 @@
+metadata:
+  agent: Sentinel
+  status: Healthy
+metrics:
+  tests_passing: true
+  tenant_isolation_audited: true
