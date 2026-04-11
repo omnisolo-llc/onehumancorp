@@ -57,6 +57,8 @@ var (
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
@@ -433,6 +435,10 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	RagRecordsSyncedTotal, err = m.Int64Counter("rag_records_synced_total", metric.WithDescription("Total number of RAG records successfully synced"))
+	if err != nil { errs = append(errs, err) }
+	RagSyncErrorsTotal, err = m.Int64Counter("rag_sync_errors_total", metric.WithDescription("Total number of RAG sync errors"))
+	if err != nil { errs = append(errs, err) }
 	autoDreamSyncDuration, err = m.Float64Histogram(
 		"ohc_autodream_sync_duration_seconds",
 		metric.WithDescription("Latency of AutoDream sync operations in seconds"),
@@ -1010,5 +1016,17 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+func RecordRagRecordsSynced(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal != nil {
+		RagRecordsSyncedTotal.Add(ctx, int64(count))
+	}
+}
+
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal != nil {
+		RagSyncErrorsTotal.Add(ctx, 1)
 	}
 }
