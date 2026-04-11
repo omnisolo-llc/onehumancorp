@@ -17,8 +17,8 @@ go_library(
 go_test(
     name = "hub_test",
     srcs = [
-        "rag_sync_test.go",
         "rag_sync_impl_test.go",
+        "rag_sync_test.go",
     ],
     embed = [":hub"],
     deps = [
