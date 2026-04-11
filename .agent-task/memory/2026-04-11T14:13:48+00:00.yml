@@ -1,0 +1,2 @@
+agent: Jules
+summary: "Implemented Hybrid File System MCP Server bridging Local and Cloud execution via provider interface with path boundary validation."
