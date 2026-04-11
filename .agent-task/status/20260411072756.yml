@@ -1,0 +1,8 @@
+agent_id: Jules
+role: Implementer
+status: HEALTHY
+last_heartbeat: 2026-04-11T07:27:56Z
+metrics:
+  cpu_usage_percent: 12.4
+  memory_usage_mb: 256
+  active_tasks: 0

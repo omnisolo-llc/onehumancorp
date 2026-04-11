@@ -1,18 +1,23 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Create Database Migration:**
+   - Create `srcs/server/db/migrations/032_add_hybrid_sync_metadata.sql`.
+   - Add `sync_status VARCHAR(50) DEFAULT 'pending'` and `last_sync_at TIMESTAMPTZ` to the `swarm_memory_embeddings` table.
+
+2. **Update db BUILD.bazel:**
+   - Add `migrations/032_add_hybrid_sync_metadata.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
+
+3. **Create Go Interface for Syncing:**
+   - Create `srcs/server/hub/rag_sync.go` with the interfaces and structs mentioned in the prompt (and metrics!).
+   - Note: The prompt tells us to define `[]float32` as a `[]byte` based on the ground rule: "When defining Go structs that interface with the swarm_memory_embeddings table for RAG features, map the vector_embedding field to []byte to match the underlying database schema's BYTEA (PostgreSQL) or BLOB (SQLite) column types, rather than []float32." Thus, `RAGSyncRecord` will use `[]byte` for the vector instead of `[]float32`.
+
+4. **Update hub BUILD.bazel:**
+   - Create `srcs/server/hub/BUILD.bazel` to expose the package. Wait, I should verify what's currently in `hub`, it didn't exist, I'll need to create the BUILD.bazel file. Or, wait, we need to add `hub` as a dependency in `srcs/server/BUILD.bazel`.
+
+5. **Create tests:**
+   - Create `srcs/server/hub/rag_sync_test.go` to verify the logic/mocks.
+
+6. **Run checks:**
+   - Run `bazelisk test //...`.
+
+7. Complete pre commit steps to ensure proper testing, verification, review, and reflection are done.
+
+8. Submit changes via PR.
