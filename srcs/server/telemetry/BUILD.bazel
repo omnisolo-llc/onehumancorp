@@ -2,11 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "telemetry",
-    srcs = [
-        "minimax_metrics.go",
-        "sync_worker.go",
-        "telemetry.go",
-    ],
+    srcs = ["minimax_metrics.go", "telemetry.go", "sync_worker.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [
@@ -22,12 +18,7 @@ go_library(
 
 go_test(
     name = "telemetry_test",
-    srcs = [
-        "buffer_test.go",
-        "sync_worker_test.go",
-        "telemetry_extra_test.go",
-        "telemetry_test.go",
-    ],
+    srcs = ["telemetry_test.go", "sync_worker_test.go", "telemetry_extra_test.go", "buffer_test.go"],
     embed = [":telemetry"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
