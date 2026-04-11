@@ -17,6 +17,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
+	_hub "github.com/onehumancorp/mono/srcs/server/hub"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -303,8 +304,18 @@ func run(now time.Time, listen listenFunc) error {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
 
+
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
+
+			// Start Hybrid RAG Sync Daemon
+			if pool != nil {
+				ragSyncSvc := _hub.NewRAGSyncService(pool.Provider)
+				ragSyncDaemon := _hub.NewSyncDaemon(ragSyncSvc, 1*time.Minute)
+				go ragSyncDaemon.Start(ctx)
+				slog.Info("started hybrid rag sync daemon")
+			}
+
 
 			// Setup AutoDreamSyncEngine
 			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")

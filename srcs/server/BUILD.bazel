@@ -11,6 +11,7 @@ go_library(
         "//srcs/server/dashboard",
         "//srcs/server/db",
         "//srcs/server/domain",
+        "//srcs/server/hub",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
         "//srcs/server/pipeline",
@@ -18,8 +19,8 @@ go_library(
         "//srcs/server/settings",
         "//srcs/server/sync",
         "//srcs/server/telemetry",
-        "@org_golang_google_grpc//:grpc",
         "@com_github_redis_rueidis//:rueidis",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
 

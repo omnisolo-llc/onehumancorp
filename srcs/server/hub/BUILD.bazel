@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hub",
+    srcs = [
+        "rag_sync.go",
+        "rag_sync_worker.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/hub",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/telemetry",
+    ],
+)
+
+go_test(
+    name = "hub_test",
+    srcs = [
+        "rag_sync_test.go",
+        "rag_sync_worker_test.go",
+    ],
+    embed = [":hub"],
+    deps = [
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
