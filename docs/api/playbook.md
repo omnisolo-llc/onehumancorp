@@ -1,5 +1,17 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
+<style>
+.glass-panel {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+</style>
+
+
 # OHC API Playbook: Interactive Reference
 
 **Version:** 1.0.0
@@ -21,6 +33,8 @@ curl -X GET https://api.ohc.local/v1/agents/status \
 
 ## 3. Core Endpoints
 
+<div class="glass-panel" markdown="1">
+
 ### 3.1 Organization Provisioning
 
 **Endpoint:** `POST /api/orgs/register`
@@ -34,6 +48,10 @@ Provisions a new organization in multi-tenant mode.
   "domain": "acme.com"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 3.2 Agent Management & Hiring
 
@@ -42,6 +60,10 @@ Retrieves a list of active agents within the current tenant scope.
 
 **Endpoint:** `POST /api/agents/hire`
 Requests a new agent capability. This triggers dynamic tool registration via MCP.
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 3.3 Task Delegation
 
@@ -65,6 +87,10 @@ Delegate a subtask to an autonomous agent. The Hub handles provisioning and VRAM
   "assigned_agent": "agent_swe_004"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 3.4 Dynamic Scaling
 
@@ -78,6 +104,10 @@ Adjust the number of concurrent agents for a specific role in real-time.
   "count": 5
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 3.5 Hybrid RAG Sync
 
@@ -99,8 +129,12 @@ Synchronize local SQLite context to the cloud Postgres orchestration engine.
   ]
 }
 ```
+</div>
+
 
 ## 4. Teammate Mesh, AutoDream & Webhooks
+
+<div class="glass-panel" markdown="1">
 
 ### Centrifuge Realtime Sync
 Channels:
@@ -108,6 +142,10 @@ Channels:
 - `mesh:coordination`: Agents announce their presence, request locks, and share immediate findings.
 - `mesh:ultraplan:<plan_id>`: Deliberation cycle realtime updates.
 - `meeting:<meeting_id>`: Transcript sync.
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### AutoDream Data Pipelines (pgvector)
 The API supports AutoDream pipelines where the backend background workers process `.agent-task/memory/*.yml` files.
@@ -126,6 +164,10 @@ Allows agents to publish messages to the mesh.
   }
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### SSE Stream
 Real-time state changes are pushed via Server-Sent Events (SSE).
@@ -137,6 +179,10 @@ Events emitted:
 - `AgentFired`
 - `TaskCompleted`
 - `QuotaExhausted`
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.3 KAIROS Orchestration APIs
 Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines.
@@ -177,6 +223,10 @@ Trigger the AutoDream vector pipeline to process shared memory and generate new 
   "pipeline_id": "dream_001"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.4 KAIROS Sub-Agent Queue API
 
@@ -201,6 +251,10 @@ Enqueues a sub-agent task into the highly available distributed queue (backed by
   "status": "ENQUEUED"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
@@ -219,6 +273,10 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
   }
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.6 AutoDream Vector Embedding Workflow
 ```mermaid
@@ -304,7 +362,10 @@ graph TD
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
 ```
+</div>
 
+
+<div class="glass-panel" markdown="1">
 
 ### 4.8 KAIROS Shared Task List API
 
@@ -361,6 +422,8 @@ sequenceDiagram
         Agent->>DB: ROLLBACK
     end
 ```
+</div>
+
 
 ## 5. Visualizing the Flow
 ```mermaid
