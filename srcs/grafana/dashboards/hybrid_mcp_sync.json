@@ -1,0 +1,23 @@
+{
+  "title": "Hybrid MCP Sync Monitoring",
+  "panels": [
+	{
+	  "title": "Records Synced",
+	  "type": "stat",
+	  "targets": [
+		{
+		  "expr": "sum(rate(rag_records_synced_total[5m]))"
+		}
+	  ]
+	},
+	{
+	  "title": "Sync Errors",
+	  "type": "stat",
+	  "targets": [
+		{
+		  "expr": "sum(rate(rag_sync_errors_total[5m]))"
+		}
+	  ]
+	}
+  ]
+}
