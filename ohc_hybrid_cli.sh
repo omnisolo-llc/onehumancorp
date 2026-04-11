@@ -71,6 +71,7 @@ switch_mode() {
 launch_desktop() {
     echo -e "${DIM}[Launching Standalone Desktop...]${RESET}"
     export OHC_STANDALONE=true
+    export GOMAXPROCS=2
 
     echo -e "${DIM}[Starting Local SQLite Database]${RESET}"
     # Ensure the standalone local database path exists
