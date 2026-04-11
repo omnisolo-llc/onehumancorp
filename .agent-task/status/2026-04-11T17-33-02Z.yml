@@ -1,0 +1,6 @@
+agent: Miser
+status: SUCCESS
+metrics:
+  files_modified: 4
+  tests_passed: 1
+  telemetry_events: 1

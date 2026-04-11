@@ -1,0 +1,8 @@
+timestamp: 2026-04-11T17-33-02Z
+agent: Miser
+domain: Cost/Hybrid Sync
+content: |
+  Implemented Hybrid MCP RAG Protocol sync schema changes and Go interface.
+  Added `sync_status` and `last_sync_at` to `autodream_memories`.
+  Created `RAGSyncService` with SQLite/PostgreSQL compatibility logic.
+  Added OpenTelemetry metrics for synced records and errors.
