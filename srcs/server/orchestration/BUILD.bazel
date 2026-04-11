@@ -7,7 +7,7 @@ go_library(
     srcs = [
         "auth_interceptor.go",
         "autodream.go",
-        "autodream_worker.go",
+        "autodream_pipeline.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",
         "delegation.go",
@@ -60,7 +60,7 @@ go_test(
     srcs = [
         "auth_interceptor_test.go",
         "autodream_test.go",
-        "autodream_worker_test.go",
+        "autodream_pipeline_test.go",
         "benchmark_test.go",
         "cached_minimax_client_test.go",
         "centrifuge_hub_test.go",
@@ -82,6 +82,8 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_gorilla_websocket//:websocket",
         "//srcs/proto:hub_go_proto",

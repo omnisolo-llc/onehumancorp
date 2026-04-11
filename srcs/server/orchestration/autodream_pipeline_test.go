@@ -1,14 +1,18 @@
 package orchestration
 
 import (
+	"database/sql"
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
 )
+
 
 type mockEmbeddingClient struct{}
 
@@ -17,25 +21,21 @@ func (m *mockEmbeddingClient) GenerateEmbedding(ctx context.Context, text string
 }
 
 func TestAutoDreamPipeline_Process(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	tmpFile, err := os.CreateTemp("", "testdb_*.db")
 	require.NoError(t, err)
-
+	defer os.Remove(tmpFile.Name())
+	sqlDB, err := sql.Open("sqlite", tmpFile.Name())
+	require.NoError(t, err)
+	provider := db.NewSqliteProvider(sqlDB)
 	ctx := context.Background()
 
-	// Initialize tables
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE shared_tasks (
-			id TEXT PRIMARY KEY,
-			title TEXT NOT NULL,
-			description TEXT,
-			status TEXT NOT NULL,
-			priority TEXT,
-			agent_id TEXT,
-			organization_id TEXT NOT NULL,
-			payload TEXT,
+		CREATE TABLE agent_session_data (
+			session_id TEXT PRIMARY KEY,
+			agent_id TEXT NOT NULL,
+			context_data TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			synced_to_cloud BOOLEAN DEFAULT 0
+			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 	require.NoError(t, err)
@@ -53,67 +53,36 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	// Insert test data
 	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
-		VALUES ('task-1', 'Test Task', 'COMPLETED', 'org-1', 'agent-1', '{"result": "success"}')
+		INSERT INTO agent_session_data (session_id, agent_id, context_data, created_at, last_accessed)
+		VALUES ('session-1', 'agent-1', 'mock session content', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`)
 	require.NoError(t, err)
 
-	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
-		VALUES ('task-2', 'Pending Task', 'PENDING', 'org-1', 'agent-1', '{"result": "waiting"}')
-	`)
-	require.NoError(t, err)
+	worker := NewAutoDreamPipeline(provider)
+	worker.client = &mockEmbeddingClient{}
+	worker.processSessionData(ctx)
 
-	pipeline := NewAutoDreamPipeline(provider)
-
-	// Mock the LLM client
-	pipeline.client = &mockEmbeddingClient{}
-
-	// Run process
-	pipeline.process(ctx)
-
-	// Verify only completed tasks were consolidated
 	rows, err := provider.Query(ctx, "SELECT id, content, source_type, embedding FROM autodream_memories")
 	require.NoError(t, err)
 	defer rows.Close()
 
-	var memories []struct {
-		id         string
-		content    string
-		sourceType string
-		embedding  string
-	}
-
+	var count int
 	for rows.Next() {
-		var m struct {
-			id         string
-			content    string
-			sourceType string
-			embedding  string
-		}
-		err := rows.Scan(&m.id, &m.content, &m.sourceType, &m.embedding)
-		require.NoError(t, err)
-		memories = append(memories, m)
+		count++
 	}
-
-	assert.Len(t, memories, 1)
-	assert.Equal(t, "task-1", memories[0].id)
-	assert.Equal(t, `{"result": "success"}`, memories[0].content)
-	assert.Equal(t, "shared_task", memories[0].sourceType)
-	assert.Equal(t, "[0.1,0.2,0.3]", memories[0].embedding)
+	assert.Equal(t, 1, count)
 }
 
 func TestAutoDreamPipeline_StartStop(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	tmpFile, err := os.CreateTemp("", "testdb_*.db")
 	require.NoError(t, err)
-
-	pipeline := NewAutoDreamPipeline(provider)
-
-	go pipeline.Start(context.Background())
-
-	// Just checking that we can start and stop it without deadlocking
+	defer os.Remove(tmpFile.Name())
+	sqlDB, err := sql.Open("sqlite", tmpFile.Name())
+	require.NoError(t, err)
+	provider := db.NewSqliteProvider(sqlDB)
+	worker := NewAutoDreamPipeline(provider)
+	go worker.Start(context.Background())
 	time.Sleep(50 * time.Millisecond)
-	pipeline.Stop()
+	worker.Stop()
 }

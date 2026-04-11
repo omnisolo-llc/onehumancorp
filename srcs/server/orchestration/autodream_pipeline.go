@@ -3,27 +3,26 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"gopkg.in/yaml.v3"
 )
 
-// EmbeddingClient interface for dependency injection and testing
 type EmbeddingClient interface {
 	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
 }
 
-// AutoDreamPipeline is the daemon process for long-term memory consolidation
 type AutoDreamPipeline struct {
 	db     db.Provider
 	client EmbeddingClient
 	done   chan struct{}
 }
 
-// NewAutoDreamPipeline creates a new pipeline instance
 func NewAutoDreamPipeline(provider db.Provider) *AutoDreamPipeline {
 	var client EmbeddingClient
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
@@ -38,129 +37,172 @@ func NewAutoDreamPipeline(provider db.Provider) *AutoDreamPipeline {
 	}
 }
 
-// Start begins the background pipeline process
-func (p *AutoDreamPipeline) Start(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute) // run periodically
+func (w *AutoDreamPipeline) Start(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			p.Stop()
+			w.Stop()
 			return
-		case <-p.done:
+		case <-w.done:
 			return
 		case <-ticker.C:
-			p.process(context.Background())
+			w.process(context.Background())
 		}
 	}
 }
 
-// Stop halts the pipeline
-func (p *AutoDreamPipeline) Stop() {
-	close(p.done)
+func (w *AutoDreamPipeline) Stop() {
+	close(w.done)
 }
 
-// process performs a sweep to consolidate ephemeral memories
-func (p *AutoDreamPipeline) process(ctx context.Context) {
-	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
+func (w *AutoDreamPipeline) process(ctx context.Context) {
+	w.processSessionData(ctx)
+	w.processMemoryFiles(ctx)
+}
 
-	// Limit to process batches and prevent unbound queue growth
+func (w *AutoDreamPipeline) processSessionData(ctx context.Context) {
 	limit := 500
-
-	// 1. Fetch recently completed shared_tasks
 	var query string
 	var args []interface{}
 
-	if p.db.IsSQLite() {
-		// SQLite degradation mode
-		query = `
-			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks
-			WHERE status = 'COMPLETED'
-			ORDER BY updated_at DESC LIMIT ?
-		`
+	if w.db.IsSQLite() {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data LIMIT ?"
 		args = append(args, limit)
 	} else {
-		// Postgres mode using SKIP LOCKED for concurrent worker safety
-		query = `
-			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks
-			WHERE status = 'COMPLETED'
-			ORDER BY updated_at DESC LIMIT $1 FOR UPDATE SKIP LOCKED
-		`
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data LIMIT $1 FOR UPDATE SKIP LOCKED"
 		args = append(args, limit)
 	}
 
-	rows, err := p.db.Query(ctx, query, args...)
+	rows, err := w.db.Query(ctx, query, args...)
 	if err != nil {
-		slog.Error("AutoDreamPipeline: failed to query shared_tasks", "error", err)
+		slog.Error("AutoDreamPipeline: failed to query agent_session_data", "error", err)
 		return
 	}
 	defer rows.Close()
 
-	type taskMem struct {
+	type sessionData struct {
 		id      string
-		orgID   string
 		agentID string
-		payload string
+		context string
 	}
-
-	var memories []taskMem
+	var items []sessionData
 	for rows.Next() {
-		var m taskMem
-		if err := rows.Scan(&m.id, &m.orgID, &m.agentID, &m.payload); err == nil {
-			memories = append(memories, m)
+		var item sessionData
+		if err := rows.Scan(&item.id, &item.agentID, &item.context); err == nil {
+			items = append(items, item)
 		}
 	}
 	rows.Close()
 
-	if len(memories) == 0 {
-		return // nothing to process
-	}
-
-	for _, m := range memories {
+	for _, item := range items {
 		embeddingStr := "[0.0, 0.0, 0.0]"
-
-		if p.client != nil {
+		if w.client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, err := p.client.GenerateEmbedding(ctxTimeout, m.payload)
+			resp, err := w.client.GenerateEmbedding(ctxTimeout, item.context)
 			cancel()
 			if err == nil && len(resp) > 0 {
 				if bytes, err := json.Marshal(resp); err == nil {
 					embeddingStr = string(bytes)
 				}
-			} else if err != nil {
-				slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
 			}
 		}
 
-		// 2. Load into autodream_memories
 		var insertQuery string
 		var insertArgs []interface{}
 
-		if p.db.IsSQLite() {
+		memID := uuid.New().String()
+		if w.db.IsSQLite() {
 			insertQuery = `
 				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES (?, ?, ?, ?, ?, 'shared_task', CURRENT_TIMESTAMP)
+				VALUES (?, 'default', ?, ?, ?, 'agent_session_data', CURRENT_TIMESTAMP)
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
+			insertArgs = []interface{}{memID, item.agentID, item.context, embeddingStr}
 		} else {
 			insertQuery = `
 				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES ($1, $2, $3, $4, $5::vector, 'shared_task', NOW())
+				VALUES ($1, 'default', $2, $3, $4::vector, 'agent_session_data', NOW())
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
+			insertArgs = []interface{}{memID, item.agentID, item.context, embeddingStr}
 		}
 
-		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
-			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", m.id, "error", err)
-		} else {
-			slog.Debug("AutoDreamPipeline: consolidated memory", "id", m.id)
+		if _, err := w.db.Exec(ctx, insertQuery, insertArgs...); err == nil {
+			if w.db.IsSQLite() {
+				w.db.Exec(ctx, "DELETE FROM agent_session_data WHERE session_id = ?", item.id)
+			} else {
+				w.db.Exec(ctx, "DELETE FROM agent_session_data WHERE session_id = $1", item.id)
+			}
 		}
 	}
+}
 
-	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(memories))
+func (w *AutoDreamPipeline) processMemoryFiles(ctx context.Context) {
+	matches, err := filepath.Glob(".agent-task/memory/*.yml")
+	if err != nil || len(matches) == 0 {
+		return
+	}
+
+	limit := 500
+	if len(matches) > limit {
+		matches = matches[:limit]
+	}
+
+	for _, file := range matches {
+		data, err := os.ReadFile(file)
+		if err != nil { continue }
+
+		type MemoryFile struct {
+			AgentSessionData string `yaml:"agent_session_data"`
+			Content          string `yaml:"content"`
+		}
+		var memFile MemoryFile
+		if err := yaml.Unmarshal(data, &memFile); err != nil { continue }
+
+		contentToEmbed := memFile.AgentSessionData
+		if contentToEmbed == "" { contentToEmbed = memFile.Content }
+		if contentToEmbed == "" {
+			os.Remove(file)
+			continue
+		}
+
+		embeddingStr := "[0.0, 0.0, 0.0]"
+		if w.client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, err := w.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			cancel()
+			if err == nil && len(resp) > 0 {
+				if bytes, err := json.Marshal(resp); err == nil {
+					embeddingStr = string(bytes)
+				}
+			}
+		}
+
+		var insertQuery string
+		var insertArgs []interface{}
+
+		memID := uuid.New().String()
+		if w.db.IsSQLite() {
+			insertQuery = `
+				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				VALUES (?, 'default', 'system', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
+				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
+			`
+			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
+		} else {
+			insertQuery = `
+				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				VALUES ($1, 'default', 'system', $2, $3::vector, 'memory_file', NOW())
+				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+			`
+			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
+		}
+
+		if _, err := w.db.Exec(ctx, insertQuery, insertArgs...); err == nil {
+			os.Remove(file)
+		}
+	}
 }
