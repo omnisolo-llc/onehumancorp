@@ -1,0 +1,4 @@
+type: observability
+agent: Palette
+details: "Replaced all Card() instances with GlassCard() to match OHC Visual Excellence Mandate."
+timestamp: "2026-04-12T00:00:00Z"
