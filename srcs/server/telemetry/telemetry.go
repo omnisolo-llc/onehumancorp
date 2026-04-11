@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"go.opentelemetry.io/otel/metric/noop"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -164,6 +165,20 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+	RagRecordsSyncedCounter, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced successfully"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	RagSyncErrorsCounter, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -715,6 +730,19 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 }
 
 // Global buffer function pointer to inject dependency without circular imports.
+
+var (
+    RagRecordsSyncedCounter metric.Int64Counter
+    RagSyncErrorsCounter    metric.Int64Counter
+)
+
+// Dummy initialization for tests
+func init() {
+    meter := noop.NewMeterProvider().Meter("test")
+    RagRecordsSyncedCounter, _ = meter.Int64Counter("rag_records_synced_total")
+    RagSyncErrorsCounter, _ = meter.Int64Counter("rag_sync_errors_total")
+}
+
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
@@ -1011,4 +1039,19 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+
+// RecordRagRecordsSynced increments the counter when a RAG record is synced successfully.
+func RecordRagRecordsSynced(ctx context.Context) {
+    if RagRecordsSyncedCounter != nil {
+        RagRecordsSyncedCounter.Add(ctx, 1)
+    }
+}
+
+// RecordRagSyncError increments the counter when a RAG sync error occurs.
+func RecordRagSyncError(ctx context.Context) {
+    if RagSyncErrorsCounter != nil {
+        RagSyncErrorsCounter.Add(ctx, 1)
+    }
 }
