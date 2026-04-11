@@ -188,3 +188,49 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// TeamReferralAnalyticsResponse represents the computed K-factor for team-based growth.
+type TeamReferralAnalyticsResponse struct {
+	TotalTeamReferrals   int     `json:"totalTeamReferrals"`
+	TotalTeamConversions int     `json:"totalTeamConversions"`
+	UniqueTeamInviters   int     `json:"uniqueTeamInviters"`
+	TeamKFactor          float64 `json:"teamKFactor"`
+}
+
+func (s *Server) handleTeamReferralAnalytics(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	refs := append([]Referral(nil), s.referrals...)
+	s.mu.RUnlock()
+
+	var totalConversions int
+	var totalReferrals int
+	inviters := make(map[string]bool)
+
+	for _, ref := range refs {
+		// Filter for team referrals
+		if len(ref.ReferralCode) >= 5 && ref.ReferralCode[:5] == "TEAM-" {
+			totalReferrals++
+			totalConversions += ref.Conversions
+			inviters[ref.UserID] = true
+		}
+	}
+
+	uniqueInviters := len(inviters)
+	kFactor := 0.0
+	if uniqueInviters > 0 {
+		kFactor = float64(totalConversions) / float64(uniqueInviters)
+	}
+
+	res := TeamReferralAnalyticsResponse{
+		TotalTeamReferrals:   totalReferrals,
+		TotalTeamConversions: totalConversions,
+		UniqueTeamInviters:   uniqueInviters,
+		TeamKFactor:          kFactor,
+	}
+	writeJSON(w, res)
+}
