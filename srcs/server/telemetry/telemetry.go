@@ -463,6 +463,10 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+	err = initRagMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
 	if len(errs) > 0 {
 		return errs[0]
@@ -1010,5 +1014,47 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+var (
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal    metric.Int64Counter
+)
+
+func initRagMetrics(m mockableMeter) error {
+	var err error
+	var errs []error
+	ragRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	return nil
+}
+
+func RecordRagRecordsSynced(ctx context.Context, count int) {
+	if ragRecordsSyncedTotal != nil {
+		ragRecordsSyncedTotal.Add(ctx, int64(count))
+	}
+}
+
+func RecordRagSyncError(ctx context.Context) {
+	if ragSyncErrorsTotal != nil {
+		ragSyncErrorsTotal.Add(ctx, 1)
 	}
 }
