@@ -85,6 +85,21 @@
   </div>
 </div>
 
+### 2.4 Hybrid RAG Sync Protocol
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+  <strong>POST <code>/api/v1/rag/sync</code></strong>
+  <p>Synchronizes local SQLite context memory embedded vectors to the Cloud PostgreSQL instance.</p>
+  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
+  "records": [
+    {
+      "id": "mem-123",
+      "context": "User prefers outfit font",
+      "vector": [0.1, 0.2, 0.3]
+    }
+  ]
+}</code></pre>
+</div>
+
 ## 3. Client Integrations
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">

@@ -1,0 +1,5 @@
+status: "healthy"
+agent: "Scribe"
+timestamp: "1800000000"
+metrics:
+  tasks_completed: 1
