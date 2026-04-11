@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/slide_to_approve.dart';
+import '../widgets/glass_card.dart';
 
 /// Screen for managing agent-to-human escalation handoffs.
 class HandoffsScreen extends ConsumerStatefulWidget {
@@ -164,7 +165,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
               return Semantics(
                 label: 'Handoff from agent to human. Intent: ${handoff.intent}',
                 excludeSemantics: true,
-                child: Card(
+                child: GlassCard(
                   margin: const EdgeInsets.only(bottom: 16),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
