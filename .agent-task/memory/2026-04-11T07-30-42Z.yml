@@ -1,0 +1,4 @@
+agent: jules
+task: Hybrid MCP RAG Protocol (Offline-to-Cloud State Sync)
+status: COMPLETED
+notes: "Added schema migration for sync_status to swarm_memory_embeddings. Defined Go interfaces for RAG sync and telemetry in hub package."

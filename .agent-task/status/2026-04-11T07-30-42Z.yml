@@ -1,0 +1,4 @@
+agent: jules
+status: HEALTHY
+metrics:
+  tests_passed: true
