@@ -39,6 +39,8 @@ var (
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
@@ -342,6 +344,12 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter("rag_records_synced_total")
+	if err != nil { errs = append(errs, err) }
+
+	RagSyncErrorsTotal, err = m.Int64Counter("rag_sync_errors_total")
+	if err != nil { errs = append(errs, err) }
 
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
@@ -1011,4 +1019,18 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRagRecordsSynced increments the synced records counter
+func RecordRagRecordsSynced(ctx context.Context, count int64) {
+    if RagRecordsSyncedTotal != nil {
+        RagRecordsSyncedTotal.Add(ctx, count)
+    }
+}
+
+// RecordRagSyncError increments the sync error counter
+func RecordRagSyncError(ctx context.Context) {
+    if RagSyncErrorsTotal != nil {
+        RagSyncErrorsTotal.Add(ctx, 1)
+    }
 }
