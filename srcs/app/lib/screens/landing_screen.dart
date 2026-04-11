@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
@@ -213,17 +214,12 @@ class _GlassCard extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 350),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              borderRadius: BorderRadius.circular(16),
-            ),
+      child: GlassCard(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
+          ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -244,7 +240,6 @@ class _GlassCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }
