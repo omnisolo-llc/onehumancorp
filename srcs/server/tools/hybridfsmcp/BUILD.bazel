@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybridfsmcp",
+    srcs = [
+        "cloud_fs_provider.go",
+        "fs_provider.go",
+        "hybrid_server.go",
+        "local_fs_provider.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp",
+    visibility = ["//visibility:public"],
+    deps = ["//srcs/server/auth"],
+)
+
+go_test(
+    name = "hybridfsmcp_test",
+    srcs = ["fs_provider_test.go"],
+    embed = [":hybridfsmcp"],
+    deps = ["//srcs/server/auth"],
+)
