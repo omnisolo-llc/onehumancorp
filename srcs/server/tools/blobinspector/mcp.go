@@ -89,15 +89,20 @@ func (m *BlobInspectorMCP) resolveKey(claims *auth.Claims, key string) string {
 	}
 
 	// Cloud mode enforces tenant isolation
-	cleanKey := filepath.Clean("/" + key)
-	cleanKey = strings.TrimPrefix(cleanKey, "/")
-
-	// Ensure we don't prepend if it already starts with it (which would be weird, but defensive)
-	if strings.HasPrefix(cleanKey, claims.OrganizationID+"/") {
-		return cleanKey
+	// Handle keys that might already start with orgID
+	if strings.HasPrefix(key, claims.OrganizationID+"/") {
+		key = strings.TrimPrefix(key, claims.OrganizationID+"/")
 	}
 
-	return fmt.Sprintf("%s/%s", claims.OrganizationID, cleanKey)
+	tenantBase := claims.OrganizationID
+	fullPath := filepath.Clean(filepath.Join(tenantBase, key))
+
+	if fullPath == tenantBase || !strings.HasPrefix(fullPath, tenantBase+"/") {
+		// Prevent path traversal out of the tenant's virtual root
+		return tenantBase + "/invalid-key"
+	}
+
+	return fullPath
 }
 
 func (m *BlobInspectorMCP) listBlobs(ctx context.Context, claims *auth.Claims, prefix string) (interface{}, error) {
