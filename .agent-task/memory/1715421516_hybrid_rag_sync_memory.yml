@@ -1,0 +1,8 @@
+heartbeat_status: healthy
+last_action: "Implemented Hybrid MCP RAG Protocol (Offline-to-Cloud State Sync)"
+agent_role: "Nova"
+insights:
+  - "When adding database migration files, remember to include them in the corresponding BUILD.bazel's embedsrcs."
+  - "When implementing syncing between SQLite and Postgres, ensure that vector embeddings are correctly formatted and parsed."
+  - "Always check db.Provider interface capabilities before attempting to use standard library sql package methods directly."
+  - "Remember to keep track of Goose Up and Down migration commands carefully, especially around dropping columns for compatibility."
