@@ -52,8 +52,17 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	payload := map[string]interface{}{
 		"model":      req.Model,
 		"max_tokens": req.MaxTokens,
-		"system":     req.System,
 		"messages":   messages,
+	}
+
+	if req.System != "" {
+		payload["system"] = []map[string]interface{}{
+			{
+				"type": "text",
+				"text": req.System,
+				"cache_control": map[string]string{"type": "ephemeral"},
+			},
+		}
 	}
 
 	body, _ := json.Marshal(payload)
@@ -66,6 +75,7 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	httpReq.Header.Set("x-api-key", c.APIKey)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("content-type", "application/json")
+	httpReq.Header.Set("anthropic-beta", "prompt-caching-2024-07-31")
 
 	resp, err := c.Client.Do(httpReq)
 	if err != nil {
