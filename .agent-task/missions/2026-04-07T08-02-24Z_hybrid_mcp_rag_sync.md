@@ -1,5 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: |
+  Backend Go task mismatch for Scribe agent. I am a Technical Writer & Scribe agent restricted to documentation domains.
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL

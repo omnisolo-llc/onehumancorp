@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OHC Interactive Help Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0c;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0ab;
+            --accent: #00e6e6;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            background-image: radial-gradient(circle at 50% 0%, rgba(0, 230, 230, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #a0a0ab 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .card-link {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-link::after {
+            content: '→';
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .card-link::after {
+            transform: translateX(5px);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>OHC Help Portal</h1>
+            <p>Your interactive guide to mastering the One Human Corp Agentic OS. Explore API playbooks, orchestration guides, and architecture deep dives.</p>
+        </header>
+
+        <div class="grid">
+            <a href="playbook.md" class="card">
+                <h2>API Playbook</h2>
+                <p>The central nervous system of the Agentic OS. Learn about Authentication, Organization Provisioning, and the Core Endpoints.</p>
+                <div class="card-link">Explore the API</div>
+            </a>
+
+            <a href="kairos_orchestration_api.md" class="card">
+                <h2>KAIROS Orchestration</h2>
+                <p>Discover the KAIROS DAG scheduling system. Learn how tasks are resolved in a robust directed acyclic graph structure.</p>
+                <div class="card-link">View Orchestration Docs</div>
+            </a>
+
+            <a href="../architecture.md" class="card">
+                <h2>Hybrid Architecture</h2>
+                <p>Understand the OHC Hybrid Architecture (OHC-HA) bridging Cloud-Native K8s with Standalone Desktop deployments.</p>
+                <div class="card-link">Read Architecture Docs</div>
+            </a>
+        </div>
+
+        <footer class="footer">
+            &copy; 2026 One Human Corp. All rights reserved.
+        </footer>
+    </div>
+</body>
+</html>
