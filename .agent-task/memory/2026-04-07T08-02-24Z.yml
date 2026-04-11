@@ -1,0 +1,2 @@
+type: memory
+data: "Implemented the foundational schema changes and Go synchronization service interface for the Hybrid MCP RAG Protocol. A new SQL migration was created in 032_hybrid_sync_metadata.sql and a RAGSyncService was implemented in srcs/server/hub/rag_sync.go. OpenTelemetry metrics for rag records synced and sync errors were also added."
