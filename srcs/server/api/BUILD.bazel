@@ -3,12 +3,14 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "api",
     srcs = [
-        "sync_handler.go",
+        "rag_sync_handler.go",
         "sync_escalation_handler.go",
+        "sync_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/hub",
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/orchestration/queue",
