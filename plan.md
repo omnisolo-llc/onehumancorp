@@ -1,18 +1,13 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Implement Database Migration:**
+   - Create `srcs/server/db/migrations/032_hybrid_sync_metadata.sql` to add `sync_status` and `last_sync_at` columns. Ensure separate ALTER TABLE statements are used as per SQLite compatibility requirements.
+2. **Implement Go Interface:**
+   - Create `srcs/server/hub/rag_sync.go` with the required `SyncStatus`, `RAGSyncRecord`, and `RAGSyncService` interfaces based on the prompt's specifications.
+3. **Add Telemetry:**
+   - Create `srcs/server/telemetry/rag_sync_metrics.go` setting up `ragRecordsSyncedTotal` and `ragSyncErrorsTotal` using OpenTelemetry.
+   - Update `srcs/server/telemetry/telemetry.go` to invoke metric initialization for the sync logic in `InitWithMeter`.
+4. **Unit Tests:**
+   - Add tests for interface functionality in `srcs/server/hub/rag_sync_test.go` and for telemetry in `srcs/server/telemetry/telemetry_extra_test.go`.
+5. **Update Mission File:**
+   - Implement append-only semantic update on `.agent-task/missions/2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md` switching `status: PENDING` to `status: DONE` and recording agent details.
+6. **Pre-commit and Submit:**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
