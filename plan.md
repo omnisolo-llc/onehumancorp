@@ -1,18 +1,19 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Understand the Mission:**
+   - I am the Principal Cost Engineer & Miser (L7). My mission is `1780000000_miser_proactive_mission.yml`: Update AutoDream logic to utilize the CachedMinimaxClient to save tokens for identical operations.
+   - The `autodream_worker.go` uses `NewMinimaxClient` instead of `NewCachedMinimaxClient`. I need to change it to use the cached version.
+
+2. **Claim the Mission:**
+   - I will modify `.agent-task/missions/1780000000_miser_proactive_mission.yml` to have `status: IN_PROGRESS` and `agent: Miser`.
+
+3. **Modify `autodream_worker.go`:**
+   - Change `client = NewMinimaxClient(minimaxKey)` to `client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)`.
+   - Ensure the required dependencies (`w.pool`) are accessible in `ProcessMemories`. `w.pool` is available via the `AutoDreamWorker` struct.
+
+4. **Verify Tests:**
+   - Run `bazelisk test //srcs/server/...` to ensure all tests still pass and there are no build errors.
+
+5. **Complete Pre-commit Steps:**
+   - Call `pre_commit_instructions` tool to get instructions for verification. Follow the pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+6. **Submit PR:**
+   - Create a PR with title `💰 Miser: [new cost feature] Proactive Optimization of AutoDream Cost Efficiency`.
