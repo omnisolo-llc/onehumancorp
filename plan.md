@@ -1,18 +1,19 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Update .agent-task/missions/2026-04-07T08-02-24Z.md:** Set `status: IN_PROGRESS` and `agent: Jules`.
+2. **Database Migration (`srcs/server/db/migrations/032_add_hybrid_sync_metadata.sql`):**
+   - Add `sync_status VARCHAR(50) DEFAULT 'pending'` and `last_sync_at TIMESTAMP NULL` to `swarm_memory_embeddings` (acting as the RAG memory context table). Use `ALTER TABLE ADD COLUMN` for broad compatibility without `IF NOT EXISTS` for SQLite compat.
+   - Update `srcs/server/db/BUILD.bazel` to include this migration file in the `embedsrcs`.
+3. **Go Interface Definition (`srcs/server/hub/rag_sync.go`):**
+   - Define `SyncStatus` constants (`pending`, `synced`, `error`).
+   - Define `RAGSyncRecord` struct with `ID`, `Context`, `Vector []byte`, `SyncStatus`, and `LastSyncAt`.
+   - Define `RAGSyncService` interface with `FetchPendingSyncs`, `MarkSynced`, and `ProcessIncomingSync`.
+   - Add OpenTelemetry metrics `rag_records_synced_total` and `rag_sync_errors_total` initialized during setup using injected `meter`.
+   - Implement the `RAGSyncService` using an injected `db.Provider` so it supports SQLite and PostgreSQL. Handle conflict resolution logic (UPSERT for postgres).
+4. **Unit Tests (`srcs/server/hub/rag_sync_test.go`):**
+   - Create tests using an SQLite in-memory DB or mocked interface to verify `FetchPendingSyncs`, `MarkSynced`, and `ProcessIncomingSync`.
+   - Test metrics initialization without panics.
+5. **Run tests & Complete Pre-commit Steps:**
+   - Execute `bazelisk test //...`.
+   - Call `pre_commit_instructions` and complete pre-commit checks to ensure proper testing, verification, review, and reflection are done.
+6. **Finalize:**
+   - Mark the mission as `status: DONE`.
+   - Submit the changes using a descriptive PR.
