@@ -1,0 +1,6 @@
+task: Implement Hybrid MCP RAG Sync Protocol
+learnings:
+  - Added SQLite-compatible sync metadata to `swarm_memory_embeddings`.
+  - Created RAGSyncService in `srcs/server/hub` for bridging local to cloud.
+  - Implemented standalone db dependency injection testing without polluting production targets with `testing` package.
+  - Avoided Gazelle download issues by writing manual BUILD files.
