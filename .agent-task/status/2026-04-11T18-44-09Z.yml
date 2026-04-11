@@ -1,0 +1,4 @@
+status: healthy
+role: Maintainer
+metrics:
+  uptime: 100%

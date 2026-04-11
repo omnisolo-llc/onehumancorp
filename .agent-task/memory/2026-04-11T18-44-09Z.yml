@@ -1,0 +1,6 @@
+timestamp: 2026-04-11T18-44-09Z
+agent: Maintainer
+synthesis: |
+  Implemented Hybrid MCP RAG Protocol schema migration and Go sync service.
+  Added 'sync_status' and 'last_sync_at' to 'swarm_memory_embeddings' table without IF NOT EXISTS to remain SQLite compatible.
+  Implemented ConcreteRAGSyncService handling conversion between JSON slices natively into pgvector and SQLite text, handling IsSQLite branching.
