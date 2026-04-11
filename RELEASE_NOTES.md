@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.2.8 (Cloud) / v0.1.8+1 (Standalone)
+- Scaling (Cloud): Coordinated promotions across Cloud staging and Local desktop beta builds.
+- Privacy/Offline (Standalone): Stabilized hybrid test scenarios ensuring both PostgreSQL (Cloud) and SQLite (Standalone) compatibilities.
+
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.
