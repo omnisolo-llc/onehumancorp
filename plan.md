@@ -1,18 +1,20 @@
-1. **Create the SQL migration file**
-    * Create `srcs/server/db/migrations/030_kairos_shared_tasks.sql` (Actually already done!).
-2. **Update BUILD.bazel**
-    * Add `migrations/030_kairos_shared_tasks.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
-3. **Examine `srcs/server/orchestration/tasks.go` and `tasks_db.go`**
-    * Determine if `tasks.go` or `tasks_db.go` is where I should add the new features. It looks like `tasks.go` handles some similar things. The mission says to create the data access layer in `srcs/server/orchestration/tasks_db.go` and implement a `ClaimTask` method.
-4. **Implement `ClaimTask` method**
-    * In `srcs/server/orchestration/tasks_db.go` (create it if it doesn't exist).
-    * It must handle claiming tasks and prevent concurrent assignment conflicts using `SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` for PostgreSQL.
-    * For SQLite Standalone mode, use application-level mutexes (or simple transaction isolation) to claim the task safely.
-5. **Create Unit Tests**
-    * Create `srcs/server/orchestration/tasks_db_test.go` with unit tests for `tasks_db.go`.
-    * Use `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` if simulating authentication claims.
-6. **Pre-commit step**
-    * Complete pre-commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit the change**
-    * Run `bazelisk test //srcs/server/orchestration/...` and wait for everything to pass.
-    * Submit.
+1. **Update mission status:** Mark `.agent-task/missions/2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md` as `IN_PROGRESS` and assign agent `Implementer`.
+2. **Implement FS Providers**:
+   - Create `srcs/server/agents/mcp/fs_provider.go`
+   - Define interface `FileSystemProvider` with methods `ReadFile(ctx context.Context, path string) ([]byte, error)`, `WriteFile(ctx context.Context, path string, data []byte) error`, and `ListDir(ctx context.Context, path string) ([]string, error)`.
+   - Implement `LocalFSProvider` that sanitizes paths (rejects any containing `..` and bounds to a safe dir, though we can just bound it to the absolute workspace root, we need to ensure safety bounds are met, specifically using `strings.Contains(path, "..")`).
+   - Implement `CloudFSProvider` that scopes paths by `auth.ClaimsFromContext(ctx).OrganizationID`.
+   - Implement a factory `NewFileSystemProvider(isStandalone bool, workspaceRoot string) FileSystemProvider`.
+3. **Implement MCP Server for FS**:
+   - Create `srcs/server/agents/mcp/fs_mcp.go`.
+   - Implement an MCP wrapper similar to `BlobInspectorMCP` that exposes `read_file`, `write_file`, and `list_directory` tools.
+   - Inject the `FileSystemProvider`.
+   - Use `auth.ClaimsFromContext` to validate cloud mode access.
+4. **Implement Tests**:
+   - Create `srcs/server/agents/mcp/fs_provider_test.go` and `fs_mcp_test.go`.
+   - Mock context using `context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)` for auth.
+   - Achieve >90% test coverage.
+5. **Update BUILD.bazel**: Update `srcs/server/agents/mcp/BUILD.bazel` to include the new files and update dependencies if needed.
+6. **Testing and Verification**: Run `bazelisk test //srcs/server/agents/mcp/...` to verify. Run `./test.sh //...` globally.
+7. **Complete pre-commit steps**: Call `pre_commit_instructions` tool.
+8. **Finalize**: Update mission file to `status: DONE` and run global test suite.
