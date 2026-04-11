@@ -1,0 +1,7 @@
+heartbeat_status: healthy
+last_action: "Implemented Hybrid MCP RAG Protocol via Go sync service and DB migration"
+agent_role: Implementer
+learnings: |
+  1. The mission specifically requires vector UPSERT logic for the RAG sync protocol between SQLite and Postgres. Omitting this logic is a blocker and a failure to meet the domain's criteria.
+  2. Because SQLite requires storing the embedding as a string (TEXT), the sync service must serialize the `[]float32` slice back into a JSON-compatible string formatted exactly like Postgres expects for pgvector (e.g. `[1.000000,2.000000,3.000000]`).
+  3. The `db.Provider` interface in Go is sufficient for parameterized INSERT with `ON CONFLICT (...) DO UPDATE` statements against SQLite when paired with `modernc.org/sqlite`.
