@@ -73,7 +73,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
           filter: ImageFilter.compose(
-            outer: const ColorFilter.matrix(<double>[
+            outer: ColorFilter.matrix(<double>[
               1.168, -0.153, -0.015, 0, 0,
               -0.046, 1.061, -0.015, 0, 0,
               -0.046, -0.152, 1.198, 0, 0,
@@ -258,7 +258,7 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
             borderRadius: BorderRadius.circular(12),
             child: BackdropFilter(
               filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(<double>[
+                outer: ColorFilter.matrix(<double>[
                   1.168, -0.153, -0.015, 0, 0,
                   -0.046, 1.061, -0.015, 0, 0,
                   -0.046, -0.152, 1.198, 0, 0,
