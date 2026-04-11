@@ -60,6 +60,8 @@ var (
 
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
+	RagRecordsSyncedTotal        metric.Int64Counter
+	RagSyncErrorsTotal           metric.Int64Counter
 	meshBroadcastTotal          metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -437,6 +439,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_autodream_sync_duration_seconds",
 		metric.WithDescription("Latency of AutoDream sync operations in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced via Hybrid MCP"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
