@@ -62,6 +62,9 @@ var (
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
 
+	ragRecordsSyncedCounter metric.Int64Counter
+	ragSyncErrorsCounter    metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -459,6 +462,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	ragRecordsSyncedCounter, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsCounter, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	err = initMinimaxMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
@@ -723,6 +742,20 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
 		))
+	}
+}
+
+// RecordRagRecordSynced increments the RAG sync counter.
+func RecordRagRecordSynced(ctx context.Context) {
+	if ragRecordsSyncedCounter != nil {
+		ragRecordsSyncedCounter.Add(ctx, 1)
+	}
+}
+
+// RecordRagSyncError increments the RAG sync error counter.
+func RecordRagSyncError(ctx context.Context) {
+	if ragSyncErrorsCounter != nil {
+		ragSyncErrorsCounter.Add(ctx, 1)
 	}
 }
 
