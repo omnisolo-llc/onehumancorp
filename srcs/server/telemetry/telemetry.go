@@ -52,6 +52,8 @@ var (
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
@@ -446,6 +448,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_autodream_query_duration_seconds",
 		metric.WithDescription("Latency of AutoDream query operations in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1010,5 +1028,21 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	)
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordRagRecordSynced increments the RAG records synced counter.
+func RecordRagRecordSynced(ctx context.Context) {
+	if RagRecordsSyncedTotal != nil {
+		RagRecordsSyncedTotal.Add(ctx, 1)
+	}
+}
+
+// RecordRagSyncError increments the RAG sync errors counter.
+func RecordRagSyncError(ctx context.Context, errStr string) {
+	if RagSyncErrorsTotal != nil {
+		RagSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("error", errStr),
+		))
 	}
 }
