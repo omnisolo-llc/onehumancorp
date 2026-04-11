@@ -1,7 +1,9 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Implementer
 ---
+blockers:
+  - "The networking transport layer and synchronization logic must be fully completed before this mission can be marked as DONE."
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
 ## Problem Statement

@@ -48,6 +48,8 @@ var (
 	AgentTransitionLatency     metric.Float64Histogram
 
 	SyncCompletedCount metric.Int64Counter
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
@@ -346,6 +348,22 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
 	)
 	if err != nil {
 		errs = append(errs, err)
