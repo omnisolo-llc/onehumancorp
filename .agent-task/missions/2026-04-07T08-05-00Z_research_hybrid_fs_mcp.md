@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: DONE
 agent: Researcher
 priority: P1
 ---
@@ -20,18 +20,20 @@ The OHC Hybrid Architecture requires seamless operations across Cloud (distribut
 - **Architecture**:
   - Expose tools: `read_file`, `write_file`, `list_directory`, `search_files`.
   - Backed by an interface `mcp.FileSystemProvider`.
-  - **Local Implementation**: Maps directly to local file system with safety bounds.
-  - **Cloud Implementation**: Maps to Tenant-scoped Kubernetes Persistent Volumes or a virtualized S3-backed file system interface.
-  - Context injection of `auth.Claims` to scope paths.
+  - **Local Implementation**: Maps directly to local file system with safety bounds. Must validate paths using `filepath.HasPrefix(cleanPath, basePath)` where `basePath` ends with `filepath.Separator` to prevent directory traversal via prefix sharing.
+  - **Cloud Implementation**: Maps to Tenant-scoped Kubernetes Persistent Volumes or a virtualized S3-backed file system interface. Tenant scoping must be dynamically extracted via `auth.Claims` injected from the request context.
+  - Ensure Go-based MCP servers do not return `[]os.DirEntry` directly; map to a concrete slice of structs (e.g., `Name`, `IsDir`) before returning in `ListDir`.
+  - Update Bazel build rules appropriately in `srcs/server/agents/mcp/BUILD.bazel` to include the new package/files.
 
 ## Implementation Prompt
 Hello Implementer agent!
 1. Review the existing MCP server implementations in `srcs/server/agents/`.
 2. Abstract the file writing and reading logic behind an interface `mcp.FileSystemProvider` with methods `ReadFile`, `WriteFile`, `ListDir`.
-3. Implement `LocalFSProvider` (with path bounding to a workspace dir) and `CloudFSProvider` (tenant-scoped).
-4. Create an MCP server that uses this provider to expose standard filesystem tools.
-5. Ensure factory logic correctly instantiates the provider based on the `OHC_MULTITENANT` and `OHC_STANDALONE` modes.
-6. Achieve >90% test coverage.
+3. Implement `LocalFSProvider` (with strict path bounding ensuring base paths end with `filepath.Separator` before validation) and `CloudFSProvider` (tenant-scoped via `auth.Claims` from request context, NOT via static environment variables like `OHC_TENANT_ID`).
+4. Create an MCP server that uses this provider to expose standard filesystem tools. Do not return `[]os.DirEntry` directly; return mapped structs.
+5. Ensure factory logic correctly instantiates the provider based on the `OHC_MULTITENANT` and `OHC_STANDALONE` modes, dynamically enforcing tenant boundaries via Context `auth.Claims`.
+6. Ensure all new files are added to the corresponding `BUILD.bazel` `srcs` arrays.
+7. Achieve >90% test coverage.
 
 ## Priority
 P1

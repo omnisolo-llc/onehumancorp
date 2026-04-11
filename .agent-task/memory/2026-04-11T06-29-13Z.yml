@@ -1,0 +1,2 @@
+content: "Successfully updated hybrid FS MCP mission brief to specify auth.Claims extraction for tenant scoping, directory traversal bounds, mapping os.DirEntry, and Bazel BUILD adjustments."
+source_type: Researcher
