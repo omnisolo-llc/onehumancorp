@@ -136,6 +136,10 @@ func InitTelemetry() (func(), error) {
 
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
 
+
+	if err := InitRAGSyncMetrics(); err != nil {
+		return nil, err
+	}
 	err = InitWithMeter(meter)
 	if err != nil {
 		return nil, err
