@@ -188,3 +188,52 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// QuotaResponse represents a user's free-tier API quotas.
+type QuotaResponse struct {
+	UserID        string `json:"userId"`
+	BaseQuota     int    `json:"baseQuota"`
+	ReferralBonus int    `json:"referralBonus"`
+	TotalQuota    int    `json:"totalQuota"`
+}
+
+func (s *Server) handleQuotas(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.URL.Query().Get("userId")
+	if userID == "" {
+		http.Error(w, "userId query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.RLock()
+	refs := append([]Referral(nil), s.referrals...)
+	s.mu.RUnlock()
+
+	conversions := 0
+	for _, ref := range refs {
+		if ref.UserID == userID {
+			conversions += ref.Conversions
+		}
+	}
+
+	baseQuota := 10
+	referralBonus := conversions * 5
+
+	res := QuotaResponse{
+		UserID:        userID,
+		BaseQuota:     baseQuota,
+		ReferralBonus: referralBonus,
+		TotalQuota:    baseQuota + referralBonus,
+	}
+	writeJSON(w, res)
+}
+
+// Quota represents a free-tier quota configuration.
+type Quota struct {
+	BaseQuota     int `json:"baseQuota"`
+	ReferralBonus int `json:"referralBonus"`
+}

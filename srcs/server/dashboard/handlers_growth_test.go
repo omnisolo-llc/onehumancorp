@@ -158,3 +158,51 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleQuotas(t *testing.T) {
+	s := &Server{
+		referrals: []Referral{
+			{UserID: "user-1", Conversions: 2},
+			{UserID: "user-1", Conversions: 1},
+			{UserID: "user-2", Conversions: 0},
+			{UserID: "user-3", Conversions: 3},
+		},
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/quotas?userId=user-1", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleQuotas(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var res QuotaResponse
+	if err := json.NewDecoder(wGet.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.UserID != "user-1" {
+		t.Errorf("expected UserID 'user-1', got '%s'", res.UserID)
+	}
+	if res.BaseQuota != 10 {
+		t.Errorf("expected BaseQuota 10, got %d", res.BaseQuota)
+	}
+	if res.ReferralBonus != 15 {
+		t.Errorf("expected ReferralBonus 15, got %d", res.ReferralBonus)
+	}
+	if res.TotalQuota != 25 {
+		t.Errorf("expected TotalQuota 25, got %d", res.TotalQuota)
+	}
+
+	// Test missing userId
+	reqGetMissing := httptest.NewRequest(http.MethodGet, "/api/growth/quotas", nil)
+	wGetMissing := httptest.NewRecorder()
+
+	s.handleQuotas(wGetMissing, reqGetMissing)
+
+	if wGetMissing.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for missing userId, got %d", wGetMissing.Code)
+	}
+}
