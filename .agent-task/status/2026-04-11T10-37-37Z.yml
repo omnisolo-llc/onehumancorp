@@ -1,0 +1,3 @@
+status: healthy
+component: kairos_orchestrator
+message: Master orchestration planning complete.

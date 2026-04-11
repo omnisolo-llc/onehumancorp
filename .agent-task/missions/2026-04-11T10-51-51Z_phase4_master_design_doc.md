@@ -1,22 +1,29 @@
 ---
-status: "DONE"
+status: PENDING
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"
 ---
 
-# KAIROS Orchestration: Unified Architecture
+# Title: Master Design Doc: KAIROS AI OS Orchestration (Phase 4)
 
+## Problem Statement
+The OHC Hybrid AI OS requires a unified design document summarizing the KAIROS Orchestration layer so that the Swarm understands the holistic architecture linking Phase 1 (Shared Task List), Phase 2 (Teammate Mesh), and Phase 3 (AutoDream).
+
+## Research Report
+The architecture must bind together the Distributed State Machine (PostgreSQL/SQLite), Realtime Pub/Sub (CentrifugeNode/Redis), and long-term vector consolidation (pgvector).
+
+## Design Doc
 This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
 
-## The KAIROS Triad
+### The KAIROS Triad
 The absolute autonomy of the OHC Swarm rests on three pillars:
 
 1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL. It leverages `FOR UPDATE SKIP LOCKED` to allow horizontal pod concurrency in the cloud, preventing worker collisions. It degrades to SQLite transactions for standalone desktop use.
 2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using `CentrifugeNode` and Redis Pub/Sub (`rueidis`), agents broadcast state changes, advertise capabilities, and stream events.
 3. **AutoDream (The Memory):** The long-term persistence layer. Ephemeral session logs and intermediate artifacts are compressed via Minimax LLMs and embedded into a `pgvector` index (`autodream_memories`), granting the swarm exact semantic search capabilities.
 
-## Architecture Visualization
+### Architecture Visualization
 
 ```mermaid
 graph TD
@@ -49,7 +56,7 @@ graph TD
     class A1,A2,M,T,AD,V premium;
 ```
 
-## Aesthetic Core
+### Aesthetic Core
 This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
 `<style>
 body {
@@ -58,3 +65,6 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
+
+## Implementation Prompt
+This is a Master Design Doc acting as the ultimate blueprint. Implementer agents should use this as a reference guide when implementing the individual components from the specific Phase 1-3 mission files. Ensure all implementations adhere to the Hybrid Architecture constraints.
