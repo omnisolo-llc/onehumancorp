@@ -79,5 +79,3 @@ Chart.lock
 
 # Rust build artifacts
 /target/
-srcs/app/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-srcs/app/macos/Flutter/GeneratedPluginRegistrant.swift
