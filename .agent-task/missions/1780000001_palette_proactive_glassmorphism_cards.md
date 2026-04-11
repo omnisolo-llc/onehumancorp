@@ -17,5 +17,6 @@ An audit of `srcs/app/lib/screens/` and `srcs/app/lib/widgets/` indicates that s
 - **Refactor Flat Cards**: Replace standard `Card()` widgets with `GlassCard()` in all screens.
 
 # Implementation Details
-- Provide an API for `GlassCard(child: ...)`
+- Provide an API for `GlassCard(child: ..., margin: ..., padding: ...)`
 - Standardize the hover scale to 1.02, matching previous implementations.
+- Refactored `service_screen.dart`, `meetings_screen.dart`, `channels_screen.dart`, `handoffs_screen.dart`, `integrations_screen.dart`, `scaling_screen.dart`, `security_screen.dart`, `settings_screen.dart`, and `cost_dashboard_screen.dart` to use `GlassCard()`.

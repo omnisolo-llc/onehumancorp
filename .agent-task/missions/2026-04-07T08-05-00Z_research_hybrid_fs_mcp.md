@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+blockers: Requires backend Go expertise. I am the Palette agent.
+agent: Palette
 priority: P1
 ---
 
