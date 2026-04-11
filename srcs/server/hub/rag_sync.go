@@ -1,0 +1,61 @@
+package hub
+
+import (
+	"context"
+	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+)
+
+var (
+	meter                = otel.Meter("github.com/onehumancorp/mono/srcs/server/hub")
+	ragRecordsSynced     metric.Int64Counter
+	ragSyncErrors        metric.Int64Counter
+)
+
+func init() {
+	var err error
+	ragRecordsSynced, err = meter.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		// Init failure, handle silently as is common in global var init
+	}
+
+	ragSyncErrors, err = meter.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
+	)
+	if err != nil {
+		// Init failure, handle silently as is common in global var init
+	}
+}
+
+type SyncStatus string
+
+const (
+	SyncStatusPending SyncStatus = "pending"
+	SyncStatusSynced  SyncStatus = "synced"
+	SyncStatusError   SyncStatus = "error"
+)
+
+type RAGSyncRecord struct {
+	ID         string
+	Context    string
+	Vector     []byte
+	SyncStatus SyncStatus
+	LastSyncAt time.Time
+}
+
+type RAGSyncService interface {
+	// FetchPendingSyncs retrieves records from the local DB that need syncing
+	FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error)
+
+	// MarkSynced updates the local DB after a successful sync to the cloud
+	MarkSynced(ctx context.Context, ids []string) error
+
+	// ProcessIncomingSync handles data pushed from a standalone client into the cloud DB
+	ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
+}
