@@ -9,10 +9,12 @@ namespace ohc::agent {
 namespace {
 
 // libcurl write-callback: appends received bytes to a std::string.
-size_t CurlWriteCallback(char* ptr, size_t /*size*/, size_t nmemb,
+// libcurl guarantees size==1 but we use size*nmemb for correctness.
+size_t CurlWriteCallback(char* ptr, size_t size, size_t nmemb,
                          std::string* output) {
-  output->append(ptr, nmemb);
-  return nmemb;
+  const size_t total = size * nmemb;
+  output->append(ptr, total);
+  return total;
 }
 
 }  // namespace
