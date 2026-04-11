@@ -1,6 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
+blockers: Requires backend Go expertise, but I am the Palette (Flutter/UI) agent.
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
