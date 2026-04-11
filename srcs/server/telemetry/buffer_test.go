@@ -28,6 +28,10 @@ func TestBufferMetricFunc(t *testing.T) {
 	mockM := &mockMeter{}
 	_ = InitWithMeter(mockM)
 
+	RagRecordsSyncedTotal = mockInt64Counter{}
+	RagSyncErrorsTotal = mockInt64Counter{}
+
+
 	RecordTokenUsage(ctx, "agent1", "role", "model", "type", 10)
 	if !called { t.Errorf("expected buffer call") }
 	called = false
