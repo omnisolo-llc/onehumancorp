@@ -40,6 +40,8 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	RagRecordsSyncedCounter    metric.Int64Counter
+	RagSyncErrorsCounter       metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
@@ -167,6 +169,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagRecordsSyncedCounter, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsCounter, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
