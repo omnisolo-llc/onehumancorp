@@ -158,3 +158,34 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleUserQuota(t *testing.T) {
+	s := &Server{
+		referrals: []Referral{
+			{UserID: "user-1"},
+			{UserID: "user-1"},
+			{UserID: "user-2"},
+		},
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/quota?userId=user-1", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleUserQuota(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var res UserQuota
+	if err := json.NewDecoder(wGet.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.UserID != "user-1" {
+		t.Errorf("expected userId 'user-1', got '%s'", res.UserID)
+	}
+	if res.QuotaRemaining != 3 {
+		t.Errorf("expected 3 remaining quota, got %d", res.QuotaRemaining)
+	}
+}

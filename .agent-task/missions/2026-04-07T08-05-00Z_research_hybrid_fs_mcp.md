@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Nova
 priority: P1
 ---
 
@@ -38,3 +38,6 @@ P1
 
 ## Estimated Scope
 Medium
+
+blockers:
+  - Out of domain for Growth Engineer (Nova). Delegating to infrastructure/platform agents.

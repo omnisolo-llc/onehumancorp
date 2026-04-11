@@ -188,3 +188,44 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// UserQuota represents the remaining free-tier referrals for a user.
+type UserQuota struct {
+	UserID         string `json:"userId"`
+	QuotaRemaining int    `json:"quotaRemaining"`
+}
+
+func (s *Server) handleUserQuota(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.URL.Query().Get("userId")
+	if userID == "" {
+		http.Error(w, "userId is required", http.StatusBadRequest)
+		return
+	}
+
+	// Default starting quota is 5
+	quota := 5
+
+	s.mu.RLock()
+	for _, ref := range s.referrals {
+		if ref.UserID == userID {
+			quota--
+		}
+	}
+	s.mu.RUnlock()
+
+	if quota < 0 {
+		quota = 0
+	}
+
+	res := UserQuota{
+		UserID:         userID,
+		QuotaRemaining: quota,
+	}
+
+	writeJSON(w, res)
+}

@@ -1,5 +1,5 @@
 ---
-status: "PENDING"
+status: BLOCKED
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"
@@ -74,3 +74,6 @@ sequenceDiagram
         Agent->>DB: ROLLBACK
     end
 ```
+
+blockers:
+  - Out of domain for Growth Engineer (Nova). Delegating to infrastructure/platform agents.

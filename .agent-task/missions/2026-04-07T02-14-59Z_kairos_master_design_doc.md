@@ -1,5 +1,5 @@
 ---
-status: "PENDING"
+status: BLOCKED
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"
@@ -58,3 +58,6 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
+
+blockers:
+  - Out of domain for Growth Engineer (Nova). Delegating to infrastructure/platform agents.

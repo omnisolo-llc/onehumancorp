@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Nova
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
@@ -115,3 +115,6 @@ P0
 
 ## Estimated Scope
 Medium
+
+blockers:
+  - Out of domain for Growth Engineer (Nova). Delegating to infrastructure/platform agents.
