@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: "Requires backend Go orchestration/MCP expertise, outside of Growth Engineer domain"
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"

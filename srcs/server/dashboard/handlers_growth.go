@@ -20,6 +20,19 @@ type experimentCreateRequest struct {
 	TrafficSplit float64 `json:"trafficSplit"`
 }
 
+// LandingPageHit defines a visitor hit for A/B testing.
+type LandingPageHit struct {
+	ID        string    `json:"id"`
+	VisitorID string    `json:"visitorId"`
+	Cohort    string    `json:"cohort"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type landingPageHitCreateRequest struct {
+	VisitorID string `json:"visitorId"`
+	Cohort    string `json:"cohort"`
+}
+
 // Referral defines a viral referral link.
 type Referral struct {
 	ID           string    `json:"id"`
@@ -33,6 +46,38 @@ type Referral struct {
 type referralCreateRequest struct {
 	UserID       string `json:"userId"`
 	ReferralCode string `json:"referralCode"`
+}
+
+func (s *Server) handleLandingPageHit(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		hits := append([]LandingPageHit(nil), s.landingPageHits...)
+		s.mu.RUnlock()
+		writeJSON(w, hits)
+	case http.MethodPost:
+		var req landingPageHitCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.VisitorID == "" || req.Cohort == "" {
+			http.Error(w, "visitorId and cohort are required", http.StatusBadRequest)
+			return
+		}
+		hit := LandingPageHit{
+			ID:        "hit-" + time.Now().UTC().Format("20060102150405"),
+			VisitorID: req.VisitorID,
+			Cohort:    req.Cohort,
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.landingPageHits = append(s.landingPageHits, hit)
+		s.mu.Unlock()
+		writeJSON(w, hit)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (s *Server) handleLandingPageExperiments(w http.ResponseWriter, r *http.Request) {

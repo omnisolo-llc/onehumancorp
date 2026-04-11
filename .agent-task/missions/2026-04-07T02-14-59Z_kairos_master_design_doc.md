@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "BLOCKED"
+blockers: "Requires backend Go orchestration/MCP expertise, outside of Growth Engineer domain"
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"

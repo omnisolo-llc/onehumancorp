@@ -60,6 +60,7 @@ type Server struct {
 	experiments           []LandingPageExperiment
 	referrals             []Referral
 	downloads             []Download
+	landingPageHits       []LandingPageHit
 }
 
 // RateLimitState functionality.
@@ -571,6 +572,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/pipelines/promote", server.handlePipelinePromote)
 	mux.HandleFunc("/api/pipelines/status", server.handlePipelineStatus)
 	// Growth & Referral Endpoints
+	mux.HandleFunc("/api/growth/landing-hit", server.handleLandingPageHit)
 	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
 	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)

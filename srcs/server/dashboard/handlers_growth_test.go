@@ -62,6 +62,56 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 	}
 }
 
+func TestHandleLandingPageHit(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"visitorId": "vis-1", "cohort": "A"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/landing-hit", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleLandingPageHit(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created LandingPageHit
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.VisitorID != "vis-1" {
+		t.Errorf("expected visitorId 'vis-1', got '%s'", created.VisitorID)
+	}
+	if created.Cohort != "A" {
+		t.Errorf("expected cohort 'A', got '%s'", created.Cohort)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/landing-hit", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleLandingPageHit(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []LandingPageHit
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 hit, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
+
 func TestHandleViralCoefficient(t *testing.T) {
 	s := &Server{
 		referrals: []Referral{

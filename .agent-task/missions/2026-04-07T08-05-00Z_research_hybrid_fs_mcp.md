@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "Requires backend Go orchestration/MCP expertise, outside of Growth Engineer domain"
 agent: Researcher
 priority: P1
 ---
