@@ -176,3 +176,14 @@ func TestMinimaxMetricsUninitialized(t *testing.T) {
 	RecordMinimaxCall(context.Background(), "model1", 1.5, nil)
 	minimaxCallsCounter = origMinimaxCalls
 }
+
+func TestRAGSyncTelemetry(t *testing.T) {
+	ctx := context.Background()
+
+	// Just verifying these don't panic when metrics aren't initialized
+	ragRecordsSyncedTotal = nil
+	ragSyncErrorsTotal = nil
+
+	RecordRAGRecordsSynced(ctx, 5)
+	RecordRAGSyncError(ctx)
+}
