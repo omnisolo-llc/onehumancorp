@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:http/http.dart' as http;
@@ -362,7 +363,7 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget buildGlassCard({required Color color, required Widget child}) {
+    Widget GlassCard({required Color color, required Widget child}) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
@@ -406,7 +407,7 @@ class _StatusBanner extends StatelessWidget {
     if (status.configured) {
       return Semantics(
         label: 'Platform is fully configured',
-        child: buildGlassCard(
+        child: GlassCard(
           color: Theme.of(context).colorScheme.primary,
           child: ListTile(
             leading: Icon(
@@ -428,7 +429,7 @@ class _StatusBanner extends StatelessWidget {
     if (!status.centrifugeStep) missing.add('Centrifuge');
     return Semantics(
       label: 'Configuration incomplete. Remaining: ${missing.join(', ')}',
-      child: buildGlassCard(
+      child: GlassCard(
         color: Theme.of(context).colorScheme.error,
         child: ListTile(
           leading: Icon(
