@@ -20,6 +20,8 @@ import (
 )
 
 var (
+RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal metric.Int64Counter
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -460,6 +462,21 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+
+	RagRecordsSyncedTotal, err = meter.Int64Counter("rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = meter.Int64Counter("rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG sync"),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}

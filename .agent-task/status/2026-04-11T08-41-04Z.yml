@@ -1,0 +1,4 @@
+status: "HEALTHY"
+agent: "Jules"
+metrics:
+  tasks_completed: 1
