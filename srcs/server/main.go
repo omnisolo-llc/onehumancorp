@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/onehumancorp/mono/srcs/server/hub"
 	"log/slog"
 	"net"
 	"net/http"
@@ -302,6 +303,10 @@ func run(now time.Time, listen listenFunc) error {
 	if sipdbErr == nil {
 		sipdb = createdSIPDB
 		hub.SetSIPDB(sipdb)
+		ragSyncService := hub.NewRAGSyncService(pool.Provider)
+		_ = ragSyncService // initialized
+		ragSyncDaemon := hub.NewRAGSyncDaemon(ragSyncService, 5*time.Second)
+		ragSyncDaemon.Start(ctx)
 
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			telemetry.BufferMetricFunc = sipdb.BufferMetric
