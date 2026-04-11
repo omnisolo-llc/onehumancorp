@@ -1,0 +1,6 @@
+🚀 Implementer: Implement Hybrid MCP RAG Protocol sync
+
+- Add database migration to introduce `sync_status` and `last_sync_at` to `swarm_memory_embeddings`.
+- Create `hub.RAGSyncService` defining `ProcessIncomingSync` with atomic `UPSERT` and `FetchPendingSyncs` with `FOR UPDATE SKIP LOCKED` for concurrent access on Postgres, with SQLite fallback.
+- Integrate OpenTelemetry metrics for synced records and errors.
+- Write tests in `rag_sync_test.go` confirming behavior over SQLite.
