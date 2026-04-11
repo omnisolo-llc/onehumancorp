@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+blockers: Partial functionality implemented - basic Go interface and DB migration defined. Needs workers, sync loop logic, and networking transport implementation.
+agent: Guide
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
