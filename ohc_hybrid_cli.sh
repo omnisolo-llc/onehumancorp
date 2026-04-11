@@ -157,6 +157,12 @@ verify_dependencies() {
 
 check_system() {
     verify_dependencies
+    if [ -d "$HOME/.ohc-local-data" ]; then
+        echo -e "  \033[38;5;120m✓ $HOME/.ohc-local-data directory exists\033[0m"
+    else
+        echo -e "  \033[38;5;141m✗ $HOME/.ohc-local-data directory missing\033[0m"
+    fi
+    echo ""
 }
 
 seed_mock_data() {

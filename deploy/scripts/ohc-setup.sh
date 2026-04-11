@@ -25,6 +25,8 @@ ENV
   chmod 0600 .env
 fi
 
+mkdir -p $HOME/.ohc-local-data
+
 echo "[2/4] Verifying Standalone Mode..."
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
