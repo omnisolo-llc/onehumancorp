@@ -94,7 +94,7 @@ func TestDefaultRAGSyncService(t *testing.T) {
 	// Test ProcessIncomingSync
 	incoming := []RAGSyncRecord{
 		{
-			ID: "3",
+			ID:      "3",
 			Context: "incoming context 3",
 		},
 	}

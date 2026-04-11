@@ -2,11 +2,11 @@ package telemetry
 
 import (
 	"context"
-	"testing"
-	"time"
-	"os"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
+	"os"
+	"testing"
+	"time"
 )
 
 func TestRecordOtherMetrics(t *testing.T) {
@@ -37,7 +37,7 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordAutoDreamMemoryIngested(ctx, "agent1")
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
-	RecordTaskProcessed(ctx, 5 * time.Second)
+	RecordTaskProcessed(ctx, 5*time.Second)
 	RecordSyncEscalation(ctx, 1)
 	RecordSyncLatency(ctx, 1.5)
 	RecordSyncPayloadSize(ctx, 100)
@@ -125,7 +125,7 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	RecordAutoDreamMemoryIngested(ctx, "agent1")
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
-	RecordTaskProcessed(ctx, 5 * time.Second)
+	RecordTaskProcessed(ctx, 5*time.Second)
 	RecordSyncEscalation(ctx, 1)
 	RecordSyncLatency(ctx, 1.5)
 	RecordSyncPayloadSize(ctx, 100)

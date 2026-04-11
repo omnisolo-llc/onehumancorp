@@ -60,11 +60,11 @@ const maxRecentActivities = 5
 
 // progressTracker accumulates token and tool-use counts.
 type progressTracker struct {
-	mu                    sync.Mutex
-	toolUseCount          int
-	latestInputTokens     int64
+	mu                     sync.Mutex
+	toolUseCount           int
+	latestInputTokens      int64
 	cumulativeOutputTokens int64
-	recentActivities      []ToolActivity
+	recentActivities       []ToolActivity
 }
 
 func newProgressTracker() *progressTracker {
@@ -118,13 +118,13 @@ type TaskState struct {
 	ToolUseID   string // optional tool_use id from the caller
 	OutputFile  string // absolute path to the task output file
 
-	status  atomic.Value // stores TaskStatus
-	err     atomic.Value // stores error (string)
-	result  atomic.Value // stores final result string
+	status atomic.Value // stores TaskStatus
+	err    atomic.Value // stores error (string)
+	result atomic.Value // stores final result string
 
 	progress *progressTracker
 
-	cancel  func()     // cancels the agent goroutine context
+	cancel  func() // cancels the agent goroutine context
 	startAt time.Time
 	endAt   atomic.Value // stores time.Time
 

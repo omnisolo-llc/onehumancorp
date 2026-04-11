@@ -108,8 +108,8 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 		_ = json.Unmarshal([]byte(payload), &parsedPayload)
 
 		missions = append(missions, map[string]interface{}{
-			"id": id,
-			"status": status,
+			"id":      id,
+			"status":  status,
 			"payload": parsedPayload,
 		})
 		ids = append(ids, id)
@@ -117,9 +117,9 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 
 	if len(missions) == 0 {
 		return map[string]interface{}{
-			"status": "success",
+			"status":       "success",
 			"synced_count": 0,
-			"message": "No pending items to sync up.",
+			"message":      "No pending items to sync up.",
 		}, nil
 	}
 
@@ -138,7 +138,7 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":       "success",
 		"synced_count": len(missions),
 	}, nil
 }
@@ -174,9 +174,9 @@ func (p *DBStateSyncProvider) SyncDown(ctx context.Context, claims *auth.Claims)
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":  "success",
 		"message": "Sync down completed successfully.",
-		"data": response,
+		"data":    response,
 	}, nil
 }
 
@@ -193,7 +193,7 @@ func (p *DBStateSyncProvider) GetStatus(ctx context.Context, claims *auth.Claims
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":          "success",
 		"pending_sync_up": count,
 	}, nil
 }

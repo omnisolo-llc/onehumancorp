@@ -42,8 +42,8 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	}
 
 	payload := map[string]interface{}{
-		"model":       req.Model,
-		"messages":    messages,
+		"model":    req.Model,
+		"messages": messages,
 	}
 
 	body, _ := json.Marshal(payload)

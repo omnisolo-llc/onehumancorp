@@ -8,7 +8,6 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-
 )
 
 // AdvertiseCapabilities advertises an agent's capabilities to the mesh
