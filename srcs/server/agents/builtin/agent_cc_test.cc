@@ -4,6 +4,8 @@
 
 #include "srcs/server/agents/builtin/agent.h"
 
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -209,11 +211,28 @@ TEST(WebSearchToolTest, MissingQueryReturnsError) {
 TEST(TodoWriteToolTest, WritesAndAppendsItems) {
   const auto tool = MakeTodoWriteTool();
 
-  // Create a temp dir so the test does not pollute the workspace.
-  // popen is available on POSIX; use it to create and clean up.
-  const std::string tmp = "/tmp/ohc_agent_test_todo";
-  ::system(("rm -rf " + tmp + " && mkdir -p " + tmp).c_str());
-  ::chdir(tmp.c_str());
+  // Use a temp directory that does not affect the real workspace.
+  const std::filesystem::path tmp =
+      std::filesystem::temp_directory_path() / "ohc_agent_test_todo";
+  std::error_code ec;
+  std::filesystem::remove_all(tmp, ec);
+  std::filesystem::create_directories(tmp, ec);
+  ASSERT_FALSE(ec) << "Failed to create tmp dir: " << ec.message();
+
+  // chdir into the temp directory so the tool writes .agent-task/todo.txt
+  // there instead of the workspace root.
+  const std::filesystem::path original = std::filesystem::current_path();
+  std::filesystem::current_path(tmp, ec);
+  ASSERT_FALSE(ec) << "chdir failed: " << ec.message();
+
+  // Restore working directory on scope exit, even if a ASSERT fires.
+  struct Restorer {
+    std::filesystem::path p;
+    ~Restorer() {
+      std::error_code e;
+      std::filesystem::current_path(p, e);
+    }
+  } restorer{original};
 
   auto r1 = tool.execute({{"todo", "first item"}});
   ASSERT_TRUE(r1.ok()) << r1.status();
@@ -222,17 +241,15 @@ TEST(TodoWriteToolTest, WritesAndAppendsItems) {
   ASSERT_TRUE(r2.ok()) << r2.status();
 
   // Verify both items are present.
-  FILE* fp = ::fopen((tmp + "/.agent-task/todo.txt").c_str(), "r");
-  ASSERT_NE(fp, nullptr);
-  std::string content;
-  char buf[256];
-  while (std::fgets(buf, sizeof(buf), fp)) content += buf;
-  ::fclose(fp);
+  const std::filesystem::path todo_file = tmp / ".agent-task" / "todo.txt";
+  std::ifstream f(todo_file);
+  ASSERT_TRUE(f.is_open()) << "Cannot open " << todo_file;
+  const std::string content(std::istreambuf_iterator<char>(f), {});
 
   EXPECT_THAT(content, ::testing::HasSubstr("first item"));
   EXPECT_THAT(content, ::testing::HasSubstr("second item"));
 
-  ::system(("rm -rf " + tmp).c_str());
+  std::filesystem::remove_all(tmp, ec);
 }
 
 TEST(BashToolTest, RunsSimpleCommand) {

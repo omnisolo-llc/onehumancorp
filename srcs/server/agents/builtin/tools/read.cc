@@ -1,10 +1,10 @@
 #include "srcs/server/agents/builtin/tools/tool.h"
 
 #include <cerrno>
-#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
@@ -35,9 +35,9 @@ Tool MakeReadTool() {
 
         std::ifstream file(path, std::ios::binary);
         if (!file.is_open()) {
+          const std::error_code ec(errno, std::generic_category());
           return absl::NotFoundError(
-              absl::StrCat("Read: cannot open '", path, "': ",
-                           std::strerror(errno)));
+              absl::StrCat("Read: cannot open '", path, "': ", ec.message()));
         }
         std::ostringstream ss;
         ss << file.rdbuf();

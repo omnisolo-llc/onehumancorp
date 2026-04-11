@@ -31,7 +31,9 @@ def _proto_cc_grpc_srcs_impl(ctx):
         else:
             proto_paths[src.dirname] = True
 
-    proto_path_args = " ".join(["--proto_path=" + p for p in proto_paths.keys()])
+    proto_path_args = " ".join(
+        ["--proto_path=" + p for p in sorted(proto_paths.keys())]
+    )
     proto_files = " ".join([src.path for src in srcs])
     out_dir = outs[0].dirname
 
