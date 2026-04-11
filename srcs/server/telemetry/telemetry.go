@@ -52,6 +52,8 @@ var (
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
@@ -164,6 +166,14 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+	RAGRecordsSyncedTotal, err = m.Int64Counter("rag_records_synced_total", metric.WithDescription("Total number of RAG records successfully synced"))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	RAGSyncErrorsTotal, err = m.Int64Counter("rag_sync_errors_total", metric.WithDescription("Total number of RAG sync errors encountered"))
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -993,6 +1003,20 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+}
+
+// RecordRAGSyncSuccess increments the successful sync counter
+func RecordRAGSyncSuccess(ctx context.Context, count int) {
+	if RAGRecordsSyncedTotal != nil {
+		RAGRecordsSyncedTotal.Add(ctx, int64(count))
+	}
+}
+
+// RecordRAGSyncError increments the sync error counter
+func RecordRAGSyncError(ctx context.Context) {
+	if RAGSyncErrorsTotal != nil {
+		RAGSyncErrorsTotal.Add(ctx, 1)
+	}
 }
 
 func RecordQueueLength(ctx context.Context, delta int) {
