@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,10 +134,26 @@ class _ProviderCardState extends State<_ProviderCard> {
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: ColorFilter.matrix(const <double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
+                  1.168,
+                  -0.153,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  1.061,
+                  -0.015,
+                  0,
+                  0,
+                  -0.046,
+                  -0.152,
+                  1.198,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
@@ -144,14 +161,16 @@ class _ProviderCardState extends State<_ProviderCard> {
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _isHovered
-                      ? colors.surfaceContainerHighest.withOpacity(0.3)
-                      : colors.surface.withOpacity(0.1),
+                  color:
+                      _isHovered
+                          ? colors.surfaceContainerHighest.withOpacity(0.3)
+                          : colors.surface.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _isHovered
-                        ? colors.outlineVariant
-                        : colors.outlineVariant.withOpacity(0.5),
+                    color:
+                        _isHovered
+                            ? colors.outlineVariant
+                            : colors.outlineVariant.withOpacity(0.5),
                   ),
                 ),
                 child: Column(
@@ -165,10 +184,7 @@ class _ProviderCardState extends State<_ProviderCard> {
                             color: colors.primary.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            Icons.psychology,
-                            color: colors.primary,
-                          ),
+                          child: Icon(Icons.psychology, color: colors.primary),
                         ),
                         const SizedBox(width: 12),
                         Text(
@@ -183,8 +199,15 @@ class _ProviderCardState extends State<_ProviderCard> {
                         const Spacer(),
                         if (widget.provider.isOfficial)
                           Chip(
-                            label: const Text('Official', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                            backgroundColor: colors.primaryContainer.withOpacity(0.8),
+                            label: const Text(
+                              'Official',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                              ),
+                            ),
+                            backgroundColor: colors.primaryContainer
+                                .withOpacity(0.8),
                             side: BorderSide.none,
                           ),
                         const SizedBox(width: 8),
@@ -210,24 +233,35 @@ class _ProviderCardState extends State<_ProviderCard> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: widget.provider.models.map(
-                          (m) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: colors.secondaryContainer.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: colors.secondary.withOpacity(0.2)),
-                            ),
-                            child: Text(
-                              m,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12,
-                                color: colors.onSecondaryContainer,
-                              ),
-                            ),
-                          ),
-                        ).toList(),
+                        children:
+                            widget.provider.models
+                                .map(
+                                  (m) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colors.secondaryContainer
+                                          .withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: colors.secondary.withOpacity(
+                                          0.2,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      m,
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12,
+                                        color: colors.onSecondaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                       ),
                     ],
                   ],
@@ -264,7 +298,10 @@ class _ProviderCardState extends State<_ProviderCard> {
               FilledButton(
                 onPressed: () async {
                   final api = widget.ref.read(apiServiceProvider);
-                  await api?.saveAiProviderKey(widget.provider.id, ctrl.text.trim());
+                  await api?.saveAiProviderKey(
+                    widget.provider.id,
+                    ctrl.text.trim(),
+                  );
                   widget.ref.invalidate(_providersProvider);
                   if (context.mounted) Navigator.pop(context);
                 },
