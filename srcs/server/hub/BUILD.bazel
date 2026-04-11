@@ -2,9 +2,13 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "hub",
-    srcs = ["rag_sync.go"],
+    srcs = [
+        "rag_sync.go",
+        "rag_sync_service.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/hub",
     visibility = ["//visibility:public"],
+    deps = ["//srcs/server/telemetry"],
 )
 
 go_test(
