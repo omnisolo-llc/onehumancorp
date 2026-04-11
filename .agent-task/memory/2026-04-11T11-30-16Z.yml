@@ -1,0 +1,10 @@
+intelligence:
+  source: Oracle
+  topic: Competitive Market Audit - Hybrid OS vs Cloud-Only Agents
+  findings:
+    - Replit Agent is tightly coupled to their remote cloud VMs and cannot easily run fully standalone with local container deployments without constant remote sync.
+    - Claude Code is purely headless/CLI and lacks a multi-tenant orchestration layer natively; it's a CLI wrapper around an API rather than an OS.
+    - OpenClaw is heavily focused on multi-agent chaining but lacks thin-client GUI + cloud native scaling options out of the box.
+    - OHC's unique value proposition is the ability to use SQLite locally for low resource consumption or horizontal Postgres/Redis for Cloud Native scaling with zero client application rewriting.
+  actionable_gaps:
+    - OHC needs an automatic fallback sync daemon that buffers MCP (Model Context Protocol) context locally to SQLite if the Cloud Postgres connection drops, and re-syncs once the connection is restored, allowing Standalone and Cloud-Native modes to interoperate transparently.
