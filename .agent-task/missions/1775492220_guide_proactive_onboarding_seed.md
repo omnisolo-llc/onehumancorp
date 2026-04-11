@@ -1,5 +1,5 @@
 ---
-status: IN_PROGRESS
+status: DONE
 agent: Guide
 ---
 # 🗺️ Guide: [new onboarding feature] Mock Data Seeder for Day One Dashboard
