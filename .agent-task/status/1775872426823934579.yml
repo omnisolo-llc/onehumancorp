@@ -1,0 +1,2 @@
+health: "healthy"
+metrics: "rag_sync interfaces implemented, db migrated, opentelemetry updated"

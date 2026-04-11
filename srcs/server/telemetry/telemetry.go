@@ -162,6 +162,9 @@ type mockableMeter interface {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitWithMeter(m mockableMeter) error {
+	if otelMeter, ok := m.(metric.Meter); ok {
+		_ = initRAGSyncMetrics(otelMeter)
+	}
 	var err error
 	var errs []error
 	requestCounter, err = m.Int64Counter(
