@@ -1,0 +1,4 @@
+timestamp: 1776500000
+status: HEALTHY
+metrics:
+  hybrid_mcp_fs_implemented: true
