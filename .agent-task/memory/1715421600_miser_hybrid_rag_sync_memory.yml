@@ -1,0 +1,9 @@
+Title: "Hybrid MCP RAG Protocol (Offline-to-Cloud State Sync)"
+Date: 2026-04-11
+Component: RAG Sync Service
+Findings:
+  - We implemented the Offline-to-Cloud State Sync for Swarm Memories.
+  - The implementation adds `sync_status` and `last_sync_at` columns to `autodream_memories`.
+  - A new `RAGSyncService` interface allows for fetching pending syncs, marking them as synced, and processing incoming syncs from Standalone clients.
+  - Test assertions confirm the correct state transitions (pending -> synced) and UPSERT operations for incoming syncs.
+  - We had to correct a mistake where a migration was renamed, which broke existing tests reliant on the migration sequence.
