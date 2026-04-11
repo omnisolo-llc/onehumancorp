@@ -122,6 +122,8 @@ func TestHandleWizardConfigure_WrongMethod(t *testing.T) {
 func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OPENAI_API_KEY", "test")
+	defer os.Unsetenv("OPENAI_API_KEY")
 
 	server := &Server{}
 	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)

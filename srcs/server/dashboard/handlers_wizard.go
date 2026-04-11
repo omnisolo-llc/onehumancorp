@@ -178,7 +178,28 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		})
 	}
 
+
+	aiHealthy := false
+	if os.Getenv("GEMINI_API_KEY") != "" || os.Getenv("ANTHROPIC_API_KEY") != "" || os.Getenv("OPENAI_API_KEY") != "" {
+		aiHealthy = true
+	}
+	if aiHealthy {
+		diagnostics = append(diagnostics, map[string]interface{}{
+			"check":   "AI_PROVIDER",
+			"status":  "ok",
+			"message": "At least one AI provider is configured",
+		})
+	} else {
+		allHealthy = false
+		diagnostics = append(diagnostics, map[string]interface{}{
+			"check":   "AI_PROVIDER",
+			"status":  "missing",
+			"message": "No AI provider keys found in environment",
+		})
+	}
+
 	respStatus := "healthy"
+
 	if !allHealthy {
 		respStatus = "degraded"
 	}
