@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+blockers: Outside my domain
+agent: Scribe
 priority: P1
 ---
 

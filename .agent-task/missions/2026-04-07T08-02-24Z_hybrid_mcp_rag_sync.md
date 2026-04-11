@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+blockers: Outside my domain
+agent: Scribe
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
