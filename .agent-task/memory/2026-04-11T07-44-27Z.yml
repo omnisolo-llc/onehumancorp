@@ -1,0 +1,2 @@
+content: "Implemented Hybrid MCP RAG Protocol schema and interfaces"
+context: "Created 032_hybrid_sync_metadata.sql and hub/rag_sync.go with []byte for Vector. Added telemetry metrics for rag_records_synced_total and rag_sync_errors_total."
