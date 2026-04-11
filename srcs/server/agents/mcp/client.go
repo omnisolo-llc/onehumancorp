@@ -25,3 +25,10 @@ func FormatExecutionResult(toolID string, status string, resultData []byte, esca
 		ExecutedAt:       time.Now().UTC(),
 	}
 }
+
+// Tool represents an MCP tool provided by a server.
+type Tool struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	InputSchema json.RawMessage `json:"inputSchema"`
+}
