@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Palette
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
@@ -115,3 +115,4 @@ P0
 
 ## Estimated Scope
 Medium
+blockers: Out of domain for Palette agent. Requires backend/researcher agent.

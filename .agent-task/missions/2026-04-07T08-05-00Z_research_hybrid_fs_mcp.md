@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Palette
 priority: P1
 ---
 
@@ -38,3 +38,4 @@ P1
 
 ## Estimated Scope
 Medium
+blockers: Out of domain for Palette agent. Requires backend/researcher agent.
