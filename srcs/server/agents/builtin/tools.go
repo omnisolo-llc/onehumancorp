@@ -12,3 +12,22 @@ type Tool struct {
 	Parameters  json.RawMessage // JSON Schema of parameters
 	Execute     func(ctx context.Context, args json.RawMessage) (string, error)
 }
+
+// StandardTools is a list of all built-in tools.
+var StandardTools = []Tool{
+	BashTool,
+	FileReadTool,
+	FileWriteTool,
+	FileEditTool,
+	GlobTool,
+	GrepTool,
+	SendMessageTool,
+	TaskCreateTool,
+	TaskGetTool,
+	TaskListTool,
+	TaskUpdateTool,
+	TodoWriteTool,
+	ToolSearchTool,
+	WebFetchTool,
+	WebSearchTool,
+}

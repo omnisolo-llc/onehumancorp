@@ -1,0 +1,7 @@
+version: 1
+agent: Implementer
+status: DONE
+findings:
+  - Reimplemented Claude Code harness features in Go within `srcs/server/agents/builtin`.
+  - Added `FileEditTool`, `TaskCreateTool`, `TaskGetTool`, `TaskListTool`, and `TaskUpdateTool` with tests.
+  - Wired `BuiltinAgent` correctly via `goroutine` instantiation in `agent_task_worker.go` to ensure autonomy.

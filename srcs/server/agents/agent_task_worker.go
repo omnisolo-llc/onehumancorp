@@ -1,6 +1,8 @@
 package agents
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
+	"os"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -191,7 +193,35 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				// Handle Builtin agent logic
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
 					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
-					// In a full implementation, we'd spawn the BuiltinAgent loop asynchronously here.
+					go func(agentId string, issueId string, directive string) {
+						slog.Info("spawning builtin agent runner", "agent_id", agentId, "issue", issueId)
+						// Initialize BuiltinAgent with required dependencies
+						client := builtin.NewAnthropicClient(os.Getenv("ANTHROPIC_API_KEY"))
+
+						agent := &builtin.BuiltinAgent{
+							Client:      client,
+							Model:       "claude-3-7-sonnet-20250219", // Standard claude code model
+							System:      "You are a skilled software engineer and autonomous agent. You must write the appropriate code to fulfill the user request. Use tools to analyze the filesystem, edit code, and verify fixes. " + directive,
+							Tools:       builtin.StandardTools,
+							MaxTokens:   8192,
+							Temperature: 0,
+						}
+
+						messages := []builtin.Message{
+							{Role: builtin.RoleUser, Content: directive},
+						}
+
+						// Context with a longer timeout for agentic loops
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+						defer cancel()
+
+						_, err := agent.Run(ctx, messages)
+						if err != nil {
+							slog.Error("builtin agent run failed", "agent_id", agentId, "issue", issueId, "err", err)
+						} else {
+							slog.Info("builtin agent run completed successfully", "agent_id", agentId, "issue", issueId)
+						}
+					}(a.ID, issue.ID, string(payload))
 				}
 
 				agentFound = true

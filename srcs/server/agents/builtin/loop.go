@@ -7,9 +7,15 @@ import (
 
 // Run executes the agent loop until completion or error.
 func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Message, error) {
+	const maxTurns = 50
+	turn := 0
 	messages := append([]Message(nil), initialMessages...)
 
 	for {
+		if turn >= maxTurns {
+			return messages, fmt.Errorf("agent loop exceeded maximum turns (%d)", maxTurns)
+		}
+		turn++
 		// Prepare request
 		req := ChatRequest{
 			Model:       a.Model,
