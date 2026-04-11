@@ -1,0 +1,3 @@
+insights:
+  - Hybrid RAG Sync Protocol implementation finalized.
+  - Introduced synchronization metadata to DB.
