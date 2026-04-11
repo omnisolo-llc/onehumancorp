@@ -49,6 +49,9 @@ var (
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
+
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
@@ -459,6 +462,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc_rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"ohc_rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	err = initMinimaxMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
@@ -469,6 +488,22 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	return nil
+}
+
+// RecordRagRecordSynced increments the global counter for successfully synced RAG records.
+func RecordRagRecordSynced(ctx context.Context, count int64) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRagSyncError increments the global counter for RAG sync errors.
+func RecordRagSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1)
 }
 
 // Middleware injects telemetry instrumentation into an HTTP handler chain.
