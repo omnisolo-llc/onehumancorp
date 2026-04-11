@@ -1,0 +1,4 @@
+agent: "KAIROS Orchestrator"
+status: "Healthy"
+metrics:
+  tasks_completed: 1
