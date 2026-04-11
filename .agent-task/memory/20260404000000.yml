@@ -1,0 +1,2 @@
+type: architectural_decision
+context: "Consolidated all flat Card widgets into a central GlassCard to maintain OHC Hybrid OS visual consistency."
