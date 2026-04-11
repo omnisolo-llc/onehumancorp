@@ -1,0 +1,6 @@
+agent: Guide
+timestamp: 2026-04-11T08-06-50Z
+status: HEALTHY
+metrics:
+  cpu_usage: 12%
+  memory_usage: 64MB

@@ -1,0 +1,4 @@
+agent: Guide
+mission_id: 2026-04-07T08-02-24Z_hybrid_mcp_rag_sync
+status: DONE
+summary: "Implemented Hybrid MCP RAG Protocol schema migrations and core sync service."
