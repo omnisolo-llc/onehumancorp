@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/services/api_service.dart';

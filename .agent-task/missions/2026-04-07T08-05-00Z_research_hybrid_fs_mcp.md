@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+blockers: Outside my domain
+agent: Palette
 priority: P1
 ---
 
