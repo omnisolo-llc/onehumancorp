@@ -62,6 +62,9 @@ var (
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
 
+	ragRecordsSyncedCounter     metric.Int64Counter
+	ragSyncErrorsCounter        metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -459,6 +462,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	ragRecordsSyncedCounter, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG memory records synchronized via Hybrid MCP"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ragSyncErrorsCounter, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during Hybrid MCP RAG sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	err = initMinimaxMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
@@ -774,6 +793,22 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+}
+
+// RecordRAGSyncSuccess increments the global counter for successful RAG memory syncs.
+func RecordRAGSyncSuccess(ctx context.Context, count int) {
+	if ragRecordsSyncedCounter == nil {
+		return
+	}
+	ragRecordsSyncedCounter.Add(ctx, int64(count))
+}
+
+// RecordRAGSyncError increments the global counter for RAG memory sync errors.
+func RecordRAGSyncError(ctx context.Context) {
+	if ragSyncErrorsCounter == nil {
+		return
+	}
+	ragSyncErrorsCounter.Add(ctx, 1)
 }
 
 // RecordSQLiteRetryExhausted increments the global counter for SQLite transaction failed after exhausting retries.
