@@ -1,0 +1,14 @@
+--- srcs/server/hub/BUILD.bazel
++++ srcs/server/hub/BUILD.bazel
+@@ -9,7 +9,10 @@
+     ],
+     importpath = "github.com/onehumancorp/mono/srcs/server/hub",
+     visibility = ["//visibility:public"],
+-    deps = ["//srcs/server/db"],
++    deps = [
++        "//srcs/server/db",
++        "//srcs/server/telemetry",
++    ],
+ )
+
+ go_test(

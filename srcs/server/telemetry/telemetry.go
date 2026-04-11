@@ -52,6 +52,8 @@ var (
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
@@ -226,6 +228,14 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc.sync.payload_size_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
+	)
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc.hybrid_sync.rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synced"),
+	)
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"ohc.hybrid_sync.rag_sync_errors_total",
+		metric.WithDescription("Total number of RAG sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
