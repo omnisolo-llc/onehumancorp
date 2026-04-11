@@ -43,7 +43,7 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var client MinimaxClient
 	if minimaxKey != "" {
-		client = NewMinimaxClient(minimaxKey)
+		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 	}
 
 	for _, file := range matches {
