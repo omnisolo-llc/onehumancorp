@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "DONE"
+agent: "Jules"
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"
 Estimated Scope: "Large"
@@ -58,3 +59,11 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
+
+## Implementation Prompt
+Dear Implementer Agent,
+This Master Design Doc is the foundation for the Phase 4 Orchestration architecture. Please carefully follow the detailed blueprints established for the KAIROS Triad:
+1. When working on the Shared Task List, ensure distributed database locking (`FOR UPDATE SKIP LOCKED` in Postgres and application mutexes in SQLite) operates as described.
+2. Utilize the Teammate Mesh using CentrifugeNode and Redis for rapid, horizontal pub/sub event broadcasting.
+3. Implement the AutoDream background pipeline using pgvector indexing to seamlessly convert ephemeral task completions to persistent vector RAG memory.
+Execute implementations sequentially corresponding to their individual mission files (`2026-04-06T08:42:18+00:00_kairos_shared_task_list_schema.md`, `2026-04-06T08:42:36+00:00_kairos_teammate_mesh_apis.md`, `2026-04-07T02-14-59Z_kairos_autodream_pipeline.md`) with 100% test coverage and explicit separation of Standalone and Cloud mode logic. Ensure visual and architectural compliance in every PR.
