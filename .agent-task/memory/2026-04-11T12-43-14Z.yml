@@ -1,0 +1,3 @@
+agent: Jules
+notes: |
+  Implemented Hybrid MCP RAG Protocol. Added `sync_status` and `last_sync_at` to `swarm_memory_embeddings`. Created `RAGSyncService` with UPSERT logic for sync.
