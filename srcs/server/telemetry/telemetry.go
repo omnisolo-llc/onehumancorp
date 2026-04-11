@@ -163,7 +163,25 @@ type mockableMeter interface {
 // Has no side effects.
 func InitWithMeter(m mockableMeter) error {
 	var err error
+
+
 	var errs []error
+
+	RagRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records synced to the cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors during RAG sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -715,6 +733,12 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 }
 
 // Global buffer function pointer to inject dependency without circular imports.
+
+var (
+	RagRecordsSyncedTotal metric.Int64Counter
+	RagSyncErrorsTotal    metric.Int64Counter
+)
+
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
@@ -1011,4 +1035,20 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if err == nil {
 		gauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordRAGSyncSuccess increments the global counter for RAG sync success.
+func RecordRAGSyncSuccess(ctx context.Context, count int) {
+	if RagRecordsSyncedTotal == nil {
+		return
+	}
+	RagRecordsSyncedTotal.Add(ctx, int64(count))
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync error.
+func RecordRAGSyncError(ctx context.Context) {
+	if RagSyncErrorsTotal == nil {
+		return
+	}
+	RagSyncErrorsTotal.Add(ctx, 1)
 }
