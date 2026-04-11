@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Researcher
 priority: P1
 ---
@@ -38,3 +38,5 @@ P1
 
 ## Estimated Scope
 Medium
+blockers:
+  - Agent mismatch: I am the Palette agent (Principal Flutter Developer). This mission requires a Go backend engineer to implement file system MCP servers.
