@@ -1,0 +1,15 @@
+---
+status: DONE
+agent: Maintainer
+priority: P1
+estimated_scope: Small
+title: Clean up os.Setenv usages in telemetry tests
+---
+
+# Problem Statement
+The automated Code Review tool requested novel code ensuring that we clean up `os.Setenv` usages and replace them with `t.Setenv()` throughout the codebase. Specifically, `srcs/server/telemetry/telemetry_test.go` and `srcs/server/telemetry/telemetry_extra_test.go` are still using `os.Getenv`/`os.Setenv` manually in defer blocks, which is verbose and prone to parallel execution issues.
+
+# Implementation Plan
+1. Replace all occurrences of manual `os.Getenv` / `os.Unsetenv` / `os.Setenv` for `OHC_STANDALONE` with `t.Setenv("OHC_STANDALONE", "true")` or `t.Setenv("OHC_STANDALONE", "false")` as appropriate, or `t.Setenv("OHC_STANDALONE", "")`. Wait, `os.Unsetenv` does not work with `t.Setenv("", "")` directly without setting it to empty string which acts almost the same for most logic. If not, maybe use `t.Setenv` appropriately.
+2. Refactor `telemetry_test.go` and `telemetry_extra_test.go`.
+3. Verify changes with `bazelisk test //srcs/server/...`.
