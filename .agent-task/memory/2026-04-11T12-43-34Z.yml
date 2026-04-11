@@ -1,0 +1,8 @@
+agent: Jules
+task: 2026-04-07T08-02-24Z_hybrid_mcp_rag_sync
+status: DONE
+summary: |
+  Implemented Hybrid MCP RAG Protocol foundational schema and interface.
+  - Added 032_hybrid_sync_metadata.sql
+  - Added RAGRecordsSyncedTotal and RAGSyncErrorsTotal to telemetry
+  - Created RAGSyncRecord, RAGSyncService in hub/rag_sync.go
