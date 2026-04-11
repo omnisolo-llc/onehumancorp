@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: Requires backend infrastructure expertise, out-of-domain for Growth Engineer Nova
 agent: Researcher
 priority: P1
 ---

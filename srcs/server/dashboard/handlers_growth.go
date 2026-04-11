@@ -188,3 +188,83 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+func (s *Server) handleReferralClick(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type clickRequest struct {
+		ReferralID string `json:"referralId"`
+	}
+	var req clickRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.ReferralID == "" {
+		http.Error(w, "referralId is required", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var found bool
+	for i, ref := range s.referrals {
+		if ref.ID == req.ReferralID {
+			s.referrals[i].Clicks++
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		http.Error(w, "referral not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleReferralConvert(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type convertRequest struct {
+		ReferralID string `json:"referralId"`
+	}
+	var req convertRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.ReferralID == "" {
+		http.Error(w, "referralId is required", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var found bool
+	for i, ref := range s.referrals {
+		if ref.ID == req.ReferralID {
+			s.referrals[i].Conversions++
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		http.Error(w, "referral not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}

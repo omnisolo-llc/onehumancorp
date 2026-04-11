@@ -158,3 +158,52 @@ func TestHandleReferrals(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleReferralClickAndConvert(t *testing.T) {
+	s := &Server{
+		referrals: []Referral{
+			{ID: "ref-123", UserID: "user-1", ReferralCode: "CODE123", Clicks: 0, Conversions: 0},
+		},
+	}
+
+	// Test Click
+	clickPayload := `{"referralId": "ref-123"}`
+	reqClick := httptest.NewRequest(http.MethodPost, "/api/growth/referrals/click", bytes.NewBufferString(clickPayload))
+	reqClick.Header.Set("Content-Type", "application/json")
+	wClick := httptest.NewRecorder()
+
+	s.handleReferralClick(wClick, reqClick)
+
+	if wClick.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wClick.Code)
+	}
+
+	// Test Convert
+	convertPayload := `{"referralId": "ref-123"}`
+	reqConvert := httptest.NewRequest(http.MethodPost, "/api/growth/referrals/convert", bytes.NewBufferString(convertPayload))
+	reqConvert.Header.Set("Content-Type", "application/json")
+	wConvert := httptest.NewRecorder()
+
+	s.handleReferralConvert(wConvert, reqConvert)
+
+	if wConvert.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wConvert.Code)
+	}
+
+	// Verify state
+	if s.referrals[0].Clicks != 1 {
+		t.Errorf("expected 1 click, got %d", s.referrals[0].Clicks)
+	}
+	if s.referrals[0].Conversions != 1 {
+		t.Errorf("expected 1 conversion, got %d", s.referrals[0].Conversions)
+	}
+
+	// Test not found
+	notFoundPayload := `{"referralId": "ref-not-found"}`
+	reqNotFound := httptest.NewRequest(http.MethodPost, "/api/growth/referrals/click", bytes.NewBufferString(notFoundPayload))
+	wNotFound := httptest.NewRecorder()
+	s.handleReferralClick(wNotFound, reqNotFound)
+	if wNotFound.Code != http.StatusNotFound {
+		t.Errorf("expected status 404 for not found, got %d", wNotFound.Code)
+	}
+}

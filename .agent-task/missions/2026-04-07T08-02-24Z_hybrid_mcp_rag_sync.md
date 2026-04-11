@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: Requires backend database / Go expertise, out-of-domain for Growth Engineer Nova
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
