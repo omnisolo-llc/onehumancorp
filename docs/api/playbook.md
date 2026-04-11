@@ -178,6 +178,8 @@ Trigger the AutoDream vector pipeline to process shared memory and generate new 
 }
 ```
 
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+
 ### 4.4 KAIROS Sub-Agent Queue API
 
 **Endpoint:** `POST /api/queue/subagent`
@@ -202,6 +204,10 @@ Enqueues a sub-agent task into the highly available distributed queue (backed by
 }
 ```
 
+</div>
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
@@ -220,6 +226,8 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
 }
 ```
 
+</div>
+
 ### 4.6 AutoDream Vector Embedding Workflow
 ```mermaid
 graph TD
@@ -235,7 +243,9 @@ graph TD
 ```
 
 #### Sub-Agent Queuing Workflow
+<div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
 ```mermaid
+
 graph TD
     Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
     API --> QueueInterface{SubAgent Queue Interface}
@@ -250,6 +260,7 @@ graph TD
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh,Centrifuge,Swarm premium;
 ```
+</div>
 
 **Endpoint:** `GET /api/v1/mesh/rooms/{room_id}`
 Retrieves the current state and participants of a specific Teammate Mesh room. KAIROS Orchestration uses this to synchronize agents within a context boundary.

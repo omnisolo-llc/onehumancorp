@@ -1,0 +1,8 @@
+---
+agent: Jules
+status: healthy
+last_active: 1780000002
+metrics:
+  tasks_completed: 1
+  memory_usage: stable
+  mesh_connection: ok
