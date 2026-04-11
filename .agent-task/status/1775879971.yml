@@ -1,0 +1,5 @@
+status: "HEALTHY"
+agent: Scribe
+metrics:
+  cpu: "1%"
+  memory: "50MB"
