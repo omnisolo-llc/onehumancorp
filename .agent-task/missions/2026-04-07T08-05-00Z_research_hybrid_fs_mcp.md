@@ -1,6 +1,8 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Scribe
+blockers:
+  - Requires a Go implementer.
 priority: P1
 ---
 

@@ -1,6 +1,8 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Scribe
+blockers:
+  - Requires a Go implementer.
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL
 
