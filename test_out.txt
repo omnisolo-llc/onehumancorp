@@ -1,0 +1,499 @@
+WARNING: The following configs were expanded more than once: [remote, buildbuddy-official]. For repeatable flags, repeats are counted twice and may lead to unexpected behavior.
+WARNING: option '--remote_cache' was expanded from both option '--config=remote' (source /app/.bazelrc) and option '--config=local' (source command line options)
+WARNING: option '--remote_executor' was expanded from both option '--config=remote' (source /app/.bazelrc) and option '--config=local' (source command line options)
+INFO: Invocation ID: 05ffdfa5-57cd-4994-8e06-9fe5032c82e8
+INFO: Streaming build results to: https://onehumancorp.buildbuddy.io/invocation/05ffdfa5-57cd-4994-8e06-9fe5032c82e8
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=0 --terminal_columns=80
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  Inherited 'build' options: --config=remote --disk_cache=~/.cache/bazel-disk-cache --action_env=CGO_ENABLED=1 --spawn_strategy=sandboxed,local --incompatible_strict_action_env --announce_rc --action_env=GEMINI_API_KEY --action_env=MINIMAX_API_KEY --action_env=MCP_BUNDLE_DIR --action_env=CI
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  'test' options: --config=remote --test_output=errors --build_tests_only --test_timeout=300,600,900,1800 --test_env=GEMINI_API_KEY --test_env=MINIMAX_API_KEY --test_env=MCP_BUNDLE_DIR --test_env=CI --test_env=HOME --test_env=MCPANY_DEBUG --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS --test_env=PATH --jobs=200
+INFO: Found applicable config definition build:remote in file /app/.bazelrc: --remote_download_all --config=buildbuddy-official
+INFO: Found applicable config definition common:buildbuddy-official in file /app/.bazelrc: --remote_cache=grpcs://onehumancorp.buildbuddy.io --remote_upload_local_results --remote_timeout=10m --remote_executor=grpcs://onehumancorp.buildbuddy.io --remote_cache_compression --jobs=200 --remote_local_fallback --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
+INFO: Found applicable config definition build:buildbuddy-official in file /app/.bazelrc: --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/ --bes_backend=grpcs://onehumancorp.buildbuddy.io
+INFO: Found applicable config definition test:remote in file /app/.bazelrc: --local_test_jobs=8
+INFO: Found applicable config definition build:remote in file /app/.bazelrc: --remote_download_all --config=buildbuddy-official
+INFO: Found applicable config definition common:buildbuddy-official in file /app/.bazelrc: --remote_cache=grpcs://onehumancorp.buildbuddy.io --remote_upload_local_results --remote_timeout=10m --remote_executor=grpcs://onehumancorp.buildbuddy.io --remote_cache_compression --jobs=200 --remote_local_fallback --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
+INFO: Found applicable config definition build:buildbuddy-official in file /app/.bazelrc: --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/ --bes_backend=grpcs://onehumancorp.buildbuddy.io
+INFO: Found applicable config definition test:remote in file /app/.bazelrc: --local_test_jobs=8
+INFO: Found applicable config definition build:local in file /app/.bazelrc: --remote_cache= --remote_executor= --spawn_strategy=local
+Computing main repo mapping:
+Loading:
+Loading: 0 packages loaded
+Analyzing: 52 targets (9 packages loaded, 0 targets configured)
+Analyzing: 52 targets (9 packages loaded, 0 targets configured)
+
+Analyzing: 52 targets (20 packages loaded, 240 targets configured)
+[11 / 13] 1 / 2 tests; checking cached actions
+Analyzing: 52 targets (31 packages loaded, 23434 targets configured)
+[13 / 13] 2 / 2 tests; no actions running
+Analyzing: 52 targets (48 packages loaded, 32847 targets configured)
+[13 / 13] 2 / 2 tests; no actions running
+Analyzing: 52 targets (62 packages loaded, 45499 targets configured)
+[13 / 13] 2 / 2 tests; no actions running
+Analyzing: 52 targets (70 packages loaded, 47869 targets configured)
+[36 / 47] 2 / 7 tests; checking cached actions
+Analyzing: 52 targets (73 packages loaded, 47903 targets configured)
+[36 / 47] 2 / 7 tests; checking cached actions
+Analyzing: 52 targets (74 packages loaded, 47976 targets configured)
+[1,261 / 1,418] 22 / 40 tests; Executing genrule //:gen_desktop_sh; 0s local, disk-cache ... (2 actions, 1 running)
+Analyzing: 52 targets (74 packages loaded, 47995 targets configured)
+[1,452 / 1,543] 33 / 51 tests; GoCompilePkg srcs/server/pipeline/pipeline.a; 0s local, disk-cache ... (3 actions, 1 running)
+INFO: Analyzed 52 targets (74 packages loaded, 47995 targets configured).
+[1,536 / 1,674] 33 / 52 tests; GoCompilePkg srcs/server/pipeline/pipeline.a; 1s local, disk-cache ... (42 actions, 4 running)
+[1,567 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 2s local, disk-cache ... (53 actions, 4 running)
+[1,570 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 3s local, disk-cache ... (51 actions, 4 running)
+[1,571 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 4s local, disk-cache ... (51 actions, 4 running)
+[1,574 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 6s local, disk-cache ... (48 actions, 4 running)
+[1,574 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 8s local, disk-cache ... (48 actions, 5 running)
+[1,576 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 10s local, disk-cache ... (47 actions, 5 running)
+INFO: From Preparing Flutter dependencies for models_lib:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,580 / 1,713] 33 / 52 tests; Preparing Flutter dependencies for models_lib; 11s local, disk-cache ... (44 actions, 7 running)
+[1,590 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 1s local, disk-cache ... (35 actions, 4 running)
+[1,593 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 2s local, disk-cache ... (38 actions, 4 running)
+[1,600 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 3s local, disk-cache ... (32 actions, 4 running)
+[1,602 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 4s local, disk-cache ... (30 actions, 4 running)
+[1,602 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 5s local, disk-cache ... (30 actions, 5 running)
+[1,609 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 6s local, disk-cache ... (27 actions, 5 running)
+[1,613 / 1,713] 33 / 52 tests; Setting up Flutter workspace for services_lib; 8s local, disk-cache ... (23 actions, 4 running)
+[1,614 / 1,713] 33 / 52 tests; Setting up Flutter workspace for app_for_tests; 7s local, disk-cache ... (22 actions, 5 running)
+[1,616 / 1,713] 33 / 52 tests; Setting up Flutter workspace for screens_lib; 8s local, disk-cache ... (20 actions, 4 running)
+[1,618 / 1,713] 33 / 52 tests; Setting up Flutter workspace for widgets_lib; 5s local, disk-cache ... (19 actions, 4 running)
+INFO: From Preparing Flutter dependencies for path:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for web:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,620 / 1,713] 33 / 52 tests; Setting up Flutter workspace for router_lib; 3s local, disk-cache ... (17 actions, 5 running)
+[1,631 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 4s local, disk-cache ... (17 actions, 9 running)
+[1,631 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 5s local, disk-cache ... (17 actions, 9 running)
+INFO: From Preparing Flutter dependencies for term_glyph:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for ffi:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,633 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 6s local, disk-cache ... (15 actions, 9 running)
+INFO: From Preparing Flutter dependencies for meta:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,634 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 7s local, disk-cache ... (14 actions, 9 running)
+[1,634 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 8s local, disk-cache ... (18 actions, 9 running)
+INFO: From Preparing Flutter dependencies for collection:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for platform:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,636 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 9s local, disk-cache ... (16 actions, 9 running)
+INFO: From Preparing Flutter dependencies for sky_engine:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,636 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 10s local, disk-cache ... (19 actions, 10 running)
+INFO: From Preparing Flutter dependencies for clock:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for fixnum:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,639 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 11s local, disk-cache ... (17 actions, 9 running)
+[1,639 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 12s local, disk-cache ... (19 actions, 9 running)
+INFO: From Preparing Flutter dependencies for logging:
+=== Preparing pub cache from dependencies ===
+No dependency caches supplied
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,640 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 13s local, disk-cache ... (18 actions, 9 running)
+[1,640 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 14s local, disk-cache ... (19 actions, 9 running)
+[1,640 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 15s local, disk-cache ... (19 actions, 9 running)
+INFO: From Preparing Flutter dependencies for stack_trace:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,641 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 16s local, disk-cache ... (18 actions, 9 running)
+[1,641 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 18s local, disk-cache ... (18 actions, 10 running)
+INFO: From Preparing Flutter dependencies for file:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,643 / 1,718] 33 / 52 tests; Setting up Flutter workspace for router_lib; 19s local, disk-cache ... (18 actions, 9 running)
+[1,645 / 1,718] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 16s local, disk-cache ... (16 actions, 9 running)
+INFO: From Preparing Flutter dependencies for xdg_directories:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,646 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 18s local, disk-cache ... (16 actions, 10 running)
+INFO: From Preparing Flutter dependencies for plugin_platform_interface:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for state_notifier:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,648 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 19s local, disk-cache ... (15 actions, 9 running)
+[1,648 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 20s local, disk-cache ... (17 actions, 11 running)
+INFO: From Preparing Flutter dependencies for async:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,649 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 21s local, disk-cache ... (17 actions, 10 running)
+[1,649 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 22s local, disk-cache ... (17 actions, 10 running)
+[1,649 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 26s local, disk-cache ... (17 actions, 10 running)
+[1,649 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 27s local, disk-cache ... (17 actions, 10 running)
+[1,649 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 32s local, disk-cache ... (17 actions, 10 running)
+[1,649 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 39s local, disk-cache ... (17 actions, 11 running)
+INFO: From Preparing Flutter dependencies for typed_data:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,650 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 40s local, disk-cache ... (17 actions, 10 running)
+[1,650 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 41s local, disk-cache ... (17 actions, 10 running)
+[1,650 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 44s local, disk-cache ... (17 actions, 11 running)
+INFO: From Preparing Flutter dependencies for protobuf:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,651 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 45s local, disk-cache ... (16 actions, 10 running)
+[1,651 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 51s local, disk-cache ... (16 actions, 11 running)
+INFO: From Preparing Flutter dependencies for source_span:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for intl:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,653 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 52s local, disk-cache ... (15 actions, 10 running)
+[1,653 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 53s local, disk-cache ... (15 actions, 11 running)
+[1,654 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 54s local, disk-cache ... (15 actions, 10 running)
+[1,654 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 55s local, disk-cache ... (15 actions, 10 running)
+INFO: From Preparing Flutter dependencies for flutter:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,654 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 58s local, disk-cache ... (15 actions, 11 running)
+[1,655 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 59s local, disk-cache ... (15 actions, 10 running)
+INFO: From Preparing Flutter dependencies for go_router:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,655 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 60s local, disk-cache ... (15 actions, 11 running)
+[1,656 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 62s local, disk-cache ... (14 actions, 10 running)
+[1,656 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 72s local, disk-cache ... (14 actions, 10 running)
+[1,656 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 78s local, disk-cache ... (14 actions, 10 running)
+[1,656 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 79s local, disk-cache ... (14 actions, 10 running)
+[1,656 / 1,719] 33 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 82s local, disk-cache ... (14 actions, 10 running)
+INFO: From Preparing Flutter dependencies for stream_channel:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,658 / 1,719] 34 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 83s local, disk-cache ... (12 actions, 9 running)
+[1,658 / 1,719] 34 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 85s local, disk-cache ... (12 actions, 10 running)
+INFO: From Preparing Flutter dependencies for crypto:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,659 / 1,719] 34 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 87s local, disk-cache ... (12 actions, 10 running)
+INFO: From Preparing Flutter dependencies for shared_preferences_platform_interface:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,661 / 1,719] 34 / 52 tests; Testing //srcs/app/lib/models:skill_model_test; 88s local, disk-cache ... (14 actions, 9 running)
+INFO: From Preparing Flutter dependencies for string_scanner:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for path_provider_platform_interface:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,670 / 1,720] 39 / 52 tests; Preparing Flutter dependencies for riverpod; 31s local, disk-cache ... (9 actions, 5 running)
+INFO: From Preparing Flutter dependencies for riverpod:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,671 / 1,720] 39 / 52 tests; Preparing Flutter dependencies for widgets_lib; 2s local, disk-cache ... (11 actions, 5 running)
+[1,671 / 1,720] 39 / 52 tests; Preparing Flutter dependencies for widgets_lib; 3s local, disk-cache ... (11 actions, 5 running)
+[1,671 / 1,720] 39 / 52 tests; Preparing Flutter dependencies for widgets_lib; 4s local, disk-cache ... (11 actions, 6 running)
+INFO: From Preparing Flutter dependencies for shared_preferences_web:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for web_socket_channel:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,674 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for widgets_lib; 6s local, disk-cache ... (9 actions, 4 running)
+[1,674 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for widgets_lib; 16s local, disk-cache ... (9 actions, 4 running)
+[1,674 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for widgets_lib; 39s local, disk-cache ... (9 actions, 5 running)
+INFO: From Preparing Flutter dependencies for shared_preferences_android:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,675 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for widgets_lib; 40s local, disk-cache ... (8 actions, 4 running)
+INFO: From Preparing Flutter dependencies for widgets_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,675 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for widgets_lib; 41s local, disk-cache ... (8 actions, 5 running)
+INFO: From Preparing Flutter dependencies for http_parser:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,676 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences_foundation; 40s local, disk-cache ... (7 actions, 5 running)
+INFO: From Preparing Flutter dependencies for boolean_selector:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,678 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences_foundation; 42s local, disk-cache ... (7 actions, 4 running)
+INFO: From Preparing Flutter dependencies for path_provider_windows:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,679 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences_foundation; 43s local, disk-cache ... (6 actions, 4 running)
+INFO: From Preparing Flutter dependencies for path_provider_linux:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,680 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences_foundation; 44s local, disk-cache ... (6 actions, 4 running)
+[1,680 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences_foundation; 46s local, disk-cache ... (7 actions, 4 running)
+INFO: From Preparing Flutter dependencies for centrifuge:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,681 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences_foundation; 48s local, disk-cache ... (6 actions, 5 running)
+INFO: From Preparing Flutter dependencies for shared_preferences_foundation:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for http:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,683 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for flutter_riverpod; 8s local, disk-cache ... (4 actions running)
+INFO: From Preparing Flutter dependencies for test_api:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,684 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for flutter_riverpod; 10s local, disk-cache ... (3 actions running)
+INFO: From Preparing Flutter dependencies for shared_preferences_windows:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,684 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for flutter_riverpod; 11s local, disk-cache ... (4 actions running)
+INFO: From Preparing Flutter dependencies for shared_preferences_linux:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+INFO: From Preparing Flutter dependencies for flutter_riverpod:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,686 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for flutter_riverpod; 13s local, disk-cache ... (3 actions running)
+[1,687 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for matcher; 3s local, disk-cache ... (2 actions running)
+[1,687 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for matcher; 4s local, disk-cache ... (2 actions running)
+INFO: From Preparing Flutter dependencies for matcher:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,688 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences; 7s local, disk-cache ... (2 actions, 1 running)
+[1,688 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences; 9s local, disk-cache ... (2 actions running)
+[1,688 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for shared_preferences; 18s local, disk-cache ... (2 actions running)
+INFO: From Preparing Flutter dependencies for shared_preferences:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,689 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for mocktail; 31s local, disk-cache
+INFO: From Preparing Flutter dependencies for mocktail:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,690 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for services_lib; 0s local, disk-cache
+[1,690 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for services_lib; 10s local, disk-cache
+INFO: From Preparing Flutter dependencies for services_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,690 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for services_lib; 20s local, disk-cache
+[1,691 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for screens_lib; 0s local, disk-cache ... (2 actions running)
+[1,691 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for screens_lib; 10s local, disk-cache ... (2 actions running)
+INFO: From Preparing Flutter dependencies for services_for_tests:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,691 / 1,720] 40 / 52 tests; Preparing Flutter dependencies for screens_lib; 20s local, disk-cache ... (2 actions running)
+[1,702 / 1,725] 40 / 52 tests; Preparing Flutter dependencies for screens_lib; 21s local, disk-cache ... (6 actions, 1 running)
+[1,702 / 1,725] 40 / 52 tests; Preparing Flutter dependencies for screens_lib; 22s local, disk-cache ... (6 actions running)
+INFO: From Preparing Flutter dependencies for screens_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,702 / 1,725] 40 / 52 tests; Preparing Flutter dependencies for screens_lib; 26s local, disk-cache ... (6 actions running)
+[1,703 / 1,725] 40 / 52 tests; Testing //srcs/app/lib/services:centrifuge_service_test; 6s local, disk-cache ... (5 actions running)
+[1,703 / 1,725] 40 / 52 tests; Testing //srcs/app/lib/services:centrifuge_service_test; 7s local, disk-cache ... (7 actions, 6 running)
+[1,703 / 1,725] 40 / 52 tests; Testing //srcs/app/lib/services:centrifuge_service_test; 8s local, disk-cache ... (7 actions running)
+[1,703 / 1,725] 40 / 52 tests; Testing //srcs/app/lib/services:centrifuge_service_test; 17s local, disk-cache ... (7 actions running)
+[1,703 / 1,725] 40 / 52 tests; Testing //srcs/app/lib/services:centrifuge_service_test; 47s local, disk-cache ... (7 actions running)
+[1,703 / 1,725] 40 / 52 tests; Testing //srcs/app/lib/services:centrifuge_service_test; 54s local, disk-cache ... (7 actions running)
+[1,708 / 1,725] 45 / 52 tests; Preparing Flutter dependencies for screens_for_tests; 48s local, disk-cache ... (2 actions running)
+INFO: From Preparing Flutter dependencies for screens_for_tests:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,708 / 1,725] 45 / 52 tests; Preparing Flutter dependencies for screens_for_tests; 52s local, disk-cache ... (2 actions running)
+[1,721 / 1,731] 45 / 52 tests; Preparing Flutter dependencies for router_lib; 52s local, disk-cache ... (7 actions, 5 running)
+[1,721 / 1,731] 45 / 52 tests; Preparing Flutter dependencies for router_lib; 54s local, disk-cache ... (7 actions running)
+[1,721 / 1,731] 45 / 52 tests; Preparing Flutter dependencies for router_lib; 63s local, disk-cache ... (7 actions running)
+INFO: From Preparing Flutter dependencies for router_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+[1,722 / 1,731] 45 / 52 tests; Testing //srcs/app/lib/screens:swarm_memory_screen_test; 31s local, disk-cache ... (6 actions running)
+[1,722 / 1,731] 45 / 52 tests; Testing //srcs/app/lib/screens:swarm_memory_screen_test; 32s local, disk-cache ... (7 actions, 6 running)
+[1,722 / 1,731] 45 / 52 tests; Testing //srcs/app/lib/screens:swarm_memory_screen_test; 33s local, disk-cache ... (7 actions running)
+[1,722 / 1,731] 45 / 52 tests; Testing //srcs/app/lib/screens:swarm_memory_screen_test; 42s local, disk-cache ... (7 actions running)
+[1,722 / 1,731] 45 / 52 tests; Testing //srcs/app/lib/screens:swarm_memory_screen_test; 56s local, disk-cache ... (7 actions running)
+[1,725 / 1,731] 48 / 52 tests; Testing //srcs/app/lib/screens:widget_test; 58s local, disk-cache ... (4 actions running)
+[1,725 / 1,731] 48 / 52 tests; Testing //srcs/app/lib/screens:widget_test; 60s local, disk-cache ... (4 actions running)
+[1,726 / 1,731] 50 / 52 tests; Testing //srcs/app/lib/screens:widget_test; 61s local, disk-cache ... (3 actions running)
+[1,728 / 1,731] 51 / 52 tests; Preparing Flutter dependencies for app_for_tests; 30s local, disk-cache
+[1,728 / 1,731] 51 / 52 tests; Preparing Flutter dependencies for app_for_tests; 40s local, disk-cache
+INFO: From Preparing Flutter dependencies for app_for_tests:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
