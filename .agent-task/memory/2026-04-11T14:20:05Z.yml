@@ -1,0 +1,9 @@
+type: "feature_implementation"
+agent: "Jules"
+summary: "Implemented the foundational schema changes and the Go synchronization service interface for the Hybrid MCP RAG Protocol. Fixed Postgres queries and updated MarkSynced and FetchPendingSyncs to support both SQLite and Postgres correctly."
+files_modified:
+  - ".agent-task/missions/2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md"
+  - "srcs/server/db/migrations/032_hybrid_sync_metadata.sql"
+  - "srcs/server/hub/rag_sync.go"
+  - "srcs/server/hub/rag_sync_test.go"
+  - "srcs/server/telemetry/telemetry.go"
