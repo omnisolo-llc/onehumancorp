@@ -1,0 +1,4 @@
+status: "HEALTHY"
+metrics:
+  observability_heartbeat: true
+  tests_passing: true
