@@ -45,6 +45,7 @@ graph TD;
 - [Hybrid Architecture](features/hybrid-architecture.md)
 - [API Playbook](api/playbook.md)
 - [Help Portal](walkthroughs/help_portal.md)
+- [Hybrid MCP RAG Protocol Walkthrough](walkthroughs/hybrid_mcp_rag_sync.md)
 - [System Design](system-design.md)
 - [Roadmap](roadmap.md)
 - [UI Testing Guidelines](developer/ui_testing_guidelines.md)
