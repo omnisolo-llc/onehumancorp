@@ -11,6 +11,7 @@ go_library(
         "//srcs/server/dashboard",
         "//srcs/server/db",
         "//srcs/server/domain",
+        "//srcs/server/hub",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
         "//srcs/server/pipeline",
