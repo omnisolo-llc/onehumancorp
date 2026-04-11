@@ -145,7 +145,7 @@ class _ValuePropGrid extends StatelessWidget {
         spacing: 24,
         runSpacing: 24,
         alignment: WrapAlignment.center,
-        children: const [
+        children: [
           _GlassCard(
             icon: Icons.speed,
             title: 'Global Performance',
@@ -172,7 +172,7 @@ class _ValuePropGrid extends StatelessWidget {
       spacing: 24,
       runSpacing: 24,
       alignment: WrapAlignment.center,
-      children: const [
+      children: [
         _GlassCard(
           icon: Icons.shield,
           title: 'Zero Data Leakage',

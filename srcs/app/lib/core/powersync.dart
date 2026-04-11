@@ -22,7 +22,7 @@ final PowerSyncDatabase powerSyncDb = PowerSyncDatabase(
       Column.text('organization_id'),
     ]),
   ]),
-  maxReaders: 3,
+  path: 'powersync.db',
 );
 
 class BackendConnector extends PowerSyncBackendConnector {

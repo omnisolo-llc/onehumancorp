@@ -163,9 +163,9 @@ void main() {
     ProcessResult result;
 
     if (Platform.isWindows) {
-      result = await defaultService.processRun('cmd', ['/c', 'echo', 'ok']);
+      result = await (defaultService as dynamic).processRun('cmd', ['/c', 'echo', 'ok']);
     } else {
-      result = await defaultService.processRun('sh', ['-c', 'echo ok']);
+      result = await (defaultService as dynamic).processRun('sh', ['-c', 'echo ok']);
     }
 
     expect(result.stdout.toString().toLowerCase(), contains('ok'));
@@ -176,9 +176,9 @@ void main() {
     Process process;
 
     if (Platform.isWindows) {
-      process = await defaultService.processStart('cmd', ['/c', 'exit', '0']);
+      process = await (defaultService as dynamic).processStart('cmd', ['/c', 'exit', '0']);
     } else {
-      process = await defaultService.processStart('sh', ['-c', 'exit 0']);
+      process = await (defaultService as dynamic).processStart('sh', ['-c', 'exit 0']);
     }
 
     expect(await process.exitCode, 0);
