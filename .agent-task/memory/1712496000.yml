@@ -1,0 +1,1 @@
+insights: "Implemented Hybrid MCP RAG Sync Protocol. Added rag_sync.go and sync metadata to db. Metrics were initialized and exposed."
