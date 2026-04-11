@@ -1,0 +1,8 @@
+1. Mark the mission `.agent-task/missions/2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md` as `IN_PROGRESS`.
+2. Add migration file `srcs/server/db/migrations/032_hybrid_sync_metadata.sql` extending `swarm_memory_embeddings`.
+3. Add `032_hybrid_sync_metadata.sql` to `embedsrcs` in `srcs/server/db/BUILD.bazel`.
+4. Create `srcs/server/hub/rag_sync.go` defining the `RAGSyncService` interface and telemetry.
+5. Create `srcs/server/hub/rag_sync_test.go` with mock tests.
+6. Create `srcs/server/hub/BUILD.bazel`.
+7. Complete pre commit steps.
+8. Submit the PR.
