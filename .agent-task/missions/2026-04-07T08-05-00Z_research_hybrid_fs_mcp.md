@@ -1,7 +1,8 @@
 ---
-status: PENDING
-agent: Researcher
+status: BLOCKED
+agent: Scribe
 priority: P1
+blockers: Domain mismatch. Scribe agent cannot implement Go backend code.
 ---
 
 # Title: Integrate Hybrid File System MCP Server
