@@ -1,0 +1,163 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+# Common copts applied to every C++ target in this package.
+_COPTS = ["-std=c++20", "-Wall", "-Wextra", "-Wpedantic"]
+
+cc_library(
+    name = "tool",
+    hdrs = ["tool.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/agents/builtin:types",
+        "@com_google_absl//absl/status:statusor",
+        "@nlohmann_json//:json",
+    ],
+)
+
+# Individual tool implementations.  Each is a separate cc_library so the
+# linker can dead-strip unused tools in embedded builds.
+
+cc_library(
+    name = "bash_tool",
+    srcs = ["bash.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "read_tool",
+    srcs = ["read.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "write_tool",
+    srcs = ["write.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "glob_tool",
+    srcs = ["glob.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "grep_tool",
+    srcs = ["grep.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "webfetch_tool",
+    srcs = ["webfetch.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "//srcs/server/agents/builtin:http_client",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "websearch_tool",
+    srcs = ["websearch.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "sendmessage_tool",
+    srcs = ["sendmessage.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "todowrite_tool",
+    srcs = ["todowrite.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_library(
+    name = "toolsearch_tool",
+    srcs = ["toolsearch.cc"],
+    copts = _COPTS,
+    deps = [
+        ":tool",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
+    ],
+)
+
+# Aggregated library: pulls in all tools plus the MakeDefaultTools factory.
+cc_library(
+    name = "tools",
+    srcs = ["all_tools.cc"],
+    hdrs = ["all_tools.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bash_tool",
+        ":glob_tool",
+        ":grep_tool",
+        ":read_tool",
+        ":sendmessage_tool",
+        ":todowrite_tool",
+        ":tool",
+        ":toolsearch_tool",
+        ":webfetch_tool",
+        ":websearch_tool",
+        ":write_tool",
+    ],
+)
