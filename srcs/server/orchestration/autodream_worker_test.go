@@ -79,7 +79,7 @@ func TestAutoDreamWorker_ProcessMemories(t *testing.T) {
 	provider := setupTestDB(t)
 	setupMockMemories(t, 2)
 
-	worker := NewAutoDreamWorker(provider)
+	worker := NewAutoDreamWorker(provider, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -121,7 +121,7 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 		os.RemoveAll(dir)
 	})
 
-	worker := NewAutoDreamWorker(provider)
+	worker := NewAutoDreamWorker(provider, nil)
 	ctx := context.Background()
 
 	err := worker.ProcessMemories(ctx)

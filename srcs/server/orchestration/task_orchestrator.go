@@ -482,7 +482,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		worker := NewAutoDreamWorker(to.db)
+		worker := NewAutoDreamWorker(to.db, to.redisClient)
 
 		// Let AutoDreamWorker handle it via direct LLM call
 		contextStr := fmt.Sprintf("Task ID: %s, Result: %s, Initial Payload: %s", taskID, result, taskPayload)

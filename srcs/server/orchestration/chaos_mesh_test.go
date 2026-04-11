@@ -114,7 +114,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	defer os.Chmod(memoryDir, 0755)
 
 	// Instantiate the AutoDreamWorker (the real application code)
-	worker := NewAutoDreamWorker(dbInstance)
+	worker := NewAutoDreamWorker(dbInstance, nil)
 
 	// Use a waitgroup to run ingestAgentMemories concurrently
 	var chaosWg sync.WaitGroup

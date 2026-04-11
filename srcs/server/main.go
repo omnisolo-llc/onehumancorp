@@ -283,7 +283,7 @@ func run(now time.Time, listen listenFunc) error {
 	}
 
 	if pool != nil {
-		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
+		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider, redisClient)
 		autodreamWorker.Start(ctx)
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)

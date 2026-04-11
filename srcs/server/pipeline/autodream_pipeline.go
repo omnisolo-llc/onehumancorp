@@ -27,7 +27,7 @@ type AutoDreamPipeline struct {
 
 // NewAutoDreamPipeline creates a new AutoDreamPipeline instance.
 func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDreamPipeline {
-	worker := orchestration.NewAutoDreamWorker(pool)
+	worker := orchestration.NewAutoDreamWorker(pool, redisClient)
 
 	// Determine LLM client based on env vars
 	var llmClient local.LLMClient

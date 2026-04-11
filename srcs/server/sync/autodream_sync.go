@@ -96,7 +96,7 @@ func (e *AutoDreamSyncEngine) synthesizeMemory(ctx context.Context) {
 
 func (e *AutoDreamSyncEngine) getOrchestrationWorker() *orchestration.AutoDreamWorker {
 	if e.dbWrapper != nil {
-		return orchestration.NewAutoDreamWorker(e.dbWrapper.Provider)
+		return orchestration.NewAutoDreamWorker(e.dbWrapper.Provider, nil)
 	}
 	return nil
 }

@@ -21,7 +21,7 @@ func TestAutoDreamPruneSessions(t *testing.T) {
 		t.Fatalf("failed migrations: %v", err)
 	}
 
-	worker := NewAutoDreamWorker(pool.Provider)
+	worker := NewAutoDreamWorker(pool.Provider, nil)
 
 	ctx := context.Background()
 	_, _ = pool.Exec(ctx, "DELETE FROM agent_session_data") // clear table
@@ -74,7 +74,7 @@ func TestAutoDreamTruthInjectionAndConflict(t *testing.T) {
 		t.Fatalf("failed migrations: %v", err)
 	}
 
-	worker := NewAutoDreamWorker(pool.Provider)
+	worker := NewAutoDreamWorker(pool.Provider, nil)
 	ctx := context.Background()
 
 	// Clear out truth table
@@ -155,7 +155,7 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		t.Fatalf("failed to insert mock session: %v", err)
 	}
 
-	worker := NewAutoDreamWorker(pool.Provider)
+	worker := NewAutoDreamWorker(pool.Provider, nil)
 	worker.compressSessionData(ctx)
 
 	// Verify the session was deleted
@@ -190,7 +190,7 @@ func TestAutoDreamConsolidateEpoch(t *testing.T) {
 		t.Fatalf("failed migrations: %v", err)
 	}
 
-	worker := NewAutoDreamWorker(pool.Provider)
+	worker := NewAutoDreamWorker(pool.Provider, nil)
 	ctx := context.Background()
 
 	err = worker.ConsolidateEpoch(ctx)
@@ -224,7 +224,7 @@ func TestAutoDreamWorker_PipelinesCoverage(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	worker := NewAutoDreamWorker(pool.Provider)
+	worker := NewAutoDreamWorker(pool.Provider, nil)
 
 	// Verify the non-blocking nature and fast exit of Start when context is cancelled.
 	go worker.Start(ctx)

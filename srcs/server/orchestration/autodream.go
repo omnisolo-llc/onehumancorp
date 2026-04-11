@@ -12,11 +12,13 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/redis/rueidis"
 )
 
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
-	pool db.Provider
+	pool        db.Provider
+	redisClient rueidis.Client
 }
 
 // AutoDreamWorker options
@@ -27,8 +29,8 @@ type AutoDreamWorkerOptions struct {
 }
 
 // NewAutoDreamWorker creates a new AutoDream worker.
-func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
-	w := &AutoDreamWorker{pool: pool}
+func NewAutoDreamWorker(pool db.Provider, redisClient rueidis.Client) *AutoDreamWorker {
+	w := &AutoDreamWorker{pool: pool, redisClient: redisClient}
 	// Note: You can inject rueidis.Client and MinimaxClient into the struct if needed.
 	return w
 }
