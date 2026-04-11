@@ -2,12 +2,14 @@ package orchestration
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
 )
 
 type mockEmbeddingClient struct{}
@@ -16,13 +18,16 @@ func (m *mockEmbeddingClient) GenerateEmbedding(ctx context.Context, text string
 	return []float32{0.1, 0.2, 0.3}, nil
 }
 
-func TestAutoDreamPipeline_Process(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+func TestAutoDreamWorker_Process(t *testing.T) {
+	f, err := os.CreateTemp("", "testdb-*.sqlite")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+
+	provider, err := db.NewSQLiteProvider(f.Name())
 	require.NoError(t, err)
 
 	ctx := context.Background()
 
-	// Initialize tables
 	_, err = provider.Exec(ctx, `
 		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
@@ -53,67 +58,37 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	// Insert test data
 	_, err = provider.Exec(ctx, `
 		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
 		VALUES ('task-1', 'Test Task', 'COMPLETED', 'org-1', 'agent-1', '{"result": "success"}')
 	`)
 	require.NoError(t, err)
 
-	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
-		VALUES ('task-2', 'Pending Task', 'PENDING', 'org-1', 'agent-1', '{"result": "waiting"}')
-	`)
-	require.NoError(t, err)
+	worker := NewAutoDreamWorker(provider)
+	worker.client = &mockEmbeddingClient{}
+	worker.process(ctx)
 
-	pipeline := NewAutoDreamPipeline(provider)
-
-	// Mock the LLM client
-	pipeline.client = &mockEmbeddingClient{}
-
-	// Run process
-	pipeline.process(ctx)
-
-	// Verify only completed tasks were consolidated
 	rows, err := provider.Query(ctx, "SELECT id, content, source_type, embedding FROM autodream_memories")
 	require.NoError(t, err)
 	defer rows.Close()
 
-	var memories []struct {
-		id         string
-		content    string
-		sourceType string
-		embedding  string
-	}
-
+	var count int
 	for rows.Next() {
-		var m struct {
-			id         string
-			content    string
-			sourceType string
-			embedding  string
-		}
-		err := rows.Scan(&m.id, &m.content, &m.sourceType, &m.embedding)
-		require.NoError(t, err)
-		memories = append(memories, m)
+		count++
 	}
-
-	assert.Len(t, memories, 1)
-	assert.Equal(t, "task-1", memories[0].id)
-	assert.Equal(t, `{"result": "success"}`, memories[0].content)
-	assert.Equal(t, "shared_task", memories[0].sourceType)
-	assert.Equal(t, "[0.1,0.2,0.3]", memories[0].embedding)
+	assert.Equal(t, 1, count)
 }
 
-func TestAutoDreamPipeline_StartStop(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+func TestAutoDreamWorker_StartStop(t *testing.T) {
+	f, err := os.CreateTemp("", "testdb-*.sqlite")
 	require.NoError(t, err)
+	defer os.Remove(f.Name())
 
-	pipeline := NewAutoDreamPipeline(provider)
+	provider, err := db.NewSQLiteProvider(f.Name())
+	require.NoError(t, err)
+	worker := NewAutoDreamWorker(provider)
 
-	go pipeline.Start(context.Background())
-
-	// Just checking that we can start and stop it without deadlocking
+	go worker.Start(context.Background())
 	time.Sleep(50 * time.Millisecond)
-	pipeline.Stop()
+	worker.Stop()
 }

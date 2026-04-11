@@ -7,7 +7,6 @@ go_library(
     srcs = [
         "auth_interceptor.go",
         "autodream.go",
-        "autodream_worker.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",
         "delegation.go",
@@ -60,7 +59,6 @@ go_test(
     srcs = [
         "auth_interceptor_test.go",
         "autodream_test.go",
-        "autodream_worker_test.go",
         "benchmark_test.go",
         "cached_minimax_client_test.go",
         "centrifuge_hub_test.go",
