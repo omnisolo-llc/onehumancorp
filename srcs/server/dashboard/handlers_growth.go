@@ -188,3 +188,50 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// TeamInvite represents an invitation sent to a prospective team member.
+type TeamInvite struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	InviterID string    `json:"inviterId"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type teamInviteCreateRequest struct {
+	Email     string `json:"email"`
+	InviterID string `json:"inviterId"`
+}
+
+func (s *Server) handleTeamInvites(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		invites := append([]TeamInvite(nil), s.teamInvites...)
+		s.mu.RUnlock()
+		writeJSON(w, invites)
+	case http.MethodPost:
+		var req teamInviteCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.Email == "" || req.InviterID == "" {
+			http.Error(w, "email and inviterId are required", http.StatusBadRequest)
+			return
+		}
+		inv := TeamInvite{
+			ID:        "inv-" + time.Now().UTC().Format("20060102150405"),
+			Email:     req.Email,
+			InviterID: req.InviterID,
+			Status:    "PENDING",
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.teamInvites = append(s.teamInvites, inv)
+		s.mu.Unlock()
+		writeJSON(w, inv)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

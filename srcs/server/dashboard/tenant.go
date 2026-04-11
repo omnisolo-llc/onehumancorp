@@ -168,7 +168,7 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// If it's a public route like /api/auth/login, a 'public' tenant handles it gracefully.
 
 	// Only serve known public routes unauthenticated, block otherwise.
-	if req.URL.Path == "/api/auth/login" || req.URL.Path == "/healthz" || req.URL.Path == "/readyz" || req.URL.Path == "/metrics" || req.URL.Path == "/login" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/" || strings.HasPrefix(req.URL.Path, "/assets/") {
+	if req.URL.Path == "/api/auth/login" || req.URL.Path == "/healthz" || req.URL.Path == "/readyz" || req.URL.Path == "/metrics" || req.URL.Path == "/login" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/" || strings.HasPrefix(req.URL.Path, "/assets/") || strings.HasPrefix(req.URL.Path, "/api/growth/") {
 		h := r.Provision(defaultTenantOrganization("public"))
 		h.ServeHTTP(w, req)
 		return
