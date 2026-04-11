@@ -1,0 +1,4 @@
+agent: Implementer
+action: implement_hybrid_rag_sync
+context: |
+  Implemented Hybrid RAG sync interfaces, metrics, and DB migrations.
