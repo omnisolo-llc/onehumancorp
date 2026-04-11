@@ -1,0 +1,6 @@
+---
+timestamp: 2026-04-11T03:45:00Z
+agent: Implementer
+type: Learning
+content: >
+  When adding new telemetry counters in the telemetry package, ensure they are instantiated with metric.Meter explicitly inside the `InitWithMeter` function, and ensure `replace_with_git_merge_diff` search queries encompass the exact code segments verbatim. Also, while test mock functionality passes build boundaries, robust implementation often requires interacting with the specific provider DAOs.

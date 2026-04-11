@@ -53,6 +53,8 @@ var (
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
+	RAGRecordsSyncedTotal metric.Int64Counter
+	RAGSyncErrorsTotal metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
@@ -417,6 +419,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	RAGRecordsSyncedTotal, err = m.Int64Counter(
+		"rag_records_synced_total",
+		metric.WithDescription("Total number of RAG records successfully synchronized."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RAGSyncErrorsTotal, err = m.Int64Counter(
+		"rag_sync_errors_total",
+		metric.WithDescription("Total number of errors encountered during RAG record synchronization."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	sqliteLockContentionCounter, err = m.Int64Counter(
 		"ohc_sqlite_lock_contention_total",
 		metric.WithDescription("Total times SQLite database lock contention (SQLITE_BUSY) was encountered."),
@@ -764,6 +782,22 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 	RateLimitExceededCount.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("endpoint", endpoint),
 	))
+}
+
+// RecordRAGRecordSynced increments the global counter for RAG records successfully synced.
+func RecordRAGRecordSynced(ctx context.Context, count int64) {
+	if RAGRecordsSyncedTotal == nil {
+		return
+	}
+	RAGRecordsSyncedTotal.Add(ctx, count)
+}
+
+// RecordRAGSyncError increments the global counter for RAG sync errors.
+func RecordRAGSyncError(ctx context.Context, count int64) {
+	if RAGSyncErrorsTotal == nil {
+		return
+	}
+	RAGSyncErrorsTotal.Add(ctx, count)
 }
 
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
