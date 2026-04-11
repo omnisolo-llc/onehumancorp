@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "sync",
-    srcs = ["autodream_sync.go"],
+    srcs = [
+        "autodream_sync.go",
+        "rag_sync.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/sync",
     visibility = ["//visibility:public"],
     deps = [
@@ -14,10 +17,14 @@ go_library(
 
 go_test(
     name = "sync_test",
-    srcs = ["autodream_sync_test.go"],
+    srcs = [
+        "autodream_sync_test.go",
+        "rag_sync_test.go",
+    ],
     embed = [":sync"],
     deps = [
         "//srcs/server/db",
         "//srcs/server/telemetry",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

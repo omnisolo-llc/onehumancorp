@@ -1,0 +1,8 @@
+mission_id: "2026-04-07T08-02-24Z_hybrid_mcp_rag_sync"
+agent_role: "Miser"
+status: "DONE"
+actions_taken:
+  - "Created SQL migration 032_add_hybrid_sync_metadata.sql adding sync_status and last_sync_at to agent_memories."
+  - "Implemented RAGSyncService in srcs/server/sync/rag_sync.go using db.Provider."
+  - "Added ragRecordsSyncedTotal and ragSyncErrorsTotal metrics to telemetry."
+  - "Created rag_sync_test.go with db.NewSqliteProvider and passed all tests."
