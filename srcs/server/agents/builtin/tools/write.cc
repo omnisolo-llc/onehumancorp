@@ -1,7 +1,7 @@
 #include "srcs/server/agents/builtin/tools/tool.h"
 
 #include <cerrno>
-#include <cstring>
+#include <system_error>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -52,9 +52,10 @@ Tool MakeWriteTool() {
 
         std::ofstream file(p, std::ios::binary | std::ios::trunc);
         if (!file.is_open()) {
+          // Use std::error_code for thread-safe error description.
+          const std::error_code ec(errno, std::generic_category());
           return absl::InternalError(absl::StrCat(
-              "Write: cannot open '", p.string(), "': ",
-              std::strerror(errno)));
+              "Write: cannot open '", p.string(), "': ", ec.message()));
         }
         const std::string content = content_it->get<std::string>();
         file.write(content.data(), static_cast<std::streamsize>(content.size()));

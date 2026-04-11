@@ -17,7 +17,10 @@ namespace ohc::agent {
 Tool MakeBashTool() {
   return Tool{
       .name        = "Bash",
-      .description = "Execute a bash script and return its combined output.",
+      .description = "Execute a bash script and return its combined output. "
+                     "SECURITY NOTE: This tool executes arbitrary commands on "
+                     "the host. It is intended for use by trusted LLM agents "
+                     "operating in controlled environments only.",
       .parameters  = nlohmann::json::parse(R"({
         "type": "object",
         "properties": {

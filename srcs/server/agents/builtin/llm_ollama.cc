@@ -101,8 +101,11 @@ absl::StatusOr<ChatResponse> OllamaClient::Chat(const ChatRequest& req) {
           call.name      = tc["function"].value("name",      std::string{});
           call.arguments = tc["function"].value("arguments", nlohmann::json{});
         }
-        // Ollama does not always supply an id; synthesise one.
-        call.id = call.name + "_" + std::to_string(chat_resp.message.tool_calls.size());
+        // Ollama does not always supply an id; synthesise one from the tool
+        // name and its position in this response (guaranteed unique within
+        // a single response).
+        call.id = absl::StrCat(call.name, "_",
+                               chat_resp.message.tool_calls.size());
         chat_resp.message.tool_calls.push_back(std::move(call));
       }
     }

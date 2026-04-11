@@ -85,7 +85,7 @@ absl::StatusOr<std::vector<Message>> Agent::Run(
       ToolResult tr;
       tr.tool_call_id = tc.id;
       if (result.ok()) {
-        tr.content = *std::move(result);
+      tr.content = std::move(*result);
       } else {
         tr.error = std::string(result.status().message());
         LOG(WARNING) << "Tool '" << tc.name << "' error: " << tr.error;

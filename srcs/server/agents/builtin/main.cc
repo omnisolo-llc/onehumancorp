@@ -9,10 +9,12 @@
 //   agent --port=50052 --llm_provider=openai  --model=gpt-4o \
 //         --system_prompt="You are a security specialist."
 
+#include <atomic>
 #include <csignal>
 #include <cstdlib>
 #include <memory>
 #include <string>
+#include <unistd.h>
 
 #include "srcs/server/agents/builtin/grpc/agent_service.h"
 #include "absl/flags/flag.h"
@@ -62,13 +64,19 @@ ABSL_FLAG(int32_t, max_context_messages, 100,
 
 namespace {
 
-// grpc::Server pointer for graceful shutdown.
-grpc::Server* g_server = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+// Atomic pointer to the gRPC server; written once from main, read from the
+// signal handler.  std::atomic<T*> is signal-safe for load/store on all
+// platforms that provide lock-free pointer atomics (i.e. all modern 32/64-bit
+// platforms including Raspberry Pi ARMv7 and AArch64).
+std::atomic<grpc::Server*> g_server{nullptr};  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 void HandleSignal(int sig) {
-  LOG(INFO) << "Received signal " << sig << " – initiating graceful shutdown.";
-  if (g_server) {
-    g_server->Shutdown();
+  // LOG is not async-signal-safe; use write() directly for safety.
+  const char msg[] = "Signal received – shutting down agent.\n";
+  (void)write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  grpc::Server* srv = g_server.load(std::memory_order_acquire);
+  if (srv) {
+    srv->Shutdown();
   }
 }
 
@@ -111,7 +119,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  g_server = server.get();
+  g_server.store(server.get(), std::memory_order_release);
 
   LOG(INFO) << "OHC Builtin Agent listening on " << address
             << " [provider=" << absl::GetFlag(FLAGS_llm_provider)
