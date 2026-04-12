@@ -1,0 +1,24 @@
+1. Fix test query scan types.
+   - Run command:
+   ```bash
+   sed -i '/if err := rows.Scan(&task.ID/c\
+\        var agentID sql.NullString\
+\        var depsJSON []byte\
+\        var created, updated sql.NullTime\
+\        if err := rows.Scan(&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &agentID, &task.Priority, &task.Payload, &task.ParentPlanID, &depsJSON, &created, &updated); err != nil {\
+\            continue\
+\        }\
+\        if agentID.Valid {\
+\            task.AssignedAgentID = agentID.String\
+\        }\
+\        if created.Valid {\
+\            task.CreatedAt = created.Time\
+\        }\
+\        if updated.Valid {\
+\            task.UpdatedAt = updated.Time\
+\        }\
+' srcs/server/orchestration/handlers.go
+   sed -i 's/var depsJSON \[\]byte//g' srcs/server/orchestration/handlers.go
+   sed -i '11i\    "database/sql"' srcs/server/orchestration/handlers.go
+   ```
+   - Verify: `bazelisk test //srcs/server/orchestration:orchestration_test --test_filter=TestHandlers`.

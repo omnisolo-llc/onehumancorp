@@ -23,6 +23,7 @@ go_library(
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh.go",
+        "handlers.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -59,6 +60,7 @@ go_test(
     name = "orchestration_test",
     srcs = [
         "auth_interceptor_test.go",
+        "handlers_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
         "benchmark_test.go",
