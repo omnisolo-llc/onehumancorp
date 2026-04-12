@@ -130,5 +130,8 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	daemon.Stop()
+
+	// Wait a moment for the goroutine to actually exit before we defer-close the DB
+	time.Sleep(10 * time.Millisecond)
 	// No panic implies successful shutdown via stop channel
 }
