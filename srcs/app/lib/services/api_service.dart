@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/models/agent.dart';
+import 'package:ohc_app/models/task.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/models/security_issue.dart';
@@ -92,6 +93,26 @@ class ApiService {
   }
 
   // ── Dashboard & Analytics ────────────────────────────────────────────────
+
+
+
+  String get _baseUrl => const String.fromEnvironment("API_BASE_URL", defaultValue: "http://localhost:8080/api/v1");
+
+  Future<List<SharedTask>> getTasks() async {
+    final res = await _client.get(
+      Uri.parse("$_baseUrl/orchestration/tasks"),
+      headers: _headers,
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      if (data["tasks"] is List) {
+        return (data["tasks"] as List).map((e) => SharedTask.fromJson(e)).toList();
+      }
+      return [];
+    } else {
+      throw Exception("Failed to fetch tasks: ${res.statusCode}");
+    }
+  }
 
   Future<DashboardSnapshot> getDashboard() async {
     final res = await _client.get(
