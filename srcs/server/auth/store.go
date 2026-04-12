@@ -159,6 +159,7 @@ func newStore(repo UserRepository) *Store {
 	if secret := os.Getenv("JWT_SECRET"); secret != "" {
 		s.secret = []byte(secret)
 	} else {
+		slog.Warn("falling back to random JWT secret; this is only suitable for single-node or standalone deployments")
 		s.secret = randomBytes(32)
 	}
 
