@@ -31,15 +31,29 @@ func TestClaimTask_SQLite(t *testing.T) {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
+	_, err = dbProvider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
+		)
+	`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
-	// Insert a test task
+	// Insert test tasks
 	_, err = dbProvider.Exec(ctx, `
 		INSERT INTO shared_tasks (id, organization_id, title, status)
-		VALUES ('task-1', 'org-1', 'Test Task', 'PENDING')
+		VALUES ('task-1', 'org-1', 'Test Task 1', 'PENDING'),
+		       ('task-2', 'org-1', 'Test Task 2', 'PENDING')
 	`)
+	// Make task-2 depend on task-1
+	_, err = dbProvider.Exec(ctx, `
+		INSERT INTO task_dependencies (task_id, depends_on_task_id)
+		VALUES ('task-2', 'task-1')
+	`)
+
 	if err != nil {
 		t.Fatalf("failed to insert test task: %v", err)
 	}
@@ -73,6 +87,14 @@ func TestClaimTask_SQLite(t *testing.T) {
 		t.Errorf("expected assigned agent 'agent-1', got '%v'", task.AssignedAgentID)
 	}
 
+	// Try to claim task-2. It should fail because it depends on task-1 which is not 'COMPLETED'
+	taskBlocked, err := to.ClaimTask(ctxWithClaims, "agent-2")
+	if err != nil {
+		t.Fatalf("ClaimTask failed: %v", err)
+	}
+	if taskBlocked != nil {
+		t.Fatalf("expected nil task because of dependency block, got %v", taskBlocked)
+	}
 	// Try to claim another task, should return nil
 	task2, err := to.ClaimTask(ctxWithClaims, "agent-2")
 	if err != nil {
