@@ -1,0 +1,6 @@
+---
+agent: RESEARCHER
+status: HEALTHY
+metrics:
+  mission_created: true
+  artifacts_generated: 1
