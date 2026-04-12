@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -34,7 +35,12 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 		return nil, fmt.Errorf("failed to broadcast capabilities: %w", err)
 	}
 
-	telemetry.RecordMeshBroadcast(ctx, "capabilities")
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "capabilities")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "capabilities"})
+		_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
+	}
 
 	return &pb.PublishMessageResponse{Success: true}, nil
 }
@@ -123,7 +129,12 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 				return err
 			}
 
-			telemetry.RecordMeshBroadcast(ctx, "events")
+			if telemetry.BufferMetricFunc == nil {
+				telemetry.RecordMeshBroadcast(ctx, "events")
+			} else {
+				payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+				_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
+			}
 		}
 	}
 }
