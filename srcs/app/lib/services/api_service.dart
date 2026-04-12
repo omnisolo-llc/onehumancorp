@@ -16,6 +16,12 @@ import 'package:ohc_app/services/auth_service.dart';
 
 /// API client for the OHC backend.
 class ApiService {
+  Future<void> submitBusinessSetup(Map<String, dynamic> data) async {
+    // Mock implementation for business setup
+    await Future.delayed(const Duration(milliseconds: 500));
+    // In a real implementation this would make a POST request to /api/business/setup
+  }
+
   final String baseUrl;
   final String token;
   final http.Client _client;
