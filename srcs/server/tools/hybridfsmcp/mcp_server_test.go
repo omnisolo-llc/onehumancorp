@@ -53,7 +53,7 @@ func TestFileSystemMCPServer(t *testing.T) {
 	}
 
 	// Test unknown tool
-	_, err = server.HandleToolCall(ctx, "unknown_tool", json.RawMessage(`{}`))
+	_, err = server.HandleToolCall(ctx, "tool_that_does_not_exist", json.RawMessage(`{}`))
 	if err == nil {
 		t.Error("Expected error for unknown tool")
 	}
