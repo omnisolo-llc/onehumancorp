@@ -317,3 +317,53 @@ func TestHandleFreeTierQuota(t *testing.T) {
 	}
 	resGet.Body.Close()
 }
+
+func TestHandleUserMilestones(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"userId": "user-123", "milestone": "ACCOUNT_CREATED"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/milestones", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleUserMilestones(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created UserMilestone
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.UserID != "user-123" {
+		t.Errorf("expected userId 'user-123', got '%s'", created.UserID)
+	}
+	if created.Milestone != "ACCOUNT_CREATED" {
+		t.Errorf("expected milestone 'ACCOUNT_CREATED', got '%s'", created.Milestone)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/milestones", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleUserMilestones(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []UserMilestone
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 milestone, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}

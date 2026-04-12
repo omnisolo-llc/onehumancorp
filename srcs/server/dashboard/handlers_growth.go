@@ -290,3 +290,48 @@ func (s *Server) handleFreeTierQuota(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// UserMilestone defines a growth onboarding milestone for a user.
+type UserMilestone struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	Milestone string    `json:"milestone"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type milestoneCreateRequest struct {
+	UserID    string `json:"userId"`
+	Milestone string `json:"milestone"`
+}
+
+func (s *Server) handleUserMilestones(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		milestones := append([]UserMilestone(nil), s.milestones...)
+		s.mu.RUnlock()
+		writeJSON(w, milestones)
+	case http.MethodPost:
+		var req milestoneCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.UserID == "" || req.Milestone == "" {
+			http.Error(w, "userId and milestone are required", http.StatusBadRequest)
+			return
+		}
+		m := UserMilestone{
+			ID:        "milestone-" + time.Now().UTC().Format("20060102150405"),
+			UserID:    req.UserID,
+			Milestone: req.Milestone,
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.milestones = append(s.milestones, m)
+		s.mu.Unlock()
+		writeJSON(w, m)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

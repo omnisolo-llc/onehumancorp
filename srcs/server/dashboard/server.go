@@ -62,6 +62,7 @@ type Server struct {
 	downloads             []Download
 	teamInvites           []TeamInvite
 	quotas                []FreeTierQuota
+	milestones              []UserMilestone
 }
 
 // RateLimitState functionality.
@@ -458,6 +459,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
 		quotas:                []FreeTierQuota{},
+		milestones:              []UserMilestone{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -581,6 +583,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
 	mux.HandleFunc("/api/growth/quota", server.handleFreeTierQuota)
+	mux.HandleFunc("/api/growth/milestones", server.handleUserMilestones)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
