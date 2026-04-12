@@ -134,15 +134,12 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 type mockProvider struct {
 	db.Provider
 	execErr  error
+	pingErr  error
 	isSqlite bool
 }
 
 func (m *mockProvider) Ping(ctx context.Context) error {
-	return m.execErr
-}
-
-func (m *mockProvider) Ping(ctx context.Context) error {
-	return m.execErr
+	return m.pingErr
 }
 
 func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
@@ -152,13 +149,6 @@ func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (
 	return 1, nil
 }
 
-
-func (m *mockProvider) Ping(ctx context.Context) error {
-	if m.execErr != nil {
-		return m.execErr
-	}
-	return nil
-}
 
 func (m *mockProvider) IsSQLite() bool {
 	return m.isSqlite
@@ -178,7 +168,7 @@ func (r *mockRow) Scan(dest ...any) error {
 func TestCheckHealth_DBPingFails(t *testing.T) {
 	hub := NewHub()
 	provider := &mockProvider{
-		execErr: context.DeadlineExceeded,
+		pingErr: context.DeadlineExceeded,
 	}
 	sipDB := &SIPDB{db: provider}
 	hub.SetSIPDB(sipDB)
