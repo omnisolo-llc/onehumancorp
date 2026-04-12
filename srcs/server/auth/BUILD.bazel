@@ -28,6 +28,7 @@ go_test(
         "jwt_extra_test.go",
         "oidc_test.go",
         "powersync_test.go",
+        "security_test.go",
     ],
     embed = [":auth"],
 )
