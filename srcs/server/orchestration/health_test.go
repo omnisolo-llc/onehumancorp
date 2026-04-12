@@ -141,23 +141,12 @@ func (m *mockProvider) Ping(ctx context.Context) error {
 	return m.execErr
 }
 
-func (m *mockProvider) Ping(ctx context.Context) error {
-	return m.execErr
-}
 
 func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	if m.execErr != nil {
 		return 0, m.execErr
 	}
 	return 1, nil
-}
-
-
-func (m *mockProvider) Ping(ctx context.Context) error {
-	if m.execErr != nil {
-		return m.execErr
-	}
-	return nil
 }
 
 func (m *mockProvider) IsSQLite() bool {
