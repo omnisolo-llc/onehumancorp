@@ -188,3 +188,7 @@ func (t *PgTx) Commit(ctx context.Context) error {
 func (t *PgTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback(ctx)
 }
+
+func (p *PgProvider) Ping(ctx context.Context) error {
+	return p.pool.Ping(ctx)
+}
