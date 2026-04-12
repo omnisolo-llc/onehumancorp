@@ -41,6 +41,8 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 		llmClient = local.NewOllamaClient("", "")
 	}
 
+	llmClient = local.NewCachedLLMClient(llmClient, pool, redisClient)
+
 	var mClient orchestration.MinimaxClient
 	if minimaxKey := os.Getenv("MINIMAX_API_KEY"); minimaxKey != "" {
 		mClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool, redisClient)
