@@ -141,9 +141,6 @@ func (m *mockProvider) Ping(ctx context.Context) error {
 	return m.execErr
 }
 
-func (m *mockProvider) Ping(ctx context.Context) error {
-	return m.execErr
-}
 
 func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	if m.execErr != nil {
@@ -153,16 +150,6 @@ func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (
 }
 
 
-func (m *mockProvider) Ping(ctx context.Context) error {
-	if m.execErr != nil {
-		return m.execErr
-	}
-	return nil
-}
-
-func (m *mockProvider) IsSQLite() bool {
-	return m.isSqlite
-}
 
 func (m *mockProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
 	return &mockRow{}
@@ -213,4 +200,8 @@ func TestCheckHealth_Postgres(t *testing.T) {
 	if probe.SyncBacklog != 5 {
 		t.Errorf("Expected SyncBacklog to be 5, got %d", probe.SyncBacklog)
 	}
+}
+
+func (m *mockProvider) IsSQLite() bool {
+	return m.isSqlite
 }
