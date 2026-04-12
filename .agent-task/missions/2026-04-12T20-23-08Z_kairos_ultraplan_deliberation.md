@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: DONE
 priority: P0
 scope: Medium
 title: "KAIROS: Manage UltraPlan Deliberation Cycles"
