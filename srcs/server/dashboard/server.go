@@ -711,16 +711,15 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mode := "local"
-	isStandalone := true
-	if os.Getenv("DATABASE_URL") != "" {
-		mode = "cloud"
-		isStandalone = false
+	probe, err := s.hub.CheckHealth(r.Context())
+	if err != nil {
+		probe = orchestration.HybridHealthProbe{
+			Status: "error",
+		}
 	}
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		isStandalone = true
-		mode = "standalone"
-	}
+
+	mode := probe.Mode
+	isStandalone := (mode == "standalone")
 
 	var checklist []map[string]interface{}
 	if isStandalone {
@@ -732,52 +731,20 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		})
 	} else {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud-Native data storage",
-		})
-		checklist = append(checklist, map[string]interface{}{
-			"id": "redis_cache", "label": "Redis Available", "status": "ok", "description": "Cloud-Native distributed cache",
+			"id": "pg_db", "label": "PostgreSQL Database", "status": "ok", "description": "Cloud remote database connected",
 		})
 	}
 
-	ctx := r.Context()
-	probe, err := s.hub.CheckHealth(ctx)
-	status := "healthy"
-	if err != nil || probe.Status == "degraded" {
-		status = "degraded"
-	}
-
-	details := map[string]interface{}{
-		"status":        status,
-		"mesh_active":   probe.MeshActive,
-		"sync_queue":    probe.SyncBacklog,
-		"agent_workers": 0,
-	}
-
-	if s.hub.SIPDB() != nil && s.hub.SIPDB().Provider() != nil {
-		stuckMissions, err := s.hub.SIPDB().Provider().Query(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'")
-		if err == nil {
-			defer stuckMissions.Close()
-			if stuckMissions.Next() {
-				var count int
-				if err := stuckMissions.Scan(&count); err == nil {
-					details["stuck_missions"] = count
-					if count > 0 {
-						status = "degraded"
-						details["status"] = status
-					}
-				}
-			}
-		}
-	}
-
-	resp := map[string]interface{}{
-		"status":    status,
-		"mode":      mode,
-		"details":   details,
+	response := map[string]interface{}{
+		"mode": mode,
+		"status": probe.Status,
 		"checklist": checklist,
+		"db_ping_ms": probe.DBPing.Milliseconds(),
+		"sync_backlog": probe.SyncBacklog,
+		"mesh_active": probe.MeshActive,
 	}
 
-	writeJSON(w, resp)
+	writeJSON(w, response)
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {
