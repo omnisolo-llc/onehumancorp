@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/models/agent.dart';
+import 'package:ohc_app/models/task.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/models/security_issue.dart';
@@ -30,6 +31,28 @@ class ApiService {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
   };
+
+  // ── Orchestration Tasks ────────────────────────────────────────────────
+
+  Future<List<SwarmTask>> listSwarmTasks() async {
+
+    final res = await _client.get(
+
+      Uri.parse('$baseUrl/api/orchestration/tasks'),
+
+      headers: _headers,
+
+    ).timeout(_timeout);
+
+    if (res.statusCode == 404) return []; // Fallback gracefully if API not ready
+
+    _checkStatus(res);
+
+    final list = jsonDecode(res.body) as List<dynamic>;
+
+    return list.map((e) => SwarmTask.fromJson(e as Map<String, dynamic>)).toList();
+
+  }
 
   // ── Agents ──────────────────────────────────────────────────────────────
 
