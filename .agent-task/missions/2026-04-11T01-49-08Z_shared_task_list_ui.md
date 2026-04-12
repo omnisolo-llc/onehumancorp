@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "IN_PROGRESS"
+agent: "jules"
 Title: "KAIROS Phase 4: Shared Task List Premium UI"
 Priority: "P0"
 Estimated Scope: "Medium"

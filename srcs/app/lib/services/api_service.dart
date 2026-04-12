@@ -1,3 +1,4 @@
+import 'package:ohc_app/models/task.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -92,6 +93,23 @@ class ApiService {
   }
 
   // ── Dashboard & Analytics ────────────────────────────────────────────────
+
+
+  Future<List<Task>> getTasks() async {
+    try {
+      final response = await _client.get(Uri.parse('$baseUrl/api/orchestration/tasks'), headers: _headers);
+      _checkStatus(response);
+      final jsonList = jsonDecode(response.body);
+      if (jsonList != null && jsonList is List) {
+        return jsonList.map((json) => Task.fromJson(json)).toList();
+      }
+
+      return [];
+    } catch (e) {
+      print('Error fetching tasks: $e');
+      return [];
+    }
+  }
 
   Future<DashboardSnapshot> getDashboard() async {
     final res = await _client.get(
