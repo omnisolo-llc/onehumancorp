@@ -17,6 +17,7 @@ go_library(
         "repository.go",
         "sanitizer.go",
         "service.go",
+        "handlers.go",
         "sip.go",
         "sqlite_hub.go",
         "sync_daemon.go",
@@ -73,6 +74,7 @@ go_test(
         "service_extra_test.go",
         "service_grpc_test.go",
         "service_test.go",
+        "handlers_test.go",
         "sip_extra_test.go",
         "sip_mesh_test.go",
         "sip_test.go",
@@ -83,6 +85,7 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "//srcs/server/auth",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_gorilla_websocket//:websocket",
         "//srcs/proto:hub_go_proto",
