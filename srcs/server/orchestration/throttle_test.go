@@ -2,7 +2,6 @@ package orchestration
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -14,15 +13,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	defer ClearSemaphore()
 
 	// Temporarily enable OHC_STANDALONE to trigger the throttle
-	original := os.Getenv("OHC_STANDALONE")
-	os.Setenv("OHC_STANDALONE", "true")
-	defer func() {
-		if original == "" {
-			os.Unsetenv("OHC_STANDALONE")
-		} else {
-			os.Setenv("OHC_STANDALONE", original)
-		}
-	}()
+	t.Setenv("OHC_STANDALONE", "true")
 
 	dbPath := filepath.Join(t.TempDir(), "throttle.db")
 	db, err := NewSIPDB(dbPath)
