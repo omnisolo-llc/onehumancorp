@@ -114,3 +114,43 @@ func TestUltraPlanManager(t *testing.T) {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
 	}
 }
+
+func TestUltraPlanManager_PhaseDuration(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	_, _ = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'DELIBERATING',
+			state_machine TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	upm := NewUltraPlanManager(prov, nil, nil)
+
+	sm := map[string]interface{}{
+		"phase": "PROPOSE",
+	}
+
+	plan, err := upm.CreateUltraPlan(context.Background(), "test-mission", sm)
+	if err != nil {
+		t.Fatalf("expected no error creating plan, got %v", err)
+	}
+
+	// Fast forward time slightly or just update status to trigger metrics
+	newSm := map[string]interface{}{
+		"phase": "APPROVED",
+	}
+
+	err = upm.UpdatePlanStatus(context.Background(), plan.ID, "DELIBERATING", newSm)
+	if err != nil {
+		t.Fatalf("expected no error updating plan, got %v", err)
+	}
+}

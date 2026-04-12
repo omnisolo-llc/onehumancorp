@@ -596,3 +596,17 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 	}
 	cleanup()
 }
+
+func TestSwarmAnalyticsInstrumentation(t *testing.T) {
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	t.Setenv("OHC_STANDALONE", "")
+
+	_, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Just call the metrics to ensure no panics
+	RecordToolAutoCorrection(context.Background(), "agent-123", "Worker", true)
+	RecordDeliberationPhaseDuration(context.Background(), "plan-123", "PROPOSE", 4.5)
+}
