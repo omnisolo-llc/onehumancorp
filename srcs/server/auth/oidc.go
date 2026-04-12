@@ -342,14 +342,25 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 		Iss string      `json:"iss"`
 		Aud interface{} `json:"aud"`
 		Iat int64       `json:"iat"`
+		Nbf int64       `json:"nbf,omitempty"`
 		Exp int64       `json:"exp"`
 		Jti string      `json:"jti"`
 	}
 	if err := json.Unmarshal(payBytes, &raw); err != nil {
 		return nil, fmt.Errorf("parse OIDC claims: %w", err)
 	}
-	if time.Now().Unix() > raw.Exp {
+
+	now := time.Now().Unix()
+	const skew = 60 // 1 minute clock skew allowance
+
+	if now > raw.Exp {
 		return nil, errors.New("token expired")
+	}
+	if raw.Iat > now+skew {
+		return nil, errors.New("token issued in the future")
+	}
+	if raw.Nbf > 0 && now < raw.Nbf-skew {
+		return nil, errors.New("token not yet valid")
 	}
 
 	if raw.Iss != cfg.IssuerURL {
