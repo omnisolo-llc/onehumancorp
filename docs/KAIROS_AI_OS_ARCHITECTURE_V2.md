@@ -47,7 +47,50 @@ graph TD
     class A1,A2,M,T,AD,V premium;
 ```
 
-## 4. Fallback Logic (Hybrid Mode)
+## 4. Sequence Diagrams
+
+### 4.1 Task Decomposition (Shared Task List)
+```mermaid
+sequenceDiagram
+    participant KAIROS
+    participant TaskDB as PostgreSQL (TaskDB)
+    participant Implementer
+
+    KAIROS->>TaskDB: INSERT INTO shared_tasks (status='PENDING', priority='P0')
+    KAIROS->>TaskDB: INSERT INTO task_dependencies (task_id, depends_on)
+    Note right of KAIROS: Task is now pending and waiting for its DAG dependencies.
+    Implementer->>TaskDB: SELECT id FROM shared_tasks WHERE status='PENDING' FOR UPDATE SKIP LOCKED
+    TaskDB-->>Implementer: Return task row
+    Implementer->>TaskDB: UPDATE shared_tasks SET status='IN_PROGRESS' WHERE id=?
+    Implementer->>KAIROS: Publish TASK_CLAIMED event via Mesh
+```
+
+### 4.2 Teammate Mesh Sub-Agent Queuing
+```mermaid
+sequenceDiagram
+    participant WorkerAgent
+    participant CentrifugeMesh
+    participant TargetAgent
+
+    WorkerAgent->>CentrifugeMesh: POST /api/mesh/broadcast {topic: 'task.assigned', agent_id: 'Scribe'}
+    CentrifugeMesh-->>TargetAgent: StreamMeshEvents(EventStreamRequest)
+    Note right of TargetAgent: Processes incoming MeshEvent
+```
+
+### 4.3 Memory Consolidation (AutoDream)
+```mermaid
+sequenceDiagram
+    participant WorkerAgent
+    participant LocalMemory as .agent-task/memory/*.yml
+    participant AutoDreamDaemon
+    participant PgVector
+
+    WorkerAgent->>LocalMemory: Write ephemeral logs
+    AutoDreamDaemon->>LocalMemory: Poll and parse YAML files
+    AutoDreamDaemon->>PgVector: Generate Embedding and Upsert to autodream_memories
+```
+
+## 5. Fallback Logic (Hybrid Mode)
 - **Cloud-Native Mode:** Uses PostgreSQL `FOR UPDATE SKIP LOCKED` for task orchestration, `pgvector` for vector similarity searches, and Redis `rueidis` for high-throughput messaging.
 - **Standalone Mode:** Uses SQLite application-level Mutex locking for task distribution, Go channels for in-memory Pub/Sub, and text-based or local file storage if `pgvector` is unsupported on the local host.
 
