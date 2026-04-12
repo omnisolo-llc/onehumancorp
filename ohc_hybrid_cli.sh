@@ -211,6 +211,7 @@ if [ "$1" == "--non-interactive" ]; then
     # run_tests
     echo -e "${GREEN}Verification completed.${RESET}\n"
 else
+    check_system
     while true; do
         show_menu
         read -p "> " choice
