@@ -428,7 +428,7 @@
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "JkH1eDZCQD5f/N2wbACZXFt269f5zRFtw1vsk/vr8SQ=",
-        "usagesDigest": "7qKBj4zkPTIUoj3wy+TJvnPFhPVVUevBIT7A3b+rzLk=",
+        "usagesDigest": "urRlrQNvrqNUlaVq4uB4J4RouT8nWCBUC117um0Uluw=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
@@ -586,7 +586,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
         "bzlTransitiveDigest": "0bn0jOSu+8OqbfpPXBU9caBoFi+4bI6sQhMYweNE1q0=",
-        "usagesDigest": "yc1rwwysCTdKulDBaeRGF4jChlWHfg+XHYz7TGa2G8k=",
+        "usagesDigest": "zvz1Bk4ic7xP0MxoVYIipbGePT72s80WA3t9meYGBm0=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
@@ -628,7 +628,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
         "bzlTransitiveDigest": "0bn0jOSu+8OqbfpPXBU9caBoFi+4bI6sQhMYweNE1q0=",
-        "usagesDigest": "Du0O9hL7hQE7+hjbNikkGEKF3E8FyiEyO8C/wPDXHhU=",
+        "usagesDigest": "1pT6Sr0DfNu3L77xIAyk/6TUkpw0vKtlbx5GuUiCRSs=",
         "recordedInputs": [
           "FILE:@@//srcs/app/pub_deps.json 1560bc913a6b08cf84069fa98e0080297ffcad0db7f0c86241569f570b18360a"
         ],
