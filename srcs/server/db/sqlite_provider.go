@@ -161,6 +161,10 @@ func (p *SqliteProvider) IsSQLite() bool {
 	return true
 }
 
+func (p *SqliteProvider) Ping(ctx context.Context) error {
+	return p.db.PingContext(ctx)
+}
+
 // SqliteRows implements Rows using sql.Rows.
 type SqliteRows struct {
 	rows *sql.Rows
