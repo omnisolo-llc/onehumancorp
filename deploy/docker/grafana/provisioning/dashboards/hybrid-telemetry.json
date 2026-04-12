@@ -532,6 +532,58 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "id": 1003,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_sync_daemon_batch_size_bucket[5m])) by (le))",
+          "legendFormat": "P95 Batch Size",
+          "refId": "A"
+        }
+      ],
+      "title": "Sync Daemon Batch Size (P95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "id": 1004,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_agent_execution_traces_total[5m])) by (role, event_type)",
+          "legendFormat": "{{role}} - {{event_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Agent Execution Traces Rate",
+      "type": "timeseries"
     }
   ],
   "refresh": "",

@@ -55,6 +55,7 @@ var (
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
+	agentExecutionTracesTotal metric.Int64Counter
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
@@ -236,8 +237,16 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
-		"sync_daemon_batch_size",
+		"ohc_sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentExecutionTracesTotal, err = m.Int64Counter(
+		"ohc_agent_execution_traces_total",
+		metric.WithDescription("Total number of agent execution traces"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -726,6 +735,8 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 // Produces no errors.
 // Has no side effects.
 func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, content string) {
+	RecordAgentExecutionTrace(ctx, agentID, role, api, eventType)
+
 	var parsed interface{}
 	if err := json.Unmarshal([]byte(content), &parsed); err == nil {
 		redacted := RedactInterfacePII(parsed)
@@ -984,10 +995,42 @@ func RecordSyncPayloadSize(ctx context.Context, size int64) {
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
 func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
-	if syncDaemonBatchSize == nil {
-		return
+	if syncDaemonBatchSize != nil {
+		syncDaemonBatchSize.Record(ctx, size)
 	}
-	syncDaemonBatchSize.Record(ctx, size)
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"batch_size": size,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sync_daemon_batch_size", string(payloadBytes))
+	}
+}
+
+// RecordAgentExecutionTrace increments the global counter for agent execution traces and buffers the event.
+func RecordAgentExecutionTrace(ctx context.Context, agentID, role, api, eventType string) {
+	if agentExecutionTracesTotal != nil {
+		agentExecutionTracesTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("role", role),
+			attribute.String("api", api),
+			attribute.String("event_type", eventType),
+		))
+	}
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"role":       role,
+			"api":        api,
+			"event_type": eventType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_execution_trace", string(payloadBytes))
+	}
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.

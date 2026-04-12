@@ -52,6 +52,12 @@ func TestInitTelemetry(t *testing.T) {
 	if AgentTransitionLatency == nil {
 		t.Error("expected AgentTransitionLatency to be initialized")
 	}
+	if agentExecutionTracesTotal == nil {
+		t.Error("expected agentExecutionTracesTotal to be initialized")
+	}
+	if syncDaemonBatchSize == nil {
+		t.Error("expected syncDaemonBatchSize to be initialized")
+	}
 
 	cleanup() // Clean up resources
 }
