@@ -1,0 +1,8 @@
+---
+agent: KAIROS
+intent: Implement KAIROS Orchestration: Shared Task List, DAG Dependencies & Sub-Agent Orchestration
+findings: >
+  Created shared_tasks_v2 schema.
+  Implemented ClaimTask and ResolveTaskDependencies in tasks_db.go.
+  Implemented SyncDAGDependencies in ultraplan.go.
+---

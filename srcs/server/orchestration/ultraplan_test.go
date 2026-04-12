@@ -131,3 +131,58 @@ func TestUltraPlanManager(t *testing.T) {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
 	}
 }
+
+func TestSyncDAGDependencies(t *testing.T) {
+	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to create db provider: %v", err)
+	}
+
+	ctx := context.Background()
+
+	_, err = dbProvider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks_v2 (
+			id TEXT PRIMARY KEY,
+			parent_plan_id TEXT,
+			status TEXT,
+			dependencies JSONB
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+
+	_, err = dbProvider.Exec(ctx, `
+		INSERT INTO shared_tasks_v2 (id, parent_plan_id, status, dependencies) VALUES
+		('task1', 'plan1', 'COMPLETED', '[]'),
+		('task2', 'plan1', 'BLOCKED', '["task1"]'),
+		('task3', 'plan1', 'BLOCKED', '["task1", "task4"]'),
+		('task4', 'plan1', 'PENDING', '[]')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert data: %v", err)
+	}
+
+	m := NewUltraPlanManager(dbProvider, nil, nil)
+	err = m.SyncDAGDependencies(ctx, "plan1")
+	if err != nil {
+		t.Fatalf("failed to sync dag dependencies: %v", err)
+	}
+
+	var status2, status3 string
+	err = dbProvider.QueryRow(ctx, "SELECT status FROM shared_tasks_v2 WHERE id = 'task2'").Scan(&status2)
+	if err != nil {
+		t.Fatalf("failed to query task2: %v", err)
+	}
+	if status2 != "PENDING" {
+		t.Fatalf("expected task2 status PENDING, got %s", status2)
+	}
+
+	err = dbProvider.QueryRow(ctx, "SELECT status FROM shared_tasks_v2 WHERE id = 'task3'").Scan(&status3)
+	if err != nil {
+		t.Fatalf("failed to query task3: %v", err)
+	}
+	if status3 != "BLOCKED" {
+		t.Fatalf("expected task3 status BLOCKED, got %s", status3)
+	}
+}

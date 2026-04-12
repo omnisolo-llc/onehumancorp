@@ -18,7 +18,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	// Create table manually since we might not run migrations in this test or wait for them
 	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks_v2 (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			parent_plan_id TEXT,
@@ -37,7 +37,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	// Insert a test task
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, organization_id, title, status)
+		INSERT INTO shared_tasks_v2 (id, organization_id, title, status)
 		VALUES ('task-1', 'org-1', 'Test Task', 'PENDING')
 	`)
 	if err != nil {

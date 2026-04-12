@@ -488,3 +488,107 @@ func (m *UltraPlanManager) GetUltraPlan(ctx context.Context, planID string) (*Ul
 	}
 	return &plan, nil
 }
+
+// SyncDAGDependencies checks tasks in BLOCKED state within an UltraPlan and transitions them to PENDING if their dependencies are met.
+func (m *UltraPlanManager) SyncDAGDependencies(ctx context.Context, planID string) error {
+	if m.redisClient != nil {
+		lockKey := "lock:ultraplan_dag:" + planID
+		cmd := m.redisClient.B().Set().Key(lockKey).Value("system").Nx().Ex(30 * time.Second).Build()
+		err := m.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return errors.New("ultra plan dag sync is currently locked")
+			}
+			return fmt.Errorf("failed to acquire lock: %w", err)
+		}
+		defer func() {
+			delCmd := m.redisClient.B().Del().Key(lockKey).Build()
+			_ = m.redisClient.Do(ctx, delCmd).Error()
+		}()
+	} else if m.db.IsSQLite() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+	}
+
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Fetch all blocked tasks for the plan
+	queryBlocked := `
+		SELECT id, dependencies
+		FROM shared_tasks_v2
+		WHERE parent_plan_id = $1 AND status = 'BLOCKED'
+	`
+
+	if !m.db.IsSQLite() {
+		queryBlocked += ` FOR UPDATE SKIP LOCKED`
+	}
+
+	rows, err := tx.Query(ctx, queryBlocked, planID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch blocked tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var unblockedTasks []string
+
+	for rows.Next() {
+		var taskID string
+		var depsJSON *string
+		if err := rows.Scan(&taskID, &depsJSON); err != nil {
+			return fmt.Errorf("failed to scan task: %w", err)
+		}
+
+		if depsJSON == nil {
+			unblockedTasks = append(unblockedTasks, taskID)
+			continue
+		}
+
+		var deps []string
+		if err := json.Unmarshal([]byte(*depsJSON), &deps); err != nil {
+			return fmt.Errorf("failed to unmarshal dependencies: %w", err)
+		}
+
+		if len(deps) == 0 {
+			unblockedTasks = append(unblockedTasks, taskID)
+			continue
+		}
+
+		// Check if all dependencies are COMPLETED
+		allCompleted := true
+		for _, depID := range deps {
+			var status string
+			err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_v2 WHERE id = $1", depID).Scan(&status)
+			if err != nil {
+				allCompleted = false
+				break
+			}
+			if status != "COMPLETED" {
+				allCompleted = false
+				break
+			}
+		}
+
+		if allCompleted {
+			unblockedTasks = append(unblockedTasks, taskID)
+		}
+	}
+
+	rows.Close()
+
+	for _, taskID := range unblockedTasks {
+		_, err := tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'PENDING' WHERE id = $1", taskID)
+		if err != nil {
+			return fmt.Errorf("failed to update task status: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	return nil
+}

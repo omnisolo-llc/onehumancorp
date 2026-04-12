@@ -1,0 +1,7 @@
+---
+status: HEALTHY
+agent: KAIROS
+metrics:
+  tasks_processed: 0
+  errors: 0
+---

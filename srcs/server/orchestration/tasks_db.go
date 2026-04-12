@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"encoding/json"
+
 	"context"
 	"errors"
 	"fmt"
@@ -59,8 +61,8 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
 	// In SQLite we use a simple SELECT then UPDATE in a transaction, protected by application mutex
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		SELECT id, organization_id, parent_plan_id, title,  status, assigned_agent_id, dependencies, created_at, updated_at
+		FROM shared_tasks_v2
 		WHERE organization_id = $1 AND status = 'PENDING'
 		LIMIT 1
 	`
@@ -69,7 +71,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	task := &SharedTaskDB{}
 	if err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID,
+		 &task.Status, &task.AssignedAgentID,
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
 		// Could be sql.ErrNoRows or pgx.ErrNoRows. We handle it generally
@@ -80,8 +82,8 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	}
 
 	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		UPDATE shared_tasks_v2
+		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
@@ -107,8 +109,8 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
 	// In Postgres we can use FOR UPDATE SKIP LOCKED
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
+		SELECT id, organization_id, parent_plan_id, title,  status, assigned_agent_id, dependencies, created_at, updated_at
+		FROM shared_tasks_v2
 		WHERE organization_id = $1 AND status = 'PENDING'
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
@@ -118,7 +120,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	task := &SharedTaskDB{}
 	if err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID,
+		 &task.Status, &task.AssignedAgentID,
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
@@ -128,8 +130,8 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	}
 
 	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		UPDATE shared_tasks_v2
+		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
@@ -144,4 +146,44 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	task.Status = "ASSIGNED"
 	task.AssignedAgentID = &agentID
 	return task, nil
+}
+
+
+// ResolveTaskDependencies checks the status of all dependencies of a task.
+// Returns true if all dependencies are COMPLETED.
+func (to *SharedTaskOrchestrator) ResolveTaskDependencies(ctx context.Context, taskID string) (bool, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return false, errors.New("unauthorized: missing claims")
+	}
+
+	query := `SELECT dependencies FROM shared_tasks_v2 WHERE id = $1`
+	var depsJSON *string
+	err := to.dbProvider.QueryRow(ctx, query, taskID).Scan(&depsJSON)
+	if err != nil {
+		return false, fmt.Errorf("failed to get task dependencies: %w", err)
+	}
+
+	if depsJSON == nil {
+		return true, nil
+	}
+
+	var deps []string
+	if err := json.Unmarshal([]byte(*depsJSON), &deps); err != nil {
+		return false, fmt.Errorf("failed to parse dependencies: %w", err)
+	}
+
+	if len(deps) == 0 {
+		return true, nil
+	}
+
+	for _, depID := range deps {
+		var status string
+		err := to.dbProvider.QueryRow(ctx, "SELECT status FROM shared_tasks_v2 WHERE id = $1", depID).Scan(&status)
+		if err != nil || status != "COMPLETED" {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
