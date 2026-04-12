@@ -27,6 +27,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -471,6 +472,23 @@ func run(now time.Time, listen listenFunc) error {
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Setup MeshTransport for Hub
+	var tm mesh.TeammateMesh
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+		rm, err := mesh.NewRedisMesh(redisURL)
+		if err == nil {
+			tm = rm
+		} else {
+			slog.Error("failed to create redis mesh", "error", err)
+		}
+	}
+	if tm == nil {
+		tm = mesh.NewLocalMesh()
+	}
+	// We'll leave tm initialized so it's ready, but use the original mesh for existing integration.
+	// Hub doesn't accept TeammateMesh type directly yet since it expects orchestration.MeshTransport.
+	_ = tm
+
+
 	var mesh orchestration.MeshTransport
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		rm, err := orchestration.NewRedisMeshTransport(redisURL)

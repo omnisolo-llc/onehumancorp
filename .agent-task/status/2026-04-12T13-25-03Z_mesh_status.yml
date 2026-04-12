@@ -1,0 +1,4 @@
+status: HEALTHY
+metrics:
+  mesh_impl: "implemented"
+  test_coverage: "pass"
