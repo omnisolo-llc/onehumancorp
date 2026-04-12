@@ -1,0 +1,5 @@
+status: HEALTHY
+agent: Scribe
+mission_id: 2026-04-12T20-00-41Z_kairos_master_design_doc
+metrics:
+  tasks_completed: 1
