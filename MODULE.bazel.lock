@@ -428,7 +428,7 @@
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "JkH1eDZCQD5f/N2wbACZXFt269f5zRFtw1vsk/vr8SQ=",
-        "usagesDigest": "7qKBj4zkPTIUoj3wy+TJvnPFhPVVUevBIT7A3b+rzLk=",
+        "usagesDigest": "urRlrQNvrqNUlaVq4uB4J4RouT8nWCBUC117um0Uluw=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
@@ -586,7 +586,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
         "bzlTransitiveDigest": "0bn0jOSu+8OqbfpPXBU9caBoFi+4bI6sQhMYweNE1q0=",
-        "usagesDigest": "yc1rwwysCTdKulDBaeRGF4jChlWHfg+XHYz7TGa2G8k=",
+        "usagesDigest": "ojz2OW8hrMtIffaaCeR1IpSTM5p2i8LwHv/7giJ936c=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
@@ -628,7 +628,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
         "bzlTransitiveDigest": "0bn0jOSu+8OqbfpPXBU9caBoFi+4bI6sQhMYweNE1q0=",
-        "usagesDigest": "Du0O9hL7hQE7+hjbNikkGEKF3E8FyiEyO8C/wPDXHhU=",
+        "usagesDigest": "1pT6Sr0DfNu3L77xIAyk/6TUkpw0vKtlbx5GuUiCRSs=",
         "recordedInputs": [
           "FILE:@@//srcs/app/pub_deps.json 1560bc913a6b08cf84069fa98e0080297ffcad0db7f0c86241569f570b18360a"
         ],
@@ -1045,7 +1045,7 @@
     "@@rules_nodejs+//nodejs:extensions.bzl%node": {
       "general": {
         "bzlTransitiveDigest": "4pUxCNc22K4I+6+4Nxu52Hur12tFRfa1JMsN5mdDv60=",
-        "usagesDigest": "XwVKUECDBQyfrX6nJxFqcczbgLMLa1GOn4IU/ps29xg=",
+        "usagesDigest": "bsfeV6V82LdXcYJZXHXwFvF73ED4r8qmBjiv1Z9uaUo=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "nodejs_linux_amd64": {
@@ -1176,7 +1176,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "4+tp/h+78uQkXMfTnPIvdbOcaqvnYlXWH5QFyM7CV3w=",
-        "usagesDigest": "DQerIJxvMe1tpbIe+lDTRHedYsxSmk25krCTT21IIFM=",
+        "usagesDigest": "T5J3cr4KvXhYT5PIcq/Bk9BMeQyz0wwmyRJH2dGYyMQ=",
         "recordedInputs": [
           "REPO_MAPPING:aspect_bazel_lib+,bazel_tools bazel_tools",
           "REPO_MAPPING:bazel_features+,bazel_tools bazel_tools",
@@ -1438,7 +1438,7 @@
     "@@rules_pkg+//toolchains/rpm:rpmbuild_configure.bzl%find_system_rpmbuild_bzlmod": {
       "general": {
         "bzlTransitiveDigest": "GRI4sIxHeBPRn+6AWpn8sfcSnU14cOcXwKE5j+yVfJk=",
-        "usagesDigest": "Yu6jQPE3oEtPmYv1YXLCUSFnlb7HthG2dFR3GZejA6k=",
+        "usagesDigest": "jvyfvVqFzDlMSiOQoDaah+gdQaHVNDfsiCX8FFtZ2tA=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "rules_pkg_rpmbuild": {
@@ -1481,7 +1481,7 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "qacCij9aWbwVJEqneKEr/fPYLI8s+GoeIiYBLVVZlCM=",
+        "usagesDigest": "NrvCifqfe3qFiuU7q5WZcnnpQCqpfuiQk/K4IzgeieM=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {

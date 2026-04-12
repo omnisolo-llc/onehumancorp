@@ -1,4 +1,10 @@
 # Release Notes
+## v0.2.11 (Cloud) / v0.2.11+1 (Standalone)
+
+- Scaling (Cloud): Coordinated multi-environment promotions across staging and desktop beta builds.
+
+- Privacy/Offline (Standalone): Maintained local-to-cloud synchronization and state fidelity across hybrid environments.
+
 ## v0.2.10 (Cloud) / v0.2.10+1 (Standalone)
 - Scaling (Cloud): Coordinated multi-environment promotions across staging and desktop beta builds.
 - Privacy/Offline (Standalone): Maintained local-to-cloud synchronization and state fidelity across hybrid environments.
@@ -6,7 +12,6 @@
 ## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
 - Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package.
 - Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization.
-
 
 ## v0.2.9 (Cloud) / v0.1.9+1 (Standalone)
 - Scaling (Cloud): Exposed HybridHealthProbe through the orchestrator Hub to check database availability and mesh channel connectivity.
