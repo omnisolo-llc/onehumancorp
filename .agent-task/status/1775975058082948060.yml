@@ -1,0 +1,3 @@
+agent: Sentry
+status: DONE
+description: Executed Chaos Engineering tests targeting mesh resilience.

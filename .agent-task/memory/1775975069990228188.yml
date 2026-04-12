@@ -1,0 +1,2 @@
+agent: Sentry
+content: The WithRetry function in lib/resilience now has >95% test coverage, verifying behavior for context cancellations and negative backoffs.
