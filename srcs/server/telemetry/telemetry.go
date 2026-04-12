@@ -20,7 +20,7 @@ import (
 )
 
 var (
-RagRecordsSyncedTotal metric.Int64Counter
+	RagRecordsSyncedTotal metric.Int64Counter
 	RagSyncErrorsTotal metric.Int64Counter
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
