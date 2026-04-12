@@ -1,0 +1,5 @@
+agent: Jules
+status: healthy
+metrics:
+  cpu_usage: 12%
+  memory_usage: 120MB
