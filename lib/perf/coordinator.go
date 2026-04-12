@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -28,42 +29,44 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 		return nil
 	}
 
-	// Use worker pool approach
-	var wg sync.WaitGroup
-	taskChan := make(chan func() error, len(tasks))
-	errChan := make(chan error, len(tasks))
-
-	// Start workers
 	workerCount := c.concurrency
 	if len(tasks) < workerCount {
 		workerCount = len(tasks)
 	}
 
+	var wg sync.WaitGroup
+	var taskIdx int32 = -1
+	errChan := make(chan error, 1)
+
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for task := range taskChan {
+			for {
+				idx := atomic.AddInt32(&taskIdx, 1)
+				if int(idx) >= len(tasks) {
+					return
+				}
+
 				select {
 				case <-ctx.Done():
-					errChan <- ctx.Err()
+					select {
+					case errChan <- ctx.Err():
+					default:
+					}
 					return
 				default:
-					if err := task(); err != nil {
-						errChan <- err
+					if err := tasks[idx](); err != nil {
+						select {
+						case errChan <- err:
+						default:
+						}
 					}
 				}
 			}
 		}()
 	}
 
-	// Enqueue tasks
-	for _, task := range tasks {
-		taskChan <- task
-	}
-	close(taskChan)
-
-	// Wait for completion
 	wg.Wait()
 	close(errChan)
 
@@ -149,15 +152,21 @@ func (m *ShardedMailbox) Read(recipient string) []Message {
 
 	// Filter messages for recipient and remove them to prevent memory leaks
 	var result []Message
-	var remaining []Message
+	n := 0
 	for _, msg := range shard.messages {
 		if msg.Recipient == recipient {
 			result = append(result, msg)
 		} else {
-			remaining = append(remaining, msg)
+			shard.messages[n] = msg
+			n++
 		}
 	}
 
-	shard.messages = remaining
+	// Clear remaining references to prevent memory leaks
+	for i := n; i < len(shard.messages); i++ {
+		shard.messages[i] = Message{}
+	}
+
+	shard.messages = shard.messages[:n]
 	return result
 }

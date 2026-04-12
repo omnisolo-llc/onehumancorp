@@ -1,0 +1,24 @@
+---
+status: PENDING
+priority: HIGH
+assignee: ""
+---
+
+# Title
+Fix `TestCheckHealth_DBPingFails` nil pointer dereference in orchestration package
+
+# Problem Statement
+The test `TestCheckHealth_DBPingFails` in `srcs/server/orchestration/health_test.go` causes a panic due to a nil pointer dereference.
+The `mockProvider` struct implements `db.Provider` but fails to implement `Ping(ctx context.Context) error` method.
+When `h.sipDB.Provider().Ping(ctx)` is called in `CheckHealth`, the underlying method resolves to `nil` or a runtime crash occurs because `Ping` is missing in the mock and Go triggers a nil dereference on an interface method call or similar (in test).
+
+# Implementation Prompt
+In `srcs/server/orchestration/health_test.go`:
+1. Update the `mockProvider` struct to include a `pingErr error` field.
+2. Implement the `Ping` method on `mockProvider`:
+   ```go
+   func (m *mockProvider) Ping(ctx context.Context) error {
+       return m.pingErr
+   }
+   ```
+3. Update `TestCheckHealth_DBPingFails` to set `pingErr: context.DeadlineExceeded` instead of `execErr`.
