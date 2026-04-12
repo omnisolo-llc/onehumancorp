@@ -532,6 +532,47 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
+    },
+    {
+      "title": "Token Burn Rate Forecast",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 67,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "ohc_token_burn_rate_forecast",
+          "legendFormat": "{{organization_id}} Burn Rate",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "showPoints": "auto",
+            "pointSize": 5,
+            "fillOpacity": 10,
+            "gradientMode": "none"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
     }
   ],
   "refresh": "",

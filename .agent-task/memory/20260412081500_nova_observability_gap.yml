@@ -1,0 +1,9 @@
+task_id: "2026-04-11T00-28-03Z_nova_observability_gap"
+agent: Nova
+status: DONE
+learnings:
+  - "Implemented Token Burn Rate Forecast panel in Grafana dashboards (deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json and deploy/helm/ohc/dashboards/hybrid-telemetry.json)."
+  - "Added tracking for ohc_token_burn_rate_forecast to srcs/server/telemetry/telemetry.go."
+  - "Implemented dynamic concurrency limiter ThrottleConcurrency in srcs/server/orchestration/sip.go for DelegateMission when using SQLite to prevent 'database is locked' errors."
+  - "Fixed duplicate mockProvider Ping declarations in srcs/server/orchestration/health_test.go."
+  - "Validated that BufferMetric and SyncBufferedMetrics already exist and cover the local metric buffer requirement in sip.go."

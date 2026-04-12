@@ -594,12 +594,37 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	return err
 }
 
+var (
+	concurrencyLimit = make(chan struct{}, 5) // limit concurrent standalone db access
+)
+
+func ThrottleConcurrency(ctx context.Context) error {
+	select {
+	case concurrencyLimit <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func ReleaseConcurrency() {
+	<-concurrencyLimit
+}
+
 // DelegateMission delegates specialized tasks via the agent_missions table.
 // Accepts parameters: s *SIPDB (No Constraints).
 // Returns DelegateMission(ctx context.Context, missionID, role string, task Message) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	if s.db.IsSQLite() {
+		// Standalone mode: Add dynamic concurrency limiting to prevent database is locked errors
+		if err := ThrottleConcurrency(ctx); err != nil {
+			return err
+		}
+		defer ReleaseConcurrency()
+	}
+
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
