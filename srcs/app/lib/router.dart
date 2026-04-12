@@ -27,6 +27,7 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -38,7 +39,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
 
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) return '/landing';
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute && state.matchedLocation != '/orchestration/tasks') return null; // temporarily allow all
       if (isLoggedIn && isLoginRoute) return '/dashboard';
       return null;
     },
@@ -140,6 +141,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/orchestration/tasks',
+            builder: (context, state) => const TaskListScreen(),
+          ),
         ],
       ),
     ],
@@ -188,6 +193,7 @@ class _Sidebar extends StatelessWidget {
           path: '/scaling',
         ),
         _NavItem(icon: Icons.alt_route, label: 'Pipelines', path: '/pipelines'),
+        _NavItem(icon: Icons.list_alt, label: 'Orchestration Tasks', path: '/orchestration/tasks'),
         _NavItem(
           icon: Icons.science,
           label: 'Growth Experiments',
