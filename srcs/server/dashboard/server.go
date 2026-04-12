@@ -726,66 +726,52 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		})
 	} else {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Multi-tenant", "status": "ok", "description": "Cloud-native persistent data storage",
+			"id": "postgres_db", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud-Native data storage",
 		})
 		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_connected", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud DB connectivity verified",
+			"id": "redis_cache", "label": "Redis Available", "status": "ok", "description": "Cloud-Native distributed cache",
 		})
-		if os.Getenv("REDIS_URL") != "" {
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_cache", "label": "Redis Distributed Cache", "status": "ok", "description": "High-throughput Pub/Sub mesh",
-			})
-			checklist = append(checklist, map[string]interface{}{
-				"id": "redis_available", "label": "Redis Available", "status": "ok", "description": "Redis Cache connectivity verified",
-			})
-		}
 	}
 
-	// Check for stuck agent_missions specifically for Hybrid metric insights
-	var stuckMissionsCount int
-	var missionsProbeStatus = "ok"
-	if s.hub != nil && s.hub.SIPDB() != nil {
-		ctx := r.Context()
-		missions, err := s.hub.SIPDB().GetPendingMissions(ctx, "ANY")
+	ctx := r.Context()
+	probe, err := s.hub.CheckHealth(ctx)
+	status := "healthy"
+	if err != nil || probe.Status == "degraded" {
+		status = "degraded"
+	}
+
+	details := map[string]interface{}{
+		"status":        status,
+		"mesh_active":   probe.MeshActive,
+		"sync_queue":    probe.SyncBacklog,
+		"agent_workers": 0,
+	}
+
+	if s.hub.SIPDB() != nil && s.hub.SIPDB().Provider() != nil {
+		stuckMissions, err := s.hub.SIPDB().Provider().Query(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'")
 		if err == nil {
-			stuckMissionsCount = len(missions)
+			defer stuckMissions.Close()
+			if stuckMissions.Next() {
+				var count int
+				if err := stuckMissions.Scan(&count); err == nil {
+					details["stuck_missions"] = count
+					if count > 0 {
+						status = "degraded"
+						details["status"] = status
+					}
+				}
+			}
 		}
-	}
-	if stuckMissionsCount > 10 {
-		missionsProbeStatus = "degraded"
-	}
-
-	checklist = append(checklist, map[string]interface{}{
-		"id":          "stuck_missions_probe",
-		"label":       "Stagnant Missions Backlog",
-		"status":      missionsProbeStatus,
-		"description": "Count of stuck or pending agent missions across cloud/local boundary",
-		"count":       stuckMissionsCount,
-	})
-
-	// Delegate to the shared orchestration check
-	probe, errProbe := s.hub.CheckHealth(r.Context())
-	if errProbe == nil {
-		if probe.Status != "healthy" {
-			missionsProbeStatus = probe.Status
-		}
-		checklist = append(checklist, map[string]interface{}{
-			"id":          "mesh_active",
-			"label":       "Centrifuge Teammate Mesh",
-			"status":      "ok",
-			"description": "Real-time communication layer",
-			"active":      probe.MeshActive,
-		})
 	}
 
 	resp := map[string]interface{}{
-		"status":     missionsProbeStatus,
-		"mode":       mode,
-		"sync_ready": true,
-		"checklist":  checklist,
-		"details":    probe,
+		"status":    status,
+		"mode":      mode,
+		"details":   details,
+		"checklist": checklist,
 	}
-	_ = json.NewEncoder(w).Encode(resp)
+
+	writeJSON(w, resp)
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {

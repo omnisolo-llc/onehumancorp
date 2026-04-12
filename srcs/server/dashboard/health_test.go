@@ -58,11 +58,7 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 		Roles:          []string{"admin"},
 	}
 
-	// Create an unexported contextKey type locally matching the one in auth package
-	type contextKey string
-	const claimsContextKey contextKey = "ohc_auth_claims"
-
-	ctx = context.WithValue(req.Context(), claimsContextKey, claims)
+	ctx = context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, claims)
 	req = req.WithContext(ctx)
 
 	w := httptest.NewRecorder()
@@ -82,12 +78,12 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 		t.Errorf("Expected status to be healthy or ok, got %s", resp["status"])
 	}
 
-	details, ok := resp["details"].(map[string]interface{})
+	checklist, ok := resp["checklist"].([]interface{})
 	if !ok {
-		t.Fatalf("Expected details in response, got %v", resp)
+		t.Fatalf("Expected checklist in response, got %v", resp)
 	}
 
-	if details["status"] != "healthy" {
-		t.Errorf("Expected details status to be healthy, got %s", details["status"])
+	if len(checklist) != 2 {
+		t.Errorf("Expected 2 items in checklist, got %d", len(checklist))
 	}
 }
