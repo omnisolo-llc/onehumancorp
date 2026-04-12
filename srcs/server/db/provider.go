@@ -44,7 +44,6 @@ type Provider interface {
 	Close()
 	Ping(ctx context.Context) error
 	IsSQLite() bool
-	Ping(ctx context.Context) error
 	AcquireTask(ctx context.Context, agentID string) (*TaskRecord, error)
 }
 
