@@ -28,42 +28,50 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 		return nil
 	}
 
-	// Use worker pool approach
-	var wg sync.WaitGroup
-	taskChan := make(chan func() error, len(tasks))
-	errChan := make(chan error, len(tasks))
-
-	// Start workers
 	workerCount := c.concurrency
 	if len(tasks) < workerCount {
 		workerCount = len(tasks)
 	}
 
+	var wg sync.WaitGroup
+	errChan := make(chan error, workerCount)
+
+	chunkSize := (len(tasks) + workerCount - 1) / workerCount
+
 	for i := 0; i < workerCount; i++ {
+		start := i * chunkSize
+		end := start + chunkSize
+		if end > len(tasks) {
+			end = len(tasks)
+		}
+		if start >= len(tasks) {
+			break
+		}
+
 		wg.Add(1)
-		go func() {
+		go func(tasksChunk []func() error) {
 			defer wg.Done()
-			for task := range taskChan {
+			for _, task := range tasksChunk {
 				select {
 				case <-ctx.Done():
-					errChan <- ctx.Err()
+					select {
+					case errChan <- ctx.Err():
+					default:
+					}
 					return
 				default:
-					if err := task(); err != nil {
-						errChan <- err
+				}
+				if err := task(); err != nil {
+					select {
+					case errChan <- err:
+					default:
 					}
+					return
 				}
 			}
-		}()
+		}(tasks[start:end])
 	}
 
-	// Enqueue tasks
-	for _, task := range tasks {
-		taskChan <- task
-	}
-	close(taskChan)
-
-	// Wait for completion
 	wg.Wait()
 	close(errChan)
 
@@ -85,7 +93,7 @@ type ShardedMailbox struct {
 
 type MailboxShard struct {
 	mu       sync.RWMutex
-	messages []Message
+	messages map[string][]Message
 }
 
 type Message struct {
@@ -106,7 +114,7 @@ func NewShardedMailbox(numShards int) *ShardedMailbox {
 	shards := make([]*MailboxShard, size)
 	for i := 0; i < size; i++ {
 		shards[i] = &MailboxShard{
-			messages: make([]Message, 0),
+			messages: make(map[string][]Message),
 		}
 	}
 
@@ -134,7 +142,7 @@ func (m *ShardedMailbox) Send(msg Message) error {
 	shard := m.shards[shardIdx]
 
 	shard.mu.Lock()
-	shard.messages = append(shard.messages, msg)
+	shard.messages[msg.Recipient] = append(shard.messages[msg.Recipient], msg)
 	shard.mu.Unlock()
 
 	return nil
@@ -145,19 +153,9 @@ func (m *ShardedMailbox) Read(recipient string) []Message {
 	shard := m.shards[shardIdx]
 
 	shard.mu.Lock()
-	defer shard.mu.Unlock()
+	result := shard.messages[recipient]
+	delete(shard.messages, recipient)
+	shard.mu.Unlock()
 
-	// Filter messages for recipient and remove them to prevent memory leaks
-	var result []Message
-	var remaining []Message
-	for _, msg := range shard.messages {
-		if msg.Recipient == recipient {
-			result = append(result, msg)
-		} else {
-			remaining = append(remaining, msg)
-		}
-	}
-
-	shard.messages = remaining
 	return result
 }
