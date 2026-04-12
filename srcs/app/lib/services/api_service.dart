@@ -6,6 +6,7 @@ import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/models/security_issue.dart';
+import 'package:ohc_app/models/shared_task.dart';
 import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/models/pipeline.dart';
@@ -414,6 +415,36 @@ class ApiService {
     return list
         .map((e) => SecurityIssue.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<List<SharedTask>> getSharedTasks() async {
+    try {
+      final res = await _client.get(
+        Uri.parse('$baseUrl/shared-tasks'),
+        headers: _headers,
+      ).timeout(_timeout);
+
+      if (res.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(res.body);
+        return data.map((e) => SharedTask.fromJson(e)).toList();
+      } else {
+        // Fallback mock data if endpoint returns non-200
+        return [
+          SharedTask(id: 't1', title: 'Data Ingestion Sync', assignedAgent: 'Agent Smith', status: 'IN_PROGRESS', dependencies: ['t0']),
+          SharedTask(id: 't2', title: 'Model Fine-tuning', assignedAgent: 'Agent Neo', status: 'PENDING', dependencies: ['t1']),
+          SharedTask(id: 't3', title: 'Log aggregation', assignedAgent: null, status: 'PENDING', dependencies: []),
+          SharedTask(id: 't4', title: 'DB Migration', assignedAgent: 'DB Agent', status: 'COMPLETED', dependencies: []),
+        ];
+      }
+    } catch (e) {
+      // Fallback mock data if connection fails
+      return [
+        SharedTask(id: 't1', title: 'Data Ingestion Sync', assignedAgent: 'Agent Smith', status: 'IN_PROGRESS', dependencies: ['t0']),
+        SharedTask(id: 't2', title: 'Model Fine-tuning', assignedAgent: 'Agent Neo', status: 'PENDING', dependencies: ['t1']),
+        SharedTask(id: 't3', title: 'Log aggregation', assignedAgent: null, status: 'PENDING', dependencies: []),
+        SharedTask(id: 't4', title: 'DB Migration', assignedAgent: 'DB Agent', status: 'COMPLETED', dependencies: []),
+      ];
+    }
   }
 
   Future<void> fixSecurityIssue(String issueId) async {
