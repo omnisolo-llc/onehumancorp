@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
+import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
@@ -48,6 +49,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
+          GoRoute(
+            path: '/orchestration/tasks',
+            builder: (context, state) => const TaskListScreen(),
+          ),
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
@@ -172,6 +177,7 @@ class _Sidebar extends StatelessWidget {
         ),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+        _NavItem(icon: Icons.account_tree, label: 'Task List', path: '/orchestration/tasks'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
