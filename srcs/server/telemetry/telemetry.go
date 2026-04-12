@@ -459,6 +459,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initRAGSyncMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	err = initMinimaxMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
