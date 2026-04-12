@@ -471,6 +471,67 @@
       ],
       "title": "Agent State Transition Latency",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "id": 1001,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_cache_hits_total[5m])) by (cache_type)",
+          "legendFormat": "Hits - {{cache_type}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_cache_misses_total[5m])) by (cache_type)",
+          "legendFormat": "Misses - {{cache_type}}",
+          "refId": "B"
+        }
+      ],
+      "title": "LLM Cache Performance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 59
+      },
+      "id": 1002,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(api_rate_limit_exceeded_count[5m])) by (endpoint)",
+          "legendFormat": "{{endpoint}}",
+          "refId": "A"
+        }
+      ],
+      "title": "API Rate Limits Exceeded",
+      "type": "timeseries"
     }
   ],
   "refresh": "",
