@@ -9,6 +9,8 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
+	"os"
 )
 
 import (
@@ -191,7 +193,24 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				// Handle Builtin agent logic
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
 					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
-					// In a full implementation, we'd spawn the BuiltinAgent loop asynchronously here.
+					go func(agent orchestration.Agent, payload string) {
+						client := builtin.NewOpenAIClient(os.Getenv("OPENAI_API_KEY"))
+						builtinAgent := &builtin.BuiltinAgent{
+							Client:      client,
+							Model:       "gpt-4o",
+							System:      builtin.GetSystemPrompt(),
+							Tools:       builtin.AllTools(),
+							MaxTokens:   4096,
+							Temperature: 0.1,
+						}
+						_, err := builtinAgent.Run(context.Background(), []builtin.Message{{
+							Role:    builtin.RoleUser,
+							Content: payload,
+						}})
+						if err != nil {
+							slog.Error("builtin agent run error", "err", err, "agent_id", agent.ID)
+						}
+					}(a, string(payload))
 				}
 
 				agentFound = true
