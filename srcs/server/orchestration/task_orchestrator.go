@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/onehumancorp/mono/srcs/server/memory"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
+	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/redis/rueidis"
 )
 
