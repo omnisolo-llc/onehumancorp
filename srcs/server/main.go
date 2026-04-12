@@ -27,6 +27,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	orchestration_mesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -471,23 +472,37 @@ func run(now time.Time, listen listenFunc) error {
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Setup MeshTransport for Hub
-	var mesh orchestration.MeshTransport
+	var meshTransport orchestration.MeshTransport
+	var teammateMesh orchestration_mesh.TeammateMesh
+
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		rm, err := orchestration.NewRedisMeshTransport(redisURL)
 		if err == nil {
-			mesh = rm
+			meshTransport = rm
 		}
-	}
-	if mesh == nil {
-		if pool != nil {
-			mesh = orchestration.NewMemoryMeshTransport(pool.Provider)
-		} else {
-			mesh = orchestration.NewMemoryMeshTransport(nil)
+
+		tm, err := orchestration_mesh.NewRedisMesh(redisURL)
+		if err == nil {
+			teammateMesh = tm
 		}
 	}
 
+	if meshTransport == nil {
+		if pool != nil {
+			meshTransport = orchestration.NewMemoryMeshTransport(pool.Provider)
+		} else {
+			meshTransport = orchestration.NewMemoryMeshTransport(nil)
+		}
+	}
+
+	if teammateMesh == nil {
+		teammateMesh = orchestration_mesh.NewLocalMesh()
+	}
+	// Avoid unused variable error
+	_ = teammateMesh
+
 	if cn := hub.CentrifugeNode(); cn != nil {
-		cn.SetMeshTransport(mesh)
+		cn.SetMeshTransport(meshTransport)
 	}
 
 	// Start gRPC server
@@ -501,7 +516,7 @@ func run(now time.Time, listen listenFunc) error {
 			grpc.UnaryInterceptor(orchestration.SPIFFEAuthInterceptor()),
 			grpc.StreamInterceptor(orchestration.SPIFFEStreamInterceptor()),
 		)
-		orchestration.RegisterHubService(s, hub, mesh)
+		orchestration.RegisterHubService(s, hub, meshTransport)
 		slog.Info("serving gRPC", "address", grpcAddress)
 		if err := s.Serve(lis); err != nil {
 			slog.Error("failed to serve gRPC", "error", err)
