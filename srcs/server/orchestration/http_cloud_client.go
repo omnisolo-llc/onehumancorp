@@ -6,17 +6,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // HTTPCloudClient implements CloudClient by making an HTTP POST request.
 type HTTPCloudClient struct {
 	endpoint string
+	client   *http.Client
 }
 
 // NewHTTPCloudClient creates a new HTTPCloudClient.
 func NewHTTPCloudClient(endpoint string) *HTTPCloudClient {
 	return &HTTPCloudClient{
 		endpoint: endpoint,
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
 }
 
@@ -37,7 +42,7 @@ func (c *HTTPCloudClient) PushSanitizedMemory(ctx context.Context, memoryID, san
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return "", err
 	}
