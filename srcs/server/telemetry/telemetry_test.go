@@ -82,6 +82,8 @@ type mockFloat64Histogram struct {
 	metric.Float64Histogram
 }
 
+func (m *mockFloat64Histogram) Record(ctx context.Context, incr float64, options ...metric.RecordOption) {}
+
 // mockInt64Counter implements metric.Int64Counter
 type mockInt64Counter struct {
 	metric.Int64Counter
