@@ -6,11 +6,21 @@ import (
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestUltraPlanManager(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
+
+	telemetry.InitTelemetry()
+	var loggedMetric string
+	var loggedPayload string
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		loggedMetric = metricType
+		loggedPayload = payload
+		return nil
+	}
+	defer func() { telemetry.BufferMetricFunc = nil }()
 
 	prov := db.NewTestProvider(t)
 	defer prov.Close()
@@ -91,6 +101,13 @@ func TestUltraPlanManager(t *testing.T) {
 	err = upm.ApprovePlan(ctx, plan.ID, "agent-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if loggedMetric != "deliberation_phase_duration" {
+		t.Errorf("expected deliberation_phase_duration metric to be logged, got %q", loggedMetric)
+	}
+	if loggedPayload == "" {
+		t.Errorf("expected payload to be logged")
 	}
 
 	planResult, err = upm.GetUltraPlan(ctx, plan.ID)
