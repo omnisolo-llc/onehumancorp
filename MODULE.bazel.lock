@@ -586,7 +586,7 @@
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
         "bzlTransitiveDigest": "0bn0jOSu+8OqbfpPXBU9caBoFi+4bI6sQhMYweNE1q0=",
-        "usagesDigest": "yc1rwwysCTdKulDBaeRGF4jChlWHfg+XHYz7TGa2G8k=",
+        "usagesDigest": "zvz1Bk4ic7xP0MxoVYIipbGePT72s80WA3t9meYGBm0=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
