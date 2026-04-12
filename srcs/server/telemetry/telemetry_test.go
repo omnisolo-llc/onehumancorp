@@ -110,6 +110,9 @@ func (m *mockMeter) Float64Histogram(name string, options ...metric.Float64Histo
 	return &mockFloat64Histogram{}, nil
 }
 
+func (m *mockFloat64Histogram) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
+}
+
 func (m *mockMeter) Float64UpDownCounter(name string, options ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error) {
 	return nil, nil
 }

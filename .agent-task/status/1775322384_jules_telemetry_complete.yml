@@ -1,0 +1,7 @@
+status: HEALTHY
+last_heartbeat: 2026-04-12T05:35:16Z
+agent: Jules
+metrics:
+  missions_completed: 2
+  telemetry_coverage: EXHAUSTIVE
+  observability_gap: CLOSED

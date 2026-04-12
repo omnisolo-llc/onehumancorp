@@ -114,3 +114,58 @@ func TestUltraPlanManager(t *testing.T) {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
 	}
 }
+
+func TestUltraPlanPhaseDurationTelemetry(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	_, _ = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'DELIBERATING',
+			state_machine TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	called := false
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		if metricType == "deliberation_phase_duration" {
+			called = true
+		}
+		return nil
+	}
+	defer func() { telemetry.BufferMetricFunc = nil }()
+
+	upm := NewUltraPlanManager(prov, nil, nil)
+	ctx := context.Background()
+
+	// 1. Create plan
+	plan, _ := upm.CreatePlan(ctx, "m-1", map[string]interface{}{"phase": "PROPOSE"})
+
+	// 2. Trigger phase change via UpdatePlanStatus
+	err := upm.UpdatePlanStatus(ctx, plan.ID, "DELIBERATING", map[string]interface{}{"phase": "CRITIQUE"})
+	if err != nil {
+		t.Fatalf("UpdatePlanStatus failed: %v", err)
+	}
+
+	if !called {
+		t.Errorf("expected RecordDeliberationPhaseDuration to be called via BufferMetricFunc")
+	}
+	called = false
+
+	// 3. Trigger phase change via SubmitCritique (which transitions to REVISION_REQUIRED)
+	err = upm.SubmitCritique(ctx, plan.ID, "agent-1", "fix it")
+	if err != nil {
+		t.Fatalf("SubmitCritique failed: %v", err)
+	}
+
+	if !called {
+		t.Errorf("expected RecordDeliberationPhaseDuration to be called via BufferMetricFunc on SubmitCritique")
+	}
+}
