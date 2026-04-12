@@ -979,6 +979,12 @@ type LocalTeammateMesh struct {
 	coordBroadcast      []chan MeshMessage
 	coordSubs           []map[chan MeshMessage]struct{}
 	coordMu             []sync.RWMutex
+
+	pubSubMu            sync.RWMutex
+	pubSubChannels      map[string]map[int]func(msg []byte)
+	pubSubCounter       int
+	presenceMu          sync.RWMutex
+	presence            map[string]AgentPresence
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
@@ -991,6 +997,9 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		coordBroadcast:      make([]chan MeshMessage, numShards),
 		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:             make([]sync.RWMutex, numShards),
+		pubSubChannels:      make(map[string]map[int]func(msg []byte)),
+		pubSubCounter:       0,
+		presence:            make(map[string]AgentPresence),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
@@ -1187,11 +1196,37 @@ func (s *localSubscription) Close() error {
 }
 
 func (lm *LocalTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
-	return nil // Mock implementation
+	lm.pubSubMu.RLock()
+	defer lm.pubSubMu.RUnlock()
+
+	if handlers, ok := lm.pubSubChannels[topic]; ok {
+		for _, h := range handlers {
+			if h != nil {
+				go h(payload)
+			}
+		}
+	}
+	return nil
 }
 
 func (lm *LocalTeammateMesh) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
-	return &localSubscription{cancel: func() {}}, nil // Mock implementation
+	lm.pubSubMu.Lock()
+	defer lm.pubSubMu.Unlock()
+
+	if lm.pubSubChannels[topic] == nil {
+		lm.pubSubChannels[topic] = make(map[int]func(msg []byte))
+	}
+	lm.pubSubCounter++
+	id := lm.pubSubCounter
+	lm.pubSubChannels[topic][id] = handler
+
+	return &localSubscription{cancel: func() {
+		lm.pubSubMu.Lock()
+		defer lm.pubSubMu.Unlock()
+		if handlers, ok := lm.pubSubChannels[topic]; ok {
+			delete(handlers, id)
+		}
+	}}, nil
 }
 
 func (lm *LocalTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
@@ -1229,11 +1264,27 @@ func (lm *LocalTeammateMesh) ReleaseLock(ctx context.Context, key string) error 
 }
 
 func (lm *LocalTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
-	return nil // Mock implementation
+	lm.presenceMu.Lock()
+	lm.presence[agentID] = AgentPresence{
+		AgentID:  agentID,
+		Status:   status,
+		LastSeen: time.Now(),
+	}
+	lm.presenceMu.Unlock()
+	return nil
 }
 
 func (lm *LocalTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
-	return []AgentPresence{
-		{AgentID: "local-agent", Status: "WORKING", LastSeen: time.Now()},
-	}, nil // Mock implementation, in local there is only 1 agent usually
+	lm.presenceMu.RLock()
+	defer lm.presenceMu.RUnlock()
+
+	var agents []AgentPresence
+	now := time.Now()
+	for _, p := range lm.presence {
+		// Consider agents active if seen within the last 5 minutes
+		if now.Sub(p.LastSeen) < 5*time.Minute {
+			agents = append(agents, p)
+		}
+	}
+	return agents, nil
 }
