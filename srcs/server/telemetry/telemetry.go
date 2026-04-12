@@ -50,6 +50,9 @@ var (
 
 	SyncCompletedCount metric.Int64Counter
 	SyncFailedCount    metric.Int64Counter
+
+	toolAutoCorrectionTotal          metric.Int64Counter
+	deliberationPhaseDurationSeconds metric.Float64Histogram
 	SyncEscalationsCount metric.Int64Counter
 	SyncLatency metric.Float64Histogram
 	SyncPayloadSize metric.Int64Histogram
@@ -165,6 +168,23 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+
+	toolAutoCorrectionTotal, err = m.Int64Counter(
+		"ohc_tool_autocorrection_total",
+		metric.WithDescription("Total number of tool parameter auto-corrections attempted by agents."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	deliberationPhaseDurationSeconds, err = m.Float64Histogram(
+		"ohc_deliberation_phase_duration_seconds",
+		metric.WithDescription("Duration of UltraPlan deliberation phases."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -1017,4 +1037,52 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	if subAgentQueueLengthGauge != nil {
 		subAgentQueueLengthGauge.Add(ctx, int64(delta))
 	}
+}
+
+// RecordToolAutoCorrection increments the tool autocorrection counter.
+func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success bool) {
+	statusStr := "failure"
+	if success {
+		statusStr = "success"
+	}
+
+	if toolAutoCorrectionTotal == nil {
+		if BufferMetricFunc != nil {
+			payloadMap := map[string]interface{}{
+				"agent_id": agentID,
+				"role":     role,
+				"status":   statusStr,
+			}
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
+			_ = BufferMetricFunc(ctx, "ohc_tool_autocorrection_total", string(payloadBytes))
+		}
+		return
+	}
+	toolAutoCorrectionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("role", role),
+		attribute.String("status", statusStr),
+	))
+}
+
+// RecordDeliberationPhaseDuration records the duration of a deliberation phase.
+func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, durationSeconds float64) {
+	if deliberationPhaseDurationSeconds == nil {
+		if BufferMetricFunc != nil {
+			payloadMap := map[string]interface{}{
+				"plan_id":  planID,
+				"phase":    phase,
+				"duration": durationSeconds,
+			}
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
+			_ = BufferMetricFunc(ctx, "ohc_deliberation_phase_duration_seconds", string(payloadBytes))
+		}
+		return
+	}
+	deliberationPhaseDurationSeconds.Record(ctx, durationSeconds, metric.WithAttributes(
+		attribute.String("plan_id", planID),
+		attribute.String("phase", phase),
+	))
 }

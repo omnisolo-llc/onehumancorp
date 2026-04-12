@@ -148,6 +148,13 @@ func (m *mockProvider) IsSQLite() bool {
 	return m.isSqlite
 }
 
+func (m *mockProvider) Ping(ctx context.Context) error {
+	if m.execErr != nil {
+		return m.execErr
+	}
+	return nil
+}
+
 func (m *mockProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
 	return &mockRow{}
 }
