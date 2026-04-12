@@ -2,15 +2,15 @@
 
 ## Premium Visual Design Mandate
 All OHC interfaces derived from this architecture MUST adhere to:
-*   \`backdrop-filter: blur(20px) saturate(200%)\`
-*   \`background: rgba(255, 255, 255, 0.03)\`
-*   \`font-family: 'Outfit', 'Inter', sans-serif\`
+*   `backdrop-filter: blur(20px) saturate(200%)`
+*   `background: rgba(255, 255, 255, 0.03)`
+*   `font-family: 'Outfit', 'Inter', sans-serif`
 
 ---
 
 ## Phase 1: UltraPlan/Decomposition (Shared Task List)
 
-The Shared Task List is the backbone of the OHC Swarm. It tracks complex feature decomposition into actionable, sequenced \`shared_tasks\`.
+The Shared Task List is the backbone of the OHC Swarm. It tracks complex feature decomposition into actionable, sequenced `shared_tasks`.
 
 ### Sequence Diagram
 ```mermaid
@@ -61,8 +61,8 @@ Realtime communication between agents is critical for the "Zero Friction" swarm 
 ### Realtime API Contracts
 - **Transport**: WebSockets / gRPC locally, backed by Redis Pub/Sub for horizontal scaling in Cloud-Native Mode.
 - **Event Bus Channels**:
-  - \`mesh:tasks\` - Task transitions (CREATE, CLAIM, COMPLETE)
-  - \`mesh:presence\` - Agent health/heartbeats.
+  - `mesh:tasks` - Task transitions (CREATE, CLAIM, COMPLETE)
+  - `mesh:presence` - Agent health/heartbeats.
 - **Message Format (JSON)**:
   ```json
   {
@@ -82,7 +82,7 @@ Realtime communication between agents is critical for the "Zero Friction" swarm 
 The long-term memory system. Agents document their findings locally, and the autoDream background pipeline asynchronously vectorizes these findings into a durable pgvector store.
 
 ### Data Pipeline Architecture
-1. **Source**: Local \`.agent-task/memory/\` YAML files.
+1. **Source**: Local `.agent-task/memory/` YAML files.
 2. **Ingestion Agent**: Reads files, generates chunked text.
 3. **Embedding Generation**: Calls LLM provider (e.g., Anthropic/OpenAI/Minimax) to produce vectors.
 4. **Storage (pgvector)**:
