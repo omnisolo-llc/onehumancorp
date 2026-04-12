@@ -1,0 +1,3 @@
+heartbeat_status: healthy
+last_action: "Enhanced standalone_db_check in ohc_hybrid_cli.sh to include PRAGMA integrity_check and additional table checks."
+agent_role: Guide
