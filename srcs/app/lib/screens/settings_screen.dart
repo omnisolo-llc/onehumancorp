@@ -1,3 +1,4 @@
+import '../widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +36,21 @@ class SettingsScreen extends ConsumerWidget {
             (settings) => ListView(
               padding: const EdgeInsets.all(24),
               children: [
+                if (user == null) ...[
+                  ListTile(
+                    leading: Icon(
+                      Icons.logout,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    title: Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    onTap: () => ref.read(authStateProvider.notifier).logout(),
+                  ),
+                ],
                 if (user != null) ...[
                   ListTile(
                     leading: CircleAvatar(
@@ -47,7 +63,7 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 const _SectionHeader(title: 'Communication'),
-                Card(
+                GlassCard(
                   child: ListTile(
                     leading: Icon(
                       settings.standaloneMode
