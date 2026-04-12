@@ -23,19 +23,19 @@ type SharedTaskDB struct {
 	UpdatedAt       string
 }
 
-type TaskOrchestrator struct {
+type SharedTaskOrchestrator struct {
 	dbProvider db.Provider
 	mu         sync.Mutex // For SQLite concurrent assignment locking
 }
 
-func NewTaskOrchestrator(dbProvider db.Provider) *TaskOrchestrator {
-	return &TaskOrchestrator{
+func NewSharedTaskOrchestrator(dbProvider db.Provider) *SharedTaskOrchestrator {
+	return &SharedTaskOrchestrator{
 		dbProvider: dbProvider,
 	}
 }
 
 // ClaimTask attempts to claim a task. Returns the task ID and an error if one occurred.
-func (to *TaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
+func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized: missing claims")
@@ -47,7 +47,7 @@ func (to *TaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*Sha
 	return to.claimTaskPostgres(ctx, claims.OrganizationID, agentID)
 }
 
-func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
 	to.mu.Lock()
 	defer to.mu.Unlock()
 
@@ -98,7 +98,7 @@ func (to *TaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID 
 	return task, nil
 }
 
-func (to *TaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
 	tx, err := to.dbProvider.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
