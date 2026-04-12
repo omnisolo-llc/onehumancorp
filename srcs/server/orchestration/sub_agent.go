@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"log/slog"
 	"path/filepath"
 	"sync"
 	"time"
@@ -176,7 +177,7 @@ isolated_context: %t
 	err := writeHeartbeatFile(task.ID, heartbeatContent)
 	if err != nil {
 		// Just log or ignore since heartbeats are non-critical
-		fmt.Printf("failed to write heartbeat: %v\n", err)
+		slog.Warn("failed to write heartbeat", "err", err)
 	}
 
 	// Simulate real work that might fail
