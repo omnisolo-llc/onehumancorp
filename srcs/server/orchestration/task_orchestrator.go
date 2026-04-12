@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/memory"
-	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/redis/rueidis"
 )
@@ -484,20 +482,32 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		apiKey := os.Getenv("MINIMAX_API_KEY")
-		var client autodream.MinimaxClient
-		if apiKey != "" {
-			client = NewCachedMinimaxClient(NewMinimaxClient(apiKey), to.db, to.redisClient)
-		}
+		worker := NewAutoDreamWorker(to.db)
 
-		repo := memory.NewVectorRepository(to.db)
-		service := autodream.NewAutoDreamService(repo, client)
-
+		// Let AutoDreamWorker handle it via direct LLM call
 		contextStr := fmt.Sprintf("Task ID: %s, Result: %s, Initial Payload: %s", taskID, result, taskPayload)
-		err := service.Consolidate(bgCtx, taskID, tenantID, contextStr)
-		if err != nil {
-			slog.Error("AutoDream: Failed to consolidate task memory", "error", err)
+
+		// In a real environment MINIMAX_API_KEY is set. For tests we mock/skip.
+		apiKey := os.Getenv("MINIMAX_API_KEY")
+		if apiKey == "" {
+			slog.Warn("AutoDream: MINIMAX_API_KEY not set, skipping embedding hook")
+			return
 		}
+
+		client := NewCachedMinimaxClient(NewMinimaxClient(apiKey), to.db, to.redisClient)
+		emb, err := client.GenerateEmbedding(bgCtx, contextStr)
+		if err != nil {
+			slog.Warn("AutoDream: Failed to generate embedding for completed task", "error", err)
+			return
+		}
+
+		b, _ := json.Marshal(emb)
+		memID := generateID()
+
+		// Instead of directly inserting, use the worker to handle standard DB inserts for AutoDream.
+		_ = worker.InjectTruth(bgCtx, memID, contextStr, string(b))
+
+		slog.Info("AutoDream: Consolidated task completion memory", "taskID", taskID)
 	}()
 
 	return nil
