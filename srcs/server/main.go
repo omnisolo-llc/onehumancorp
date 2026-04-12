@@ -27,6 +27,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -471,23 +472,39 @@ func run(now time.Time, listen listenFunc) error {
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Setup MeshTransport for Hub
-	var mesh orchestration.MeshTransport
+	// Setup New TeammateMesh API
+	var teammateMesh mesh.TeammateMesh
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+		rm, err := mesh.NewRedisMesh(redisURL)
+		if err == nil {
+			teammateMesh = rm
+		} else {
+			slog.Error("Failed to initialize RedisMesh", "error", err)
+		}
+	}
+	if teammateMesh == nil {
+		teammateMesh = mesh.NewLocalMesh()
+	}
+	slog.Info("Initialized TeammateMesh", "type", fmt.Sprintf("%T", teammateMesh))
+
+
+	var meshTransport orchestration.MeshTransport
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		rm, err := orchestration.NewRedisMeshTransport(redisURL)
 		if err == nil {
-			mesh = rm
+			meshTransport = rm
 		}
 	}
-	if mesh == nil {
+	if meshTransport == nil {
 		if pool != nil {
-			mesh = orchestration.NewMemoryMeshTransport(pool.Provider)
+			meshTransport = orchestration.NewMemoryMeshTransport(pool.Provider)
 		} else {
-			mesh = orchestration.NewMemoryMeshTransport(nil)
+			meshTransport = orchestration.NewMemoryMeshTransport(nil)
 		}
 	}
 
 	if cn := hub.CentrifugeNode(); cn != nil {
-		cn.SetMeshTransport(mesh)
+		cn.SetMeshTransport(meshTransport)
 	}
 
 	// Start gRPC server
