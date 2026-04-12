@@ -145,3 +145,65 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	task.AssignedAgentID = &agentID
 	return task, nil
 }
+
+// UpdateSwarmTaskStatus updates a swarm_task's status and records the state transition.
+func (to *SharedTaskOrchestrator) UpdateSwarmTaskStatus(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
+	to.mu.Lock()
+	defer to.mu.Unlock()
+
+	tx, err := to.dbProvider.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Validate transition flow based on the DB schema check constraint
+	validTransitions := map[string][]string{
+		"PENDING":     {"IN_PROGRESS"},
+		"IN_PROGRESS": {"COMPLETED", "FAILED"},
+	}
+
+	isValid := false
+	if allowedToStates, ok := validTransitions[fromState]; ok {
+		for _, state := range allowedToStates {
+			if state == toState {
+				isValid = true
+				break
+			}
+		}
+	}
+
+	if !isValid {
+		return fmt.Errorf("invalid state transition from %s to %s", fromState, toState)
+	}
+
+	updateQuery := `
+		UPDATE swarm_tasks
+		SET status = $1, assigned_agent_id = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $3 AND status = $4
+	`
+	rowsAffected, err := tx.Exec(ctx, updateQuery, toState, agentID, taskID, fromState)
+	if err != nil {
+		return fmt.Errorf("failed to update swarm_tasks status: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("task not found or not in expected fromState")
+	}
+
+	transitionQuery := `
+		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	transitionID := fmt.Sprintf("sm-%s-%s", taskID, toState)
+	_, err = tx.Exec(ctx, transitionQuery, transitionID, taskID, "swarm_task", fromState, toState, agentID, reason)
+	if err != nil {
+		return fmt.Errorf("failed to insert state transition: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
