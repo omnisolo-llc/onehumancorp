@@ -942,6 +942,16 @@ if [ -d "$FLUTTER_GPU_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_GPU_PUB_CACHE" 2>/
     chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
 fi
 
+# Seed runtime pub cache from Flutter SDK package caches so transitive deps
+# (e.g. leak_tracker_flutter_testing, characters, vector_math) are available
+# with their proper lib/ directory structure.
+for _SDK_PKG_CACHE in "${{FLUTTER_ROOT_ORIG}}/packages"/*/.pub_cache; do
+    if [ -d "$_SDK_PKG_CACHE" ] && [ -n "$(ls -A "$_SDK_PKG_CACHE" 2>/dev/null)" ]; then
+        copy_tree "$_SDK_PKG_CACHE" "$RUNTIME_PUB_CACHE"
+        chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
+    fi
+done
+
 # ── Create a writable Flutter SDK overlay ────────────────────────────────────
 # The external Flutter SDK is mounted read-only inside the Bazel linux-sandbox
 # (errno=30 EROFS).  Flutter writes a lockfile to bin/cache/ on every invocation.
