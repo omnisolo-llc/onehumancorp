@@ -16,7 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
-	"github.com/onehumancorp/mono/lib/integrations/hybridfsmcp"
+	"github.com/onehumancorp/mono/srcs/server/tools/fsmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -401,14 +401,14 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		// if we're in local mode, or cloud provider otherwise. We don't have direct access
 		// to the global mode here so we fallback to a safe default (cloud).
 
-		var fsProvider hybridfsmcp.FileSystemProvider
+		var fsProvider fsmcp.FileSystemProvider
 		if s.hub.Storage() != nil && s.hub.Storage().IsLocal() {
-			fsProvider = hybridfsmcp.NewLocalFSProvider("./")
+			fsProvider = fsmcp.NewLocalFSProvider("./")
 		} else {
-			fsProvider = hybridfsmcp.NewCloudFSProvider("/tmp/ohc-cloud-fs")
+			fsProvider = fsmcp.NewCloudFSProvider("/tmp/ohc-cloud-fs")
 		}
 
-		inspector := hybridfsmcp.NewHybridFSMCP(fsProvider)
+		inspector := fsmcp.NewHybridFSMCP(fsProvider)
 		var params map[string]interface{}
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return nil, fmt.Errorf("invalid hybridfs-mcp parameters: %w", err)

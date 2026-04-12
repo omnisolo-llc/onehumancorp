@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Implementer
+status: DONE
+agent: Guide
 priority: P1
 ---
 
