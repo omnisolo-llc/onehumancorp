@@ -1,0 +1,7 @@
+---
+status: healthy
+mode: cloud
+agent: Maintainer
+metrics:
+  tests: 100%
+  version: 0.2.11
