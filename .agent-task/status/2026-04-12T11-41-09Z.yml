@@ -1,0 +1,3 @@
+agent: Researcher
+status: HEALTHY
+last_action: Created mission file for Postgres Lock Contention and LLM Network Latency telemetry observability gap.
