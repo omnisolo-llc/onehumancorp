@@ -107,6 +107,10 @@ func (p *PgProvider) IsSQLite() bool {
 	return false
 }
 
+func (p *PgProvider) Ping(ctx context.Context) error {
+	return p.pool.Ping(ctx)
+}
+
 // PgRows implements Rows using pgx.Rows.
 type PgRows struct {
 	rows pgx.Rows
