@@ -817,6 +817,7 @@ type LocalTeammateMesh struct {
 	coordBroadcast      []chan MeshMessage
 	coordSubs           []map[chan MeshMessage]struct{}
 	coordMu             []sync.RWMutex
+	mt                  *MemoryMeshTransport
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
@@ -829,6 +830,7 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		coordBroadcast:      make([]chan MeshMessage, numShards),
 		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:             make([]sync.RWMutex, numShards),
+		mt:                  NewMemoryMeshTransport(provider),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
@@ -1000,17 +1002,18 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 
 
 func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
-	return nil
+	// Delegate to persistent memory transport for local broadcast
+	return lm.mt.AdvertiseCapabilities(ctx, caps)
 }
 
 func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
-	return make(chan pb.AgentCapabilities, 100), nil
+	return lm.mt.SubscribeCapabilities(ctx)
 }
 
 func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
-	return nil
+	return lm.mt.BroadcastMeshEvent(ctx, topic, payload)
 }
 
 func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
-	return make(chan []byte, 100), nil
+	return lm.mt.SubscribeMeshEvents(ctx, topic)
 }
