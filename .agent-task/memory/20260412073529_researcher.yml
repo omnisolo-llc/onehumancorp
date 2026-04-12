@@ -1,0 +1,5 @@
+timestamp: "20260412073529"
+insights:
+  - "Identified that the 'Proactive Hybrid Telemetry' mission requires application code changes which violate the Researcher role constraint."
+actions:
+  - "Marked mission as BLOCKED."

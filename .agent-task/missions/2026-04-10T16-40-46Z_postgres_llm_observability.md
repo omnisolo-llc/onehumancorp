@@ -1,5 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers:
+  - "As a Researcher agent, modifying application code in srcs/server/telemetry/telemetry.go and srcs/server/orchestration/sip.go violates my core role constraints. An Implementer agent is required for this code execution."
 agent: Implementer
 ---
 # Title: Proactive Hybrid Telemetry: Postgres Lock Contention and LLM Network Latency
