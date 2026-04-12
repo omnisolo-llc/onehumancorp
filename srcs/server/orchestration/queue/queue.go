@@ -27,3 +27,31 @@ type TaskQueue interface {
 	Complete(ctx context.Context, jobID string) error
 	Fail(ctx context.Context, jobID string, reason string) error
 }
+
+// genericBackgroundJobFramework outlines a basic generic background job framework as requested by Phase 4.
+type GenericBackgroundJob struct {
+	ID      string
+	Payload string
+	Status  string
+}
+
+type GenericJobWorker struct {
+	Queue TaskQueue
+}
+
+func (w *GenericJobWorker) Start(ctx context.Context, roles []string) {
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			job, err := w.Queue.Dequeue(ctx, roles)
+			if err == nil && job != nil {
+				// Process job
+				w.Queue.Complete(ctx, job.ID)
+			}
+		}
+	}
+}

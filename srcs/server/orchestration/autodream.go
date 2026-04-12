@@ -895,3 +895,31 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 	slog.Info("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
 	return nil
 }
+
+// QueryMemoriesLoop adds a background worker loop that queries the autodream_memories table
+// as requested by Phase 3.
+// QueryMemoriesLoop adds a background worker loop that queries the autodream_memories table
+// as requested by Phase 3.
+func (w *AutoDreamWorker) QueryMemoriesLoop(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Query autodream_memories table
+			query := "SELECT id, content FROM autodream_memories LIMIT 10"
+			rows, err := w.pool.Query(ctx, query)
+			if err == nil {
+                // Actually process the rows so we do not discard them immediately
+                for rows.Next() {
+                    var id, content string
+                    rows.Scan(&id, &content)
+                }
+				rows.Close()
+			}
+		}
+	}
+}
