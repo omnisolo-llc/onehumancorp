@@ -649,3 +649,25 @@ func TestRecordDeliberationPhaseDuration(t *testing.T) {
 		t.Error("expected non-empty payload")
 	}
 }
+
+func TestRecordPostgresLockContention(t *testing.T) {
+	_, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("Failed to initialize telemetry: %v", err)
+	}
+
+	ctx := context.Background()
+	// Should not panic
+	RecordPostgresLockContention(ctx, "test_op")
+}
+
+func TestRecordLLMNetworkLatency(t *testing.T) {
+	_, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("Failed to initialize telemetry: %v", err)
+	}
+
+	ctx := context.Background()
+	// Should not panic
+	RecordLLMNetworkLatency(ctx, "claude-3.5", 0.42)
+}

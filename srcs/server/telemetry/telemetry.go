@@ -21,6 +21,8 @@ import (
 
 var (
 	meter            metric.Meter
+	postgresLockContentionCounter metric.Int64Counter
+	llmNetworkLatencyHistogram metric.Float64Histogram
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
@@ -342,6 +344,22 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	postgresLockContentionCounter, err = m.Int64Counter(
+		"ohc_postgres_lock_contention_total",
+		metric.WithDescription("Total PostgreSQL lock contentions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	llmNetworkLatencyHistogram, err = m.Float64Histogram(
+		"ohc_llm_network_latency_seconds",
+		metric.WithDescription("Network latency to external LLM providers in seconds"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1186,4 +1204,22 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
 	}
+}
+
+func RecordPostgresLockContention(ctx context.Context, operation string) {
+	if postgresLockContentionCounter == nil {
+		return
+	}
+	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64) {
+	if llmNetworkLatencyHistogram == nil {
+		return
+	}
+	llmNetworkLatencyHistogram.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("model", model),
+	))
 }

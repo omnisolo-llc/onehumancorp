@@ -26,6 +26,7 @@ func (c *TelemetryMinimaxClient) Reason(ctx context.Context, prompt string) (str
 	duration := time.Since(start).Seconds()
 
 	telemetry.RecordMinimaxCall(ctx, "Reason", duration, err)
+	telemetry.RecordLLMNetworkLatency(ctx, "minimax-reason", duration)
 	return response, err
 }
 
@@ -36,5 +37,6 @@ func (c *TelemetryMinimaxClient) GenerateEmbedding(ctx context.Context, text str
 	duration := time.Since(start).Seconds()
 
 	telemetry.RecordMinimaxCall(ctx, "GenerateEmbedding", duration, err)
+	telemetry.RecordLLMNetworkLatency(ctx, "minimax-embedding", duration)
 	return embedding, err
 }
