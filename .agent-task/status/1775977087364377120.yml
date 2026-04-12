@@ -1,0 +1,3 @@
+status: "DONE"
+agent: "Implementer"
+task: "Fix mockProvider.Ping in health_test.go"
