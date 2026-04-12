@@ -111,3 +111,8 @@ flutter_test(
     tags = ["manual"],
     test_files = ["."],
 )
+
+alias(
+    name = "task_model",
+    actual = ":models_lib",
+)
