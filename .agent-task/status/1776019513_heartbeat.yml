@@ -1,0 +1,6 @@
+status: HEALTHY
+component: maintainer-triage
+metrics:
+  sub_agent_queue_length: 0
+  stuck_missions_cleared: 62
+timestamp: "$(date -Iseconds)"
