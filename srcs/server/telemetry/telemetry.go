@@ -768,6 +768,16 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":  operation,
+			"cache_type": cacheType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "cache_hit", string(payloadBytes))
+	}
 }
 
 // RecordApiRateLimitExceeded increments the counter for API rate limits exceeded (HTTP 429).
@@ -778,6 +788,15 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 	RateLimitExceededCount.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("endpoint", endpoint),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"endpoint": endpoint,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "api_rate_limit_exceeded", string(payloadBytes))
+	}
 }
 
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
@@ -788,6 +807,15 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sqlite_lock_contention", string(payloadBytes))
+	}
 }
 
 // RecordSQLiteRetryExhausted increments the global counter for SQLite transaction failed after exhausting retries.
@@ -798,6 +826,15 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sqlite_retry_exhausted", string(payloadBytes))
+	}
 }
 
 // RecordTeammateMeshBroadcast increments the global counter for Teammate Mesh broadcasts.
@@ -860,6 +897,15 @@ func RecordTaskQueueLength(ctx context.Context, amount int64) {
 		return
 	}
 	TaskQueueLengthGauge.Add(ctx, amount)
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"amount": amount,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "task_queue_length", string(payloadBytes))
+	}
 }
 
 // RecordTaskProcessed Latency
@@ -868,6 +914,15 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 		return
 	}
 	TaskProcessingLatency.Record(ctx, latency.Seconds())
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency.Seconds(),
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "task_processed_latency", string(payloadBytes))
+	}
 }
 
 // RecordAgentTransitionLatency records the duration an agent spends in a specific state transition.
@@ -878,6 +933,16 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 	AgentTransitionLatency.Record(ctx, duration, metric.WithAttributes(
 		attribute.String("transition", transitionType),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"transition": transitionType,
+			"duration":   duration,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_transition_latency", string(payloadBytes))
+	}
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
@@ -930,6 +995,15 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 		return
 	}
 	swarmTaskQueueLengthGauge.Add(ctx, int64(delta))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "swarm_task_queue_length", string(payloadBytes))
+	}
 }
 
 // RecordSwarmTaskProcessingLatency records the processing time of a task.
@@ -938,6 +1012,15 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 		return
 	}
 	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency_ms": latencyMS,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "swarm_task_processing_latency", string(payloadBytes))
+	}
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.
@@ -948,6 +1031,15 @@ func RecordTaskEnqueued(ctx context.Context, taskID string) {
 	taskEnqueuedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("task_id", taskID),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"task_id": taskID,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "task_enqueued", string(payloadBytes))
+	}
 }
 
 // RecordTaskFailed increments the counter for tasks failed.
@@ -959,6 +1051,16 @@ func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
 		attribute.String("task_id", taskID),
 		attribute.String("error", errStr),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"task_id": taskID,
+			"error":   errStr,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "task_failed", string(payloadBytes))
+	}
 }
 
 // RecordCacheMiss increments the global counter for LLM cache misses.
@@ -970,6 +1072,16 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":  operation,
+			"cache_type": cacheType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "cache_miss", string(payloadBytes))
+	}
 }
 
 // RecordAutoDreamSyncLatency records the duration of the AutoDream sync operation.
