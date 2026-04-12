@@ -30,16 +30,28 @@ func (p *LocalProvider) IsLocal() bool {
 	return true
 }
 
-func (p *LocalProvider) getLocalPath(key string) string {
-	// Clean the key to prevent directory traversal
-	cleanKey := filepath.Clean("/" + key)
-	cleanKey = strings.TrimPrefix(cleanKey, "/")
-	return filepath.Join(p.basePath, cleanKey)
+func (p *LocalProvider) getLocalPath(key string) (string, error) {
+	cleanKey := filepath.Clean(key)
+	if filepath.IsAbs(cleanKey) {
+		return "", fmt.Errorf("absolute paths are not allowed")
+	}
+
+	fullPath := filepath.Join(p.basePath, cleanKey)
+	cleanPath := filepath.Clean(fullPath)
+
+	if cleanPath != p.basePath && !strings.HasPrefix(cleanPath, p.basePath+string(filepath.Separator)) {
+		return "", fmt.Errorf("path traversal detected")
+	}
+
+	return cleanPath, nil
 }
 
 func (p *LocalProvider) ListBlobs(ctx context.Context, prefix string) ([]BlobMetadata, error) {
 	var blobs []BlobMetadata
-	searchDir := p.getLocalPath(prefix)
+	searchDir, err := p.getLocalPath(prefix)
+	if err != nil {
+		return nil, err
+	}
 
 	// If prefix doesn't end with '/', it could be part of a filename or a directory.
 	// For simplicity in Local FS, let's just search the directory if it's one,
@@ -100,7 +112,10 @@ func (p *LocalProvider) ListBlobs(ctx context.Context, prefix string) ([]BlobMet
 }
 
 func (p *LocalProvider) ReadBlobMetadata(ctx context.Context, key string) (BlobMetadata, error) {
-	path := p.getLocalPath(key)
+	path, err := p.getLocalPath(key)
+	if err != nil {
+		return BlobMetadata{}, err
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		return BlobMetadata{}, fmt.Errorf("read metadata: %w", err)
@@ -120,7 +135,10 @@ func (p *LocalProvider) ReadBlobMetadata(ctx context.Context, key string) (BlobM
 func (p *LocalProvider) GetBlobURL(ctx context.Context, key string) (string, error) {
 	// For local provider, we might just return the file:// URL or a dummy local URL.
 	// Since MCP tools are run locally, a local absolute path is fine.
-	path := p.getLocalPath(key)
+	path, err := p.getLocalPath(key)
+	if err != nil {
+		return "", err
+	}
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return "", fmt.Errorf("blob does not exist")
 	}
