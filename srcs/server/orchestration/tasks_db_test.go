@@ -24,13 +24,6 @@ func TestClaimTask_SQLite(t *testing.T) {
 			depends_on_task_id TEXT NOT NULL,
 			PRIMARY KEY (task_id, depends_on_task_id)
 		)
-
-
-		CREATE TABLE IF NOT EXISTS task_dependencies (
-			task_id TEXT NOT NULL,
-			depends_on_task_id TEXT NOT NULL,
-			PRIMARY KEY (task_id, depends_on_task_id)
-		)
 	`)
 
 	if err != nil {
