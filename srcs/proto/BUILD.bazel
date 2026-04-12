@@ -37,6 +37,13 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
+proto_go_grpc_library(
+    name = "agent_service_go_proto",
+    protos = ":agent_service_proto",
+    importpath = "github.com/onehumancorp/mono/srcs/proto/agentservice",
+    visibility = ["//visibility:public"],
+)
+
 proto_cc_grpc_library(
     name = "agent_service_cc_grpc",
     protos = ":agent_service_proto",

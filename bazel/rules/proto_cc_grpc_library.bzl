@@ -34,22 +34,39 @@ def _proto_cc_grpc_srcs_impl(ctx):
     proto_path_args = " ".join(
         ["--proto_path=" + p for p in sorted(proto_paths.keys())]
     )
-    proto_files = " ".join([src.path for src in srcs])
     out_dir = outs[0].dirname
 
     wrapper = ctx.actions.declare_file(ctx.label.name + "_protoc_cc_wrapper.sh")
     wrapper_content = "#!/bin/bash\nset -euo pipefail\n"
+    wrapper_content += "tmpdir=$(mktemp -d)\n"
+    wrapper_content += "trap 'rm -rf \"$tmpdir\"' EXIT\n"
+    wrapper_content += "sanitized_files=()\n"
+    for src in srcs:
+        wrapper_content += "cp {src} \"$tmpdir/{basename}\"\n".format(
+            src = src.path,
+            basename = src.basename,
+        )
+        # grpc_cpp_plugin does not yet understand Edition 2024. Generate the
+        # C++ stubs from a temporary proto3-compatible copy while keeping the
+        # checked-in proto on Edition 2024 for Go and other toolchains.
+        wrapper_content += (
+            "sed -E -i 's/^edition = \"[0-9]+\";$/syntax = \"proto3\";/' " +
+            "\"$tmpdir/{basename}\"\n"
+        ).format(basename = src.basename)
+        wrapper_content += "sanitized_files+=(\"$tmpdir/{basename}\")\n".format(
+            basename = src.basename,
+        )
     wrapper_content += (
         "{protoc} --plugin=protoc-gen-grpc={grpc_plugin}" +
         " --cpp_out={out_dir}" +
         " --grpc_out={out_dir}" +
-        " {proto_path_args} {proto_files}\n"
+        " --proto_path=\"$tmpdir\"" +
+        " {proto_path_args} \"${{sanitized_files[@]}}\"\n"
     ).format(
         protoc = protoc.path,
         grpc_plugin = grpc_plugin.path,
         out_dir = out_dir,
         proto_path_args = proto_path_args,
-        proto_files = proto_files,
     )
 
     ctx.actions.write(
@@ -84,7 +101,7 @@ _proto_cc_grpc_srcs = rule(
             cfg = "exec",
         ),
         "_grpc_cpp_plugin": attr.label(
-            default = "@grpc//:grpc_cpp_plugin",
+            default = "@grpc//src/compiler:grpc_cpp_plugin",
             executable = True,
             cfg = "exec",
         ),

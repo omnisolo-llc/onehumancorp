@@ -5,11 +5,11 @@
 // server (RunTask) as well as sub-agent dispatch requests.
 
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <string>
 
 #include "srcs/server/agents/builtin/agent.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/strings/string_view.h"
 #include "grpcpp/grpcpp.h"
 
@@ -25,14 +25,19 @@ class AgentServiceImpl final
     : public ohc::agent::service::AgentService::Service {
  public:
   using AgentFactory =
-      std::function<std::unique_ptr<Agent>(const std::string& model,
-                                           const std::string& provider,
-                                           const std::string& endpoint,
-                                           const std::string& system,
-                                           int32_t max_tokens,
-                                           float temperature)>;
+      absl::AnyInvocable<std::unique_ptr<Agent>(const std::string& model,
+                                                const std::string& provider,
+                                                const std::string& endpoint,
+                                                const std::string& system,
+                                                int32_t max_tokens,
+                                                float temperature,
+                                                int32_t max_iterations,
+                                                int32_t max_context_messages)>;
 
   explicit AgentServiceImpl(AgentFactory factory);
+  AgentServiceImpl(
+      AgentFactory factory,
+      const ohc::agent::service::AgentRuntimeConfig& default_runtime_config);
 
   // Streams RunTaskEvent messages back to the caller as the agent works.
   grpc::Status RunTask(
@@ -54,6 +59,7 @@ class AgentServiceImpl final
 
  private:
   AgentFactory factory_;
+    ohc::agent::service::AgentRuntimeConfig default_runtime_config_;
 };
 
 // Returns a default AgentFactory that creates agents with MakeDefaultTools().

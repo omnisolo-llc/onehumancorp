@@ -9,6 +9,12 @@
 
 namespace ohc::agent {
 
+namespace {
+
+void IgnoreEvent(const AgentEvent& /*unused*/) {}
+
+}  // namespace
+
 // ---------------------------------------------------------------------------
 // Constructor
 // ---------------------------------------------------------------------------
@@ -33,12 +39,28 @@ Agent::Agent(std::unique_ptr<LLMClient> client, AgentConfig config,
 // ---------------------------------------------------------------------------
 
 absl::StatusOr<std::vector<Message>> Agent::Run(
+    absl::Span<const Message> initial_messages) {
+  return Run(initial_messages, IgnoreEvent);
+}
+
+absl::StatusOr<std::vector<Message>> Agent::Run(
     absl::Span<const Message> initial_messages, EventCallback on_event) {
   std::vector<Message> messages(initial_messages.begin(),
                                 initial_messages.end());
 
+  on_event(AgentEvent{
+      .type = AgentEvent::Type::kRunStarted,
+      .message_count = static_cast<int32_t>(messages.size()),
+  });
+
   for (int32_t iter = 0; iter < config_.max_iterations; ++iter) {
     TrimContext(&messages);
+
+    on_event(AgentEvent{
+        .type = AgentEvent::Type::kIterationStarted,
+        .iteration = iter + 1,
+        .message_count = static_cast<int32_t>(messages.size()),
+    });
 
     ChatRequest req;
     req.model            = config_.model;
@@ -50,10 +72,8 @@ absl::StatusOr<std::vector<Message>> Agent::Run(
 
     auto resp_or = llm_client_->Chat(req);
     if (!resp_or.ok()) {
-      if (on_event) {
-        on_event(AgentEvent{.type  = AgentEvent::Type::kTaskError,
-                            .error = std::string(resp_or.status().message())});
-      }
+      on_event(AgentEvent{.type  = AgentEvent::Type::kTaskError,
+                          .error = std::string(resp_or.status().message())});
       return resp_or.status();
     }
 
@@ -61,17 +81,15 @@ absl::StatusOr<std::vector<Message>> Agent::Run(
     messages.push_back(std::move(resp_or->message));
     const Message& assistant_msg = messages.back();
 
-    if (on_event && !assistant_msg.content.empty()) {
+    if (!assistant_msg.content.empty()) {
       on_event(AgentEvent{.type    = AgentEvent::Type::kTextChunk,
                           .content = assistant_msg.content});
     }
 
     if (assistant_msg.tool_calls.empty()) {
       // No tool calls → the agent is done.
-      if (on_event) {
-        on_event(AgentEvent{.type    = AgentEvent::Type::kTaskComplete,
-                            .content = assistant_msg.content});
-      }
+      on_event(AgentEvent{.type    = AgentEvent::Type::kTaskComplete,
+                          .content = assistant_msg.content});
       return messages;
     }
 
@@ -85,20 +103,18 @@ absl::StatusOr<std::vector<Message>> Agent::Run(
       ToolResult tr;
       tr.tool_call_id = tc.id;
       if (result.ok()) {
-      tr.content = std::move(*result);
+        tr.content = std::move(*result);
       } else {
         tr.error = std::string(result.status().message());
         LOG(WARNING) << "Tool '" << tc.name << "' error: " << tr.error;
       }
 
-      if (on_event) {
-        on_event(AgentEvent{
-            .type          = AgentEvent::Type::kToolCall,
-            .tool_name     = tc.name,
-            .tool_args_json = tc.arguments.dump(),
-            .tool_result   = tr.content.empty() ? tr.error : tr.content,
-        });
-      }
+      on_event(AgentEvent{
+          .type           = AgentEvent::Type::kToolCall,
+          .tool_name      = tc.name,
+          .tool_args_json = tc.arguments.dump(),
+          .tool_result    = tr.content.empty() ? tr.error : tr.content,
+      });
 
       tool_result_msg.tool_results.push_back(std::move(tr));
     }
@@ -108,10 +124,8 @@ absl::StatusOr<std::vector<Message>> Agent::Run(
 
   const auto err = absl::ResourceExhaustedError(
       absl::StrCat("Agent exceeded max_iterations=", config_.max_iterations));
-  if (on_event) {
-    on_event(AgentEvent{.type  = AgentEvent::Type::kTaskError,
-                        .error = std::string(err.message())});
-  }
+  on_event(AgentEvent{.type  = AgentEvent::Type::kTaskError,
+                      .error = std::string(err.message())});
   return err;
 }
 
