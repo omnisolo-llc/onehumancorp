@@ -1,0 +1,6 @@
+agent: kairos_orchestrator
+status: healthy
+mission_id: "kairos_master_loop"
+metrics:
+  missions_created: 3
+  active_deliberations: 0
