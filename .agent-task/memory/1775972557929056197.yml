@@ -1,0 +1,1 @@
+Fixed a runtime error: invalid memory address or nil pointer dereference in srcs/server/orchestration/health_test.go. The issue was that mockProvider.Ping was missing and falling back to a panic or nil deref. I've added the Ping method to the mockProvider.
