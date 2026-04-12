@@ -195,10 +195,21 @@ standalone_db_check() {
         return
     fi
 
+    echo -e "${DIM}Running integrity check...${RESET}"
+    INTEGRITY=$(sqlite3 "$DB_FILE" "PRAGMA integrity_check;")
+    if [ "$INTEGRITY" == "ok" ]; then
+        echo -e "  ${GREEN}✓ DB Integrity Check Passed.${RESET}"
+    else
+        echo -e "  ${PURPLE}✗ DB Integrity Check Failed: $INTEGRITY${RESET}"
+    fi
+
     echo -e "${DIM}Checking internal tables...${RESET}"
     TABLES=$(sqlite3 "$DB_FILE" ".tables")
-    if echo "$TABLES" | grep -q "agent_missions" && echo "$TABLES" | grep -q "meeting_rooms"; then
-         echo -e "  ${GREEN}✓ Migrations appear successful (found agent_missions and meeting_rooms).${RESET}\n"
+    if echo "$TABLES" | grep -q "agent_missions" && \
+       echo "$TABLES" | grep -q "meeting_rooms" && \
+       echo "$TABLES" | grep -q "swarm_memory" && \
+       echo "$TABLES" | grep -q "agents"; then
+         echo -e "  ${GREEN}✓ Migrations appear successful (found all essential tables).${RESET}\n"
     else
          echo -e "  ${PURPLE}✗ Critical tables missing. Migrations might have failed.${RESET}\n"
     fi
