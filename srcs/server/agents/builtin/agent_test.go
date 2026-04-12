@@ -24,6 +24,7 @@ func TestBuiltinAgent(t *testing.T) {
 		Tools:       []Tool{SendMessageTool, TodoWriteTool},
 		MaxTokens:   100,
 		Temperature: 0,
+		MaxTurns:    10,
 	}
 
 	messages, err := agent.Run(context.Background(), []Message{{Role: RoleUser, Content: "Say hi"}})
@@ -80,4 +81,15 @@ type MockClient struct {
 
 func (m *MockClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	return m.Response, m.Err
+}
+
+func (m *MockClient) ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatResponseChunk, error) {
+	ch := make(chan ChatResponseChunk)
+	go func() {
+		defer close(ch)
+		if m.Err == nil {
+			ch <- ChatResponseChunk{Message: m.Response.Message}
+		}
+	}()
+	return ch, m.Err
 }

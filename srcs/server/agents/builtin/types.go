@@ -48,3 +48,7 @@ type ChatRequest struct {
 type ChatResponse struct {
 	Message Message `json:"message"`
 }
+// ChatResponseChunk represents a streamed chunk of response from the LLM.
+type ChatResponseChunk struct {
+	Message Message `json:"message"`
+}

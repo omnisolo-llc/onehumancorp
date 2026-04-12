@@ -10,9 +10,19 @@ type BuiltinAgent struct {
 	Tools       []Tool
 	MaxTokens   int
 	Temperature float32
+
+	MaxTurns      int
+	TokenBudget   int
+	TokensUsed    int
+	ContextWindow int
+	Streaming     bool
+	MaxRetries    int
+	AllowList     []string
+	DenyList      []string
 }
 
 // LLMClient is the interface for talking to the LLM backend.
 type LLMClient interface {
 	Chat(ctx context.Context, req ChatRequest) (ChatResponse, error)
+	ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatResponseChunk, error)
 }

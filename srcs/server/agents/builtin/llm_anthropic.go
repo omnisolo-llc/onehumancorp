@@ -99,3 +99,18 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 		},
 	}, nil
 }
+
+// ChatStream returns a mock streamed response using the regular Chat execution.
+func (c *AnthropicClient) ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatResponseChunk, error) {
+	ch := make(chan ChatResponseChunk)
+
+	go func() {
+		defer close(ch)
+		resp, err := c.Chat(ctx, req)
+		if err == nil {
+			ch <- ChatResponseChunk{Message: resp.Message}
+		}
+	}()
+
+	return ch, nil
+}

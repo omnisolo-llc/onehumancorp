@@ -202,6 +202,13 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 							Tools:       builtin.AllTools(),
 							MaxTokens:   4096,
 							Temperature: 0.1,
+							MaxTurns:      100,
+							TokenBudget:   0,
+							ContextWindow: 128000,
+							Streaming:     false,
+							MaxRetries:    3,
+							AllowList:     []string{},
+							DenyList:      []string{},
 						}
 						_, err := builtinAgent.Run(context.Background(), []builtin.Message{{
 							Role:    builtin.RoleUser,
