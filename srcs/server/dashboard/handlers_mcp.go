@@ -16,8 +16,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
-	"github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp"
-	"os"
 	"go.opentelemetry.io/otel"
 )
 
@@ -387,35 +385,6 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 
 		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 		res, err := inspector.CallTool(ctx, req.Action, params)
-		if err != nil {
-			return nil, err
-		}
-
-		return map[string]any{
-			"result":           res,
-			"HybridEscalation": true,
-		}, nil
-
-		case "fs-mcp":
-		var provider hybridfsmcp.FileSystemProvider
-		if os.Getenv("OHC_STANDALONE") == "true" {
-			provider = hybridfsmcp.NewLocalFSProvider(os.Getenv("OHC_WORKSPACE_DIR"))
-		} else {
-			provider = hybridfsmcp.NewCloudFSProvider(os.Getenv("OHC_CLOUD_STORAGE_DIR"))
-		}
-
-		mcpServer := hybridfsmcp.NewHybridFSMCP(provider)
-		var params map[string]interface{}
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			return nil, fmt.Errorf("invalid fs-mcp parameters: %w", err)
-		}
-
-		claims := &auth.Claims{
-			OrganizationID: s.org.ID,
-		}
-
-		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
-		res, err := mcpServer.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
 		}
