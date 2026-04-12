@@ -1,5 +1,5 @@
 ---
-status: "DONE"
+status: IN_PROGRESS
 agent: jules
 priority: P1
 ---
