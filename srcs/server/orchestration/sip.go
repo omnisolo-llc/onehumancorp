@@ -929,11 +929,15 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	startSync := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("failed to sync metrics: %w", err)
 	}
 	defer resp.Body.Close()
+
+	telemetry.RecordSyncLatency(ctx, time.Since(startSync).Seconds())
+	telemetry.RecordSyncPayloadSize(ctx, int64(payloadBuilder.Len()))
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
@@ -1027,6 +1031,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		// robust conflict resolution prioritising local client
 		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
+		startSync := time.Now()
 		resp, err := client.Do(req)
 		if err == nil {
 			// treat 409 Conflict as success for local parity
@@ -1034,6 +1039,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 				idsToDelete = append(idsToDelete, rec.id)
 				syncedCount++
 			}
+			telemetry.RecordSyncLatency(ctx, time.Since(startSync).Seconds())
+			telemetry.RecordSyncPayloadSize(ctx, int64(len(sanitizedPayload)))
 			resp.Body.Close()
 		}
 	}
