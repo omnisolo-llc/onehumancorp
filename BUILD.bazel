@@ -218,4 +218,5 @@ alias(
 
 go_test(
     name = "mono_test",
+    srcs = ["patch_auth_test.go"],
 )
