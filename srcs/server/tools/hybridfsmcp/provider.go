@@ -128,7 +128,6 @@ func NewCloudFSProvider(baseDir string) (*CloudFSProvider, error) {
 func (p *CloudFSProvider) securePath(ctx context.Context, path string) (string, error) {
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil || claims.OrganizationID == "" {
-
 		return "", fmt.Errorf("unauthorized: missing organization claims")
 	}
 
