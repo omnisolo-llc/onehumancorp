@@ -207,3 +207,39 @@ func TestCachedMinimaxClient_Reason(t *testing.T) {
 		t.Fatalf("expected 3 calls to mock client, got %d", mockClient.reasonCalls)
 	}
 }
+
+func TestCachedMinimaxClient_PruneCache(t *testing.T) {
+	ctx := context.Background()
+	prov := setupDB(t)
+	defer prov.Close()
+
+	var redisClient rueidis.Client
+	cachedClient := NewCachedMinimaxClient(&mockMinimax{}, prov, redisClient)
+
+	// Add an old record
+	_, err := prov.Exec(ctx, `INSERT INTO llm_reason_cache (prompt_hash, response, created_at) VALUES ('oldhash', 'oldresp', datetime('now', '-2 day'))`)
+	if err != nil {
+		t.Fatalf("failed to insert old record: %v", err)
+	}
+
+	// Add a new record
+	_, err = prov.Exec(ctx, `INSERT INTO llm_reason_cache (prompt_hash, response, created_at) VALUES ('newhash', 'newresp', datetime('now'))`)
+	if err != nil {
+		t.Fatalf("failed to insert new record: %v", err)
+	}
+
+	// Prune
+	client := cachedClient.(*CachedMinimaxClient)
+	client.PruneCache(ctx)
+
+	// Check that the old record is gone and new is kept
+	var count int
+	err = prov.QueryRow(ctx, "SELECT COUNT(*) FROM llm_reason_cache").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count records: %v", err)
+	}
+
+	if count != 1 {
+		t.Fatalf("expected 1 record after prune, got %d", count)
+	}
+}

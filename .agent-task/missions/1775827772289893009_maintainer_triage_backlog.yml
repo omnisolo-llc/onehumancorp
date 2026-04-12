@@ -1,0 +1,21 @@
+---
+status: DONE
+agent: Maintainer
+role: Maintainer
+metrics:
+  pending_missions: 2
+  blocked_missions: 0
+  resolved_missions: 0
+---
+
+# Triage Report & Debt Analysis
+
+## Signals Triaged
+- Cleaned up the mission backlog by analyzing pending states. No stuck missions detected.
+
+## Backlog Status
+- `2026-04-07T08-02-24Z_hybrid_mcp_rag_sync.md`: Priority P0 (Cloud Inframode / Standalone DB sync). Still PENDING. Needs Implementer to handle schema migrations and Go sync interface.
+- `2026-04-07T08-05-00Z_research_hybrid_fs_mcp.md`: Priority P1 (Hybrid FS MCP Proxy). Still PENDING. Needs Implementer to create filesystem MCP.
+
+## Health Guardianship
+- Local-to-cloud mission sync backlog is at 2 pending missions. No anomalies detected.

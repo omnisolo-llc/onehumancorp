@@ -44,6 +44,7 @@ var (
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
+	subAgentQueueLengthGauge   metric.Int64UpDownCounter
 	TaskProcessingLatency      metric.Float64Histogram
 	AgentTransitionLatency     metric.Float64Histogram
 
@@ -359,6 +360,14 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
+		"ohc.sub_agent.queue_length",
+		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	TaskProcessingLatency, err = m.Float64Histogram(
 		"ohc_task_processing_latency_seconds",
 		metric.WithDescription("Task processing latency in seconds"),
@@ -455,6 +464,11 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
 	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = initRAGSyncMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1000,15 +1014,7 @@ func RecordQueueLength(ctx context.Context, delta int) {
 		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
-	if meter == nil {
-		return
-	}
-	// Note: We use an UpDownCounter to act as a gauge delta in OpenTelemetry
-	gauge, err := meter.Int64UpDownCounter(
-		"ohc.sub_agent.queue_length",
-		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
-	)
-	if err == nil {
-		gauge.Add(ctx, int64(delta))
+	if subAgentQueueLengthGauge != nil {
+		subAgentQueueLengthGauge.Add(ctx, int64(delta))
 	}
 }

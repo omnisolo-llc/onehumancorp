@@ -2,9 +2,12 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"os"
 	"testing"
 	"time"
 
+	_ "modernc.org/sqlite"
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
@@ -43,13 +46,22 @@ func TestCheckHealthDegraded_NoDB(t *testing.T) {
 }
 
 func TestCheckHealth_SQLite(t *testing.T) {
-	// Setup a temporary in-memory sqlite
+	// Setup a physical temporary sqlite file
 	ctx := context.Background()
-	provider, err := db.NewSQLiteProvider(":memory:")
+	tmpFile, err := os.CreateTemp("", "health_test_*.db")
 	if err != nil {
-		t.Fatalf("Failed to create sqlite provider: %v", err)
+		t.Fatalf("Failed to create temp db file: %v", err)
 	}
-	defer provider.Close()
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	sqliteDB, err := sql.Open("sqlite", tmpFile.Name())
+	if err != nil {
+		t.Fatalf("Failed to open test sqlite db: %v", err)
+	}
+
+	provider := db.NewSqliteProvider(sqliteDB)
+	defer sqliteDB.Close()
 
 	// Ensure the agent_missions table exists
 	_, err = provider.Exec(ctx, "CREATE TABLE agent_missions (status TEXT)")
@@ -100,7 +112,7 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 	hub := NewHub()
 
 	// Use a mock setup to test MeshActive
-	cn, err := NewCentrifugeNode(nil)
+	cn, err := NewCentrifugeNode()
 	if err != nil {
 		t.Skipf("Skipping TestCheckHealth_MeshActive since NewCentrifugeNode failed to initialize: %v", err)
 	}
@@ -116,5 +128,74 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 	}
 	if probe.MeshActive != true {
 		t.Errorf("Expected MeshActive to be true")
+	}
+}
+
+type mockProvider struct {
+	db.Provider
+	execErr   error
+	isSqlite  bool
+}
+
+func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+	if m.execErr != nil {
+		return 0, m.execErr
+	}
+	return 1, nil
+}
+
+func (m *mockProvider) IsSQLite() bool {
+	return m.isSqlite
+}
+
+func (m *mockProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
+	return &mockRow{}
+}
+
+type mockRow struct {
+}
+
+func (r *mockRow) Scan(dest ...any) error {
+	*dest[0].(*int) = 5
+	return nil
+}
+
+func TestCheckHealth_DBPingFails(t *testing.T) {
+	hub := NewHub()
+	provider := &mockProvider{
+		execErr: context.DeadlineExceeded,
+	}
+	sipDB := &SIPDB{db: provider}
+	hub.SetSIPDB(sipDB)
+
+	probe, err := hub.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if probe.Status != "degraded" {
+		t.Errorf("Expected status 'degraded', got '%s'", probe.Status)
+	}
+}
+
+func TestCheckHealth_Postgres(t *testing.T) {
+	hub := NewHub()
+	provider := &mockProvider{
+		isSqlite: false,
+	}
+	sipDB := &SIPDB{db: provider}
+	hub.SetSIPDB(sipDB)
+
+	probe, err := hub.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if probe.Status != "healthy" {
+		t.Errorf("Expected status 'healthy', got '%s'", probe.Status)
+	}
+	if probe.Mode != "cloud" {
+		t.Errorf("Expected mode 'cloud', got '%s'", probe.Mode)
+	}
+	if probe.SyncBacklog != 5 {
+		t.Errorf("Expected SyncBacklog to be 5, got %d", probe.SyncBacklog)
 	}
 }

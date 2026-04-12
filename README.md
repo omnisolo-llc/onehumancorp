@@ -1,7 +1,19 @@
 # One Human Corp
 
+## Getting Started (Day One Onboarding)
+To begin your onboarding journey and easily set up the platform in your desired mode, simply run the **OHC Hybrid Setup CLI** from the root of the repository:
+
+```bash
+./ohc_hybrid_cli.sh
+```
+
+*This interactive wizard will guide you through generating your environment variables, switching modes (Cloud, Standalone, Headless), and seeding mock data.*
+
 ## Identity
 One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
+
+## Product Vision & Market Strategy
+One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/vision/market_strategy.md)**.
 
 ## Architecture
 

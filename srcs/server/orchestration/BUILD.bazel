@@ -68,6 +68,7 @@ go_test(
         "delegation_test.go",
         "eventlog_test.go",
         "hub_test.go",
+        "health_test.go",
         "minimax_client_test.go",
         "service_extra_test.go",
         "service_grpc_test.go",
@@ -99,5 +100,6 @@ go_test(
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
-    ],
+        "@org_modernc_sqlite//:sqlite",
+],
 )

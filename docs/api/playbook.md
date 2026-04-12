@@ -1,5 +1,17 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
+<style>
+.glass-panel {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+</style>
+
+
 # OHC API Playbook: Interactive Reference
 
 **Version:** 1.0.0
@@ -21,6 +33,8 @@ curl -X GET https://api.ohc.local/v1/agents/status \
 
 ## 3. Core Endpoints
 
+<div class="glass-panel" markdown="1">
+
 ### 3.1 Organization Provisioning
 
 **Endpoint:** `POST /api/orgs/register`
@@ -34,6 +48,10 @@ Provisions a new organization in multi-tenant mode.
   "domain": "acme.com"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 3.2 Agent Management & Hiring
 
@@ -42,6 +60,10 @@ Retrieves a list of active agents within the current tenant scope.
 
 **Endpoint:** `POST /api/agents/hire`
 Requests a new agent capability. This triggers dynamic tool registration via MCP.
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 3.3 Task Delegation
 
@@ -65,8 +87,40 @@ Delegate a subtask to an autonomous agent. The Hub handles provisioning and VRAM
   "assigned_agent": "agent_swe_004"
 }
 ```
+</div>
 
-### 3.4 Dynamic Scaling
+
+<div class="glass-panel" markdown="1">
+
+### 3.4 Swarm Orchestration (Legacy/Internal)
+
+**Endpoint:** `GET /api/orchestration/tasks`
+Retrieves a list of all active orchestration tasks in the queue. Supports pagination.
+
+**Endpoint:** `POST /api/orchestration/tasks`
+Submit a new task to the swarm.
+
+**Payload:**
+```json
+{
+  "title": "Analyze market data",
+  "priority": "P0",
+  "payload": {
+    "description": "Perform deep market analysis."
+  }
+}
+```
+
+### 3.5 Teammate Mesh Communications (v1)
+
+**Endpoint:** `POST /api/mesh/broadcast`
+Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.
+
+### 3.6 Client Integrations
+
+Whether you are developing against the **Local SQLite SIPDB** or the **Cloud Postgres/Redis** stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.
+
+### 3.7 Dynamic Scaling
 
 **Endpoint:** `POST /api/v1/scale`
 Adjust the number of concurrent agents for a specific role in real-time.
@@ -78,8 +132,12 @@ Adjust the number of concurrent agents for a specific role in real-time.
   "count": 5
 }
 ```
+</div>
 
-### 3.5 Hybrid RAG Sync
+
+<div class="glass-panel" markdown="1">
+
+### 3.8 Hybrid RAG Sync
 
 **Endpoint:** `POST /api/missions/sync`
 Synchronize local SQLite context to the cloud Postgres orchestration engine.
@@ -99,8 +157,12 @@ Synchronize local SQLite context to the cloud Postgres orchestration engine.
   ]
 }
 ```
+</div>
+
 
 ## 4. Teammate Mesh, AutoDream & Webhooks
+
+<div class="glass-panel" markdown="1">
 
 ### Centrifuge Realtime Sync
 Channels:
@@ -108,6 +170,10 @@ Channels:
 - `mesh:coordination`: Agents announce their presence, request locks, and share immediate findings.
 - `mesh:ultraplan:<plan_id>`: Deliberation cycle realtime updates.
 - `meeting:<meeting_id>`: Transcript sync.
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### AutoDream Data Pipelines (pgvector)
 The API supports AutoDream pipelines where the backend background workers process `.agent-task/memory/*.yml` files.
@@ -126,6 +192,10 @@ Allows agents to publish messages to the mesh.
   }
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### SSE Stream
 Real-time state changes are pushed via Server-Sent Events (SSE).
@@ -137,6 +207,10 @@ Events emitted:
 - `AgentFired`
 - `TaskCompleted`
 - `QuotaExhausted`
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.3 KAIROS Orchestration APIs
 Detailed endpoints for the Shared Task List, Teammate Mesh, and AutoDream Vector Pipelines.
@@ -177,6 +251,10 @@ Trigger the AutoDream vector pipeline to process shared memory and generate new 
   "pipeline_id": "dream_001"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.4 KAIROS Sub-Agent Queue API
 
@@ -201,6 +279,27 @@ Enqueues a sub-agent task into the highly available distributed queue (backed by
   "status": "ENQUEUED"
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
+
+#### Sub-Agent Queue Orchestration Flow
+```mermaid
+sequenceDiagram
+    participant API as OHC API
+    participant DB as State Machine (PG/SQLite)
+    participant Queue as Sub-Agent Queue
+    participant Worker as Sub-Agent
+
+    API->>Queue: POST /api/queue/subagent
+    Queue->>DB: Record Task (PENDING)
+    Worker->>Queue: Poll/Subscribe
+    Worker->>DB: FOR UPDATE SKIP LOCKED
+    DB-->>Worker: Lock Acquired (EXECUTING)
+    Worker->>API: Complete Task
+    API->>DB: Update State (COMPLETED)
+```
 
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
@@ -219,6 +318,10 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
   }
 }
 ```
+</div>
+
+
+<div class="glass-panel" markdown="1">
 
 ### 4.6 AutoDream Vector Embedding Workflow
 ```mermaid
@@ -304,7 +407,26 @@ graph TD
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
 ```
+</div>
 
+### 4.7 Health & Diagnostics
+
+**Endpoint:** `GET /api/health`
+Verifies the backend health programmatically. Checks connectivity to Postgres, Redis, and the internal agent runtime.
+
+**Response (200 OK):**
+```json
+{
+  "status": "UP",
+  "services": {
+    "database": "CONNECTED",
+    "mesh": "CONNECTED",
+    "agents": "READY"
+  }
+}
+```
+
+<div class="glass-panel" markdown="1">
 
 ### 4.8 KAIROS Shared Task List API
 
@@ -361,6 +483,62 @@ sequenceDiagram
         Agent->>DB: ROLLBACK
     end
 ```
+</div>
+
+
+### 4.9 KAIROS Sub-Agent Queue API
+**Endpoint:** `POST /api/queue/subagent`
+Enqueues a sub-agent task into the highly available distributed queue. This queue is backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode.
+
+**Payload:**
+```json
+{
+  "task_type": "doc_audit",
+  "priority": "P1",
+  "payload": {
+     "url": "/docs/api/playbook.md"
+  }
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "queue_id": "queue_9876",
+  "status": "ENQUEUED"
+}
+```
+
+### 4.10 KAIROS State Machine Broadcast
+**Endpoint:** `POST /api/mesh/v2/broadcast`
+Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
+
+**Payload:**
+```json
+{
+  "room_id": "mesh_room_101",
+  "event_type": "state_transition",
+  "payload": {
+     "from_state": "PENDING",
+     "to_state": "IN_PROGRESS"
+  }
+}
+```
+
+#### SubAgent Queue Workflow
+```mermaid
+graph TD
+    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
+    API --> QueueInterface{SubAgent Queue Interface}
+    QueueInterface -->|Cloud-Native| Rueidis[(Redis ZSETs)]
+    QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
+    Rueidis -->|Dequeues| Worker[Sub-Agent Worker]
+    SQLite -->|Dequeues| Worker
+    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh premium;
+```
 
 ## 5. Visualizing the Flow
 ```mermaid
@@ -376,4 +554,69 @@ graph TD
     class Client,API,Auth,Hub,401,K8s,Agents premium;
 ```
 
+
+
+### 3.4 KAIROS Queue and State Machine
+
+**Endpoint:** `POST /api/queue/subagent`
+Queues a new task for subagents.
+
+**Payload:**
+```json
+{
+  "parent_task_id": "uuid-string",
+  "agent_role": "Scribe",
+  "payload": {
+    "command": "document_feature",
+    "target": "mesh_api"
+  }
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "job_id": "job-uuid",
+  "status": "QUEUED"
+}
+```
+
+**Endpoint:** `POST /api/mesh/v2/broadcast`
+Broadcasts a state machine transition or generic event to the Teammate Mesh.
+
+**Payload:**
+```json
+{
+  "topic": "state.transition",
+  "payload": {
+    "entity_id": "job-uuid",
+    "from_state": "QUEUED",
+    "to_state": "IN_PROGRESS",
+    "agent_id": "worker-42"
+  }
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message_id": "msg-uuid"
+}
+```
+
+#### SubAgent Queue Workflow
+
+```mermaid
+graph TD
+    Client[Client / Orchestrator] -->|POST /api/queue/subagent| API[OHC Gateway]
+    API --> Queue[(SubAgent Queue DB)]
+    Queue -.->|Poll / Listen| Worker[SubAgent Worker]
+    Worker -->|State Transition| Broadcast[Mesh Broadcast API]
+    Broadcast -->|POST /api/mesh/v2/broadcast| MeshHub[Teammate Mesh Hub]
+    MeshHub -.->|Websocket / Redis PubSub| SubscribedAgents[Subscribed Agents / UI]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Client,API,Queue,Worker,Broadcast,MeshHub,SubscribedAgents premium;
+```
 </div>

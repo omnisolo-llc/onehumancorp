@@ -105,7 +105,12 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var embedding string
 	if minimaxKey != "" {
-		client := orchestration.NewMinimaxClient(minimaxKey)
+		var client orchestration.MinimaxClient
+		if s.hub != nil && s.hub.SIPDB() != nil {
+			client = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), s.hub.SIPDB().Provider(), nil)
+		} else {
+			client = orchestration.NewMinimaxClient(minimaxKey)
+		}
 		emb, err := client.GenerateEmbedding(r.Context(), req.QueryText)
 		if err == nil {
 			bytesEmb, _ := json.Marshal(emb)

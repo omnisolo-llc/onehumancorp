@@ -23,6 +23,7 @@ show_menu() {
     echo -e "${BOLD}Select an action:${RESET}"
     echo -e "  ${PURPLE}1)${RESET} Run Initial Setup (Generate default .env, Verify build)"
     echo -e "  ${PURPLE}e)${RESET} Interactive Environment Wizard (Configure API Keys/Ports)"
+    echo -e "  ${PURPLE}a)${RESET} Interactive Agent Provisioning Wizard"
     echo -e "  ${PURPLE}2)${RESET} Switch Environment Mode (Cloud / Standalone / Headless)"
     echo -e "  ${PURPLE}3)${RESET} Launch Standalone Desktop Mode"
     echo -e "  ${PURPLE}4)${RESET} Launch Cloud Backend"
@@ -30,6 +31,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Interactive Setup Diagnostics"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -40,6 +42,16 @@ run_setup() {
         echo -e "${GREEN}Setup completed successfully.${RESET}\n"
     else
         echo -e "${PURPLE}Setup failed.${RESET}\n"
+    fi
+}
+
+
+run_agent_wizard() {
+    echo -e "${DIM}[Executing deploy/scripts/ohc-agent-wizard.sh...]${RESET}"
+    if bash deploy/scripts/ohc-agent-wizard.sh; then
+        echo -e "${GREEN}Agent Wizard completed successfully.${RESET}\n"
+    else
+        echo -e "${PURPLE}Agent Wizard failed.${RESET}\n"
     fi
 }
 
@@ -205,6 +217,7 @@ else
         case $choice in
             1) run_setup ;;
             e|E) run_env_wizard ;;
+            a|A) run_agent_wizard ;;
             2) switch_mode ;;
             3) launch_desktop ;;
             4) launch_cloud ;;
@@ -212,6 +225,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) bash deploy/scripts/ohc-diagnostics.sh ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
