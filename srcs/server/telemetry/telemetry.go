@@ -1187,3 +1187,21 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
 	}
 }
+
+// RecordWorkerJobStart increments the counter when a worker starts processing a job.
+func RecordWorkerJobStart(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "worker_job_start", "{}")
+	}
+}
+
+// RecordWorkerJobComplete increments the counter when a worker completes a job.
+func RecordWorkerJobComplete(ctx context.Context, success bool) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"success": success,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "worker_job_complete", string(payloadBytes))
+	}
+}

@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "docs",
     srcs = ["generator.go"],
-    importpath = "github.com/onehumancorp/ohc/srcs/server/docs",
+    importpath = "github.com/onehumancorp/mono/srcs/server/docs",
     visibility = ["//visibility:public"],
     deps = [
         "@io_opentelemetry_go_otel//:otel",
