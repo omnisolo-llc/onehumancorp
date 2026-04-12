@@ -620,3 +620,21 @@ graph TD
     class Client,API,Queue,Worker,Broadcast,MeshHub,SubscribedAgents premium;
 ```
 </div>
+
+
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; font-family: 'Outfit', 'Inter', sans-serif;">
+
+### 4.11 KAIROS Distributed State Machine (DAG Dependencies)
+
+**Endpoint:** `GET /api/v1/tasks/{task_id}/dependencies`
+Retrieves the DAG dependencies for a shared task to ensure proper execution sequence.
+
+**Response (200 OK):**
+```json
+{
+  "task_id": "task_123",
+  "dependencies": ["task_120", "task_121"],
+  "status": "BLOCKED"
+}
+```
+</div>
