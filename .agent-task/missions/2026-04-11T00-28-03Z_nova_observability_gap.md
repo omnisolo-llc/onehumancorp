@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Nova
+status: DONE
+agent: Miser
 priority: P1
 ---
 
