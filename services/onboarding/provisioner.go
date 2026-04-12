@@ -1,0 +1,44 @@
+package onboarding
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+)
+
+var provisionsCounter metric.Int64Counter
+
+func init() {
+	meter := otel.Meter("github.com/onehumancorp/mono/ohc")
+	provisionsCounter, _ = meter.Int64Counter("provisions_total")
+}
+
+// ProvisionEnvironment sets up the necessary folders for Day One Hybrid OS onboarding.
+func ProvisionEnvironment(ctx context.Context, isCloud bool) error {
+	if provisionsCounter != nil {
+		provisionsCounter.Add(ctx, 1)
+	}
+
+	baseDir := ".ohc-local-data"
+	if isCloud {
+		baseDir = ".ohc-cloud-data"
+	}
+
+	dirs := []string{
+		filepath.Join(baseDir, "db"),
+		filepath.Join(baseDir, "blob"),
+		filepath.Join(baseDir, "config"),
+	}
+
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	return nil
+}
