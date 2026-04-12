@@ -28,28 +28,9 @@ flutter_library(
         ["*.dart"],
         exclude = ["*_test.dart"],
     ),
-    data = [
-        "//srcs/app:app_assets",
-        "//srcs/app:pub_deps.json",
-    ],
+    data = ["//srcs/app:app_assets"],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        "@pub_async//:async",
-        "@pub_boolean_selector//:boolean_selector",
-        "@pub_characters//:characters",
-        "@pub_collection//:collection",
-        "@pub_material_color_utilities//:material_color_utilities",
-        "@pub_matcher//:matcher",
-        "@pub_meta//:meta",
-        "@pub_source_span//:source_span",
-        "@pub_stack_trace//:stack_trace",
-        "@pub_stream_channel//:stream_channel",
-        "@pub_string_scanner//:string_scanner",
-        "@pub_term_glyph//:term_glyph",
-        "@pub_test_api//:test_api",
-        "@pub_vector_math//:vector_math",
-    ],
 )
 
 # Keep individual model names as aliases for any existing embed references.

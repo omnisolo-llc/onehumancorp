@@ -930,27 +930,11 @@ fi
 FLUTTER_BIN_DIR="$(dirname "$FLUTTER_BIN_ABS")"
 FLUTTER_ROOT_ORIG="$(cd "$FLUTTER_BIN_DIR/.." && pwd)"
 FLUTTER_TOOLS_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/packages/flutter_tools/.pub_cache"
-FLUTTER_GPU_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/bin/cache/pkg/flutter_gpu/.pub_cache"
 
 if [ -d "$FLUTTER_TOOLS_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_TOOLS_PUB_CACHE" 2>/dev/null)" ]; then
     copy_tree "$FLUTTER_TOOLS_PUB_CACHE" "$RUNTIME_PUB_CACHE"
     chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
 fi
-
-if [ -d "$FLUTTER_GPU_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_GPU_PUB_CACHE" 2>/dev/null)" ]; then
-    copy_tree "$FLUTTER_GPU_PUB_CACHE" "$RUNTIME_PUB_CACHE"
-    chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-fi
-
-# Seed runtime pub cache from Flutter SDK package caches so transitive deps
-# (e.g. leak_tracker_flutter_testing, characters, vector_math) are available
-# with their proper lib/ directory structure.
-for _SDK_PKG_CACHE in "${{FLUTTER_ROOT_ORIG}}/packages"/*/.pub_cache; do
-    if [ -d "$_SDK_PKG_CACHE" ] && [ -n "$(ls -A "$_SDK_PKG_CACHE" 2>/dev/null)" ]; then
-        copy_tree "$_SDK_PKG_CACHE" "$RUNTIME_PUB_CACHE"
-        chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-    fi
-done
 
 # ── Create a writable Flutter SDK overlay ────────────────────────────────────
 # The external Flutter SDK is mounted read-only inside the Bazel linux-sandbox
@@ -1268,13 +1252,9 @@ for i, line in enumerate(lines):
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
+    spec = spec.replace(">=", "").replace("<", "").split()
     if spec:
-        version = spec[0].split("+")[0]
-        parts = version.split(".")
-        if len(parts) >= 2:
-            return parts[0] + "." + parts[1]
-        return version
+        return spec[0].split("+")[0]
     return "3.0"
 
 language_version = _parse_language(language_spec)
@@ -1408,26 +1388,23 @@ def sdk_package_dir(pkg_name):
     return os.path.join(flutter_root, "packages", pkg_name)
 
 
-def to_file_uri(path):
-    return "file://" + os.path.abspath(path).replace(os.sep, "/")
-
-
-def add_package(packages, seen, pkg_name, root_path, package_uri):
+def add_package(packages, seen, pkg_name, root_path, config_root):
     if not pkg_name or pkg_name in seen or not os.path.isdir(root_path):
         return
+    rel = os.path.relpath(root_path, config_root).replace(os.sep, "/")
     packages.append(dict(
         name = pkg_name,
-        rootUri = to_file_uri(root_path),
-        packageUri = package_uri,
+        rootUri = rel,
+        packageUri = "lib/",
         languageVersion = language_version,
     ))
     seen.add(pkg_name)
 
 
-def collect_packages(root_path):
+def collect_packages(config_root, root_uri):
     packages = [dict(
         name = name,
-        rootUri = to_file_uri(root_path),
+        rootUri = root_uri,
         packageUri = "lib/",
         languageVersion = language_version,
     )]
@@ -1451,8 +1428,7 @@ def collect_packages(root_path):
             if not versions:
                 continue
             version, root_path = versions[-1]
-            package_uri = "lib/" if os.path.isdir(os.path.join(root_path, "lib")) else ""
-            add_package(packages, seen, pkg_name, root_path, package_uri)
+            add_package(packages, seen, pkg_name, root_path, config_root)
             pubspec_file = os.path.join(root_path, "pubspec.yaml")
             if os.path.exists(pubspec_file):
                 with open(pubspec_file, "r", encoding = "utf-8") as fh:
@@ -1461,7 +1437,7 @@ def collect_packages(root_path):
                     queue.append((child, False))
         elif source == "sdk":
             root_path = sdk_package_dir(pkg_name)
-            add_package(packages, seen, pkg_name, root_path, "lib/")
+            add_package(packages, seen, pkg_name, root_path, config_root)
             pubspec_file = os.path.join(root_path, "pubspec.yaml")
             if os.path.exists(pubspec_file):
                 with open(pubspec_file, "r", encoding = "utf-8") as fh:
@@ -1485,7 +1461,7 @@ def write_config(path, packages):
         fh.write("\\n")
 
 
-package_packages = collect_packages(package_root)
+package_packages = collect_packages(package_root, ".")
 write_config(config_path, package_packages)
 package_names = set([pkg.get("name") for pkg in package_packages])
 print("app package_config:", config_path)
@@ -1496,7 +1472,8 @@ print("app has test_api:", "test_api" in package_names)
 if workspace_config_path:
     workspace_config_abs = os.path.abspath(workspace_config_path)
     if workspace_config_abs != os.path.abspath(config_path):
-        workspace_packages = collect_packages(package_root)
+        root_uri = package_dir_rel if package_dir_rel else "."
+        workspace_packages = collect_packages(workspace_root_path, root_uri)
         write_config(workspace_config_path, workspace_packages)
         workspace_names = set([pkg.get("name") for pkg in workspace_packages])
         print("workspace package_config:", workspace_config_path)
