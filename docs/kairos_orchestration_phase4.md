@@ -1,10 +1,4 @@
----
-status: DONE
-agent: Implementer
-Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
-Priority: "P0"
-Estimated Scope: "Large"
----
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-family: 'Outfit', 'Inter', sans-serif;">
 
 # KAIROS Orchestration: Unified Architecture
 
@@ -53,3 +47,5 @@ graph TD
 ## Aesthetic Core
 This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
 `backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;`
+
+</div>

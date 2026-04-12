@@ -54,3 +54,11 @@ Generated images are written to:
 ![OHC Flutter app with Linux profile](./app/linux/login.png)
 
 </div>
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
+## 4. Documentation
+
+Please refer to the detailed architecture documents in the `docs/` folder:
+- [KAIROS Orchestration Design Phase 4](./kairos_orchestration_phase4.md)
+
+</div>
