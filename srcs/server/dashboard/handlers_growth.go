@@ -235,3 +235,58 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// FreeTierQuota defines a user's free-tier limits.
+type FreeTierQuota struct {
+	ID             string    `json:"id"`
+	UserID         string    `json:"userId"`
+	TasksUsed      int       `json:"tasksUsed"`
+	TasksLimit     int       `json:"tasksLimit"`
+	IsLimitReached bool      `json:"isLimitReached"`
+	CreatedAt      time.Time `json:"createdAt"`
+}
+
+type quotaCreateRequest struct {
+	UserID     string `json:"userId"`
+	TasksLimit int    `json:"tasksLimit"`
+}
+
+func (s *Server) handleFreeTierQuota(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		quotas := append([]FreeTierQuota(nil), s.quotas...)
+		s.mu.RUnlock()
+		writeJSON(w, quotas)
+	case http.MethodPost:
+		var req quotaCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.UserID == "" {
+			http.Error(w, "userId is required", http.StatusBadRequest)
+			return
+		}
+
+		limit := req.TasksLimit
+		if limit <= 0 {
+			limit = 100 // Default limit
+		}
+
+		q := FreeTierQuota{
+			ID:             "quota-" + time.Now().UTC().Format("20060102150405"),
+			UserID:         req.UserID,
+			TasksUsed:      0,
+			TasksLimit:     limit,
+			IsLimitReached: false,
+			CreatedAt:      time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.quotas = append(s.quotas, q)
+		s.mu.Unlock()
+		writeJSON(w, q)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
