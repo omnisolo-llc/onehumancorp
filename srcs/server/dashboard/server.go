@@ -764,18 +764,25 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	})
 
 	// Delegate to the shared orchestration check
-	probe, errProbe := s.hub.CheckHealth(r.Context())
-	if errProbe == nil {
-		if probe.Status != "healthy" {
-			missionsProbeStatus = probe.Status
+	var details map[string]interface{}
+	if s.hub != nil {
+		probe, errProbe := s.hub.CheckHealth(r.Context())
+		if errProbe == nil {
+			if probe.Status != "healthy" {
+				missionsProbeStatus = probe.Status
+			}
+			checklist = append(checklist, map[string]interface{}{
+				"id":          "mesh_active",
+				"label":       "Centrifuge Teammate Mesh",
+				"status":      "ok",
+				"description": "Real-time communication layer",
+				"active":      probe.MeshActive,
+			})
+			details = map[string]interface{}{
+				"status": probe.Status,
+				"mesh_active": probe.MeshActive,
+			}
 		}
-		checklist = append(checklist, map[string]interface{}{
-			"id":          "mesh_active",
-			"label":       "Centrifuge Teammate Mesh",
-			"status":      "ok",
-			"description": "Real-time communication layer",
-			"active":      probe.MeshActive,
-		})
 	}
 
 	resp := map[string]interface{}{
@@ -783,7 +790,7 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		"mode":       mode,
 		"sync_ready": true,
 		"checklist":  checklist,
-		"details":    probe,
+		"details":    details,
 	}
 	_ = json.NewEncoder(w).Encode(resp)
 }

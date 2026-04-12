@@ -1,6 +1,4 @@
-agent: Jules
-status: SUCCESS
-tests: PASSED
-metrics:
-  files_changed: 4
-  duration: "4m"
+type: status
+agent: Implementer
+status: healthy
+timestamp: 1775162000
