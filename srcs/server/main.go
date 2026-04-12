@@ -68,31 +68,28 @@ func envBoolDefault(key string, fallback bool) bool {
 }
 
 func newHubAndTracker(pool *db.DB, orgID string) (*orchestration.Hub, *billing.Tracker) {
-	if pool != nil {
-		var hubRepo orchestration.HubRepository
-		var taskRepo scheduler.TaskRepository
-		var usageRepo billing.UsageRepository
-
-		if pool.Provider.IsSQLite() {
-			hubRepo = orchestration.NewSqliteHubRepository(pool.Provider, orgID)
-			taskRepo = scheduler.NewSqliteTaskRepository(pool.Provider)
-			usageRepo = billing.NewSqliteUsageRepository(pool.Provider, billing.DefaultCatalog)
-		} else {
-			hubRepo = orchestration.NewPgHubRepository(pool.Provider, orgID)
-			taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
-			usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
-		}
-
-		return orchestration.NewHubWithRepository(
-				hubRepo,
-				taskRepo,
-			), billing.NewTrackerWithRepository(
-				billing.DefaultCatalog,
-				usageRepo,
-			)
+	if pool == nil {
+		return orchestration.NewHub(), billing.NewTracker(billing.DefaultCatalog)
 	}
 
-	return orchestration.NewHub(), billing.NewTracker(billing.DefaultCatalog)
+	var (
+		hubRepo   orchestration.HubRepository
+		taskRepo  scheduler.TaskRepository
+		usageRepo billing.UsageRepository
+	)
+
+	if pool.Provider.IsSQLite() {
+		hubRepo = orchestration.NewSqliteHubRepository(pool.Provider, orgID)
+		taskRepo = scheduler.NewSqliteTaskRepository(pool.Provider)
+		usageRepo = billing.NewSqliteUsageRepository(pool.Provider, billing.DefaultCatalog)
+	} else {
+		hubRepo = orchestration.NewPgHubRepository(pool.Provider, orgID)
+		taskRepo = scheduler.NewPgTaskRepository(pool.Provider)
+		usageRepo = billing.NewPgUsageRepository(pool.Provider, billing.DefaultCatalog)
+	}
+
+	return orchestration.NewHubWithRepository(hubRepo, taskRepo),
+		billing.NewTrackerWithRepository(billing.DefaultCatalog, usageRepo)
 }
 
 func bootstrapTenantOrganization(now time.Time) domain.Organization {

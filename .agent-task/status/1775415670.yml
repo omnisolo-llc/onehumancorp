@@ -1,5 +1,0 @@
-agent: Sentry
-role: Maintainer
-status: HEALTHY
-message: "Verified Chaos Engineering Parity. Found no double-lock livelocks, standaloneThrottle handles concurrency appropriately."
-timestamp: 1775415670
