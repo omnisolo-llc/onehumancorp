@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -38,7 +39,8 @@ func TestUltraPlanManager(t *testing.T) {
 		);
 	`)
 
-	upm := NewUltraPlanManager(prov, nil, nil)
+	sm := statemachine.NewStateMachine(prov, nil)
+	upm := NewUltraPlanManager(prov, nil, nil, sm)
 	ctx := context.Background()
 
 	// Create
@@ -169,7 +171,8 @@ func TestUltraPlanDeliberator(t *testing.T) {
 		);
 	`)
 
-	upm := NewUltraPlanManager(prov, nil, nil)
+	sm := statemachine.NewStateMachine(prov, nil)
+	upm := NewUltraPlanManager(prov, nil, nil, sm)
 	ctx := context.Background()
 
 	mockLLM := &mockMinimaxClient{

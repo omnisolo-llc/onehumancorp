@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -88,15 +89,17 @@ type UltraPlanManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // Reusing CentrifugeNode for Mesh integration
+	sm          *statemachine.StateMachine
 	mu          sync.Mutex
 }
 
 // NewUltraPlanManager initializes a new UltraPlanManager.
-func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode) *UltraPlanManager {
+func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, sm *statemachine.StateMachine) *UltraPlanManager {
 	return &UltraPlanManager{
 		db:          provider,
 		redisClient: redisClient,
 		hub:         hub,
+		sm:          sm,
 	}
 }
 
@@ -431,12 +434,17 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, duration)
 	}
 
+	broadcastFunc, err := m.sm.TransitionWithTx(ctx, tx, planID, "ULTRAPLAN", newStatus, "system", "status update")
+	if err != nil {
+		return fmt.Errorf("state machine transition failed: %w", err)
+	}
+
 	updateQuery := `
 		UPDATE swarm_ultra_plans
-		SET status = $1, state_machine = $2, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $3
+		SET state_machine = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, newStatus, compressedStateMachineJSON, planID)
+	rowsAffected, err := tx.Exec(ctx, updateQuery, compressedStateMachineJSON, planID)
 	if err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
@@ -447,6 +455,10 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	if broadcastFunc != nil {
+		broadcastFunc()
 	}
 
 	if m.hub != nil {
