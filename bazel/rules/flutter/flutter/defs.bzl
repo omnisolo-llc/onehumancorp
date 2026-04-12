@@ -930,9 +930,15 @@ fi
 FLUTTER_BIN_DIR="$(dirname "$FLUTTER_BIN_ABS")"
 FLUTTER_ROOT_ORIG="$(cd "$FLUTTER_BIN_DIR/.." && pwd)"
 FLUTTER_TOOLS_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/packages/flutter_tools/.pub_cache"
+FLUTTER_GPU_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/bin/cache/pkg/flutter_gpu/.pub_cache"
 
 if [ -d "$FLUTTER_TOOLS_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_TOOLS_PUB_CACHE" 2>/dev/null)" ]; then
     copy_tree "$FLUTTER_TOOLS_PUB_CACHE" "$RUNTIME_PUB_CACHE"
+    chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
+fi
+
+if [ -d "$FLUTTER_GPU_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_GPU_PUB_CACHE" 2>/dev/null)" ]; then
+    copy_tree "$FLUTTER_GPU_PUB_CACHE" "$RUNTIME_PUB_CACHE"
     chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
 fi
 
@@ -1252,9 +1258,13 @@ for i, line in enumerate(lines):
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
+    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
     if spec:
-        return spec[0].split("+")[0]
+        version = spec[0].split("+")[0]
+        parts = version.split(".")
+        if len(parts) >= 2:
+            return parts[0] + "." + parts[1]
+        return version
     return "3.0"
 
 language_version = _parse_language(language_spec)
@@ -1388,23 +1398,26 @@ def sdk_package_dir(pkg_name):
     return os.path.join(flutter_root, "packages", pkg_name)
 
 
-def add_package(packages, seen, pkg_name, root_path, config_root):
+def to_file_uri(path):
+    return "file://" + os.path.abspath(path).replace(os.sep, "/")
+
+
+def add_package(packages, seen, pkg_name, root_path, package_uri):
     if not pkg_name or pkg_name in seen or not os.path.isdir(root_path):
         return
-    rel = os.path.relpath(root_path, config_root).replace(os.sep, "/")
     packages.append(dict(
         name = pkg_name,
-        rootUri = rel,
-        packageUri = "lib/",
+        rootUri = to_file_uri(root_path),
+        packageUri = package_uri,
         languageVersion = language_version,
     ))
     seen.add(pkg_name)
 
 
-def collect_packages(config_root, root_uri):
+def collect_packages(root_path):
     packages = [dict(
         name = name,
-        rootUri = root_uri,
+        rootUri = to_file_uri(root_path),
         packageUri = "lib/",
         languageVersion = language_version,
     )]
@@ -1428,7 +1441,8 @@ def collect_packages(config_root, root_uri):
             if not versions:
                 continue
             version, root_path = versions[-1]
-            add_package(packages, seen, pkg_name, root_path, config_root)
+            package_uri = "lib/" if os.path.isdir(os.path.join(root_path, "lib")) else ""
+            add_package(packages, seen, pkg_name, root_path, package_uri)
             pubspec_file = os.path.join(root_path, "pubspec.yaml")
             if os.path.exists(pubspec_file):
                 with open(pubspec_file, "r", encoding = "utf-8") as fh:
@@ -1437,7 +1451,7 @@ def collect_packages(config_root, root_uri):
                     queue.append((child, False))
         elif source == "sdk":
             root_path = sdk_package_dir(pkg_name)
-            add_package(packages, seen, pkg_name, root_path, config_root)
+            add_package(packages, seen, pkg_name, root_path, "lib/")
             pubspec_file = os.path.join(root_path, "pubspec.yaml")
             if os.path.exists(pubspec_file):
                 with open(pubspec_file, "r", encoding = "utf-8") as fh:
@@ -1461,7 +1475,7 @@ def write_config(path, packages):
         fh.write("\\n")
 
 
-package_packages = collect_packages(package_root, ".")
+package_packages = collect_packages(package_root)
 write_config(config_path, package_packages)
 package_names = set([pkg.get("name") for pkg in package_packages])
 print("app package_config:", config_path)
@@ -1472,8 +1486,7 @@ print("app has test_api:", "test_api" in package_names)
 if workspace_config_path:
     workspace_config_abs = os.path.abspath(workspace_config_path)
     if workspace_config_abs != os.path.abspath(config_path):
-        root_uri = package_dir_rel if package_dir_rel else "."
-        workspace_packages = collect_packages(workspace_root_path, root_uri)
+        workspace_packages = collect_packages(package_root)
         write_config(workspace_config_path, workspace_packages)
         workspace_names = set([pkg.get("name") for pkg in workspace_packages])
         print("workspace package_config:", workspace_config_path)
