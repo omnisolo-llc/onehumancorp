@@ -929,13 +929,19 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	start := time.Now()
+	payloadSize := int64(payloadBuilder.Len())
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("failed to sync metrics: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds())
+		telemetry.RecordSyncPayloadSize(ctx, payloadSize)
+	} else {
 		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
 	}
 
@@ -1027,12 +1033,18 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		// robust conflict resolution prioritising local client
 		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
+		start := time.Now()
+		payloadSize := int64(len(sanitizedPayload))
+
 		resp, err := client.Do(req)
 		if err == nil {
 			// treat 409 Conflict as success for local parity
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				idsToDelete = append(idsToDelete, rec.id)
 				syncedCount++
+
+				telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds())
+				telemetry.RecordSyncPayloadSize(ctx, payloadSize)
 			}
 			resp.Body.Close()
 		}
