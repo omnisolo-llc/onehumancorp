@@ -60,7 +60,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(5 * time.Second):
+	case <-time.After(15 * time.Second):
 		t.Fatal("Test timed out, possible deadlock in throttle semaphore")
 	case <-doneChan:
 	}

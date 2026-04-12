@@ -10,7 +10,7 @@
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
+        "name": "Annotations \u0026 Alerts",
         "type": "dashboard"
       }
     ]
@@ -24,6 +24,21 @@
   "panels": [
     {
       "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 9999,
+      "options": {
+        "content": "\u003cdiv style=\"background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 24px; color: white; font-family: 'Outfit', 'Inter', sans-serif;\"\u003e\n  \u003ch2 style=\"margin-top: 0; font-size: 24px; font-weight: 600;\"\u003eHybrid Observability Token Burn Rate\u003c/h2\u003e\n  \u003cp style=\"font-size: 16px; opacity: 0.9; margin-bottom: 0;\"\u003ePredictive alerting based on a 5-tick moving average. Analyzes \u003ccode\u003eohc_token_burn_rate_forecast\u003c/code\u003e.\u003c/p\u003e\n\u003c/div\u003e",
+        "mode": "html"
+      },
+      "title": "Burn Rate Forecast Information",
+      "type": "text"
+    },
+    {
+      "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
@@ -31,7 +46,7 @@
       },
       "id": 100,
       "options": {
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
+        "content": "\u003cstyle\u003e\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n\u003c/style\u003e\n\u003cdiv class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\"\u003e\n  OHC Premium Telemetry\n\u003c/div\u003e",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -268,8 +283,6 @@
       "type": "timeseries"
     },
     {
-      "title": "Teammate Mesh Broadcasts",
-      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -281,7 +294,9 @@
           "expr": "rate(teammate_mesh_broadcasts_total[1m])",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Teammate Mesh Broadcasts",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -317,19 +332,17 @@
       "type": "timeseries"
     },
     {
-      "id": 101,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 35
       },
-      "type": "timeseries",
-      "title": "Task Queue Length",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 101,
       "targets": [
         {
           "datasource": {
@@ -339,22 +352,22 @@
           "expr": "ohc_task_queue_length",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Task Queue Length",
+      "type": "timeseries"
     },
     {
-      "id": 102,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
         "y": 35
       },
-      "type": "timeseries",
-      "title": "Task Processing Latency",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 102,
       "targets": [
         {
           "datasource": {
@@ -364,22 +377,22 @@
           "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Task Processing Latency",
+      "type": "timeseries"
     },
     {
-      "id": 103,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 43
       },
-      "type": "timeseries",
-      "title": "Task Failed Rate",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 103,
       "targets": [
         {
           "datasource": {
@@ -390,22 +403,22 @@
           "legendFormat": "{{error}}",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Task Failed Rate",
+      "type": "timeseries"
     },
     {
-      "id": 104,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
         "y": 43
       },
-      "type": "timeseries",
-      "title": "SQLite Retry Exhaustion",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
+      "id": 104,
       "targets": [
         {
           "datasource": {
@@ -416,7 +429,9 @@
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "SQLite Retry Exhaustion",
+      "type": "timeseries"
     },
     {
       "datasource": {

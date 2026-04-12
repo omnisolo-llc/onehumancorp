@@ -758,6 +758,16 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 			attribute.String("organization_id", organizationID),
 		))
 	}
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"rate":            rate,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "token_burn_rate_forecast", string(payloadBytes))
+	}
 }
 
 // RecordSwarmTaskCompleted increments the global counter for completed swarm tasks.
