@@ -1,4 +1,8 @@
 # Release Notes
+## v0.2.10 (Cloud) / v0.2.10+1 (Standalone)
+- Scaling (Cloud): Fixed `orchestration` test regressions by mocking health check implementations safely.
+- Privacy/Offline (Standalone): Ensured graceful handling of SQLite connections during health probing.
+
 ## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
 - Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package.
 - Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization.
