@@ -7,24 +7,35 @@ export DATABASE_URL=""
 
 # Mock sqlite3
 sqlite3() {
-    echo "agent_missions"
-    echo "meeting_rooms"
+    if [ "$2" = "PRAGMA integrity_check;" ]; then
+        echo "ok"
+    else
+        echo "agent_missions"
+        echo "meeting_rooms"
+        echo "teammate_mesh"
+        echo "shared_tasks"
+        echo "autodream_pipeline"
+    fi
 }
 export -f sqlite3
 
-touch local_standalone.db
+TEST_HOME=$(mktemp -d)
+export HOME="$TEST_HOME"
+
+mkdir -p "$HOME/.ohc-local-data"
+touch "$HOME/.ohc-local-data/standalone.db"
 OUTPUT=$(./ohc_hybrid_cli.sh << CMD
 7
 q
 CMD
 )
 
-if echo "$OUTPUT" | grep -q "Migrations appear successful"; then
+if echo "$OUTPUT" | grep -q "Migrations appear successful" && echo "$OUTPUT" | grep -q "DB Integrity Check Passed."; then
     echo "Test passed."
 else
     echo "Test failed."
     echo "$OUTPUT"
-    rm local_standalone.db
+    rm -rf "$TEST_HOME"
     kill -SIGINT $$
 fi
-rm local_standalone.db
+rm -rf "$TEST_HOME"
