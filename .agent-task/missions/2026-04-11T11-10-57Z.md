@@ -1,5 +1,6 @@
 ---
 status: "PENDING"
+priority: P1
 Title: "KAIROS Phase 1: Shared Task List Backend Database Design"
 Priority: "P0"
 Estimated Scope: "Medium"

@@ -507,7 +507,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		// Instead of directly inserting, use the worker to handle standard DB inserts for AutoDream.
 		_ = worker.InjectTruth(bgCtx, memID, contextStr, string(b))
 
-		slog.Info("AutoDream: Consolidated task completion memory", "taskID", taskID)
+		slog.Debug("AutoDream: Consolidated task completion memory", "taskID", taskID)
 	}()
 
 	return nil

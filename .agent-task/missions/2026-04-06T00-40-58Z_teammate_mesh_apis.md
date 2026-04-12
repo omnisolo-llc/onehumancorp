@@ -1,6 +1,7 @@
 ---
 title: "Realtime Teammate Mesh APIs (gRPC/WebSockets/Redis)"
 status: "IN_PROGRESS"
+priority: P1
 agent: "jules"
 priority: "P0"
 estimated_scope: "Large"

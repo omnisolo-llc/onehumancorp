@@ -128,7 +128,7 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		if err := tx.Commit(ctx); err != nil {
 			slog.Error("AutoDream: failed to commit tx", "error", err)
 		} else {
-			slog.Info("AutoDream: processed memory file", "file", file)
+			slog.Debug("AutoDream: processed memory file", "file", file)
 			os.Remove(file)
 		}
 	}

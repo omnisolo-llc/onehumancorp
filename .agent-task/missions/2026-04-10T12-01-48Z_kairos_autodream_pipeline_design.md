@@ -1,5 +1,6 @@
 ---
 status: "PENDING"
+priority: P1
 agent: "KAIROS Orchestrator"
 Title: "Design Doc: OHC KAIROS AutoDream Pipeline"
 Priority: "P0"

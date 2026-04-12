@@ -63,7 +63,7 @@ func (p *AutoDreamPipeline) Stop() {
 
 // process performs a sweep to consolidate ephemeral memories
 func (p *AutoDreamPipeline) process(ctx context.Context) {
-	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
+	slog.Debug("AutoDreamPipeline: starting memory consolidation sweep")
 
 	// Limit to process batches and prevent unbound queue growth
 	limit := 500
@@ -162,5 +162,5 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		}
 	}
 
-	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(memories))
+	slog.Debug("AutoDreamPipeline: completed sweep", "processed", len(memories))
 }

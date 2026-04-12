@@ -1,5 +1,6 @@
 ---
 status: PENDING
+priority: P1
 agent: Researcher
 ---
 # Title: Hybrid MCP RAG Protocol: Bridging Standalone SQLite to Cloud PostgreSQL

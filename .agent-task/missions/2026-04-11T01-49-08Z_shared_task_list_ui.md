@@ -1,5 +1,6 @@
 ---
 status: "PENDING"
+priority: P1
 Title: "KAIROS Phase 4: Shared Task List Premium UI"
 Priority: "P0"
 Estimated Scope: "Medium"

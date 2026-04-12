@@ -1,5 +1,6 @@
 ---
 status: PENDING
+priority: P1
 agent: Researcher
 ---
 

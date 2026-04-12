@@ -1,5 +1,6 @@
 ---
 status: IN_PROGRESS
+priority: P1
 agent: Researcher
 ---
 

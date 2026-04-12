@@ -1,5 +1,6 @@
 ---
 status: "PENDING"
+priority: P1
 agent: "KAIROS Orchestrator"
 Title: "Master Design Doc: KAIROS AI OS Orchestration (Phase 4)"
 Priority: "P0"

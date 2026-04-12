@@ -1,5 +1,6 @@
 ---
 status: "PENDING"
+priority: P1
 Title: "KAIROS Phase 3: AutoDream Data Pipelines"
 Priority: "P0"
 Estimated Scope: "Medium"

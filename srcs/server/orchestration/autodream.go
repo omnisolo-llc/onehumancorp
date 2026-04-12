@@ -493,7 +493,7 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		if err != nil {
 			slog.Error("AutoDream: failed to delete memory file", "file", filePath, "error", err)
 		} else {
-			slog.Info("AutoDream: successfully processed and deleted memory file", "file", file.Name())
+			slog.Debug("AutoDream: successfully processed and deleted memory file", "file", file.Name())
 		}
 	}
 }
@@ -592,7 +592,7 @@ func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
 
 	if err := tx.Commit(ctx); err == nil {
 		if len(sessions) > 0 {
-			slog.Info("AutoDream: pruned and compressed stale sessions via distributed queue", "count", len(sessions))
+			slog.Debug("AutoDream: pruned and compressed stale sessions via distributed queue", "count", len(sessions))
 		}
 	} else {
 		slog.Error("AutoDream: failed to commit prune stale sessions", "error", err)
@@ -665,7 +665,7 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 			continue
 		}
 
-		slog.Info("AutoDream: detected memory conflict via pgvector", "id1", c.ID1, "id2", c.ID2)
+		slog.Debug("AutoDream: detected memory conflict via pgvector", "id1", c.ID1, "id2", c.ID2)
 
 		// Ask LLM to consolidate the truth
 		prompt := fmt.Sprintf(
@@ -712,7 +712,7 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 		_, _ = tx.Exec(ctx, "UPDATE memory_conflicts SET resolution_status = 'RESOLVED', resolved_memory_id = $1 WHERE conflict_id = $2", resolvedID, conflictID)
 
 		if err := tx.Commit(ctx); err == nil {
-			slog.Info("AutoDream: resolved conflict via LLM synthesis", "conflict_id", conflictID, "resolved_id", resolvedID)
+			slog.Debug("AutoDream: resolved conflict via LLM synthesis", "conflict_id", conflictID, "resolved_id", resolvedID)
 		} else {
 			_ = tx.Rollback(ctx)
 		}
@@ -792,7 +792,7 @@ func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, lim
 // ConsolidateEpoch runs a continuous long-term memory consolidation pipeline
 // by creating a swarm_dream_epochs record and clustering knowledge.
 func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
-	slog.Info("AutoDream: Starting ConsolidateEpoch")
+	slog.Debug("AutoDream: Starting ConsolidateEpoch")
 
 	// 1. Create a new epoch record
 	epochID := fmt.Sprintf("epoch-%d", time.Now().Unix())
@@ -860,7 +860,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 			cancel()
 
 			if err == nil {
-				slog.Info("AutoDream: Consolidated epoch via LLM")
+				slog.Debug("AutoDream: Consolidated epoch via LLM")
 				clusterData["consolidated_insight"] = response
 
 				// Inject the summarized task embeddings into the Vector DB
@@ -892,6 +892,6 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to update epoch status: %w", err)
 	}
 
-	slog.Info("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
+	slog.Debug("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
 	return nil
 }

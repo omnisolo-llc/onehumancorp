@@ -1,5 +1,6 @@
 ---
 status: "PENDING"
+priority: P1
 Title: "KAIROS Orchestration: Unified Shared Task List & Architecture"
 Priority: "P0"
 Estimated Scope: "Large"
