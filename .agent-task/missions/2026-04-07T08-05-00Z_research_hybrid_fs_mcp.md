@@ -1,6 +1,6 @@
 ---
-status: DONE
-agent: Jules
+status: PENDING
+agent: Researcher
 priority: P1
 ---
 
@@ -12,7 +12,7 @@ The OHC Hybrid Architecture requires seamless operations across Cloud (distribut
 ## Research Report
 - **Market Context**: External tools and default MCP servers (e.g., `filesystem` MCP) assume a single monolithic environment, usually purely local paths. Replit Agent operates purely in the cloud with cloud filesystems. Claude Code operates purely on local files.
 - **OHC Requirement**: We need a "Hybrid File System MCP Proxy" that abstracts file system operations. While Blob storage (S3) handles large unstructured binaries and web artifacts, the application also needs a POSIX-like abstraction for configuration files, intermediate code generation scripts, and hybrid workspaces that synchronize between local Standalone mode and K8s persistent volumes (or Ephemeral scratch space) in Cloud-native mode.
-- **Tooling Discovery**: A dedicated MCP adapter wrapping an interface like `fs.FS` or a custom `mcp.FileSystemProvider` into standard MCP tools. This unifies file operations for agents.
+- **Tooling Discovery**: A dedicated MCP adapter wrapping an interface like `fs.FS` or a custom `mcp.HybridFSProvider` into standard MCP tools. This unifies file operations for agents.
 - **Security & Multi-Tenancy**: In Cloud mode, access must be chrooted or scoped via `auth.Claims` to tenant-specific virtual directories to prevent cross-tenant access. In standalone mode, access might be broader but still needs directory bounding for safety.
 
 ## Design Doc
