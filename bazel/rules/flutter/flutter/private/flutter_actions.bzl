@@ -185,24 +185,27 @@ IS_PUB_PACKAGE="{is_pub_package}"
 ORIGINAL_PWD="$PWD"
 
 WORKSPACE_SRC_ABS="$ORIGINAL_PWD/$WORKSPACE_SRC"
-# The sandbox layout depends on whether we are in Workspace Mode
-WORKSPACE_DIR_ABS="$ORIGINAL_PWD/{working_dir_path}"
+# Preserve the staged workspace root, then address the package directory within it.
+WORKSPACE_ROOT_ABS="$ORIGINAL_PWD/{working_dir_path}"
 PACKAGE_DIR="{package_dir}"
-WORKSPACE_DIR_ABS="${{WORKSPACE_DIR_ABS:+$WORKSPACE_DIR_ABS/}}${{PACKAGE_DIR:+$PACKAGE_DIR}}"
+PACKAGE_WORKSPACE_DIR_ABS="$WORKSPACE_ROOT_ABS"
+if [ -n "$PACKAGE_DIR" ]; then
+    PACKAGE_WORKSPACE_DIR_ABS="$WORKSPACE_ROOT_ABS/$PACKAGE_DIR"
+fi
 
-# Use the calculated WORKSPACE_DIR_ABS for everything else
+# Use the calculated package directory for pub metadata generation.
 PUB_CACHE_DIR_ABS="$ORIGINAL_PWD/$PUB_CACHE_DIR"
 DART_TOOL_DIR_ABS="$ORIGINAL_PWD/$DART_TOOL_DIR"
 
 # Copy staged workspace into prepared output directory
-rm -rf "$WORKSPACE_DIR_ABS"
-mkdir -p "$WORKSPACE_DIR_ABS"
+rm -rf "$WORKSPACE_ROOT_ABS"
+mkdir -p "$WORKSPACE_ROOT_ABS"
 if command -v rsync >/dev/null 2>&1; then
-    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_DIR_ABS/"
+    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_ROOT_ABS/"
 else
-    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
+    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_ROOT_ABS/"
 fi
-chmod -R u+rwX "$WORKSPACE_DIR_ABS"
+chmod -R u+rwX "$WORKSPACE_ROOT_ABS"
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
@@ -213,8 +216,8 @@ fi
 export PUB_CACHE="$PUB_CACHE_DIR_ABS"
 mkdir -p "$PUB_CACHE_DIR_ABS"
 
-if [ "$IS_PUB_PACKAGE" = "1" ] && [ -f "$WORKSPACE_DIR_ABS/pubspec.yaml" ]; then
-    export WORKSPACE_PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
+if [ "$IS_PUB_PACKAGE" = "1" ] && [ -f "$PACKAGE_WORKSPACE_DIR_ABS/pubspec.yaml" ]; then
+    export WORKSPACE_PUBSPEC_PATH="$PACKAGE_WORKSPACE_DIR_ABS/pubspec.yaml"
     "$PYTHON_BIN" <<'PY'
 import os
 
@@ -277,7 +280,7 @@ else
 fi
 echo ""
 
-export PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
+export PUBSPEC_PATH="$PACKAGE_WORKSPACE_DIR_ABS/pubspec.yaml"
 PACKAGE_INFO="$("$PYTHON_BIN" <<'PY'
 import os
 path = os.environ.get("PUBSPEC_PATH")
@@ -323,9 +326,9 @@ if [ "$IS_PUB_PACKAGE" = "1" ] && [ -n "$PACKAGE_NAME" ] && [ -n "$PACKAGE_VERSI
     rm -rf "$DEST"
     mkdir -p "$DEST"
     if command -v rsync >/dev/null 2>&1; then
-        rsync -aL "$WORKSPACE_DIR_ABS/" "$DEST/"
+        rsync -aL "$PACKAGE_WORKSPACE_DIR_ABS/" "$DEST/"
     else
-        cp -RL "$WORKSPACE_DIR_ABS/." "$DEST/"
+        cp -RL "$PACKAGE_WORKSPACE_DIR_ABS/." "$DEST/"
     fi
 fi
 
@@ -344,13 +347,15 @@ FLUTTER_ROOT="$(cd "$(dirname "$FLUTTER_BIN_ABS")/.." && pwd -P)"
 export FLUTTER_ROOT
 export PATH="$FLUTTER_ROOT/bin:$PATH"
 
-cd "$WORKSPACE_DIR_ABS"
+cd "$PACKAGE_WORKSPACE_DIR_ABS"
 
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
-PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
+PUB_DEPS_ERR="$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.stderr.log"
 PUB_DEPS_READY=0
-if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
+if [ -s pub_deps.json ]; then
+    PUB_DEPS_READY=1
+elif [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
     PUB_DEPS_READY=1
 elif [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
     if "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
@@ -360,7 +365,7 @@ fi
 
 if [ "$PUB_DEPS_READY" != "1" ]; then
     echo "⚠ pub deps --json failed; reconstructing dependency graph from cached metadata" >&2
-    if ! WORKSPACE_DIR_ABS="$WORKSPACE_DIR_ABS" \
+    if ! WORKSPACE_DIR_ABS="$PACKAGE_WORKSPACE_DIR_ABS" \
         PUB_CACHE_DIR_ABS="$PUB_CACHE_DIR_ABS" \
         FLUTTER_ROOT="$FLUTTER_ROOT" \
         PACKAGE_NAME="$PACKAGE_NAME" \
@@ -595,7 +600,7 @@ PY
     fi
 fi
 
-export PUB_DEPS_PATH="$WORKSPACE_DIR_ABS/pub_deps.json"
+export PUB_DEPS_PATH="$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.json"
 "$PYTHON_BIN" <<'PY'
 import os
 
@@ -619,8 +624,8 @@ if [ ! -s pub_deps.json ]; then
 fi
 
 export PUB_CACHE_ABS="$PUB_CACHE_DIR_ABS"
-export WORKSPACE_ABS="$WORKSPACE_DIR_ABS"
-export PACKAGE_CONFIG_PATH="$WORKSPACE_DIR_ABS/.dart_tool/package_config.json"
+export WORKSPACE_ABS="$PACKAGE_WORKSPACE_DIR_ABS"
+export PACKAGE_CONFIG_PATH="$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool/package_config.json"
 export ROOT_PACKAGE_NAME="$PACKAGE_NAME"
 export ROOT_LANGUAGE_SPEC="$LANGUAGE_SPEC"
 mkdir -p "$(dirname "$PACKAGE_CONFIG_PATH")"
@@ -636,12 +641,19 @@ flutter_root = os.environ.get("FLUTTER_ROOT") or ""
 root_name = os.environ.get("ROOT_PACKAGE_NAME") or ""
 language_spec = os.environ.get("ROOT_LANGUAGE_SPEC") or ""
 
+def to_file_uri(path):
+    return "file://" + os.path.abspath(path).replace(os.sep, "/")
+
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
+    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
     if spec:
-        return spec[0].split("+")[0]
+        version = spec[0].split("+")[0]
+        parts = version.split(".")
+        if len(parts) >= 2:
+            return parts[0] + "." + parts[1]
+        return version
     return "3.0"
 
 language_version = _parse_language(language_spec)
@@ -660,19 +672,18 @@ for entry in data.get("packages", []):
         root_path = os.path.join(cache_root, "hosted", "pub.dev", name + "-" + version)
         if not os.path.isdir(root_path):
             continue
-        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
         if name == "ffi":
             language_version = "2.12"
         pkg = dict()
         pkg["name"] = name
-        pkg["rootUri"] = rel
-        pkg["packageUri"] = "lib/"
+        pkg["rootUri"] = to_file_uri(root_path)
+        pkg["packageUri"] = "lib/" if os.path.isdir(os.path.join(root_path, "lib")) else ""
         pkg["languageVersion"] = language_version
         packages.append(pkg)
     elif source == "root":
         pkg = dict()
         pkg["name"] = name
-        pkg["rootUri"] = "."
+        pkg["rootUri"] = to_file_uri(workspace_root)
         pkg["packageUri"] = "lib/"
         pkg["languageVersion"] = language_version
         packages.append(pkg)
@@ -683,10 +694,9 @@ for entry in data.get("packages", []):
             root_path = os.path.join(flutter_root, "packages", name)
         if not os.path.isdir(root_path):
             continue
-        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
         pkg = dict()
         pkg["name"] = name
-        pkg["rootUri"] = rel
+        pkg["rootUri"] = to_file_uri(root_path)
         pkg["packageUri"] = "lib/"
         pkg["languageVersion"] = language_version
         packages.append(pkg)
@@ -755,8 +765,8 @@ echo "Workspace output: {workspace_dir}" >> "$LOG_FILE"
 echo "Prepared at: $(date)" >> "$LOG_FILE"
 echo "" >> "$LOG_FILE"
 
-if [ -f "$WORKSPACE_DIR_ABS/pub_deps.json" ]; then
-    cp "$WORKSPACE_DIR_ABS/pub_deps.json" "{pub_deps}"
+if [ -f "$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.json" ]; then
+    cp "$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.json" "{pub_deps}"
     echo "✓ Generated pub_deps.json" >> "$LOG_FILE"
 else
     echo "{{}}" > "{pub_deps}"
@@ -765,11 +775,11 @@ fi
 
 rm -rf "{dart_tool_dir}"
 mkdir -p "{dart_tool_dir}"
-if [ -d "$WORKSPACE_DIR_ABS/.dart_tool" ]; then
+if [ -d "$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool" ]; then
     if command -v rsync >/dev/null 2>&1; then
-        rsync -a "$WORKSPACE_DIR_ABS/.dart_tool/" "{dart_tool_dir}/"
+        rsync -a "$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool/" "{dart_tool_dir}/"
     else
-        cp -RL "$WORKSPACE_DIR_ABS/.dart_tool/." "{dart_tool_dir}/"
+        cp -RL "$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool/." "{dart_tool_dir}/"
     fi
     echo "✓ Created .dart_tool/package_config.json" >> "$LOG_FILE"
 else
@@ -1103,9 +1113,13 @@ package_name, package_language_spec = read_pubspec_meta(package_pubspec_path)
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
+    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
     if spec:
-        return spec[0].split("+")[0]
+        version = spec[0].split("+")[0]
+        parts = version.split(".")
+        if len(parts) >= 2:
+            return parts[0] + "." + parts[1]
+        return version
     return "3.0"
 
 def _as_uri(path):
