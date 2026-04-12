@@ -43,6 +43,7 @@ type Server struct {
 	handoffs              []HandoffPackage
 	skills                []SkillPack
 	snapshots             []OrgSnapshot
+	waitlist              []Waitlist
 	integReg              *integrations.Registry
 	trustAgreements       []TrustAgreement
 	incidents             []Incident
@@ -581,6 +582,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
 	mux.HandleFunc("/api/growth/quota", server.handleFreeTierQuota)
+	mux.HandleFunc("/api/growth/waitlist", server.handleWaitlist)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)

@@ -290,3 +290,51 @@ func (s *Server) handleFreeTierQuota(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// Waitlist defines a user's B2B waitlist entry.
+type Waitlist struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Company   string    `json:"company"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type waitlistCreateRequest struct {
+	Email   string `json:"email"`
+	Company string `json:"company"`
+}
+
+func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		wl := append([]Waitlist(nil), s.waitlist...)
+		s.mu.RUnlock()
+		writeJSON(w, wl)
+	case http.MethodPost:
+		var req waitlistCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.Email == "" {
+			http.Error(w, "email is required", http.StatusBadRequest)
+			return
+		}
+
+		entry := Waitlist{
+			ID:        "wl-" + time.Now().UTC().Format("20060102150405"),
+			Email:     req.Email,
+			Company:   req.Company,
+			Status:    "PENDING",
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.waitlist = append(s.waitlist, entry)
+		s.mu.Unlock()
+		writeJSON(w, entry)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

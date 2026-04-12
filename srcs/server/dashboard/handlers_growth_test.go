@@ -317,3 +317,38 @@ func TestHandleFreeTierQuota(t *testing.T) {
 	}
 	resGet.Body.Close()
 }
+
+func TestHandleWaitlist(t *testing.T) {
+	s := &Server{}
+	payload := `{"email": "test@example.com", "company": "Acme Corp"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/waitlist", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	s.handleWaitlist(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+	var created Waitlist
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if created.Email != "test@example.com" {
+		t.Errorf("expected email test@example.com, got %s", created.Email)
+	}
+	if created.Status != "PENDING" {
+		t.Errorf("expected status PENDING, got %s", created.Status)
+	}
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/waitlist", nil)
+	wGet := httptest.NewRecorder()
+	s.handleWaitlist(wGet, reqGet)
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected GET status 200, got %d", wGet.Code)
+	}
+	var list []Waitlist
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 waitlist entry, got %d", len(list))
+	}
+}
