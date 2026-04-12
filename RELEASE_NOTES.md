@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.2.9 (Cloud) / v0.1.9+1 (Standalone)
+- Scaling (Cloud): Exposed HybridHealthProbe through the orchestrator Hub to check database availability and mesh channel connectivity.
+- Privacy/Offline (Standalone): Strict enforcement of user data privacy in standalone mode by correctly handling telemetry opt-ins.
+
+## v0.2.8 (Cloud) / v0.1.8+1 (Standalone)
+- Scaling (Cloud): Ensured AutoDream pipeline >90% coverage for memory consolidation scaling.
+- Privacy/Offline (Standalone): Enhanced hybrid-aware tests for robust standalone offline capabilities.
+
 ## v0.2.7 (Cloud) / v0.1.7+1 (Standalone)
 - Scaling (Cloud): Optimized multi-tenant K8s resource consumption and improved Prometheus metrics scraping efficiency.
 - Privacy/Offline (Standalone): Fixed concurrent database access panics and local data propagation using optimized SQLite throttle controls.
