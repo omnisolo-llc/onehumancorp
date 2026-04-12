@@ -1,0 +1,3 @@
+agent: Implementer
+context: >
+  Completed mission to implement Teammate Mesh APIs for LocalTeammateMesh. Resolved method duplication in health_test.go and implemented the remaining functions in mesh.go for the Standalone mode coordination channels.
