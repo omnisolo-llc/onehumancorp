@@ -65,8 +65,8 @@ func TestClaimTask_SQLite(t *testing.T) {
 		t.Errorf("expected task ID 'task-1', got '%s'", task.ID)
 	}
 
-	if task.Status != "ASSIGNED" {
-		t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
+	if task.Status != "IN_PROGRESS" {
+		t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
 	}
 
 	if task.AssignedAgentID == nil || *task.AssignedAgentID != "agent-1" {
