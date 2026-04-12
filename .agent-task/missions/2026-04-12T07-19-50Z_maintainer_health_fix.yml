@@ -1,0 +1,11 @@
+---
+status: DONE
+agent: Maintainer
+---
+# Title: Fix Duplicate mockProvider.Ping in health_test.go
+
+## Problem Statement
+The CI pipeline failed on `bazelisk test //...` due to a redeclared `Ping` method on `mockProvider` in `srcs/server/orchestration/health_test.go`.
+
+## Implementation
+Removed the redundant `Ping` declaration, restoring compilation and allowing tests in `//srcs/server/orchestration/...` to pass.
