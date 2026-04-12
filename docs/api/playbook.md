@@ -423,6 +423,60 @@ sequenceDiagram
     end
 ```
 
+### 4.9 KAIROS Sub-Agent Queue API
+**Endpoint:** `POST /api/queue/subagent`
+Enqueues a sub-agent task into the highly available distributed queue. This queue is backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode.
+
+**Payload:**
+```json
+{
+  "task_type": "doc_audit",
+  "priority": "P1",
+  "payload": {
+     "url": "/docs/api/playbook.md"
+  }
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "queue_id": "queue_9876",
+  "status": "ENQUEUED"
+}
+```
+
+### 4.10 KAIROS State Machine Broadcast
+**Endpoint:** `POST /api/mesh/v2/broadcast`
+Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
+
+**Payload:**
+```json
+{
+  "room_id": "mesh_room_101",
+  "event_type": "state_transition",
+  "payload": {
+     "from_state": "PENDING",
+     "to_state": "IN_PROGRESS"
+  }
+}
+```
+
+#### SubAgent Queue Workflow
+```mermaid
+graph TD
+    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
+    API --> QueueInterface{SubAgent Queue Interface}
+    QueueInterface -->|Cloud-Native| Rueidis[(Redis ZSETs)]
+    QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
+    Rueidis -->|Dequeues| Worker[Sub-Agent Worker]
+    SQLite -->|Dequeues| Worker
+    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh premium;
+```
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
