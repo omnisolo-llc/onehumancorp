@@ -37,7 +37,7 @@ go_library(
         "migrations/023_llm_completion_cache.sql",
         "migrations/024_autodream_memories.sql",
         "migrations/025_kairos_dag_deps.sql",
-        "migrations/026_telemetry_buffer.sql",
+        "migrations/012_telemetry_buffer.sql",
         "migrations/027_consolidated_memory.sql",
         "migrations/029_autodream_memories.sql",
         "migrations/030_kairos_shared_tasks.sql",
