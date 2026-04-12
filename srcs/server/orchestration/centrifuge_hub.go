@@ -177,6 +177,19 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 
 // PublishCoordinationMessage fans out a coordination message to the coordination channel.
 func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
+	if cn.meshTransport != nil {
+		meshMsg := MeshMessage{
+			AgentID:   msg.ToAgent,
+			Action:    msg.Type,
+			Status:    "PENDING",
+			SenderID:  msg.FromAgent,
+			Role:      "assistant",
+			Content:   msg.Content,
+			Timestamp: msg.OccurredAt,
+		}
+		_ = cn.meshTransport.BroadcastCoordination(context.Background(), meshMsg)
+	}
+
 	channel := "mesh:coordination"
 	data, err := json.Marshal(msg)
 	if err != nil {
