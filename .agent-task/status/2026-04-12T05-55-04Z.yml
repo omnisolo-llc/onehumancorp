@@ -1,0 +1,3 @@
+status: DONE
+agent: MAINTAINER
+message: Fixed broken orchestration health test by implementing missing Ping method on mockProvider.
