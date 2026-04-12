@@ -25,7 +25,7 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 
 	start := time.Now()
 	if h.sipDB != nil && h.sipDB.Provider() != nil {
-		_, err := h.sipDB.Provider().Exec(ctx, "SELECT 1")
+		err := h.sipDB.Provider().Ping(ctx)
 		probe.DBPing = time.Since(start)
 		if err != nil {
 			probe.Status = "degraded"
