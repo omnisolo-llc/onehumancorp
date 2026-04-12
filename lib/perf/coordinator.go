@@ -28,52 +28,51 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 		return nil
 	}
 
-	// Use worker pool approach
-	var wg sync.WaitGroup
-	taskChan := make(chan func() error, len(tasks))
-	errChan := make(chan error, len(tasks))
-
-	// Start workers
 	workerCount := c.concurrency
 	if len(tasks) < workerCount {
 		workerCount = len(tasks)
 	}
 
+	var wg sync.WaitGroup
+	errChan := make(chan error, workerCount)
+
+	chunkSize := (len(tasks) + workerCount - 1) / workerCount
+
 	for i := 0; i < workerCount; i++ {
+		start := i * chunkSize
+		end := start + chunkSize
+		if end > len(tasks) {
+			end = len(tasks)
+		}
+		if start >= end {
+			continue
+		}
+
 		wg.Add(1)
-		go func() {
+		go func(start, end int) {
 			defer wg.Done()
-			for task := range taskChan {
+			for j := start; j < end; j++ {
 				select {
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
 				default:
-					if err := task(); err != nil {
-						errChan <- err
-					}
+				}
+				if err := tasks[j](); err != nil {
+					errChan <- err
+					return
 				}
 			}
-		}()
+		}(start, end)
 	}
 
-	// Enqueue tasks
-	for _, task := range tasks {
-		taskChan <- task
-	}
-	close(taskChan)
-
-	// Wait for completion
 	wg.Wait()
 	close(errChan)
-
-	// Collect first error if any
 	for err := range errChan {
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -147,9 +146,8 @@ func (m *ShardedMailbox) Read(recipient string) []Message {
 	shard.mu.Lock()
 	defer shard.mu.Unlock()
 
-	// Filter messages for recipient and remove them to prevent memory leaks
 	var result []Message
-	var remaining []Message
+	remaining := shard.messages[:0]
 	for _, msg := range shard.messages {
 		if msg.Recipient == recipient {
 			result = append(result, msg)
