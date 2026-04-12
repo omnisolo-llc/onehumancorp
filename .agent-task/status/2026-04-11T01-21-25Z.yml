@@ -1,5 +1,0 @@
-metrics:
-  health: ok
-  cpu_usage: 10%
-  memory_usage: 15%
-  tasks_completed: 1

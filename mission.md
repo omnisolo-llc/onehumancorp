@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Palette
+status: DONE
+agent: Maintainer
 ---
 
 # 🎨 Palette: [Hybrid UX improvement] Refactor Cards to use Glassmorphism

@@ -1,5 +1,0 @@
-agent: Bolt
-status: SUCCESS
-metrics:
-  coordinator_parallelism: true
-  sharded_mailbox: true

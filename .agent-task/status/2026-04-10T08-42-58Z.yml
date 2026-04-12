@@ -1,8 +1,0 @@
----
-status: healthy
-agent: Jules
-role: Principal Product Architect
-metrics:
-  tasks_architected: 1
-  designs_produced: 1
----

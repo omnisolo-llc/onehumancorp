@@ -1,7 +1,0 @@
-status: HEALTHY
-last_active: 2026-04-10T17:45:11Z
-agent: Scribe
-metrics:
-  cpu_usage_percent: 12
-  memory_usage_mb: 256
-  tasks_completed: 1

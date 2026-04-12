@@ -1,5 +1,0 @@
-status: "DONE"
-metrics:
-  tests_passed: true
-  build_successful: true
-  cache_implemented: true
