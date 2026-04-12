@@ -23,19 +23,19 @@ import (
 
 // SharedTask represents a shared task distributed across agents.
 type SharedTask struct {
-	ID              string
-	OrganizationID  string
-	ParentPlanID    string
-	Dependencies    []string
-	Title           string
-	Description     string
-	AssignedAgentID string
-	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
-	Priority        string
-	Payload         string
-	LockedUntil     sql.NullTime
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              string       `json:"id"`
+	OrganizationID  string       `json:"organization_id"`
+	ParentPlanID    string       `json:"parent_plan_id"`
+	Dependencies    []string     `json:"dependencies"`
+	Title           string       `json:"title"`
+	Description     string       `json:"description"`
+	AssignedAgentID string       `json:"agent_id"`
+	Status          string       `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
+	Priority        string       `json:"priority"`
+	Payload         string       `json:"payload"`
+	LockedUntil     sql.NullTime `json:"locked_until"`
+	CreatedAt       time.Time    `json:"created_at"`
+	UpdatedAt       time.Time    `json:"updated_at"`
 }
 
 // TaskManager manages the shared tasks list
