@@ -42,6 +42,7 @@ type Provider interface {
 	QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row
 	Begin(ctx context.Context) (Tx, error)
 	Close()
+	Ping(ctx context.Context) error
 	IsSQLite() bool
 	Ping(ctx context.Context) error
 	AcquireTask(ctx context.Context, agentID string) (*TaskRecord, error)
