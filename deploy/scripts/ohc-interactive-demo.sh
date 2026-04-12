@@ -1,0 +1,48 @@
+#!/bin/bash
+# OHC Hybrid Agentic OS - Day One Interactive Demo
+set -e
+RESET="\033[0m"
+BOLD="\033[1m"
+DIM="\033[2m"
+BLUE="\033[38;5;39m"
+CYAN="\033[38;5;87m"
+GREEN="\033[38;5;120m"
+PURPLE="\033[38;5;141m"
+
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo -e "${BOLD}${CYAN}      OHC: Interactive Day One Demo Walkthrough       ${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo ""
+echo -e "${DIM}Welcome to One Human Corp (OHC) - The Hybrid Agentic OS!${RESET}"
+echo -e "${DIM}This demo will guide you through the core concepts of OHC.${RESET}"
+echo ""
+
+echo -e "${BOLD}1. The Hybrid Architecture${RESET}"
+echo -e "OHC is designed to run anywhere. Let's explore the modes:"
+echo -e "  • ${GREEN}Standalone Mode${RESET}: Your local development environment. It uses a lightweight SQLite database and runs everything on your machine. Perfect for fast, isolated testing."
+echo -e "  • ${PURPLE}Cloud-Native Mode${RESET}: The production powerhouse. It leverages PostgreSQL, Redis, and multi-tenancy for horizontal scaling and robust operations."
+echo -e "  • ${CYAN}Headless Mode${RESET}: Exposes the API without the UI, ideal for remote clients."
+echo ""
+read -p "Press Enter to continue..."
+
+echo -e "\n${BOLD}2. The Setup Wizard (ohc_hybrid_cli.sh)${RESET}"
+echo -e "The CLI you just used is your command center. It simplifies Day One:"
+echo -e "  • Generates a default ${BOLD}.env${RESET} file tailored for your chosen mode."
+echo -e "  • Allows you to seamlessly switch between Cloud and Standalone modes."
+echo -e "  • Validates your system dependencies and provides health checks."
+echo ""
+read -p "Press Enter to continue..."
+
+echo -e "\n${BOLD}3. Simulating Standalone Mode Startup...${RESET}"
+echo -e "${DIM}[Simulated Output]${RESET}"
+echo -e "${DIM}export OHC_STANDALONE=true${RESET}"
+echo -e "${DIM}export DATABASE_URL=\"file:$HOME/.ohc-local-data/standalone.db\"${RESET}"
+echo -e "${DIM}Starting Local SQLite Database...${RESET}"
+echo -e "${GREEN}✓ Local database initialized successfully.${RESET}"
+echo -e "${DIM}Starting Local Server on port 8080...${RESET}"
+echo -e "${GREEN}✓ Standalone server running!${RESET}"
+echo ""
+
+echo -e "${BOLD}Demo Complete!${RESET}"
+echo -e "You are now ready to explore OHC. Try running the 'Interactive Environment Wizard' next!"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"

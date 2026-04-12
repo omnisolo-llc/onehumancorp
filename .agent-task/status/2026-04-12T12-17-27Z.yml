@@ -1,0 +1,7 @@
+type: status
+metadata:
+  role: Guide
+  timestamp: ${timestamp}
+health: ok
+observations:
+  - Created and integrated ohc-interactive-demo.sh
