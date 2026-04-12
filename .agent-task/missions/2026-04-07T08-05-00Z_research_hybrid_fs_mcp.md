@@ -1,7 +1,6 @@
 ---
 status: "DONE"
 agent: jules
-agent: Researcher
 priority: P1
 ---
 
