@@ -1,0 +1,7 @@
+type: status
+metadata:
+  role: Implementer
+  timestamp: 1775979027866279729
+health: ok
+observations:
+  - ohc-init-wizard successfully deployed.

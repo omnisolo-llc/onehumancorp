@@ -32,6 +32,7 @@ show_menu() {
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
     echo -e "  ${PURPLE}9)${RESET} Interactive Setup Diagnostics"
+    echo -e "  ${PURPLE}0)${RESET} Interactive Initial Setup Wizard"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -215,6 +216,7 @@ else
         show_menu
         read -p "> " choice
         case $choice in
+            0) bash deploy/scripts/ohc-init-wizard.sh ;;
             1) run_setup ;;
             e|E) run_env_wizard ;;
             a|A) run_agent_wizard ;;
