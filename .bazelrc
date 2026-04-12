@@ -1,7 +1,6 @@
 # Bazel configuration for MCP Any
 
 build --config=remote
-test --config=remote
 
 # Enable disk cache for fast incremental builds
 build --disk_cache=~/.cache/bazel-disk-cache
@@ -55,40 +54,40 @@ common:nativelink --jobs=100
 build:nativelink --remote_timeout=10m
 build:nativelink --spawn_strategy=remote
 
-# Config for BuildBuddy specifically
-common:buildbuddy_remote-common --bes_results_url=https://buildbuddy.cubectl.com/invocation/
-common:buildbuddy_remote-common --bes_backend=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --remote_cache=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --experimental_remote_downloader=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --remote_executor=grpcs://buildbuddy-grpc.cubectl.com
+# Config for the BuildBuddy Ubuntu 24 toolchain. This layers the BuildBuddy
+# execution platform and C++ toolchain onto the default remote endpoint config.
 common:buildbuddy_remote-common --spawn_strategy=remote
 common:buildbuddy_remote-common --genrule_strategy=remote
-common:buildbuddy_remote-common --remote_local_fallback
-common:buildbuddy_remote-common --remote_upload_local_results
-common:buildbuddy_remote-common --remote_cache_compression
-common:buildbuddy_remote-common --jobs=200
 build:buildbuddy_remote-common --remote_timeout=10m
 build:buildbuddy_remote-common --verbose_failures
-build:buildbuddy_remote-common --platforms=@toolchains_buildbuddy//platforms:linux_arm64
-build:buildbuddy_remote-common --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_arm64
-build:buildbuddy_remote-common --extra_toolchains=@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_arm64
 # AMD64 Specifics
-build:buildbuddy_remote-amd64 --config=_remote-base
+build:buildbuddy_remote-amd64 --config=buildbuddy_remote-common
 build:buildbuddy_remote-amd64 --platforms=@toolchains_buildbuddy//platforms:linux_x86_64
 build:buildbuddy_remote-amd64 --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_x86_64
 build:buildbuddy_remote-amd64 --extra_toolchains=@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_x86_64
 # ARM64 Specifics
-build:buildbuddy_remote-arm64 --config=_remote-base
+build:buildbuddy_remote-arm64 --config=buildbuddy_remote-common
 build:buildbuddy_remote-arm64 --platforms=@toolchains_buildbuddy//platforms:linux_arm64
 build:buildbuddy_remote-arm64 --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_arm64
 build:buildbuddy_remote-arm64 --extra_toolchains=@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_arm64
 
-# --- THE MAGIC BIT ---
-# This alias points to the specific config based on the host architecture
-build:buildbuddy --define=executor=remote
-build:buildbuddy --config=buildbuddy_remote-amd64
-# If the host is arm64, the following line overrides the previous one
-build:buildbuddy --config=buildbuddy_remote-arm64 --cpu=aarch64
+# Default BuildBuddy alias for the current Linux x86_64 environment.
+common:buildbuddy --define=executor=remote
+common:buildbuddy --config=buildbuddy_remote-amd64
+test:buildbuddy --local_test_jobs=8
+common:buildbuddy-arm64 --define=executor=remote
+common:buildbuddy-arm64 --config=buildbuddy_remote-arm64
+common:buildbuddy-arm64 --cpu=aarch64
+
+# C++ hardening config for libFuzzer, AddressSanitizer, and LeakSanitizer.
+build:asan --config=local
+build:asan --strip=never
+build:asan --copt=-fno-omit-frame-pointer
+build:asan --copt=-fsanitize=address
+build:asan --linkopt=-fsanitize=address
+test:asan --test_env=ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:allocator_may_return_null=1
+
+common:fuzz --config=asan
 
 build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
 build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io

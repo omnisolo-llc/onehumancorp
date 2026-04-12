@@ -47,6 +47,14 @@ func mockLookupIP(host string) ([]net.IP, error) {
 	return []net.IP{net.ParseIP("8.8.8.8")}, nil
 }
 
+func useMockLookupIP(t *testing.T) {
+	t.Helper()
+
+	oldLookupIP := LookupIPFunc
+	LookupIPFunc = mockLookupIP
+	t.Cleanup(func() { LookupIPFunc = oldLookupIP })
+}
+
 func TestValidateURL(t *testing.T) {
 	oldLookupIP := LookupIPFunc
 	LookupIPFunc = mockLookupIP
@@ -244,6 +252,8 @@ func TestIntegrationsByCategoryUnknown(t *testing.T) {
 // ── Connect / Disconnect ──────────────────────────────────────────────────────
 
 func TestConnectUpdatesStatus(t *testing.T) {
+	useMockLookupIP(t)
+
 	r := NewRegistry()
 
 	updated, err := r.Connect("slack", "https://hooks.slack.com/services/test")
@@ -291,8 +301,12 @@ func TestConnectNotFound(t *testing.T) {
 // TestValidateURL and TestConnectSSRF are now defined at the top of the file
 
 func TestDisconnectUpdatesStatus(t *testing.T) {
+	useMockLookupIP(t)
+
 	r := NewRegistry()
-	_, _ = r.Connect("discord", "https://discord.com/api/webhooks/test")
+	if _, err := r.Connect("discord", "https://discord.com/api/webhooks/test"); err != nil {
+		t.Fatalf("connect returned error: %v", err)
+	}
 
 	updated, err := r.Disconnect("discord")
 	if err != nil {
@@ -452,8 +466,12 @@ func TestCreatePullRequestSuccess(t *testing.T) {
 }
 
 func TestCreatePullRequestGitLab(t *testing.T) {
+	useMockLookupIP(t)
+
 	r := NewRegistry()
-	_, _ = r.Connect("gitlab", "https://gitlab.example.com")
+	if _, err := r.Connect("gitlab", "https://gitlab.example.com"); err != nil {
+		t.Fatalf("connect returned error: %v", err)
+	}
 
 	pr, err := r.CreatePullRequest("gitlab", "myorg/backend", "fix: resolve race condition",
 		"", "fix/race", "develop", "swe-2", testNow)
@@ -466,8 +484,12 @@ func TestCreatePullRequestGitLab(t *testing.T) {
 }
 
 func TestCreatePullRequestGitea(t *testing.T) {
+	useMockLookupIP(t)
+
 	r := NewRegistry()
-	_, _ = r.Connect("gitea", "https://git.internal.example.com")
+	if _, err := r.Connect("gitea", "https://git.internal.example.com"); err != nil {
+		t.Fatalf("connect returned error: %v", err)
+	}
 	pr, err := r.CreatePullRequest("gitea", "internal/api", "chore: update deps",
 		"", "chore/deps", "main", "swe-1", testNow)
 	if err != nil {
@@ -1421,6 +1443,8 @@ func TestTelegramAPIBaseSSRF(t *testing.T) {
 }
 
 func TestSendTelegramMessage_NewRequestError(t *testing.T) {
+	useMockLookupIP(t)
+
 	originalBase := TelegramAPIBase
 	TelegramAPIBase = "http://example.com"
 	defer func() { TelegramAPIBase = originalBase }()
@@ -1429,17 +1453,19 @@ func TestSendTelegramMessage_NewRequestError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from http.NewRequestWithContext, got nil")
 	}
-	if !strings.Contains(err.Error(), "create request") && !strings.Contains(err.Error(), "DNS resolution") {
+	if !strings.Contains(err.Error(), "create request") {
 		t.Fatalf("expected 'create request' error, got: %v", err)
 	}
 }
 
 func TestSendDiscordWebhook_NewRequestError(t *testing.T) {
+	useMockLookupIP(t)
+
 	err := sendDiscordWebhook(nil, "http://example.com/webhook", "user", "msg")
 	if err == nil {
 		t.Fatal("expected error from http.NewRequestWithContext, got nil")
 	}
-	if !strings.Contains(err.Error(), "create request") && !strings.Contains(err.Error(), "DNS resolution") {
+	if !strings.Contains(err.Error(), "create request") {
 		t.Fatalf("expected 'create request' error, got: %v", err)
 	}
 }
@@ -1451,6 +1477,8 @@ func (e *errorTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestSendTelegramMessage_DoError(t *testing.T) {
+	useMockLookupIP(t)
+
 	originalBase := TelegramAPIBase
 	TelegramAPIBase = "http://example.com"
 	defer func() { TelegramAPIBase = originalBase }()
@@ -1469,6 +1497,8 @@ func TestSendTelegramMessage_DoError(t *testing.T) {
 }
 
 func TestSendDiscordWebhook_DoError(t *testing.T) {
+	useMockLookupIP(t)
+
 	originalClient := safeClient
 	safeClient = &http.Client{Transport: &errorTripper{}}
 	defer func() { safeClient = originalClient }()
