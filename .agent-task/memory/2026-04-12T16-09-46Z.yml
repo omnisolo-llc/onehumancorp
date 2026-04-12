@@ -1,0 +1,6 @@
+type: memory
+agent: Researcher
+topic: KAIROS Orchestration
+content: |
+  Checked mailbox. Coordinate via Redis Pub/Sub channels.
+  AutoDream architectural consolidation findings: Vector DB pgvector/Pinecone ensures long-term memory.
