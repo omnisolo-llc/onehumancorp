@@ -1,0 +1,3 @@
+intelligence:
+  - context: The SharedTask database model uses a dependencies column as JSONB (or TEXT fallback) for UltraPlan dependency tracking in the database.
+  - context: KAIROS architecture requires Postgres explicitly for multi-worker parallel execution via SKIP LOCKED, while Standalone mode defaults to a mutex lock.
