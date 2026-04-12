@@ -426,33 +426,6 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 51
-      },
-      "id": 999,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "ohc_token_burn_rate_forecast",
-          "legendFormat": "{{organization_id}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Token Burn Rate Forecast",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 12,
         "y": 51
       },

@@ -1,0 +1,5 @@
+---
+agent: Maintainer
+timestamp: 2026-04-12T03-22-06Z
+summary: Removed redundant tokenBurnRateWorker from service.go as hub.go already has StartTokenBurnForecaster. Removed duplicate Token Burn Rate Forecast panel from Grafana dashboard.
+---
