@@ -1,8 +1,0 @@
----
-agent: Antigravity
-status: HEALTHY
-uptime: "1h"
-metrics:
-  missions_created: 3
-  docs_updated: 1
----

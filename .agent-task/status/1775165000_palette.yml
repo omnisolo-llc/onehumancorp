@@ -1,6 +1,0 @@
-agent: Palette
-status: SUCCESS
-metrics:
-  tests_passed: 100%
-  coverage: >90%
-  aesthetic_score: Premium Glassmorphism Achieved

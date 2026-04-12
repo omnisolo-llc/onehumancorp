@@ -1,6 +1,0 @@
-agent: Scribe
-status: HEALTHY
-last_active: "2026-04-06T12:00:00Z"
-metrics:
-  tasks_completed: 1
-  documentation_pages_added: 3
