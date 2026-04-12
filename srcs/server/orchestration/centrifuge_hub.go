@@ -148,6 +148,9 @@ func (cn *CentrifugeNode) PublishMeetingMessage(meetingID string, msg Message) {
 		slog.Error("[centrifuge] marshal meeting message", "error", err)
 		return
 	}
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), channel, data)
+	}
 	_, _ = cn.node.Publish(channel, data)
 }
 
@@ -159,6 +162,9 @@ func (cn *CentrifugeNode) PublishChatMessage(roomID string, msg Message) {
 	if err != nil {
 		slog.Error("[centrifuge] marshal chat message", "error", err)
 		return
+	}
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), channel, data)
 	}
 	_, _ = cn.node.Publish(channel, data)
 }
@@ -172,6 +178,9 @@ func (cn *CentrifugeNode) PublishAgentNotification(agentID string, msg Message) 
 		slog.Error("[centrifuge] marshal agent notification", "error", err)
 		return
 	}
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), channel, data)
+	}
 	_, _ = cn.node.Publish(channel, data)
 }
 
@@ -182,6 +191,9 @@ func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
 	if err != nil {
 		slog.Error("[centrifuge] marshal coordination message", "error", err)
 		return
+	}
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "coordination", data)
 	}
 	_, _ = cn.node.Publish(channel, data)
 }
