@@ -24,6 +24,11 @@ class SubAgentClient {
   // address: host:port of the sub-agent gRPC server (e.g. "localhost:50052").
   explicit SubAgentClient(absl::string_view address);
 
+  // Sends a task to the sub-agent using the proto-first runtime config.
+  absl::StatusOr<std::string> Dispatch(
+      absl::string_view task,
+      const ohc::agent::service::AgentRuntimeConfig& runtime_config);
+
   // Sends a task to the sub-agent and blocks until a result is returned.
   absl::StatusOr<std::string> Dispatch(
       absl::string_view task,
@@ -32,7 +37,9 @@ class SubAgentClient {
       absl::string_view endpoint    = "",
       absl::string_view system      = "",
       int32_t           max_tokens  = 2048,
-      float             temperature = 0.7f);
+      float             temperature = 0.7f,
+      int32_t           max_iterations = 50,
+      int32_t           max_context_messages = 100);
 
   // Returns true when the sub-agent is reachable.
   bool Ping();

@@ -10,6 +10,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/agents/builtin:types",
+        "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/status:statusor",
         "@nlohmann_json//:json",
     ],
@@ -57,6 +58,7 @@ cc_library(
 cc_library(
     name = "glob_tool",
     srcs = ["glob.cc"],
+    hdrs = ["test_hooks.h"],
     copts = _COPTS,
     deps = [
         ":tool",
@@ -144,7 +146,10 @@ cc_library(
 cc_library(
     name = "tools",
     srcs = ["all_tools.cc"],
-    hdrs = ["all_tools.h"],
+    hdrs = [
+        "all_tools.h",
+        "test_hooks.h",
+    ],
     copts = _COPTS,
     visibility = ["//visibility:public"],
     deps = [

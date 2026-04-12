@@ -1,4 +1,5 @@
 #include "srcs/server/agents/builtin/tools/tool.h"
+#include "srcs/server/agents/builtin/tools/test_hooks.h"
 
 #include <glob.h>
 
@@ -11,6 +12,12 @@
 #include "nlohmann/json.hpp"
 
 namespace ohc::agent {
+
+namespace {
+
+GlobFnForTesting g_glob_fn = &::glob;
+
+}  // namespace
 
 Tool MakeGlobTool() {
   return Tool{
@@ -36,7 +43,7 @@ Tool MakeGlobTool() {
         glob_t result{};
         // GLOB_TILDE expands ~ and GLOB_BRACE enables {a,b} patterns.
         const int flags = GLOB_TILDE | GLOB_BRACE;
-        const int rc    = ::glob(pattern.c_str(), flags, nullptr, &result);
+        const int rc    = g_glob_fn(pattern.c_str(), flags, nullptr, &result);
 
         struct GlobGuard {
           glob_t* g;
@@ -59,6 +66,14 @@ Tool MakeGlobTool() {
         return absl::StrJoin(matches, "\n");
       },
   };
+}
+
+void SetGlobFnForTesting(GlobFnForTesting glob_fn) {
+  g_glob_fn = glob_fn;
+}
+
+void ResetGlobFnForTesting() {
+  g_glob_fn = &::glob;
 }
 
 }  // namespace ohc::agent

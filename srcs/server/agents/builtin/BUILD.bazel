@@ -1,5 +1,6 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_fuzzing//fuzzing:cc_defs.bzl", "cc_fuzz_test")
 
 # ── Go targets (unchanged) ────────────────────────────────────────────────────
 
@@ -72,14 +73,27 @@ cc_library(
     srcs = ["http_client.cc"],
     hdrs = ["http_client.h"],
     copts = _COPTS,
-    # libcurl is expected to be installed on the host (standard on Linux/Pi).
-    # `apt install libcurl4-openssl-dev` if not present.
-    linkopts = ["-lcurl"],
     visibility = ["//visibility:public"],
     deps = [
+        "@cpp_httplib//:httplib",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "llm_parsing",
+    srcs = ["llm_parsing.cc"],
+    hdrs = ["llm_parsing.h"],
+    copts = _COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":types",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@nlohmann_json//:json",
     ],
 )
 
@@ -100,6 +114,7 @@ cc_library(
     deps = [
         ":http_client",
         ":llm_client",
+        ":llm_parsing",
         ":types",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -116,6 +131,7 @@ cc_library(
     deps = [
         ":http_client",
         ":llm_client",
+        ":llm_parsing",
         ":types",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -132,6 +148,7 @@ cc_library(
     deps = [
         ":http_client",
         ":llm_client",
+        ":llm_parsing",
         ":types",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -146,6 +163,7 @@ cc_library(
     copts = _COPTS,
     visibility = ["//visibility:public"],
     deps = [
+        "@com_google_absl//absl/functional:function_ref",
         ":llm_client",
         ":types",
         "//srcs/server/agents/builtin/tools:tool",
@@ -162,9 +180,10 @@ cc_library(
 # ── C++ agent binary ──────────────────────────────────────────────────────────
 
 cc_binary(
-    name = "agent_bin",
+    name = "ohc-builtin-agent",
     srcs = ["main.cc"],
     copts = _COPTS,
+    linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/agents/builtin/grpc:agent_service",
@@ -178,12 +197,18 @@ cc_binary(
     ],
 )
 
+alias(
+    name = "agent_bin",
+    actual = ":ohc-builtin-agent",
+)
+
 # ── C++ tests (gtest + gmock) ─────────────────────────────────────────────────
 
 cc_test(
     name = "agent_cc_test",
     srcs = ["agent_cc_test.cc"],
     copts = _COPTS,
+    linkstatic = True,
     deps = [
         ":agent",
         ":types",
@@ -191,9 +216,36 @@ cc_test(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:span",
-        "@googletest//:gmock",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_test(
+    name = "http_llm_cc_test",
+    srcs = ["http_llm_cc_test.cc"],
+    copts = _COPTS,
+    linkstatic = True,
+    deps = [
+        ":http_client",
+        ":llm_anthropic",
+        ":llm_ollama",
+        ":llm_openai",
+        ":llm_parsing",
+        ":types",
+        "//srcs/server/agents/builtin/tools:tools",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
         "@nlohmann_json//:json",
     ],
+)
+
+cc_fuzz_test(
+    name = "llm_parsing_fuzz_test",
+    srcs = ["llm_parsing_fuzz_test.cc"],
+    deps = [":llm_parsing"],
 )

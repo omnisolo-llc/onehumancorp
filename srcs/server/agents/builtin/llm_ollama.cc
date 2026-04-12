@@ -3,6 +3,8 @@
 #include <utility>
 
 #include "srcs/server/agents/builtin/http_client.h"
+#include "srcs/server/agents/builtin/llm_parsing.h"
+#include "absl/base/attributes.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "nlohmann/json.hpp"
@@ -12,7 +14,8 @@ namespace ohc::agent {
 OllamaClient::OllamaClient(std::string endpoint)
     : endpoint_(std::move(endpoint)) {}
 
-absl::StatusOr<ChatResponse> OllamaClient::Chat(const ChatRequest& req) {
+ABSL_ATTRIBUTE_NOINLINE absl::StatusOr<ChatResponse> OllamaClient::Chat(
+  const ChatRequest& req) {
   // ---- Build messages array (OpenAI-compatible) ----------------------------
   nlohmann::json messages = nlohmann::json::array();
 
@@ -80,38 +83,7 @@ absl::StatusOr<ChatResponse> OllamaClient::Chat(const ChatRequest& req) {
   }
 
   // ---- Parse response ------------------------------------------------------
-  const auto result =
-      nlohmann::json::parse(resp_or->body, nullptr, false);
-  if (result.is_discarded()) {
-    return absl::InternalError("Failed to parse Ollama JSON response");
-  }
-
-  ChatResponse chat_resp;
-  chat_resp.message.role = Role::kAssistant;
-
-  if (result.contains("message")) {
-    const auto& msg = result["message"];
-    chat_resp.message.content = msg.value("content", std::string{});
-
-    // Ollama tool-call format mirrors OpenAI.
-    if (msg.contains("tool_calls")) {
-      for (const auto& tc : msg["tool_calls"]) {
-        ToolCall call;
-        if (tc.contains("function")) {
-          call.name      = tc["function"].value("name",      std::string{});
-          call.arguments = tc["function"].value("arguments", nlohmann::json{});
-        }
-        // Ollama does not always supply an id; synthesise one from the tool
-        // name and its position in this response (guaranteed unique within
-        // a single response).
-        call.id = absl::StrCat(call.name, "_",
-                               chat_resp.message.tool_calls.size());
-        chat_resp.message.tool_calls.push_back(std::move(call));
-      }
-    }
-  }
-
-  return chat_resp;
+  return ParseOllamaChatResponse(resp_or->body);
 }
 
 }  // namespace ohc::agent

@@ -4,13 +4,17 @@
 
 #include "srcs/server/agents/builtin/agent.h"
 
+#include <array>
 #include <filesystem>
 #include <fstream>
+#include <chrono>
 #include <memory>
 #include <string>
+#include <sys/resource.h>
 #include <vector>
 
 #include "srcs/server/agents/builtin/tools/all_tools.h"
+#include "srcs/server/agents/builtin/tools/test_hooks.h"
 #include "srcs/server/agents/builtin/tools/tool.h"
 #include "srcs/server/agents/builtin/types.h"
 #include "absl/status/status.h"
@@ -23,6 +27,7 @@ namespace ohc::agent {
 namespace {
 
 using ::testing::_;
+using ::testing::Invoke;
 using ::testing::Return;
 using ::testing::StrictMock;
 
@@ -35,6 +40,67 @@ class MockLLMClient : public LLMClient {
   MOCK_METHOD(absl::StatusOr<ChatResponse>, Chat, (const ChatRequest& req),
               (override));
 };
+
+std::filesystem::path MakeTempDir(absl::string_view prefix) {
+  const auto suffix = std::to_string(
+      std::chrono::steady_clock::now().time_since_epoch().count());
+  const auto path = std::filesystem::temp_directory_path() /
+                    (std::string(prefix) + "_" + suffix);
+  std::error_code ec;
+  std::filesystem::create_directories(path, ec);
+  EXPECT_FALSE(ec) << ec.message();
+  return path;
+}
+
+class ScopedCurrentDirectory {
+ public:
+  explicit ScopedCurrentDirectory(const std::filesystem::path& path)
+      : original_(std::filesystem::current_path()) {
+    std::error_code ec;
+    std::filesystem::current_path(path, ec);
+    EXPECT_FALSE(ec) << ec.message();
+  }
+
+  ~ScopedCurrentDirectory() {
+    std::error_code ec;
+    std::filesystem::current_path(original_, ec);
+  }
+
+ private:
+  std::filesystem::path original_;
+};
+
+class ScopedFileDescriptorLimit {
+ public:
+  explicit ScopedFileDescriptorLimit(rlim_t soft_limit) {
+    EXPECT_EQ(::getrlimit(RLIMIT_NOFILE, &original_), 0);
+    rlimit updated = original_;
+    updated.rlim_cur = soft_limit;
+    EXPECT_EQ(::setrlimit(RLIMIT_NOFILE, &updated), 0);
+  }
+
+  ~ScopedFileDescriptorLimit() {
+    EXPECT_EQ(::setrlimit(RLIMIT_NOFILE, &original_), 0);
+  }
+
+ private:
+  rlimit original_{};
+};
+
+std::vector<Tool> MakeToolVector(Tool tool) {
+  std::vector<Tool> tools;
+  tools.push_back(std::move(tool));
+  return tools;
+}
+
+std::array<Message, 1> MakeInitialMessages(const Message& message) {
+  return {message};
+}
+
+int FailingGlob(const char* /*pattern*/, int /*flags*/,
+                int (*/*errfunc*/)(const char*, int), glob_t* /*result*/) {
+  return GLOB_ABORTED;
+}
 
 // ---------------------------------------------------------------------------
 // Helper: build a simple assistant ChatResponse.
@@ -75,7 +141,7 @@ TEST(BuiltinAgentTest, TerminatesOnNoToolCalls) {
   Agent agent(std::move(mock), cfg, {});
 
   const Message user_msg{.role = Role::kUser, .content = "Say hi"};
-  const absl::Span<const Message> initial({user_msg});
+  const auto initial = MakeInitialMessages(user_msg);
 
   auto result = agent.Run(initial);
   ASSERT_TRUE(result.ok()) << result.status();
@@ -96,10 +162,10 @@ TEST(BuiltinAgentTest, ExecutesToolCallThenTerminates) {
   AgentConfig cfg;
   cfg.model = "mock-model";
 
-  Agent agent(std::move(mock), cfg, {MakeWebSearchTool()});
+  Agent agent(std::move(mock), cfg, MakeToolVector(MakeWebSearchTool()));
 
   const Message user_msg{.role = Role::kUser, .content = "Search for Bazel"};
-  const absl::Span<const Message> initial({user_msg});
+  const auto initial = MakeInitialMessages(user_msg);
 
   auto result = agent.Run(initial);
   ASSERT_TRUE(result.ok()) << result.status();
@@ -125,7 +191,7 @@ TEST(BuiltinAgentTest, ToolErrorSurfacedToLLM) {
   Agent agent(std::move(mock), cfg, {});  // No tools registered.
 
   const Message user_msg{.role = Role::kUser, .content = "Do something"};
-  const absl::Span<const Message> initial({user_msg});
+  const auto initial = MakeInitialMessages(user_msg);
 
   auto result = agent.Run(initial);
   ASSERT_TRUE(result.ok()) << result.status();
@@ -155,7 +221,7 @@ TEST(BuiltinAgentTest, LLMErrorPropagated) {
   Agent agent(std::move(mock), cfg, {});
 
   const Message user_msg{.role = Role::kUser, .content = "ping"};
-  const absl::Span<const Message> initial({user_msg});
+  const auto initial = MakeInitialMessages(user_msg);
 
   auto result = agent.Run(initial);
   EXPECT_FALSE(result.ok());
@@ -172,7 +238,7 @@ TEST(BuiltinAgentTest, EventCallbackFiredForTextAndToolCalls) {
   AgentConfig cfg;
   cfg.model = "mock-model";
 
-  Agent agent(std::move(mock), cfg, {MakeWebSearchTool()});
+  Agent agent(std::move(mock), cfg, MakeToolVector(MakeWebSearchTool()));
 
   std::vector<AgentEvent::Type> event_types;
   auto on_event = [&](const AgentEvent& ev) {
@@ -180,7 +246,7 @@ TEST(BuiltinAgentTest, EventCallbackFiredForTextAndToolCalls) {
   };
 
   const Message user_msg{.role = Role::kUser, .content = "search"};
-  const absl::Span<const Message> initial({user_msg});
+  const auto initial = MakeInitialMessages(user_msg);
 
   auto result = agent.Run(initial, std::move(on_event));
   ASSERT_TRUE(result.ok()) << result.status();
@@ -188,6 +254,53 @@ TEST(BuiltinAgentTest, EventCallbackFiredForTextAndToolCalls) {
   EXPECT_THAT(event_types, ::testing::Contains(AgentEvent::Type::kToolCall));
   EXPECT_THAT(event_types,
               ::testing::Contains(AgentEvent::Type::kTaskComplete));
+}
+
+TEST(BuiltinAgentTest, TrimsContextWhenHistoryGrowsTooLarge) {
+  auto mock = std::make_unique<StrictMock<MockLLMClient>>();
+  EXPECT_CALL(*mock, Chat(_))
+      .WillOnce(Return(MakeToolCallResponse("WebSearch", {{"query", "trim"}})))
+      .WillOnce(Invoke([](const ChatRequest& req)
+                           -> absl::StatusOr<ChatResponse> {
+        EXPECT_EQ(req.messages.size(), 2u);
+        EXPECT_EQ(req.messages.front().content, "trim the context");
+        return MakeTextResponse("trimmed");
+      }));
+
+  AgentConfig cfg;
+  cfg.model = "mock-model";
+  cfg.max_context_messages = 2;
+
+  Agent agent(std::move(mock), cfg, MakeToolVector(MakeWebSearchTool()));
+  const Message user_msg{.role = Role::kUser, .content = "trim the context"};
+  const auto initial = MakeInitialMessages(user_msg);
+
+  auto result = agent.Run(initial);
+  ASSERT_TRUE(result.ok()) << result.status();
+  EXPECT_EQ(result->back().content, "trimmed");
+}
+
+TEST(BuiltinAgentTest, ReturnsResourceExhaustedWhenMaxIterationsExceeded) {
+  auto mock = std::make_unique<StrictMock<MockLLMClient>>();
+  EXPECT_CALL(*mock, Chat(_))
+      .WillRepeatedly(Return(MakeToolCallResponse("WebSearch", {{"query", "loop"}})));
+
+  AgentConfig cfg;
+  cfg.model = "mock-model";
+  cfg.max_iterations = 2;
+
+  Agent agent(std::move(mock), cfg, MakeToolVector(MakeWebSearchTool()));
+  const Message user_msg{.role = Role::kUser, .content = "loop forever"};
+  const auto initial = MakeInitialMessages(user_msg);
+
+  auto result = agent.Run(initial);
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kResourceExhausted);
+}
+
+TEST(RoleToStringViewTest, CoversSystemAndUnknownRoles) {
+  EXPECT_EQ(RoleToStringView(Role::kSystem), "system");
+  EXPECT_EQ(RoleToStringView(static_cast<Role>(255)), "unknown");
 }
 
 // ---------------------------------------------------------------------------
@@ -259,11 +372,260 @@ TEST(BashToolTest, RunsSimpleCommand) {
   EXPECT_THAT(*result, ::testing::HasSubstr("hello_world"));
 }
 
+TEST(BashToolTest, MissingCommandReturnsInvalidArgument) {
+  const auto tool = MakeBashTool();
+  auto result = tool.execute({});
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(BashToolTest, PopenFailureReturnsInternalError) {
+  const auto tool = MakeBashTool();
+  ScopedFileDescriptorLimit fd_limit(0);
+  auto result = tool.execute({{"command", "echo should_fail"}});
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kInternal);
+}
+
 TEST(ReadToolTest, MissingFileReturnsNotFound) {
   const auto tool = MakeReadTool();
   auto result     = tool.execute({{"file_path", "/nonexistent/path/file.txt"}});
   EXPECT_FALSE(result.ok());
   EXPECT_EQ(result.status().code(), absl::StatusCode::kNotFound);
+}
+
+TEST(ReadToolTest, ReadsExistingFile) {
+  const auto tool = MakeReadTool();
+  const auto dir = MakeTempDir("ohc_read");
+  const auto path = dir / "input.txt";
+  {
+    std::ofstream file(path);
+    file << "hello";
+  }
+
+  auto result = tool.execute({{"file_path", path.string()}});
+  ASSERT_TRUE(result.ok()) << result.status();
+  EXPECT_EQ(*result, "hello");
+
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(ReadToolTest, MissingFilePathReturnsInvalidArgument) {
+  const auto tool = MakeReadTool();
+  auto result = tool.execute({});
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(WriteToolTest, WritesFileAndCreatesDirectories) {
+  const auto tool = MakeWriteTool();
+  const auto dir = MakeTempDir("ohc_write");
+  const auto path = dir / "nested" / "output.txt";
+
+  auto result = tool.execute(
+      {{"file_path", path.string()}, {"content", "payload"}});
+  ASSERT_TRUE(result.ok()) << result.status();
+
+  std::ifstream file(path);
+  ASSERT_TRUE(file.is_open());
+  std::string content((std::istreambuf_iterator<char>(file)), {});
+  EXPECT_EQ(content, "payload");
+
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(WriteToolTest, ValidatesArgumentsAndFilesystemFailures) {
+  const auto tool = MakeWriteTool();
+
+  auto missing_path = tool.execute({{"content", "payload"}});
+  EXPECT_FALSE(missing_path.ok());
+  EXPECT_EQ(missing_path.status().code(), absl::StatusCode::kInvalidArgument);
+
+  auto missing_content = tool.execute({{"file_path", "/tmp/output.txt"}});
+  EXPECT_FALSE(missing_content.ok());
+  EXPECT_EQ(missing_content.status().code(),
+            absl::StatusCode::kInvalidArgument);
+
+  const auto dir = MakeTempDir("ohc_write_fail");
+  const auto parent_file = dir / "parent";
+  {
+    std::ofstream file(parent_file);
+    file << "not a directory";
+  }
+  auto create_dirs_failure = tool.execute(
+      {{"file_path", (parent_file / "child.txt").string()},
+       {"content", "payload"}});
+  EXPECT_FALSE(create_dirs_failure.ok());
+
+  const auto open_dir = dir / "open_dir";
+  std::error_code ec;
+  std::filesystem::create_directories(open_dir, ec);
+  ASSERT_FALSE(ec) << ec.message();
+  auto open_failure = tool.execute(
+      {{"file_path", open_dir.string()}, {"content", "payload"}});
+  EXPECT_FALSE(open_failure.ok());
+
+  auto write_failure = tool.execute(
+      {{"file_path", "/dev/full"}, {"content", "payload"}});
+  EXPECT_FALSE(write_failure.ok());
+
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(GlobToolTest, MatchesFilesAndHandlesValidation) {
+  const auto tool = MakeGlobTool();
+  const auto dir = MakeTempDir("ohc_glob");
+  {
+    std::ofstream(dir / "a.txt") << "a";
+    std::ofstream(dir / "b.txt") << "b";
+  }
+
+  auto result = tool.execute({{"pattern", (dir / "*.txt").string()}});
+  ASSERT_TRUE(result.ok()) << result.status();
+  EXPECT_THAT(*result, ::testing::HasSubstr("a.txt"));
+  EXPECT_THAT(*result, ::testing::HasSubstr("b.txt"));
+
+  auto no_matches = tool.execute({{"pattern", (dir / "*.md").string()}});
+  ASSERT_TRUE(no_matches.ok()) << no_matches.status();
+  EXPECT_EQ(*no_matches, "No files found matching pattern.");
+
+  auto missing_pattern = tool.execute({});
+  EXPECT_FALSE(missing_pattern.ok());
+  EXPECT_EQ(missing_pattern.status().code(),
+            absl::StatusCode::kInvalidArgument);
+
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(GlobToolTest, ReturnsInternalErrorWhenGlobFails) {
+  SetGlobFnForTesting(&FailingGlob);
+  const auto tool = MakeGlobTool();
+  auto result = tool.execute({{"pattern", "*.txt"}});
+  ResetGlobFnForTesting();
+
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kInternal);
+}
+
+TEST(GrepToolTest, FindsMatchesAndValidatesArguments) {
+  const auto tool = MakeGrepTool();
+  const auto dir = MakeTempDir("ohc_grep");
+  {
+    std::ofstream(dir / "notes.txt") << "alpha\nbeta\n";
+  }
+
+  auto match = tool.execute(
+      {{"pattern", "alpha"}, {"directory", dir.string()}});
+  ASSERT_TRUE(match.ok()) << match.status();
+  EXPECT_THAT(*match, ::testing::HasSubstr("notes.txt"));
+
+  auto no_match = tool.execute(
+      {{"pattern", "gamma"}, {"directory", dir.string()}});
+  ASSERT_TRUE(no_match.ok()) << no_match.status();
+  EXPECT_EQ(*no_match, "No matches found.");
+
+  auto missing_pattern = tool.execute({{"directory", dir.string()}});
+  EXPECT_FALSE(missing_pattern.ok());
+  EXPECT_EQ(missing_pattern.status().code(),
+            absl::StatusCode::kInvalidArgument);
+
+  auto missing_directory = tool.execute({{"pattern", "alpha"}});
+  EXPECT_FALSE(missing_directory.ok());
+  EXPECT_EQ(missing_directory.status().code(),
+            absl::StatusCode::kInvalidArgument);
+
+  auto not_found = tool.execute(
+      {{"pattern", "alpha"}, {"directory", "/definitely/not/here"}});
+  EXPECT_FALSE(not_found.ok());
+  EXPECT_EQ(not_found.status().code(), absl::StatusCode::kNotFound);
+
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(GrepToolTest, PopenFailureReturnsInternalError) {
+  const auto tool = MakeGrepTool();
+  const auto dir = MakeTempDir("ohc_grep_popen_fail");
+  ScopedFileDescriptorLimit fd_limit(0);
+  auto result = tool.execute(
+      {{"pattern", "alpha"}, {"directory", dir.string()}});
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.status().code(), absl::StatusCode::kInternal);
+
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(SendMessageToolTest, ValidatesArgumentsAndSucceeds) {
+  const auto tool = MakeSendMessageTool();
+  auto missing = tool.execute({});
+  EXPECT_FALSE(missing.ok());
+  EXPECT_EQ(missing.status().code(), absl::StatusCode::kInvalidArgument);
+
+  auto sent = tool.execute({{"message", "hello user"}});
+  ASSERT_TRUE(sent.ok()) << sent.status();
+  EXPECT_EQ(*sent, "Message sent.");
+}
+
+TEST(TodoWriteToolTest, ValidatesArgumentsAndFailureModes) {
+  const auto tool = MakeTodoWriteTool();
+
+  auto missing = tool.execute({});
+  EXPECT_FALSE(missing.ok());
+  EXPECT_EQ(missing.status().code(), absl::StatusCode::kInvalidArgument);
+
+  const auto dir = MakeTempDir("ohc_todo_fail");
+  {
+    ScopedCurrentDirectory cwd(dir);
+
+    std::ofstream(".agent-task") << "file blocks directory creation";
+    auto create_dir_failure = tool.execute({{"todo", "blocked"}});
+    EXPECT_FALSE(create_dir_failure.ok());
+    std::filesystem::remove(".agent-task");
+
+    std::error_code ec;
+    std::filesystem::create_directories(".agent-task/todo.txt", ec);
+    ASSERT_FALSE(ec) << ec.message();
+    auto open_failure = tool.execute({{"todo", "cannot open"}});
+    EXPECT_FALSE(open_failure.ok());
+    std::filesystem::remove_all(".agent-task", ec);
+
+    std::filesystem::create_directories(".agent-task", ec);
+    ASSERT_FALSE(ec) << ec.message();
+    std::filesystem::create_symlink("/dev/full", ".agent-task/todo.txt", ec);
+    ASSERT_FALSE(ec) << ec.message();
+    auto write_failure = tool.execute({{"todo", "cannot write"}});
+    EXPECT_FALSE(write_failure.ok());
+  }
+
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST(ToolSearchToolTest, ListsAndFiltersTools) {
+  const auto tool = MakeToolSearchTool();
+
+  auto list_all = tool.execute({});
+  ASSERT_TRUE(list_all.ok()) << list_all.status();
+  EXPECT_THAT(*list_all, ::testing::HasSubstr("Bash: Execute a bash script."));
+
+  auto filtered = tool.execute({{"query", "fetch"}});
+  ASSERT_TRUE(filtered.ok()) << filtered.status();
+  EXPECT_THAT(*filtered, ::testing::HasSubstr("WebFetch"));
+
+  auto no_match = tool.execute({{"query", "does-not-exist"}});
+  ASSERT_TRUE(no_match.ok()) << no_match.status();
+  EXPECT_EQ(*no_match, "No tools found matching query.");
+}
+
+TEST(DefaultToolsTest, ReturnsAllBuiltinTools) {
+  const auto tools = MakeDefaultTools();
+  EXPECT_EQ(tools.size(), 10u);
+  EXPECT_EQ(tools.front().name, "Bash");
+  EXPECT_EQ(tools.back().name, "ToolSearch");
 }
 
 }  // namespace

@@ -1,83 +1,174 @@
 #include "srcs/server/agents/builtin/http_client.h"
 
-#include <curl/curl.h>
+#include <chrono>
+#include <cstdint>
+#include <string>
 
 #include "absl/status/status.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
+#include "httplib.h"
 
 namespace ohc::agent {
 namespace {
 
-// libcurl write-callback: appends received bytes to a std::string.
-// libcurl guarantees size==1 but we use size*nmemb for correctness.
-size_t CurlWriteCallback(char* ptr, size_t size, size_t nmemb,
-                         std::string* output) {
-  const size_t total = size * nmemb;
-  output->append(ptr, total);
-  return total;
+struct ParsedUrl {
+  std::string base_url;
+  std::string path;
+};
+
+absl::StatusOr<ParsedUrl> ParseUrl(const std::string& url) {
+  absl::string_view remaining(url);
+  absl::string_view scheme;
+  if (absl::StartsWith(remaining, "http://")) {
+    scheme = "http://";
+  } else if (absl::StartsWith(remaining, "https://")) {
+    scheme = "https://";
+  } else {
+    return absl::InvalidArgumentError(
+        absl::StrCat("unsupported URL scheme: ", url));
+  }
+  remaining.remove_prefix(scheme.size());
+
+  if (remaining.empty()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("URL is missing an authority: ", url));
+  }
+
+  const size_t authority_end = remaining.find_first_of("/?#");
+  const absl::string_view authority = remaining.substr(0, authority_end);
+  if (authority.empty()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("URL is missing an authority: ", url));
+  }
+
+  absl::string_view path = "/";
+  if (authority_end != absl::string_view::npos) {
+    path = remaining.substr(authority_end);
+  }
+
+  const size_t fragment = path.find('#');
+  if (fragment != absl::string_view::npos) {
+    path = path.substr(0, fragment);
+  }
+
+  std::string normalized_path(path);
+  if (normalized_path.empty()) {
+    normalized_path = "/";
+  } else if (normalized_path.front() != '/') {
+    normalized_path.insert(normalized_path.begin(), '/');
+  }
+
+  return ParsedUrl{
+      .base_url = absl::StrCat(scheme, authority),
+      .path = std::move(normalized_path),
+  };
+}
+
+httplib::Headers MakeDefaultHeaders(
+    const std::map<std::string, std::string>& headers,
+    std::string* content_type) {
+  httplib::Headers result;
+  for (const auto& [key, value] : headers) {
+    if (absl::EqualsIgnoreCase(key, "content-type")) {
+      *content_type = value;
+      continue;
+    }
+    result.emplace(key, value);
+  }
+  return result;
+}
+
+absl::StatusOr<httplib::Result> DispatchRequest(httplib::Client* client,
+                                                const HttpRequest& req,
+                                                const ParsedUrl& parsed_url) {
+  std::string content_type;
+  client->set_default_headers(MakeDefaultHeaders(req.headers, &content_type));
+
+  const std::string method = absl::AsciiStrToUpper(req.method);
+  if (method == "GET") {
+    return client->Get(parsed_url.path);
+  }
+  if (method == "POST") {
+    if (content_type.empty()) {
+      content_type = "application/octet-stream";
+    }
+    return client->Post(parsed_url.path, req.body, content_type);
+  }
+  if (method == "PUT") {
+    if (content_type.empty()) {
+      content_type = "application/octet-stream";
+    }
+    return client->Put(parsed_url.path, req.body, content_type);
+  }
+  if (method == "PATCH") {
+    if (content_type.empty()) {
+      content_type = "application/octet-stream";
+    }
+    return client->Patch(parsed_url.path, req.body, content_type);
+  }
+  if (method == "DELETE") {
+    return client->Delete(parsed_url.path);
+  }
+  if (method == "OPTIONS") {
+    return client->Options(parsed_url.path);
+  }
+
+  return absl::InvalidArgumentError(
+      absl::StrCat("unsupported HTTP method: ", req.method));
+}
+
+absl::Status MakeTransportError(const httplib::Result& result) {
+  std::string message =
+      absl::StrCat("HTTP request failed: ", httplib::to_string(result.error()));
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+  if (result.error() == httplib::Error::SSLConnection ||
+      result.error() == httplib::Error::SSLLoadingCerts ||
+      result.error() == httplib::Error::SSLServerVerification ||
+      result.error() == httplib::Error::SSLServerHostnameVerification) {
+    absl::StrAppend(&message, " (tls_backend_error=", result.ssl_backend_error(),
+                    ")");
+  }
+#endif
+  return absl::InternalError(message);
 }
 
 }  // namespace
 
 absl::StatusOr<HttpResponse> HttpDo(const HttpRequest& req) {
-  CURL* curl = curl_easy_init();
-  if (!curl) {
-    return absl::InternalError("curl_easy_init failed");
-  }
-  // RAII guard: always call curl_easy_cleanup.
-  struct CurlGuard {
-    CURL* c;
-    ~CurlGuard() { curl_easy_cleanup(c); }
-  } guard{curl};
-
-  HttpResponse response;
-
-  curl_easy_setopt(curl, CURLOPT_URL, req.url.c_str());
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, static_cast<long>(req.timeout_seconds));
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  // On embedded systems the CA bundle path can differ; let libcurl use its
-  // compiled-in default.  Override via CURL_CA_BUNDLE env if needed.
-  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-
-  // Build header list.
-  struct curl_slist* headers = nullptr;
-  // RAII guard for curl_slist.
-  struct HeaderGuard {
-    struct curl_slist* h = nullptr;
-    ~HeaderGuard() {
-      if (h) curl_slist_free_all(h);
-    }
-  } hguard;
-
-  for (const auto& [key, value] : req.headers) {
-    std::string header = absl::StrCat(key, ": ", value);
-    headers = curl_slist_append(headers, header.c_str());
-  }
-  hguard.h = headers;
-  if (headers) {
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  auto parsed_url = ParseUrl(req.url);
+  if (!parsed_url.ok()) {
+    return parsed_url.status();
   }
 
-  if (req.method == "POST") {
-    curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
-                     static_cast<long>(req.body.size()));
+  httplib::Client client(parsed_url->base_url);
+  if (!client.is_valid()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("invalid URL: ", req.url));
   }
 
-  CURLcode res = curl_easy_perform(curl);
-  if (res != CURLE_OK) {
-    return absl::InternalError(
-        absl::StrCat("libcurl error: ", curl_easy_strerror(res)));
+  const auto timeout = std::chrono::seconds(req.timeout_seconds);
+  client.set_follow_location(true);
+  client.set_keep_alive(false);
+  client.set_path_encode(false);
+  client.set_connection_timeout(timeout);
+  client.set_read_timeout(timeout);
+  client.set_write_timeout(timeout);
+  client.set_max_timeout(timeout);
+
+  auto response = DispatchRequest(&client, req, *parsed_url);
+  if (!response.ok()) {
+    return response.status();
+  }
+  if (!*response) {
+    return MakeTransportError(*response);
   }
 
-  long http_code = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-  response.status_code = static_cast<int32_t>(http_code);
-
-  return response;
+  return HttpResponse{
+      .status_code = static_cast<int32_t>((*response)->status),
+      .body = std::move((*response)->body),
+  };
 }
 
 }  // namespace ohc::agent

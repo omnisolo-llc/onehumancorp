@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "builtinclient",
+    srcs = ["client.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtinclient",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto:agent_service_go_proto",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "builtinclient_test",
+    srcs = ["client_test.go"],
+    embed = [":builtinclient"],
+    deps = [
+        "//srcs/proto:agent_service_go_proto",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
