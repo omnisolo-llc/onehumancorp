@@ -26,7 +26,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			agent_id TEXT,
-			dependencies JSONB,
+			dependencies TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -87,4 +87,43 @@ func TestClaimTask_SQLite(t *testing.T) {
 func TestClaimTask_Postgres(t *testing.T) {
 	// Skip Postgres since it requires running instance for this pure db-layer test
 	t.Skip("Postgres requires a running instance, skip for basic unit test")
+}
+func TestClaimTask_SQLite_Concurrency(t *testing.T) {
+	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to create sqlite provider: %v", err)
+	}
+	ctx := context.Background()
+	_, err = dbProvider.Exec(ctx, `CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, parent_plan_id TEXT, title TEXT NOT NULL, description TEXT, status TEXT NOT NULL DEFAULT 'PENDING', agent_id TEXT, dependencies TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+	_, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task', 'PENDING')`)
+	if err != nil {
+		t.Fatalf("failed to insert test task: %v", err)
+	}
+	claims := &auth.Claims{OrganizationID: "org-1"}
+	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+	to := NewSharedTaskOrchestrator(dbProvider)
+	var wg sync.WaitGroup
+	results := make(chan *SharedTaskDB, 10)
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(agentID string) {
+			defer wg.Done()
+			task, _ := to.ClaimTask(ctxWithClaims, agentID)
+			if task != nil {
+				results <- task
+			}
+		}(fmt.Sprintf("agent-%d", i))
+	}
+	wg.Wait()
+	close(results)
+	var claimedCount int
+	for range results {
+		claimedCount++
+	}
+	if claimedCount != 1 {
+		t.Errorf("expected exactly 1 task to be claimed, got %d", claimedCount)
+	}
 }
