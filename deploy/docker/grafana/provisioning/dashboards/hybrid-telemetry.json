@@ -532,6 +532,123 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "id": 1003,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(autodream_memories_ingested_total[5m])) by (agent_id)",
+          "legendFormat": "{{agent_id}} - Ingested",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(autodream_memories_compressed_total[5m])) by (agent_id)",
+          "legendFormat": "{{agent_id}} - Compressed",
+          "refId": "B"
+        }
+      ],
+      "title": "AutoDream Memory Pipeline",
+      "type": "timeseries",
+      "description": "AutoDream Memory Ingestion and Compression grouped by agent_id"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "id": 1004,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{deployment_mode}} - Sync Latency",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{deployment_mode}} - Query Latency",
+          "refId": "B"
+        }
+      ],
+      "title": "AutoDream RAG Latency",
+      "type": "timeseries",
+      "description": "95th percentile of AutoDream sync and query durations grouped by deployment_mode"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "id": 1005,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_sync_latency_seconds_sum[5m])) / sum(rate(ohc_sync_latency_seconds_count[5m]))",
+          "legendFormat": "Average Sync Latency",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_sync_escalations_total[5m]))",
+          "legendFormat": "Sync Escalations",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg(ohc_sync_daemon_batch_size)",
+          "legendFormat": "Average Batch Size",
+          "refId": "C"
+        }
+      ],
+      "title": "Sync Daemon Health",
+      "type": "timeseries",
+      "description": "Performance and health metrics of the Sync Daemon"
     }
   ],
   "refresh": "",
