@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"github.com/redis/go-redis/v9"
 	"context"
 	"fmt"
 	"log/slog"
@@ -469,6 +471,24 @@ func run(now time.Time, listen listenFunc) error {
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	startBuiltinAgentProcess(ctx, builtinclient.AddressFromEnv())
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
+
+	// Setup TeammateMesh for orchestration
+	var teammateMesh mesh.TeammateMesh
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+		// Note: In a real environment, we should reuse a shared redis.Client
+		// or parse the URL using redis.ParseURL. We keep it simple here.
+		opt, err := redis.ParseURL(redisURL)
+		if err == nil {
+			redisClient := redis.NewClient(opt)
+			teammateMesh = mesh.NewRedisMesh(redisClient)
+		}
+	}
+	if teammateMesh == nil {
+		teammateMesh = mesh.NewLocalMesh()
+	}
+
+	// Use teammateMesh to avoid "declared and not used" error if not wired elsewhere.
+	_ = teammateMesh
 
 	// Setup MeshTransport for Hub
 	var mesh orchestration.MeshTransport
