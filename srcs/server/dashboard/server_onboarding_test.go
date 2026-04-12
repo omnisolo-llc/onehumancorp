@@ -33,16 +33,20 @@ func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 	}
 
 	checklist := resp["checklist"].([]interface{})
-	if len(checklist) != 1 {
-		t.Errorf("Expected 1 checklist item, got %v", len(checklist))
+	if len(checklist) != 2 {
+		t.Errorf("Expected 2 checklist items for standalone, got %v", len(checklist))
 	}
 
-	item := checklist[0].(map[string]interface{})
-	if item["id"] != "sqlite_db" {
-		t.Errorf("Expected sqlite_db checklist item, got %v", item["id"])
+	item1 := checklist[0].(map[string]interface{})
+	if item1["id"] != "sqlite_db" {
+		t.Errorf("Expected sqlite_db checklist item, got %v", item1["id"])
+	}
+
+	item2 := checklist[1].(map[string]interface{})
+	if item2["id"] != "sqlite_standalone" {
+		t.Errorf("Expected sqlite_standalone checklist item, got %v", item2["id"])
 	}
 }
-
 func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "false")
 	defer os.Unsetenv("OHC_STANDALONE")
@@ -72,6 +76,16 @@ func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 
 	checklist := resp["checklist"].([]interface{})
 	if len(checklist) != 2 {
-		t.Errorf("Expected 2 checklist items, got %v", len(checklist))
+		t.Errorf("Expected 2 checklist items for cloud, got %v", len(checklist))
+	}
+
+	item1 := checklist[0].(map[string]interface{})
+	if item1["id"] != "postgres_db" {
+		t.Errorf("Expected postgres_db checklist item, got %v", item1["id"])
+	}
+
+	item2 := checklist[1].(map[string]interface{})
+	if item2["id"] != "redis_cache" {
+		t.Errorf("Expected redis_cache checklist item, got %v", item2["id"])
 	}
 }
