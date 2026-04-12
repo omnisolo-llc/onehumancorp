@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math/rand"
 	"log/slog"
 	"time"
 
@@ -73,6 +74,29 @@ type CachedMinimaxClient struct {
 	redis  rueidis.Client
 }
 
+// PruneCache periodically removes DB cache entries older than 24 hours to prevent unbounded local storage growth.
+func (c *CachedMinimaxClient) PruneCache(ctx context.Context) {
+	if c.db == nil {
+		return
+	}
+
+	queryReason := "DELETE FROM llm_reason_cache WHERE created_at < NOW() - INTERVAL '1 day'"
+	queryEmbed := "DELETE FROM embedding_cache WHERE created_at < NOW() - INTERVAL '1 day'"
+	if c.db.IsSQLite() {
+		queryReason = "DELETE FROM llm_reason_cache WHERE created_at < datetime('now', '-1 day')"
+		queryEmbed = "DELETE FROM embedding_cache WHERE created_at < datetime('now', '-1 day')"
+	}
+
+	_, err := c.db.Exec(ctx, queryReason)
+	if err != nil {
+		slog.Warn("CachedMinimaxClient: failed to prune llm_reason_cache", "err", err)
+	}
+	_, err = c.db.Exec(ctx, queryEmbed)
+	if err != nil {
+		slog.Warn("CachedMinimaxClient: failed to prune embedding_cache", "err", err)
+	}
+}
+
 // NewCachedMinimaxClient creates a new CachedMinimaxClient.
 func NewCachedMinimaxClient(client MinimaxClient, db db.Provider, redisClient rueidis.Client) MinimaxClient {
 	return &CachedMinimaxClient{
@@ -128,6 +152,11 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 
 	// 3. Cache miss: generate response
 	telemetry.RecordCacheMiss(ctx, "reason", "all")
+
+	if rand.Float32() < 0.01 {
+		go c.PruneCache(context.Background())
+	}
+
 	response, err := c.client.Reason(ctx, prompt)
 	if err != nil {
 		return "", err
@@ -214,6 +243,11 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 
 	// 3. Cache miss: generate embedding
 	telemetry.RecordCacheMiss(ctx, "embedding", "all")
+
+	if rand.Float32() < 0.01 {
+		go c.PruneCache(context.Background())
+	}
+
 	embedding, err := c.client.GenerateEmbedding(ctx, text)
 	if err != nil {
 		return nil, err
