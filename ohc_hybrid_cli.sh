@@ -21,7 +21,8 @@ echo ""
 
 show_menu() {
     echo -e "${BOLD}Select an action:${RESET}"
-    echo -e "  ${PURPLE}1)${RESET} Run Initial Setup (Generate default .env, Verify build)"
+    echo -e "  ${PURPLE}0)${RESET} Welcome Dashboard
+  ${PURPLE}1)${RESET} Run Initial Setup (Generate default .env, Verify build)"
     echo -e "  ${PURPLE}e)${RESET} Interactive Environment Wizard (Configure API Keys/Ports)"
     echo -e "  ${PURPLE}a)${RESET} Interactive Agent Provisioning Wizard"
     echo -e "  ${PURPLE}2)${RESET} Switch Environment Mode (Cloud / Standalone / Headless)"
@@ -215,6 +216,7 @@ else
         show_menu
         read -p "> " choice
         case $choice in
+            0) bash deploy/scripts/ohc-welcome.sh ;;
             1) run_setup ;;
             e|E) run_env_wizard ;;
             a|A) run_agent_wizard ;;
