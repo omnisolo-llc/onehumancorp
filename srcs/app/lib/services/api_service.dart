@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:ohc_app/models/task.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/models/channel.dart';
@@ -455,6 +456,18 @@ class ApiService {
         }
       }
     }
+  }
+
+  // ── Orchestration
+
+  Future<List<Task>> listOrchestrationTasks() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/orchestration/tasks'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.map((e) => Task.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   // ── Growth ───────────────────────────────────────────────────────────────
