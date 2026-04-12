@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"strings"
 	"context"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"encoding/json"
@@ -203,7 +204,29 @@ type AgentCapabilities struct {
 
 
 
+type Subscription struct {
+	Unsubscribe func()
+}
+
+type AgentPresence struct {
+	AgentID string
+	Status  string
+}
+
 type TeammateMesh interface {
+	// PubSub
+	Publish(ctx context.Context, topic string, payload []byte) error
+	Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error)
+
+	// Distributed Lock
+	AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error)
+	ReleaseLock(ctx context.Context, key string) error
+
+	// Presence
+	RegisterPresence(ctx context.Context, agentID string, status string) error
+	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
+
+	// Legacy
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
@@ -1013,4 +1036,178 @@ func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic strin
 
 func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
 	return make(chan []byte, 100), nil
+}
+
+
+// --- Added for Mission Requirements --- //
+
+func (rm *RedisTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
+	cmd := rm.client.B().Publish().Channel(topic).Message(string(payload)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
+
+func (rm *RedisTeammateMesh) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
+	ctxCancel, cancel := context.WithCancel(ctx)
+
+	go func() {
+		err := rm.client.Receive(ctxCancel, rm.client.B().Subscribe().Channel(topic).Build(), func(msg rueidis.PubSubMessage) {
+			handler([]byte(msg.Message))
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisTeammateMesh Subscribe error", "topic", topic, "err", err)
+		}
+	}()
+
+	return Subscription{
+		Unsubscribe: func() {
+			cancel()
+		},
+	}, nil
+}
+
+func (rm *RedisTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	cmd := rm.client.B().Set().Key("lock:" + key).Value("1").Nx().Px(ttl).Build()
+	resp := rm.client.Do(ctx, cmd)
+	if resp.Error() != nil {
+		if rueidis.IsRedisNil(resp.Error()) {
+			return false, nil
+		}
+		return false, resp.Error()
+	}
+	return true, nil
+}
+
+func (rm *RedisTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+	cmd := rm.client.B().Del().Key("lock:" + key).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	cmd := rm.client.B().Set().Key("presence:" + agentID).Value(status).Ex(60 * time.Second).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	cmdKeys := rm.client.B().Keys().Pattern("presence:*").Build()
+	keys, err := rm.client.Do(ctx, cmdKeys).AsStrSlice()
+	if err != nil {
+		return nil, err
+	}
+
+	var agents []AgentPresence
+	for _, key := range keys {
+		cmdGet := rm.client.B().Get().Key(key).Build()
+		status, err := rm.client.Do(ctx, cmdGet).ToString()
+		if err == nil {
+			agentID := strings.TrimPrefix(key, "presence:")
+			agents = append(agents, AgentPresence{
+				AgentID: agentID,
+				Status:  status,
+			})
+		}
+	}
+
+	return agents, nil
+}
+
+var localLocks = sync.Map{}
+
+type lockEntry struct {
+	expiresAt time.Time
+}
+
+func (lm *LocalTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
+	return lm.BroadcastMeshEvent(ctx, topic, payload)
+}
+
+func (lm *LocalTeammateMesh) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
+	ch, err := lm.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return Subscription{}, err
+	}
+
+	ctxCancel, cancel := context.WithCancel(ctx)
+
+	go func() {
+		for {
+			select {
+			case <-ctxCancel.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				handler(msg)
+			}
+		}
+	}()
+
+	return Subscription{
+		Unsubscribe: func() {
+			cancel()
+		},
+	}, nil
+}
+
+func (lm *LocalTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	entry := lockEntry{
+		expiresAt: time.Now().Add(ttl),
+	}
+
+	v, loaded := localLocks.LoadOrStore(key, entry)
+	if loaded {
+		existing := v.(lockEntry)
+		if time.Now().After(existing.expiresAt) {
+			localLocks.Store(key, entry)
+			return true, nil
+		}
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (lm *LocalTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+	localLocks.Delete(key)
+	return nil
+}
+
+var localPresence = sync.Map{}
+
+type presenceEntry struct {
+	status    string
+	expiresAt time.Time
+}
+
+func (lm *LocalTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	localPresence.Store(agentID, presenceEntry{
+		status:    status,
+		expiresAt: time.Now().Add(60 * time.Second),
+	})
+	return nil
+}
+
+func (lm *LocalTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	var agents []AgentPresence
+	now := time.Now()
+
+	localPresence.Range(func(key, value interface{}) bool {
+		agentID := key.(string)
+		entry := value.(presenceEntry)
+
+		if now.Before(entry.expiresAt) {
+			agents = append(agents, AgentPresence{
+				AgentID: agentID,
+				Status:  entry.status,
+			})
+		} else {
+			localPresence.Delete(key)
+		}
+
+		return true
+	})
+
+	return agents, nil
 }
