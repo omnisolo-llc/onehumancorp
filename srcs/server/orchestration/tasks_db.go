@@ -18,6 +18,7 @@ type SharedTaskDB struct {
 	Description     *string
 	Status          string
 	AssignedAgentID *string
+	Priority        *string
 	Dependencies    *string // JSON string
 	CreatedAt       string
 	UpdatedAt       string
@@ -59,9 +60,12 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
 	// In SQLite we use a simple SELECT then UPDATE in a transaction, protected by application mutex
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
+		SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.priority, st.dependencies, st.created_at, st.updated_at
+		FROM shared_tasks st
+		WHERE st.organization_id = $1 AND st.status = 'PENDING'
+		AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+		ORDER BY st.priority ASC, st.created_at ASC
 		LIMIT 1
 	`
 	row := tx.QueryRow(ctx, query, orgID)
@@ -69,7 +73,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	task := &SharedTaskDB{}
 	if err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID,
+		&task.Description, &task.Status, &task.AssignedAgentID, &task.Priority,
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
 		// Could be sql.ErrNoRows or pgx.ErrNoRows. We handle it generally
@@ -107,18 +111,20 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
 	// In Postgres we can use FOR UPDATE SKIP LOCKED
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
+		SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.priority, st.dependencies, st.created_at, st.updated_at
+		FROM shared_tasks st
+		WHERE st.organization_id = $1 AND st.status = 'PENDING'
+		AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+		ORDER BY st.priority ASC, st.created_at ASC
+		LIMIT 1 FOR UPDATE SKIP LOCKED
 	`
 	row := tx.QueryRow(ctx, query, orgID)
 
 	task := &SharedTaskDB{}
 	if err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID,
+		&task.Description, &task.Status, &task.AssignedAgentID, &task.Priority,
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {

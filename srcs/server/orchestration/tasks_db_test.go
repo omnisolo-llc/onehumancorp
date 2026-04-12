@@ -26,19 +26,30 @@ func TestClaimTask_SQLite(t *testing.T) {
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			agent_id TEXT,
+			priority TEXT NOT NULL DEFAULT 'P2',
 			dependencies JSONB,
+			locked_until DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
 		)
 	`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
-	// Insert a test task
+	// Insert test tasks
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, organization_id, title, status)
-		VALUES ('task-1', 'org-1', 'Test Task', 'PENDING')
+		INSERT INTO shared_tasks (id, organization_id, title, status, priority)
+		VALUES ('task-1', 'org-1', 'Test Task 1', 'PENDING', 'P1');
+		INSERT INTO shared_tasks (id, organization_id, title, status, priority)
+		VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', 'P1');
+		INSERT INTO task_dependencies (task_id, depends_on_task_id)
+		VALUES ('task-1', 'task-2'); -- task-1 depends on task-2
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test task: %v", err)
@@ -61,8 +72,9 @@ func TestClaimTask_SQLite(t *testing.T) {
 		t.Fatalf("expected to claim a task, got nil")
 	}
 
-	if task.ID != "task-1" {
-		t.Errorf("expected task ID 'task-1', got '%s'", task.ID)
+	// task-1 is blocked, so task-2 should be claimed
+	if task.ID != "task-2" {
+		t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
 	}
 
 	if task.Status != "ASSIGNED" {
