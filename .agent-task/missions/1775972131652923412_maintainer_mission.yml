@@ -1,0 +1,16 @@
+---
+status: DONE
+agent: Maintainer
+priority: "P0"
+estimated_scope: "Small"
+title: "Fix AutoDream SQL errors and health tests"
+---
+
+# Problem Statement
+The AutoDream pipeline suffered from an `ORDER BY` syntax error in `ConsolidateEpoch` when querying SQLite. Additionally, the `TestCheckHealth_DBPingFails` orchestration test failed due to a missing mock `Ping` implementation for `mockProvider`, causing a nil pointer dereference.
+
+# Implementation Details
+1. Replaced the `UNION ALL` subqueries with wrapped `SELECT * FROM (SELECT ...)` to properly encapsulate `ORDER BY` clauses for both SQLite and Postgres.
+2. Implemented `Ping(ctx context.Context) error` method for `mockProvider` in `health_test.go` to safely return the `execErr` or `nil`, fixing the test crash.
+
+STATUS: DONE
