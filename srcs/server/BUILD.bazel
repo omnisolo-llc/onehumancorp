@@ -6,8 +6,6 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server",
     visibility = ["//visibility:private"],
     deps = [
-        "//srcs/proto:agent_service_go_proto",
-        "//srcs/server/agents/builtinclient",
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/dashboard",
@@ -21,7 +19,6 @@ go_library(
         "//srcs/server/sync",
         "//srcs/server/telemetry",
         "@org_golang_google_grpc//:grpc",
-        "@org_golang_google_protobuf//proto",
         "@com_github_redis_rueidis//:rueidis",
     ],
 )

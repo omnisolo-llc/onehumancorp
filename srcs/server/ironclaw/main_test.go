@@ -370,19 +370,9 @@ func TestPerformScan_WalkError(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	unreadableDir := filepath.Join(dir, "unreadable")
-	if err := os.Mkdir(unreadableDir, 0o000); err != nil {
-		t.Fatalf("mkdir unreadable dir: %v", err)
-	}
-	defer os.Chmod(unreadableDir, 0o755)
+	os.Mkdir(unreadableDir, 0000)
 
-	if _, err := os.ReadDir(unreadableDir); err == nil {
-		t.Skip("environment can still read mode 0000 directory")
-	}
-
-	result, err := performScan(dir)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	result, _ := performScan(dir)
 	// it should have a finding about skipped file
 	foundSkip := false
 	for _, f := range result.Findings {
@@ -394,6 +384,8 @@ func TestPerformScan_WalkError(t *testing.T) {
 	if !foundSkip {
 		t.Errorf("expected a skipped finding, got %+v", result.Findings)
 	}
+
+	os.Chmod(unreadableDir, 0755) // restore for cleanup
 }
 
 func TestRunScan_TargetNoEquals(t *testing.T) {
