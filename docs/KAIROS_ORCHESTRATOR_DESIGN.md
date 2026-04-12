@@ -111,3 +111,13 @@ Adhering to OHC Core Values, the UI components tracking the KAIROS Orchestration
 *   **Typography**: `font-family: 'Outfit', 'Inter', sans-serif`
 
 </div>
+
+## Aesthetic Core
+This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
+`<style>
+body {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+</style>`
