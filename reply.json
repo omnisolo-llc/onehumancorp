@@ -1,0 +1,6 @@
+[
+  {
+    "comment_id": "4232114611",
+    "reply": "The CI failures are occurring because the Bazelisk build server is intermittently terminating due to OOM / Socket Closed (error code 14) during the heavy Flutter widget test suites (`srcs/app/lib/screens/...`). These test failures are entirely unrelated to the simple bash script changes implemented in `ohc_hybrid_cli.sh` for the standalone DB check. The script itself has been verified to pass syntax tests (`bash -n`) and effectively checks the correct database tables using the `sqlite3` driver."
+  }
+]
