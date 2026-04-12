@@ -490,8 +490,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ohc_cache_hits_total[5m])) by (cache_type)",
-          "legendFormat": "Hits - {{cache_type}}",
+          "expr": "sum(rate(ohc_cache_hits_total[5m])) by (operation, cache_type)",
+          "legendFormat": "Hits - {{operation}} - {{cache_type}}",
           "refId": "A"
         },
         {
@@ -499,8 +499,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ohc_cache_misses_total[5m])) by (cache_type)",
-          "legendFormat": "Misses - {{cache_type}}",
+          "expr": "sum(rate(ohc_cache_misses_total[5m])) by (operation, cache_type)",
+          "legendFormat": "Misses - {{operation}} - {{cache_type}}",
           "refId": "B"
         }
       ],
@@ -532,6 +532,92 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
+    },
+    {
+      "id": 1003,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "type": "timeseries",
+      "title": "AutoDream RAG Latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(ohc_autodream_sync_duration_seconds_bucket[5m]))",
+          "legendFormat": "Sync - {{deployment_mode}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(ohc_autodream_query_duration_seconds_bucket[5m]))",
+          "legendFormat": "Query - {{deployment_mode}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 1004,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "type": "timeseries",
+      "title": "AutoDream Memory Pipeline",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(autodream_memories_ingested_total[5m])) by (agent_id)",
+          "legendFormat": "Ingested - {{agent_id}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(autodream_memories_compressed_total[5m])) by (agent_id)",
+          "legendFormat": "Compressed - {{agent_id}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 1006,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "type": "timeseries",
+      "title": "Sync Daemon Health",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(ohc_sync_latency_seconds_sum[5m]) / rate(ohc_sync_latency_seconds_count[5m])",
+          "legendFormat": "Latency",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_sync_escalations_total[5m]))",
+          "legendFormat": "Escalations",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(ohc_sync_daemon_batch_size_sum[5m])) / sum(rate(ohc_sync_daemon_batch_size_count[5m]))",
+          "legendFormat": "Batch Size",
+          "refId": "C"
+        }
+      ]
     }
   ],
   "refresh": "",
