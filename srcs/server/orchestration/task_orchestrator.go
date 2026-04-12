@@ -11,6 +11,8 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
+	"github.com/onehumancorp/mono/srcs/server/memory"
+	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/redis/rueidis"
 )
 
@@ -482,6 +484,8 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		// Wired up memory consolidator
+		// Note: we can inject AutoDreamService here or instantiate it
 		worker := NewAutoDreamWorker(to.db)
 
 		// Let AutoDreamWorker handle it via direct LLM call
