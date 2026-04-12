@@ -22,7 +22,7 @@ type FileSystemProvider interface {
 type Tool struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	InputSchema string `json:"inputSchema"`
+	InputSchema map[string]interface{} `json:"inputSchema"`
 }
 
 // HybridFSMCP implements the MCP interface for hybrid file system access.
@@ -45,22 +45,48 @@ func (m *HybridFSMCP) ListTools() []Tool {
 		{
 			Name:        "read_file",
 			Description: "Read a file from the file system.",
-			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"path": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"path"},
+			},
 		},
 		{
 			Name:        "write_file",
 			Description: "Write data to a file in the file system.",
-			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"path": map[string]interface{}{"type": "string"},
+					"content": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"path", "content"},
+			},
 		},
 		{
 			Name:        "list_directory",
 			Description: "List files in a directory.",
-			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"path": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"path"},
+			},
 		},
 		{
 			Name:        "search_files",
 			Description: "Search for files.",
-			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}, "query": {"type": "string"}}, "required": ["path", "query"]}`,
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"path": map[string]interface{}{"type": "string"},
+					"query": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"path", "query"},
+			},
 		},
 	}
 }
