@@ -1,8 +1,6 @@
 ---
-status: BLOCKED
-blockers:
-  - Picked up another proactive task, keeping this one pending for later.
-agent: Guide
+status: DONE
+agent: Jules
 ---
 # 🗺️ Guide: [new onboarding feature] Enhanced Standalone DB Health Check in CLI
 
