@@ -40,7 +40,9 @@ var (
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
-	AutoDreamMemoriesCompressedCounter metric.Int64Counter
+		AutoDreamMemoriesCompressedCounter metric.Int64Counter
+	AutoDreamRecordsSyncedTotal metric.Int64Counter
+	AutoDreamSyncErrorsTotal metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
@@ -342,6 +344,22 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+		AutoDreamRecordsSyncedTotal, err = m.Int64Counter(
+		"ohc_autodream_records_synced_total",
+		metric.WithDescription("Total number of AutoDream records synced"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamSyncErrorsTotal, err = m.Int64Counter(
+		"ohc_autodream_sync_errors_total",
+		metric.WithDescription("Total number of AutoDream sync errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1185,5 +1203,19 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
+	}
+}
+
+// RecordAutoDreamRecordSynced increments the counter when an AutoDream record is synced.
+func RecordAutoDreamRecordSynced(ctx context.Context) {
+	if AutoDreamRecordsSyncedTotal != nil {
+		AutoDreamRecordsSyncedTotal.Add(ctx, 1)
+	}
+}
+
+// RecordAutoDreamSyncError increments the counter when an AutoDream sync error occurs.
+func RecordAutoDreamSyncError(ctx context.Context) {
+	if AutoDreamSyncErrorsTotal != nil {
+		AutoDreamSyncErrorsTotal.Add(ctx, 1)
 	}
 }
