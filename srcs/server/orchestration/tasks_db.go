@@ -81,7 +81,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
 	updateQuery := `
 		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
@@ -93,7 +93,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	task.Status = "ASSIGNED"
+	task.Status = "IN_PROGRESS"
 	task.AssignedAgentID = &agentID
 	return task, nil
 }
@@ -129,7 +129,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
 	updateQuery := `
 		UPDATE shared_tasks
-		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
@@ -141,7 +141,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	task.Status = "ASSIGNED"
+	task.Status = "IN_PROGRESS"
 	task.AssignedAgentID = &agentID
 	return task, nil
 }
