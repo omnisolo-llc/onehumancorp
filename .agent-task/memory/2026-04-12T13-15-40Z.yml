@@ -1,0 +1,2 @@
+timestamp: "2026-04-12T13-15-40Z"
+context: "Removed redundant mockProvider.Ping method definition in srcs/server/orchestration/health_test.go to fix test compilation failure and maintain clean build state."
