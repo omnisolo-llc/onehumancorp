@@ -15,7 +15,6 @@ js_binary(
         "//:node_modules/zod",
     ],
     entry_point = "index.js",
-
     visibility = ["//visibility:public"],
 )
 
@@ -24,7 +23,6 @@ go_library(
     srcs = ["client.go", "fs_provider.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
     deps = ["//srcs/server/auth"],
-
     visibility = ["//visibility:public"],
 )
 
