@@ -27,6 +27,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -470,24 +471,39 @@ func run(now time.Time, listen listenFunc) error {
 	startBuiltinAgentProcess(ctx, builtinclient.AddressFromEnv())
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
+	// Setup TeammateMesh API
+	var teammateMesh mesh.TeammateMesh
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+		rm, err := mesh.NewRedisTeammateMesh(redisURL)
+		if err == nil {
+			teammateMesh = rm
+		}
+	}
+	if teammateMesh == nil {
+		teammateMesh = mesh.NewLocalTeammateMesh()
+	}
+
+	// Keep compiler happy since it is not fully wired to orchestration yet
+	_ = teammateMesh
+
 	// Setup MeshTransport for Hub
-	var mesh orchestration.MeshTransport
+	var meshTransport orchestration.MeshTransport
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		rm, err := orchestration.NewRedisMeshTransport(redisURL)
 		if err == nil {
-			mesh = rm
+			meshTransport = rm
 		}
 	}
-	if mesh == nil {
+	if meshTransport == nil {
 		if pool != nil {
-			mesh = orchestration.NewMemoryMeshTransport(pool.Provider)
+			meshTransport = orchestration.NewMemoryMeshTransport(pool.Provider)
 		} else {
-			mesh = orchestration.NewMemoryMeshTransport(nil)
+			meshTransport = orchestration.NewMemoryMeshTransport(nil)
 		}
 	}
 
 	if cn := hub.CentrifugeNode(); cn != nil {
-		cn.SetMeshTransport(mesh)
+		cn.SetMeshTransport(meshTransport)
 	}
 
 	// Start gRPC server
@@ -501,7 +517,7 @@ func run(now time.Time, listen listenFunc) error {
 			grpc.UnaryInterceptor(orchestration.SPIFFEAuthInterceptor()),
 			grpc.StreamInterceptor(orchestration.SPIFFEStreamInterceptor()),
 		)
-		orchestration.RegisterHubService(s, hub, mesh)
+		orchestration.RegisterHubService(s, hub, meshTransport)
 		slog.Info("serving gRPC", "address", grpcAddress)
 		if err := s.Serve(lis); err != nil {
 			slog.Error("failed to serve gRPC", "error", err)
