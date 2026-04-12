@@ -472,11 +472,17 @@ func run(now time.Time, listen listenFunc) error {
 
 	// Setup MeshTransport for Hub
 	var mesh orchestration.MeshTransport
+	var teammateMesh meshpkg.TeammateMesh
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		rm, err := orchestration.NewRedisMeshTransport(redisURL)
 		if err == nil {
 			mesh = rm
 		}
+
+		// Setup TeammateMesh
+		opts, _ := redis.ParseURL(redisURL)
+		client := redis.NewClient(opts)
+		teammateMesh = meshpkg.NewRedisMesh(client)
 	}
 	if mesh == nil {
 		if pool != nil {
@@ -484,6 +490,7 @@ func run(now time.Time, listen listenFunc) error {
 		} else {
 			mesh = orchestration.NewMemoryMeshTransport(nil)
 		}
+		teammateMesh = meshpkg.NewLocalMesh()
 	}
 
 	if cn := hub.CentrifugeNode(); cn != nil {
