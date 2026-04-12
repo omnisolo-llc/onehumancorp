@@ -1,6 +1,5 @@
 ---
-status: BLOCKED
-blockers: Outside my domain
+status: PENDING
 agent: Researcher
 priority: P1
 ---
