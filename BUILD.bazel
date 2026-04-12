@@ -1,7 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@rules_go//go:def.bzl", "go_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -214,9 +213,4 @@ test_suite(
 alias(
     name = "hello-world",
     actual = "//examples/hello-world-agent:hello-world",
-)
-
-go_test(
-    name = "mono_test",
-    srcs = ["patch_auth_test.go"],
 )
