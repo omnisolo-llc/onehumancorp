@@ -643,6 +643,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching
 // and local-to-cloud mission sync as per the health guardianship requirements.
+
+
 // handleSyncRules provides dynamic sync rules for the PowerSync instance to ensure multi-tenant isolation.
 func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
