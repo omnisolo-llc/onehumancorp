@@ -527,7 +527,19 @@ class ApiService {
     _checkStatus(response);
   }
 
+
+  Future<List<Map<String, dynamic>>> listTeamInvites() async {
+    final res = await _client.get(
+      Uri.parse('${baseUrl}/api/growth/team-invites'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
   void _checkStatus(http.Response res) {
+
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('API error ${res.statusCode}: ${res.body}');
     }

@@ -24,6 +24,8 @@ import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
+import 'package:ohc_app/screens/team_invites_dashboard_screen.dart';
+
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -135,6 +137,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/team-invites',
+            builder: (context, state) => const TeamInvitesDashboardScreen(),
+          ),
+
         ],
       ),
     ],
@@ -193,6 +200,12 @@ class _Sidebar extends StatelessWidget {
           label: 'Viral Referrals',
           path: '/referrals',
         ),
+        _NavItem(
+          icon: Icons.group_add,
+          label: 'Team Invites',
+          path: '/team-invites',
+        ),
+
         _NavItem(
           icon: Icons.extension,
           label: 'Integrations & Tools',
