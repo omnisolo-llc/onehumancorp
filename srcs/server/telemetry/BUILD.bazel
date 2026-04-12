@@ -3,10 +3,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "telemetry",
     srcs = [
+        "telemetry_mcp.go",
         "minimax_metrics.go",
         "sync_worker.go",
         "telemetry.go",
-        "telemetry_mcp.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
