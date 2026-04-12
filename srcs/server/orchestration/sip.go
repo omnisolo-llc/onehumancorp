@@ -862,6 +862,7 @@ func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload str
 // Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from telemetry_buffer.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) (int, error) {
+	startTime := time.Now()
 	var records []struct {
 		id         int64
 		metricType string
@@ -945,6 +946,14 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM telemetry_buffer WHERE id IN (%s)", idList))
 		return err
 	})
+
+	if err == nil {
+		latency := time.Since(startTime).Seconds()
+		payloadSize := int64(len(payloadBuilder.String()))
+		telemetry.RecordSyncLatency(ctx, latency)
+		telemetry.RecordSyncPayloadSize(ctx, payloadSize)
+	}
+
 	return len(records), err
 }
 
@@ -955,6 +964,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Has side effects: Posts local RAG context to a remote endpoint, deletes local records on success.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	startTime := time.Now()
 	var records []struct {
 		id      string
 		payload string
@@ -994,6 +1004,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	client := &http.Client{Timeout: 10 * time.Second}
 	syncedCount := 0
 	var idsToDelete []string
+	var totalPayloadSize int64
 
 	for _, rec := range records {
 		// Sanitize sensitive data by explicitly deleting `rag_context` key
@@ -1033,6 +1044,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				idsToDelete = append(idsToDelete, rec.id)
 				syncedCount++
+				totalPayloadSize += int64(len(sanitizedPayload))
 			}
 			resp.Body.Close()
 		}
@@ -1047,6 +1059,12 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		if err != nil {
 			return syncedCount, err
 		}
+	}
+
+	if syncedCount > 0 {
+		latency := time.Since(startTime).Seconds()
+		telemetry.RecordSyncLatency(ctx, latency)
+		telemetry.RecordSyncPayloadSize(ctx, totalPayloadSize)
 	}
 
 	return syncedCount, nil
