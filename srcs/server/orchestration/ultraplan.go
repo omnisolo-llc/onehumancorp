@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -85,6 +86,7 @@ type UltraPlanManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // Reusing CentrifugeNode for Mesh integration
+	mu          sync.Mutex
 }
 
 // NewUltraPlanManager initializes a new UltraPlanManager.
@@ -217,6 +219,25 @@ func (m *UltraPlanManager) ApprovePlan(ctx context.Context, planID string, agent
 
 // modifyStateMachine abstracts the boilerplate for fetching, updating, and locking the state machine.
 func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string, modifier func(*UltraPlan) (bool, error), eventType string) error {
+	if m.redisClient != nil {
+		lockKey := "lock:ultraplan:" + planID
+		cmd := m.redisClient.B().Set().Key(lockKey).Value("system").Nx().Ex(30 * time.Second).Build()
+		err := m.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return errors.New("ultra plan is currently locked")
+			}
+			return fmt.Errorf("failed to acquire lock: %w", err)
+		}
+		defer func() {
+			delCmd := m.redisClient.B().Del().Key(lockKey).Build()
+			_ = m.redisClient.Do(ctx, delCmd).Error()
+		}()
+	} else if m.db.IsSQLite() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+	}
+
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -337,6 +358,9 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 			delCmd := m.redisClient.B().Del().Key(lockKey).Build()
 			_ = m.redisClient.Do(ctx, delCmd).Error()
 		}()
+	} else if m.db.IsSQLite() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
 	}
 
 	// Begin TX for atomicity
