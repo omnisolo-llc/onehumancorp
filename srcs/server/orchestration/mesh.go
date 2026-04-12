@@ -511,6 +511,10 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		for j := 0; j < 4; j++ {
 			go lm.run(i)
@@ -817,6 +821,13 @@ type LocalTeammateMesh struct {
 	coordBroadcast      []chan MeshMessage
 	coordSubs           []map[chan MeshMessage]struct{}
 	coordMu             []sync.RWMutex
+	capsBroadcast       []chan pb.AgentCapabilities
+	capsSubs            []map[chan pb.AgentCapabilities]struct{}
+	capsMu              []sync.RWMutex
+	eventsBroadcast     map[string][]chan []byte
+	eventsSubs          map[string][]map[chan []byte]struct{}
+	eventsMu            map[string][]sync.RWMutex
+	eventsGlobalMu      sync.RWMutex
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
@@ -829,6 +840,12 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		coordBroadcast:      make([]chan MeshMessage, numShards),
 		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:             make([]sync.RWMutex, numShards),
+		capsBroadcast:       make([]chan pb.AgentCapabilities, numShards),
+		capsSubs:            make([]map[chan pb.AgentCapabilities]struct{}, numShards),
+		capsMu:              make([]sync.RWMutex, numShards),
+		eventsBroadcast:     make(map[string][]chan []byte),
+		eventsSubs:          make(map[string][]map[chan []byte]struct{}),
+		eventsMu:            make(map[string][]sync.RWMutex),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
@@ -839,6 +856,8 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		lm.subs[i] = make(map[chan Task]struct{})
 		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		// Spawn multiple worker threads per shard
 		for j := 0; j < 4; j++ {
@@ -846,6 +865,7 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 			go lm.persistWorker(i)
 		}
 		go lm.runCoord(i)
+		go lm.runCaps(i)
 	}
 	return lm
 }
@@ -999,18 +1019,148 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 }
 
 
+
 func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	shardIdx := lm.getShard(caps.GetAgentId())
+
+	err := meshWithRetry(ctx, 3, func() error {
+		select {
+		case lm.capsBroadcast[shardIdx] <- caps:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh caps broadcast channel full")
+		}
+	})
+
+	if err != nil {
+		slog.Warn("LocalTeammateMesh caps broadcast channel full, dropping message after retries")
+	}
 	return nil
 }
 
 func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
-	return make(chan pb.AgentCapabilities, 100), nil
+	ch := make(chan pb.AgentCapabilities, 100)
+
+	for i := 0; i < numShards; i++ {
+		lm.capsMu[i].Lock()
+		lm.capsSubs[i][ch] = struct{}{}
+		lm.capsMu[i].Unlock()
+	}
+
+	go func() {
+		<-ctx.Done()
+		for i := 0; i < numShards; i++ {
+			lm.capsMu[i].Lock()
+			delete(lm.capsSubs[i], ch)
+			lm.capsMu[i].Unlock()
+		}
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+func (lm *LocalTeammateMesh) runCaps(shardIdx int) {
+	for msg := range lm.capsBroadcast[shardIdx] {
+		lm.capsMu[shardIdx].RLock()
+		for ch := range lm.capsSubs[shardIdx] {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		lm.capsMu[shardIdx].RUnlock()
+	}
+}
+
+func (lm *LocalTeammateMesh) initTopic(topic string) {
+	lm.eventsGlobalMu.Lock()
+	defer lm.eventsGlobalMu.Unlock()
+	if _, ok := lm.eventsBroadcast[topic]; !ok {
+		lm.eventsBroadcast[topic] = make([]chan []byte, numShards)
+		lm.eventsSubs[topic] = make([]map[chan []byte]struct{}, numShards)
+		lm.eventsMu[topic] = make([]sync.RWMutex, numShards)
+		for i := 0; i < numShards; i++ {
+			lm.eventsBroadcast[topic][i] = make(chan []byte, 10000)
+			lm.eventsSubs[topic][i] = make(map[chan []byte]struct{})
+			go lm.runEvents(topic, i)
+		}
+	}
 }
 
 func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	lm.initTopic(topic)
+	shardIdx := lm.getShard(string(payload)) // hash payload for random shard since event ID isn't directly available
+
+	lm.eventsGlobalMu.RLock()
+	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
+	lm.eventsGlobalMu.RUnlock()
+
+	err := meshWithRetry(ctx, 3, func() error {
+		select {
+		case broadcastChan <- payload:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh events broadcast channel full")
+		}
+	})
+
+	if err != nil {
+		slog.Warn("LocalTeammateMesh events broadcast channel full, dropping message after retries")
+	}
 	return nil
 }
 
 func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
-	return make(chan []byte, 100), nil
+	lm.initTopic(topic)
+	ch := make(chan []byte, 100)
+
+	lm.eventsGlobalMu.RLock()
+	muArray := lm.eventsMu[topic]
+	subsArray := lm.eventsSubs[topic]
+	for i := 0; i < numShards; i++ {
+		muArray[i].Lock()
+		subsArray[i][ch] = struct{}{}
+		muArray[i].Unlock()
+	}
+	lm.eventsGlobalMu.RUnlock()
+
+	go func() {
+		<-ctx.Done()
+		lm.eventsGlobalMu.RLock()
+		if muArray, ok := lm.eventsMu[topic]; ok {
+			subsArray := lm.eventsSubs[topic]
+			for i := 0; i < numShards; i++ {
+				muArray[i].Lock()
+				delete(subsArray[i], ch)
+				muArray[i].Unlock()
+			}
+		}
+		lm.eventsGlobalMu.RUnlock()
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+func (lm *LocalTeammateMesh) runEvents(topic string, shardIdx int) {
+	lm.eventsGlobalMu.RLock()
+	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
+	lm.eventsGlobalMu.RUnlock()
+
+	for msg := range broadcastChan {
+		lm.eventsGlobalMu.RLock()
+		if muArray, ok := lm.eventsMu[topic]; ok {
+			subsArray := lm.eventsSubs[topic]
+			muArray[shardIdx].RLock()
+			for ch := range subsArray[shardIdx] {
+				select {
+				case ch <- msg:
+				default:
+				}
+			}
+			muArray[shardIdx].RUnlock()
+		}
+		lm.eventsGlobalMu.RUnlock()
+	}
 }

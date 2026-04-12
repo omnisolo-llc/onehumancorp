@@ -222,3 +222,73 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 		}
 	})
 }
+
+func TestLocalTeammateMesh_CapabilitiesAndEvents(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pool := db.NewTestProvider()
+	defer pool.Close()
+
+	// Create table so the persistWorker doesn't error out constantly
+	_, _ = pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id VARCHAR NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			agent_id TEXT,
+			priority VARCHAR NOT NULL DEFAULT 'P2',
+			payload JSON,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	mt := NewLocalTeammateMesh(pool)
+
+	t.Run("Capabilities", func(t *testing.T) {
+		sub, err := mt.SubscribeCapabilities(ctx)
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+
+		err = mt.AdvertiseCapabilities(ctx, pb.AgentCapabilities{
+			AgentId: "test-agent",
+		})
+		if err != nil {
+			t.Fatalf("failed to advertise: %v", err)
+		}
+
+		select {
+		case caps := <-sub:
+			if caps.AgentId != "test-agent" {
+				t.Fatalf("expected test-agent, got %v", caps.AgentId)
+			}
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for capabilities")
+		}
+	})
+
+	t.Run("MeshEvents", func(t *testing.T) {
+		sub, err := mt.SubscribeMeshEvents(ctx, "tasks")
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+
+		err = mt.BroadcastMeshEvent(ctx, "tasks", []byte("payload"))
+		if err != nil {
+			t.Fatalf("failed to broadcast: %v", err)
+		}
+
+		select {
+		case payload := <-sub:
+			if string(payload) != "payload" {
+				t.Fatalf("expected payload, got %v", string(payload))
+			}
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for mesh event")
+		}
+	})
+}
