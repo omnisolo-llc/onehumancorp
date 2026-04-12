@@ -3,6 +3,27 @@ edition = "2024";
 package ohc.agent.service;
 
 option cc_enable_arenas = true;
+option go_package = "github.com/onehumancorp/mono/srcs/proto/agentservice;agentservicepb";
+
+// AgentRuntimeConfig is the proto-first control surface for agent defaults and
+// per-request execution settings.
+message AgentRuntimeConfig {
+  string llm_provider = 1;
+  string model = 2;
+  string llm_endpoint = 3;
+  string system_prompt = 4;
+  int32 max_tokens = 5;
+  float temperature = 6;
+  int32 max_iterations = 7;
+  int32 max_context_messages = 8;
+}
+
+// BuiltinAgentProcessConfig is written by the Go server and consumed by the
+// standalone C++ agent daemon during startup.
+message BuiltinAgentProcessConfig {
+  string listen_address = 1;
+  AgentRuntimeConfig runtime_config = 2;
+}
 
 // RunTaskRequest is sent from the main server to the C++ agent to start a task.
 message RunTaskRequest {
@@ -23,6 +44,9 @@ message RunTaskRequest {
   float temperature = 7;
   // Maximum number of messages retained in the context window before trimming.
   int32 max_context_messages = 8;
+  // Preferred proto-first configuration surface. When populated, these values
+  // override the process defaults and supersede the legacy duplicated fields.
+  AgentRuntimeConfig runtime_config = 9;
 }
 
 // EventType classifies a RunTaskEvent.
@@ -36,6 +60,10 @@ enum EventType {
   TASK_COMPLETE = 3;
   // A fatal error has occurred.
   TASK_ERROR = 4;
+  // The agent accepted the task and initialized its runtime state.
+  RUN_STARTED = 5;
+  // A new ReAct iteration began.
+  ITERATION_STARTED = 6;
 }
 
 // RunTaskEvent is a single streamed event from the agent back to the server.
@@ -49,6 +77,9 @@ message RunTaskEvent {
   string tool_result = 5;
   // Present for TASK_ERROR.
   string error = 6;
+  // Present for RUN_STARTED and ITERATION_STARTED.
+  int32 iteration = 7;
+  int32 message_count = 8;
 }
 
 // PingRequest / PingResponse for health-check.
@@ -68,6 +99,11 @@ message SubAgentRequest {
   string system_prompt = 5;
   int32 max_tokens = 6;
   float temperature = 7;
+  // Optional remote gRPC endpoint for the sub-agent (host:port).
+  // When empty, the receiving agent may execute the request locally.
+  string sub_agent_address = 8;
+  // Preferred proto-first configuration surface for sub-agent execution.
+  AgentRuntimeConfig runtime_config = 9;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.

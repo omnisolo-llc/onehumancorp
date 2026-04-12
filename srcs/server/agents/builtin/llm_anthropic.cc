@@ -3,14 +3,19 @@
 #include <utility>
 
 #include "srcs/server/agents/builtin/http_client.h"
+#include "srcs/server/agents/builtin/llm_parsing.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "nlohmann/json.hpp"
 
 namespace ohc::agent {
 
-AnthropicClient::AnthropicClient(std::string api_key, std::string api_version)
-    : api_key_(std::move(api_key)), api_version_(std::move(api_version)) {}
+AnthropicClient::AnthropicClient(std::string api_key,
+                                 std::string api_version,
+                                 std::string endpoint)
+    : api_key_(std::move(api_key)),
+      api_version_(std::move(api_version)),
+      endpoint_(std::move(endpoint)) {}
 
 absl::StatusOr<ChatResponse> AnthropicClient::Chat(const ChatRequest& req) {
   // ---- Build messages array (Anthropic format) ----------------------------
@@ -78,7 +83,7 @@ absl::StatusOr<ChatResponse> AnthropicClient::Chat(const ChatRequest& req) {
 
   // ---- HTTP POST -----------------------------------------------------------
   HttpRequest http_req;
-  http_req.url    = "https://api.anthropic.com/v1/messages";
+  http_req.url    = endpoint_;
   http_req.method = "POST";
   http_req.body   = payload.dump();
   http_req.headers = {
@@ -95,30 +100,7 @@ absl::StatusOr<ChatResponse> AnthropicClient::Chat(const ChatRequest& req) {
   }
 
   // ---- Parse response ------------------------------------------------------
-  const auto result =
-      nlohmann::json::parse(resp_or->body, nullptr, false);
-  if (result.is_discarded()) {
-    return absl::InternalError("Failed to parse Anthropic JSON response");
-  }
-
-  ChatResponse chat_resp;
-  chat_resp.message.role = Role::kAssistant;
-
-  const auto& blocks = result.value("content", nlohmann::json::array());
-  for (const auto& block : blocks) {
-    const auto type = block.value("type", std::string{});
-    if (type == "text") {
-      chat_resp.message.content += block.value("text", std::string{});
-    } else if (type == "tool_use") {
-      ToolCall call;
-      call.id        = block.value("id",   std::string{});
-      call.name      = block.value("name", std::string{});
-      call.arguments = block.value("input", nlohmann::json{});
-      chat_resp.message.tool_calls.push_back(std::move(call));
-    }
-  }
-
-  return chat_resp;
+  return ParseAnthropicChatResponse(resp_or->body);
 }
 
 }  // namespace ohc::agent

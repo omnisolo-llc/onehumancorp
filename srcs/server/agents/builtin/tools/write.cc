@@ -59,9 +59,10 @@ Tool MakeWriteTool() {
         }
         const std::string content = content_it->get<std::string>();
         file.write(content.data(), static_cast<std::streamsize>(content.size()));
+          file.close();
         if (!file) {
           return absl::InternalError(
-              absl::StrCat("Write: error writing to '", p.string(), "'"));
+            absl::StrCat("Write: error writing to '", p.string(), "'"));
         }
         return "File written successfully.";
       },

@@ -17,7 +17,6 @@ std::vector<Tool> MakeDefaultTools() {
   tools.push_back(MakeSendMessageTool());
   tools.push_back(MakeTodoWriteTool());
   tools.push_back(MakeToolSearchTool());
-  return tools;
-}
+  return tools; }
 
 }  // namespace ohc::agent

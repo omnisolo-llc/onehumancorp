@@ -1,15 +1,14 @@
 #pragma once
 
-// Thin libcurl wrapper used by the LLM client implementations.
-// Using libcurl keeps the binary small and is pre-installed on virtually
-// every Linux / Raspberry-Pi distribution.
+// Thin cpp-httplib wrapper used by the LLM client implementations.
+// Requests stay hermetic because cpp-httplib and its TLS backend are supplied
+// by Bazel rather than the host toolchain.
 
 #include <cstdint>
 #include <map>
 #include <string>
 
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 
 namespace ohc::agent {
 

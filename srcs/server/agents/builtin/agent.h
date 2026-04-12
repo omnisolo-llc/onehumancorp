@@ -7,7 +7,6 @@
 //   • absl::flat_hash_map for O(1) tool dispatch.
 
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,6 +14,7 @@
 #include "srcs/server/agents/builtin/llm_client.h"
 #include "srcs/server/agents/builtin/tools/tool.h"
 #include "srcs/server/agents/builtin/types.h"
+#include "absl/functional/function_ref.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/inlined_vector.h"
 #include "absl/status/statusor.h"
@@ -29,13 +29,17 @@ namespace ohc::agent {
 
 struct AgentEvent {
   enum class Type : uint8_t {
-    kTextChunk    = 0,  // Partial assistant text.
-    kToolCall     = 1,  // A tool was invoked.
-    kTaskComplete = 2,  // Final response ready.
-    kTaskError    = 3,  // Unrecoverable error.
+    kRunStarted       = 0,  // A task was accepted and runtime initialized.
+    kIterationStarted = 1,  // A new ReAct iteration has started.
+    kTextChunk        = 2,  // Partial assistant text.
+    kToolCall         = 3,  // A tool was invoked.
+    kTaskComplete     = 4,  // Final response ready.
+    kTaskError        = 5,  // Unrecoverable error.
   };
 
   Type        type;
+  int32_t     iteration = 0;     // RUN_STARTED / ITERATION_STARTED
+  int32_t     message_count = 0; // RUN_STARTED / ITERATION_STARTED
   std::string content;        // TEXT_CHUNK / TASK_COMPLETE
   std::string tool_name;      // TOOL_CALL
   std::string tool_args_json; // TOOL_CALL
@@ -43,8 +47,7 @@ struct AgentEvent {
   std::string error;          // TASK_ERROR
 };
 
-// EventCallback is optional; pass nullptr to disable streaming.
-using EventCallback = std::function<void(const AgentEvent&)>;
+using EventCallback = absl::FunctionRef<void(const AgentEvent&)>;
 
 // ---------------------------------------------------------------------------
 // AgentConfig
@@ -81,8 +84,11 @@ class Agent {
   // Returns the full conversation history on success.
   // on_event is called synchronously from the loop thread.
   absl::StatusOr<std::vector<Message>> Run(
+      absl::Span<const Message> initial_messages);
+
+  absl::StatusOr<std::vector<Message>> Run(
       absl::Span<const Message> initial_messages,
-      EventCallback on_event = nullptr);
+      EventCallback on_event);
 
  private:
   // Removes old tool-result messages when the history is too long.

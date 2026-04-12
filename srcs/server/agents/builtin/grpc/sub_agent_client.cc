@@ -31,17 +31,11 @@ SubAgentClient::SubAgentClient(absl::string_view address) {
 }
 
 absl::StatusOr<std::string> SubAgentClient::Dispatch(
-    absl::string_view task, absl::string_view model,
-    absl::string_view provider, absl::string_view endpoint,
-    absl::string_view system, int32_t max_tokens, float temperature) {
+    absl::string_view task,
+    const service::AgentRuntimeConfig& runtime_config) {
   SubAgentRequest req;
   req.set_task(std::string(task));
-  req.set_model(std::string(model));
-  req.set_llm_provider(std::string(provider));
-  req.set_llm_endpoint(std::string(endpoint));
-  req.set_system_prompt(std::string(system));
-  req.set_max_tokens(max_tokens);
-  req.set_temperature(temperature);
+  *req.mutable_runtime_config() = runtime_config;
 
   SubAgentResponse resp;
   ClientContext ctx;
@@ -58,6 +52,23 @@ absl::StatusOr<std::string> SubAgentClient::Dispatch(
         absl::StrCat("Sub-agent returned error: ", resp.error()));
   }
   return resp.result();
+}
+
+absl::StatusOr<std::string> SubAgentClient::Dispatch(
+    absl::string_view task, absl::string_view model,
+    absl::string_view provider, absl::string_view endpoint,
+    absl::string_view system, int32_t max_tokens, float temperature,
+    int32_t max_iterations, int32_t max_context_messages) {
+  service::AgentRuntimeConfig runtime_config;
+  runtime_config.set_model(std::string(model));
+  runtime_config.set_llm_provider(std::string(provider));
+  runtime_config.set_llm_endpoint(std::string(endpoint));
+  runtime_config.set_system_prompt(std::string(system));
+  runtime_config.set_max_tokens(max_tokens);
+  runtime_config.set_temperature(temperature);
+  runtime_config.set_max_iterations(max_iterations);
+  runtime_config.set_max_context_messages(max_context_messages);
+  return Dispatch(task, runtime_config);
 }
 
 bool SubAgentClient::Ping() {

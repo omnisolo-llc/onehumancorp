@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "srcs/server/agents/builtin/http_client.h"
+#include "srcs/server/agents/builtin/llm_parsing.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "nlohmann/json.hpp"
@@ -88,34 +89,7 @@ absl::StatusOr<ChatResponse> OpenAIClient::Chat(const ChatRequest& req) {
   }
 
   // ---- Parse response ------------------------------------------------------
-  const auto result =
-      nlohmann::json::parse(resp_or->body, /*cb=*/nullptr, /*allow_exc=*/false);
-  if (result.is_discarded()) {
-    return absl::InternalError("Failed to parse OpenAI JSON response");
-  }
-
-  ChatResponse chat_resp;
-  chat_resp.message.role = Role::kAssistant;
-
-  const auto& choices = result.value("choices", nlohmann::json::array());
-  if (!choices.empty()) {
-    const auto& msg = choices[0]["message"];
-    if (msg.contains("content") && msg["content"].is_string()) {
-      chat_resp.message.content = msg["content"].get<std::string>();
-    }
-    if (msg.contains("tool_calls")) {
-      for (const auto& tc : msg["tool_calls"]) {
-        ToolCall call;
-        call.id   = tc["id"].get<std::string>();
-        call.name = tc["function"]["name"].get<std::string>();
-        const auto& args_str = tc["function"]["arguments"].get<std::string>();
-        call.arguments = nlohmann::json::parse(args_str, nullptr, false);
-        chat_resp.message.tool_calls.push_back(std::move(call));
-      }
-    }
-  }
-
-  return chat_resp;
+  return ParseOpenAIChatResponse(resp_or->body);
 }
 
 }  // namespace ohc::agent

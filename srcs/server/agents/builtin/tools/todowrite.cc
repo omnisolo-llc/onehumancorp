@@ -34,7 +34,6 @@ Tool MakeTodoWriteTool() {
           return absl::InvalidArgumentError("TodoWrite: missing 'todo'");
         }
         const std::string todo = it->get<std::string>();
-
         const std::filesystem::path p(kTodoPath);
         std::error_code ec;
         std::filesystem::create_directories(p.parent_path(), ec);
@@ -49,6 +48,7 @@ Tool MakeTodoWriteTool() {
               "TodoWrite: cannot open '", std::string(kTodoPath), "'"));
         }
         file << "- " << todo << "\n";
+        file.close();
         if (!file) {
           return absl::InternalError("TodoWrite: write failed");
         }
