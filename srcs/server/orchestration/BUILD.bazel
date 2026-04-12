@@ -28,6 +28,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
+        "//srcs/server/orchestration/mesh",
         "@com_github_gorilla_websocket//:websocket",
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
@@ -84,6 +85,7 @@ go_test(
     embed = [":orchestration"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
+        "//srcs/server/orchestration/mesh",
         "@com_github_gorilla_websocket//:websocket",
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",

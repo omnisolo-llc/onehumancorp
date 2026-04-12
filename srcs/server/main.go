@@ -27,6 +27,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -279,12 +281,20 @@ func run(now time.Time, listen listenFunc) error {
 		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
 	}
 
-	// Initialize Rueidis client if REDIS_URL is provided
 	var redisClient rueidis.Client
+	var teammateMesh mesh.TeammateMesh
+
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
 		if opts, err := rueidis.ParseURL(redisURL); err == nil {
 			redisClient, _ = rueidis.NewClient(opts)
+			if os.Getenv("OHC_STANDALONE") != "true" {
+				teammateMesh = mesh.NewRedisMesh(redisClient)
+			}
 		}
+	}
+
+	if teammateMesh == nil {
+		teammateMesh = mesh.NewLocalMesh()
 	}
 
 	if pool != nil {
@@ -486,6 +496,8 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	}
 
+	hub.SetTeammateMesh(teammateMesh)
+	hub.SetTeammateMesh(teammateMesh)
 	if cn := hub.CentrifugeNode(); cn != nil {
 		cn.SetMeshTransport(mesh)
 	}
