@@ -66,6 +66,9 @@ var (
 	toolAutoCorrectionCounter          metric.Int64Counter
 	deliberationPhaseDurationHistogram metric.Float64Histogram
 
+	hybridHealthStatusGauge    metric.Int64Gauge
+	hybridSyncBacklogCountGauge metric.Int64Gauge
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -158,6 +161,7 @@ type mockableMeter interface {
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
+	Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error)
 }
 
 // InitWithMeter functionality.
@@ -483,6 +487,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_deliberation_phase_duration_seconds",
 		metric.WithDescription("Duration of UltraPlan deliberation phases"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	hybridHealthStatusGauge, err = m.Int64Gauge(
+		"ohc_hybrid_health_status",
+		metric.WithDescription("Operational health status of the hybrid OS (1=Healthy, 0=Degraded)"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	hybridSyncBacklogCountGauge, err = m.Int64Gauge(
+		"ohc_hybrid_sync_backlog_count",
+		metric.WithDescription("Number of pending missions awaiting cloud synchronization"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1185,5 +1205,46 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
+	}
+}
+
+// RecordHybridHealthStatus records the operational health status of the system.
+func RecordHybridHealthStatus(ctx context.Context, healthy bool, mode string) {
+	if hybridHealthStatusGauge == nil {
+		return
+	}
+	val := int64(0)
+	if healthy {
+		val = 1
+	}
+	hybridHealthStatusGauge.Record(ctx, val, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"healthy": healthy,
+			"mode":    mode,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "hybrid_health_status", string(payloadBytes))
+	}
+}
+
+// RecordHybridSyncBacklog records the current mission sync backlog count.
+func RecordHybridSyncBacklog(ctx context.Context, count int64) {
+	if hybridSyncBacklogCountGauge == nil {
+		return
+	}
+	hybridSyncBacklogCountGauge.Record(ctx, count)
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"count": count,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "hybrid_sync_backlog", string(payloadBytes))
 	}
 }

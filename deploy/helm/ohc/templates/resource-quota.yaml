@@ -10,4 +10,8 @@ spec:
     limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "2" }}
     limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "2Gi" }}
     pods: {{ .Values.backend.resourceQuota.limits.pods | default "20" | quote }}
+    services: "10"
+    configmaps: "20"
+    secrets: "20"
+    persistentvolumeclaims: "5"
 {{- end }}

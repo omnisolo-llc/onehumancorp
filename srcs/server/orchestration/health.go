@@ -3,6 +3,8 @@ package orchestration
 import (
 	"context"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // HybridHealthProbe details the system health across standalone and cloud modes.
@@ -53,6 +55,9 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 			probe.Status = "degraded"
 		}
 	}
+
+	telemetry.RecordHybridHealthStatus(ctx, probe.Status == "healthy", probe.Mode)
+	telemetry.RecordHybridSyncBacklog(ctx, int64(probe.SyncBacklog))
 
 	return probe, nil
 }
