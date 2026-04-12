@@ -258,3 +258,176 @@ func (q *SQLiteTaskQueue) Complete(ctx context.Context, queueName, taskID string
 	_, err := q.db.Exec(ctx, "DELETE FROM local_queue_jobs WHERE id = $1", taskID)
 	return err
 }
+
+// Job represents a sub-agent execution job.
+type Job struct {
+	ID             string
+	OrganizationID string
+	ParentTaskID   string
+	Payload        map[string]interface{}
+}
+
+// SubAgentQueue defines the queue interface for sub-agent jobs.
+type SubAgentQueue interface {
+	Enqueue(ctx context.Context, job Job) error
+	Dequeue(ctx context.Context) (*Job, error)
+	Ack(ctx context.Context, jobID string) error
+	Nack(ctx context.Context, jobID string) error
+}
+
+func NewSubAgentQueue(provider db.Provider, redisClient rueidis.Client, queueName string) SubAgentQueue {
+	if redisClient != nil {
+		return &RedisSubAgentQueue{client: redisClient, queueName: queueName}
+	}
+	return &SQLiteSubAgentQueue{db: provider, queueName: queueName}
+}
+
+// RedisSubAgentQueue implementation using Lists and Hashes for processing state.
+type RedisSubAgentQueue struct {
+	client    rueidis.Client
+	queueName string
+}
+
+func (q *RedisSubAgentQueue) Enqueue(ctx context.Context, job Job) error {
+	bytes, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	cmd := q.client.B().Rpush().Key(q.queueName).Element(string(bytes)).Build()
+	return q.client.Do(ctx, cmd).Error()
+}
+
+func (q *RedisSubAgentQueue) Dequeue(ctx context.Context) (*Job, error) {
+	processingKey := q.queueName + ":processing"
+	cmd := q.client.B().Rpoplpush().Source(q.queueName).Destination(processingKey).Build()
+	str, err := q.client.Do(ctx, cmd).ToString()
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var job Job
+	if err := json.Unmarshal([]byte(str), &job); err != nil {
+		return nil, err
+	}
+	// We could store it in a hash, but for this simpler implementation
+	// we just push it into processing list. Ack removes from processing list.
+	return &job, nil
+}
+
+func (q *RedisSubAgentQueue) Ack(ctx context.Context, jobID string) error {
+	// In a real robust implementation, we would keep track of the payload to remove it via LREM.
+	// Since we only have the jobID, we'll assume there is a hash storing payloads or just ignore.
+	// Here we will implement it by searching the processing list via Lua or just returning nil
+	// because LREM requires the exact value. Let's use a lua script to find and delete.
+	script := `
+	local items = redis.call('LRANGE', KEYS[1], 0, -1)
+	for i, item in ipairs(items) do
+		if string.find(item, ARGV[1]) then
+			redis.call('LREM', KEYS[1], 1, item)
+			return 1
+		end
+	end
+	return 0
+	`
+	processingKey := q.queueName + ":processing"
+	cmd := q.client.B().Eval().Script(script).Numkeys(1).Key(processingKey).Arg(jobID).Build()
+	_ = q.client.Do(ctx, cmd)
+	return nil
+}
+
+func (q *RedisSubAgentQueue) Nack(ctx context.Context, jobID string) error {
+	script := `
+	local items = redis.call('LRANGE', KEYS[1], 0, -1)
+	for i, item in ipairs(items) do
+		if string.find(item, ARGV[1]) then
+			redis.call('LREM', KEYS[1], 1, item)
+			redis.call('RPUSH', KEYS[2], item)
+			return 1
+		end
+	end
+	return 0
+	`
+	processingKey := q.queueName + ":processing"
+	cmd := q.client.B().Eval().Script(script).Numkeys(2).Key(processingKey).Key(q.queueName).Arg(jobID).Build()
+	_ = q.client.Do(ctx, cmd)
+	return nil
+}
+
+// SQLiteSubAgentQueue implementation
+type SQLiteSubAgentQueue struct {
+	db        db.Provider
+	queueName string
+}
+
+func (q *SQLiteSubAgentQueue) Enqueue(ctx context.Context, job Job) error {
+	payloadBytes, err := json.Marshal(job.Payload)
+	if err != nil {
+		return err
+	}
+	query := `
+		INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status)
+		VALUES ($1, $2, $3, $4, 'QUEUED')
+	`
+	_, err = q.db.Exec(ctx, query, job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes))
+	return err
+}
+
+func (q *SQLiteSubAgentQueue) Dequeue(ctx context.Context) (*Job, error) {
+	var id, orgID, parentID, payloadStr string
+	var query string
+
+	if q.db.IsSQLite() {
+		query = `
+			UPDATE sub_agent_queue
+			SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM sub_agent_queue
+				WHERE status = 'QUEUED'
+				ORDER BY created_at ASC LIMIT 1
+			)
+			RETURNING id, organization_id, parent_task_id, payload
+		`
+	} else {
+		query = `
+			UPDATE sub_agent_queue
+			SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
+			WHERE id IN (
+				SELECT id FROM sub_agent_queue
+				WHERE status = 'QUEUED'
+				ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, organization_id, parent_task_id, payload
+		`
+	}
+
+	err := q.db.QueryRow(ctx, query).Scan(&id, &orgID, &parentID, &payloadStr)
+	if err != nil {
+		// Suppress only if it's the "no rows" error, depending on the DB driver
+		if err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var payload map[string]interface{}
+	_ = json.Unmarshal([]byte(payloadStr), &payload)
+
+	return &Job{
+		ID:             id,
+		OrganizationID: orgID,
+		ParentTaskID:   parentID,
+		Payload:        payload,
+	}, nil
+}
+
+func (q *SQLiteSubAgentQueue) Ack(ctx context.Context, jobID string) error {
+	_, err := q.db.Exec(ctx, "UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", jobID)
+	return err
+}
+
+func (q *SQLiteSubAgentQueue) Nack(ctx context.Context, jobID string) error {
+	_, err := q.db.Exec(ctx, "UPDATE sub_agent_queue SET status = 'QUEUED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", jobID)
+	return err
+}
