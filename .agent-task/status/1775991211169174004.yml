@@ -1,0 +1,4 @@
+status: "healthy"
+agent: "Researcher"
+component: "kairos_orchestrator"
+message: "Mission file for Shared Task List created."
