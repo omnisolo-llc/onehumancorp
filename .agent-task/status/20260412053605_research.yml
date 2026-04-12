@@ -1,0 +1,5 @@
+status: "HEALTHY"
+component: "HybridSecretsMCP"
+agent: "Researcher"
+metrics:
+  missions_generated: 1
