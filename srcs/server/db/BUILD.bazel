@@ -48,7 +48,7 @@ go_library(
         "migrations/031_agent_missions_updated_at.sql",
         "migrations/032_hybrid_rag_sync.sql",
         "migrations/033_mesh_bridges.sql",
-        "migrations/034_ohc_memory_embeddings.sql",
+        "migrations/040_ohc_memory_embeddings.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
