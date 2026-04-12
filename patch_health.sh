@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNER_EOF' > srcs/server/orchestration/health_test.go
 package orchestration
 
 import (
@@ -205,3 +207,4 @@ func TestCheckHealth_Postgres(t *testing.T) {
 		t.Errorf("Expected SyncBacklog to be 5, got %d", probe.SyncBacklog)
 	}
 }
+INNER_EOF
