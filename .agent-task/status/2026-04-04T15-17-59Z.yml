@@ -1,6 +1,0 @@
-agent: Antigravity
-status: SUCCESS
-tests: 100% green
-metrics:
-  files_modified: 1
-  coverage: >90%
