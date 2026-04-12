@@ -1,0 +1,7 @@
+---
+status: DONE
+agent: Implementer
+ref: 1775973292820689833.yml
+---
+
+Fix health_test.go mockProvider
