@@ -2,9 +2,12 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"os"
 	"testing"
 	"time"
 
+	_ "modernc.org/sqlite"
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
@@ -43,13 +46,22 @@ func TestCheckHealthDegraded_NoDB(t *testing.T) {
 }
 
 func TestCheckHealth_SQLite(t *testing.T) {
-	// Setup a temporary in-memory sqlite
+	// Setup a physical temporary sqlite file
 	ctx := context.Background()
-	provider, err := db.NewSQLiteProvider(":memory:")
+	tmpFile, err := os.CreateTemp("", "health_test_*.db")
 	if err != nil {
-		t.Fatalf("Failed to create sqlite provider: %v", err)
+		t.Fatalf("Failed to create temp db file: %v", err)
 	}
-	defer provider.Close()
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	sqliteDB, err := sql.Open("sqlite", tmpFile.Name())
+	if err != nil {
+		t.Fatalf("Failed to open test sqlite db: %v", err)
+	}
+
+	provider := db.NewSqliteProvider(sqliteDB)
+	defer sqliteDB.Close()
 
 	// Ensure the agent_missions table exists
 	_, err = provider.Exec(ctx, "CREATE TABLE agent_missions (status TEXT)")
@@ -100,7 +112,7 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 	hub := NewHub()
 
 	// Use a mock setup to test MeshActive
-	cn, err := NewCentrifugeNode(nil)
+	cn, err := NewCentrifugeNode()
 	if err != nil {
 		t.Skipf("Skipping TestCheckHealth_MeshActive since NewCentrifugeNode failed to initialize: %v", err)
 	}
