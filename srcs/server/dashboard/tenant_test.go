@@ -414,3 +414,23 @@ func TestNewMultiTenantServer(t *testing.T) {
 		t.Fatal("expected NewMultiTenantServer to return a valid handler")
 	}
 }
+
+func TestTenantRegistry_ServeHTTP_HybridHealthFallback(t *testing.T) {
+	// These tests verify cloud multi-tenant isolation, which is disabled in standalone mode.
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
+
+	reg := newTestRegistry()
+	req := httptest.NewRequest(http.MethodGet, "/api/health/hybrid", nil)
+	rr := httptest.NewRecorder()
+	reg.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/health/hybrid public route fallback, got %d", rr.Code)
+	}
+}
