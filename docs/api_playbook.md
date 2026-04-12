@@ -85,16 +85,6 @@
   </div>
 </div>
 
-### 2.4 KAIROS Orchestration
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-  <strong>POST <code>/api/kairos/autodream/start</code></strong>
-  <p>Triggers the AutoDream Consolidation Pipeline. Orchestrates the transition of ephemeral swarm memory into permanent architectural insights.</p>
-  <pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 8px;"><code>{
-  "context_ids": ["ctx-101", "ctx-102"],
-  "priority": "low"
-}</code></pre>
-</div>
-
 ## 3. Client Integrations
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
