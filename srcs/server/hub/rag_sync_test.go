@@ -111,3 +111,23 @@ func TestRAGSyncServiceError(t *testing.T) {
 		t.Fatalf("expected error %v, got %v", expectedErr, err)
 	}
 }
+
+func TestDefaultRAGSyncService(t *testing.T) {
+	service := NewDefaultRAGSyncService()
+	ctx := context.Background()
+
+	_, err := service.FetchPendingSyncs(ctx, 10)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	err = service.MarkSynced(ctx, []string{"1"})
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	err = service.ProcessIncomingSync(ctx, []RAGSyncRecord{})
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}

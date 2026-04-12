@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -30,4 +31,27 @@ type RAGSyncService interface {
 
 	// ProcessIncomingSync handles data pushed from a standalone client into the cloud DB
 	ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error
+}
+
+type DefaultRAGSyncService struct {
+	// dependencies will be injected here
+}
+
+func NewDefaultRAGSyncService() *DefaultRAGSyncService {
+	return &DefaultRAGSyncService{}
+}
+
+func (s *DefaultRAGSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
+	// Concrete implementation for fetching from SQLite
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (s *DefaultRAGSyncService) MarkSynced(ctx context.Context, ids []string) error {
+	// Concrete implementation for updating SQLite status
+	return fmt.Errorf("not implemented")
+}
+
+func (s *DefaultRAGSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
+	// Concrete implementation for upserting to Postgres
+	return fmt.Errorf("not implemented")
 }
