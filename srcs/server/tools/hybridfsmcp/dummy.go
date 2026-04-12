@@ -1,0 +1,3 @@
+package hybridfsmcp
+
+func dummy() {}
