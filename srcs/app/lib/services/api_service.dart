@@ -99,7 +99,7 @@ class ApiService {
     try {
       final response = await _client.get(Uri.parse('$baseUrl/api/orchestration/tasks'), headers: _headers);
       _checkStatus(response);
-      final jsonList = jsonDecode(response.body);
+      final dynamic jsonList = jsonDecode(response.body);
       if (jsonList != null && jsonList is List) {
         return jsonList.map((json) => Task.fromJson(json)).toList();
       }
