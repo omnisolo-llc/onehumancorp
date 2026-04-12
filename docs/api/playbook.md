@@ -66,7 +66,35 @@ Delegate a subtask to an autonomous agent. The Hub handles provisioning and VRAM
 }
 ```
 
-### 3.4 Dynamic Scaling
+### 3.4 Swarm Orchestration (Legacy/Internal)
+
+**Endpoint:** `GET /api/orchestration/tasks`
+Retrieves a list of all active orchestration tasks in the queue. Supports pagination.
+
+**Endpoint:** `POST /api/orchestration/tasks`
+Submit a new task to the swarm.
+
+**Payload:**
+```json
+{
+  "title": "Analyze market data",
+  "priority": "P0",
+  "payload": {
+    "description": "Perform deep market analysis."
+  }
+}
+```
+
+### 3.5 Teammate Mesh Communications (v1)
+
+**Endpoint:** `POST /api/mesh/broadcast`
+Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.
+
+### 3.6 Client Integrations
+
+Whether you are developing against the **Local SQLite SIPDB** or the **Cloud Postgres/Redis** stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.
+
+### 3.7 Dynamic Scaling
 
 **Endpoint:** `POST /api/v1/scale`
 Adjust the number of concurrent agents for a specific role in real-time.
@@ -79,7 +107,7 @@ Adjust the number of concurrent agents for a specific role in real-time.
 }
 ```
 
-### 3.5 Hybrid RAG Sync
+### 3.8 Hybrid RAG Sync
 
 **Endpoint:** `POST /api/missions/sync`
 Synchronize local SQLite context to the cloud Postgres orchestration engine.
@@ -202,6 +230,23 @@ Enqueues a sub-agent task into the highly available distributed queue (backed by
 }
 ```
 
+#### Sub-Agent Queue Orchestration Flow
+```mermaid
+sequenceDiagram
+    participant API as OHC API
+    participant DB as State Machine (PG/SQLite)
+    participant Queue as Sub-Agent Queue
+    participant Worker as Sub-Agent
+
+    API->>Queue: POST /api/queue/subagent
+    Queue->>DB: Record Task (PENDING)
+    Worker->>Queue: Poll/Subscribe
+    Worker->>DB: FOR UPDATE SKIP LOCKED
+    DB-->>Worker: Lock Acquired (EXECUTING)
+    Worker->>API: Complete Task
+    API->>DB: Update State (COMPLETED)
+```
+
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
@@ -305,6 +350,22 @@ graph TD
     class Trigger,Hub,Parser,Embedding,VectorDB,RAGSync,Mesh premium;
 ```
 
+### 4.7 Health & Diagnostics
+
+**Endpoint:** `GET /api/health`
+Verifies the backend health programmatically. Checks connectivity to Postgres, Redis, and the internal agent runtime.
+
+**Response (200 OK):**
+```json
+{
+  "status": "UP",
+  "services": {
+    "database": "CONNECTED",
+    "mesh": "CONNECTED",
+    "agents": "READY"
+  }
+}
+```
 
 ### 4.8 KAIROS Shared Task List API
 
