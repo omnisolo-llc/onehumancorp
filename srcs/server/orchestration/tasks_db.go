@@ -59,9 +59,10 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
 	// In SQLite we use a simple SELECT then UPDATE in a transaction, protected by application mutex
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
+		SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.dependencies, st.created_at, st.updated_at
+		FROM shared_tasks st
+		WHERE st.organization_id = $1 AND st.status = 'PENDING'
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 	`
 	row := tx.QueryRow(ctx, query, orgID)
@@ -107,9 +108,10 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
 	// In Postgres we can use FOR UPDATE SKIP LOCKED
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
-		FROM shared_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
+		SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.dependencies, st.created_at, st.updated_at
+		FROM shared_tasks st
+		WHERE st.organization_id = $1 AND st.status = 'PENDING'
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
 	`
