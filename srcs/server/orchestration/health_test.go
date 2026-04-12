@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "modernc.org/sqlite"
 )
 
 func TestHybridHealthProbe(t *testing.T) {
@@ -133,8 +133,12 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 
 type mockProvider struct {
 	db.Provider
-	execErr   error
-	isSqlite  bool
+	execErr  error
+	isSqlite bool
+}
+
+func (m *mockProvider) Ping(ctx context.Context) error {
+	return m.execErr
 }
 
 func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
@@ -152,8 +156,7 @@ func (m *mockProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs 
 	return &mockRow{}
 }
 
-type mockRow struct {
-}
+type mockRow struct{}
 
 func (r *mockRow) Scan(dest ...any) error {
 	*dest[0].(*int) = 5
