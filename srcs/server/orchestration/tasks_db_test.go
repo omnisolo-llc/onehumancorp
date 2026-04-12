@@ -48,6 +48,17 @@ func TestClaimTask_SQLite(t *testing.T) {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
+	_, err = dbProvider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table task_dependencies: %v", err)
+	}
+
 	// Insert a test task
 	_, err = dbProvider.Exec(ctx, `
 		INSERT INTO shared_tasks (id, organization_id, title, status)
@@ -94,6 +105,44 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	if task2 != nil {
 		t.Fatalf("expected nil task, got %v", task2)
+	}
+
+	// Insert task with a pending dependency, so it shouldn't be claimed
+	_, err = dbProvider.Exec(ctx, `
+		INSERT INTO shared_tasks (id, organization_id, title, status)
+		VALUES ('task-dep', 'org-1', 'Task with dependency', 'PENDING'),
+		       ('task-parent', 'org-1', 'Parent task', 'PENDING')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert dependency tasks: %v", err)
+	}
+	_, err = dbProvider.Exec(ctx, `
+		INSERT INTO task_dependencies (task_id, depends_on_task_id)
+		VALUES ('task-dep', 'task-parent')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert dependency link: %v", err)
+	}
+
+	// Claiming should only grab task-parent, because task-dep has an incomplete dependency
+	task3, err := to.ClaimTask(ctxWithClaims, "agent-3")
+	if err != nil {
+		t.Fatalf("ClaimTask failed: %v", err)
+	}
+	if task3 == nil {
+		t.Fatalf("expected to claim a task, got nil")
+	}
+	if task3.ID != "task-parent" {
+		t.Errorf("expected to claim 'task-parent', got '%s'", task3.ID)
+	}
+
+	// Claiming again should yield nil, because task-dep is still blocked by task-parent
+	task4, err := to.ClaimTask(ctxWithClaims, "agent-4")
+	if err != nil {
+		t.Fatalf("ClaimTask failed: %v", err)
+	}
+	if task4 != nil {
+		t.Fatalf("expected nil task, got %v (should be blocked)", task4.ID)
 	}
 }
 
