@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.9] - 2026-04-11
+
+### Added
+- HybridHealthProbe for verification of hybrid-mode switching and local-to-cloud mission sync reliability.
+
+### Changed
+- Improved AutoDream Memory consolidation pipeline test coverage to >90%.
+
+### Fixed
+- Enforced strict opt-in telemetry for Hybrid Architecture Privacy in standalone mode.
+
 ## [0.2.8] - 2026-04-03
 
 ### Added
