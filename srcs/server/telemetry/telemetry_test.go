@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -17,15 +16,7 @@ import (
 
 func TestInitTelemetry(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-
-	// In Standalone Mode, Telemetry may be disabled. Force it enabled for tests.
-	originalStandalone := os.Getenv("OHC_STANDALONE")
-	os.Unsetenv("OHC_STANDALONE")
-	defer func() {
-		if originalStandalone != "" {
-			os.Setenv("OHC_STANDALONE", originalStandalone)
-		}
-	}()
+	t.Setenv("OHC_STANDALONE", "")
 
 	// Happy path: initialization succeeds
 	cleanup, err := InitTelemetry()
@@ -197,15 +188,7 @@ func TestInitTelemetryError(t *testing.T) {
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
 
 	prometheus.DefaultRegisterer = &mockRegisterer{}
-
-	// In Standalone Mode, Telemetry may be disabled. Force it enabled for tests.
-	originalStandalone := os.Getenv("OHC_STANDALONE")
-	os.Unsetenv("OHC_STANDALONE")
-	defer func() {
-		if originalStandalone != "" {
-			os.Setenv("OHC_STANDALONE", originalStandalone)
-		}
-	}()
+	t.Setenv("OHC_STANDALONE", "")
 
 	cleanup, err := InitTelemetry()
 	if err == nil {
@@ -279,15 +262,7 @@ func TestMiddleware(t *testing.T) {
 			defer func() { Verbosity = originalVerbosity }()
 
 			prometheus.DefaultRegisterer = prometheus.NewRegistry()
-
-			// In Standalone Mode, Telemetry may be disabled. Force it enabled for tests.
-			originalStandalone := os.Getenv("OHC_STANDALONE")
-			os.Unsetenv("OHC_STANDALONE")
-			defer func() {
-				if originalStandalone != "" {
-					os.Setenv("OHC_STANDALONE", originalStandalone)
-				}
-			}()
+			t.Setenv("OHC_STANDALONE", "")
 
 			cleanup, err := InitTelemetry()
 			if err != nil {
@@ -344,15 +319,7 @@ func TestRecordSQLiteLockMetrics(t *testing.T) {
 
 func TestRecordFunctions(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-
-	// In Standalone Mode, Telemetry may be disabled. Force it enabled for tests.
-	originalStandalone := os.Getenv("OHC_STANDALONE")
-	os.Unsetenv("OHC_STANDALONE")
-	defer func() {
-		if originalStandalone != "" {
-			os.Setenv("OHC_STANDALONE", originalStandalone)
-		}
-	}()
+	t.Setenv("OHC_STANDALONE", "")
 
 	cleanup, err := InitTelemetry()
 	if err != nil {
@@ -588,15 +555,7 @@ func TestInitTelemetry_PrometheusError(t *testing.T) {
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
 
 	prometheus.DefaultRegisterer = errorRegisterer{}
-
-	// In Standalone Mode, Telemetry may be disabled. Force it enabled for tests.
-	originalStandalone := os.Getenv("OHC_STANDALONE")
-	os.Unsetenv("OHC_STANDALONE")
-	defer func() {
-		if originalStandalone != "" {
-			os.Setenv("OHC_STANDALONE", originalStandalone)
-		}
-	}()
+	t.Setenv("OHC_STANDALONE", "")
 
 	_, err := InitTelemetry()
 	if err == nil {
