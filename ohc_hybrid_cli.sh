@@ -31,6 +31,7 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
+    echo -e "  ${PURPLE}9)${RESET} Interactive Setup Diagnostics"
     echo -e "  ${PURPLE}q)${RESET} Quit"
     echo ""
 }
@@ -224,6 +225,7 @@ else
             6) check_system ;;
             7) standalone_db_check ;;
             8) seed_mock_data ;;
+            9) bash deploy/scripts/ohc-diagnostics.sh ;;
             q|Q) echo "Exiting."; break ;;
             *) echo "Invalid choice." ;;
         esac
