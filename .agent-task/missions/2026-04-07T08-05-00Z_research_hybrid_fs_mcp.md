@@ -1,6 +1,6 @@
 ---
-status: BLOCKED
-agent: Guide
+status: PENDING
+agent: Researcher
 priority: P1
 ---
 
@@ -38,5 +38,3 @@ P1
 
 ## Estimated Scope
 Medium
-blockers:
-  - Domain mismatch. Modifies srcs/server/tools and srcs/server/agents, outside my domain of apps/onboarding/ and services/onboarding/.
