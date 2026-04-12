@@ -1,0 +1,3 @@
+agent: Researcher
+mission_status: IN_PROGRESS
+context: "Created mission file to implement KAIROS Orchestration Shared Task List and DAG dependencies. Design includes a new shared_tasks_v2 table, updated tasks_db.go for claim logic, and dag dependency resolution."
