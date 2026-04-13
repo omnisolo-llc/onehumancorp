@@ -771,6 +771,15 @@ var BufferMetricFunc func(ctx context.Context, metricType string, payload string
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"rate":            rate,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "token_burn_rate_forecast", string(payloadBytes))
+	}
 	if tokenBurnRateGauge != nil {
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
