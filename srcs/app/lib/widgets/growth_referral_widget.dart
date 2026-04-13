@@ -1,14 +1,16 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/services/api_service.dart';
 
-class GrowthReferralWidget extends StatefulWidget {
+class GrowthReferralWidget extends ConsumerStatefulWidget {
   const GrowthReferralWidget({super.key});
 
   @override
-  State<GrowthReferralWidget> createState() => _GrowthReferralWidgetState();
+  ConsumerState<GrowthReferralWidget> createState() => _GrowthReferralWidgetState();
 }
 
-class _GrowthReferralWidgetState extends State<GrowthReferralWidget> {
+class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
   bool _isHovered = false;
 
   @override
@@ -90,7 +92,37 @@ class _GrowthReferralWidgetState extends State<GrowthReferralWidget> {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          try {
+                            await ref.read(apiServiceProvider)!.createReferral(
+                              "anonymous",
+                              "xYz8vQ_local_sovereign",
+                            );
+                            if (context.mounted) {
+                              final snackBar = SnackBar(
+                                content: Text(
+                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    style: TextStyle(
+                                      color: colorScheme.onPrimaryContainer,
+                                      fontFamily: 'Inter',
+                                    ),
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: colorScheme.primaryContainer,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: colorScheme.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
                         child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
                       ),
                     ],
