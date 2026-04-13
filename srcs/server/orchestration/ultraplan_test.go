@@ -2,15 +2,27 @@ package orchestration
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestUltraPlanManager(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
+
+	telemetry.InitTelemetry()
+	var loggedMetric string
+	var loggedPayload string
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		loggedMetric = metricType
+		loggedPayload = payload
+		return nil
+	}
+	defer func() { telemetry.BufferMetricFunc = nil }()
 
 	prov := db.NewTestProvider(t)
 	defer prov.Close()
@@ -27,7 +39,8 @@ func TestUltraPlanManager(t *testing.T) {
 		);
 	`)
 
-	upm := NewUltraPlanManager(prov, nil, nil)
+	sm := statemachine.NewStateMachine(prov, nil)
+	upm := NewUltraPlanManager(prov, nil, nil, sm)
 	ctx := context.Background()
 
 	// Create
@@ -93,6 +106,13 @@ func TestUltraPlanManager(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
+	if loggedMetric != "deliberation_phase_duration" {
+		t.Errorf("expected deliberation_phase_duration metric to be logged, got %q", loggedMetric)
+	}
+	if loggedPayload == "" {
+		t.Errorf("expected payload to be logged")
+	}
+
 	planResult, err = upm.GetUltraPlan(ctx, plan.ID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -113,4 +133,100 @@ func TestUltraPlanManager(t *testing.T) {
 	if planResult.StateMachine["phase"] != "APPROVED" {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
 	}
+}
+
+type mockMinimaxClient struct {
+	reasonResponses []string
+	reasonCalls     int
+}
+
+func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	if m.reasonCalls >= len(m.reasonResponses) {
+		return "", fmt.Errorf("no more mock responses")
+	}
+	resp := m.reasonResponses[m.reasonCalls]
+	m.reasonCalls++
+	return resp, nil
+}
+
+func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	return []float32{0.1, 0.2, 0.3}, nil
+}
+
+func TestUltraPlanDeliberator(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	// Ensure the table exists in memory DB for the test (test provider only creates some)
+	_, _ = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'DELIBERATING',
+			state_machine TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	sm := statemachine.NewStateMachine(prov, nil)
+	upm := NewUltraPlanManager(prov, nil, nil, sm)
+	ctx := context.Background()
+
+	mockLLM := &mockMinimaxClient{
+		reasonResponses: []string{
+			"Proposal 1",
+			"Critique 1",
+			"Refined Plan 1",
+		},
+	}
+
+	deliberator := NewUltraPlanDeliberator(upm, mockLLM)
+
+	missionID := "mission-456"
+	prompt := "Build an awesome feature"
+
+	plan, err := deliberator.Deliberate(ctx, missionID, prompt)
+	if err != nil {
+		t.Fatalf("expected no error from Deliberate, got %v", err)
+	}
+
+	if plan == nil {
+		t.Fatal("expected plan, got nil")
+	}
+
+	if plan.MissionID != missionID {
+		t.Errorf("expected mission ID %s, got %s", missionID, plan.MissionID)
+	}
+
+	if plan.Status != "EXECUTING" {
+		t.Errorf("expected status EXECUTING, got %s", plan.Status)
+	}
+
+	if plan.StateMachine["phase"] != "APPROVED" {
+		t.Errorf("expected phase APPROVED, got %v", plan.StateMachine["phase"])
+	}
+
+	if plan.StateMachine["proposal"] != "Proposal 1" {
+		t.Errorf("expected proposal 'Proposal 1', got %v", plan.StateMachine["proposal"])
+	}
+
+	if plan.StateMachine["final_plan"] != "Refined Plan 1" {
+		t.Errorf("expected final_plan 'Refined Plan 1', got %v", plan.StateMachine["final_plan"])
+	}
+
+	// Verify file was written
+	filepath := fmt.Sprintf(".agent-task/ultraplans/%s.md", missionID)
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		t.Fatalf("expected file to exist at %s, got err %v", filepath, err)
+	}
+	if string(content) != "Refined Plan 1" {
+		t.Errorf("expected file content 'Refined Plan 1', got %s", string(content))
+	}
+
+	// Clean up
+	_ = os.Remove(filepath)
 }
