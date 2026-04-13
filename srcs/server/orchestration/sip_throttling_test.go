@@ -10,7 +10,7 @@ import (
 
 func TestStandaloneThrottling(t *testing.T) {
 	defer ClearSemaphore()
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	// Force acquireThrottle initialization if not done yet
 	acquireThrottle(context.Background())
@@ -44,7 +44,7 @@ func TestStandaloneThrottling(t *testing.T) {
 
 func TestUpsertMissionThrottling(t *testing.T) {
 	defer ClearSemaphore()
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	// Force acquireThrottle initialization if not done yet
 	acquireThrottle(context.Background())

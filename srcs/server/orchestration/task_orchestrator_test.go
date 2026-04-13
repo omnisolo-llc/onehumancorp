@@ -11,8 +11,8 @@ import (
 )
 
 func TestTaskOrchestrator(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	prov := db.NewTestProvider(t)
 	defer prov.Close()
@@ -133,8 +133,8 @@ func TestTaskOrchestrator(t *testing.T) {
 }
 
 func TestTaskOrchestrator_DistributedLocking(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	prov := db.NewTestProvider(t)
 	defer prov.Close()

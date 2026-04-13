@@ -13,11 +13,11 @@ func TestRecordOtherMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	originalStandalone := os.Getenv("OHC_STANDALONE")
-	os.Unsetenv("OHC_STANDALONE")
+	originalStandalone := os.Getenv("OHC_MULTITENANT")
+	os.Unsetenv("OHC_MULTITENANT")
 	defer func() {
 		if originalStandalone != "" {
-			os.Setenv("OHC_STANDALONE", originalStandalone)
+			os.Setenv("OHC_MULTITENANT", originalStandalone)
 		}
 	}()
 
@@ -154,11 +154,11 @@ func TestMinimaxMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	originalStandalone := os.Getenv("OHC_STANDALONE")
-	os.Unsetenv("OHC_STANDALONE")
+	originalStandalone := os.Getenv("OHC_MULTITENANT")
+	os.Unsetenv("OHC_MULTITENANT")
 	defer func() {
 		if originalStandalone != "" {
-			os.Setenv("OHC_STANDALONE", originalStandalone)
+			os.Setenv("OHC_MULTITENANT", originalStandalone)
 		}
 	}()
 
