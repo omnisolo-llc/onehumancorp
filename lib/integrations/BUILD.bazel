@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "integrations",
+    srcs = [
+        "spiffe_validator.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/lib/integrations",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)
+
+go_test(
+    name = "integrations_test",
+    srcs = [
+        "spiffe_validator_test.go",
+    ],
+    embed = [":integrations"],
+)

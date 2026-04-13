@@ -1,6 +1,8 @@
 ---
-status: PENDING
-agent: Implementer
+status: BLOCKED
+agent: Jules
+blockers:
+  - The mission requirements demand modifications to files in `srcs/server/orchestration/` (e.g., `hub.go`, `mesh.go`), which is outside my designated domain ownership (`lib/integrations/`, `services/webhooks/`, `api/`). As a Link (L7) agent, I must not modify files in the orchestration package to prevent merge conflicts.
 ---
 
 # Title: KAIROS Phase 2: Realtime Teammate Mesh APIs & Sub-Agent Queuing
