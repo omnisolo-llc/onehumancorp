@@ -308,3 +308,43 @@ func TestHandleOnboardingFunnel(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleOnboardingMetrics(t *testing.T) {
+	s := &Server{
+		onboardingFunnels: []OnboardingFunnel{
+			{Step: "step1"},
+			{Step: "step1"},
+			{Step: "step2"},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/growth/onboarding-metrics", nil)
+	w := httptest.NewRecorder()
+
+	s.handleOnboardingMetrics(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var metrics []OnboardingMetric
+	if err := json.NewDecoder(w.Body).Decode(&metrics); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Fatalf("expected 2 metric groups, got %d", len(metrics))
+	}
+
+	counts := make(map[string]int)
+	for _, m := range metrics {
+		counts[m.Step] = m.Count
+	}
+
+	if counts["step1"] != 2 {
+		t.Errorf("expected step1 to have count 2, got %d", counts["step1"])
+	}
+	if counts["step2"] != 1 {
+		t.Errorf("expected step2 to have count 1, got %d", counts["step2"])
+	}
+}

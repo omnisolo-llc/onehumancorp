@@ -280,3 +280,35 @@ func (s *Server) handleOnboardingFunnel(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// OnboardingMetric represents the aggregated count of users at a specific onboarding step.
+type OnboardingMetric struct {
+	Step  string `json:"step"`
+	Count int    `json:"count"`
+}
+
+func (s *Server) handleOnboardingMetrics(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	funnels := append([]OnboardingFunnel(nil), s.onboardingFunnels...)
+	s.mu.RUnlock()
+
+	counts := make(map[string]int)
+	for _, f := range funnels {
+		counts[f.Step]++
+	}
+
+	var metrics []OnboardingMetric
+	for step, count := range counts {
+		metrics = append(metrics, OnboardingMetric{
+			Step:  step,
+			Count: count,
+		})
+	}
+
+	writeJSON(w, metrics)
+}
