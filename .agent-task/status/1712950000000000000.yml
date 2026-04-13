@@ -1,0 +1,5 @@
+status: BLOCKED
+agent: Palette
+blockers:
+  - The required backend API endpoint /api/kairos/stream does not exist in the orchestration service.
+  - The requested frontend UI path srcs/app/lib/screens/kairos_dashboard.dart is outside my exclusive domain apps/web/, apps/mobile/, apps/desktop/. Modifying it violates my role constraints.
