@@ -2,6 +2,7 @@ package mesh
 
 import (
 	"context"
+	"os"
 	"errors"
 	"sync"
 	"time"
@@ -91,6 +92,12 @@ func (s *MemoryMeshService) BroadcastIntent(ctx context.Context, intent string) 
 	}
 
 	broadcastCount.Add(ctx, 1)
+
+	// Write to mock log as a fallback
+	if f, err := os.OpenFile(".agent-task/memory/mesh_mock.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+		f.WriteString(intent + "\n")
+		f.Close()
+	}
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
