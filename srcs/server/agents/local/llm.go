@@ -174,6 +174,10 @@ type anthropicResponse struct {
 }
 
 func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (*AssistantMessage, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordLLMNetworkLatency(ctx, c.model, time.Since(start).Seconds())
+	}()
 	maxTok := req.MaxTokens
 	if maxTok <= 0 {
 		maxTok = 2048
@@ -412,6 +416,10 @@ type openAIResponse struct {
 }
 
 func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest) (*AssistantMessage, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordLLMNetworkLatency(ctx, c.model, time.Since(start).Seconds())
+	}()
 	maxTok := req.MaxTokens
 	if maxTok <= 0 {
 		maxTok = 2048
