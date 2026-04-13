@@ -72,7 +72,7 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 		t.Fatalf("Failed to create memory dir: %v", err)
 	}
 
-	testFile := filepath.Join(memoryDir, "sentry_chaos_test.yml")
+	testFile := filepath.Join(memoryDir, fmt.Sprintf("sentry_chaos_test_%d.yml", time.Now().UnixNano()))
 	err = os.WriteFile(testFile, []byte("content: chaos"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
