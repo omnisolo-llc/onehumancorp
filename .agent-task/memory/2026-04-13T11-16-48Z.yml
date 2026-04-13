@@ -1,0 +1,1 @@
+context: Cleaned up the swarm.db agent_missions queue to resolve stuck states, ensuring 0 stuck missions in the local queue. Evaluated health-check endpoints in srcs/server/dashboard/server.go and orchestration package.

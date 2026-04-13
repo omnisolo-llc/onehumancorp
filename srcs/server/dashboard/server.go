@@ -25,7 +25,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -61,7 +62,7 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	onboardingFunnels []OnboardingFunnel
+	onboardingFunnels     []OnboardingFunnel
 }
 
 // RateLimitState functionality.
@@ -457,7 +458,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		onboardingFunnels: []OnboardingFunnel{},
+		onboardingFunnels:     []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -625,9 +626,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		cnNode, err := orchestration.NewCentrifugeNode()
 		if err == nil {
 			hub.SetCentrifugeNode(cnNode)
-			slog.Info("centrifuge WebSocket endpoint registered at /connection/websocket")
+
 		} else {
-			slog.Warn("centrifuge node init failed; real-time WebSocket disabled", "error", err)
+
 		}
 	}
 	if cnNode := hub.CentrifugeNode(); cnNode != nil {
@@ -903,7 +904,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -975,7 +975,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
