@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+
 	"github.com/redis/rueidis"
 )
 
@@ -76,9 +77,13 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 		}
 	}
 
-	// Fallback to SQLite queue if not using Redis
+	// Fallback to SQLite or Postgres queue if not using Redis
 	if tm.taskQueue == nil {
-		tm.taskQueue = queue.NewSQLiteTaskQueue(provider)
+		if provider != nil && !provider.IsSQLite() {
+			tm.taskQueue = queue.NewPostgresTaskQueue(provider)
+		} else {
+			tm.taskQueue = queue.NewSQLiteTaskQueue(provider)
+		}
 	}
 
 	tm.stopChan = make(chan struct{})
@@ -470,9 +475,16 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
+
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
+
+	// AutoDream is triggered by sync daemon or another worker.
+	// Production logic runs separately via AutoDreamPipeline.
+
+
 	// Broadcast task completion
+
 	if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{

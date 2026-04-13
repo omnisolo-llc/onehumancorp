@@ -262,49 +262,58 @@ func TestHandleDownloads(t *testing.T) {
 	}
 }
 
-func TestHandleOnboardingFunnel(t *testing.T) {
-	s := &Server{}
+func TestHandleFreeTierQuota(t *testing.T) {
+	s := &Server{
+
+	}
 
 	// Test POST
-	payload := `{"userId": "user-A", "step": "step-1"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/growth/onboarding-funnel", bytes.NewBufferString(payload))
+	payload := `{"userId": "user-123", "tasksLimit": 50}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/quota", bytes.NewBufferString(payload))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	s.handleOnboardingFunnel(w, req)
+	s.handleFreeTierQuota(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", w.Code)
+	res := w.Result()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", res.Status)
 	}
 
-	var created OnboardingFunnel
-	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+	var created FreeTierQuota
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 
-	if created.UserID != "user-A" || created.Step != "step-1" {
-		t.Errorf("unexpected values: %+v", created)
+	if created.UserID != "user-123" {
+		t.Errorf("expected userId 'user-123', got '%s'", created.UserID)
 	}
+	if created.TasksLimit != 50 {
+		t.Errorf("expected tasksLimit 50, got %d", created.TasksLimit)
+	}
+	res.Body.Close()
 
 	// Test GET
-	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/onboarding-funnel", nil)
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/quota", nil)
 	wGet := httptest.NewRecorder()
 
-	s.handleOnboardingFunnel(wGet, reqGet)
+	s.handleFreeTierQuota(wGet, reqGet)
 
-	if wGet.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", wGet.Code)
+	resGet := wGet.Result()
+	if resGet.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resGet.Status)
 	}
 
-	var list []OnboardingFunnel
-	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
+	var list []FreeTierQuota
+	if err := json.NewDecoder(resGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode GET response: %v", err)
 	}
 
 	if len(list) != 1 {
-		t.Fatalf("expected 1 funnel, got %d", len(list))
+		t.Fatalf("expected 1 quota, got %d", len(list))
 	}
-	if list[0].ID != created.ID {
-		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	if list[0].UserID != "user-123" {
+		t.Errorf("expected userId 'user-123', got '%s'", list[0].UserID)
 	}
+	resGet.Body.Close()
 }

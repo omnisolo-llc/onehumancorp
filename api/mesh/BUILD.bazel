@@ -2,7 +2,11 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mesh",
-    srcs = ["handlers.go", "mesh.go"],
+    srcs = [
+        "local_mesh_v2.go",
+        "mesh.go",
+        "redis_mesh_v2.go",
+    ],
     importpath = "github.com/onehumancorp/mono/api/mesh",
     visibility = ["//visibility:public"],
     deps = [
@@ -15,10 +19,15 @@ go_library(
 
 go_test(
     name = "mesh_test",
-    srcs = ["handlers_test.go", "mesh_test.go"],
+    srcs = [
+        "mesh_test.go",
+        "mesh_v2_test.go",
+    ],
     embed = [":mesh"],
     deps = [
         "//srcs/server/auth",
+        "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel_metric//noop",
+        "@io_opentelemetry_go_otel//:otel",
     ],
 )

@@ -2,7 +2,6 @@ package mesh
 
 import (
 	"context"
-	"os"
 	"errors"
 	"sync"
 	"time"
@@ -13,14 +12,40 @@ import (
 )
 
 var (
-	meter            = otel.Meter("github.com/onehumancorp/mono/api/mesh")
+	meter             = otel.Meter("github.com/onehumancorp/mono/api/mesh")
 	broadcastCount, _ = meter.Int64Counter("mesh.broadcast.count")
-	subscribeCount, _ = meter.Int64Counter("mesh.subscribe.count")
+	subscribeCount, _  = meter.Int64Counter("mesh.subscribe.count")
 )
 
+// TeammateMeshService is the legacy V1 interface. Kept for backwards compatibility.
 type TeammateMeshService interface {
 	BroadcastIntent(ctx context.Context, intent string) error
 	Subscribe(ctx context.Context) (<-chan string, error)
+}
+
+// TeammateMeshV2 is the new interface meeting the mission requirements.
+type TeammateMeshV2 interface {
+	// PubSub
+	Publish(ctx context.Context, topic string, payload []byte) error
+	Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error)
+
+	// Distributed Lock
+	AcquireLock(ctx context.Context, key string, lockID string, ttl time.Duration) (bool, error)
+	ReleaseLock(ctx context.Context, key string, lockID string) error
+
+	// Presence
+	RegisterPresence(ctx context.Context, agentID string, status string) error
+	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
+}
+
+type Subscription interface {
+	Unsubscribe() error
+}
+
+type AgentPresence struct {
+	AgentID  string
+	Status   string
+	LastSeen time.Time
 }
 
 type RedisMeshService struct {
@@ -92,12 +117,6 @@ func (s *MemoryMeshService) BroadcastIntent(ctx context.Context, intent string) 
 	}
 
 	broadcastCount.Add(ctx, 1)
-
-	// Write to mock log as a fallback
-	if f, err := os.OpenFile(".agent-task/memory/mesh_mock.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
-		f.WriteString(intent + "\n")
-		f.Close()
-	}
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
