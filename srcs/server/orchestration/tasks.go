@@ -76,13 +76,9 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 		}
 	}
 
-	// Fallback to SQLite or Postgres queue if not using Redis
+	// Fallback to SQLite queue if not using Redis
 	if tm.taskQueue == nil {
-		if provider != nil && !provider.IsSQLite() {
-			tm.taskQueue = queue.NewPostgresTaskQueue(provider)
-		} else {
-			tm.taskQueue = queue.NewSQLiteTaskQueue(provider)
-		}
+		tm.taskQueue = queue.NewSQLiteTaskQueue(provider)
 	}
 
 	tm.stopChan = make(chan struct{})

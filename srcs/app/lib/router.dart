@@ -13,7 +13,6 @@ import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
-import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
 import 'package:ohc_app/screens/cost_dashboard_screen.dart';
 import 'package:ohc_app/screens/scaling_screen.dart';
@@ -49,10 +48,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
-          GoRoute(
-            path: '/business_setup',
-            builder: (context, state) => const BusinessSetupWizardScreen(),
-          ),
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),

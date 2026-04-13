@@ -600,11 +600,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	if err := acquireThrottle(ctx); err != nil {
-		return err
-	}
-	defer releaseThrottle()
-
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
@@ -653,30 +648,13 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		Task: task,
 	}
 	taskBytes, _ := json.Marshal(wrapper)
-
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		_, err = s.db.Exec(ctx,
+	return withSipRetry(ctx, func() error {
+		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)",
 			missionID, string(taskBytes), s.orgID,
 		)
-		if err == nil {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
-			time.Sleep(retryInterval)
-			continue
-		}
 		return err
-	}
-	return err
+	})
 }
 
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.

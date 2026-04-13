@@ -45,10 +45,4 @@ Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored i
 ## 4. Phase 4: Sub-Agent Orchestration Queue
 Background worker system (`srcs/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
 
-## 5. Visual Excellence Mandate
-All associated UI components must represent the OHC "Premium Feel".
-- Backdrop Filter: `blur(20px) saturate(200%)`
-- Background: `rgba(255, 255, 255, 0.03)`
-- Typography: `'Outfit', 'Inter', sans-serif`
-
 </div>

@@ -81,35 +81,3 @@ func BenchmarkShardedMailbox(b *testing.B) {
 		})
 	})
 }
-
-// BenchmarkShardedMailboxRead benchmarks the read performance
-func BenchmarkShardedMailboxRead(b *testing.B) {
-	mailbox := perf.NewShardedMailbox(64)
-	// prefill
-	for i := 0; i < 10000; i++ {
-		msg := perf.Message{
-			ID:        "msg-1",
-			Sender:    "agent-1",
-			Recipient: fmt.Sprintf("agent-%d", i%1000),
-			Timestamp: time.Now(),
-		}
-		_ = mailbox.Send(msg)
-	}
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		i := 0
-		for pb.Next() {
-			_ = mailbox.Read(fmt.Sprintf("agent-%d", i%1000))
-			// re-insert to keep mailbox populated
-			msg := perf.Message{
-				ID:        "msg-1",
-				Sender:    "agent-1",
-				Recipient: fmt.Sprintf("agent-%d", i%1000),
-				Timestamp: time.Now(),
-			}
-			_ = mailbox.Send(msg)
-			i++
-		}
-	})
-}

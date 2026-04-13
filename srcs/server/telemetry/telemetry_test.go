@@ -82,9 +82,6 @@ type mockFloat64Histogram struct {
 	metric.Float64Histogram
 }
 
-func (m *mockFloat64Histogram) Record(ctx context.Context, value float64, options ...metric.RecordOption) {}
-
-
 // mockInt64Counter implements metric.Int64Counter
 type mockInt64Counter struct {
 	metric.Int64Counter
@@ -598,54 +595,4 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
-}
-
-func TestRecordToolAutoCorrection(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
-
-	InitTelemetry()
-
-	var loggedMetric string
-	var loggedPayload string
-	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		loggedMetric = metricType
-		loggedPayload = payload
-		return nil
-	}
-	defer func() { BufferMetricFunc = nil }()
-
-	ctx := context.Background()
-	RecordToolAutoCorrection(ctx, "agent-123", "analyst", true)
-
-	if loggedMetric != "tool_autocorrection" {
-		t.Errorf("expected tool_autocorrection, got %q", loggedMetric)
-	}
-	if loggedPayload == "" {
-		t.Error("expected non-empty payload")
-	}
-}
-
-func TestRecordDeliberationPhaseDuration(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
-
-	InitTelemetry()
-
-	var loggedMetric string
-	var loggedPayload string
-	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		loggedMetric = metricType
-		loggedPayload = payload
-		return nil
-	}
-	defer func() { BufferMetricFunc = nil }()
-
-	ctx := context.Background()
-	RecordDeliberationPhaseDuration(ctx, "plan-123", "CRITIQUE", 1.5)
-
-	if loggedMetric != "deliberation_phase_duration" {
-		t.Errorf("expected deliberation_phase_duration, got %q", loggedMetric)
-	}
-	if loggedPayload == "" {
-		t.Error("expected non-empty payload")
-	}
 }

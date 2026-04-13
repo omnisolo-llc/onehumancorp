@@ -52,55 +52,6 @@ func TestBufferMetricFunc(t *testing.T) {
 	if !called { t.Errorf("expected buffer call") }
 	called = false
 
-
-
-	RecordCacheHit(ctx, "op1", "type1")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordCacheMiss(ctx, "op1", "type1")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordApiRateLimitExceeded(ctx, "/test")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordSQLiteLockContention(ctx, "write")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordSQLiteRetryExhausted(ctx, "write")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordTaskQueueLength(ctx, 5)
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordTaskProcessed(ctx, 10)
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordAgentTransitionLatency(ctx, "trans1", 1.5)
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordSwarmTaskQueueLength(ctx, 3)
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordSwarmTaskProcessingLatency(ctx, 150)
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordTaskEnqueued(ctx, "task1")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
-
-	RecordTaskFailed(ctx, "task1", "err1")
-	if !called { t.Errorf("expected buffer call") }
-	called = false
 	// Restore
 	tokenUsageCounter = origTokenUsage
 	agentApiCallsCounter = origAgentCalls

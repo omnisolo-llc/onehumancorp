@@ -122,14 +122,3 @@ powersync:
     limits:
       cpu: "250m"
       memory: "256Mi"
-
-# Kube-Prometheus-Stack for Cloud Observability
-kube-prometheus-stack:
-  enabled: true
-  grafana:
-    enabled: true
-    sidecar:
-      dashboards:
-        enabled: true
-        label: grafana_dashboard
-        labelValue: "1"

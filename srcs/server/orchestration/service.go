@@ -668,8 +668,6 @@ func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byt
 		"corrected": corrected,
 	})
 
-	telemetry.RecordToolAutoCorrection(context.Background(), agentID, "", corrected)
-
 	return nil
 }
 

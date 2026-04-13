@@ -85,7 +85,7 @@ type ShardedMailbox struct {
 
 type MailboxShard struct {
 	mu       sync.RWMutex
-	messages map[string][]Message
+	messages []Message
 }
 
 type Message struct {
@@ -106,7 +106,7 @@ func NewShardedMailbox(numShards int) *ShardedMailbox {
 	shards := make([]*MailboxShard, size)
 	for i := 0; i < size; i++ {
 		shards[i] = &MailboxShard{
-			messages: make(map[string][]Message),
+			messages: make([]Message, 0),
 		}
 	}
 
@@ -134,7 +134,7 @@ func (m *ShardedMailbox) Send(msg Message) error {
 	shard := m.shards[shardIdx]
 
 	shard.mu.Lock()
-	shard.messages[msg.Recipient] = append(shard.messages[msg.Recipient], msg)
+	shard.messages = append(shard.messages, msg)
 	shard.mu.Unlock()
 
 	return nil
@@ -147,8 +147,17 @@ func (m *ShardedMailbox) Read(recipient string) []Message {
 	shard.mu.Lock()
 	defer shard.mu.Unlock()
 
-	result := shard.messages[recipient]
-	delete(shard.messages, recipient)
+	// Filter messages for recipient and remove them to prevent memory leaks
+	var result []Message
+	var remaining []Message
+	for _, msg := range shard.messages {
+		if msg.Recipient == recipient {
+			result = append(result, msg)
+		} else {
+			remaining = append(remaining, msg)
+		}
+	}
 
+	shard.messages = remaining
 	return result
 }

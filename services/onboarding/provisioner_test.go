@@ -48,37 +48,3 @@ func TestProvisionEnvironment_Cloud(t *testing.T) {
 
 	os.RemoveAll(".ohc-cloud-data")
 }
-
-func TestCheckEnvironment_Local(t *testing.T) {
-	// Ensure clean state
-	os.RemoveAll(".ohc-local-data")
-
-	err := CheckEnvironment(false)
-	if err == nil {
-		t.Fatalf("expected error for missing environment, got nil")
-	}
-
-	ProvisionEnvironment(context.Background(), false)
-	err = CheckEnvironment(false)
-	if err != nil {
-		t.Fatalf("expected nil error for provisioned environment, got %v", err)
-	}
-	os.RemoveAll(".ohc-local-data")
-}
-
-func TestCheckEnvironment_Cloud(t *testing.T) {
-	// Ensure clean state
-	os.RemoveAll(".ohc-cloud-data")
-
-	err := CheckEnvironment(true)
-	if err == nil {
-		t.Fatalf("expected error for missing environment, got nil")
-	}
-
-	ProvisionEnvironment(context.Background(), true)
-	err = CheckEnvironment(true)
-	if err != nil {
-		t.Fatalf("expected nil error for provisioned environment, got %v", err)
-	}
-	os.RemoveAll(".ohc-cloud-data")
-}

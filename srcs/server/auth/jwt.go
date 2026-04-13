@@ -31,7 +31,6 @@ type Claims struct {
 	Roles          []string `json:"roles"`
 	OrganizationID string   `json:"organization_id,omitempty"`
 	IssuedAt       int64    `json:"iat"`
-	NotBefore      int64    `json:"nbf,omitempty"`
 	Expires        int64    `json:"exp"`
 	TokenID        string   `json:"jti"`
 }
@@ -160,17 +159,8 @@ func parseHS256(token string, secret []byte) (*Claims, error) {
 	if err := json.Unmarshal(payBytes, &claims); err != nil {
 		return nil, fmt.Errorf("parse claims: %w", err)
 	}
-	now := time.Now().Unix()
-	const skew = 60 // 1 minute clock skew allowance
-
-	if now > claims.Expires {
+	if time.Now().Unix() > claims.Expires {
 		return nil, errors.New("token expired")
-	}
-	if claims.IssuedAt > now+skew {
-		return nil, errors.New("token issued in the future")
-	}
-	if claims.NotBefore > 0 && now < claims.NotBefore-skew {
-		return nil, errors.New("token not yet valid")
 	}
 	return &claims, nil
 }

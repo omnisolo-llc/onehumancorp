@@ -42,25 +42,3 @@ func ProvisionEnvironment(ctx context.Context, isCloud bool) error {
 
 	return nil
 }
-
-// CheckEnvironment verifies that the necessary folders for Day One Hybrid OS onboarding exist.
-func CheckEnvironment(isCloud bool) error {
-	baseDir := ".ohc-local-data"
-	if isCloud {
-		baseDir = ".ohc-cloud-data"
-	}
-
-	dirs := []string{
-		filepath.Join(baseDir, "db"),
-		filepath.Join(baseDir, "blob"),
-		filepath.Join(baseDir, "config"),
-	}
-
-	for _, dir := range dirs {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			return fmt.Errorf("directory %s does not exist", dir)
-		}
-	}
-
-	return nil
-}

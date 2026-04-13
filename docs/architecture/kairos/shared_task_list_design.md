@@ -1,5 +1,3 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
-
 # Master Design Doc: KAIROS AI OS Orchestration
 
 This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
@@ -53,5 +51,3 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 </style>`
-
-</div>
