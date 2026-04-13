@@ -5,11 +5,10 @@ build --config=remote
 # Enable disk cache for fast incremental builds
 build --disk_cache=~/.cache/bazel-disk-cache
 
-# Enable Build without the Bytes for faster remote builds.
-# For tests under --config=remote we override this to download all outputs,
-# because many test wrappers execute local helper binaries/scripts generated
-# during the build phase.
-build:remote --remote_download_all
+# Keep remote and local behavior aligned while avoiding large output downloads
+# on CI runners. Bazel will still materialize the specific inputs needed for
+# local actions and tests.
+build:remote --remote_download_minimal
 
 # Show test output only on failure
 test --test_output=errors
