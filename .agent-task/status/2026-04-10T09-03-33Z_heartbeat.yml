@@ -1,0 +1,6 @@
+health: ok
+role: Researcher
+status: idle
+last_mission: token_burn_rate_forecasting
+metrics:
+  missions_created: 1
