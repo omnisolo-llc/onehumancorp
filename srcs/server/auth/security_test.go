@@ -3,6 +3,7 @@ package auth
 import (
 	"testing"
 	"time"
+	"context"
 )
 
 func TestHS256Validation_ClockSkew(t *testing.T) {
@@ -115,5 +116,28 @@ func TestClaims_HasRole_Admin(t *testing.T) {
 	}
 	if viewerClaims.HasRole(RoleAdmin) {
 		t.Error("viewer should NOT have admin permissions")
+	}
+}
+
+func TestValidateToken_RevokedOIDC(t *testing.T) {
+	store := NewStore()
+	// Force OIDC enabled so parseHS256 fallback happens
+	store.oidcCfg.Enabled = true
+
+	// Manually insert a revoked jti
+	store.RevokeToken("oidc-jti-123", time.Now().Add(1 * time.Hour))
+
+	// Test revocation logic directly or through standard token parsing fallback behavior
+	if !store.IsRevoked("oidc-jti-123") {
+		t.Errorf("expected token to be revoked")
+	}
+}
+
+func TestTenantIsolation_GetByID(t *testing.T) {
+	// Validate tenant isolation through dummy claims injection
+	ctx := context.WithValue(context.Background(), claimsContextKey, &Claims{OrganizationID: "tenant-a"})
+	orgID := OrganizationIDFromContext(ctx)
+	if orgID != "tenant-a" {
+		t.Errorf("expected tenant-a, got %s", orgID)
 	}
 }

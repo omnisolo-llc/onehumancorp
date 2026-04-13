@@ -29,7 +29,7 @@ func TestNewStore_AdminUserCreated(t *testing.T) {
 	t.Setenv("ADMIN_EMAIL", "testadmin@test.com")
 	s := auth.NewStore()
 
-	users := s.ListUsers()
+	users := s.ListUsers(context.Background())
 	if len(users) != 1 {
 		t.Fatalf("expected 1 user after init, got %d", len(users))
 	}
@@ -84,7 +84,7 @@ func TestStore_UpdateAndDeleteUser(t *testing.T) {
 
 	newEmail := "charlie2@test.com"
 	inactive := false
-	updated, err := s.UpdateUser(u.ID, &newEmail, []string{auth.RoleOperator}, &inactive)
+	updated, err := s.UpdateUser(context.Background(), u.ID, &newEmail, []string{auth.RoleOperator}, &inactive)
 	if err != nil {
 		t.Fatalf("UpdateUser: %v", err)
 	}
@@ -95,10 +95,10 @@ func TestStore_UpdateAndDeleteUser(t *testing.T) {
 		t.Error("active should be false after update")
 	}
 
-	if err := s.DeleteUser(u.ID); err != nil {
+	if err := s.DeleteUser(context.Background(), u.ID); err != nil {
 		t.Fatalf("DeleteUser: %v", err)
 	}
-	if _, ok := s.GetUser(u.ID); ok {
+	if _, ok := s.GetUser(context.Background(), u.ID); ok {
 		t.Error("user should be gone after delete")
 	}
 }
@@ -107,7 +107,7 @@ func TestStore_DisabledUserCannotLogin(t *testing.T) {
 	s := auth.NewStore()
 	u, _ := s.CreateUser("disabled", "dis@test.com", "dispass1", nil)
 	inactive := false
-	s.UpdateUser(u.ID, nil, nil, &inactive)
+	s.UpdateUser(context.Background(), u.ID, nil, nil, &inactive)
 
 	if _, err := s.Authenticate("disabled", "dispass1"); err == nil {
 		t.Error("expected error authenticating disabled user")
@@ -880,17 +880,17 @@ func TestAuthMoreCoverage(t *testing.T) {
 	u1, _ := s.CreateUser("cov1", "cov1@test.com", "pass123", []string{auth.RoleViewer})
 	_, _ = s.CreateUser("cov2", "cov2@test.com", "pass123", []string{auth.RoleViewer})
 	newEmail := "cov2@test.com"
-	if _, err := s.UpdateUser(u1.ID, &newEmail, nil, nil); err == nil {
+	if _, err := s.UpdateUser(context.Background(), u1.ID, &newEmail, nil, nil); err == nil {
 		t.Error("expected error for duplicate email on update")
 	}
 
 	// UpdateUser missing
-	if _, err := s.UpdateUser("missing", nil, nil, nil); err == nil {
+	if _, err := s.UpdateUser(context.Background(), "missing", nil, nil, nil); err == nil {
 		t.Error("expected error for missing user on update")
 	}
 
 	// DeleteUser missing
-	if err := s.DeleteUser("missing"); err == nil {
+	if err := s.DeleteUser(context.Background(), "missing"); err == nil {
 		t.Error("expected error for missing user on delete")
 	}
 
@@ -1049,7 +1049,7 @@ func TestStore_RevokeCleanup(t *testing.T) {
 func TestStore_DeleteOIDCUser(t *testing.T) {
 	s := auth.NewStore()
 	u := s.GetOrCreateOIDCUser("sub-delete", "del@test.com", "deluser")
-	s.DeleteUser(u.ID)
+	s.DeleteUser(context.Background(), u.ID)
 
 	u2 := s.GetOrCreateOIDCUser("sub-delete", "del@test.com", "deluser")
 	if u.ID == u2.ID {
@@ -1457,7 +1457,7 @@ func TestStore_AuthenticateErrorsMore(t *testing.T) {
 	s := auth.NewStore()
 	u, _ := s.CreateUser("user1", "u1@test.com", "123456", nil)
 	inactive := false
-	s.UpdateUser(u.ID, nil, nil, &inactive)
+	s.UpdateUser(context.Background(), u.ID, nil, nil, &inactive)
 	if _, err := s.Authenticate("user1", "123456"); err == nil {
 		t.Error("expected error for disabled user")
 	}

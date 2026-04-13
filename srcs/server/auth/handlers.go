@@ -112,7 +112,7 @@ func (h *Handlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "not authenticated", http.StatusUnauthorized)
 		return
 	}
-	user, ok := h.store.GetUser(claims.Subject)
+	user, ok := h.store.GetUser(r.Context(), claims.Subject)
 	if !ok {
 		// OIDC user not yet materialised locally — return claims-derived info
 		writeJSON(w, http.StatusOK, UserPublic{
@@ -156,7 +156,7 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		users := h.store.ListUsers()
+		users := h.store.ListUsers(r.Context())
 		out := make([]UserPublic, 0, len(users))
 		for _, u := range users {
 			out = append(out, u.PublicView())
@@ -214,7 +214,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		user, ok := h.store.GetUser(id)
+		user, ok := h.store.GetUser(r.Context(), id)
 		if !ok {
 			jsonError(w, "user not found", http.StatusNotFound)
 			return
@@ -234,7 +234,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			req.Roles = nil
 			req.Active = nil
 		}
-		user, err := h.store.UpdateUser(id, req.Email, req.Roles, req.Active)
+		user, err := h.store.UpdateUser(r.Context(), id, req.Email, req.Roles, req.Active)
 		if err != nil {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -246,7 +246,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		if err := h.store.DeleteUser(id); err != nil {
+		if err := h.store.DeleteUser(r.Context(), id); err != nil {
 			jsonError(w, err.Error(), http.StatusNotFound)
 			return
 		}

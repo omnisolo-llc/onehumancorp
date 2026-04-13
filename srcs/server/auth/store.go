@@ -188,6 +188,7 @@ func newStore(repo UserRepository) *Store {
 }
 
 func (s *Store) seedDefaultAdmin(now time.Time) {
+	ctx := context.Background()
 	adminUser := envOr("ADMIN_USERNAME", "admin")
 	adminPass := envOr("ADMIN_PASSWORD", "admin")
 	adminEmail := envOr("ADMIN_EMAIL", "admin@localhost")
@@ -210,7 +211,7 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 	}
 
 	if s.repo != nil {
-		ctx := context.Background()
+
 		existing, err := s.repo.GetByUsername(ctx, adminUser)
 		switch {
 		case err == nil && existing != nil:
@@ -339,9 +340,9 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 // Returns (*User, bool).
 // Produces no errors.
 // Has no side effects.
-func (s *Store) GetUser(id string) (*User, bool) {
+func (s *Store) GetUser(ctx context.Context, id string) (*User, bool) {
 	if s.repo != nil {
-		u, err := s.repo.GetByID(context.Background(), id)
+		u, err := s.repo.GetByID(ctx, id)
 		if err != nil {
 			return nil, false
 		}
@@ -359,9 +360,9 @@ func (s *Store) GetUser(id string) (*User, bool) {
 // Returns []*User.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) ListUsers() []*User {
+func (s *Store) ListUsers(ctx context.Context) []*User {
 	if s.repo != nil {
-		users, err := s.repo.ListUsers(context.Background())
+		users, err := s.repo.ListUsers(ctx)
 		if err != nil {
 			slog.Error("failed to list users from repository", "error", err)
 			return nil
@@ -383,9 +384,8 @@ func (s *Store) ListUsers() []*User {
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
+func (s *Store) UpdateUser(ctx context.Context, id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
 	if s.repo != nil {
-		ctx := context.Background()
 		u, err := s.repo.GetByID(ctx, id)
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
@@ -439,9 +439,8 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) DeleteUser(id string) error {
+func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	if s.repo != nil {
-		ctx := context.Background()
 		if _, err := s.repo.GetByID(ctx, id); err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				return errors.New("user not found")
@@ -622,6 +621,7 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User 
 
 func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername string) *User {
 	ctx := context.Background()
+
 
 	if u, err := s.repo.GetByOIDCSubject(ctx, sub); err == nil {
 		return u

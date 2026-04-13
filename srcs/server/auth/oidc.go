@@ -339,6 +339,7 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 		RealmAccess       struct {
 			Roles []string `json:"roles"`
 		} `json:"realm_access"`
+		OrganizationID    string   `json:"organization_id"`
 		Iss string      `json:"iss"`
 		Aud interface{} `json:"aud"`
 		Iat int64       `json:"iat"`
@@ -398,6 +399,7 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 		Username: raw.PreferredUsername,
 		Email:    raw.Email,
 		Roles:    roles,
+		OrganizationID: raw.OrganizationID,
 		IssuedAt: raw.Iat,
 		Expires:  raw.Exp,
 		TokenID:  raw.Jti,

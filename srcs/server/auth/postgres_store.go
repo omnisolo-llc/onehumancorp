@@ -42,23 +42,49 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 }
 
 func (r *PgUserRepository) GetByID(ctx context.Context, id string) (*User, error) {
+	orgID := OrganizationIDFromContext(ctx)
+	if orgID != "" && orgID != "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1", id)
 }
 
 func (r *PgUserRepository) GetByUsername(ctx context.Context, username string) (*User, error) {
+	orgID := OrganizationIDFromContext(ctx)
+	if orgID != "" && orgID != "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", username, orgID)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", username)
 }
 
 func (r *PgUserRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
+	orgID := OrganizationIDFromContext(ctx)
+	if orgID != "" && orgID != "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2", email, orgID)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1", email)
 }
 
 func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string) (*User, error) {
+	orgID := OrganizationIDFromContext(ctx)
+	if orgID != "" && orgID != "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2", sub, orgID)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1", sub)
 }
 
 func (r *PgUserRepository) ListUsers(ctx context.Context) ([]*User, error) {
-	rows, err := r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
+	orgID := OrganizationIDFromContext(ctx)
+	var query string
+	var args []any
+	if orgID != "" && orgID != "sys" {
+		query = "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at"
+		args = []any{orgID}
+	} else {
+		query = "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at"
+	}
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("pg: list users: %w", err)
 	}
@@ -109,7 +135,13 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 }
 
 func (r *PgUserRepository) DeleteUser(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
+	orgID := OrganizationIDFromContext(ctx)
+	var err error
+	if orgID != "" && orgID != "sys" {
+		_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
+	} else {
+		_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
+	}
 	if err != nil {
 		return fmt.Errorf("pg: delete user: %w", err)
 	}

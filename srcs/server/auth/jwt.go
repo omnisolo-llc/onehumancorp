@@ -92,9 +92,13 @@ func (s *Store) ValidateToken(token string) (*Claims, error) {
 	claims, err := parseHS256(token, s.secret)
 	if err != nil {
 		if s.oidcCfg.Enabled {
-			return ValidateOIDCToken(token, s.oidcCfg)
+			claims, err = ValidateOIDCToken(token, s.oidcCfg)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
 		}
-		return nil, err
 	}
 	if s.IsRevoked(claims.TokenID) {
 		return nil, errors.New("token revoked")
