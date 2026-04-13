@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "utils",
-    srcs = ["json_minify.go", "gzip_middleware.go"],
+    srcs = ["json_minify.go", "gzip_middleware.go", "fs.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/utils",
     visibility = ["//visibility:public"],
 )

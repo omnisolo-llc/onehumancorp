@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"path/filepath"
 	"strings"
 
@@ -50,7 +51,7 @@ func (p *LocalFSProvider) WriteFile(ctx context.Context, path string, data []byt
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(fullPath, data, 0644)
+	return utils.WriteFileAtomic(fullPath, data, 0644)
 }
 
 func (p *LocalFSProvider) ListDir(ctx context.Context, path string) ([]string, error) {
@@ -109,7 +110,7 @@ func (p *CloudFSProvider) WriteFile(ctx context.Context, path string, data []byt
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(fullPath, data, 0644)
+	return utils.WriteFileAtomic(fullPath, data, 0644)
 }
 
 func (p *CloudFSProvider) ListDir(ctx context.Context, path string) ([]string, error) {
