@@ -364,69 +364,6 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 }
 
 
-func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
-	if s.mesh != nil {
-		err := s.mesh.AdvertiseCapabilities(ctx, *req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
-}
-
-func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
-	if s.mesh == nil {
-		return fmt.Errorf("mesh transport not configured")
-	}
-
-	ctx := stream.Context()
-	capsCh, err := s.mesh.SubscribeCapabilities(ctx)
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case cap := <-capsCh:
-			if err := stream.Send(&cap); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
-	if s.mesh == nil {
-		return fmt.Errorf("mesh transport not configured")
-	}
-
-	ctx := stream.Context()
-	topic := req.GetTopic()
-
-	eventsCh, err := s.mesh.SubscribeMeshEvents(ctx, topic)
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case payload := <-eventsCh:
-			timestamp := time.Now().UnixNano()
-			event := pb.MeshEvent_builder{
-				Topic:     &topic,
-				Payload:   payload,
-				Timestamp: &timestamp,
-			}.Build()
-			if err := stream.Send(event); err != nil {
-				return err
-			}
-		}
-	}
-}
 
 func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
 	if h.GetTokenUsage == nil {
@@ -1440,6 +1377,70 @@ type HubServiceServer struct {
 	mesh MeshTransport
 }
 
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.mesh != nil {
+		err := s.mesh.AdvertiseCapabilities(ctx, *req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.mesh == nil {
+		return fmt.Errorf("mesh transport not configured")
+	}
+
+	ctx := stream.Context()
+	capsCh, err := s.mesh.SubscribeCapabilities(ctx)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case cap := <-capsCh:
+			if err := stream.Send(&cap); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.mesh == nil {
+		return fmt.Errorf("mesh transport not configured")
+	}
+
+	ctx := stream.Context()
+	topic := req.GetTopic()
+
+	eventsCh, err := s.mesh.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case payload := <-eventsCh:
+			timestamp := time.Now().UnixNano()
+			event := pb.MeshEvent_builder{
+				Topic:     &topic,
+				Payload:   payload,
+				Timestamp: &timestamp,
+			}.Build()
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // NewHubServiceServer functionality.
 // Accepts parameters: hub *Hub (No Constraints).
 // Returns *HubServiceServer.
@@ -1892,6 +1893,14 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
+	mux.HandleFunc("/api/orchestration/tasks/all", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleListAllTasks(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleCreateTask(w, r, tm)
@@ -1984,6 +1993,21 @@ func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 	limit := 10 // Default limit
 
 	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if tasks == nil {
+		tasks = []*SharedTask{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tasks)
+}
+
+func handleListAllTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	tasks, err := tm.ListTasks(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

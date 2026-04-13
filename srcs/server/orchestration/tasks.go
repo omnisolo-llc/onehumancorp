@@ -24,19 +24,19 @@ import (
 
 // SharedTask represents a shared task distributed across agents.
 type SharedTask struct {
-	ID              string
-	OrganizationID  string
-	ParentPlanID    string
-	Dependencies    []string
-	Title           string
-	Description     string
-	AssignedAgentID string
-	Status          string // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
-	Priority        string
-	Payload         string
-	LockedUntil     sql.NullTime
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              string     `json:"id"`
+	OrganizationID  string     `json:"organizationId"`
+	ParentPlanID    string     `json:"parentPlanId"`
+	Dependencies    []string   `json:"dependencies"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	AssignedAgentID string     `json:"assignedAgentId"`
+	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
+	Priority        string     `json:"priority"`
+	Payload         string     `json:"payload"`
+	LockedUntil     *time.Time `json:"lockedUntil"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
 }
 
 // TaskManager manages the shared tasks list
@@ -335,9 +335,13 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		FROM shared_tasks
 		WHERE id = $1
 	`
+	var lockedUntil sql.NullTime
 	errQuery = tx.QueryRow(ctx, readQuery, fetchedTaskID).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &lockedUntil, &task.CreatedAt, &task.UpdatedAt,
 	)
+	if lockedUntil.Valid {
+		task.LockedUntil = &lockedUntil.Time
+	}
 
 	if errQuery != nil {
 		return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
@@ -544,8 +548,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	var tasks []*SharedTask
 	for rows.Next() {
 		task := &SharedTask{}
+		var lockedUntil sql.NullTime
 		if err := rows.Scan(
-			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &lockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
@@ -557,6 +562,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			}
 		}
 
+		if lockedUntil.Valid {
+			task.LockedUntil = &lockedUntil.Time
+		}
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
@@ -632,9 +640,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				WHERE id = $1
 			`
 			task := &SharedTask{}
+			var lockedUntil sql.NullTime
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &lockedUntil, &task.CreatedAt, &task.UpdatedAt,
 			)
+			if lockedUntil.Valid {
+				task.LockedUntil = &lockedUntil.Time
+			}
 
 			if errQuery != nil {
 				return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
@@ -696,9 +708,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				WHERE id = $1
 			`
 			task := &SharedTask{}
+			var lockedUntil sql.NullTime
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &lockedUntil, &task.CreatedAt, &task.UpdatedAt,
 			)
+			if lockedUntil.Valid {
+				task.LockedUntil = &lockedUntil.Time
+			}
 
 			if errQuery != nil {
 				return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
@@ -771,6 +787,115 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	return claimedTasks, nil
 }
 
+// ListTasks returns all tasks for the current organization.
+func (tm *TaskManager) ListTasks(ctx context.Context) ([]*SharedTask, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized: missing claims")
+	}
+
+	query := `
+		SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.agent_id, st.created_at, st.updated_at
+		FROM shared_tasks st
+		WHERE st.organization_id = $1
+		ORDER BY st.updated_at DESC
+	`
+
+	rows, err := tm.db.Query(ctx, query, claims.OrganizationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	for rows.Next() {
+		task := &SharedTask{}
+		var agentID sql.NullString
+		var lockedUntil sql.NullTime
+		if err := rows.Scan(
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &lockedUntil, &agentID, &task.CreatedAt, &task.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan task: %w", err)
+		}
+
+		if agentID.Valid {
+			task.AssignedAgentID = agentID.String
+		}
+		if lockedUntil.Valid {
+			task.LockedUntil = &lockedUntil.Time
+		}
+
+		var payloadMap map[string]interface{}
+		if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+			if desc, ok := payloadMap["description"].(string); ok {
+				task.Description = desc
+			}
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	if len(tasks) == 0 {
+		return tasks, nil
+	}
+
+	// Fetch all dependencies in a single query
+	taskIDs := make([]string, len(tasks))
+	taskMap := make(map[string]*SharedTask, len(tasks))
+	for i, t := range tasks {
+		taskIDs[i] = t.ID
+		taskMap[t.ID] = t
+	}
+
+	// Simple IN query for dependencies
+	depQuery := `SELECT task_id, depends_on_task_id FROM task_dependencies WHERE task_id = ANY($1)`
+	if tm.db.IsSQLite() {
+		// SQLite doesn't support ANY($1) for slices directly in the same way pgx does.
+		// We can build the query with placeholders or use a different approach.
+		// For simplicity and safety in this context, let's use a batch approach.
+		placeholders := make([]string, len(taskIDs))
+		args := make([]interface{}, len(taskIDs))
+		for i, id := range taskIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			args[i] = id
+		}
+		depQuery = fmt.Sprintf("SELECT task_id, depends_on_task_id FROM task_dependencies WHERE task_id IN (%s)", strings.Join(placeholders, ","))
+
+		depRows, err := tm.db.Query(ctx, depQuery, args...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query dependencies: %w", err)
+		}
+		defer depRows.Close()
+		for depRows.Next() {
+			var taskID, depID string
+			if err := depRows.Scan(&taskID, &depID); err == nil {
+				if t, ok := taskMap[taskID]; ok {
+					t.Dependencies = append(t.Dependencies, depID)
+				}
+			}
+		}
+	} else {
+		depRows, err := tm.db.Query(ctx, depQuery, taskIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query dependencies: %w", err)
+		}
+		defer depRows.Close()
+		for depRows.Next() {
+			var taskID, depID string
+			if err := depRows.Scan(&taskID, &depID); err == nil {
+				if t, ok := taskMap[taskID]; ok {
+					t.Dependencies = append(t.Dependencies, depID)
+				}
+			}
+		}
+	}
+
+	return tasks, nil
+}
 
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {

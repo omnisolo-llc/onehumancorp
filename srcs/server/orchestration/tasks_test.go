@@ -331,3 +331,52 @@ func getTaskHelper(t *testing.T, ctx context.Context, tm *TaskManager, taskID st
 	)
 	return &task, err
 }
+
+func TestTaskManager_ListTasks(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+
+	// Create a few tasks
+	_, _ = tm.CreateTask(ctx, "org-1", "Task 1", "Desc 1", "P2")
+	time.Sleep(10 * time.Millisecond) // Ensure different update_at
+	_, _ = tm.CreateTask(ctx, "org-1", "Task 2", "Desc 2", "P1")
+	time.Sleep(10 * time.Millisecond)
+	task3, _ := tm.CreateTask(ctx, "org-1", "Task 3", "Desc 3", "P3")
+
+	// Add dependency to Task 3
+	_, err := tm.db.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task3.ID, "some-parent-id")
+	if err != nil {
+		t.Fatalf("failed to insert dependency: %v", err)
+	}
+
+	tasks, err := tm.ListTasks(ctx)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(tasks) != 3 {
+		t.Fatalf("expected 3 tasks, got %d", len(tasks))
+	}
+
+	// Verify order (newest first)
+	if tasks[0].Title != "Task 3" {
+		t.Errorf("expected Task 3 first, got %s", tasks[0].Title)
+	}
+
+	// Verify dependencies
+	foundDep := false
+	for _, task := range tasks {
+		if task.ID == task3.ID {
+			if len(task.Dependencies) == 1 && task.Dependencies[0] == "some-parent-id" {
+				foundDep = true
+			}
+		}
+	}
+	if !foundDep {
+		t.Errorf("failed to find dependency for task 3")
+	}
+}

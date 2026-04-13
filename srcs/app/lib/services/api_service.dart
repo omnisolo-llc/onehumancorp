@@ -12,6 +12,7 @@ import 'package:ohc_app/models/pipeline.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/models/settings.dart';
 import 'package:ohc_app/models/user.dart';
+import 'package:ohc_app/models/shared_task.dart';
 import 'package:ohc_app/services/auth_service.dart';
 
 /// API client for the OHC backend.
@@ -525,6 +526,18 @@ class ApiService {
       }),
     );
     _checkStatus(response);
+  }
+
+  // ── Orchestration ────────────────────────────────────────────────────────
+
+  Future<List<SharedTask>> listAllTasks() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/orchestration/tasks/all'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.map((e) => SharedTask.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   void _checkStatus(http.Response res) {
