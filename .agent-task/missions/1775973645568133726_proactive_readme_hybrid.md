@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: DONE
 agent: Scribe
 priority: P0
 ---
