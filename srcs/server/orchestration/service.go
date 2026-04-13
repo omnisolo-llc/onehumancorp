@@ -1658,7 +1658,7 @@ func NewMinimaxClient(apiKey string) MinimaxClient {
 	globalCircuitBreakerOnce.Do(func() {
 		globalCircuitBreaker = &CircuitBreaker{
 			maxFailures:  3,
-			resetTimeout: 30 * time.Second,
+			resetTimeout: 120 * time.Second,
 		}
 	})
 
@@ -1675,7 +1675,7 @@ var bufferPool = sync.Pool{
 }
 
 var sharedHTTPClient = &http.Client{
-	Timeout: 30 * time.Second,
+	Timeout: 120 * time.Second,
 }
 
 // Reason functionality.
