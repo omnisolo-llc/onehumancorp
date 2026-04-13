@@ -592,6 +592,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
+	mux.HandleFunc("/connection/kairos_stream", api.HandleKairosStream(hub))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
