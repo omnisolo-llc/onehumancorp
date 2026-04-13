@@ -87,7 +87,7 @@ func TestCalculateCost(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cost := CalculateCost(ctx, tt.model, tt.promptTokens, tt.completionTokens, tt.cachedTokens)
 			if math.Abs(cost-tt.expectedCost) > 1e-9 {
-				t.Errorf("expected total cost %f, got %f", tt.expectedCost, cost)
+				t.Errorf("expected %f, got %f", tt.expectedCost, cost)
 			}
 		})
 	}

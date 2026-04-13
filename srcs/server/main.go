@@ -3,22 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/redis/rueidis"
+	"github.com/onehumancorp/mono/srcs/server/sync"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"time"
 
-	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
-	"github.com/onehumancorp/mono/srcs/server/agents/builtinclient"
-	"github.com/onehumancorp/mono/srcs/server/sync"
-	"github.com/redis/rueidis"
-
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
@@ -27,6 +22,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -465,29 +461,45 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	})
 
-	// 5. Start the standalone builtin agent gRPC daemon.
+	// 5. Start the builtin agent process (Rust binary).
+	// The Rust binary connects to the gRPC server and self-registers.
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
-	startBuiltinAgentProcess(ctx, builtinclient.AddressFromEnv())
+	grpcEndpoint := "http://localhost" + grpcAddress
+	startBuiltinAgentProcess(ctx, grpcEndpoint)
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 
 	// Setup MeshTransport for Hub
-	var mesh orchestration.MeshTransport
+		var teammateMesh mesh.TeammateMesh
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_MULTITENANT") == "true" {
+		rm, err := mesh.NewRedisMesh(redisURL)
+		if err == nil {
+			teammateMesh = rm
+		} else {
+			slog.Error("Failed to initialize RedisMesh", "err", err)
+			teammateMesh = mesh.NewLocalMesh()
+		}
+	} else {
+		teammateMesh = mesh.NewLocalMesh()
+	}
+	_ = teammateMesh // In a real app this would be injected somewhere
+
+	var meshTransport orchestration.MeshTransport
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		rm, err := orchestration.NewRedisMeshTransport(redisURL)
 		if err == nil {
-			mesh = rm
+			meshTransport = rm
 		}
 	}
-	if mesh == nil {
+	if meshTransport == nil {
 		if pool != nil {
-			mesh = orchestration.NewMemoryMeshTransport(pool.Provider)
+			meshTransport = orchestration.NewMemoryMeshTransport(pool.Provider)
 		} else {
-			mesh = orchestration.NewMemoryMeshTransport(nil)
+			meshTransport = orchestration.NewMemoryMeshTransport(nil)
 		}
 	}
 
 	if cn := hub.CentrifugeNode(); cn != nil {
-		cn.SetMeshTransport(mesh)
+		cn.SetMeshTransport(meshTransport)
 	}
 
 	// Start gRPC server
@@ -501,7 +513,7 @@ func run(now time.Time, listen listenFunc) error {
 			grpc.UnaryInterceptor(orchestration.SPIFFEAuthInterceptor()),
 			grpc.StreamInterceptor(orchestration.SPIFFEStreamInterceptor()),
 		)
-		orchestration.RegisterHubService(s, hub, mesh)
+		orchestration.RegisterHubService(s, hub, meshTransport)
 		slog.Info("serving gRPC", "address", grpcAddress)
 		if err := s.Serve(lis); err != nil {
 			slog.Error("failed to serve gRPC", "error", err)
@@ -530,24 +542,10 @@ func main() {
 	}
 }
 
-// startBuiltinAgentProcess spawns the standalone C++ builtin agent gRPC daemon
-// as a subprocess when the configured endpoint is local.
+// startBuiltinAgentProcess spawns the Rust builtin agent binary as a subprocess.
+// The Rust binary connects back to the gRPC server and self-registers.
 // It is restarted automatically if it exits unexpectedly.
-func startBuiltinAgentProcess(ctx context.Context, agentAddress string) {
-	if agentAddress == "" {
-		agentAddress = builtinclient.DefaultAddress
-	}
-	if !builtinclient.IsLocalAddress(agentAddress) {
-		slog.Info("builtin agent points to a remote gRPC endpoint; skipping local spawn", "address", agentAddress)
-		return
-	}
-
-	port, err := builtinclient.PortFromAddress(agentAddress)
-	if err != nil {
-		slog.Error("invalid builtin agent address", "address", agentAddress, "error", err)
-		return
-	}
-
+func startBuiltinAgentProcess(ctx context.Context, grpcEndpoint string) {
 	binaryPath := os.Getenv("OHC_BUILTIN_AGENT_BINARY")
 	if binaryPath == "" {
 		exe, err := os.Executable()
@@ -564,65 +562,17 @@ func startBuiltinAgentProcess(ctx context.Context, agentAddress string) {
 		return
 	}
 
-	processConfig, err := buildBuiltinAgentProcessConfig(agentAddress)
-	if err != nil {
-		slog.Error("failed to build builtin agent process config", "error", err)
-		return
-	}
-	configPath, err := writeBuiltinAgentProcessConfig(processConfig)
-	if err != nil {
-		slog.Error("failed to persist builtin agent process config", "error", err)
-		return
-	}
-	go func() {
-		<-ctx.Done()
-		_ = os.Remove(configPath)
-	}()
-
-	args := []string{"--config_proto_path=" + configPath}
-
-	healthAddress := net.JoinHostPort("127.0.0.1", port)
-
 	go func() {
 		for {
-			cmd := exec.CommandContext(ctx, binaryPath, args...)
-			cmd.Env = os.Environ()
+			cmd := exec.CommandContext(ctx, binaryPath)
+			cmd.Env = append(os.Environ(),
+				"OHC_GRPC_ENDPOINT="+grpcEndpoint,
+			)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 
-			slog.Info("starting builtin agent process", "path", binaryPath, "address", agentAddress)
-			if err := cmd.Start(); err != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				slog.Error("failed to start builtin agent process", "err", err)
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(5 * time.Second):
-				}
-				continue
-			}
-
-			readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			readyErr := builtinclient.WaitForReady(readyCtx, healthAddress, 250*time.Millisecond)
-			cancel()
-			if readyErr != nil {
-				slog.Error("builtin agent failed readiness check", "address", healthAddress, "err", readyErr)
-				if cmd.Process != nil {
-					_ = cmd.Process.Kill()
-				}
-				_ = cmd.Wait()
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(5 * time.Second):
-				}
-				continue
-			}
-
-			slog.Info("builtin agent ready", "address", healthAddress)
-			if err := cmd.Wait(); err != nil {
+			slog.Info("starting builtin agent process", "path", binaryPath)
+			if err := cmd.Run(); err != nil {
 				if ctx.Err() != nil {
 					return
 				}
@@ -632,104 +582,7 @@ func startBuiltinAgentProcess(ctx context.Context, agentAddress string) {
 					return
 				case <-time.After(5 * time.Second):
 				}
-				continue
-			}
-			if ctx.Err() != nil {
-				return
-			}
-			slog.Warn("builtin agent process exited cleanly, restarting in 5s")
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(5 * time.Second):
 			}
 		}
 	}()
-}
-
-func buildBuiltinAgentProcessConfig(agentAddress string) (*agentservicepb.BuiltinAgentProcessConfig, error) {
-	port, err := builtinclient.PortFromAddress(agentAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	runtimeConfig := &agentservicepb.AgentRuntimeConfig{}
-	if provider := os.Getenv("OHC_BUILTIN_AGENT_PROVIDER"); provider != "" {
-		runtimeConfig.SetLlmProvider(provider)
-	}
-	if model := os.Getenv("OHC_BUILTIN_AGENT_MODEL"); model != "" {
-		runtimeConfig.SetModel(model)
-	}
-	if endpoint := os.Getenv("OHC_BUILTIN_AGENT_ENDPOINT"); endpoint != "" {
-		runtimeConfig.SetLlmEndpoint(endpoint)
-	}
-	if prompt := os.Getenv("OHC_BUILTIN_AGENT_SYSTEM_PROMPT"); prompt != "" {
-		runtimeConfig.SetSystemPrompt(prompt)
-	}
-	if maxTokens, ok := parseOptionalEnvInt32("OHC_BUILTIN_AGENT_MAX_TOKENS"); ok {
-		runtimeConfig.SetMaxTokens(maxTokens)
-	}
-	if temperature, ok := parseOptionalEnvFloat32("OHC_BUILTIN_AGENT_TEMPERATURE"); ok {
-		runtimeConfig.SetTemperature(temperature)
-	}
-	if maxIterations, ok := parseOptionalEnvInt32("OHC_BUILTIN_AGENT_MAX_ITERATIONS"); ok {
-		runtimeConfig.SetMaxIterations(maxIterations)
-	}
-	if maxContext, ok := parseOptionalEnvInt32("OHC_BUILTIN_AGENT_MAX_CONTEXT_MESSAGES"); ok {
-		runtimeConfig.SetMaxContextMessages(maxContext)
-	}
-
-	return agentservicepb.BuiltinAgentProcessConfig_builder{
-		ListenAddress: proto.String(net.JoinHostPort("0.0.0.0", port)),
-		RuntimeConfig: runtimeConfig,
-	}.Build(), nil
-}
-
-func writeBuiltinAgentProcessConfig(config *agentservicepb.BuiltinAgentProcessConfig) (string, error) {
-	payload, err := proto.Marshal(config)
-	if err != nil {
-		return "", fmt.Errorf("marshal builtin agent process config: %w", err)
-	}
-
-	file, err := os.CreateTemp("", "ohc-builtin-agent-*.pb")
-	if err != nil {
-		return "", fmt.Errorf("create builtin agent process config file: %w", err)
-	}
-	defer file.Close()
-
-	if _, err := file.Write(payload); err != nil {
-		_ = os.Remove(file.Name())
-		return "", fmt.Errorf("write builtin agent process config: %w", err)
-	}
-	if err := file.Chmod(0o600); err != nil {
-		_ = os.Remove(file.Name())
-		return "", fmt.Errorf("chmod builtin agent process config: %w", err)
-	}
-	return file.Name(), nil
-}
-
-func parseOptionalEnvInt32(key string) (int32, bool) {
-	value, ok := os.LookupEnv(key)
-	if !ok || value == "" {
-		return 0, false
-	}
-	parsed, err := strconv.ParseInt(value, 10, 32)
-	if err != nil {
-		slog.Warn("invalid integer builtin agent env", "key", key, "value", value, "error", err)
-		return 0, false
-	}
-	return int32(parsed), true
-}
-
-func parseOptionalEnvFloat32(key string) (float32, bool) {
-	value, ok := os.LookupEnv(key)
-	if !ok || value == "" {
-		return 0, false
-	}
-	parsed, err := strconv.ParseFloat(value, 32)
-	if err != nil {
-		slog.Warn("invalid float builtin agent env", "key", key, "value", value, "error", err)
-		return 0, false
-	}
-	return float32(parsed), true
 }

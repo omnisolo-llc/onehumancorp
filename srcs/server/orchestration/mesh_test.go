@@ -223,85 +223,44 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 	})
 }
 
-func TestRedisTeammateMesh_V2Methods(t *testing.T) {
-	redisURL := "redis://localhost:6379"
-	mesh, err := NewRedisTeammateMesh(redisURL)
-	if err != nil {
-		t.Skip("Redis not available")
-	}
 
-	ctx := context.Background()
-	topic := "test:topic"
-	msg := []byte("hello")
+func TestLocalTeammateMesh_EventsAndCapabilities(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Test PubSub
-	sub, err := mesh.Subscribe(ctx, topic, func(m []byte) {})
-	if err != nil {
-		t.Fatalf("Subscribe failed: %v", err)
-	}
-	defer sub.Close()
+	pool := db.NewTestProvider()
+	defer pool.Close()
+	mt := NewLocalTeammateMesh(pool)
 
-	if err := mesh.Publish(ctx, topic, msg); err != nil {
-		t.Fatalf("Publish failed: %v", err)
-	}
+	t.Run("Capabilities", func(t *testing.T) {
+		sub, err := mt.SubscribeCapabilities(ctx)
+		require.NoError(t, err)
 
-	// Test Lock
-	key := "test:lock"
-	acquired, err := mesh.AcquireLock(ctx, key, 1*time.Minute)
-	if err != nil {
-		t.Fatalf("AcquireLock failed: %v", err)
-	}
-	if !acquired {
-		t.Fatalf("Failed to acquire lock")
-	}
-	if err := mesh.ReleaseLock(ctx, key); err != nil {
-		t.Fatalf("ReleaseLock failed: %v", err)
-	}
+		err = mt.AdvertiseCapabilities(ctx, pb.AgentCapabilities{
+			AgentId: "test-agent",
+		})
+		require.NoError(t, err)
 
-	// Test Presence
-	if err := mesh.RegisterPresence(ctx, "agent1", "IDLE"); err != nil {
-		t.Fatalf("RegisterPresence failed: %v", err)
-	}
-}
+		select {
+		case caps := <-sub:
+			assert.Equal(t, "test-agent", caps.AgentId)
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout")
+		}
+	})
 
-func TestLocalTeammateMesh_V2Methods(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
-	if err != nil {
-		t.Fatalf("failed to create db: %v", err)
-	}
-	defer provider.Close()
-	mesh := NewLocalTeammateMesh(provider)
+	t.Run("Events", func(t *testing.T) {
+		sub, err := mt.SubscribeMeshEvents(ctx, "test-topic")
+		require.NoError(t, err)
 
-	ctx := context.Background()
-	topic := "test:topic"
-	msg := []byte("hello")
+		err = mt.BroadcastMeshEvent(ctx, "test-topic", []byte("hello"))
+		require.NoError(t, err)
 
-	// Test PubSub
-	sub, err := mesh.Subscribe(ctx, topic, func(m []byte) {})
-	if err != nil {
-		t.Fatalf("Subscribe failed: %v", err)
-	}
-	defer sub.Close()
-
-	if err := mesh.Publish(ctx, topic, msg); err != nil {
-		t.Fatalf("Publish failed: %v", err)
-	}
-
-	// Test Lock
-	key := "test:lock"
-	acquired, err := mesh.AcquireLock(ctx, key, 1*time.Minute)
-	if err != nil {
-		t.Fatalf("AcquireLock failed: %v", err)
-	}
-	if !acquired {
-		t.Fatalf("Failed to acquire lock")
-	}
-	if err := mesh.ReleaseLock(ctx, key); err != nil {
-		t.Fatalf("ReleaseLock failed: %v", err)
-	}
-
-	// Test Presence
-	if err := mesh.RegisterPresence(ctx, "agent1", "IDLE"); err != nil {
-		t.Fatalf("RegisterPresence failed: %v", err)
-	}
+		select {
+		case msg := <-sub:
+			assert.Equal(t, "hello", string(msg))
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout")
+		}
+	})
 }

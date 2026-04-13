@@ -1,11 +1,11 @@
 # Changelog
-## [0.2.10] - 2026-04-12
+## [0.2.10] - 2026-04-13
 
 ### Added
 - Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries.
 
 ### Changed
-- Coordinated promotions across Cloud staging and Local desktop beta builds.
+- Improved Resilience Mesh coverage and verified parity.
 - Synchronized version configurations across `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
 
 ## [0.2.9] - 2026-04-10

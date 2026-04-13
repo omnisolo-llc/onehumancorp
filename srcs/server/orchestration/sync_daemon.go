@@ -164,7 +164,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) {
 
 	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
 
-	telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds())
+	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
 
 	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 }

@@ -3,24 +3,21 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "growth",
     srcs = [
-        "quotas.go",
         "referrals.go",
+        "experiments.go",
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
     deps = [
-        "//lib/analytics",
+        "@com_github_prometheus_client_golang//prometheus",
     ],
 )
 
 go_test(
     name = "growth_test",
     srcs = [
-        "quotas_test.go",
         "referrals_test.go",
+        "experiments_test.go",
     ],
     embed = [":growth"],
-    deps = [
-        "//lib/analytics",
-    ],
 )

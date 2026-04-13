@@ -1,3 +1,8 @@
+**KAIROS Orchestration**:
+- **Shared Task List**: Centralized postgres schema for `shared_tasks` with **Omni-Context Sub-agent Routing**.
+- **Teammate Mesh**: Pub/sub over `mesh:tasks` and `mesh:coordination` (OHC-SIP compliant).
+- **autoDream**: Vector pipeline pushing to `consolidated_memory` with **Hybrid MCP RAG Sync**.
+
 # Universal Core Design Protocols (Claude-Class)
 
 1. **Skeptical Memory**: Verify state (`ls`, `grep`, `view_file`) BEFORE acting.
