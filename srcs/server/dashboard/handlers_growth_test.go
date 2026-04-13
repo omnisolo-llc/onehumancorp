@@ -348,3 +348,89 @@ func TestHandleOnboardingMetrics(t *testing.T) {
 		t.Errorf("expected step2 to have count 1, got %d", counts["step2"])
 	}
 }
+
+func TestHandleTeamInviteAccept(t *testing.T) {
+	s := &Server{
+		teamInvites: []TeamInvite{
+			{ID: "inv-1", InviterID: "user-A", InviteeID: "user-B", Status: "PENDING"},
+		},
+	}
+
+	payload := `{"id": "inv-1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/team-invites/accept", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleTeamInviteAccept(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var updated TeamInvite
+	if err := json.NewDecoder(w.Body).Decode(&updated); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if updated.Status != "ACCEPTED" {
+		t.Errorf("expected status 'ACCEPTED', got '%s'", updated.Status)
+	}
+
+	if s.teamInvites[0].Status != "ACCEPTED" {
+		t.Errorf("expected internal state to be 'ACCEPTED'")
+	}
+}
+
+func TestHandleReferralClickAndConvert(t *testing.T) {
+	s := &Server{
+		referrals: []Referral{
+			{ID: "ref-1", UserID: "user-A", ReferralCode: "CODE123", Clicks: 0, Conversions: 0},
+		},
+	}
+
+	// Test Click
+	payloadClick := `{"id": "ref-1"}`
+	reqClick := httptest.NewRequest(http.MethodPost, "/api/growth/referrals/click", bytes.NewBufferString(payloadClick))
+	reqClick.Header.Set("Content-Type", "application/json")
+	wClick := httptest.NewRecorder()
+
+	s.handleReferralClick(wClick, reqClick)
+
+	if wClick.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wClick.Code)
+	}
+
+	var updatedClick Referral
+	if err := json.NewDecoder(wClick.Body).Decode(&updatedClick); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if updatedClick.Clicks != 1 {
+		t.Errorf("expected 1 click, got %d", updatedClick.Clicks)
+	}
+
+	// Test Convert
+	payloadConvert := `{"id": "ref-1"}`
+	reqConvert := httptest.NewRequest(http.MethodPost, "/api/growth/referrals/convert", bytes.NewBufferString(payloadConvert))
+	reqConvert.Header.Set("Content-Type", "application/json")
+	wConvert := httptest.NewRecorder()
+
+	s.handleReferralConvert(wConvert, reqConvert)
+
+	if wConvert.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wConvert.Code)
+	}
+
+	var updatedConvert Referral
+	if err := json.NewDecoder(wConvert.Body).Decode(&updatedConvert); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if updatedConvert.Conversions != 1 {
+		t.Errorf("expected 1 conversion, got %d", updatedConvert.Conversions)
+	}
+
+	if s.referrals[0].Clicks != 1 || s.referrals[0].Conversions != 1 {
+		t.Errorf("expected internal state to be updated")
+	}
+}
