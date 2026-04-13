@@ -1,41 +1,46 @@
 # Bazel configuration for MCP Any
 
-build --config=remote
-test --config=remote
+# ── Default: use BuildBuddy official for all builds and tests ─────────────────
+# Provides remote cache, remote execution, and build event streaming.
+build --config=buildbuddy-official
+test --config=buildbuddy-official
 
-# Disk cache in /tmp so it does not eat into the home-directory quota.
-# Size-limited to 5 GB to prevent disk exhaustion on CI runners.
-# build --disk_cache=~/.cache/bazel-disk-cache
-# build --disk_cache=/tmp/bazel-disk-cache
+# ── Disk cache (L1 in front of remote cache) ──────────────────────────────────
+# Caches action outputs locally to avoid re-downloading on subsequent runs.
+# Particularly helpful for the large Flutter pub-cache tree artifacts.
+# Limited to 5 GB to prevent disk exhaustion on CI runners.
+build --disk_cache=/tmp/bazel-disk-cache
 build --experimental_disk_cache_gc_max_size=5G
 
-# Enable Build without the Bytes for faster remote builds.
-# For tests under --config=remote we override this to download all outputs,
-# because many test wrappers execute local helper binaries/scripts generated
-# during the build phase.
-build:remote --remote_download_all
+# ── Download strategy ─────────────────────────────────────────────────────────
+# Download all outputs so that local test wrappers and generated scripts are
+# available.  Flutter test runners require the pub-cache and workspace trees
+# to be materialised on the local host since test execution uses processwrapper-sandbox.
+build --remote_download_all
 
-# Show test output only on failure
-test --test_output=errors
-test --build_tests_only
-
-# Stream test output for debugging (use --config=verbose)
-test:verbose --test_output=streamed
-
-# Enable CGO for SQLite support
+# ── CGO / SQLite ──────────────────────────────────────────────────────────────
 build --action_env=CGO_ENABLED=1
 
-# Increase test timeout for integration tests
-test --test_timeout=300,600,900,1800
-
-# Enable sandboxing for hermeticity
+# ── Sandboxing ────────────────────────────────────────────────────────────────
 build --spawn_strategy=sandboxed,local
-
 build --incompatible_strict_action_env
 build --announce_rc
 
-# Use all available CPUs
-# Pass through critical environment variables
+# ── Test defaults ─────────────────────────────────────────────────────────────
+# Show test output only on failure
+test --test_output=errors
+test --build_tests_only
+test --test_timeout=300,600,900,1800
+# Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
+# Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
+test --local_test_jobs=4
+# Allow up to 200 parallel remote build actions during tests.
+test --jobs=200
+
+# ── Stream test output for debugging (use --config=verbose) ───────────────────
+test:verbose --test_output=streamed
+
+# ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
 test --test_env=MINIMAX_API_KEY
 test --test_env=MCP_BUNDLE_DIR
@@ -45,81 +50,63 @@ test --test_env=MCPANY_DEBUG
 test --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS
 test --test_env=PATH
 
-# Also for actions if needed
+# ── Action environment ────────────────────────────────────────────────────────
 build --action_env=GEMINI_API_KEY
 build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
+# ── BuildBuddy official (default) ─────────────────────────────────────────────
+# Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
+build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
+build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
+# Upload BES data asynchronously so the build/test result is available sooner.
+build:buildbuddy-official --bes_upload_mode=fully_async
+build:buildbuddy-official --verbose_failures
+common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
+# Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
+common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy-official --remote_upload_local_results
+common:buildbuddy-official --remote_timeout=10m
+common:buildbuddy-official --remote_cache_compression
+common:buildbuddy-official --remote_local_fallback
+common:buildbuddy-official --jobs=200
+# Default read-only API key (public, read-only – cannot push artifacts or
+# modify any BuildBuddy state; safe to keep in version control).
+common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
+
+# ── BuildBuddy self-hosted (cubectl.com) ──────────────────────────────────────
+# Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
+# Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
+# buildbuddy-official which relies on the global sandboxed,local fallback chain.
+common:buildbuddy --bes_results_url=https://buildbuddy.cubectl.com/invocation/
+common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.cubectl.com
+common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.cubectl.com
+common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.cubectl.com
+common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.cubectl.com
+common:buildbuddy --spawn_strategy=remote
+common:buildbuddy --genrule_strategy=remote
+common:buildbuddy --remote_local_fallback
+common:buildbuddy --remote_upload_local_results
+common:buildbuddy --remote_cache_compression
+common:buildbuddy --jobs=200
+build:buildbuddy --remote_timeout=10m
+build:buildbuddy --verbose_failures
+build:buildbuddy --bes_upload_mode=fully_async
+
+# ── NativeLink remote cache ───────────────────────────────────────────────────
 common:nativelink --remote_cache=grpcs://nativelink-gprc.cubectl.com
-# common:nativelink --remote_executor=grpcs://nativelink.cubectl.com
 common:nativelink --remote_cache_compression
 common:nativelink --jobs=100
 build:nativelink --remote_timeout=10m
-build:nativelink --spawn_strategy=remote
 
-# Config for BuildBuddy specifically
-common:buildbuddy_remote-common --bes_results_url=https://buildbuddy.cubectl.com/invocation/
-common:buildbuddy_remote-common --bes_backend=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --remote_cache=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --experimental_remote_downloader=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --remote_executor=grpcs://buildbuddy-grpc.cubectl.com
-common:buildbuddy_remote-common --spawn_strategy=remote
-common:buildbuddy_remote-common --genrule_strategy=remote
-common:buildbuddy_remote-common --remote_local_fallback
-common:buildbuddy_remote-common --remote_upload_local_results
-common:buildbuddy_remote-common --remote_cache_compression
-common:buildbuddy_remote-common --jobs=200
-build:buildbuddy_remote-common --remote_timeout=10m
-build:buildbuddy_remote-common --verbose_failures
-build:buildbuddy_remote-common --platforms=@toolchains_buildbuddy//platforms:linux_arm64
-build:buildbuddy_remote-common --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_arm64
-build:buildbuddy_remote-common --extra_toolchains=@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_arm64
-# AMD64 Specifics
-build:buildbuddy_remote-amd64 --config=_remote-base
-build:buildbuddy_remote-amd64 --platforms=@toolchains_buildbuddy//platforms:linux_x86_64
-build:buildbuddy_remote-amd64 --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_x86_64
-build:buildbuddy_remote-amd64 --extra_toolchains=@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_x86_64
-# ARM64 Specifics
-build:buildbuddy_remote-arm64 --config=_remote-base
-build:buildbuddy_remote-arm64 --platforms=@toolchains_buildbuddy//platforms:linux_arm64
-build:buildbuddy_remote-arm64 --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_arm64
-build:buildbuddy_remote-arm64 --extra_toolchains=@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_arm64
-
-# --- THE MAGIC BIT ---
-# This alias points to the specific config based on the host architecture
-build:buildbuddy --define=executor=remote
-build:buildbuddy --config=buildbuddy_remote-amd64
-# If the host is arm64, the following line overrides the previous one
-build:buildbuddy --config=buildbuddy_remote-arm64 --cpu=aarch64
-
-build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
-build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
-common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
-common:buildbuddy-official --remote_upload_local_results
-common:buildbuddy-official --remote_timeout=10m
-common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
-common:buildbuddy-official --remote_cache_compression
-common:buildbuddy-official --jobs=200
-common:buildbuddy-official --remote_local_fallback
-# Default read-only key
-common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
-
-# Set buildbuddy as the default configuration for all builds
-build:remote --config=buildbuddy-official
-# Limit concurrent local test jobs to prevent disk exhaustion on CI runners
-# (Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR).
-test:remote --local_test_jobs=4
-
-# Optimize testing globally by automatically discovering max parallelism
-test --jobs=200
-
-# Local config to disable remote execution
+# ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
 build:local --remote_executor=
 build:local --spawn_strategy=local
 
-# Platform specific configs
+# ── Platform configs ───────────────────────────────────────────────────────────
 build:linux --platforms=@platforms//os:linux
 build:android --platforms=@platforms//os:android
 build:ios --platforms=@platforms//os:ios
