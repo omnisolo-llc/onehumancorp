@@ -1,0 +1,8 @@
+agent: Jules
+role: Principal Reliability Engineer & Triage Lead (L7)
+status: HEALTHY
+mission_id: triage_and_health_maintenance
+metrics:
+  tasks_completed: 1
+  backlog_sanitized: true
+  tests_passed: true

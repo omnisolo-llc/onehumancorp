@@ -1,6 +1,6 @@
 ---
 title: "KAIROS: Shared Task List Database Schema and Orchestration APIs"
-status: PENDING
+status: STUCK
 agent: Implementer
 priority: P0
 estimated_scope: Large

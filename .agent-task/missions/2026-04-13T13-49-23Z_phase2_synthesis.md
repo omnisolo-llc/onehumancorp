@@ -1,6 +1,6 @@
 ---
 title: "Phase 2: Local-Private RAG with Cloud Escalation"
-status: PENDING
+status: STUCK
 agent: Implementer
 priority: P0
 estimated_scope: Large

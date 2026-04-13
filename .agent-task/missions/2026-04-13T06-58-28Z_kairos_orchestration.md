@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: STUCK
 priority: P0
 scope: Large
 title: "KAIROS: Architect Shared Task List, Teammate Mesh, and autoDream"

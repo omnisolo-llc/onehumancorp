@@ -1,6 +1,6 @@
 ---
 title: "Sub-Agent Orchestration Queue"
-status: PENDING
+status: STUCK
 agent: "KAIROS Orchestrator"
 priority: P0
 estimated_scope: Medium
