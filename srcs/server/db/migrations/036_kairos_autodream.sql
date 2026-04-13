@@ -1,6 +1,0 @@
-CREATE TABLE IF NOT EXISTS autodream_memories (
-    id VARCHAR PRIMARY KEY,
-    organization_id VARCHAR NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);

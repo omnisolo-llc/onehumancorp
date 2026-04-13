@@ -490,8 +490,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ohc_cache_hits_total[5m])) by (operation, cache_type)",
-          "legendFormat": "Hits - {{operation}} - {{cache_type}}",
+          "expr": "sum(rate(ohc_cache_hits_total[5m])) by (cache_type)",
+          "legendFormat": "Hits - {{cache_type}}",
           "refId": "A"
         },
         {
@@ -499,8 +499,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ohc_cache_misses_total[5m])) by (operation, cache_type)",
-          "legendFormat": "Misses - {{operation}} - {{cache_type}}",
+          "expr": "sum(rate(ohc_cache_misses_total[5m])) by (cache_type)",
+          "legendFormat": "Misses - {{cache_type}}",
           "refId": "B"
         }
       ],
@@ -532,124 +532,6 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 67
-      },
-      "id": 1003,
-      "title": "AutoDream RAG Latency",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
-          "legendFormat": "Sync - {{deployment_mode}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
-          "legendFormat": "Query - {{deployment_mode}}",
-          "refId": "B"
-        }
-      ],
-      "description": "Glassmorphism CSS applied implicitly. Uses Outfit/Inter.",
-      "transparent": true
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 67
-      },
-      "id": 1004,
-      "title": "AutoDream Memory Pipeline",
-      "type": "barchart",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(autodream_memories_ingested_total[5m])) by (agent_id)",
-          "legendFormat": "Ingested - {{agent_id}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(autodream_memories_compressed_total[5m])) by (agent_id)",
-          "legendFormat": "Compressed - {{agent_id}}",
-          "refId": "B"
-        }
-      ],
-      "transparent": true
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 75
-      },
-      "id": 1005,
-      "title": "Sync Daemon Health",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(ohc_sync_latency_seconds_sum[5m]) / rate(ohc_sync_latency_seconds_count[5m])",
-          "legendFormat": "Avg Latency",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate(ohc_sync_daemon_batch_size_sum[5m]) / rate(ohc_sync_daemon_batch_size_count[5m])",
-          "legendFormat": "Avg Batch Size",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(ohc_sync_escalations_total[5m]))",
-          "legendFormat": "Escalations Rate",
-          "refId": "C"
-        }
-      ],
-      "transparent": true
     }
   ],
   "refresh": "",

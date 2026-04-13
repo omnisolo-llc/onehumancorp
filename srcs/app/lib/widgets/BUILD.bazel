@@ -32,9 +32,7 @@ flutter_library(
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         "//srcs/app/lib/models:models_lib",
-        "//srcs/app/lib/services:services_lib",
         "@flutter_sdk//flutter/packages/flutter",
-        "@pub_flutter_riverpod//:flutter_riverpod",
     ],
 )
 

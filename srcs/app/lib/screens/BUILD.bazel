@@ -25,7 +25,10 @@ filegroup(
 # one per screen file.  This is the main speed-up: ~15 separate pub-prepare
 # actions (each 60-70 s) become 1.
 SCREEN_SRCS = glob(
-    ["*.dart"],
+    [
+        "*.dart",
+        "orchestration/*.dart",
+    ],
     exclude = ["*_test.dart"],
 )
 
@@ -38,8 +41,6 @@ SCREEN_DEPS = [
     "@pub_flutter_riverpod//:flutter_riverpod",
     "@pub_go_router//:go_router",
     "@pub_intl//:intl",
-    "@pub_powersync//:powersync",
-    "@pub_uuid//:uuid",
 ]
 
 flutter_library(

@@ -1,6 +1,6 @@
 ---
 title: "Fix Sub-Agent Queue Metric Telemetry Registration"
-status: DONE
+status: PENDING
 agent: Implementer
 priority: P1
 scope: Small

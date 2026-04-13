@@ -100,22 +100,23 @@ func TestStore_FromFileErrors(t *testing.T) {
 }
 
 func TestStore_SaveErrors(t *testing.T) {
-	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
-	if err := os.WriteFile(parentFile, []byte("block directory creation"), 0o600); err != nil {
-		t.Fatalf("failed to create parent file: %v", err)
-	}
-
-	store := &Store{path: filepath.Join(parentFile, "file.json")}
+	// Cannot create dir
+	store := &Store{path: "/root/unauthorized/file.json"}
 	err := store.Save()
 	if err == nil {
 		t.Fatal("expected error creating dir")
 	}
 
-	store2 := &Store{path: t.TempDir()}
+	// Cannot write file
+	d := t.TempDir()
+	store2 := &Store{path: filepath.Join(d, "file.json")}
+	// Make dir read-only so we can't create file
+	os.Chmod(d, 0555)
 	err = store2.Save()
 	if err == nil {
 		t.Fatal("expected error writing file")
 	}
+	os.Chmod(d, 0755) // restore so it can be cleaned up
 }
 
 func TestStore_SetExtraEmptyExtras(t *testing.T) {

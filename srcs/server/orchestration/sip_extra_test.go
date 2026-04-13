@@ -2,7 +2,6 @@ package orchestration
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -27,12 +26,8 @@ func TestSIPDB_RetryContextCancel(t *testing.T) {
 }
 
 func TestSIPDB_NewSIPDB_InvalidPath(t *testing.T) {
-	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
-	if err := os.WriteFile(parentFile, []byte("x"), 0600); err != nil {
-		t.Fatalf("failed to create parent file: %v", err)
-	}
-
-	db, err := NewSIPDB(filepath.Join(parentFile, "locked.db"))
+	// sqlite generally allows weird paths, but /root/locked.db should fail to open or init
+	db, err := NewSIPDB("/root/locked.db")
 	if err == nil {
 		db.Close()
 		t.Fatalf("expected error for invalid db path")

@@ -38,8 +38,6 @@ flutter_library(
         "@pub_flutter_riverpod//:flutter_riverpod",
         "@pub_http//:http",
         "@pub_path//:path",
-        "@pub_path_provider//:path_provider",
-        "@pub_powersync//:powersync",
         "@pub_shared_preferences//:shared_preferences",
     ],
 )

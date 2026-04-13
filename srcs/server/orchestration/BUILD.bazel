@@ -23,7 +23,6 @@ go_library(
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh.go",
-        "bridge_manager.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -52,15 +51,12 @@ go_library(
         "@org_golang_google_protobuf//proto",
         "@org_modernc_sqlite//:sqlite",
         "@in_gopkg_yaml_v3//:yaml_v3",
-
         "@com_github_google_uuid//:uuid",
-
     ],
 )
 
 go_test(
     name = "orchestration_test",
-    size = "large",
     srcs = [
         "auth_interceptor_test.go",
         "autodream_test.go",
@@ -84,7 +80,6 @@ go_test(
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
-        "bridge_manager_test.go",
     ],
     embed = [":orchestration"],
     deps = [

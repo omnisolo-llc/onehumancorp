@@ -85,12 +85,9 @@ func TestSIPDB_Init(t *testing.T) {
 }
 
 func TestSIPDB_NewSIPDB_Fail(t *testing.T) {
-	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
-	if err := os.WriteFile(parentFile, []byte("x"), 0600); err != nil {
-		t.Fatalf("failed to create parent file: %v", err)
-	}
-
-	_, err := NewSIPDB(filepath.Join(parentFile, "db.sqlite"))
+	// Attempt to create a database on a read-only directory to trigger an error.
+	// We'll just provide a path we know will fail SQLite open.
+	_, err := NewSIPDB("/root/illegal/path/db.sqlite")
 	if err == nil {
 		t.Fatal("Expected error when opening DB in illegal path")
 	}
@@ -811,7 +808,6 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 
 	claudeMdContent4 := "Fallback CLAUDE."
 	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE_OHC.md"), []byte(claudeMdContent4), 0644)
-	os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte("CLAUDE.md content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
@@ -837,7 +833,7 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4 + "\n\n" + "CLAUDE.md content" + "\n\n" + claudeMdContent4
+	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4 + "\n\n" + claudeMdContent4
 	if missions4[0].Content != expectedContent4 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}
@@ -894,7 +890,6 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 
 	claudeMdContent := "CLAUDE_OHC.md rules"
 	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE_OHC.md"), []byte(claudeMdContent), 0644)
-	os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte("CLAUDE.md rules"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
@@ -920,7 +915,7 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent + "\n\n" + "CLAUDE.md rules" + "\n\n" + claudeMdContent
+	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent + "\n\n" + claudeMdContent
 	if missions4[0].Content != expectedContent3 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}

@@ -47,20 +47,11 @@ class _GlassCardState extends State<GlassCard> {
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+              child: Container(
                 padding: widget.padding ?? const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: widget.color ?? (
-                    _isHovered
-                        ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-                        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.1)
-                  ),
-                  border: Border.all(
-                    color: _isHovered
-                        ? Theme.of(context).colorScheme.outlineVariant
-                        : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
-                  ),
+                  color: widget.color ?? const Color.fromRGBO(255, 255, 255, 0.03),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: widget.child,

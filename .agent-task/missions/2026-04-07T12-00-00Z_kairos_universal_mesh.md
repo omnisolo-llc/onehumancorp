@@ -1,6 +1,5 @@
 ---
-status: "DONE"
-agent: Jules
+status: "PENDING"
 Title: "KAIROS Phase 5: Universal Mesh Bridge & Cross-Swarm Coordination"
 Priority: "P1"
 Estimated Scope: "Large"
