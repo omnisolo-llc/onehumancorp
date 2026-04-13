@@ -51,6 +51,7 @@ go_library(
         "migrations/032_hybrid_rag_sync.sql",
         "migrations/033_kairos_shared_tasks.sql",
         "migrations/034_kairos_sub_agent_queue.sql",
+        "migrations/046_autodream_pgvector.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
