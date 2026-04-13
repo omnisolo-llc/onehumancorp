@@ -1,40 +1,53 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
-# OHC AI OS Orchestration: Shared Task List, Teammate Mesh & AutoDream
+# Phase 4: Master Design Doc - KAIROS AI OS Orchestration
 
-## 1. Introduction
-The One Human Corp (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**.
+## 1. KAIROS Shared Task List (Phase 1)
+*   **Purpose:** The central queue for distributing tasks dynamically among Agents.
+*   **Database Schema:**
+    ```sql
+    CREATE TABLE IF NOT EXISTS shared_tasks (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL,
+        parent_plan_id TEXT,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        assigned_agent_id TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+    ```
+*   **Sequence Diagram:**
+    ```mermaid
+    sequenceDiagram
+        participant WorkerAgent
+        participant PostgresDB
+        participant CentrifugeMesh
 
-## 2. Architecture: Shared Task List
-The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming.
+        WorkerAgent->>PostgresDB: SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED
+        PostgresDB-->>WorkerAgent: Returns Task Data
+        WorkerAgent->>PostgresDB: UPDATE shared_tasks SET status = 'IN_PROGRESS'
+        WorkerAgent->>CentrifugeMesh: Broadcast MeshEvent {topic: 'task.assigned'}
+    ```
 
-*   **Cloud-Native Mode:** Uses PostgreSQL `FOR UPDATE SKIP LOCKED` to allow safe concurrent polling and distributed lock management.
-*   **Standalone Mode:** Degrades gracefully to local SQLite transactions, using single-process Mutex locks for state coordination.
+## 2. KAIROS Teammate Mesh (Phase 2)
+*   **Purpose:** Fast, real-time publish/subscribe communication between Agents.
+*   **Protocol (Proto RPCs):**
+    ```protobuf
+    message MeshEvent {
+        string event_id = 1;
+        string topic = 2;
+        bytes payload = 3;
+        int64 timestamp = 4;
+    }
+    rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+    ```
 
-### Schema Blueprint
-- **shared_tasks**: Stores `id`, `organization_id`, `title`, `status`, `agent_id`.
-- **task_dependencies**: Stores `task_id` and `depends_on_task_id`.
-
-## 3. Realtime Teammate Mesh APIs
-The Teammate Mesh ensures agents coordinate without delays.
-
-*   **Cloud-Native Mode:** Redis Pub/Sub drives the Centrifuge WebSocket hubs (`mesh:tasks`, `mesh:coordination`).
-*   **Standalone Mode:** In-Memory channel broadcast ensures low-latency IPC.
-
-**API Contracts:**
-Agents use `POST /api/mesh/broadcast` to announce task claims and updates. All updates sent to the Centrifuge channel must enforce the OHC-SIP JSON structure, guaranteeing that `agent_id`, `action`, and `status` reside at the root level.
-
-## 4. AutoDream Vector Pipeline (Memory Consolidation)
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
-
-*   **Worker:** A Go daemon polls `.agent-task/memory/*.yml`.
-*   **Vector DB:** The content is passed through an LLM to generate an embedding (e.g., Ada 1536), which is upserted into PostgreSQL (via `pgvector`) in the `agent_memories` table.
-
-## 5. Visual Excellence Mandate
-All associated UI components must represent the OHC "Premium Feel".
-- Backdrop Filter: `blur(20px) saturate(200%)`
-- Background: `rgba(255, 255, 255, 0.03)`
-- Typography: `'Outfit', 'Inter', sans-serif`
-
+## 3. KAIROS AutoDream Pipelines (Phase 3)
+*   **Purpose:** Background daemon that converts ephemeral tasks into semantic memory.
+*   **Data Pipeline Flow:**
+    1.  `AutoDreamWorker` queries `shared_tasks` where `status = 'COMPLETED'`.
+    2.  Invokes `MinimaxClient` LLM to generate `[]float32` embeddings.
+    3.  Upserts memory vector into Postgres (`VECTOR(1536)`).
 
 </div>
