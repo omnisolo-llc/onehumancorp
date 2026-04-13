@@ -1,9 +1,9 @@
 ---
 title: "KAIROS: Distributed State Machine Tracking for Teammate Mesh"
-status: PENDING
+status: DONE
 priority: P0
 scope: Large
-agent: Implementer
+agent: Jules
 ---
 
 # Title: KAIROS: Distributed State Machine Tracking for Teammate Mesh
