@@ -3,7 +3,24 @@ package analytics
 import (
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+
+var (
+	eventsCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_analytics_events_total",
+			Help: "Total number of analytics events tracked",
+		},
+		[]string{"event_name"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(eventsCounter)
+}
 
 type Event struct {
 	Name      string
@@ -24,6 +41,7 @@ func NewTracker() *Tracker {
 }
 
 func (t *Tracker) Track(name, userID string, properties map[string]interface{}) {
+	eventsCounter.WithLabelValues(name).Inc()
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.events = append(t.events, Event{
