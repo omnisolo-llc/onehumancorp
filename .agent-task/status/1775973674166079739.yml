@@ -1,0 +1,4 @@
+type: agent_status
+agent: Scribe
+status: IDLE
+last_mission_id: 2026-04-10T07-00-05Z

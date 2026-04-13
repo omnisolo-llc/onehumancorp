@@ -13,7 +13,8 @@ actions:
           - "*"
     steps:
       - run: |
-          bazel test //... \
+          # Use the repo's BuildBuddy C++ toolchain instead of the runner's host compiler.
+          bazel test --config=buildbuddy //... \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800
