@@ -22,6 +22,8 @@ type TaskOrchestrator interface {
 }
 
 type DefaultTaskOrchestrator struct {
+	stateMachine *TaskStateMachine
+
 	db           db.Provider
 	redisClient  rueidis.Client
 	hub          *CentrifugeNode
@@ -37,8 +39,10 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, 10)
+	sm := NewTaskStateMachine(provider)
 
 	to := &DefaultTaskOrchestrator{
+		stateMachine: sm,
 		db:           provider,
 		redisClient:  redisClient,
 		hub:          hub,
@@ -511,4 +515,39 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	}()
 
 	return nil
+}
+
+func (o *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, title string, orgID string) (*models.Task, error) {
+	task := &models.Task{
+		ID:             generateID(),
+		Title:          title,
+		Status:         TaskStatePending,
+	}
+
+	// Create task first
+	tx, err := o.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	insertQuery := `
+		INSERT INTO shared_tasks (id, organization_id, title, status)
+		VALUES ($1, $2, $3, $4)
+	`
+	if _, err := tx.Exec(ctx, insertQuery, task.ID, orgID, task.Title, task.Status); err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	// Then process event
+	err = o.stateMachine.ProcessEvent(ctx, task.ID, EventDecompositionComplete)
+	if err != nil {
+		return nil, err
+	}
+
+	task.Status = TaskStateExecuting
+	return task, nil
 }
