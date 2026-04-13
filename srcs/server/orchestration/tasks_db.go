@@ -20,7 +20,7 @@ type SharedTaskDB struct {
 	Title           string
 	Description     *string
 	Status          string
-	AssignedAgentID *string
+	AgentID *string
 	CreatedAt       string
 	UpdatedAt       string
 }
@@ -69,12 +69,12 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT st.id, st.organization_id, st.parent_plan_id, st.dependencies, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-		FROM shared_tasks st
+		SELECT st.id, st.organization_id, st.parent_plan_id, st.dependencies, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
+		FROM shared_tasks_v4 st
 		WHERE st.status = 'PENDING' AND st.organization_id = $1
 		AND NOT EXISTS (
 			SELECT 1 FROM json_each(CASE WHEN st.dependencies IS NULL OR st.dependencies = '' THEN '[]' ELSE st.dependencies END) AS dep
-			JOIN shared_tasks d ON d.id = dep.value
+			JOIN shared_tasks_v4 d ON d.id = dep.value
 			WHERE d.status != 'COMPLETED'
 		)
 		LIMIT 1
@@ -84,7 +84,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	var selectedTask SharedTaskDB
 	if err := row.Scan(
 		&selectedTask.ID, &selectedTask.OrganizationID, &selectedTask.ParentPlanID, &selectedTask.Dependencies, &selectedTask.Title,
-		&selectedTask.Description, &selectedTask.Status, &selectedTask.AssignedAgentID, &selectedTask.CreatedAt, &selectedTask.UpdatedAt,
+		&selectedTask.Description, &selectedTask.Status, &selectedTask.AgentID, &selectedTask.CreatedAt, &selectedTask.UpdatedAt,
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 			return nil, nil // No task found
@@ -93,8 +93,8 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	}
 
 	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		UPDATE shared_tasks_v4
+		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	if _, err = tx.Exec(ctx, updateQuery, agentID, selectedTask.ID); err != nil {
@@ -110,7 +110,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	}
 
 	selectedTask.Status = "ASSIGNED"
-	selectedTask.AssignedAgentID = &agentID
+	selectedTask.AgentID = &agentID
 	return &selectedTask, nil
 }
 
@@ -122,12 +122,12 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT st.id, st.organization_id, st.parent_plan_id, st.dependencies::text, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-		FROM shared_tasks st
+		SELECT st.id, st.organization_id, st.parent_plan_id, st.dependencies::text, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
+		FROM shared_tasks_v4 st
 		WHERE st.status = 'PENDING' AND st.organization_id = $1
 		AND NOT EXISTS (
 			SELECT 1 FROM jsonb_array_elements_text(COALESCE(st.dependencies, '[]'::jsonb)) AS dep_id
-			JOIN shared_tasks d ON d.id = dep_id
+			JOIN shared_tasks_v4 d ON d.id = dep_id
 			WHERE d.status != 'COMPLETED'
 		)
 		LIMIT 1
@@ -138,7 +138,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	task := &SharedTaskDB{}
 	if err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Dependencies, &task.Title,
-		&task.Description, &task.Status, &task.AssignedAgentID, &task.CreatedAt, &task.UpdatedAt,
+		&task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 			return nil, nil // No task found
@@ -147,8 +147,8 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	}
 
 	updateQuery := `
-		UPDATE shared_tasks
-		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		UPDATE shared_tasks_v4
+		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 	if _, err = tx.Exec(ctx, updateQuery, agentID, task.ID); err != nil {
@@ -164,7 +164,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	}
 
 	task.Status = "ASSIGNED"
-	task.AssignedAgentID = &agentID
+	task.AgentID = &agentID
 	return task, nil
 }
 
@@ -178,7 +178,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
 	// Validate current state
 	var current string
-	if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", taskID).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1", taskID).Scan(&current); err != nil {
 		return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
 	}
 
@@ -187,7 +187,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 	}
 
 	// Update state
-	if _, err := tx.Exec(ctx, "UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+	if _, err := tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
 		return err
 	}
 

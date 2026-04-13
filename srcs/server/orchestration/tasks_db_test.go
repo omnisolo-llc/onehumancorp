@@ -22,14 +22,14 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 
 	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			parent_plan_id TEXT,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
+			agent_id TEXT,
 			dependencies JSONB,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -57,7 +57,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	// Insert test tasks. task-2 depends on task-1 (which is COMPLETED)
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies)
+		INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies)
 		VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')
 	`)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 	}
 
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies)
+		INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies)
 		VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')
 	`)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	// task-3 depends on task-2 (which is PENDING)
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies)
+		INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies)
 		VALUES ('task-3', 'org-1', 'p-1', 'Test Task 3', 'PENDING', '["task-2"]')
 	`)
 	if err != nil {
@@ -137,14 +137,14 @@ func TestClaimTask_Postgres(t *testing.T) {
 
 
 	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			parent_plan_id TEXT,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
+			agent_id TEXT,
 			dependencies JSONB,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -170,12 +170,12 @@ func TestClaimTask_Postgres(t *testing.T) {
 		t.Fatalf("failed to create state_machine_transitions: %v", err)
 	}
 
-	_, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')")
+	_, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
 
-	_, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
+	_, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}

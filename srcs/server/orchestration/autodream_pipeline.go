@@ -76,7 +76,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		// SQLite degradation mode
 		query = `
 			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks
+			FROM shared_tasks_v4
 			WHERE status = 'COMPLETED'
 			ORDER BY updated_at DESC LIMIT ?
 		`
@@ -85,7 +85,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		// Postgres mode using SKIP LOCKED for concurrent worker safety
 		query = `
 			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks
+			FROM shared_tasks_v4
 			WHERE status = 'COMPLETED'
 			ORDER BY updated_at DESC LIMIT $1 FOR UPDATE SKIP LOCKED
 		`
@@ -94,7 +94,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 	rows, err := p.db.Query(ctx, query, args...)
 	if err != nil {
-		slog.Error("AutoDreamPipeline: failed to query shared_tasks", "error", err)
+		slog.Error("AutoDreamPipeline: failed to query shared_tasks_v4", "error", err)
 		return
 	}
 	defer rows.Close()
