@@ -930,8 +930,7 @@ if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ] && [ -n "$(ls -A "$PUB_CAC
     # onto disk - symlinks are followed transparently by dart/flutter at runtime.
     copy_tree_preserve_symlinks "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
 fi
-# Only chmod real files; do not follow symlinks into bazel-out artifacts.
-chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
+chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true  # make writable (errors silenced; follows symlinks is OK here)
 
 if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
     mkdir -p "$RUNTIME_WORKSPACE/.dart_tool"
