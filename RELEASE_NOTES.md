@@ -1,4 +1,8 @@
 # Release Notes
+## v0.3.0 (Cloud) / v0.3.0+1 (Standalone)
+- Scaling (Cloud): Distributed agent coordination via Teammate Mesh pub/sub and KAIROS Shared Task List.
+- Privacy/Offline (Standalone): Seamless local-to-cloud coordination parity with premium visual excellence across all modes.
+
 ## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
 - Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package.
 - Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization.

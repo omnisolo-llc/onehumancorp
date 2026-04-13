@@ -1,4 +1,15 @@
 # Changelog
+## [0.3.0] - 2026-04-12
+
+### Added
+- KAIROS Orchestration: Implemented the Shared Task List UI component with premium Glassmorphism design.
+- Teammate Mesh: Peer-to-peer agent coordination foundations for distributed swarms.
+- Hybrid Architecture: Support for cross-mode (Cloud/Standalone) coordination via `mesh:coordination` channels.
+
+### Changed
+- Bumped Monorepo version to v0.3.0.
+- Synchronized version configurations across `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
+
 ## [0.2.9] - 2026-04-10
 
 ### Added
