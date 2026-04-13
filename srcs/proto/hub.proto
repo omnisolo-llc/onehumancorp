@@ -12,6 +12,8 @@ message Agent {
   string organization_id = 4;
   string status = 5;
   string provider_type = 6;
+  string region = 7;
+  bool managed = 8;
 }
 
 message Message {
@@ -117,8 +119,75 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
+enum WorkerPhase {
+  WORKER_PHASE_UNSPECIFIED = 0;
+  WORKER_PHASE_STARTING = 1;
+  WORKER_PHASE_READY = 2;
+  WORKER_PHASE_BUSY = 3;
+  WORKER_PHASE_STOPPING = 4;
+  WORKER_PHASE_FAILED = 5;
+}
+
+message WorkerState {
+  string agent_id = 1;
+  WorkerPhase phase = 2;
+  string runtime = 3;
+  int64 observed_at_unix = 4;
+  string detail = 5;
+}
+
+message ReportWorkerStateRequest {
+  WorkerState state = 1;
+}
+
+message ReportWorkerStateResponse {
+  bool success = 1;
+}
+
+message WorkerConfig {
+  string agent_id = 1;
+  string agent_name = 2;
+  string role = 3;
+  string organization_id = 4;
+  string provider_type = 5;
+  string region = 6;
+  string hub_address = 7;
+  string builtin_address = 8;
+}
+
+message TaskAssignment {
+  string issue_id = 1;
+  string issue_name = 2;
+  string directive = 3;
+  string prompt = 4;
+  string work_dir = 5;
+}
+
+message KillTaskRequest {
+  string task_id = 1;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_COMPLETED = 1;
+  TASK_STATUS_FAILED = 2;
+  TASK_STATUS_KILLED = 3;
+}
+
+message TaskResultEnvelope {
+  string task_id = 1;
+  string description = 2;
+  TaskStatus status = 3;
+  string result = 4;
+  string error = 5;
+  int32 tool_use_count = 6;
+  int64 started_at_unix = 7;
+  int64 ended_at_unix = 8;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
+  rpc ReportWorkerState(ReportWorkerStateRequest) returns (ReportWorkerStateResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
   rpc Publish(PublishMessageRequest) returns (PublishMessageResponse);
   rpc DelegateTask(DelegateTaskRequest) returns (DelegateTaskResponse);

@@ -1,8 +1,6 @@
 package orchestration
 
 import (
-	"google.golang.org/protobuf/proto"
-
 	"bufio"
 	"bytes"
 	"context"
@@ -20,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -30,9 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var (
-	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
-)
+var featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -249,6 +247,15 @@ type MeetingRoom struct {
 	Transcript   []Message `json:"transcript"`
 }
 
+type WorkerState struct {
+	AgentID        string    `json:"agentId"`
+	Phase          string    `json:"phase"`
+	Runtime        string    `json:"runtime,omitempty"`
+	ObservedAt     time.Time `json:"observedAt"`
+	Detail         string    `json:"detail,omitempty"`
+	HeartbeatCount int64     `json:"heartbeatCount,omitempty"`
+}
+
 // Hub acts as the central, thread-safe asynchronous message broker and state registry for all active agents and meeting rooms.
 // Accepts no parameters.
 // Returns nothing.
@@ -257,6 +264,7 @@ type MeetingRoom struct {
 type Hub struct {
 	mu             sync.RWMutex
 	agents         map[string]Agent
+	workerStates   map[string]WorkerState
 	inbox          map[string][]Message
 	meetings       map[string]MeetingRoom
 	minimaxAPIKey  string
@@ -314,6 +322,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 
 	h := &Hub{
 		agents:        map[string]Agent{},
+		workerStates:  map[string]WorkerState{},
 		inbox:         map[string][]Message{},
 		meetings:      map[string]MeetingRoom{},
 		subs:          map[string][]chan struct{}{},
@@ -368,6 +377,7 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 	}
 	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
 }
+
 func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
 	if s.mesh == nil {
 		return fmt.Errorf("mesh transport not configured")
@@ -938,6 +948,9 @@ func (h *Hub) FireAgent(id string) {
 		if err := h.repo.RemoveAgent(context.Background(), id); err != nil {
 			slog.Error("failed to remove agent from repository", "agent_id", id, "error", err)
 		}
+		h.mu.Lock()
+		delete(h.workerStates, id)
+		h.mu.Unlock()
 		return
 	}
 
@@ -945,7 +958,49 @@ func (h *Hub) FireAgent(id string) {
 	defer h.mu.Unlock()
 
 	delete(h.agents, id)
+	delete(h.workerStates, id)
 	delete(h.inbox, id)
+}
+
+func (h *Hub) UpdateWorkerState(state WorkerState) {
+	if state.AgentID == "" {
+		return
+	}
+	if state.ObservedAt.IsZero() {
+		state.ObservedAt = time.Now().UTC()
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	previous := h.workerStates[state.AgentID]
+	state.HeartbeatCount = previous.HeartbeatCount + 1
+	h.workerStates[state.AgentID] = state
+	if agent, ok := h.agents[state.AgentID]; ok {
+		switch state.Phase {
+		case "READY":
+			agent.Status = StatusIdle
+		case "BUSY":
+			agent.Status = StatusActive
+		case "FAILED":
+			agent.Status = StatusBlocked
+		}
+		h.agents[state.AgentID] = agent
+	}
+	if subs, ok := h.subs[state.AgentID]; ok {
+		for _, sub := range subs {
+			select {
+			case sub <- struct{}{}:
+			default:
+			}
+		}
+	}
+}
+
+func (h *Hub) WorkerState(agentID string) (WorkerState, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	state, ok := h.workerStates[agentID]
+	return state, ok
 }
 
 // Publish validates and routes a message to a direct recipient, a meeting room, or both.
@@ -1455,15 +1510,43 @@ func (s *HubServiceServer) RegisterAgent(ctx context.Context, req *pb.RegisterAg
 		OrganizationID: agentReq.GetOrganizationId(),
 		Status:         Status(agentReq.GetStatus()),
 		ProviderType:   agentReq.GetProviderType(),
+		Region:         agentReq.GetRegion(),
+		Managed:        agentReq.GetManaged(),
 	}
 	if existing, ok := s.hub.Agent(agent.ID); ok {
 		if agent.Region == "" {
 			agent.Region = existing.Region
 		}
-		agent.Managed = existing.Managed
+		if !agent.Managed {
+			agent.Managed = existing.Managed
+		}
 	}
 	s.hub.RegisterAgent(agent)
 	return pb.RegisterAgentResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+func (s *HubServiceServer) ReportWorkerState(ctx context.Context, req *pb.ReportWorkerStateRequest) (*pb.ReportWorkerStateResponse, error) {
+	stateReq := req.GetState()
+	if stateReq == nil || stateReq.GetAgentId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "worker state agent_id is required")
+	}
+	phase := stateReq.GetPhase().String()
+	phase = strings.TrimPrefix(phase, "WORKER_PHASE_")
+	if phase == "UNSPECIFIED" {
+		phase = "STARTING"
+	}
+	observedAt := time.Unix(stateReq.GetObservedAtUnix(), 0).UTC()
+	if stateReq.GetObservedAtUnix() == 0 {
+		observedAt = time.Now().UTC()
+	}
+	s.hub.UpdateWorkerState(WorkerState{
+		AgentID:    stateReq.GetAgentId(),
+		Phase:      phase,
+		Runtime:    stateReq.GetRuntime(),
+		ObservedAt: observedAt,
+		Detail:     stateReq.GetDetail(),
+	})
+	return pb.ReportWorkerStateResponse_builder{Success: proto.Bool(true)}.Build(), nil
 }
 
 // OpenMeeting functionality.
@@ -1650,8 +1733,10 @@ type minimaxClientImpl struct {
 	cb     *CircuitBreaker
 }
 
-var globalCircuitBreaker *CircuitBreaker
-var globalCircuitBreakerOnce *sync.Once = &sync.Once{}
+var (
+	globalCircuitBreaker     *CircuitBreaker
+	globalCircuitBreakerOnce *sync.Once = &sync.Once{}
+)
 
 // ResetCircuitBreakerForTest resets the global circuit breaker instance for testing.
 func ResetCircuitBreakerForTest() {
