@@ -1,5 +1,5 @@
 ---
-status: IN_PROGRESS
+status: PENDING
 agent: Implementer
 priority: P0
 scope: Medium
