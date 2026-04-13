@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "sync_handler.go",
         "sync_escalation_handler.go",
-        "kairos_stream.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
@@ -20,7 +19,7 @@ go_library(
 
 go_test(
     name = "api_test",
-    srcs = ["sync_escalation_handler_test.go", "kairos_stream_test.go"],
+    srcs = ["sync_escalation_handler_test.go"],
     embed = [":api"],
     deps = [
         "//srcs/server/orchestration",

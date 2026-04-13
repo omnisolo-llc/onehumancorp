@@ -301,6 +301,70 @@ sequenceDiagram
     API->>DB: Update State (COMPLETED)
 ```
 
+<div class="glass-panel" markdown="1">
+
+### 4.4 KAIROS Distributed State Machine
+
+The **KAIROS Distributed State Machine** manages the lifecycle of autonomous tasks and sub-agent workflows across the Swarm. It provides robust state transition APIs, guaranteeing distributed consistency.
+
+**Endpoint:** `POST /api/v1/state/transition`
+Transitions an entity from its current state to a new state. Required for tracking Sub-Agent mission progress.
+
+**Payload:**
+```json
+{
+  "entity_id": "task_12345",
+  "from_state": "PENDING",
+  "to_state": "ASSIGNED",
+  "agent_id": "worker-42"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "transaction_id": "txn-789"
+}
+```
+
+**Endpoint:** `GET /api/v1/state/{entity_id}`
+Retrieves the current state of a task or sub-agent execution within the Distributed State Machine.
+
+**Response (200 OK):**
+```json
+{
+  "entity_id": "task_12345",
+  "current_state": "EXECUTING",
+  "last_transition_at": "2026-04-06T12:05:00Z",
+  "history": [
+    {"from": "PENDING", "to": "ASSIGNED", "timestamp": "2026-04-06T12:01:00Z"}
+  ]
+}
+```
+
+#### Distributed State Machine Flow
+```mermaid
+stateDiagram-v2
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+
+    [*] --> PENDING
+    PENDING --> ASSIGNED : Claim Task
+    ASSIGNED --> EXECUTING : Begin Execution
+    EXECUTING --> WAITING_DELEGATION : Delegate Sub-tasks
+    WAITING_DELEGATION --> EXECUTING : Sub-tasks Complete
+    EXECUTING --> REVIEW : Needs Review
+    REVIEW --> EXECUTING : Review Failed
+    REVIEW --> SUCCESS : Review Passed
+    EXECUTING --> TERMINATED_ERROR : Unrecoverable Error
+    SUCCESS --> [*]
+    TERMINATED_ERROR --> [*]
+
+    class PENDING,ASSIGNED,EXECUTING,WAITING_DELEGATION,REVIEW,SUCCESS,TERMINATED_ERROR premium;
+```
+</div>
+
+
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
@@ -553,47 +617,7 @@ graph TD
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Client,API,Auth,Hub,401,K8s,Agents premium;
 ```
-</div>
 
 
-<div class="glass-panel" markdown="1">
 
-### 4.11 KAIROS Elastic Swarm Bursting
 
-**Endpoint:** `POST /api/v1/bursting/sync`
-Offloads heavy `agent_missions` from Standalone Mode to the multi-tenant Cloud-Native API when local compute is saturated.
-
-**Payload:**
-```json
-{
-  "mission_id": "mission_8899",
-  "payload": {
-    "redacted": true,
-    "instruction": "Compute massive parallel RAG search"
-  },
-  "status": "BURSTING"
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
-  "burst_id": "burst_cloud_001",
-  "status": "ACCEPTED"
-}
-```
-
-#### Elastic Swarm Bursting Workflow
-```mermaid
-graph TD
-    LocalQueue[Local SQLite Queue] -->|Detect High Load| Daemon[Sync Daemon]
-    Daemon -->|Redact PII| BurstAPI[POST /api/v1/bursting/sync]
-    BurstAPI -->|Authenticate SPIFFE| CloudQueue[(Cloud Redis ZSETs)]
-    CloudQueue -->|Execute| CloudWorker[Cloud Worker Pod]
-    CloudWorker -->|Sync Result| LocalQueue
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class LocalQueue,Daemon,BurstAPI,CloudQueue,CloudWorker premium;
-```
-
-</div>

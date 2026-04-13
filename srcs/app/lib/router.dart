@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
-import 'package:ohc_app/screens/kairos_dashboard.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
@@ -26,6 +25,8 @@ import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
+import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -50,16 +51,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(
+            path: '/orchestration/tasks',
+            builder: (context, state) => const TaskListScreen(),
+          ),
+          GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
-          ),
-          GoRoute(
-            path: '/kairos_dashboard',
-            builder: (context, state) => const KairosDashboardScreen(),
           ),
           GoRoute(
             path: '/agents',
@@ -177,8 +178,12 @@ class _Sidebar extends StatelessWidget {
         ),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
-        _NavItem(icon: Icons.analytics, label: 'KAIROS Analytics', path: '/kairos_dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
+        _NavItem(
+          icon: Icons.checklist,
+          label: 'Shared Tasks',
+          path: '/orchestration/tasks',
+        ),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),

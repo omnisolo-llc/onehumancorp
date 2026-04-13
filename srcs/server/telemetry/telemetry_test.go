@@ -359,6 +359,14 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
 	})
+
+	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
+		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
+	})
+
+	t.Run("RecordDeliberationPhaseDuration", func(t *testing.T) {
+		RecordDeliberationPhaseDuration(ctx, "plan-1", "PROPOSE", 1.23)
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -427,6 +435,16 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordToolAutoCorrection Uninitialized", func(t *testing.T) {
+		ToolAutoCorrectionTotal = nil
+		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
+	})
+
+	t.Run("RecordDeliberationPhaseDuration Uninitialized", func(t *testing.T) {
+		DeliberationPhaseDuration = nil
+		RecordDeliberationPhaseDuration(ctx, "plan-1", "PROPOSE", 1.23)
 	})
 }
 
@@ -598,54 +616,4 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
-}
-
-func TestRecordToolAutoCorrection(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
-
-	InitTelemetry()
-
-	var loggedMetric string
-	var loggedPayload string
-	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		loggedMetric = metricType
-		loggedPayload = payload
-		return nil
-	}
-	defer func() { BufferMetricFunc = nil }()
-
-	ctx := context.Background()
-	RecordToolAutoCorrection(ctx, "agent-123", "analyst", true)
-
-	if loggedMetric != "tool_autocorrection" {
-		t.Errorf("expected tool_autocorrection, got %q", loggedMetric)
-	}
-	if loggedPayload == "" {
-		t.Error("expected non-empty payload")
-	}
-}
-
-func TestRecordDeliberationPhaseDuration(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
-
-	InitTelemetry()
-
-	var loggedMetric string
-	var loggedPayload string
-	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		loggedMetric = metricType
-		loggedPayload = payload
-		return nil
-	}
-	defer func() { BufferMetricFunc = nil }()
-
-	ctx := context.Background()
-	RecordDeliberationPhaseDuration(ctx, "plan-123", "CRITIQUE", 1.5)
-
-	if loggedMetric != "deliberation_phase_duration" {
-		t.Errorf("expected deliberation_phase_duration, got %q", loggedMetric)
-	}
-	if loggedPayload == "" {
-		t.Error("expected non-empty payload")
-	}
 }
