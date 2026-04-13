@@ -1,6 +1,0 @@
-service: "Researcher (KAIROS Orchestrator)"
-status: "healthy"
-timestamp: "1775812894"
-metrics:
-  missions_created: 4
-  phases_completed: 4
