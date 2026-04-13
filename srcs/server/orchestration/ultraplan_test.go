@@ -135,12 +135,12 @@ func TestUltraPlanManager(t *testing.T) {
 	}
 }
 
-type mockMinimaxClient struct {
+type mockMinimaxClientUltra struct {
 	reasonResponses []string
 	reasonCalls     int
 }
 
-func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+func (m *mockMinimaxClientUltra) Reason(ctx context.Context, prompt string) (string, error) {
 	if m.reasonCalls >= len(m.reasonResponses) {
 		return "", fmt.Errorf("no more mock responses")
 	}
@@ -149,7 +149,7 @@ func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, 
 	return resp, nil
 }
 
-func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+func (m *mockMinimaxClientUltra) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	return []float32{0.1, 0.2, 0.3}, nil
 }
 
@@ -175,7 +175,7 @@ func TestUltraPlanDeliberator(t *testing.T) {
 	upm := NewUltraPlanManager(prov, nil, nil, sm)
 	ctx := context.Background()
 
-	mockLLM := &mockMinimaxClient{
+	mockLLM := &mockMinimaxClientUltra{
 		reasonResponses: []string{
 			"Proposal 1",
 			"Critique 1",
