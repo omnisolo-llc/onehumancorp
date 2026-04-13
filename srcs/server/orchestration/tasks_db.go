@@ -68,55 +68,26 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	}
 	defer tx.Rollback(ctx)
 
-	// SQLite DAG: We will fetch all pending tasks for the org and manually check dependencies in application code since SQLite JSON functions can be complex.
-	// For simplicity in this demo, let's assume we can just claim the first pending task whose dependencies are either empty or all completed.
-	// To strictly follow SQLite, we just query all PENDING tasks and check.
-	rows, err := tx.Query(ctx, `
-		SELECT id, mission_id, organization_id, dependencies, title, description, status, assigned_agent_id, created_at, updated_at
-		FROM swarm_tasks
-		WHERE organization_id = $1 AND status = 'PENDING'
-	`, orgID)
-	if err != nil {
-		return nil, err
-	}
+	// SQLite DAG: check swarm_task_dependencies table
+	// We claim the first pending task whose dependencies are either empty or all completed.
+	query := `
+		SELECT st.id, st.mission_id, st.organization_id, st.dependencies, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
+		FROM swarm_tasks st
+		WHERE st.organization_id = $1 AND st.status = 'PENDING'
+		AND (SELECT COUNT(*) FROM swarm_task_dependencies std INNER JOIN swarm_tasks d ON std.depends_on_task_id = d.id WHERE std.task_id = st.id AND d.status != 'COMPLETED') = 0
+		LIMIT 1
+	`
+	row := tx.QueryRow(ctx, query, orgID)
 
-	var candidates []SwarmTaskDB
-	for rows.Next() {
-		var task SwarmTaskDB
-		if err := rows.Scan(
-			&task.ID, &task.MissionID, &task.OrganizationID, &task.Dependencies, &task.Title,
-			&task.Description, &task.Status, &task.AssignedAgentID, &task.CreatedAt, &task.UpdatedAt,
-		); err != nil {
-			rows.Close()
-			return nil, err
+	var selectedTask SwarmTaskDB
+	if err := row.Scan(
+		&selectedTask.ID, &selectedTask.MissionID, &selectedTask.OrganizationID, &selectedTask.Dependencies, &selectedTask.Title,
+		&selectedTask.Description, &selectedTask.Status, &selectedTask.AssignedAgentID, &selectedTask.CreatedAt, &selectedTask.UpdatedAt,
+	); err != nil {
+		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			return nil, nil // No task found
 		}
-		candidates = append(candidates, task)
-	}
-	rows.Close()
-
-	var selectedTask *SwarmTaskDB
-	for _, task := range candidates {
-		var deps []string
-		if task.Dependencies != "" {
-			_ = json.Unmarshal([]byte(task.Dependencies), &deps)
-		}
-		canClaim := true
-		for _, depID := range deps {
-			var depStatus string
-			err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", depID).Scan(&depStatus)
-			if err != nil || depStatus != "COMPLETED" {
-				canClaim = false
-				break
-			}
-		}
-		if canClaim {
-			selectedTask = &task
-			break
-		}
-	}
-
-	if selectedTask == nil {
-		return nil, nil // No task found
+		return nil, fmt.Errorf("failed to query pending task: %w", err)
 	}
 
 	updateQuery := `
@@ -138,7 +109,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
 	selectedTask.Status = "ASSIGNED"
 	selectedTask.AssignedAgentID = &agentID
-	return selectedTask, nil
+	return &selectedTask, nil
 }
 
 func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SwarmTaskDB, error) {
@@ -148,16 +119,12 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	}
 	defer tx.Rollback(ctx)
 
-	// Postgres DAG using JSONB array elements
+	// Postgres DAG using swarm_task_dependencies with SKIP LOCKED
 	query := `
-		SELECT id, mission_id, organization_id, dependencies::text, title, description, status, assigned_agent_id, created_at, updated_at
-		FROM swarm_tasks t
-		WHERE organization_id = $1 AND status = 'PENDING'
-		AND NOT EXISTS (
-			SELECT 1 FROM jsonb_array_elements_text(CASE WHEN t.dependencies IS NULL OR jsonb_typeof(t.dependencies) != 'array' THEN '[]'::jsonb ELSE t.dependencies END) as dep_id
-			JOIN swarm_tasks st ON st.id::text = dep_id
-			WHERE st.status != 'COMPLETED'
-		)
+		SELECT st.id, st.mission_id, st.organization_id, st.dependencies::text, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
+		FROM swarm_tasks st
+		WHERE st.organization_id = $1 AND st.status = 'PENDING'
+		AND (SELECT COUNT(*) FROM swarm_task_dependencies std INNER JOIN swarm_tasks d ON std.depends_on_task_id = d.id WHERE std.task_id = st.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
 	`
