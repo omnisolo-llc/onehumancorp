@@ -135,10 +135,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
+          ),
           GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
-          ),
           ),
         ],
       ),
