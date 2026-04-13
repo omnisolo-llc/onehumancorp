@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "queue.go",
         "queue_manager.go",
+        "worker.go",
         "redis_queue.go",
         "sqlite_queue.go",
         "postgres_queue.go",
@@ -23,7 +24,7 @@ go_library(
 
 go_test(
     name = "queue_test",
-    srcs = ["queue_test.go"],
+    srcs = ["queue_test.go", "worker_test.go"],
     embed = [":queue"],
     deps = [
         "//srcs/server/db",
