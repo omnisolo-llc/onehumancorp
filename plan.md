@@ -1,13 +1,8 @@
-1. **Apply fixes**:
-   - Made sure `payload` is unmarshaled as `map[string]interface{}` instead of `map[string]string` in `srcs/server/orchestration/service.go`.
-   - Updated `PublishPresenceBroadcast` in `srcs/server/orchestration/centrifuge_hub.go` to avoid unnecessary double marshaling.
-   - Deleted the `plan.md` file from previous steps to prevent repository pollution.
-2. **Ensure Mission State is updated**:
-   - Find the correct task and mark it `status: DONE` and add `agent: jules`. Note: We should actually just do `ls -la .agent-task/missions/` and `grep "Teammate Mesh APIs"` to find the mission file, and then change it to `status: DONE`.
-   - Then insert a corresponding row (title, description, status) into the `agent_missions` table in the SQLite database at `.agent-task/swarm.db` per the memory.
-3. **Run relevant tests**
-   - Rerun the orchestration tests (`export PATH=$PATH:/home/jules/go/bin && bazelisk test //srcs/server/orchestration/...`) to verify the fixes.
-4. **Complete pre-commit steps**
-   - Follow instructions from `pre_commit_instructions`.
-5. **Submit the PR**
-   - Call the `submit` tool with `branch_name` "add-mesh-presence-teammate-apis", `commit_message` "Add mesh:presence broadcast to Teammate Mesh APIs", `title` "Add mesh:presence broadcast to Teammate Mesh APIs" and `description` "Implement Teammate Mesh APIs (Phase 2)".
+1. **Understand the Goal**: We need to create an `mcp.BlobProvider` interface in the `mcp` package that abstracts file writing logic.
+2. **Implementations**:
+    - `LocalBlobProvider`: Uses the local file system (e.g. `/var/tmp/ohc/blobs`).
+    - `S3BlobProvider`: Uses AWS S3 `ohc-multi-tenant-blobs`.
+3. **Factory Method**: Create a factory function (e.g., `NewBlobProvider()`) that returns the correct provider based on `OHC_STANDALONE` or `OHC_MULTITENANT` environment variables.
+4. **Where to place it**: `srcs/server/agents/mcp/blob_provider.go`.
+5. **Update Mission File**: Update `.agent-task/missions/2026-04-05T17-03-50Z_hybrid_mcp_rag_market_audit.md` to indicate progress/completion.
+6. **Pre-commit**: Complete pre commit steps to ensure proper testing, verification, review, and reflection are done.
