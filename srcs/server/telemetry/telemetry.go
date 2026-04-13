@@ -45,6 +45,8 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	subAgentQueueLengthGauge   metric.Int64UpDownCounter
+	ToolAutoCorrectionTotal    metric.Int64Counter
+	DeliberationPhaseDuration  metric.Float64Histogram
 	TaskProcessingLatency      metric.Float64Histogram
 	AgentTransitionLatency     metric.Float64Histogram
 
@@ -62,9 +64,6 @@ var (
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
-
-	toolAutoCorrectionCounter          metric.Int64Counter
-	deliberationPhaseDurationHistogram metric.Float64Histogram
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -202,7 +201,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
-		"autodream_memories_compressed_total",
+		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
 	)
 	if err != nil {
@@ -210,7 +209,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncEscalationsCount, err = m.Int64Counter(
-		"ohc_sync_escalations_total",
+		"ohc.sync.escalations.count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
 	)
 	if err != nil {
@@ -218,16 +217,16 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncLatency, err = m.Float64Histogram(
-		"ohc_sync_latency_seconds",
-		metric.WithDescription("Latency of mission synchronization in seconds"),
-		metric.WithUnit("s"),
+		"ohc.sync.latency_ms",
+		metric.WithDescription("Latency of mission synchronization in milliseconds"),
+		metric.WithUnit("ms"),
 	)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
 	SyncPayloadSize, err = m.Int64Histogram(
-		"ohc_sync_payload_size_bytes",
+		"ohc.sync.payload_size_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
 	)
@@ -236,7 +235,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
-		"ohc_sync_daemon_batch_size",
+		"sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
 	)
 	if err != nil {
@@ -348,7 +347,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
-		"autodream_memories_ingested_total",
+		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
 	)
 	if err != nil {
@@ -366,6 +365,22 @@ func InitWithMeter(m mockableMeter) error {
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc.sub_agent.queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ToolAutoCorrectionTotal, err = m.Int64Counter(
+		"ohc_tool_autocorrection_total",
+		metric.WithDescription("Total number of tool parameter auto-corrections attempted by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	DeliberationPhaseDuration, err = m.Float64Histogram(
+		"ohc_deliberation_phase_duration_seconds",
+		metric.WithDescription("Duration of UltraPlan deliberation phases"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -466,23 +481,6 @@ func InitWithMeter(m mockableMeter) error {
 	meshBroadcastTotal, err = m.Int64Counter(
 		"ohc_mesh_broadcast_total",
 		metric.WithDescription("Total number of Teammate Mesh broadcast messages sent"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	toolAutoCorrectionCounter, err = m.Int64Counter(
-		"ohc_tool_autocorrection_total",
-		metric.WithDescription("Total number of tool parameter auto-corrections attempted by agents"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	deliberationPhaseDurationHistogram, err = m.Float64Histogram(
-		"ohc_deliberation_phase_duration_seconds",
-		metric.WithDescription("Duration of UltraPlan deliberation phases"),
-		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1141,19 +1139,10 @@ func RecordQueueLength(ctx context.Context, delta int) {
 
 // RecordToolAutoCorrection increments the global counter for tool parameter auto-corrections.
 func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success bool) {
-	if toolAutoCorrectionCounter == nil {
-		return
-	}
 	status := "failure"
 	if success {
 		status = "success"
 	}
-	toolAutoCorrectionCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("role", role),
-		attribute.String("status", status),
-	))
-
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"agent_id": agentID,
@@ -1162,20 +1151,20 @@ func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "tool_autocorrection", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "tool_autocorrection_total", string(payloadBytes))
 	}
-}
-
-// RecordDeliberationPhaseDuration records the duration an UltraPlan spends in a specific deliberation phase.
-func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, durationSeconds float64) {
-	if deliberationPhaseDurationHistogram == nil {
+	if ToolAutoCorrectionTotal == nil {
 		return
 	}
-	deliberationPhaseDurationHistogram.Record(ctx, durationSeconds, metric.WithAttributes(
-		attribute.String("plan_id", planID),
-		attribute.String("phase", phase),
+	ToolAutoCorrectionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("role", role),
+		attribute.String("status", status),
 	))
+}
 
+// RecordDeliberationPhaseDuration records the duration of an UltraPlan deliberation phase.
+func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, durationSeconds float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"plan_id":  planID,
@@ -1184,6 +1173,13 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "deliberation_phase_duration_seconds", string(payloadBytes))
 	}
+	if DeliberationPhaseDuration == nil {
+		return
+	}
+	DeliberationPhaseDuration.Record(ctx, durationSeconds, metric.WithAttributes(
+		attribute.String("plan_id", planID),
+		attribute.String("phase", phase),
+	))
 }

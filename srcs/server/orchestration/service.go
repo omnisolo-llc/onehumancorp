@@ -363,17 +363,6 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 	}
 }
 
-
-func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
-	if s.mesh != nil {
-		err := s.mesh.AdvertiseCapabilities(ctx, *req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
-}
-
 func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
 	if s.mesh == nil {
 		return fmt.Errorf("mesh transport not configured")
@@ -611,7 +600,8 @@ func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payloa
 // Returns ToolParameterAutoCorrection(eventID, agentID string, payload []byte) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byte) error {
+func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byte) (err error) {
+	defer func() { telemetry.RecordToolAutoCorrection(context.Background(), agentID, "agent", err == nil) }()
 	h.mu.Lock()
 	if _, exists := h.autoCorTrack[eventID]; exists {
 		h.mu.Unlock()
@@ -678,8 +668,6 @@ func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byt
 		"payload":   temp,
 		"corrected": corrected,
 	})
-
-	telemetry.RecordToolAutoCorrection(context.Background(), agentID, "", corrected)
 
 	return nil
 }
@@ -1623,8 +1611,6 @@ func (cb *CircuitBreaker) Allow() bool {
 	}
 	return true
 }
-
-
 
 func (cb *CircuitBreaker) RecordSuccess() {
 	cb.mu.Lock()

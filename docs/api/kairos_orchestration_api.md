@@ -128,46 +128,4 @@ sequenceDiagram
     AutoDream-->>Worker: Broadcast Consolidation Success
 ```
 
-
-
-## 6. Elastic Swarm Bursting
-
-The Elastic Swarm Bursting endpoints manage the offloading of heavy computations from Standalone Mode to the Cloud-Native API.
-
-### 6.1 Process Bursting Sync
-**Endpoint:** `POST /api/v1/bursting/sync`
-Offloads pending agent missions to the cloud when local SQLite queue execution is saturated.
-
-**Payload:**
-```json
-{
-  "mission_id": "mission_8899",
-  "payload": {
-    "redacted": true,
-    "instruction": "Compute massive parallel RAG search"
-  },
-  "status": "BURSTING"
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
-  "burst_id": "burst_cloud_001",
-  "status": "ACCEPTED"
-}
-```
-
-## 7. Visualizing the Bursting Flow
-```mermaid
-graph TD
-    LocalQueue[Local SQLite Queue] -->|Detect High Load| Daemon[Sync Daemon]
-    Daemon -->|Redact PII| BurstAPI[POST /api/v1/bursting/sync]
-    BurstAPI -->|Authenticate SPIFFE| CloudQueue[(Cloud Redis ZSETs)]
-    CloudQueue -->|Execute| CloudWorker[Cloud Worker Pod]
-    CloudWorker -->|Sync Result| LocalQueue
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class LocalQueue,Daemon,BurstAPI,CloudQueue,CloudWorker premium;
-```
 </div>
