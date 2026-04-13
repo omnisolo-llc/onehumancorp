@@ -978,7 +978,7 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	err := s.hub.Publish(orchestration.Message{
+	err = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   req.ToAgent,
