@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"strings"
 )
 
@@ -67,7 +68,7 @@ var FileEditTool = Tool{
 			newContent = strings.Replace(content, input.OldString, input.NewString, 1)
 		}
 
-		if err := os.WriteFile(input.FilePath, []byte(newContent), 0644); err != nil {
+		if err := utils.WriteFileAtomic(input.FilePath, []byte(newContent), 0644); err != nil {
 			return "", err
 		}
 
