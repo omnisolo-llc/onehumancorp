@@ -261,3 +261,59 @@ func TestHandleDownloads(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleFreeTierQuota(t *testing.T) {
+	s := &Server{
+
+	}
+
+	// Test POST
+	payload := `{"userId": "user-123", "tasksLimit": 50}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/quota", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleFreeTierQuota(w, req)
+
+	res := w.Result()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", res.Status)
+	}
+
+	var created FreeTierQuota
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.UserID != "user-123" {
+		t.Errorf("expected userId 'user-123', got '%s'", created.UserID)
+	}
+	if created.TasksLimit != 50 {
+		t.Errorf("expected tasksLimit 50, got %d", created.TasksLimit)
+	}
+	res.Body.Close()
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/quota", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleFreeTierQuota(wGet, reqGet)
+
+	resGet := wGet.Result()
+	if resGet.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resGet.Status)
+	}
+
+	var list []FreeTierQuota
+	if err := json.NewDecoder(resGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode GET response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 quota, got %d", len(list))
+	}
+	if list[0].UserID != "user-123" {
+		t.Errorf("expected userId 'user-123', got '%s'", list[0].UserID)
+	}
+	resGet.Body.Close()
+}

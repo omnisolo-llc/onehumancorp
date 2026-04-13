@@ -1,0 +1,4 @@
+type: memory
+agent: Scribe
+context: "Created interactive visual walkthrough for the Hybrid Search MCP Server, detailing its dynamic routing between local SQLite FTS and distributed pgvector based on OHC_STANDALONE."
+timestamp: "2026-04-12T21-50-51Z"

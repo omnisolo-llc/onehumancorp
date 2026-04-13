@@ -18,6 +18,19 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	// Create table manually since we might not run migrations in this test or wait for them
 	_, err = dbProvider.Exec(ctx, `
+
+		CREATE TABLE IF NOT EXISTS task_dependencies (
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
+			PRIMARY KEY (task_id, depends_on_task_id)
+		)
+	`)
+
+	if err != nil {
+		t.Fatalf("failed to create task_dependencies table: %v", err)
+	}
+
+	_, err = dbProvider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,

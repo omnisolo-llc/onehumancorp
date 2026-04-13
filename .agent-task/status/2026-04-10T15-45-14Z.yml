@@ -1,8 +1,0 @@
-status: "Healthy"
-last_active: "2026-04-10T15:45:14Z"
-agent: "Researcher"
-domain: "RESEARCHER"
-activity: "Created Hybrid AutoDream Synchronization mission brief."
-metrics:
-  missions_created: 1
-  uptime_seconds: 120

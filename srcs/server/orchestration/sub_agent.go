@@ -236,3 +236,47 @@ func (s *DefaultSubAgentSpawner) Stop() {
 	s.cancel()
 	s.wg.Wait()
 }
+
+// StartWorkerPool continuously checks the queue via the abstract interface and forks isolated sub-agent processes.
+func (s *DefaultSubAgentSpawner) StartWorkerPool(ctx context.Context, queue SubAgentQueue) {
+	concurrency := cap(s.sem)
+	if concurrency == 0 {
+		concurrency = 1
+	}
+	for i := 0; i < concurrency; i++ {
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			ticker := time.NewTicker(100 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-s.ctx.Done():
+					return
+				default:
+					job, err := queue.Dequeue(ctx)
+					if err != nil || job == nil {
+						// Sleep briefly if no job to avoid tight loop
+						<-ticker.C
+						continue
+					}
+
+					// Re-encode payload to match SharedTask format
+					payloadBytes, _ := json.Marshal(job.Payload)
+					task := &SharedTask{
+						ID: job.ID,
+						Payload: payloadBytes,
+					}
+
+					if err := s.Spawn(ctx, task); err != nil {
+						_ = queue.Nack(ctx, job.ID)
+					} else {
+						_ = queue.Ack(ctx, job.ID)
+					}
+				}
+			}
+		}()
+	}
+}

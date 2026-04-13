@@ -1,0 +1,6 @@
+agent: Maintainer
+status: OK
+mission: "mission.md"
+metrics:
+  tests_passed: true
+  coverage: ">95%"

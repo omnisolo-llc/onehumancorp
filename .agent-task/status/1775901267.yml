@@ -1,6 +1,0 @@
-timestamp: 1775901267
-agent: Miser
-status: "HEALTHY"
-metrics:
-  llm_tokens_saved: true
-  redis_cache_hits: "unknown"

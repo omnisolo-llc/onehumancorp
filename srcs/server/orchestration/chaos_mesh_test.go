@@ -12,6 +12,7 @@ import (
 
 // TestSIPDB_ChaosMesh simulates team mesh corruption and standalone limits.
 func TestSIPDB_ChaosMesh(t *testing.T) {
+	defer ClearSemaphore()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "chaos_mesh.db")
 
@@ -136,6 +137,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 // TestSIPDB_CUJ_StressVerification automates CUJ stress-testing for high-concurrency Cloud pods
 // and low-resource Standalone wrappers (SQLite limits).
 func TestSIPDB_CUJ_StressVerification(t *testing.T) {
+	defer ClearSemaphore()
 	// 1. High-concurrency Standalone Wrapper (SQLite limit simulation)
 	t.Run("StandaloneWrapperStress", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "true")
@@ -235,6 +237,7 @@ func TestSIPDB_CUJ_StressVerification(t *testing.T) {
 
 // TestSIPDB_ChaosParity ensures that both SQLite and Postgres modes behave similarly under stress.
 func TestSIPDB_ChaosParity(t *testing.T) {
+	defer ClearSemaphore()
 	// First, run with Standalone (SQLite)
 	t.Run("SQLite", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "true")

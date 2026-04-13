@@ -137,12 +137,12 @@ func (tm *LegacyTeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Req
 		msg.Timestamp = time.Now()
 		broadcastPayload, _ := json.Marshal(msg)
 
-		tm.Publish(ctx, roomID, string(broadcastPayload))
+		tm.PublishMessage(ctx, roomID, string(broadcastPayload))
 	}
 }
 
 // Publish broadcasts a message to a room.
-func (tm *LegacyTeammateMesh) Publish(ctx context.Context, roomID, message string) error {
+func (tm *LegacyTeammateMesh) PublishMessage(ctx context.Context, roomID, message string) error {
 	if tm.isCloud && tm.redisClient != nil {
 		return tm.redisClient.Publish(ctx, roomID, message).Err()
 	}
@@ -188,6 +188,41 @@ func (tm *LegacyTeammateMesh) unsubscribe(roomID string, conn *websocket.Conn) {
 	_ = conn.Close()
 }
 
+func (tm *LegacyTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
+	return tm.PublishMessage(ctx, topic, string(payload))
+}
+
+func (tm *LegacyTeammateMesh) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
+	return &localSubscription{cancel: func() {}}, nil
+}
+
+func (tm *LegacyTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	return true, nil
+}
+
+func (tm *LegacyTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+	return nil
+}
+
+func (tm *LegacyTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	return nil
+}
+
+func (tm *LegacyTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	return []AgentPresence{}, nil
+}
+
+
+type Subscription interface {
+	Close() error
+}
+
+type AgentPresence struct {
+	AgentID  string    `json:"agent_id"`
+	Status   string    `json:"status"`
+	LastSeen time.Time `json:"last_seen"`
+}
+
 type Task struct {
 	AgentID string `json:"agent_id"`
 	Action  string `json:"action"`
@@ -208,6 +243,18 @@ type TeammateMesh interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+
+	// PubSub
+	Publish(ctx context.Context, topic string, payload []byte) error
+	Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error)
+
+	// Distributed Lock
+	AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error)
+	ReleaseLock(ctx context.Context, key string) error
+
+	// Presence
+	RegisterPresence(ctx context.Context, agentID string, status string) error
+	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
 }
 
 type RedisTeammateMesh struct {
@@ -384,6 +431,96 @@ func meshWithRetry(ctx context.Context, maxRetries int, fn func() error) error {
 	return err
 }
 
+
+type redisSubscription struct {
+	cancel context.CancelFunc
+}
+
+func (s *redisSubscription) Close() error {
+	s.cancel()
+	return nil
+}
+
+func (rm *RedisTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
+	cmd := rm.client.B().Publish().Channel(topic).Message(string(payload)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
+	subCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		err := rm.client.Receive(subCtx, rm.client.B().Subscribe().Channel(topic).Build(), func(msg rueidis.PubSubMessage) {
+			handler([]byte(msg.Message))
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisTeammateMesh.Subscribe error", "err", err)
+		}
+	}()
+	return &redisSubscription{cancel: cancel}, nil
+}
+
+func (rm *RedisTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	cmd := rm.client.B().Set().Key(key).Value("locked").Nx().Px(ttl).Build()
+	err := rm.client.Do(ctx, cmd).Error()
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (rm *RedisTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+	cmd := rm.client.B().Del().Key(key).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	key := "agent_presence:" + agentID
+	data, _ := json.Marshal(AgentPresence{AgentID: agentID, Status: status, LastSeen: time.Now()})
+	cmd := rm.client.B().Set().Key(key).Value(string(data)).Ex(10 * time.Minute).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	var cursor uint64
+	var keys []string
+	var agents []AgentPresence
+
+	for {
+		cmd := rm.client.B().Scan().Cursor(cursor).Match("agent_presence:*").Count(100).Build()
+		resp := rm.client.Do(ctx, cmd)
+		if resp.Error() != nil {
+			return nil, resp.Error()
+		}
+
+		scanRes, err := resp.AsScanEntry()
+		if err != nil {
+			return nil, err
+		}
+		cursor = scanRes.Cursor
+		keys = append(keys, scanRes.Elements...)
+
+		if cursor == 0 {
+			break
+		}
+	}
+
+	for _, key := range keys {
+		cmd := rm.client.B().Get().Key(key).Build()
+		resp := rm.client.Do(ctx, cmd)
+		if resp.Error() == nil {
+			val, _ := resp.ToString()
+			var p AgentPresence
+			if json.Unmarshal([]byte(val), &p) == nil {
+				agents = append(agents, p)
+			}
+		}
+	}
+	return agents, nil
+}
+
 func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
 	data, err := json.Marshal(task)
 	if err != nil {
@@ -483,6 +620,8 @@ type MemoryMeshTransport struct {
 	eventsSubs          map[string][]map[chan []byte]struct{}
 	eventsMu            map[string][]sync.RWMutex
 	eventsGlobalMu      sync.RWMutex
+	presenceMu          sync.RWMutex
+	presence            map[string]AgentPresence
 }
 
 func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
@@ -501,6 +640,7 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		eventsBroadcast:     make(map[string][]chan []byte),
 		eventsSubs:          make(map[string][]map[chan []byte]struct{}),
 		eventsMu:            make(map[string][]sync.RWMutex),
+		presence:            make(map[string]AgentPresence),
 	}
 
 	for i := 0; i < numShards; i++ {
@@ -702,6 +842,31 @@ func (lm *MemoryMeshTransport) SubscribeCapabilities(ctx context.Context) (<-cha
 	return ch, nil
 }
 
+func (lm *MemoryMeshTransport) Publish(ctx context.Context, topic string, payload []byte) error {
+	return nil
+}
+
+func (lm *MemoryMeshTransport) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
+	return &localSubscription{cancel: func() {}}, nil
+}
+
+func (lm *MemoryMeshTransport) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	return true, nil
+}
+
+func (lm *MemoryMeshTransport) ReleaseLock(ctx context.Context, key string) error {
+	return nil
+}
+
+func (lm *MemoryMeshTransport) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	return nil
+}
+
+func (lm *MemoryMeshTransport) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	return []AgentPresence{}, nil
+}
+
+
 func (lm *MemoryMeshTransport) runCaps(shardIdx int) {
 	for msg := range lm.capsBroadcast[shardIdx] {
 		lm.capsMu[shardIdx].RLock()
@@ -817,6 +982,15 @@ type LocalTeammateMesh struct {
 	coordBroadcast      []chan MeshMessage
 	coordSubs           []map[chan MeshMessage]struct{}
 	coordMu             []sync.RWMutex
+	capsBroadcast       []chan pb.AgentCapabilities
+	capsSubs            []map[chan pb.AgentCapabilities]struct{}
+	capsMu              []sync.RWMutex
+	eventsBroadcast     map[string][]chan []byte
+	eventsSubs          map[string][]map[chan []byte]struct{}
+	eventsMu            map[string][]sync.RWMutex
+	eventsGlobalMu      sync.RWMutex
+	presenceMu          sync.RWMutex
+	presence            map[string]AgentPresence
 }
 
 func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
@@ -829,6 +1003,13 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		coordBroadcast:      make([]chan MeshMessage, numShards),
 		coordSubs:           make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:             make([]sync.RWMutex, numShards),
+		capsBroadcast:       make([]chan pb.AgentCapabilities, numShards),
+		capsSubs:            make([]map[chan pb.AgentCapabilities]struct{}, numShards),
+		capsMu:              make([]sync.RWMutex, numShards),
+		eventsBroadcast:     make(map[string][]chan []byte),
+		eventsSubs:          make(map[string][]map[chan []byte]struct{}),
+		eventsMu:            make(map[string][]sync.RWMutex),
+		presence:            make(map[string]AgentPresence),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
@@ -839,6 +1020,8 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		lm.subs[i] = make(map[chan Task]struct{})
 		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		// Spawn multiple worker threads per shard
 		for j := 0; j < 4; j++ {
@@ -846,6 +1029,7 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 			go lm.persistWorker(i)
 		}
 		go lm.runCoord(i)
+		go lm.runCaps(i)
 	}
 	return lm
 }
@@ -1000,17 +1184,239 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 
 
 func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	shardIdx := lm.getShard(caps.GetAgentId())
+
+	err := meshWithRetry(ctx, 3, func() error {
+		select {
+		case lm.capsBroadcast[shardIdx] <- caps:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh caps broadcast channel full")
+		}
+	})
+
+	if err != nil {
+		slog.Warn("LocalTeammateMesh caps broadcast channel full, dropping message after retries")
+	}
 	return nil
 }
 
 func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
-	return make(chan pb.AgentCapabilities, 100), nil
+	ch := make(chan pb.AgentCapabilities, 100)
+
+	for i := 0; i < numShards; i++ {
+		lm.capsMu[i].Lock()
+		lm.capsSubs[i][ch] = struct{}{}
+		lm.capsMu[i].Unlock()
+	}
+
+	go func() {
+		<-ctx.Done()
+		for i := 0; i < numShards; i++ {
+			lm.capsMu[i].Lock()
+			delete(lm.capsSubs[i], ch)
+			lm.capsMu[i].Unlock()
+		}
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+func (lm *LocalTeammateMesh) runCaps(shardIdx int) {
+	for msg := range lm.capsBroadcast[shardIdx] {
+		lm.capsMu[shardIdx].RLock()
+		for ch := range lm.capsSubs[shardIdx] {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		lm.capsMu[shardIdx].RUnlock()
+	}
+}
+
+func (lm *LocalTeammateMesh) initTopic(topic string) {
+	lm.eventsGlobalMu.Lock()
+	defer lm.eventsGlobalMu.Unlock()
+	if _, ok := lm.eventsBroadcast[topic]; !ok {
+		lm.eventsBroadcast[topic] = make([]chan []byte, numShards)
+		lm.eventsSubs[topic] = make([]map[chan []byte]struct{}, numShards)
+		lm.eventsMu[topic] = make([]sync.RWMutex, numShards)
+		for i := 0; i < numShards; i++ {
+			lm.eventsBroadcast[topic][i] = make(chan []byte, 10000)
+			lm.eventsSubs[topic][i] = make(map[chan []byte]struct{})
+			go lm.runEvents(topic, i)
+		}
+	}
+}
+
+func (lm *LocalTeammateMesh) runEvents(topic string, shardIdx int) {
+	lm.eventsGlobalMu.RLock()
+	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
+	lm.eventsGlobalMu.RUnlock()
+
+	for msg := range broadcastChan {
+		lm.eventsGlobalMu.RLock()
+		mu := &lm.eventsMu[topic][shardIdx]
+		subs := lm.eventsSubs[topic][shardIdx]
+		lm.eventsGlobalMu.RUnlock()
+
+		mu.RLock()
+		for ch := range subs {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		mu.RUnlock()
+	}
 }
 
 func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	lm.initTopic(topic)
+	shardIdx := lm.getShard(string(payload))
+
+	lm.eventsGlobalMu.RLock()
+	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
+	lm.eventsGlobalMu.RUnlock()
+
+	err := meshWithRetry(ctx, 3, func() error {
+		select {
+		case broadcastChan <- payload:
+			return nil
+		default:
+			return fmt.Errorf("LocalTeammateMesh events broadcast channel full")
+		}
+	})
+
+	if err != nil {
+		slog.Warn("LocalTeammateMesh events broadcast channel full, dropping message after retries")
+	}
 	return nil
 }
 
 func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
-	return make(chan []byte, 100), nil
+	lm.initTopic(topic)
+	ch := make(chan []byte, 100)
+
+	lm.eventsGlobalMu.RLock()
+	muArray := lm.eventsMu[topic]
+	subsArray := lm.eventsSubs[topic]
+	for i := 0; i < numShards; i++ {
+		muArray[i].Lock()
+		subsArray[i][ch] = struct{}{}
+		muArray[i].Unlock()
+	}
+	lm.eventsGlobalMu.RUnlock()
+
+	go func() {
+		<-ctx.Done()
+		lm.eventsGlobalMu.RLock()
+		muArray := lm.eventsMu[topic]
+		subsArray := lm.eventsSubs[topic]
+		for i := 0; i < numShards; i++ {
+			muArray[i].Lock()
+			delete(subsArray[i], ch)
+			muArray[i].Unlock()
+		}
+		lm.eventsGlobalMu.RUnlock()
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+type localSubscription struct {
+	cancel context.CancelFunc
+}
+
+func (s *localSubscription) Close() error {
+	s.cancel()
+	return nil
+}
+
+func (lm *LocalTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
+	return lm.BroadcastMeshEvent(ctx, topic, payload)
+}
+
+func (lm *LocalTeammateMesh) Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	ch, err := lm.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				handler(msg)
+			}
+		}
+	}()
+
+	return &localSubscription{cancel: cancel}, nil
+}
+
+func (lm *LocalTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	tx, err := lm.db.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	nowStr := time.Now().Format(time.RFC3339Nano)
+	_, _ = tx.Exec(ctx, "DELETE FROM distributed_locks WHERE lock_key = $1 AND expires_at < $2", key, nowStr)
+
+	expiresAt := time.Now().Add(ttl)
+
+	query := `
+		INSERT INTO distributed_locks (lock_key, owner_id, expires_at)
+		VALUES ($1, 'local-node', $2)
+	`
+	_, execErr := tx.Exec(ctx, query, key, expiresAt.Format(time.RFC3339Nano))
+
+	if execErr != nil {
+		return false, nil // Failed to acquire
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (lm *LocalTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+	query := "DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = 'local-node'"
+	_, err := lm.db.Exec(ctx, query, key)
+	return err
+}
+
+func (lm *LocalTeammateMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	lm.presenceMu.Lock()
+	defer lm.presenceMu.Unlock()
+	lm.presence[agentID] = AgentPresence{
+		AgentID:  agentID,
+		Status:   status,
+		LastSeen: time.Now(),
+	}
+	return nil
+}
+
+func (lm *LocalTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	lm.presenceMu.RLock()
+	defer lm.presenceMu.RUnlock()
+
+	var agents []AgentPresence
+	for _, p := range lm.presence {
+		agents = append(agents, p)
+	}
+	return agents, nil
 }

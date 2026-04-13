@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/billing"
 )
@@ -51,4 +52,42 @@ func TestProcessForecastTick(t *testing.T) {
 	if calls != 2 {
 		t.Fatalf("Expected tracker to be called 2 times, got %d", calls)
 	}
+}
+
+func TestStartTokenBurnForecasterWithTicker(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	calls := 0
+	tracker := &mockTokenTracker{
+		orgs: []string{"org1"},
+		summaryFunc: func(orgID string) billing.Summary {
+			calls++
+			if calls >= 2 {
+				cancel() // Stop the loop
+			}
+			return billing.Summary{
+				TotalTokens: int64(calls * 100),
+			}
+		},
+	}
+
+	StartTokenBurnForecasterWithTicker(
+		ctx,
+		tracker.ActiveOrganizations,
+		func(orgID string) int64 { return tracker.Summary(orgID).TotalTokens },
+		time.Millisecond*10,
+	)
+
+	if calls < 2 {
+		t.Fatalf("Expected tracker to be called at least 2 times, got %d", calls)
+	}
+}
+
+func TestStartTokenBurnForecaster(t *testing.T) {
+	// Just verify it doesn't panic when we pass a canceled context immediately.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	StartTokenBurnForecaster(ctx, nil, nil)
 }
