@@ -3,12 +3,12 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "queue",
     srcs = [
-        "postgres_queue.go",
         "queue.go",
         "queue_manager.go",
+        "worker.go",
         "redis_queue.go",
         "sqlite_queue.go",
-        "worker.go",
+        "postgres_queue.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/queue",
     visibility = ["//visibility:public"],
@@ -24,15 +24,14 @@ go_library(
 
 go_test(
     name = "queue_test",
-    srcs = [
-        "queue_test.go",
-        "redis_queue_test.go",
-        "worker_test.go",
-    ],
+    srcs = ["queue_test.go", "worker_test.go"],
     embed = [":queue"],
     deps = [
         "//srcs/server/db",
         "@com_github_redis_rueidis//:rueidis",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_metric//:metric",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
