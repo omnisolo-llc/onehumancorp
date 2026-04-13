@@ -135,10 +135,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
-          ),
           GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
+          ),
           ),
         ],
       ),
@@ -176,7 +176,6 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
-        _NavItem(icon: Icons.checklist, label: 'Shared Tasks', path: '/orchestration/tasks'),
         _NavItem(
           icon: Icons.transfer_within_a_station,
           label: 'Handoffs',
