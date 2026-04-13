@@ -492,6 +492,16 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
+  // ── Onboarding ──────────────────────────────────────────────────────────
+  Future<void> submitBusinessSetup(Map<String, dynamic> data) async {
+    final res = await _client.post(
+      Uri.parse($baseUrl/api/onboarding/business-setup),
+      headers: _headers,
+      body: jsonEncode(data),
+    );
+    _checkStatus(res);
+  }
+
     // ── Shared Tasks ─────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> listSharedTasks() async {
