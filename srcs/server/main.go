@@ -290,6 +290,9 @@ func run(now time.Time, listen listenFunc) error {
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
 
+		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
+		go competitorAuditWorker.Start(ctx)
+
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
 	}
