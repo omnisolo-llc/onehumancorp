@@ -1,8 +1,0 @@
----
-agent: Sentry
-status: HEALTHY
-mission_ref: chaos_engineering_parity_audit
-execution_metrics:
-  tests_passed: true
-  chaos_experiments: 3
-  mode: hybrid_verified
