@@ -28,46 +28,65 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 		return nil
 	}
 
-	// Use worker pool approach
-	var wg sync.WaitGroup
-	taskChan := make(chan func() error, len(tasks))
-	errChan := make(chan error, len(tasks))
-
-	// Start workers
 	workerCount := c.concurrency
+	if workerCount <= 0 {
+		workerCount = 4
+	}
 	if len(tasks) < workerCount {
 		workerCount = len(tasks)
 	}
 
+	// Static chunking gives the absolute best performance for uniform tasks
+	chunkSize := (len(tasks) + workerCount - 1) / workerCount
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, workerCount)
+
+	ctxDone := ctx.Done()
+
 	for i := 0; i < workerCount; i++ {
+		start := i * chunkSize
+		end := start + chunkSize
+		if start >= len(tasks) {
+			break
+		}
+		if end > len(tasks) {
+			end = len(tasks)
+		}
+
 		wg.Add(1)
-		go func() {
+		go func(s, e int) {
 			defer wg.Done()
-			for task := range taskChan {
-				select {
-				case <-ctx.Done():
-					errChan <- ctx.Err()
-					return
-				default:
-					if err := task(); err != nil {
-						errChan <- err
+			for j := s; j < e; j++ {
+				// Fast context check - only every 16 tasks to minimize select overhead
+				if j&15 == 0 {
+					select {
+					case <-ctxDone:
+						select {
+						case errChan <- ctx.Err():
+						default:
+						}
+						return
+					default:
 					}
 				}
+
+				if err := tasks[j](); err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
 			}
-		}()
+		}(start, end)
 	}
 
-	// Enqueue tasks
-	for _, task := range tasks {
-		taskChan <- task
-	}
-	close(taskChan)
-
-	// Wait for completion
+	// Wait for completion synchronously to prevent goroutine leaks and race conditions
 	wg.Wait()
 	close(errChan)
 
-	// Collect first error if any
+	// Return first error if any
 	for err := range errChan {
 		if err != nil {
 			return err
@@ -83,9 +102,12 @@ type ShardedMailbox struct {
 	mask   uint64
 }
 
+// MailboxShard uses padding to avoid false sharing between shards
 type MailboxShard struct {
-	mu       sync.RWMutex
+	_        [64]byte // padding
+	mu       sync.Mutex
 	messages map[string][]Message
+	_        [64]byte // padding
 }
 
 type Message struct {
@@ -116,11 +138,12 @@ func NewShardedMailbox(numShards int) *ShardedMailbox {
 	}
 }
 
-// hash string to determine shard
+// fast hash
 func hash(s string) uint64 {
-	var h uint64 = 5381
+	var h uint64 = 14695981039346656037
 	for i := 0; i < len(s); i++ {
-		h = ((h << 5) + h) + uint64(s[i])
+		h ^= uint64(s[i])
+		h *= 1099511628211
 	}
 	return h
 }
@@ -145,10 +168,11 @@ func (m *ShardedMailbox) Read(recipient string) []Message {
 	shard := m.shards[shardIdx]
 
 	shard.mu.Lock()
-	defer shard.mu.Unlock()
-
 	result := shard.messages[recipient]
-	delete(shard.messages, recipient)
+	if len(result) > 0 {
+		delete(shard.messages, recipient)
+	}
+	shard.mu.Unlock()
 
 	return result
 }
