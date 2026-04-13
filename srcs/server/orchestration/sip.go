@@ -602,9 +602,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
 	_ = CheckDocumentationGate(task.Content)
 
-	return withSipRetry(ctx, func() error {
-		if s.ContextRoot != "" {
-			s.groundingOnce.Do(func() {
+	if s.ContextRoot != "" {
+		s.groundingOnce.Do(func() {
 			var combinedGrounding strings.Builder
 
 			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
@@ -641,14 +640,15 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		}
 	}
 
-		wrapper := struct {
-			Role string  `json:"role"`
-			Task Message `json:"task"`
-		}{
-			Role: role,
-			Task: task,
-		}
-		taskBytes, _ := json.Marshal(wrapper)
+	wrapper := struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}{
+		Role: role,
+		Task: task,
+	}
+	taskBytes, _ := json.Marshal(wrapper)
+	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)",
 			missionID, string(taskBytes), s.orgID,
