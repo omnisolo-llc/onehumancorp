@@ -884,15 +884,12 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+	spiffeID, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
+	_ = spiffeID
 
 	var req struct {
 		Channel string `json:"channel"`
@@ -964,15 +961,12 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+	spiffeID, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
+	_ = spiffeID
 
 	var req struct {
 		ToAgent string `json:"toAgent"`
@@ -984,7 +978,7 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	err := s.hub.Publish(orchestration.Message{
+	err = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   req.ToAgent,
@@ -1075,15 +1069,12 @@ func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+	spiffeID, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
+	_ = spiffeID
 
 	agentID := r.URL.Query().Get("agent_id")
 	if agentID == "" {
