@@ -3,8 +3,10 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 )
 
 const (
@@ -22,13 +24,24 @@ const (
 
 type TaskStateMachine struct {
 	dbProvider db.Provider
+	mutexProvider MutexProvider
 }
 
-func NewTaskStateMachine(provider db.Provider) *TaskStateMachine {
-	return &TaskStateMachine{dbProvider: provider}
+func NewTaskStateMachine(provider db.Provider, redisClient rueidis.Client) *TaskStateMachine {
+	ctx := context.Background()
+	mp, _ := NewMutexProvider(ctx, provider, redisClient)
+	return &TaskStateMachine{dbProvider: provider, mutexProvider: mp}
 }
 
 func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, event string) error {
+	if sm.mutexProvider != nil {
+		mx := sm.mutexProvider.NewMutex("sm:" + taskID)
+		if err := mx.Lock(ctx, 30*time.Second); err != nil {
+			return fmt.Errorf("failed to acquire state machine lock: %w", err)
+		}
+		defer mx.Unlock(ctx)
+	}
+
 	tx, err := sm.dbProvider.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin tx: %w", err)
