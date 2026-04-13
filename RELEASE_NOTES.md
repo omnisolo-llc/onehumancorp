@@ -1,4 +1,8 @@
 # Release Notes
+## v0.2.10 (Cloud) / v0.2.10+1 (Standalone)
+- Scaling (Cloud): Enhanced Resilience Mesh coverage and verified parity.
+- Privacy/Offline (Standalone): Maintained local-to-cloud sync reliability and standalone desktop compatibility.
+
 ## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
 - Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package.
 - Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization.
