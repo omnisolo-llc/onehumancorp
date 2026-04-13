@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/glass_card.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'dart:convert';
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -105,9 +105,26 @@ class _KairosDashboardScreenState extends ConsumerState<KairosDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text('Shared Task Queue', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                          SizedBox(height: 16),
-                          Expanded(child: Center(child: Text('Task visualization pending backend integration...', style: TextStyle(color: Colors.white70)))),
+                          Row(
+                            children: const [
+                              Icon(Icons.list_alt, color: Colors.white, size: 24),
+                              SizedBox(width: 8),
+                              Text('Shared Task Queue', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const CircularProgressIndicator(color: Colors.blueAccent),
+                                  const SizedBox(height: 16),
+                                  const Text('Awaiting backend task stream...', style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 14)),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -118,9 +135,26 @@ class _KairosDashboardScreenState extends ConsumerState<KairosDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text('AutoDream Memory', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                          SizedBox(height: 16),
-                          Expanded(child: Center(child: Text('Memory vectors visualization pending...', style: TextStyle(color: Colors.white70)))),
+                          Row(
+                            children: const [
+                              Icon(Icons.memory, color: Colors.white, size: 24),
+                              SizedBox(width: 8),
+                              Text('AutoDream Memory', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const CircularProgressIndicator(color: Colors.purpleAccent),
+                                  const SizedBox(height: 16),
+                                  const Text('Consolidating episodic memory vectors...', style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 14)),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

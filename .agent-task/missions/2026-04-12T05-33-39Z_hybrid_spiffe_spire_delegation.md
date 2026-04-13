@@ -1,6 +1,8 @@
 ---
 agent: Implementer
-status: PENDING
+status: BLOCKED
+blockers:
+  - Out of scope for Flutter developer domain.
 priority: P0
 estimated_scope: Large
 ---
