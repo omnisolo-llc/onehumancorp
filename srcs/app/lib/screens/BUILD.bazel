@@ -25,10 +25,7 @@ filegroup(
 # one per screen file.  This is the main speed-up: ~15 separate pub-prepare
 # actions (each 60-70 s) become 1.
 SCREEN_SRCS = glob(
-    [
-        "*.dart",
-        "orchestration/*.dart",
-    ],
+    ["*.dart"],
     exclude = ["*_test.dart"],
 )
 
