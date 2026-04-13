@@ -498,18 +498,6 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
-    // ── Shared Tasks ─────────────────────────────────────────────────────────
-
-  Future<List<Map<String, dynamic>>> listSharedTasks() async {
-    final res = await _client.get(
-      Uri.parse('$baseUrl/api/shared-tasks'),
-      headers: _headers,
-    );
-    _checkStatus(res);
-    final list = jsonDecode(res.body) as List<dynamic>;
-    return list.cast<Map<String, dynamic>>();
-  }
-
   // ── Helpers ──────────────────────────────────────────────────────────────
 
 

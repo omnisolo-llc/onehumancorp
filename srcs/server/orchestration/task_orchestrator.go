@@ -12,13 +12,10 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/redis/rueidis"
-	"crypto/rand"
-	"encoding/hex"
 )
 
 // TaskOrchestrator abstracts the state machine and dependency tracking for the Teammate Mesh
 type TaskOrchestrator interface {
-	ReceiveHighLevelRequest(ctx context.Context, orgID, title string) (string, error)
 	EnqueueTask(ctx context.Context, task *models.Task, dependsOn []string) (*models.Task, error)
 	AcquireReadyTask(ctx context.Context, agentID string, capabilities []string) (*models.Task, error)
 	CompleteTask(ctx context.Context, taskID string, agentID string, result string) error
@@ -514,34 +511,4 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	}()
 
 	return nil
-}
-
-func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, orgID, title string) (string, error) {
-	tx, err := to.db.Begin(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer tx.Rollback(ctx)
-
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	taskID := hex.EncodeToString(b)
-	_, err = tx.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ($1, $2, $3, $4)", taskID, orgID, title, "PENDING")
-	if err != nil {
-		return "", err
-	}
-	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = $1 WHERE id = $2", "DECOMPOSING", taskID)
-	if err != nil {
-		return "", err
-	}
-
-	tx.Commit(ctx)
-
-	sm := NewTaskStateMachine(to.db)
-	err = sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
-	if err != nil {
-		return "", err
-	}
-
-	return taskID, nil
 }
