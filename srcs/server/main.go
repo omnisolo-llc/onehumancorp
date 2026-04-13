@@ -26,6 +26,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/workers"
 )
 
 const defaultAddress = ":8080"
@@ -285,6 +286,9 @@ func run(now time.Time, listen listenFunc) error {
 	if pool != nil {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
+
+		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
+		go missionIngestionWorker.Start(ctx)
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
