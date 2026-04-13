@@ -14,6 +14,8 @@ type SharedTaskDB struct {
 	ID              string
 	OrganizationID  string
 	ParentPlanID    *string
+	ParentTaskID    *string
+	WorkflowState   *string
 	Title           string
 	Description     *string
 	Status          string
@@ -59,17 +61,16 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
 	// In SQLite we use a simple SELECT then UPDATE in a transaction, protected by application mutex
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
+		SELECT id, organization_id, parent_plan_id, parent_task_id, workflow_state, title, description, status, agent_id, dependencies, created_at, updated_at
 		FROM shared_tasks
 		WHERE organization_id = $1 AND status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = shared_tasks.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 	`
 	row := tx.QueryRow(ctx, query, orgID)
 
 	task := &SharedTaskDB{}
 	if err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.ParentTaskID, &task.WorkflowState, &task.Title,
 		&task.Description, &task.Status, &task.AssignedAgentID,
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
@@ -108,10 +109,9 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
 	// In Postgres we can use FOR UPDATE SKIP LOCKED
 	query := `
-		SELECT id, organization_id, parent_plan_id, title, description, status, agent_id, dependencies, created_at, updated_at
+		SELECT id, organization_id, parent_plan_id, parent_task_id, workflow_state, title, description, status, agent_id, dependencies, created_at, updated_at
 		FROM shared_tasks
 		WHERE organization_id = $1 AND status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = shared_tasks.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
 	`
@@ -119,7 +119,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
 	task := &SharedTaskDB{}
 	if err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.ParentTaskID, &task.WorkflowState, &task.Title,
 		&task.Description, &task.Status, &task.AssignedAgentID,
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {

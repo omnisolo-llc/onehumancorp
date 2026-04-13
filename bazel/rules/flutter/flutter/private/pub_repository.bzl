@@ -23,7 +23,6 @@ _ATTRS = {
         doc = "Base URL for pub.dev API",
     ),
     "sdk_repo": attr.string(
-        default = "@flutter_sdk",
         doc = "Repository label providing Flutter SDK packages (e.g. @flutter_sdk)",
     ),
 }
