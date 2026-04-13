@@ -19,27 +19,18 @@ func TestClaimTask_SQLite(t *testing.T) {
 	ctx := context.Background()
 
 	// Create tables
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS swarm_task_dependencies (
-			task_id TEXT,
-			depends_on_task_id TEXT,
-			PRIMARY KEY (task_id, depends_on_task_id)
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create swarm_task_dependencies: %v", err)
-	}
+
 
 	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS swarm_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
-			mission_id TEXT NOT NULL,
 			organization_id TEXT NOT NULL,
-			dependencies JSONB,
+			parent_plan_id TEXT,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			assigned_agent_id TEXT,
+			dependencies JSONB,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -66,38 +57,28 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 	// Insert test tasks. task-2 depends on task-1 (which is COMPLETED)
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO swarm_tasks (id, mission_id, organization_id, title, status, dependencies)
-		VALUES ('task-1', 'm-1', 'org-1', 'Test Task 1', 'COMPLETED', '[]')
+		INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies)
+		VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test task 1: %v", err)
 	}
 
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO swarm_tasks (id, mission_id, organization_id, title, status, dependencies)
-		VALUES ('task-2', 'm-1', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')
+		INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies)
+		VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test task 2: %v", err)
 	}
 
-	_, err = dbProvider.Exec(ctx, "INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ('task-2', 'task-1')")
-	if err != nil {
-		t.Fatalf("failed to insert dependency task-2 -> task-1: %v", err)
-	}
-
 	// task-3 depends on task-2 (which is PENDING)
 	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO swarm_tasks (id, mission_id, organization_id, title, status, dependencies)
-		VALUES ('task-3', 'm-1', 'org-1', 'Test Task 3', 'PENDING', '["task-2"]')
+		INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies)
+		VALUES ('task-3', 'org-1', 'p-1', 'Test Task 3', 'PENDING', '["task-2"]')
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test task 3: %v", err)
-	}
-
-	_, err = dbProvider.Exec(ctx, "INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ('task-3', 'task-2')")
-	if err != nil {
-		t.Fatalf("failed to insert dependency task-3 -> task-2: %v", err)
 	}
 
 	claims := &auth.Claims{
@@ -153,27 +134,18 @@ func TestClaimTask_Postgres(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS swarm_task_dependencies (
-			task_id TEXT,
-			depends_on_task_id TEXT,
-			PRIMARY KEY (task_id, depends_on_task_id)
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create swarm_task_dependencies: %v", err)
-	}
+
 
 	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS swarm_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
-			mission_id TEXT NOT NULL,
 			organization_id TEXT NOT NULL,
-			dependencies JSONB,
+			parent_plan_id TEXT,
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			assigned_agent_id TEXT,
+			dependencies JSONB,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -198,19 +170,14 @@ func TestClaimTask_Postgres(t *testing.T) {
 		t.Fatalf("failed to create state_machine_transitions: %v", err)
 	}
 
-	_, err = dbProvider.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, organization_id, title, status, dependencies) VALUES ('task-1', 'm-1', 'org-1', 'Test Task 1', 'COMPLETED', '[]')")
+	_, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')")
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
 	}
 
-	_, err = dbProvider.Exec(ctx, `INSERT INTO swarm_tasks (id, mission_id, organization_id, title, status, dependencies) VALUES ('task-2', 'm-1', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
+	_, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
 	if err != nil {
 		t.Fatalf("failed to insert: %v", err)
-	}
-
-	_, err = dbProvider.Exec(ctx, "INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ('task-2', 'task-1')")
-	if err != nil {
-		t.Fatalf("failed to insert dep: %v", err)
 	}
 
 	to := NewSharedTaskOrchestrator(dbProvider)
