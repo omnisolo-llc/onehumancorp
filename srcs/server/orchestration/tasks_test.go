@@ -8,10 +8,12 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
+	telemetry.InitTelemetry()
 	// Create an in-memory SQLite database
 	prov := db.NewTestProvider(t)
 
