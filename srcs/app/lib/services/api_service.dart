@@ -493,17 +493,6 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
-  // ── Orchestration Tasks ──────────────────────────────────────────────────
-  Future<List<Task>> listTasks() async {
-    final res = await _client.get(
-      Uri.parse('$baseUrl/api/v1/orchestration/tasks'),
-      headers: _headers,
-    );
-    _checkStatus(res);
-    final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => Task.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
   // ── Helpers ──────────────────────────────────────────────────────────────
 
 
