@@ -2,39 +2,92 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/glass_card.dart';
 
-class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
-  const BusinessSetupWizardScreen({super.key});
+class BusinessSetupState {
+  final int step;
+  final String companyName;
+  final String industry;
+  final String size;
+  final List<String> goals;
+  final String deployment;
+  final String adminName;
+  final String adminEmail;
+  final String adminPassword;
 
-  @override
-  ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
+  const BusinessSetupState({
+    this.step = 0,
+    this.companyName = '',
+    this.industry = '',
+    this.size = 'S',
+    this.goals = const [],
+    this.deployment = 'Cloud',
+    this.adminName = '',
+    this.adminEmail = '',
+    this.adminPassword = '',
+  });
+
+  BusinessSetupState copyWith({
+    int? step,
+    String? companyName,
+    String? industry,
+    String? size,
+    List<String>? goals,
+    String? deployment,
+    String? adminName,
+    String? adminEmail,
+    String? adminPassword,
+  }) {
+    return BusinessSetupState(
+      step: step ?? this.step,
+      companyName: companyName ?? this.companyName,
+      industry: industry ?? this.industry,
+      size: size ?? this.size,
+      goals: goals ?? this.goals,
+      deployment: deployment ?? this.deployment,
+      adminName: adminName ?? this.adminName,
+      adminEmail: adminEmail ?? this.adminEmail,
+      adminPassword: adminPassword ?? this.adminPassword,
+    );
+  }
 }
 
-class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
-  int _step = 0;
-  String _companyName = '';
-  String _industry = '';
-  String _size = 'S';
-  List<String> _goals = [];
-  String _deployment = 'Cloud';
-  String _adminName = '';
-  String _adminEmail = '';
-  String _adminPassword = '';
+class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
+  @override
+  BusinessSetupState build() => const BusinessSetupState();
 
-  void _nextStep() {
-    if (_step < 4) {
-      setState(() => _step++);
+  void nextStep() {
+    if (state.step < 4) {
+      state = state.copyWith(step: state.step + 1);
     } else {
       _launch();
     }
   }
 
+  void updateCompany(String name) => state = state.copyWith(companyName: name);
+  void updateIndustry(String val) => state = state.copyWith(industry: val);
+  void updateSize(String val) => state = state.copyWith(size: val);
+  void updateDeployment(String val) => state = state.copyWith(deployment: val);
+  void updateAdminName(String name) => state = state.copyWith(adminName: name);
+  void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
+  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
+
   void _launch() {
     // Perform launch logic
     // Mocking launch logic here since the actual API might not exist yet based on exploration.
   }
+}
+
+final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
+  return BusinessSetupNotifier();
+});
+
+class BusinessSetupWizardScreen extends ConsumerWidget {
+  const BusinessSetupWizardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(businessSetupProvider);
+    final notifier = ref.read(businessSetupProvider.notifier);
+
     return Scaffold(
       body: Center(
         child: ConstrainedBox(
@@ -45,38 +98,31 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Business Setup',
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  if (_step == 0) ...[
+                  if (state.step == 0) ...[
                     const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter')),
-                    const SizedBox(height: 16),
-                  ] else if (_step == 1) ...[
+                  ] else if (state.step == 1) ...[
                     TextField(
                       decoration: const InputDecoration(labelText: 'Company Name'),
-                      onChanged: (v) => _companyName = v,
+                      onChanged: notifier.updateCompany,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
-                  ] else if (_step == 2) ...[
+                  ] else if (state.step == 2) ...[
                      const Text('Select Goals', style: TextStyle(fontFamily: 'Inter')),
-                  ] else if (_step == 3) ...[
+                  ] else if (state.step == 3) ...[
                      const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter')),
-                  ] else if (_step == 4) ...[
+                  ] else if (state.step == 4) ...[
                     TextField(
                       decoration: const InputDecoration(labelText: 'Admin Name'),
-                      onChanged: (v) => _adminName = v,
+                      onChanged: notifier.updateAdminName,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
                   ],
+                  const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _nextStep,
-                    child: Text(_step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                    onPressed: notifier.nextStep,
+                    child: Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
                   ),
                 ],
               ),
