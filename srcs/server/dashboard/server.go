@@ -852,14 +852,9 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+	_, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
@@ -932,14 +927,9 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+	_, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
@@ -954,7 +944,7 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	err := s.hub.Publish(orchestration.Message{
+	err = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   req.ToAgent,
@@ -1043,14 +1033,9 @@ func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+	_, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}

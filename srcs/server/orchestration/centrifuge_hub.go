@@ -97,7 +97,7 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 	})
 
 	node.OnConnect(func(client *centrifuge.Client) {
-		slog.Debug("[centrifuge] client connected", "userID", client.UserID(), "id", client.ID())
+
 
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
 			cb(centrifuge.SubscribeReply{}, nil)
@@ -108,7 +108,7 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 		})
 
 		client.OnDisconnect(func(e centrifuge.DisconnectEvent) {
-			slog.Debug("[centrifuge] client disconnected", "userID", client.UserID(), "reason", e.Reason)
+
 		})
 	})
 
