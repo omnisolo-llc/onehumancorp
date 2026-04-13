@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"log/slog"
 	"path/filepath"
 	"sync"
@@ -19,7 +20,7 @@ func writeHeartbeatFile(taskID string, content string) error {
 		return err
 	}
 	path := filepath.Join(dir, fmt.Sprintf("%s.yml", taskID))
-	return os.WriteFile(path, []byte(content), 0644)
+	return utils.WriteFileAtomic(path, []byte(content), 0644)
 }
 
 // SubAgentSpawner defines the interface for spawning and monitoring sub-agents.
