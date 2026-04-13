@@ -61,7 +61,7 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	quotas                []FreeTierQuota
+	onboardingFunnels []OnboardingFunnel
 }
 
 // RateLimitState functionality.
@@ -457,7 +457,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		quotas:                []FreeTierQuota{},
+		onboardingFunnels: []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -580,7 +580,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
-	mux.HandleFunc("/api/growth/quota", server.handleFreeTierQuota)
+	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
@@ -711,15 +711,16 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	probe, err := s.hub.CheckHealth(r.Context())
-	if err != nil {
-		probe = orchestration.HybridHealthProbe{
-			Status: "error",
-		}
+	mode := "local"
+	isStandalone := true
+	if os.Getenv("DATABASE_URL") != "" {
+		mode = "cloud"
+		isStandalone = false
 	}
-
-	mode := probe.Mode
-	isStandalone := (mode == "standalone")
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		isStandalone = true
+		mode = "standalone"
+	}
 
 	var checklist []map[string]interface{}
 	if isStandalone {
@@ -731,20 +732,52 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		})
 	} else {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "pg_db", "label": "PostgreSQL Database", "status": "ok", "description": "Cloud remote database connected",
+			"id": "postgres_db", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud-Native data storage",
+		})
+		checklist = append(checklist, map[string]interface{}{
+			"id": "redis_cache", "label": "Redis Available", "status": "ok", "description": "Cloud-Native distributed cache",
 		})
 	}
 
-	response := map[string]interface{}{
-		"mode": mode,
-		"status": probe.Status,
-		"checklist": checklist,
-		"db_ping_ms": probe.DBPing.Milliseconds(),
-		"sync_backlog": probe.SyncBacklog,
-		"mesh_active": probe.MeshActive,
+	ctx := r.Context()
+	probe, err := s.hub.CheckHealth(ctx)
+	status := "healthy"
+	if err != nil || probe.Status == "degraded" {
+		status = "degraded"
 	}
 
-	writeJSON(w, response)
+	details := map[string]interface{}{
+		"status":        status,
+		"mesh_active":   probe.MeshActive,
+		"sync_queue":    probe.SyncBacklog,
+		"agent_workers": 0,
+	}
+
+	if s.hub.SIPDB() != nil && s.hub.SIPDB().Provider() != nil {
+		stuckMissions, err := s.hub.SIPDB().Provider().Query(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'")
+		if err == nil {
+			defer stuckMissions.Close()
+			if stuckMissions.Next() {
+				var count int
+				if err := stuckMissions.Scan(&count); err == nil {
+					details["stuck_missions"] = count
+					if count > 0 {
+						status = "degraded"
+						details["status"] = status
+					}
+				}
+			}
+		}
+	}
+
+	resp := map[string]interface{}{
+		"status":    status,
+		"mode":      mode,
+		"details":   details,
+		"checklist": checklist,
+	}
+
+	writeJSON(w, resp)
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {

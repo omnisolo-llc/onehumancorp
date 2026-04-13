@@ -8,19 +8,15 @@ The Shared Task List tracks complex feature decomposition into actionable, seque
 
 **Database Schema (PostgreSQL):**
 ```sql
-CREATE TABLE IF NOT EXISTS shared_tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id VARCHAR NOT NULL,
-    title VARCHAR NOT NULL,
-    description TEXT,
-    status VARCHAR NOT NULL DEFAULT 'PENDING',
-    agent_id VARCHAR,
-    priority VARCHAR NOT NULL DEFAULT 'P2',
-    payload JSONB,
-    parent_plan_id TEXT,
-    dependencies JSONB NOT NULL DEFAULT '[]',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS shared_tasks_v3 (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    assigned_agent_id TEXT,
+    dependencies JSONB,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -30,20 +26,22 @@ sequenceDiagram
     participant KAIROS
     participant TaskDB as PostgreSQL (TaskDB)
     participant Implementer
-    KAIROS->>TaskDB: INSERT INTO shared_tasks (status='PENDING')
-    Implementer->>TaskDB: SELECT id FROM shared_tasks WHERE status='PENDING' FOR UPDATE SKIP LOCKED
+    KAIROS->>TaskDB: INSERT INTO shared_tasks_v3 (status='PENDING')
+    Implementer->>TaskDB: SELECT id FROM shared_tasks_v3 WHERE status='PENDING' FOR UPDATE SKIP LOCKED
     TaskDB-->>Implementer: Return task row
-    Implementer->>TaskDB: UPDATE shared_tasks SET status='IN_PROGRESS' WHERE id=?
+    Implementer->>TaskDB: UPDATE shared_tasks_v3 SET status='IN_PROGRESS' WHERE id=?
 ```
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via Centrifuge node integration in `srcs/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `srcs/server/orchestration/mesh.go`.
+Realtime communication via Centrifuge node integration in `srcs/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh`.
+- **Cloud-Native Mode:** Uses Redis Pub/Sub (`rueidis`).
+- **Standalone Mode:** In-memory Go channel broadcast.
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
-Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table.
+Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
 
 ## 4. Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`srcs/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
+Background worker system with Redis or SQLite implementations for spawning isolated sub-agents.
 
 ## 5. Visual Excellence Mandate
 All associated UI components must represent the OHC "Premium Feel".
