@@ -26,6 +26,9 @@ func setupTestDB(t *testing.T) db.Provider {
 		content TEXT NOT NULL,
 		embedding TEXT,
 		source_mission_id TEXT,
+		organization_id TEXT,
+		agent_id TEXT,
+		source_type TEXT,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
