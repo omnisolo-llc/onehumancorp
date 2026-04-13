@@ -96,11 +96,10 @@ class ApiService {
 
 
 
-  String get _baseUrl => const String.fromEnvironment("API_BASE_URL", defaultValue: "http://localhost:8080/api/v1");
 
   Future<List<SharedTask>> getTasks() async {
     final res = await _client.get(
-      Uri.parse("$_baseUrl/orchestration/tasks"),
+      Uri.parse("$baseUrl/api/v1/orchestration/tasks"),
       headers: _headers,
     );
     if (res.statusCode == 200) {
