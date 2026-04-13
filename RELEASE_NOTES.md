@@ -1,4 +1,8 @@
 # Release Notes
+## v0.2.12 (Cloud) / v0.2.12+1 (Standalone)
+- Scaling (Cloud): Coordinated multi-environment promotions across staging builds and enhanced K8s readiness.
+- Privacy/Offline (Standalone): Promoted desktop beta builds with verified local data sovereignty.
+
 ## v0.2.11 (Cloud) / v0.2.11+1 (Standalone)
 - Scaling (Cloud): Upgraded dependencies and optimized hybrid CI/CD tests for multi-tenant isolation.
 - Privacy/Offline (Standalone): Ensured robust local UI tests execution and verified local data isolation.
