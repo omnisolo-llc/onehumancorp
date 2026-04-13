@@ -23,6 +23,8 @@ go_library(
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh.go",
+            "subagent_worker.go",
+            "sub_agent.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -82,6 +84,7 @@ go_test(
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
+            "subagent_worker_test.go",
     ],
     embed = [":orchestration"],
     deps = [
@@ -103,5 +106,7 @@ go_test(
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@org_modernc_sqlite//:sqlite",
-],
+        "@com_github_stretchr_testify//assert",
+            "//srcs/server/orchestration/queue",
+    ],
 )

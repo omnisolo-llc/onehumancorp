@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"time"
-
+	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 )
 
@@ -41,38 +41,39 @@ func (w *SubAgentWorker) Start(ctx context.Context) {
 
 func (w *SubAgentWorker) poll(ctx context.Context) {
 	for {
-		// Respect context cancellation during polling
 		if ctx.Err() != nil {
 			return
 		}
-
 		job, err := w.taskQueue.Dequeue(ctx, []string{})
 		if err != nil || job == nil {
 			return
 		}
+		go w.processJob(ctx, job)
+	}
+}
 
-		go func(job *queue.Job) {
-			var payload map[string]interface{}
-			_ = json.Unmarshal([]byte(job.Payload), &payload)
+func (w *SubAgentWorker) processJob(ctx context.Context, job *queue.Job) {
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
+		_ = w.taskQueue.Fail(ctx, job.ID, fmt.Sprintf("invalid payload: %v", err))
+		return
+	}
 
-			orgID := ""
-			if val, ok := payload["organization_id"].(string); ok {
-				orgID = val
-			}
+	orgID := ""
+	if val, ok := payload["organization_id"].(string); ok {
+		orgID = val
+	}
 
-			task := &SharedTask{
-				ID:             job.ParentTaskID,
-				OrganizationID: orgID,
-				Priority:       "DELEGATED",
-			}
+	task := &SharedTask{
+		ID:             job.ParentTaskID,
+		OrganizationID: orgID,
+		Priority:       "DELEGATED",
+	}
 
-			err := w.spawner.Spawn(ctx, task)
-			if err != nil {
-				_ = w.taskQueue.Fail(ctx, job.ID, err.Error())
-			} else {
-				_ = w.taskQueue.Complete(ctx, job.ID)
-			}
-		}(job)
+	if err := w.spawner.Spawn(ctx, task); err != nil {
+		_ = w.taskQueue.Fail(ctx, job.ID, err.Error())
+	} else {
+		_ = w.taskQueue.Complete(ctx, job.ID)
 	}
 }
 
