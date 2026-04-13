@@ -66,7 +66,7 @@ func TestHubServiceServer_AdvertiseCapabilities(t *testing.T) {
 	cn.SetMeshTransport(mt)
 	hub.SetCentrifugeNode(cn)
 
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, mt)
 
 	// Test missing agent ID
 	req := &pb.AgentCapabilities{}
@@ -97,7 +97,7 @@ func TestHubServiceServer_DiscoverAgents(t *testing.T) {
 	cn.SetMeshTransport(mt)
 	hub.SetCentrifugeNode(cn)
 
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, mt)
 
 	// Background worker to publish capability
 	go func() {
@@ -134,7 +134,7 @@ func TestHubServiceServer_StreamMeshEvents(t *testing.T) {
 	cn.SetMeshTransport(mt)
 	hub.SetCentrifugeNode(cn)
 
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, mt)
 
 	// Test missing topic
 	req := &pb.EventStreamRequest{}
@@ -171,7 +171,7 @@ func TestHubServiceServer_StreamMeshEvents(t *testing.T) {
 func TestHubServiceServer_Errors(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
-	srv := NewHubServiceServer(hub)
+	srv := NewHubServiceServer(hub, nil)
 
 	// No CentrifugeNode
 	_, err := srv.AdvertiseCapabilities(context.Background(), &pb.AgentCapabilities{AgentId: "test"})
