@@ -835,6 +835,14 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 
 // RecordTeammateMeshBroadcast increments the global counter for Teammate Mesh broadcasts.
 func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"channel": channel,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "teammate_mesh_broadcast", string(payloadBytes))
+	}
 	if TeammateMeshBroadcastsCounter == nil {
 		return
 	}
@@ -845,6 +853,9 @@ func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 
 // RecordTeammateMeshDirectMessage increments the global counter for Teammate Mesh direct messages.
 func RecordTeammateMeshDirectMessage(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "teammate_mesh_direct_message", "{}")
+	}
 	if TeammateMeshDirectMessagesCounter == nil {
 		return
 	}
@@ -940,6 +951,14 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
 func RecordSyncEscalation(ctx context.Context, count int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"count": count,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sync_escalation", string(payloadBytes))
+	}
 	if SyncEscalationsCount == nil {
 		return
 	}
@@ -948,6 +967,14 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 
 // RecordSyncLatency records the latency of the sync process.
 func RecordSyncLatency(ctx context.Context, latency float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sync_latency", string(payloadBytes))
+	}
 	if SyncLatency == nil {
 		return
 	}
@@ -956,6 +983,14 @@ func RecordSyncLatency(ctx context.Context, latency float64) {
 
 // RecordSyncPayloadSize records the size of the sync payload.
 func RecordSyncPayloadSize(ctx context.Context, size int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"size": size,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sync_payload_size", string(payloadBytes))
+	}
 	if SyncPayloadSize == nil {
 		return
 	}
@@ -964,6 +999,14 @@ func RecordSyncPayloadSize(ctx context.Context, size int64) {
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
 func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"size": size,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sync_daemon_batch_size", string(payloadBytes))
+	}
 	if syncDaemonBatchSize == nil {
 		return
 	}
@@ -1074,6 +1117,15 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 
 // RecordAutoDreamSyncLatency records the duration of the AutoDream sync operation.
 func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency,
+			"deployment_mode": mode,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_sync_latency", string(payloadBytes))
+	}
 	if autoDreamSyncDuration != nil {
 		autoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -1083,6 +1135,15 @@ func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode strin
 
 // RecordAutoDreamQueryLatency records the duration of the AutoDream RAG query.
 func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency,
+			"deployment_mode": mode,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_query_latency", string(payloadBytes))
+	}
 	if autoDreamQueryDuration != nil {
 		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -1092,6 +1153,14 @@ func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode stri
 
 // RecordMeshBroadcast increments the mesh broadcast counter.
 func RecordMeshBroadcast(ctx context.Context, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"deployment_mode": mode,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
+	}
 	if meshBroadcastTotal != nil {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -1101,6 +1170,15 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 
 // RecordQueueLength adds a delta to the current queue length gauge.
 func RecordMeshLatency(ctx context.Context, operation string, latency time.Duration) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+			"latency": latency.Seconds(),
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "mesh_latency", string(payloadBytes))
+	}
 	if MeshLatencyRecorder == nil {
 		return
 	}
