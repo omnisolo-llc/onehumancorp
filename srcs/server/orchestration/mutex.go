@@ -152,12 +152,11 @@ func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 
 func (m *SQLiteMutex) Unlock(ctx context.Context) error {
 	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2`
-	res, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)
+	rowsAffected, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)
 	if err != nil {
 		return err
 	}
 
-	rowsAffected := res
 	if rowsAffected == 0 {
 		return ErrLockNotOwned
 	}
