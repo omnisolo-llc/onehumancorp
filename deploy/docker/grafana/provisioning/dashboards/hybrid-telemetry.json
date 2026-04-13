@@ -532,6 +532,164 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "id": 2001,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
+          "legendFormat": "Sync - {{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "Query - {{deployment_mode}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "AutoDream RAG Latency (P95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "id": 2002,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (agent_id) (rate(ohc_autodream_memories_ingested_total[5m]))",
+          "legendFormat": "Ingested - {{agent_id}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (agent_id) (rate(ohc_autodream_memories_compressed_total[5m]))",
+          "legendFormat": "Compressed - {{agent_id}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "AutoDream Memory Pipeline",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "id": 2003,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (operation, cache_type) (rate(ohc_cache_hits_total[5m]))",
+          "legendFormat": "Hits - {{operation}} ({{cache_type}})",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (operation, cache_type) (rate(ohc_cache_misses_total[5m]))",
+          "legendFormat": "Misses - {{operation}} ({{cache_type}})",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "LLM Cache Efficiency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 75
+      },
+      "id": 2004,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(ohc_sync_latency_ms_sum[5m]) / rate(ohc_sync_latency_ms_count[5m])",
+          "legendFormat": "Latency (ms)",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(sync_daemon_batch_size_sum[5m]) / rate(sync_daemon_batch_size_count[5m])",
+          "legendFormat": "Batch Size",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_sync_escalations_count[5m]))",
+          "legendFormat": "Escalations",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Sync Daemon Health",
+      "type": "timeseries"
     }
   ],
   "refresh": "",
