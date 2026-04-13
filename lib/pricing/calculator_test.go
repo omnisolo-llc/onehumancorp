@@ -73,6 +73,15 @@ func TestCalculateCost(t *testing.T) {
 			cachedTokens:     1000,
 			expectedCost:     (1000.0 * 3.0 / 1000000.0) + (500.0 * 12.0 / 1000000.0) + (1000.0 * 1.50 / 1000000.0),
 		},
+		{
+			name:             "Bulk Discount test > 1M tokens",
+			model:            "claude-3-5-sonnet-20240620",
+			promptTokens:     2000000,
+			completionTokens: 0,
+			cachedTokens:     0,
+			// 10% discount on 2M input tokens
+			expectedCost:     (2000000.0 * 3.0 / 1000000.0) * 0.90,
+		},
 	}
 
 	for _, tt := range tests {
@@ -88,6 +97,7 @@ func TestCalculateCost(t *testing.T) {
 func TestCalculateCostDetails(t *testing.T) {
 	ctx := context.Background()
 
+	// Test without discount
 	details := CalculateCostDetails(ctx, "claude-3-opus-20240229", 1000, 500, 1000)
 
 	expectedInputCost := 1000.0 * 15.0 / 1000000.0
@@ -104,7 +114,28 @@ func TestCalculateCostDetails(t *testing.T) {
 	if math.Abs(details.CachedCost-expectedCachedCost) > 1e-9 {
 		t.Errorf("expected cached cost %f, got %f", expectedCachedCost, details.CachedCost)
 	}
+	if math.Abs(details.VolumeDiscount-0.0) > 1e-9 {
+		t.Errorf("expected volume discount 0.0, got %f", details.VolumeDiscount)
+	}
 	if math.Abs(details.TotalCost-expectedTotalCost) > 1e-9 {
 		t.Errorf("expected total cost %f, got %f", expectedTotalCost, details.TotalCost)
+	}
+
+	// Test with discount (> 1,000,000 input tokens)
+	detailsWithDiscount := CalculateCostDetails(ctx, "claude-3-opus-20240229", 1500000, 500, 1000)
+
+	rawInputCost := 1500000.0 * 15.0 / 1000000.0
+	expectedDiscount := rawInputCost * 0.10
+	expectedInputCostDiscounted := rawInputCost - expectedDiscount
+	expectedTotalCostDiscounted := expectedInputCostDiscounted + expectedOutputCost + expectedCachedCost
+
+	if math.Abs(detailsWithDiscount.InputCost-expectedInputCostDiscounted) > 1e-9 {
+		t.Errorf("expected discounted input cost %f, got %f", expectedInputCostDiscounted, detailsWithDiscount.InputCost)
+	}
+	if math.Abs(detailsWithDiscount.VolumeDiscount-expectedDiscount) > 1e-9 {
+		t.Errorf("expected volume discount %f, got %f", expectedDiscount, detailsWithDiscount.VolumeDiscount)
+	}
+	if math.Abs(detailsWithDiscount.TotalCost-expectedTotalCostDiscounted) > 1e-9 {
+		t.Errorf("expected total cost %f, got %f", expectedTotalCostDiscounted, detailsWithDiscount.TotalCost)
 	}
 }

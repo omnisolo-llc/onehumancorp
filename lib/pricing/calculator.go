@@ -41,10 +41,11 @@ var ModelPricing = map[string]PricingRates{
 
 // CostDetails represents the breakdown of costs for an LLM request.
 type CostDetails struct {
-	InputCost  float64
-	OutputCost float64
-	CachedCost float64
-	TotalCost  float64
+	InputCost      float64
+	OutputCost     float64
+	CachedCost     float64
+	VolumeDiscount float64
+	TotalCost      float64
 }
 
 // CalculateCostDetails computes the granular costs of an LLM request in USD.
@@ -55,10 +56,19 @@ func CalculateCostDetails(ctx context.Context, model string, promptTokens, compl
 		return CostDetails{}
 	}
 
+	rawInputCost := float64(promptTokens) * (rates.Input / 1000000.0)
+	discount := 0.0
+
+	// Apply a 10% volume discount on input cost if promptTokens > 1,000,000
+	if promptTokens > 1000000 {
+		discount = rawInputCost * 0.10
+	}
+
 	details := CostDetails{
-		InputCost:  float64(promptTokens) * (rates.Input / 1000000.0),
-		OutputCost: float64(completionTokens) * (rates.Output / 1000000.0),
-		CachedCost: float64(cachedTokens) * (rates.Cached / 1000000.0),
+		InputCost:      rawInputCost - discount,
+		OutputCost:     float64(completionTokens) * (rates.Output / 1000000.0),
+		CachedCost:     float64(cachedTokens) * (rates.Cached / 1000000.0),
+		VolumeDiscount: discount,
 	}
 	details.TotalCost = details.InputCost + details.OutputCost + details.CachedCost
 
