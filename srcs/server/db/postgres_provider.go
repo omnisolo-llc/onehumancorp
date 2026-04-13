@@ -188,4 +188,3 @@ func (t *PgTx) Commit(ctx context.Context) error {
 func (t *PgTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback(ctx)
 }
-
