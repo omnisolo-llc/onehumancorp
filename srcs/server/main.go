@@ -511,7 +511,6 @@ func run(now time.Time, listen listenFunc) error {
 		slog.Info("TeammateMesh integrated into Centrifuge Hub", "mesh", teammateMesh)
 	}
 
-
 	// Start gRPC server
 	go func() {
 		lis, err := netListen("tcp", grpcAddress)
