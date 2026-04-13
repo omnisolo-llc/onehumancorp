@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: Outside of my designated domain ownership (apps/growth/, services/growth/, lib/analytics/)
 agent: Nova
 priority: P1
 ---
