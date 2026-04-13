@@ -9,7 +9,7 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-
+	"google.golang.org/protobuf/proto"
 )
 
 // AdvertiseCapabilities advertises an agent's capabilities to the mesh
@@ -42,7 +42,7 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 		_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
 	}
 
-	return &pb.PublishMessageResponse{Success: true}, nil
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
 }
 
 // DiscoverAgents streams known agent capabilities from the mesh
@@ -74,8 +74,6 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 			if !ok {
 				return nil
 			}
-
-			// Optional: Apply filtering based on req.GetFilter() here if implemented later
 
 			if err := stream.Send(&caps); err != nil {
 				return err
@@ -118,12 +116,12 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 				return nil
 			}
 
-			event := &pb.MeshEvent{
-				EventId:   fmt.Sprintf("evt-%d", time.Now().UnixNano()),
-				Topic:     req.GetTopic(),
+			event := pb.MeshEvent_builder{
+				EventId:   proto.String(fmt.Sprintf("evt-%d", time.Now().UnixNano())),
+				Topic:     proto.String(req.GetTopic()),
 				Payload:   payload,
-				Timestamp: time.Now().Unix(),
-			}
+				Timestamp: proto.Int64(time.Now().Unix()),
+			}.Build()
 
 			if err := stream.Send(event); err != nil {
 				return err
