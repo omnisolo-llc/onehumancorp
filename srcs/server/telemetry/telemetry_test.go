@@ -16,7 +16,7 @@ import (
 
 func TestInitTelemetry(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	t.Setenv("OHC_STANDALONE", "")
+	t.Setenv("OHC_MULTITENANT", "true")
 
 	// Happy path: initialization succeeds
 	cleanup, err := InitTelemetry()
@@ -197,7 +197,7 @@ func TestInitTelemetryError(t *testing.T) {
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
 
 	prometheus.DefaultRegisterer = &mockRegisterer{}
-	t.Setenv("OHC_STANDALONE", "")
+	t.Setenv("OHC_MULTITENANT", "true")
 
 	cleanup, err := InitTelemetry()
 	if err == nil {
@@ -271,7 +271,7 @@ func TestMiddleware(t *testing.T) {
 			defer func() { Verbosity = originalVerbosity }()
 
 			prometheus.DefaultRegisterer = prometheus.NewRegistry()
-			t.Setenv("OHC_STANDALONE", "")
+			t.Setenv("OHC_MULTITENANT", "true")
 
 			cleanup, err := InitTelemetry()
 			if err != nil {
@@ -328,7 +328,7 @@ func TestRecordSQLiteLockMetrics(t *testing.T) {
 
 func TestRecordFunctions(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	t.Setenv("OHC_STANDALONE", "")
+	t.Setenv("OHC_MULTITENANT", "true")
 
 	cleanup, err := InitTelemetry()
 	if err != nil {
@@ -582,7 +582,7 @@ func TestInitTelemetry_PrometheusError(t *testing.T) {
 	defer func() { prometheus.DefaultRegisterer = originalReg }()
 
 	prometheus.DefaultRegisterer = errorRegisterer{}
-	t.Setenv("OHC_STANDALONE", "")
+	t.Setenv("OHC_MULTITENANT", "true")
 
 	_, err := InitTelemetry()
 	if err == nil {
@@ -591,7 +591,7 @@ func TestInitTelemetry_PrometheusError(t *testing.T) {
 }
 
 func TestInitTelemetry_StandaloneOptOut(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 	t.Setenv("OHC_TELEMETRY_ENABLED", "false")
 
 	// Since we mock the actual metrics if initialized in other tests,
@@ -607,7 +607,7 @@ func TestInitTelemetry_StandaloneOptOut(t *testing.T) {
 }
 
 func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
 
 	originalReg := prometheus.DefaultRegisterer

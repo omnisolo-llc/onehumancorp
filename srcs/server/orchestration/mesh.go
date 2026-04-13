@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
+
 	"sync"
 	"time"
 
@@ -47,7 +47,7 @@ type LegacyTeammateMesh struct {
 
 // NewLegacyTeammateMesh creates a new mesh instance.
 func NewLegacyTeammateMesh(redisURL string) (*LegacyTeammateMesh, error) {
-	isCloud := os.Getenv("OHC_MULTITENANT") == "true"
+	isCloud := envBoolDefault("OHC_MULTITENANT", true)
 
 	tm := &LegacyTeammateMesh{
 		isCloud:     isCloud,
