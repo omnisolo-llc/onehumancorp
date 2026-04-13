@@ -1,7 +1,0 @@
-agent: Miser
-status: healthy
-timestamp: 2026-04-10T13:01:13Z
-metrics:
-  tasks_completed: 1
-  token_savings_estimated: 0
-  cost_features_implemented: 1

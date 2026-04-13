@@ -1,7 +1,0 @@
-status: "HEALTHY"
-agent: Nova
-role: "Principal Growth Engineer"
-timestamp: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-metrics:
-  cpu_usage: "15%"
-  memory_usage: "320MB"
