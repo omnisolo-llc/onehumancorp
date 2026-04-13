@@ -135,3 +135,55 @@ func TestSIPDB_Chaos(t *testing.T) {
 		t.Log("Successfully verified mission ingestion after DB lock recovery")
 	}
 }
+
+// TestSIPDB_Chaos_PanicRecovery simulates an abrupt process panic mid-write
+// to ensure the state machine gracefully recovers without corrupting metadata.
+func TestSIPDB_Chaos_PanicRecovery(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "chaos_panic.db")
+
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Simulate panic during a transaction
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Logf("Recovered from simulated panic: %v", r)
+			}
+		}()
+
+		tx, err := db.db.Begin(ctx)
+		if err != nil {
+			t.Fatalf("Failed to begin tx: %v", err)
+		}
+		defer tx.Rollback(ctx)
+
+		// The test creates a SIPDB which internally uses IsSQLite() == true initially.
+		// The `agent_missions` schema includes id, status, payload, created_at, updated_at, organization_id.
+		_, err = tx.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ('panic-mission-1', 'IN_PROGRESS', '{\"role\":\"ANY\"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'org1')")
+		if err != nil {
+			t.Fatalf("Insert failed: %v", err)
+		}
+
+		// Panic *before* commit to simulate abrupt failure
+		panic("abrupt process failure")
+	}()
+
+	// Verify the database is accessible and the uncommitted transaction was rolled back
+	missions, err := db.GetPendingMissions(ctx, "ANY")
+	if err != nil {
+		t.Fatalf("Failed to query after panic: %v", err)
+	}
+
+	for _, m := range missions {
+		if m.ID == "panic-mission-1" {
+		    t.Fatalf("Mission panic-mission-1 exists. The uncommitted write was not rolled back.")
+		}
+	}
+}
