@@ -175,3 +175,9 @@ use_repo(oci, "distroless_static", "distroless_static_linux_amd64", "nginx_alpin
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
 use_repo(proto_deps, "google_protobuf_dart")
+
+go_deps.module(
+    path = "github.com/minio/minio-go/v7",
+    sum = "h1:ShkWi8Tyj9RtU57OQB2HIXKz4bFgtVib0bbT1sbtLI8=",
+    version = "v7.0.100",
+)
