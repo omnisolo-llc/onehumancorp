@@ -31,7 +31,8 @@ show_menu() {
     echo -e "  ${PURPLE}6)${RESET} Verify System State (Diagnostics)"
     echo -e "  ${PURPLE}7)${RESET} Standalone DB Health Check"
     echo -e "  ${PURPLE}8)${RESET} Seed Database with Mock Data"
-    echo -e "  ${PURPLE}9)${RESET} Interactive Setup Diagnostics"
+    echo -e "  ${PURPLE}9)${RESET} Interactive Setup Diagnostics
+  ${PURPLE}h)${RESET} Run Setup Health Check"
     echo -e "  ${PURPLE}q)${RESET} Quick Start (Standalone Local Backend)\n  ${PURPLE}c)${RESET} Quick Start (Cloud-Native K8s)\n  ${PURPLE}x)${RESET} Quit"
     echo ""
 }
@@ -226,6 +227,7 @@ else
             7) standalone_db_check ;;
             8) seed_mock_data ;;
             9) bash deploy/scripts/ohc-diagnostics.sh ;;
+            h|H) bash deploy/scripts/ohc-setup-health.sh ;;
             q|Q) bash deploy/scripts/ohc-quick-start.sh ;;
             c|C) bash deploy/scripts/ohc-cloud-start.sh ;;
             x|X) echo "Exiting."; break ;;
