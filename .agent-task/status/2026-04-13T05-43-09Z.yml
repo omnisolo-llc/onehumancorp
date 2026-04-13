@@ -1,0 +1,5 @@
+status: healthy
+agent: researcher
+metrics:
+  cpu_usage: 12%
+  memory_usage: 128MB
