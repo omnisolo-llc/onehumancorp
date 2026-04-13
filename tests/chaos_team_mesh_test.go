@@ -108,3 +108,40 @@ func TestMeshFallback_MaxRetries(t *testing.T) {
 		t.Logf("Successfully failed after max retries: %v", err)
 	}
 }
+
+// TestMeshFallback_ZeroBackoff tests behavior when initialBackoff is zero or negative
+func TestMeshFallback_ZeroBackoff(t *testing.T) {
+	ctx := context.Background()
+	err := resilience.WithRetry(ctx, 1, 0, func(c context.Context) error {
+		return errors.New("always fail")
+	})
+	if err == nil {
+		t.Error("Expected error but got nil")
+	}
+}
+
+// TestMeshFallback_ContextCancelled tests behavior when context is cancelled during retries
+func TestMeshFallback_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	err := resilience.WithRetry(ctx, 5, 100*time.Millisecond, func(c context.Context) error {
+		cancel() // cancel immediately so the sleep select catches it
+		return errors.New("failing callback")
+	})
+	if err == nil {
+		t.Error("Expected error but got nil")
+	} else if !errors.Is(err, context.Canceled) {
+		t.Errorf("Expected context.Canceled, got %v", err)
+	}
+}
+
+// TestMeshFallback_ZeroJitter tests behavior when jitterVal is <= 0
+func TestMeshFallback_ZeroJitter(t *testing.T) {
+	ctx := context.Background()
+	// initialBackoff of 1ns means jitterVal will be 1/2 = 0
+	err := resilience.WithRetry(ctx, 1, 1*time.Nanosecond, func(c context.Context) error {
+		return errors.New("always fail")
+	})
+	if err == nil {
+		t.Error("Expected error but got nil")
+	}
+}
