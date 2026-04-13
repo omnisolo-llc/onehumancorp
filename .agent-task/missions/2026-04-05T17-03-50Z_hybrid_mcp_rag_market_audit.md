@@ -13,7 +13,7 @@ A deep analysis of the OHC Hybrid architecture vs. Cloud-only alternatives.
 - **Claude Code**: Single-user, CLI-centric. No persistent swarm context.
 - **OpenClaw**: Cloud-orchestrated, rigid APIs. Lacks private standalone fallback.
 - **OHC Vision**: A unified data layer where the same application binaries run locally backed by SQLite and Local FS, but automatically synchronize "Omni-Context" payloads to K8s Postgres and S3 when swarm scaling is required.
-See also: `RESEARCH_REPORT_HYBRID_RAG.md`
+See also: `docs/research/RESEARCH_REPORT_HYBRID_RAG.md`
 
 ## Design Doc
 We need to design a "Hybrid Blob Storage Proxy MCP".

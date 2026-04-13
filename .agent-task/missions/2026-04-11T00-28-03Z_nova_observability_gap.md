@@ -12,7 +12,7 @@ The OHC Hybrid Architecture (OHC-HA) currently exhibits observability gaps and m
 2. **Standalone Desktop Mode:** Local SQLite (`swarm.db`) experiences severe `database is locked` errors during swarm execution burst workloads due to high concurrency. Additionally, local telemetry is not effectively captured and synced when transitioning online.
 
 ## Research Report
-A comprehensive audit of `OBSERVABILITY_AUDIT_REPORT.md` and `TELEMETRY_REPORT.md` highlights the divergent bottlenecks between Cloud-Native and Standalone modes:
+A comprehensive audit of `docs/research/OBSERVABILITY_AUDIT_REPORT.md` and `docs/research/TELEMETRY_REPORT.md` highlights the divergent bottlenecks between Cloud-Native and Standalone modes:
 - **Cloud-Native:** The primary inefficiencies arise from network latency to external LLMs and PostgreSQL lock contention during massive `agent_missions` bulk updates. Error rates spike during aggressive pod scaling.
 - **Standalone:** Single-user local Go backend operations are constrained by host I/O limits, rapidly hitting SQLite lock contention as exponential backoff is exhausted during parallel operations.
 

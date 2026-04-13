@@ -69,6 +69,22 @@ spec:
               value: "{{ .Values.multiTenant.enabled }}"
             - name: OHC_HEADLESS
               value: "{{ .Values.backend.headless }}"
+            - name: OHC_AGENT_RUNTIME
+              value: "{{ .Values.backend.agentRuntime }}"
+            - name: OHC_AGENT_IMAGE
+              value: "{{ default .Values.backend.image .Values.backend.agentImage }}"
+            - name: OHC_AGENT_K8S_NAMESPACE
+              value: "{{ default .Release.Namespace .Values.backend.agentNamespace }}"
+            - name: OHC_AGENT_K8S_WORKDIR
+              value: "{{ .Values.backend.agentWorkDir }}"
+            {{- if .Values.backend.agentWorkspaceClaim }}
+            - name: OHC_AGENT_WORKSPACE_CLAIM
+              value: "{{ .Values.backend.agentWorkspaceClaim }}"
+            {{- end }}
+            {{- if .Values.backend.agentServiceAccount }}
+            - name: OHC_AGENT_K8S_SERVICE_ACCOUNT
+              value: "{{ .Values.backend.agentServiceAccount }}"
+            {{- end }}
             {{- if .Values.ohcCore.enabled }}
             - name: OHC_CORE_URL
               value: "http://{{ .Release.Name }}-ohc-core:{{ .Values.ohcCore.service.port }}"

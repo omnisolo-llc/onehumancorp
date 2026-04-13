@@ -24,7 +24,7 @@ A comparative analysis of Prometheus metrics, Kubernetes logs, and local SQLite 
 
 ## 3. Observability Gap Analysis
 
-While basic metrics exist (e.g., `ohc_token_usage_total`), a critical audit of `TELEMETRY_REPORT.md` and the existing Grafana provisioning (`deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json`) reveals the following systemic gaps:
+While basic metrics exist (e.g., `ohc_token_usage_total`), a critical audit of `docs/research/TELEMETRY_REPORT.md` and the existing Grafana provisioning (`deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json`) reveals the following systemic gaps:
 
 - **Missing Metric Coverage:** There is no dedicated metric tracking **Token Burn Rate Forecasting**. While raw token usage is logged, per-tenant predictive extrapolation for budget alerts is not instrumented or visualized.
 - **Grafana Visualization Gap:** The "Hybrid Telemetry Review" dashboard lacks specific panels for token forecasting and fine-grained agent API error rate breakdowns.

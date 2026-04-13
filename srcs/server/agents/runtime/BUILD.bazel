@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+	name = "runtime",
+	srcs = ["launcher.go"],
+	importpath = "github.com/onehumancorp/mono/srcs/server/agents/runtime",
+	visibility = ["//visibility:public"],
+)
+
+go_test(
+	name = "runtime_test",
+	srcs = ["launcher_test.go"],
+	embed = [":runtime"],
+)

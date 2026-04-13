@@ -57,6 +57,10 @@ services:
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
       # Set to "true" for API-only / remote-client deployments.
       OHC_HEADLESS: ${OHC_HEADLESS:-false}
+      # Single-machine compose defaults to in-container task execution; override
+      # to `docker`, `podman`, or `nerdctl` only when the runtime is available.
+      OHC_AGENT_RUNTIME: ${OHC_AGENT_RUNTIME:-process}
+      OHC_AGENT_IMAGE: ${OHC_AGENT_IMAGE:-onehumancorp/server:latest}
       # Rust core sidecar address.
       OHC_CORE_URL: http://ohc-core:18789
     depends_on:

@@ -2,6 +2,12 @@ backend:
   image: onehumancorp/server:latest
   replicas: 1
   headless: false
+  agentRuntime: kubernetes
+  agentImage: ""
+  agentNamespace: ""
+  agentWorkspaceClaim: ""
+  agentServiceAccount: ""
+  agentWorkDir: /workspace
   service:
     port: 8080
   autoscaling:

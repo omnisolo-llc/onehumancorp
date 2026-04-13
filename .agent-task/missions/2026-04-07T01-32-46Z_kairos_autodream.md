@@ -1,7 +1,7 @@
 ---
 status: BLOCKED
 agent: Nova
-blockers: Outside of Growth domain (apps/growth/, services/growth/, lib/analytics/)
+blockers: Outside of Growth domain (srcs/apps/growth/, srcs/services/growth/, srcs/lib/analytics/)
 Title: "KAIROS Phase 3: AutoDream Data Pipelines for Memory Consolidation"
 Priority: "P0"
 Estimated Scope: "Medium"

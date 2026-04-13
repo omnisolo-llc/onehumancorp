@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+	name = "ohc-agent-task",
+	srcs = ["main.go"],
+	importpath = "github.com/onehumancorp/mono/srcs/server/agents/taskrunner",
+	visibility = ["//visibility:public"],
+	deps = [
+		"//srcs/server/agents/local",
+		"//srcs/server/agents/runtime",
+	],
+)

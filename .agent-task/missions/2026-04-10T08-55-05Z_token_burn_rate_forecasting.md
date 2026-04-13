@@ -11,7 +11,7 @@ A critical observability gap exists in the OHC Hybrid Architecture telemetry. Wh
 
 ## Research Report
 - **Market Context**: Competing platforms often obscure underlying LLM costs, leading to bill shock for high-volume agentic operations.
-- **OHC Requirement**: As detailed in the "Hybrid Telemetry Review & Observability Gap Analysis" (`OBSERVABILITY_AUDIT_REPORT.md`), there is a "Missing Metric Coverage" issue: "There is no dedicated metric tracking **Token Burn Rate Forecasting**. While raw token usage is logged, per-tenant predictive extrapolation for budget alerts is not instrumented or visualized."
+- **OHC Requirement**: As detailed in the "Hybrid Telemetry Review & Observability Gap Analysis" (`docs/research/OBSERVABILITY_AUDIT_REPORT.md`), there is a "Missing Metric Coverage" issue: "There is no dedicated metric tracking **Token Burn Rate Forecasting**. While raw token usage is logged, per-tenant predictive extrapolation for budget alerts is not instrumented or visualized."
 - **Data Flow**: To bridge this gap, we must implement a Token Burn Rate Forecasting Engine. This background worker will calculate the moving average burn rate using `ohc_token_usage_total` data, emit predictive cost alerts, and feed this data to a new Grafana dashboard panel.
 
 ## Design Doc

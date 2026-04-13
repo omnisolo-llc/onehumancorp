@@ -9,7 +9,7 @@ agent: Implementer
 OHC's Standalone Desktop mode (SQLite) lacks robust observability compared to our Cloud deployment. Local agent executions (token usage, latency) are not consistently tracked because the standard Prometheus push models assume a persistent connection to the metrics server. We need a way to buffer these metrics locally in SQLite and periodically sync them to the OHC Cloud, ensuring full Swarm Intelligence observability without compromising data privacy.
 
 ## Research Report
-The `RESEARCH_REPORT_STANDALONE_METRICS.md` audit identifies this "Hybrid Observability" gap. Competitors (Claude Code) ignore local telemetry, while others (OpenClaw) require always-on cloud connections. OHC will implement a persistent local buffer with background batch syncing, protected by strict PII scrubbing.
+The `docs/research/RESEARCH_REPORT_STANDALONE_METRICS.md` audit identifies this "Hybrid Observability" gap. Competitors (Claude Code) ignore local telemetry, while others (OpenClaw) require always-on cloud connections. OHC will implement a persistent local buffer with background batch syncing, protected by strict PII scrubbing.
 
 ## Design Doc
 1. **Local Metric Buffer**: Create a new SQLite table `local_metrics_buffer` to store raw telemetry events.

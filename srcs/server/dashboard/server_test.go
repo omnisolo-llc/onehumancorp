@@ -85,6 +85,8 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 }
 
 func TestNewServerBootstrapsInternalDefaultAgentWhenHubEmpty(t *testing.T) {
+	t.Setenv("OHC_AGENT_RUNTIME", "process")
+
 	org := domain.NewSoftwareCompany("org-empty", "Empty Org", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
 	hub := orchestration.NewHub()
 	defer hub.Close()
@@ -106,8 +108,8 @@ func TestNewServerBootstrapsInternalDefaultAgentWhenHubEmpty(t *testing.T) {
 	if agent.ProviderType != "builtin" {
 		t.Fatalf("expected builtin provider type, got %q", agent.ProviderType)
 	}
-	if agent.Region != "docker" {
-		t.Fatalf("expected docker region, got %q", agent.Region)
+	if agent.Region != "process" {
+		t.Fatalf("expected process region, got %q", agent.Region)
 	}
 	if agent.Role == "" {
 		t.Fatal("expected bootstrapped agent role to be set")

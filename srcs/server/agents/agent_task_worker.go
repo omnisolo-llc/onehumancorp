@@ -5,17 +5,19 @@ import (
 	"encoding/json"
 	"log/slog"
 	"math/rand"
+	"os"
+	"sync"
 	"time"
 
+	agentruntime "github.com/onehumancorp/mono/srcs/server/agents/runtime"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
-	"os"
 )
 
-import (
-	"sync"
-)
+type builtinTaskLauncher interface {
+	LaunchTask(context.Context, agentruntime.TaskRequest) error
+	DefaultRegion() string
+}
 
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)
 // and randomly assigns an idle agent to them by injecting the task into their context.
@@ -25,6 +27,7 @@ type TaskWorker struct {
 	hub          *orchestration.Hub
 	pollInterval time.Duration
 	numWorkers   int
+	taskLauncher builtinTaskLauncher
 }
 
 // NewTaskWorker creates a new TaskWorker with default single worker.
@@ -34,7 +37,19 @@ func NewTaskWorker(pc *plane.Client, hub *orchestration.Hub) *TaskWorker {
 		hub:          hub,
 		pollInterval: 30 * time.Second,
 		numWorkers:   1, // Default to 1 for backward compatibility
+		taskLauncher: agentruntime.NewLauncherFromEnv(),
 	}
+}
+
+func defaultAgentWorkDir() string {
+	if configured := os.Getenv("OHC_AGENT_WORKDIR"); configured != "" {
+		return configured
+	}
+	workDir, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	return workDir
 }
 
 // Start begins the background polling loop for the task worker.
@@ -89,7 +104,7 @@ func (tw *TaskWorker) StartWithWorkers(ctx context.Context, workers int) {
 
 // pollAndDispatch polls the Plane REST API for open issues and sends them to the worker channel.
 func (tw *TaskWorker) pollAndDispatch(taskChan chan<- plane.Issue) {
-	if !plane.IsEnabled() {
+	if !plane.IsEnabled() || tw.planeClient == nil {
 		return
 	}
 
@@ -128,7 +143,7 @@ func (tw *TaskWorker) pollAndDispatch(taskChan chan<- plane.Issue) {
 // pollAndAssign polls the Plane REST API for open issues and assigns a random one.
 // Kept for tests or manual single-task dispatch.
 func (tw *TaskWorker) pollAndAssign() {
-	if !plane.IsEnabled() {
+	if !plane.IsEnabled() || tw.planeClient == nil {
 		return
 	}
 
@@ -154,9 +169,11 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 	slog.Info("agent task worker: processing issue", "issue_id", issue.ID, "title", issue.Name)
 
 	// Mark it as in progress
-	if err := tw.planeClient.UpdateIssueStatus(issue.ID, "in_progress"); err != nil {
-		slog.Error("failed to update plane issue status", "err", err)
-		return
+	if tw.planeClient != nil {
+		if err := tw.planeClient.UpdateIssueStatus(issue.ID, "in_progress"); err != nil {
+			slog.Error("failed to update plane issue status", "err", err)
+			return
+		}
 	}
 
 	agentFound := false
@@ -169,57 +186,74 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 
 		for _, idx := range agentIndices {
 			a := agents[idx]
-			if a.Status == orchestration.StatusActive || a.Status == orchestration.StatusWaitingForTools {
-				// Encode the issue payload securely as JSON to prevent prompt injection.
-				// The agent's framework is responsible for parsing this data blob
-				// rather than blindly executing unstructured text.
-				payload, _ := json.Marshal(map[string]string{
-					"issue_id":   issue.ID,
-					"issue_name": issue.Name,
-					"directive":  "Please resolve the attached issue descriptor.",
-				})
-
-				msg := orchestration.Message{
-					ID:         "task-" + issue.ID,
-					FromAgent:  "SYSTEM",
-					ToAgent:    a.ID,
-					Type:       "TaskAssignment",
-					Content:    string(payload),
-					OccurredAt: time.Now().UTC(),
-				}
-				_ = tw.hub.Publish(msg)
-				slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", a.ID)
-
-				// Handle Builtin agent logic
-				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
-					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
-					go func(agent orchestration.Agent, payload string) {
-						client := builtin.NewOpenAIClient(os.Getenv("OPENAI_API_KEY"))
-						builtinAgent := &builtin.BuiltinAgent{
-							Client:      client,
-							Model:       "gpt-4o",
-							System:      builtin.GetSystemPrompt(),
-							Tools:       builtin.AllTools(),
-							MaxTokens:   4096,
-							Temperature: 0.1,
-						}
-						_, err := builtinAgent.Run(context.Background(), []builtin.Message{{
-							Role:    builtin.RoleUser,
-							Content: payload,
-						}})
-						if err != nil {
-							slog.Error("builtin agent run error", "err", err, "agent_id", agent.ID)
-						}
-					}(a, string(payload))
-				}
-
-				agentFound = true
-				break
+			if a.Status != orchestration.StatusIdle {
+				continue
 			}
+
+			// Encode the issue payload securely as JSON to prevent prompt injection.
+			// The agent's framework is responsible for parsing this data blob
+			// rather than blindly executing unstructured text.
+			payload, _ := json.Marshal(map[string]string{
+				"issue_id":   issue.ID,
+				"issue_name": issue.Name,
+				"directive":  "Please resolve the attached issue descriptor.",
+			})
+
+			msg := orchestration.Message{
+				ID:         "task-" + issue.ID,
+				FromAgent:  a.ID,
+				ToAgent:    a.ID,
+				Type:       "TaskAssignment",
+				Content:    string(payload),
+				OccurredAt: time.Now().UTC(),
+			}
+
+			activeAgent := a
+			activeAgent.Status = orchestration.StatusActive
+			tw.hub.RegisterAgent(activeAgent)
+
+			if err := tw.hub.Publish(msg); err != nil {
+				slog.Error("agent task worker: failed to publish task assignment", "agent_id", activeAgent.ID, "err", err)
+				tw.hub.RegisterAgent(a)
+				continue
+			}
+			slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", activeAgent.ID)
+
+			if activeAgent.ProviderType == string(ProviderTypeBuiltin) || activeAgent.ProviderType == "" {
+				go tw.launchBuiltinTask(activeAgent, issue, string(payload))
+			}
+
+			agentFound = true
+			break
 		}
 	}
 
 	if !agentFound {
 		slog.Warn("agent task worker: issue marked in_progress but no available agents to delegate to")
 	}
+}
+
+func (tw *TaskWorker) launchBuiltinTask(agent orchestration.Agent, issue plane.Issue, payload string) {
+	launcher := tw.taskLauncher
+	if launcher == nil {
+		launcher = agentruntime.NewLauncherFromEnv()
+	}
+
+	request := agentruntime.TaskRequest{
+		AgentID:      agent.ID,
+		AgentName:    agent.Name,
+		Role:         agent.Role,
+		ProviderType: agent.ProviderType,
+		IssueID:      issue.ID,
+		Description:  issue.Name,
+		Prompt:       payload,
+		WorkDir:      defaultAgentWorkDir(),
+	}
+
+	if err := launcher.LaunchTask(context.Background(), request); err != nil {
+		slog.Error("builtin agent launch error", "err", err, "agent_id", agent.ID, "runtime", launcher.DefaultRegion())
+	}
+
+	agent.Status = orchestration.StatusIdle
+	tw.hub.RegisterAgent(agent)
 }

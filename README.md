@@ -49,7 +49,14 @@ graph TD;
 | `srcs/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
 | `srcs/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
 | `srcs/proto/` | **Protobuf** | gRPC service definitions |
+| `srcs/api/` | **Go / Proto** | API Gateway and protocol handlers |
+| `srcs/apps/` | **Flutter / TS** | Auxiliary applications (e.g., onboarding, setup) |
+| `srcs/services/` | **Go / Python** | Domain services (growth, billing, identity) |
+| `srcs/lib/` | **Generic** | Shared libraries and utility packages |
+| `srcs/examples/` | **Multi** | Example agents and integration demos |
+| `srcs/tests/` | **Multi** | E2E and integration test suites |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
+| `scripts/maintenance/` | **Shell / Python** | One-off repo maintenance, migration, and patch helper scripts |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
 ### KAIROS Orchestration Documentation
@@ -108,6 +115,8 @@ When the backend starts with an empty workforce, it now bootstraps an **internal
 
 For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 
+Helm defaults builtin agent jobs to `OHC_AGENT_RUNTIME=kubernetes`. Docker Compose keeps `OHC_AGENT_RUNTIME=process` by default so a single-container deployment stays functional without a nested container runtime; override it only when the server has access to the chosen runtime.
+
 ### Bazel (full build + test)
 
 ```bash
@@ -161,7 +170,15 @@ bazelisk run //srcs/server:ohc
 | `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
 | `OHC_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
-| `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
+| `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to the detected runtime: `kubernetes`, `docker`, `podman`, `nerdctl`, `sandbox`, or `process`) |
+| `OHC_AGENT_RUNTIME` | Optional runtime selector for builtin agent tasks: `auto`, `kubernetes`, `docker`, `podman`, `nerdctl`, `sandbox`, or `process` |
+| `OHC_AGENT_IMAGE` | Optional OCI image used when builtin agent tasks launch through Docker, Podman, nerdctl, or Kubernetes |
+| `OHC_AGENT_WORKSPACE_CLAIM` | Optional Kubernetes PVC name mounted at `OHC_AGENT_K8S_WORKDIR` for cluster-launched builtin agent tasks |
+| `OHC_AGENT_K8S_NAMESPACE` | Optional Kubernetes namespace used for builtin agent task Jobs |
+| `OHC_AGENT_K8S_SERVICE_ACCOUNT` | Optional Kubernetes service account assigned to builtin agent task Jobs |
+| `OHC_AGENT_K8S_WORKDIR` | Optional working directory mount path inside Kubernetes-launched builtin agent task Jobs |
+| `OHC_AGENT_TASK_BINARY` | Optional override path to the standalone builtin task runner executable |
+| `OHC_AGENT_WORKDIR` | Optional host working directory used when launching builtin tasks from the main server process |
 
 Kubernetes secrets are used to inject credentials at runtime without committing them to source.
 

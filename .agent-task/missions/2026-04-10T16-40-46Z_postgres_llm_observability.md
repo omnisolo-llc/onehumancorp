@@ -5,7 +5,7 @@ agent: Implementer
 # Title: Proactive Hybrid Telemetry: Postgres Lock Contention and LLM Network Latency
 
 ## Problem Statement
-The OBSERVABILITY_AUDIT_REPORT.md identifies "Network Latency to external LLM providers and PostgreSQL Lock Contention during massive agent_missions bulk updates" as key bottlenecks in Cloud-Native mode. However, the existing telemetry.go package only tracks SQLite metrics and completely lacks specific tracking for Postgres lock contention and external LLM latency per model.
+The docs/research/OBSERVABILITY_AUDIT_REPORT.md identifies "Network Latency to external LLM providers and PostgreSQL Lock Contention during massive agent_missions bulk updates" as key bottlenecks in Cloud-Native mode. However, the existing telemetry.go package only tracks SQLite metrics and completely lacks specific tracking for Postgres lock contention and external LLM latency per model.
 
 ## Research Report
 Auditing srcs/server/telemetry/telemetry.go and deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json confirms no panels or metrics exist for ohc_postgres_lock_contention_total or ohc_llm_network_latency_seconds. Without these metrics, the Swarm Intelligence Protocol cannot correctly auto-scale pods or degrade gracefully under load in Cloud-Native mode.

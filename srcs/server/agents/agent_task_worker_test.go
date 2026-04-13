@@ -9,10 +9,29 @@ import (
 	"testing"
 	"time"
 
+	agentruntime "github.com/onehumancorp/mono/srcs/server/agents/runtime"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
+
+type recordingLauncher struct {
+	requests chan agentruntime.TaskRequest
+	err      error
+}
+
+func newRecordingLauncher() *recordingLauncher {
+	return &recordingLauncher{requests: make(chan agentruntime.TaskRequest, 4)}
+}
+
+func (l *recordingLauncher) LaunchTask(_ context.Context, req agentruntime.TaskRequest) error {
+	l.requests <- req
+	return l.err
+}
+
+func (l *recordingLauncher) DefaultRegion() string {
+	return "process"
+}
 
 func TestTaskWorker_pollAndAssign(t *testing.T) {
 	plane.ResetGlobalPlaneCircuitBreakerForTest()
@@ -228,4 +247,76 @@ func TestTaskWorker_pollAndAssign_ManualTrigger(t *testing.T) {
 	defer hub.Close()
 	worker := NewTaskWorker(client, hub)
 	worker.pollAndAssign()
+}
+
+func TestTaskWorker_processIssueLaunchesBuiltinTaskForIdleAgent(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
+	launcher := newRecordingLauncher()
+	hub := orchestration.NewHub()
+	defer hub.Close()
+	hub.RegisterAgent(orchestration.Agent{
+		ID:           "agent-1",
+		Name:         "Builder",
+		Role:         "SOFTWARE_ENGINEER",
+		ProviderType: string(ProviderTypeBuiltin),
+		Status:       orchestration.StatusIdle,
+	})
+
+	worker := NewTaskWorker(nil, hub)
+	worker.taskLauncher = launcher
+	worker.processIssue(plane.Issue{ID: "issue-1", Name: "Fix failing test"})
+
+	select {
+	case req := <-launcher.requests:
+		if req.AgentID != "agent-1" {
+			t.Fatalf("expected launch for agent-1, got %q", req.AgentID)
+		}
+		if req.IssueID != "issue-1" {
+			t.Fatalf("expected issue-1, got %q", req.IssueID)
+		}
+		if req.Description != "Fix failing test" {
+			t.Fatalf("expected description to match issue name, got %q", req.Description)
+		}
+		if req.WorkDir == "" {
+			t.Fatal("expected workdir to be populated")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for builtin task launch")
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		agents := hub.Agents()
+		if len(agents) == 1 && agents[0].Status == orchestration.StatusIdle {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if agents := hub.Agents(); len(agents) != 1 || agents[0].Status != orchestration.StatusIdle {
+		t.Fatalf("expected agent to return to idle, got %+v", agents)
+	}
+}
+
+func TestTaskWorker_processIssueSkipsBusyAgents(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
+	launcher := newRecordingLauncher()
+	hub := orchestration.NewHub()
+	defer hub.Close()
+	hub.RegisterAgent(orchestration.Agent{
+		ID:           "agent-1",
+		Name:         "Busy Builder",
+		Role:         "SOFTWARE_ENGINEER",
+		ProviderType: string(ProviderTypeBuiltin),
+		Status:       orchestration.StatusActive,
+	})
+
+	worker := NewTaskWorker(nil, hub)
+	worker.taskLauncher = launcher
+	worker.processIssue(plane.Issue{ID: "issue-2", Name: "Do not dispatch"})
+
+	select {
+	case req := <-launcher.requests:
+		t.Fatalf("unexpected launch request: %+v", req)
+	case <-time.After(100 * time.Millisecond):
+	}
 }

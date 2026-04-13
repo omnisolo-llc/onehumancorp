@@ -47,6 +47,10 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 	if providerType == "" {
 		providerType = string(agents.ProviderTypeBuiltin)
 	}
+	region := req.Region
+	if region == "" {
+		region = agents.DefaultRuntimeRegion()
+	}
 
 	// Validate that the requested provider is registered.
 	if _, ok := s.agentProviderRegistry.Get(agents.ProviderType(providerType)); !ok {
@@ -63,7 +67,7 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 		OrganizationID: s.org.ID,
 		Status:         orchestration.StatusIdle,
 		ProviderType:   providerType,
-		Region:         req.Region,
+		Region:         region,
 	}
 	s.hub.RegisterAgent(agent)
 	snapshot := s.snapshotLocked()

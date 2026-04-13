@@ -98,5 +98,4 @@ through the Go dashboard server).  All business logic — agent scheduling,
 meeting rooms, chat integration — lives in `srcs/core` and is shared between:
 
 - This Flutter app (via the REST/gRPC API)
-- The Tauri desktop app (`srcs/desktop`)
-- The web frontend (`srcs/frontend`)
+- Auxiliary applications in `srcs/apps/`

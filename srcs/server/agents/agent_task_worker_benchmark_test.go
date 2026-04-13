@@ -89,10 +89,11 @@ func BenchmarkTaskWorker_processIssue(b *testing.B) {
 
 	// Register some agents
 	for i := 0; i < 10; i++ {
-		hub.RegisterAgent(orchestration.Agent{ID: "agent", Status: orchestration.StatusActive})
+		hub.RegisterAgent(orchestration.Agent{ID: "agent", Status: orchestration.StatusIdle})
 	}
 
 	worker := NewTaskWorker(client, hub)
+	worker.taskLauncher = newRecordingLauncher()
 
 	issue := plane.Issue{
 		ID:   "test-issue",
