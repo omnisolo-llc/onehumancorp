@@ -1,3 +1,0 @@
-content: |
-  Marked mission 2026-04-11T00-28-03Z_nova_observability_gap.md as BLOCKED because the required changes are in srcs/server/orchestration/ and deploy/docker/grafana/, which are outside of my designated domain ownership (apps/growth/, services/growth/, lib/analytics/).
-timestamp: "2026-04-13T07:39:51Z"
