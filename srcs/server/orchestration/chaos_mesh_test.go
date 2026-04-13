@@ -93,25 +93,18 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	// run its memory ingestion pipeline while the .agent-task/memory directory is corrupted.
 	// ML-Resilience mandates that the worker gracefully logs the error without panicking.
 
-	// Temporarily override the working directory to point to our chaos environment
-	// so that memoryDir = ".agent-task/memory" hits our temporary directory.
-	originalWd, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(originalWd)
-
-	memoryDir := filepath.Join(tmpDir, ".agent-task", "memory")
-	err = os.MkdirAll(memoryDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create memory dir: %v", err)
-	}
-
-	// Create a dummy memory file that will become unreadable
-	dummyMemory := filepath.Join(memoryDir, "test.yml")
+	// Create temporary corrupted file in actual .agent-task/memory without os.Chdir
+	memoryDir := ".agent-task/memory"
+	os.MkdirAll(memoryDir, 0755)
+	dummyMemory := filepath.Join(memoryDir, "chaos_mesh_test_memory.yml")
 	os.WriteFile(dummyMemory, []byte("content: chaos"), 0644)
 
-	// Corrupt permissions to prevent reading
-	os.Chmod(memoryDir, 0000)
-	defer os.Chmod(memoryDir, 0755)
+	// Make file unreadable to simulate corruption
+	os.Chmod(dummyMemory, 0000)
+	defer func() {
+		os.Chmod(dummyMemory, 0644)
+		os.Remove(dummyMemory)
+	}()
 
 	// Instantiate the AutoDreamWorker (the real application code)
 	worker := NewAutoDreamWorker(dbInstance)
