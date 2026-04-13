@@ -33,6 +33,41 @@ flutter_library(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
+MODEL_TEST_DEPS = [
+    ":models_lib",
+    "@flutter_sdk//flutter/packages/flutter",
+    "@flutter_sdk//flutter/packages/flutter_test",
+    "@pub_async//:async",
+    "@pub_boolean_selector//:boolean_selector",
+    "@pub_characters//:characters",
+    "@pub_clock//:clock",
+    "@pub_collection//:collection",
+    "@pub_fake_async//:fake_async",
+    "@pub_leak_tracker//:leak_tracker",
+    "@pub_leak_tracker_flutter_testing//:leak_tracker_flutter_testing",
+    "@pub_leak_tracker_testing//:leak_tracker_testing",
+    "@pub_matcher//:matcher",
+    "@pub_material_color_utilities//:material_color_utilities",
+    "@pub_meta//:meta",
+    "@pub_path//:path",
+    "@pub_source_span//:source_span",
+    "@pub_stack_trace//:stack_trace",
+    "@pub_stream_channel//:stream_channel",
+    "@pub_string_scanner//:string_scanner",
+    "@pub_term_glyph//:term_glyph",
+    "@pub_test_api//:test_api",
+    "@pub_vector_math//:vector_math",
+    "@pub_vm_service//:vm_service",
+]
+
+flutter_library(
+    name = "models_for_tests",
+    srcs = [],
+    pubspec = "//srcs/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = MODEL_TEST_DEPS,
+)
+
 # Keep individual model names as aliases for any existing embed references.
 alias(
     name = "agent_model",
@@ -90,7 +125,7 @@ MODEL_TESTS = glob(["*_test.dart"])
     flutter_test(
         name = file.replace(".dart", ""),
         srcs = [file],
-        embed = [":models_lib"],
+        embed = [":models_for_tests"],
         test_files = [file],
     )
     for file in MODEL_TESTS
@@ -107,7 +142,7 @@ flutter_test(
     srcs = MODEL_TESTS,
     coverage = True,
     coverage_min = 90,
-    embed = [":models_lib"],
+    embed = [":models_for_tests"],
     tags = ["manual"],
     test_files = ["."],
 )

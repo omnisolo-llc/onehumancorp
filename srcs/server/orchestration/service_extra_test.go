@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -340,11 +341,13 @@ func TestEventLogWorker_Errors(t *testing.T) {
 		eventLogChan: make(chan interface{}, 10),
 	}
 
-	// Open file error branch
-	hub.eventLogWorker(context.Background(), "/root/forbidden_path_test.jsonl")
+	// Force an open error in a way that is stable across local and remote runs.
+	invalidLogPath := filepath.Join(t.TempDir(), "missing", "events.jsonl")
+	hub.eventLogWorker(context.Background(), invalidLogPath)
 	// If it doesn't panic, it passed
 
 	hub2 := NewHub()
+	defer hub2.Close()
 	// Marshal failure branch (func cannot be marshaled in JSON)
 	hub2.LogEvent(func() {})
 

@@ -441,10 +441,10 @@ func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // BuiltinProvider implements Provider for the platform's own builtin agent. It requires no
 // external credentials and is always considered authenticated.  When selected, the
-// platform runs the full builtin agent loop (srcs/server/agents/builtin) which supports
-// LLM-driven tool execution with Bash, FileRead, FileWrite, FileEdit, Grep, Glob,
-// WebFetch, WebSearch, TodoWrite, TaskCreate/Get/List/Update, SendMessage, and
-// ToolSearch tools.  The LLM backend is auto-selected: Anthropic API
+// platform runs the standalone builtin C++ agent daemon over gRPC, which
+// supports LLM-driven tool execution with Bash, FileRead, FileWrite, FileEdit,
+// Grep, Glob, WebFetch, WebSearch, TodoWrite, SendMessage, and ToolSearch
+// tools. The LLM backend is auto-selected: Anthropic API
 // (ANTHROPIC_API_KEY), OpenAI-compatible (OPENAI_API_KEY), or Ollama
 // (OHC_LOCAL_LLM_ENDPOINT).
 // Accepts no parameters.
@@ -466,7 +466,7 @@ func (p *BuiltinProvider) Type() ProviderType { return ProviderTypeBuiltin }
 // Produces no errors.
 // Has no side effects.
 func (p *BuiltinProvider) Description() string {
-	return "Built-in local agent — full agentic loop with tool execution; no external credentials required. Uses Anthropic/OpenAI/Ollama as configured."
+	return "Built-in standalone C++ agent daemon over gRPC; no external credentials required. Uses Anthropic/OpenAI/Ollama as configured."
 }
 
 // SupportedRoles functionality.
