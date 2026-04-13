@@ -9,6 +9,7 @@ go_library(
         "//srcs/server/auth",
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
     ],
 )
 
@@ -18,7 +19,6 @@ go_test(
     embed = [":mesh"],
     deps = [
         "//srcs/server/auth",
-        "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//noop",
     ],
 )
