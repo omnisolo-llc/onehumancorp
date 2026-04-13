@@ -876,11 +876,17 @@ func (lm *LocalTeammateMesh) persistWorker(shardIdx int) {
 }
 
 func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
+	// Broadcast over mesh:tasks channel locally
+	payload, err := json.Marshal(task)
+	if err == nil {
+		_ = lm.BroadcastMeshEvent(ctx, "mesh:tasks", payload)
+	}
+
 	shardIdx := lm.getShard(task.TaskID)
 
 	// Offload persistence to worker threads within the specific shard
 	// Use backoff retry for persistence channel
-	err := meshWithRetry(ctx, 3, func() error {
+	err = meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.persist[shardIdx] <- task:
 			return nil
@@ -907,6 +913,8 @@ func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 }
 
 func (lm *LocalTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	// Let SubscribeMeshEvents handle the mesh:tasks routing for symmetry if needed.
+	// We'll also return the channel logic already implemented.
 	// A subscriber needs to receive tasks from all shards.
 	// To keep it simple but performant, we add the subscriber to all shards.
 	ch := make(chan Task, 100)
@@ -945,10 +953,16 @@ func (lm *LocalTeammateMesh) run(shardIdx int) {
 }
 
 func (lm *LocalTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	// Broadcast over mesh:coordination channel locally
+	payload, err := json.Marshal(msg)
+	if err == nil {
+		_ = lm.BroadcastMeshEvent(ctx, "mesh:coordination", payload)
+	}
+
 	shardIdx := lm.getShard(msg.AgentID)
 
 	// Use backoff retry for coord broadcast channel
-	err := meshWithRetry(ctx, 3, func() error {
+	err = meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.coordBroadcast[shardIdx] <- msg:
 			return nil

@@ -1,6 +1,6 @@
 ---
 agent: Implementer
-status: DONE
+status: PENDING
 priority: P0
 estimated_scope: Large
 ---
