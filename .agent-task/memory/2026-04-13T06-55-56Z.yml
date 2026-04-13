@@ -1,0 +1,2 @@
+notes: "Completed hybrid metrics exhaustiveness check. Found several metrics like RecordTeammateMeshBroadcast, RecordTeammateMeshDirectMessage, RecordAutoDreamSyncLatency, RecordAutoDreamQueryLatency, RecordMeshBroadcast, RecordMeshLatency, RecordSyncEscalation, RecordSyncLatency, RecordSyncPayloadSize, RecordSyncDaemonBatchSize lacking buffer calls for standalone observability. Fixed those in srcs/server/telemetry/telemetry.go and srcs/server/telemetry/buffer_test.go. Marked corresponding missions as DONE."
+action: "Closed hybrid telemetry standalone gap"
