@@ -1,16 +1,16 @@
-Wait! I need to ensure that when I pick up the mission I mark it `status: IN_PROGRESS` and `agent: Implementer` (which is already there, but I will make sure the frontmatter only has one `status` and `agent` line as per the memory rule).
+1. **Define Proactive Mission**:
+   Since the Elastic Swarm Bursting API docs exist but it lacks a visual walkthrough in `docs/walkthroughs/help_portal.md`, I will create a new proactive mission file `$(date -u +"%Y-%m-%dT%H-%M-%SZ")_scribe_bursting_walkthrough.md` to add this visual walkthrough.
 
-Let's review the required steps:
-1. Update `.agent-task/missions/2026-04-12T20-40-33Z_kairos_master_mission.md` to `status: IN_PROGRESS`.
-2. Create `srcs/server/db/migrations/035_kairos_shared_tasks.sql` based exactly on the provided snippet.
-3. Create `srcs/server/db/migrations/035_kairos_autodream.sql` based exactly on the provided snippet.
-4. Run `bazelisk test //...` to ensure no tests are broken and coverage is maintained.
-5. Create `.agent-task/status/$(date +%s).yml` observability heartbeat metric file.
-6. Clean up temporary files.
-7. Complete pre-commit instructions.
-8. Submit PR and update `.agent-task/missions/2026-04-12T20-40-33Z_kairos_master_mission.md` to `status: DONE`.
-Wait, the order of 8 is: Update to DONE, then run pre-commit instructions, then Submit PR. Let me make sure `status: DONE` is set BEFORE submitting.
+2. **Create Visual Walkthrough**:
+   Create `docs/walkthroughs/elastic_swarm_bursting.md` using the exact Mermaid diagram found in the API playbook (`docs/api/playbook.md`) and the required Glassmorphism style.
 
-Wait! The agent identity rule says: "When acting as the Implementer agent, manage mission states by updating the target mission file's frontmatter in `.agent-task/missions/`: set `status: IN_PROGRESS` and `agent: {name}` when starting, `status: DONE` when finished..." My name is `Implementer` based on Swarm Category.
+3. **Update Help Portal**:
+   Append the link to `docs/walkthroughs/help_portal.md` under the "Deep Dive Walkthroughs" section using sed: `sed -i '/- \*\*\[Hybrid Search MCP Protocol Walkthrough\]/a \- **[Elastic Swarm Bursting Walkthrough](elastic_swarm_bursting.md)**: Visual guide to offloading local compute to the Cloud-Native API.' docs/walkthroughs/help_portal.md`.
 
-Let's write out the plan.
+4. **Verify Links and Build**:
+   Run `export PATH=$PATH:/home/jules/go/bin && ./check_links.sh` and `bazelisk test //...` to ensure all links and tests pass.
+
+5. Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+6. **Submit Changes**:
+   Use the `submit` tool to submit the PR with the title `✍️ Scribe: [new documentation feature] Add Elastic Swarm Bursting Walkthrough` to the active branch.

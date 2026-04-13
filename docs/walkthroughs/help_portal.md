@@ -114,6 +114,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[AutoDream Pipeline Walkthrough](autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
 - **[Omni-Context Sub-Agent Routing Walkthrough](omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
 - **[Hybrid Search MCP Protocol Walkthrough](hybrid_search_mcp.md)**: Visual guide to seamless multi-tenant and standalone search indexing.
+- **[Elastic Swarm Bursting Walkthrough](elastic_swarm_bursting.md)**: Visual guide to offloading local compute to the Cloud-Native API.
 
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
