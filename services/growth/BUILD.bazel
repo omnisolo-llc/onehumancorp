@@ -8,9 +8,6 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
-    deps = [
-        "//lib/analytics",
-    ],
 )
 
 go_test(
@@ -20,7 +17,4 @@ go_test(
         "referrals_test.go",
     ],
     embed = [":growth"],
-    deps = [
-        "//lib/analytics",
-    ],
 )

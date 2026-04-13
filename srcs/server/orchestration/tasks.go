@@ -18,7 +18,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
-
 	"github.com/redis/rueidis"
 )
 
@@ -475,16 +474,9 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
-
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
-
-	// AutoDream is triggered by sync daemon or another worker.
-	// Production logic runs separately via AutoDreamPipeline.
-
-
 	// Broadcast task completion
-
 	if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
