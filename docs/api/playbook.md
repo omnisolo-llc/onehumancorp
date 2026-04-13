@@ -305,6 +305,29 @@ sequenceDiagram
 
 ### 4.4 KAIROS Distributed State Machine
 
+The **KAIROS Distributed State Machine** manages the lifecycle of autonomous tasks and sub-agent workflows across the Swarm. It provides robust state transition APIs, guaranteeing distributed consistency.
+
+**Endpoint:** `POST /api/v1/state/transition`
+Transitions an entity from its current state to a new state. Required for tracking Sub-Agent mission progress.
+
+**Payload:**
+```json
+{
+  "entity_id": "task_12345",
+  "from_state": "PENDING",
+  "to_state": "ASSIGNED",
+  "agent_id": "worker-42"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "transaction_id": "txn-789"
+}
+```
+
 **Endpoint:** `GET /api/v1/state/{entity_id}`
 Retrieves the current state of a task or sub-agent execution within the Distributed State Machine.
 
@@ -323,6 +346,8 @@ Retrieves the current state of a task or sub-agent execution within the Distribu
 #### Distributed State Machine Flow
 ```mermaid
 stateDiagram-v2
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+
     [*] --> PENDING
     PENDING --> ASSIGNED : Claim Task
     ASSIGNED --> EXECUTING : Begin Execution
@@ -334,6 +359,8 @@ stateDiagram-v2
     EXECUTING --> TERMINATED_ERROR : Unrecoverable Error
     SUCCESS --> [*]
     TERMINATED_ERROR --> [*]
+
+    class PENDING,ASSIGNED,EXECUTING,WAITING_DELEGATION,REVIEW,SUCCESS,TERMINATED_ERROR premium;
 ```
 </div>
 
@@ -593,67 +620,4 @@ graph TD
 
 
 
-### 3.4 KAIROS Queue and State Machine
 
-**Endpoint:** `POST /api/queue/subagent`
-Queues a new task for subagents.
-
-**Payload:**
-```json
-{
-  "parent_task_id": "uuid-string",
-  "agent_role": "Scribe",
-  "payload": {
-    "command": "document_feature",
-    "target": "mesh_api"
-  }
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
-  "job_id": "job-uuid",
-  "status": "QUEUED"
-}
-```
-
-**Endpoint:** `POST /api/mesh/v2/broadcast`
-Broadcasts a state machine transition or generic event to the Teammate Mesh.
-
-**Payload:**
-```json
-{
-  "topic": "state.transition",
-  "payload": {
-    "entity_id": "job-uuid",
-    "from_state": "QUEUED",
-    "to_state": "IN_PROGRESS",
-    "agent_id": "worker-42"
-  }
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message_id": "msg-uuid"
-}
-```
-
-#### SubAgent Queue Workflow
-
-```mermaid
-graph TD
-    Client[Client / Orchestrator] -->|POST /api/queue/subagent| API[OHC Gateway]
-    API --> Queue[(SubAgent Queue DB)]
-    Queue -.->|Poll / Listen| Worker[SubAgent Worker]
-    Worker -->|State Transition| Broadcast[Mesh Broadcast API]
-    Broadcast -->|POST /api/mesh/v2/broadcast| MeshHub[Teammate Mesh Hub]
-    MeshHub -.->|Websocket / Redis PubSub| SubscribedAgents[Subscribed Agents / UI]
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Client,API,Queue,Worker,Broadcast,MeshHub,SubscribedAgents premium;
-```
-</div>
