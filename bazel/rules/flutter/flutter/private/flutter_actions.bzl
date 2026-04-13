@@ -3,11 +3,11 @@ def compute_relative_to_package(ctx, file):
     pkg_path = ctx.label.package
     if not pkg_path:
         return file.basename
-    
+
     path = file.short_path
     if path.startswith(pkg_path + "/"):
         return path[len(pkg_path) + 1:]
-    
+
     return file.basename
 
 def create_flutter_working_dir(ctx, pubspec_file, dart_files, other_files, data_files, workspace_pubspec = None):
