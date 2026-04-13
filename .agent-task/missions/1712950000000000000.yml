@@ -1,0 +1,7 @@
+title: Implement KAIROS Swarm Analytics Dashboard UI and Stream
+problem_statement: The KAIROS Dashboard UI implementation is blocked due to domain constraints and a missing backend endpoint.
+research_report: The Palette agent is restricted to apps/web/, apps/mobile/, apps/desktop/. The original mission requires modifying srcs/app/lib/screens/kairos_dashboard.dart and srcs/server/api/kairos_stream.go.
+design_doc: Implement the dashboard UI in srcs/app/ and the WebSocket backend in srcs/server/api/.
+implementation_prompt: Implement the KairosDashboardScreen in srcs/app/lib/screens/kairos_dashboard.dart using GlassCard. Implement the WebSocket stream in srcs/server/api/kairos_stream.go.
+priority: P0
+estimated_scope: Large
