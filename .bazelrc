@@ -72,11 +72,14 @@ common:buildbuddy-official --remote_timeout=10m
 common:buildbuddy-official --remote_cache_compression
 common:buildbuddy-official --remote_local_fallback
 common:buildbuddy-official --jobs=200
-# Default read-only API key
+# Default read-only API key (public, read-only – cannot push artifacts or
+# modify any BuildBuddy state; safe to keep in version control).
 common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
 
 # ── BuildBuddy self-hosted (cubectl.com) ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
+# Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
+# buildbuddy-official which relies on the global sandboxed,local fallback chain.
 common:buildbuddy --bes_results_url=https://buildbuddy.cubectl.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.cubectl.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.cubectl.com
