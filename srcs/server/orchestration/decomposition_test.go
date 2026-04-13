@@ -74,7 +74,7 @@ func TestDecomposer_DecomposeTask(t *testing.T) {
 
 	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
 
-	err := decomposer.DecomposeTask(ctx, "org-1", "plan-1", "Make a new feature")
+	err := decomposer.DecomposeTask(ctx, "org-1", "plan-1", "parent-task-1", "Make a new feature")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
