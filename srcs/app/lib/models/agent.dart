@@ -6,6 +6,7 @@ class Agent {
   final String status;
   final String organizationId;
   final DateTime createdAt;
+  final bool svidVerified;
 
   const Agent({
     required this.id,
@@ -14,6 +15,7 @@ class Agent {
     required this.status,
     required this.organizationId,
     required this.createdAt,
+    this.svidVerified = false,
   });
 
   factory Agent.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class Agent {
           json['created_at'] != null
               ? DateTime.parse(json['created_at'] as String)
               : DateTime.now(),
+      svidVerified: json['svid_verified'] as bool? ?? false,
     );
   }
 
@@ -37,6 +40,7 @@ class Agent {
     'status': status,
     'organization_id': organizationId,
     'created_at': createdAt.toIso8601String(),
+    'svid_verified': svidVerified,
   };
 
   bool get isRunning => status == 'running';
