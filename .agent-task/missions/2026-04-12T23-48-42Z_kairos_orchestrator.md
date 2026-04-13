@@ -1,6 +1,5 @@
 ---
-status: DONE
-agent: Jules
+status: PENDING
 priority: P0
 scope: Large
 ---
