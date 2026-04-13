@@ -363,17 +363,6 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 	}
 }
 
-
-func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
-	if s.mesh != nil {
-		err := s.mesh.AdvertiseCapabilities(ctx, *req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
-}
-
 func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
 	if s.mesh == nil {
 		return fmt.Errorf("mesh transport not configured")
@@ -1623,8 +1612,6 @@ func (cb *CircuitBreaker) Allow() bool {
 	}
 	return true
 }
-
-
 
 func (cb *CircuitBreaker) RecordSuccess() {
 	cb.mu.Lock()

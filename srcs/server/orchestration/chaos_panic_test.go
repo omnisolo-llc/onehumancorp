@@ -24,9 +24,6 @@ func TestSIPDB_ChaosPanic(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Fill the throttle to simulate max concurrency before panic
-	// Note: withSipRetry uses acquireThrottle and releaseThrottle internally
-
 	// Use withSipRetry with a panic to simulate an abrupt failure
 	var paniced bool
 	func() {

@@ -1,6 +1,5 @@
 ---
-status: DONE
-agent: Scribe
+status: PENDING
 priority: P0
 scope: Medium
 title: "KAIROS: Finalize Master Design Document"

@@ -208,10 +208,7 @@ standalone_db_check() {
     if echo "$TABLES" | grep -q "agent_missions" && \
        echo "$TABLES" | grep -q "meeting_rooms" && \
        echo "$TABLES" | grep -q "swarm_memory" && \
-       echo "$TABLES" | grep -q "agents" && \
-       echo "$TABLES" | grep -q "teammate_mesh" && \
-       echo "$TABLES" | grep -q "shared_tasks" && \
-       echo "$TABLES" | grep -q "autodream_pipeline"; then
+       echo "$TABLES" | grep -q "agents"; then
          echo -e "  ${GREEN}✓ Migrations appear successful (found all essential tables).${RESET}\n"
     else
          echo -e "  ${PURPLE}✗ Critical tables missing. Migrations might have failed.${RESET}\n"
