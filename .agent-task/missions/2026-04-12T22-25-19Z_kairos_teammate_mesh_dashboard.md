@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
+status: PENDING
+=======
 status: DONE
+>>>>>>> 4f79acf2 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
 priority: P0
 scope: Large
 ---
