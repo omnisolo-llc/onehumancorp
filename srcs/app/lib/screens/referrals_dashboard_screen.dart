@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';import 'package:ohc_app/widgets/glass_card.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'dart:ui';
@@ -95,21 +96,10 @@ class _ReferralCard extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: 0.6),
-              border: Border.all(
-                color: colors.onSurface.withValues(alpha: 0.1),
-                width: 1.5,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
+      child: GlassCard(
+        padding: const EdgeInsets.all(24),
+        color: colors.surface.withValues(alpha: 0.6),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -157,8 +147,6 @@ class _ReferralCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
       ),
     );
   }
