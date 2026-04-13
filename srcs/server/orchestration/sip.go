@@ -532,6 +532,14 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
 
 			if err != nil {
+				if err.Error() == "sql: no rows in result set" {
+					// Check if row actually exists. If it does, we skipped it due to a lock.
+					var checkID string
+					checkErr := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&checkID)
+					if checkErr == nil && checkID == missionID {
+						telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
+					}
+				}
 				// Record doesn't exist or is locked by someone else.
 				// Since we skip locked, if it's locked we might just skip the insert/update to avoid contention,
 				// or we try inserting. For standard upsert logic without waiting:
