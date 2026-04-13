@@ -1733,6 +1733,13 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == 529 {
+				// Retry on high load without recording circuit breaker failure immediately
+				resp.Body.Close()
+				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				time.Sleep(2 * time.Second) // Longer backoff for overloaded
+				continue
+			}
 			c.cb.RecordFailure()
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
@@ -1839,6 +1846,12 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == 529 {
+				resp.Body.Close()
+				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				time.Sleep(2 * time.Second)
+				continue
+			}
 			c.cb.RecordFailure()
 			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
 			resp.Body.Close()
