@@ -34,12 +34,7 @@ To ensure transitions survive worker pod failures and prevent race conditions, t
 - **Cloud Mode:** Uses Redis (`rueidis`) `SET NX EX` to acquire an exclusive lock on the entity ID before reading current state and transitioning.
 - **Standalone Mode:** Uses SQLite/PostgreSQL transaction (`FOR UPDATE` if Postgres) or SQLite database lock to serialize transitions.
 
-## 3. Observability & Telemetry
-Every transition is instrumented to detect bottlenecks and lock contention:
-- `ohc_postgres_lock_contention_total`: Incremented when `FOR UPDATE SKIP LOCKED` returns an empty set under contention.
-- `ohc_deliberation_phase_duration_seconds`: Histogram tracking time spent in each UltraPlan phase.
-
-## 4. Database Schema Integration
+## 3. Database Schema Integration
 
 Transitions are recorded in an audit log for full observability.
 
