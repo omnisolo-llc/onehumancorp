@@ -424,3 +424,44 @@ func (s *Server) handleReferralConvert(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, updated)
 }
+
+type WaitlistEntry struct {
+    ID        string    `json:"id"`
+    Email     string    `json:"email"`
+    CreatedAt time.Time `json:"createdAt"`
+}
+
+type waitlistCreateRequest struct {
+    Email string `json:"email"`
+}
+
+func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
+    switch r.Method {
+    case http.MethodGet:
+        s.mu.RLock()
+        wl := append([]WaitlistEntry(nil), s.waitlist...)
+        s.mu.RUnlock()
+        writeJSON(w, wl)
+    case http.MethodPost:
+        var req waitlistCreateRequest
+        if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+            http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+            return
+        }
+        if req.Email == "" {
+            http.Error(w, "email is required", http.StatusBadRequest)
+            return
+        }
+        entry := WaitlistEntry{
+            ID:        "wl-" + time.Now().UTC().Format("20060102150405"),
+            Email:     req.Email,
+            CreatedAt: time.Now().UTC(),
+        }
+        s.mu.Lock()
+        s.waitlist = append(s.waitlist, entry)
+        s.mu.Unlock()
+        writeJSON(w, entry)
+    default:
+        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+    }
+}

@@ -62,6 +62,7 @@ type Server struct {
 	downloads             []Download
 	teamInvites           []TeamInvite
 	onboardingFunnels []OnboardingFunnel
+	waitlist          []WaitlistEntry
 }
 
 // RateLimitState functionality.
@@ -457,6 +458,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
+		waitlist:          []WaitlistEntry{},
 		onboardingFunnels: []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
@@ -584,6 +586,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
 	mux.HandleFunc("/api/growth/team-invites/accept", server.handleTeamInviteAccept)
 	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
+	mux.HandleFunc("/api/growth/waitlist", server.handleWaitlist)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
 
 	// Phase 5 - PowerSync

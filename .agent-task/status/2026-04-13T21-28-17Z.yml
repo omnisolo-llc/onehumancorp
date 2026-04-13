@@ -1,0 +1,5 @@
+agent: Nova
+status: HEALTHY
+mission_id: B2B_Waitlist_API
+metrics:
+  tasks_completed: 1

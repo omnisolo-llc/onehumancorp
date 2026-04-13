@@ -434,3 +434,38 @@ func TestHandleReferralClickAndConvert(t *testing.T) {
 		t.Errorf("expected internal state to be updated")
 	}
 }
+
+func TestHandleWaitlist(t *testing.T) {
+    s := &Server{}
+
+    // Test POST
+    payload := `{"email": "test@example.com"}`
+    req := httptest.NewRequest(http.MethodPost, "/api/growth/waitlist", bytes.NewBufferString(payload))
+    req.Header.Set("Content-Type", "application/json")
+    w := httptest.NewRecorder()
+
+    s.handleWaitlist(w, req)
+
+    if w.Result().StatusCode != http.StatusOK {
+        t.Errorf("expected 200 OK, got %d", w.Result().StatusCode)
+    }
+    var created WaitlistEntry
+    json.NewDecoder(w.Result().Body).Decode(&created)
+    if created.Email != "test@example.com" {
+        t.Errorf("expected email test@example.com, got %s", created.Email)
+    }
+
+    // Test GET
+    reqGET := httptest.NewRequest(http.MethodGet, "/api/growth/waitlist", nil)
+    wGET := httptest.NewRecorder()
+    s.handleWaitlist(wGET, reqGET)
+
+    if wGET.Result().StatusCode != http.StatusOK {
+        t.Errorf("expected 200 OK, got %d", wGET.Result().StatusCode)
+    }
+    var list []WaitlistEntry
+    json.NewDecoder(wGET.Result().Body).Decode(&list)
+    if len(list) != 1 {
+        t.Errorf("expected 1 waitlist entry, got %d", len(list))
+    }
+}
