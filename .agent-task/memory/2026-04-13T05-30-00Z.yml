@@ -1,0 +1,7 @@
+timestamp: "2026-04-13T05:30:00Z"
+agent: Implementer
+action: "Implemented TeammateMesh API"
+learnings:
+  - "When implementing local in-memory Pub/Sub messaging in Go, ensure `Publish` operations do not block on unbuffered or slow subscriber channels (e.g., by using non-blocking sends) and correctly handle slice references under read locks to prevent data races and panics during concurrent subscription closes."
+  - "Always handle context cancellation (`ctx.Done()`) explicitly in asynchronous subscriptions to prevent connection and goroutine resource leaks."
+  - "Ensure local presence tracking actively removes expired entries from maps to avoid slow memory leaks."
