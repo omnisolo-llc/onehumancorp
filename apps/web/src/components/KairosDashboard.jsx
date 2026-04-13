@@ -7,7 +7,6 @@ export function KairosDashboard() {
   const [autoDream, setAutoDream] = useState([]);
 
   useEffect(() => {
-    // Connect to the WebSocket stream
     const ws = new WebSocket('ws://localhost:8080/api/kairos/stream');
 
     ws.onmessage = (event) => {
