@@ -3,8 +3,8 @@
 # Master Design Doc: KAIROS Hybrid Agentic OS
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
-## 1. Phase 1: Shared Task List (Decomposition)
-The Shared Task List tracks complex feature decomposition into actionable, sequenced `shared_tasks`.
+## 1. Phase 1: Shared Task List & Omni-Context Routing
+The Shared Task List tracks complex feature decomposition into actionable, sequenced `shared_tasks`. KAIROS enhances this with **Omni-Context Sub-agent Routing**, injecting project grounding (`AGENTS.md`, `CLAUDE_OHC.md`) directly into task payloads.
 
 **Database Schema (PostgreSQL):**
 ```sql
@@ -16,29 +16,29 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     status VARCHAR NOT NULL DEFAULT 'PENDING',
     agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
-    payload JSONB
+    payload JSONB -- Contains [SYSTEM GROUNDING] for Omni-Context routing
 );
 ```
 
-**Sequence Diagram:**
+**Omni-Context Sequence:**
 ```mermaid
 sequenceDiagram
-    participant Planner
+    participant KAIROS
+    participant FS as Local Filesystem
     participant TaskDB
-    participant Implementer
-    Planner->>TaskDB: INSERT INTO shared_tasks (status='PENDING')
-    Implementer->>TaskDB: SELECT id FROM shared_tasks WHERE status='PENDING' FOR UPDATE SKIP LOCKED
-    TaskDB-->>Implementer: Return task row
-    Implementer->>TaskDB: UPDATE shared_tasks SET status='IN_PROGRESS' WHERE id=?
+    KAIROS->>FS: Read CLAUDE_OHC.md / AGENTS.md
+    FS-->>KAIROS: Return Grounding Context
+    KAIROS->>TaskDB: INSERT INTO shared_tasks (payload=Grounding+Task)
+    Note over TaskDB: Zero-latency context delivery
 ```
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via transport components like `LocalTeammateMesh` utilizing the `mesh:tasks` and `mesh:coordination` channels.
+Realtime communication via transport components like `LocalTeammateMesh` utilizing the `mesh:tasks` and `mesh:coordination` channels. OHC-SIP compliance ensures `agent_id`, `action`, and `status` are at the root of every message.
 
-## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
-Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
+## 3. Phase 3: autoDream & Hybrid RAG Sync
+Background workers consolidate `.agent-task/memory/*.yml` to embeddings. The **Hybrid MCP RAG Sync** protocol ensures local SQLite memories are synchronized to cloud PostgreSQL `pgvector` indices when scaling.
 
 ## 4. Phase 4: Sub-Agent Orchestration Queue
-Background worker system with Redis or SQLite implementations for spawning isolated sub-agents.
+Background worker system with Redis or SQLite implementations for spawning isolated sub-agents, instrumented with `ohc_sub_agent_spawn_total` metrics.
 
 </div>
