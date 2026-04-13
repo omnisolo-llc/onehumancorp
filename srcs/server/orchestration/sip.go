@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -124,7 +125,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 			return err
 		}
 
-		// slog.Warn("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
+		slog.Warn("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
 		time.Sleep(retryInterval * time.Duration(1<<i))
 	}
 
@@ -1119,7 +1120,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		// Parse payload to redact and sanitize
 		var rawData interface{}
 		if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
-			// slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+			slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
 			if syncMissionsErr != nil {
 				syncMissionsErr.Add(ctx, 1)
 			}
@@ -1140,7 +1141,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		// Re-marshal sanitized payload
 		sanitizedBytes, err := json.Marshal(rawData)
 		if err != nil {
-			// slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+			slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
 			if syncMissionsErr != nil {
 				syncMissionsErr.Add(ctx, 1)
 			}
