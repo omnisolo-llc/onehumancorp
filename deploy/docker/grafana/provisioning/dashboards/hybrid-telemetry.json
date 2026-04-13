@@ -536,7 +536,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -549,69 +549,14 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
-          "legendFormat": "{{deployment_mode}}",
-          "range": true,
+          "expr": "sum(ohc_token_burn_rate_forecast) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
           "refId": "A"
         }
       ],
-      "title": "AutoDream Sync Duration",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 67
-      },
-      "id": 1004,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
-          "legendFormat": "{{deployment_mode}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "AutoDream Query Duration",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 75
-      },
-      "id": 1005,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(rate(ohc_mesh_broadcast_total[5m])) by (deployment_mode)",
-          "legendFormat": "{{deployment_mode}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Mesh Broadcast Total",
+      "title": "Token Burn Rate Forecast",
       "type": "timeseries"
     }
   ],
