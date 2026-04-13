@@ -33,7 +33,11 @@ type SubTaskSchema struct {
     DependsOn   []string `json:"depends_on"`
 }
 
+<<<<<<< HEAD
 func (d *Decomposer) DecomposeTask(ctx context.Context, organizationID, parentPlanID, parentTaskID, prompt string) error {
+=======
+func (d *Decomposer) DecomposeTask(ctx context.Context, organizationID, parentPlanID, prompt string) error {
+>>>>>>> origin/main
     claims := auth.ClaimsFromContext(ctx)
     if claims == nil {
         claims = &auth.Claims{OrganizationID: organizationID}
@@ -78,12 +82,21 @@ func (d *Decomposer) DecomposeTask(ctx context.Context, organizationID, parentPl
             continue
         }
 
+<<<<<<< HEAD
         // We manually update parentPlanID and parent_task_id since CreateTaskWithPlan lacks it in signature but struct has it
         if parentPlanID != "" || parentTaskID != "" {
             updateQuery := "UPDATE shared_tasks SET parent_plan_id = $1, parent_task_id = $2 WHERE id = $3"
             _, dbErr := d.taskManager.db.Exec(ctx, updateQuery, parentPlanID, parentTaskID, task.ID)
             if dbErr != nil {
                 slog.Error("Failed to update parent_plan_id and parent_task_id", "task", task.ID, "error", dbErr)
+=======
+        // We manually update parentPlanID since CreateTaskWithPlan lacks it in signature but struct has it
+        if parentPlanID != "" {
+            updateQuery := "UPDATE shared_tasks SET parent_plan_id = $1 WHERE id = $2"
+            _, dbErr := d.taskManager.db.Exec(ctx, updateQuery, parentPlanID, task.ID)
+            if dbErr != nil {
+                slog.Error("Failed to update parent_plan_id", "task", task.ID, "error", dbErr)
+>>>>>>> origin/main
             }
         }
 
