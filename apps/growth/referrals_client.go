@@ -1,3 +1,0 @@
-package growth
-
-func Init() {}
