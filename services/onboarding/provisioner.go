@@ -3,6 +3,8 @@ package onboarding
 import (
 	"context"
 	"fmt"
+	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -63,4 +65,27 @@ func CheckEnvironment(isCloud bool) error {
 	}
 
 	return nil
+}
+
+
+// HealthHandler responds to HTTP health check requests for the environment.
+func HealthHandler(w http.ResponseWriter, r *http.Request) {
+	isCloud := r.URL.Query().Get("cloud") == "true"
+
+	err := CheckEnvironment(isCloud)
+	w.Header().Set("Content-Type", "application/json")
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "error",
+			"error":  err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ok",
+	})
 }

@@ -2,6 +2,9 @@ package onboarding
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,5 +83,90 @@ func TestCheckEnvironment_Cloud(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error for provisioned environment, got %v", err)
 	}
+	os.RemoveAll(".ohc-cloud-data")
+}
+
+
+func TestHealthHandler_Local(t *testing.T) {
+	os.RemoveAll(".ohc-local-data")
+
+	req, err := http.NewRequest("GET", "/health", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HealthHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusInternalServerError)
+	}
+
+	var res map[string]string
+	json.NewDecoder(rr.Body).Decode(&res)
+	if res["status"] != "error" {
+		t.Errorf("handler returned wrong json status: got %v want error", res["status"])
+	}
+
+	ProvisionEnvironment(context.Background(), false)
+
+	rr2 := httptest.NewRecorder()
+	handler.ServeHTTP(rr2, req)
+
+	if status := rr2.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var res2 map[string]string
+	json.NewDecoder(rr2.Body).Decode(&res2)
+	if res2["status"] != "ok" {
+		t.Errorf("handler returned wrong json status: got %v want ok", res2["status"])
+	}
+
+	os.RemoveAll(".ohc-local-data")
+}
+
+func TestHealthHandler_Cloud(t *testing.T) {
+	os.RemoveAll(".ohc-cloud-data")
+
+	req, err := http.NewRequest("GET", "/health?cloud=true", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HealthHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusInternalServerError)
+	}
+
+	var res map[string]string
+	json.NewDecoder(rr.Body).Decode(&res)
+	if res["status"] != "error" {
+		t.Errorf("handler returned wrong json status: got %v want error", res["status"])
+	}
+
+	ProvisionEnvironment(context.Background(), true)
+
+	rr2 := httptest.NewRecorder()
+	handler.ServeHTTP(rr2, req)
+
+	if status := rr2.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var res2 map[string]string
+	json.NewDecoder(rr2.Body).Decode(&res2)
+	if res2["status"] != "ok" {
+		t.Errorf("handler returned wrong json status: got %v want ok", res2["status"])
+	}
+
 	os.RemoveAll(".ohc-cloud-data")
 }
