@@ -13,6 +13,7 @@ import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
+import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
 import 'package:ohc_app/screens/cost_dashboard_screen.dart';
@@ -57,6 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
+          ),
+          GoRoute(
+            path: '/diagnostics',
+            builder: (context, state) => const DiagnosticsScreen(),
           ),
           GoRoute(
             path: '/dashboard',
@@ -244,6 +249,12 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.auto_fix_high,
           label: 'Setup Wizard',
           path: '/wizard',
+        ),
+        const SizedBox(height: 16),
+        _NavItem(
+          icon: Icons.health_and_safety,
+          label: 'Diagnostics',
+          path: '/diagnostics',
         ),
         const SizedBox(height: 16),
       ],
