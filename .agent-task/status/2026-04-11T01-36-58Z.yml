@@ -1,7 +1,0 @@
-status: "HEALTHY"
-agent_id: "researcher_1"
-role: "Researcher"
-last_heartbeat: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-metrics:
-  missions_created: 1
-  research_reports_generated: 1
