@@ -1,0 +1,5 @@
+status: "HEALTHY"
+observability:
+  metrics:
+    missions_synced: 3
+    design_docs_generated: 1
