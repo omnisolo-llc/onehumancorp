@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "codeexecmcp",
+    srcs = ["mcp.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/tools/codeexecmcp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)
+
+go_test(
+    name = "codeexecmcp_test",
+    srcs = ["mcp_test.go"],
+    embed = [":codeexecmcp"],
+    deps = [
+        "//srcs/server/auth",
+    ],
+)
