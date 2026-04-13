@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
+import 'package:ohc_app/screens/kairos_dashboard.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
@@ -117,6 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const PipelinesScreen(),
           ),
           GoRoute(
+            path: '/kairos',
+            builder: (context, state) => const KairosDashboardScreen(),
+          ),
+          GoRoute(
             path: '/integrations',
             builder: (context, state) => const IntegrationsScreen(),
           ),
@@ -172,6 +177,7 @@ class _Sidebar extends StatelessWidget {
         ),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+        _NavItem(icon: Icons.analytics, label: 'Swarm Analytics', path: '/kairos'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),

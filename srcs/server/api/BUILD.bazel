@@ -4,6 +4,7 @@ go_library(
     name = "api",
     srcs = [
         "sync_handler.go",
+        "kairos_stream.go",
         "sync_escalation_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
@@ -13,16 +14,18 @@ go_library(
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/orchestration/queue",
         "//srcs/server/telemetry",
+        "@com_github_gorilla_websocket//:websocket",
         "@io_opentelemetry_go_otel//:otel",
     ],
 )
 
 go_test(
     name = "api_test",
-    srcs = ["sync_escalation_handler_test.go"],
+    srcs = ["sync_escalation_handler_test.go", "kairos_stream_test.go"],
     embed = [":api"],
     deps = [
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
+        "@com_github_gorilla_websocket//:websocket",
     ],
 )
