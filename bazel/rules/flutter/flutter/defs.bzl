@@ -183,12 +183,23 @@ def _compute_relative_to_package(ctx, file):
     package = ctx.label.package
     short_path = file.short_path
 
+    workspace_name = ctx.label.workspace_name
+    if workspace_name and workspace_name not in ("__main__", "_main"):
+        for prefix in [
+            "external/{}/".format(workspace_name),
+            "../{}/".format(workspace_name),
+            workspace_name + "/",
+        ]:
+            if short_path.startswith(prefix):
+                short_path = short_path[len(prefix):]
+                break
+
     if package:
         prefix = package + "/"
         if short_path.startswith(prefix):
             return short_path[len(prefix):]
 
-    return file.basename
+    return short_path
 
 def _flutter_library_impl(ctx):
     """Implementation for flutter_library rule."""
@@ -929,12 +940,7 @@ fi
 
 FLUTTER_BIN_DIR="$(dirname "$FLUTTER_BIN_ABS")"
 FLUTTER_ROOT_ORIG="$(cd "$FLUTTER_BIN_DIR/.." && pwd)"
-FLUTTER_TOOLS_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/packages/flutter_tools/.pub_cache"
-
-if [ -d "$FLUTTER_TOOLS_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_TOOLS_PUB_CACHE" 2>/dev/null)" ]; then
-    copy_tree "$FLUTTER_TOOLS_PUB_CACHE" "$RUNTIME_PUB_CACHE"
-    chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-fi
+chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
 
 # ── Create a writable Flutter SDK overlay ────────────────────────────────────
 # The external Flutter SDK is mounted read-only inside the Bazel linux-sandbox
@@ -1058,6 +1064,107 @@ if [ -z "$PYTHON_BIN" ]; then
     echo "✗ python interpreter not found on PATH" | tee -a "$TEST_LOG"
     exit 1
 fi
+
+FLUTTER_ROOT_ORIGINAL="$FLUTTER_ROOT_ORIG" \
+RUNTIME_PUB_CACHE="$RUNTIME_PUB_CACHE" \
+PUB_DEPS_PATH="$PUB_DEPS_ABS" \
+"$PYTHON_BIN" <<'PY'
+import json
+import os
+import shutil
+import urllib.parse
+
+
+def collect_required_from_pub_deps(deps_path):
+    required = set()
+    if not deps_path or not os.path.exists(deps_path):
+        return required
+    with open(deps_path, "r", encoding = "utf-8") as fh:
+        try:
+            data = json.load(fh)
+        except ValueError:
+            return required
+    for package in data.get("packages", []):
+        if package.get("source") != "hosted":
+            continue
+        name = package.get("name")
+        version = package.get("version")
+        if name and version:
+            required.add("{{}}-{{}}".format(name, version))
+    return required
+
+
+def resolve_root_uri(config_dir, root_uri):
+    if root_uri.startswith("file:"):
+        return os.path.normpath(urllib.parse.unquote(urllib.parse.urlparse(root_uri).path))
+    return os.path.normpath(os.path.join(config_dir, root_uri.replace("/", os.sep)))
+
+
+def collect_required_from_package_config(config_path):
+    required = set()
+    if not os.path.exists(config_path):
+        return required
+    with open(config_path, "r", encoding = "utf-8") as fh:
+        try:
+            config = json.load(fh)
+        except ValueError:
+            return required
+    config_dir = os.path.dirname(config_path)
+    marker = "/.pub_cache/hosted/pub.dev/"
+    for package in config.get("packages", []):
+        root_uri = package.get("rootUri")
+        if not root_uri:
+            continue
+        root_path = resolve_root_uri(config_dir, root_uri).replace(os.sep, "/")
+        marker_index = root_path.find(marker)
+        if marker_index == -1:
+            continue
+        required.add(root_path[marker_index + len(marker):].rstrip("/"))
+    return required
+
+
+flutter_root = os.environ["FLUTTER_ROOT_ORIGINAL"]
+runtime_pub_cache = os.environ["RUNTIME_PUB_CACHE"]
+runtime_hosted_root = os.path.join(runtime_pub_cache, "hosted", "pub.dev")
+os.makedirs(runtime_hosted_root, exist_ok = True)
+packages_root = os.path.join(flutter_root, "packages")
+
+required = collect_required_from_pub_deps(os.environ.get("PUB_DEPS_PATH", ""))
+if os.path.isdir(packages_root):
+    for package_name in os.listdir(packages_root):
+        required.update(collect_required_from_package_config(
+            os.path.join(packages_root, package_name, ".dart_tool", "package_config.json"),
+        ))
+
+existing = set(os.listdir(runtime_hosted_root)) if os.path.isdir(runtime_hosted_root) else set()
+missing = sorted(package_dir for package_dir in required if package_dir not in existing)
+
+sdk_hosted_roots = []
+if os.path.isdir(packages_root):
+    for package_name in os.listdir(packages_root):
+        hosted_root = os.path.join(packages_root, package_name, ".pub_cache", "hosted", "pub.dev")
+        if os.path.isdir(hosted_root):
+            sdk_hosted_roots.append(hosted_root)
+
+copied = 0
+unresolved = []
+for package_dir in missing:
+    source_dir = ""
+    for hosted_root in sdk_hosted_roots:
+        candidate = os.path.join(hosted_root, package_dir)
+        if os.path.isdir(candidate):
+            source_dir = candidate
+            break
+    if not source_dir:
+        unresolved.append(package_dir)
+        continue
+    shutil.copytree(source_dir, os.path.join(runtime_hosted_root, package_dir), dirs_exist_ok = True)
+    copied += 1
+
+print("sdk hosted packages copied:", copied)
+if unresolved:
+    print("sdk hosted packages unresolved:", ", ".join(unresolved[:10]))
+PY
 
 PACKAGE_DIR="{package_dir}"
 
@@ -1252,12 +1359,45 @@ for i, line in enumerate(lines):
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
-    if spec:
-        return spec[0].split("+")[0]
+    normalized = spec
+    for marker in [">=", "<=", ">", "<", "^", "~"]:
+        normalized = normalized.replace(marker, " ")
+    tokens = normalized.split()
+    if tokens:
+        version = tokens[0].split("+")[0]
+        parts = version.split(".")
+        if len(parts) >= 2:
+            return parts[0] + "." + parts[1]
+        if len(parts) == 1:
+            return parts[0] + ".0"
+    return "3.0"
+
+def read_language_spec(pubspec_path):
+    if not os.path.exists(pubspec_path):
+        return ""
+    with open(pubspec_path, "r", encoding = "utf-8") as fh:
+        pubspec_lines = fh.readlines()
+    for i, line in enumerate(pubspec_lines):
+        if line.strip().startswith("environment:"):
+            for j in range(i + 1, len(pubspec_lines)):
+                subline = pubspec_lines[j].strip()
+                if subline.startswith("sdk:"):
+                    return subline.split(":", 1)[1].strip().strip('"').strip("'")
+                if subline and not subline.startswith("#") and ":" in subline and not subline.startswith(("flutter:", "flutter_test:", "dart:")):
+                    return ""
+            break
+    return ""
+
+def package_language_for_root(root_path, fallback_spec = ""):
+    package_spec = read_language_spec(os.path.join(root_path, "pubspec.yaml"))
+    if package_spec:
+        return _parse_language(package_spec)
+    if fallback_spec:
+        return _parse_language(fallback_spec)
     return "3.0"
 
 language_version = _parse_language(language_spec)
+root_language_version = package_language_for_root(package_root, language_spec)
 
 def finish_dependency(dep_name, block):
     if not dep_name:
@@ -1388,25 +1528,27 @@ def sdk_package_dir(pkg_name):
     return os.path.join(flutter_root, "packages", pkg_name)
 
 
-def add_package(packages, seen, pkg_name, root_path, config_root):
+def add_package(packages, seen, pkg_name, root_path, config_dir, fallback_spec = ""):
     if not pkg_name or pkg_name in seen or not os.path.isdir(root_path):
         return
-    rel = os.path.relpath(root_path, config_root).replace(os.sep, "/")
+    rel = os.path.relpath(root_path, config_dir).replace(os.sep, "/")
+    package_language = package_language_for_root(root_path, fallback_spec)
     packages.append(dict(
         name = pkg_name,
         rootUri = rel,
         packageUri = "lib/",
-        languageVersion = language_version,
+        languageVersion = package_language,
     ))
     seen.add(pkg_name)
 
 
-def collect_packages(config_root, root_uri):
+def collect_packages(root_package_path, config_path):
+    config_dir = os.path.dirname(config_path)
     packages = [dict(
         name = name,
-        rootUri = root_uri,
+        rootUri = os.path.relpath(root_package_path, config_dir).replace(os.sep, "/"),
         packageUri = "lib/",
-        languageVersion = language_version,
+        languageVersion = root_language_version,
     )]
     seen = set([name])
 
@@ -1428,7 +1570,7 @@ def collect_packages(config_root, root_uri):
             if not versions:
                 continue
             version, root_path = versions[-1]
-            add_package(packages, seen, pkg_name, root_path, config_root)
+            add_package(packages, seen, pkg_name, root_path, config_dir)
             pubspec_file = os.path.join(root_path, "pubspec.yaml")
             if os.path.exists(pubspec_file):
                 with open(pubspec_file, "r", encoding = "utf-8") as fh:
@@ -1437,7 +1579,7 @@ def collect_packages(config_root, root_uri):
                     queue.append((child, False))
         elif source == "sdk":
             root_path = sdk_package_dir(pkg_name)
-            add_package(packages, seen, pkg_name, root_path, config_root)
+            add_package(packages, seen, pkg_name, root_path, config_dir)
             pubspec_file = os.path.join(root_path, "pubspec.yaml")
             if os.path.exists(pubspec_file):
                 with open(pubspec_file, "r", encoding = "utf-8") as fh:
@@ -1461,7 +1603,7 @@ def write_config(path, packages):
         fh.write("\\n")
 
 
-package_packages = collect_packages(package_root, ".")
+package_packages = collect_packages(package_root, config_path)
 write_config(config_path, package_packages)
 package_names = set([pkg.get("name") for pkg in package_packages])
 print("app package_config:", config_path)
@@ -1472,8 +1614,7 @@ print("app has test_api:", "test_api" in package_names)
 if workspace_config_path:
     workspace_config_abs = os.path.abspath(workspace_config_path)
     if workspace_config_abs != os.path.abspath(config_path):
-        root_uri = package_dir_rel if package_dir_rel else "."
-        workspace_packages = collect_packages(workspace_root_path, root_uri)
+        workspace_packages = collect_packages(package_root, workspace_config_path)
         write_config(workspace_config_path, workspace_packages)
         workspace_names = set([pkg.get("name") for pkg in workspace_packages])
         print("workspace package_config:", workspace_config_path)
