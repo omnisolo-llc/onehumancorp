@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"path/filepath"
 )
 
@@ -39,7 +40,7 @@ var FileWriteTool = Tool{
 			return "", err
 		}
 
-		err = os.WriteFile(input.FilePath, []byte(input.Content), 0644)
+		err = utils.WriteFileAtomic(input.FilePath, []byte(input.Content), 0644)
 		if err != nil {
 			return "", err
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"path/filepath"
 	"sync"
 )
@@ -92,7 +93,7 @@ func (s *Store) Save() error {
 		return fmt.Errorf("failed to marshal settings: %w", err)
 	}
 
-	if err := os.WriteFile(s.path, data, 0600); err != nil {
+	if err := utils.WriteFileAtomic(s.path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write settings file: %w", err)
 	}
 
