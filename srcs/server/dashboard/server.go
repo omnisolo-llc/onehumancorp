@@ -753,21 +753,10 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		"agent_workers": 0,
 	}
 
-	if s.hub.SIPDB() != nil && s.hub.SIPDB().Provider() != nil {
-		stuckMissions, err := s.hub.SIPDB().Provider().Query(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'")
-		if err == nil {
-			defer stuckMissions.Close()
-			if stuckMissions.Next() {
-				var count int
-				if err := stuckMissions.Scan(&count); err == nil {
-					details["stuck_missions"] = count
-					if count > 0 {
-						status = "degraded"
-						details["status"] = status
-					}
-				}
-			}
-		}
+	details["stuck_missions"] = probe.StuckMissions
+	if probe.StuckMissions > 0 {
+		status = "degraded"
+		details["status"] = status
 	}
 
 	resp := map[string]interface{}{
