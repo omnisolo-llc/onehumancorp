@@ -1,4 +1,15 @@
 # Changelog
+## [0.3.0] - 2026-04-13
+
+### Added
+- Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries.
+- Realtime Teammate Mesh APIs (gRPC/WebSockets/Redis).
+- Shared Task List and OHC Core Systems.
+
+### Changed
+- Coordinated promotions across Cloud staging and Local desktop beta builds.
+- Synchronized version configurations across `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
+
 ## [0.2.9] - 2026-04-10
 
 ### Added
