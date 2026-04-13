@@ -79,6 +79,3 @@ Chart.lock
 
 # Rust build artifacts
 /target/
-
-# Generated Go protobufs live in Bazel outputs only.
-srcs/proto/agentservice/*.pb.go

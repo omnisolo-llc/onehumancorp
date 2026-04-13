@@ -1,57 +1,25 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+# OHC AI OS Orchestration: KAIROS Hybrid Agentic OS Design
 
-# Master Design Doc: KAIROS AI OS Orchestration
+## 1. Introduction
+The One Human Corp (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**.
 
-This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
+## 2. Architecture: Shared Task List
+The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming.
 
-## The KAIROS Triad
-The absolute autonomy of the OHC Swarm rests on three pillars:
+*   **Cloud-Native Mode:** Uses PostgreSQL `FOR UPDATE SKIP LOCKED` to allow safe concurrent polling and distributed lock management.
+*   **Standalone Mode:** Degrades gracefully to local SQLite transactions, using single-process Mutex locks for state coordination.
 
-1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL. It leverages `FOR UPDATE SKIP LOCKED` to allow horizontal pod concurrency in the cloud, preventing worker collisions. It degrades to SQLite transactions for standalone desktop use.
-2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using `CentrifugeNode` and Redis Pub/Sub (`rueidis`), agents broadcast state changes, advertise capabilities, and stream events.
-3. **AutoDream (The Memory):** The long-term persistence layer. Ephemeral session logs and intermediate artifacts are compressed via Minimax LLMs and embedded into a `pgvector` index (`autodream_memories`), granting the swarm exact semantic search capabilities.
+## 3. Realtime Teammate Mesh APIs
+The Teammate Mesh ensures agents coordinate without delays.
 
-## Architecture Visualization
+*   **Cloud-Native Mode:** Redis Pub/Sub drives the Centrifuge WebSocket hubs (`mesh:tasks`, `mesh:coordination`).
+*   **Standalone Mode:** In-Memory channel broadcast ensures low-latency IPC.
 
-```mermaid
-graph TD
-    subgraph Swarm
-        A1[Worker Agent 1]
-        A2[Worker Agent 2]
-    end
+## 4. AutoDream Vector Pipeline (Memory Consolidation)
+The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state via pgvector/Pinecone.
 
-    subgraph Teammate Mesh (Redis/Centrifugo)
-        M[Mesh Hub]
-    end
-
-    subgraph KAIROS Orchestrator
-        T[(Shared Task List / DB)]
-        AD[AutoDream Pipeline]
-        V[(pgvector Memories)]
-    end
-
-    A1 <-->|Pub/Sub| M
-    A2 <-->|Pub/Sub| M
-
-    A1 -->|Claim Task| T
-    A2 -->|Claim Task| T
-
-    T -.->|Completions| AD
-    AD -->|Embed| V
-    A1 -->|Semantic Search| V
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class A1,A2,M,T,AD,V premium;
-```
-
-## Aesthetic Core
-This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
-`<style>
-body {
-  backdrop-filter: blur(20px) saturate(200%);
-  background: rgba(255, 255, 255, 0.03);
-  font-family: 'Outfit', 'Inter', sans-serif;
-}
-</style>`
-
-</div>
+## 5. Visual Excellence Mandate
+All associated UI components must represent the OHC "Premium Feel".
+- Backdrop Filter: `blur(20px) saturate(200%)`
+- Background: `rgba(255, 255, 255, 0.03)`
+- Typography: `'Outfit', 'Inter', sans-serif`
