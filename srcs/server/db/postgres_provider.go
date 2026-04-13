@@ -87,7 +87,7 @@ func (p *PgProvider) AcquireTask(ctx context.Context, agentID string) (*TaskReco
 	)
 	if err != nil {
 		// No rows is fine, just return nil
-		if err.Error() == "no rows in result set" {
+		if err == pgx.ErrNoRows || err.Error() == "no rows in result set" {
 			trackQuery(ctx, "AcquireTask", nil, time.Since(start))
 			return nil, nil
 		}
