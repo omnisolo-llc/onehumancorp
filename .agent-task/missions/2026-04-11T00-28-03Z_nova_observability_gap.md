@@ -1,6 +1,6 @@
 ---
-status: PENDING
-agent: Nova
+status: DONE
+agent: Implementer
 priority: P1
 ---
 

@@ -185,27 +185,24 @@ IS_PUB_PACKAGE="{is_pub_package}"
 ORIGINAL_PWD="$PWD"
 
 WORKSPACE_SRC_ABS="$ORIGINAL_PWD/$WORKSPACE_SRC"
-# Preserve the staged workspace root, then address the package directory within it.
-WORKSPACE_ROOT_ABS="$ORIGINAL_PWD/{working_dir_path}"
+# The sandbox layout depends on whether we are in Workspace Mode
+WORKSPACE_DIR_ABS="$ORIGINAL_PWD/{working_dir_path}"
 PACKAGE_DIR="{package_dir}"
-PACKAGE_WORKSPACE_DIR_ABS="$WORKSPACE_ROOT_ABS"
-if [ -n "$PACKAGE_DIR" ]; then
-    PACKAGE_WORKSPACE_DIR_ABS="$WORKSPACE_ROOT_ABS/$PACKAGE_DIR"
-fi
+WORKSPACE_DIR_ABS="${{WORKSPACE_DIR_ABS:+$WORKSPACE_DIR_ABS/}}${{PACKAGE_DIR:+$PACKAGE_DIR}}"
 
-# Use the calculated package directory for pub metadata generation.
+# Use the calculated WORKSPACE_DIR_ABS for everything else
 PUB_CACHE_DIR_ABS="$ORIGINAL_PWD/$PUB_CACHE_DIR"
 DART_TOOL_DIR_ABS="$ORIGINAL_PWD/$DART_TOOL_DIR"
 
 # Copy staged workspace into prepared output directory
-rm -rf "$WORKSPACE_ROOT_ABS"
-mkdir -p "$WORKSPACE_ROOT_ABS"
+rm -rf "$WORKSPACE_DIR_ABS"
+mkdir -p "$WORKSPACE_DIR_ABS"
 if command -v rsync >/dev/null 2>&1; then
-    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_ROOT_ABS/"
+    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_DIR_ABS/"
 else
-    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_ROOT_ABS/"
+    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
 fi
-chmod -R u+rwX "$WORKSPACE_ROOT_ABS"
+chmod -R u+rwX "$WORKSPACE_DIR_ABS"
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
@@ -216,8 +213,8 @@ fi
 export PUB_CACHE="$PUB_CACHE_DIR_ABS"
 mkdir -p "$PUB_CACHE_DIR_ABS"
 
-if [ "$IS_PUB_PACKAGE" = "1" ] && [ -f "$PACKAGE_WORKSPACE_DIR_ABS/pubspec.yaml" ]; then
-    export WORKSPACE_PUBSPEC_PATH="$PACKAGE_WORKSPACE_DIR_ABS/pubspec.yaml"
+if [ "$IS_PUB_PACKAGE" = "1" ] && [ -f "$WORKSPACE_DIR_ABS/pubspec.yaml" ]; then
+    export WORKSPACE_PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
     "$PYTHON_BIN" <<'PY'
 import os
 
@@ -280,7 +277,7 @@ else
 fi
 echo ""
 
-export PUBSPEC_PATH="$PACKAGE_WORKSPACE_DIR_ABS/pubspec.yaml"
+export PUBSPEC_PATH="$WORKSPACE_DIR_ABS/pubspec.yaml"
 PACKAGE_INFO="$("$PYTHON_BIN" <<'PY'
 import os
 path = os.environ.get("PUBSPEC_PATH")
@@ -326,9 +323,9 @@ if [ "$IS_PUB_PACKAGE" = "1" ] && [ -n "$PACKAGE_NAME" ] && [ -n "$PACKAGE_VERSI
     rm -rf "$DEST"
     mkdir -p "$DEST"
     if command -v rsync >/dev/null 2>&1; then
-        rsync -aL "$PACKAGE_WORKSPACE_DIR_ABS/" "$DEST/"
+        rsync -aL "$WORKSPACE_DIR_ABS/" "$DEST/"
     else
-        cp -RL "$PACKAGE_WORKSPACE_DIR_ABS/." "$DEST/"
+        cp -RL "$WORKSPACE_DIR_ABS/." "$DEST/"
     fi
 fi
 
@@ -347,260 +344,28 @@ FLUTTER_ROOT="$(cd "$(dirname "$FLUTTER_BIN_ABS")/.." && pwd -P)"
 export FLUTTER_ROOT
 export PATH="$FLUTTER_ROOT/bin:$PATH"
 
-cd "$PACKAGE_WORKSPACE_DIR_ABS"
+cd "$WORKSPACE_DIR_ABS"
 
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
-PUB_DEPS_ERR="$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.stderr.log"
-PUB_DEPS_READY=0
-if [ -s pub_deps.json ]; then
-    PUB_DEPS_READY=1
-elif [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
-    PUB_DEPS_READY=1
-elif [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
-    if "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
-        PUB_DEPS_READY=1
-    fi
-fi
-
-if [ "$PUB_DEPS_READY" != "1" ]; then
-    echo "⚠ pub deps --json failed; reconstructing dependency graph from cached metadata" >&2
-    if ! WORKSPACE_DIR_ABS="$PACKAGE_WORKSPACE_DIR_ABS" \
-        PUB_CACHE_DIR_ABS="$PUB_CACHE_DIR_ABS" \
-        FLUTTER_ROOT="$FLUTTER_ROOT" \
-        PACKAGE_NAME="$PACKAGE_NAME" \
-        PACKAGE_VERSION="$PACKAGE_VERSION" \
-        "$PYTHON_BIN" > pub_deps.json <<'PY'
-import json
-import os
-import re
-import sys
-
-workspace_dir = os.environ["WORKSPACE_DIR_ABS"]
-pub_cache_dir = os.environ["PUB_CACHE_DIR_ABS"]
-flutter_root = os.environ.get("FLUTTER_ROOT") or ""
-package_name = os.environ.get("PACKAGE_NAME") or ""
-package_version = os.environ.get("PACKAGE_VERSION") or ""
-hosted_cache_dir = os.path.join(pub_cache_dir, "hosted", "pub.dev")
-
-
-def read_pubspec_meta(pubspec_path):
-    name = ""
-    version = ""
-    if not os.path.exists(pubspec_path):
-        return name, version
-
-    with open(pubspec_path, "r", encoding = "utf-8") as fh:
-        for line in fh:
-            stripped = line.strip()
-            if stripped.startswith("name:") and not name:
-                name = stripped.split(":", 1)[1].strip().strip('"').strip("'")
-            elif stripped.startswith("version:") and not version:
-                version = stripped.split(":", 1)[1].strip().strip('"').strip("'")
-            if name and version:
-                break
-
-    return name, version
-
-
-def finish_dependency(name, block):
-    if not name:
-        return None
-    if block != None and block.get("path"):
-        return dict(name = name, source = "path", description = dict(path = block.get("path")))
-    if block != None and block.get("sdk"):
-        return dict(name = name, source = "sdk")
-    return dict(name = name, source = "hosted")
-
-
-def parse_pubspec_dependencies(pubspec_path):
-    if not os.path.exists(pubspec_path):
-        return []
-
-    with open(pubspec_path, "r", encoding = "utf-8") as fh:
-        content = fh.read().splitlines()
-
-    deps = []
-    in_deps = False
-    deps_indent = 0
-    current_name = ""
-    current_indent = 0
-    current_block = None
-
-    for raw_line in content:
-        stripped = raw_line.strip()
-        indent = len(raw_line) - len(raw_line.lstrip(" "))
-
-        if not stripped or stripped.startswith("#"):
-            continue
-
-        if not in_deps:
-            if stripped == "dependencies:":
-                in_deps = True
-                deps_indent = indent
-            continue
-
-        if indent <= deps_indent:
-            entry = finish_dependency(current_name, current_block)
-            if entry:
-                deps.append(entry)
-            current_name = ""
-            current_block = None
-            break
-
-        if current_name and indent > current_indent:
-            if ":" in stripped:
-                sub_key, sub_value = stripped.split(":", 1)
-                if current_block == None:
-                    current_block = dict()
-                current_block[sub_key.strip()] = sub_value.strip().strip('"').strip("'")
-            continue
-
-        if ":" not in stripped:
-            continue
-
-        name, remainder = stripped.split(":", 1)
-        name = name.strip()
-        remainder = remainder.strip()
-        entry_indent = indent
-
-        if not name:
-            continue
-
-        entry = finish_dependency(current_name, current_block)
-        if entry:
-            deps.append(entry)
-
-        current_name = name
-        current_indent = entry_indent
-        if remainder:
-            deps.append(dict(name = current_name, source = "hosted"))
-            current_name = ""
-            current_block = None
-        else:
-            current_block = dict()
-
-    entry = finish_dependency(current_name, current_block)
-    if entry:
-        deps.append(entry)
-
-    return deps
-
-
-def version_key(version):
-    parts = re.split("([0-9]+)", version)
-    key = []
-    for part in parts:
-        if not part:
-            continue
-        if part.isdigit():
-            key.append((0, int(part)))
-        else:
-            key.append((1, part))
-    return key
-
-
-def build_hosted_index(cache_dir):
-    index = dict()
-    if not os.path.isdir(cache_dir):
-        return index
-
-    for entry in os.listdir(cache_dir):
-        full_path = os.path.join(cache_dir, entry)
-        if not os.path.isdir(full_path):
-            continue
-        match = re.match("^([a-z0-9_]+)-(.+)$", entry)
-        if not match:
-            continue
-        name = match.group(1)
-        version = match.group(2)
-        index.setdefault(name, []).append((version, full_path))
-
-    for versions in index.values():
-        versions.sort(key = lambda item: version_key(item[0]))
-
-    return index
-
-
-def hosted_package(name, hosted_index):
-    versions = hosted_index.get(name) or []
-    if not versions:
-        return None, None
-    return versions[-1]
-
-
-def sdk_package_dir(name):
-    if not flutter_root:
-        return ""
-    if name == "sky_engine":
-        return os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
-    return os.path.join(flutter_root, "packages", name)
-
-
-hosted_index = build_hosted_index(hosted_cache_dir)
-root_pubspec = os.path.join(workspace_dir, "pubspec.yaml")
-if not package_name or not package_version:
-    root_name, root_version = read_pubspec_meta(root_pubspec)
-    if not package_name:
-        package_name = root_name
-    if not package_version:
-        package_version = root_version
-
-if not package_name:
-    raise RuntimeError("unable to determine root package name from pubspec.yaml")
-
-packages = [dict(name = package_name, source = "root", dependency = "direct main", version = package_version)]
-seen = set([package_name])
-queue = []
-missing = []
-
-for dep in parse_pubspec_dependencies(root_pubspec):
-    queue.append((dep, True))
-
-while queue:
-    dep, is_direct = queue.pop(0)
-    name = dep.get("name")
-    source = dep.get("source")
-    dependency_kind = "direct main" if is_direct else "transitive"
-
-    if not name or name in seen:
-        continue
-
-    if source == "hosted":
-        version, package_dir = hosted_package(name, hosted_index)
-        if not package_dir:
-            missing.append("hosted package not found in cache: %s" % name)
-            continue
-        packages.append(dict(name = name, source = "hosted", version = version, dependency = dependency_kind))
-        seen.add(name)
-        for child in parse_pubspec_dependencies(os.path.join(package_dir, "pubspec.yaml")):
-            queue.append((child, False))
-    elif source == "sdk":
-        packages.append(dict(name = name, source = "sdk", dependency = dependency_kind))
-        seen.add(name)
-        package_dir = sdk_package_dir(name)
-        if package_dir and os.path.isdir(package_dir):
-            for child in parse_pubspec_dependencies(os.path.join(package_dir, "pubspec.yaml")):
-                queue.append((child, False))
-    elif source == "path":
-        missing.append("path dependencies are not supported in offline pub deps fallback: %s" % name)
-
-if missing:
-    for item in missing:
-        sys.stderr.write(item + "\\n")
-    raise RuntimeError("failed to reconstruct cached pub dependency graph")
-
-json.dump(dict(packages = packages), sys.stdout, indent = 2)
-sys.stdout.write("\\n")
-PY
-    then
+PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
+if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
+    :
+else
+    if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
+        if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
+            cat "$PUB_DEPS_ERR" >&2 || true
+            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+            exit 1
+        fi
+    else
         cat "$PUB_DEPS_ERR" >&2 || true
         echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
         exit 1
     fi
 fi
 
-export PUB_DEPS_PATH="$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.json"
+export PUB_DEPS_PATH="$WORKSPACE_DIR_ABS/pub_deps.json"
 "$PYTHON_BIN" <<'PY'
 import os
 
@@ -624,8 +389,8 @@ if [ ! -s pub_deps.json ]; then
 fi
 
 export PUB_CACHE_ABS="$PUB_CACHE_DIR_ABS"
-export WORKSPACE_ABS="$PACKAGE_WORKSPACE_DIR_ABS"
-export PACKAGE_CONFIG_PATH="$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool/package_config.json"
+export WORKSPACE_ABS="$WORKSPACE_DIR_ABS"
+export PACKAGE_CONFIG_PATH="$WORKSPACE_DIR_ABS/.dart_tool/package_config.json"
 export ROOT_PACKAGE_NAME="$PACKAGE_NAME"
 export ROOT_LANGUAGE_SPEC="$LANGUAGE_SPEC"
 mkdir -p "$(dirname "$PACKAGE_CONFIG_PATH")"
@@ -641,19 +406,12 @@ flutter_root = os.environ.get("FLUTTER_ROOT") or ""
 root_name = os.environ.get("ROOT_PACKAGE_NAME") or ""
 language_spec = os.environ.get("ROOT_LANGUAGE_SPEC") or ""
 
-def to_file_uri(path):
-    return "file://" + os.path.abspath(path).replace(os.sep, "/")
-
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
+    spec = spec.replace(">=", "").replace("<", "").split()
     if spec:
-        version = spec[0].split("+")[0]
-        parts = version.split(".")
-        if len(parts) >= 2:
-            return parts[0] + "." + parts[1]
-        return version
+        return spec[0].split("+")[0]
     return "3.0"
 
 language_version = _parse_language(language_spec)
@@ -672,18 +430,19 @@ for entry in data.get("packages", []):
         root_path = os.path.join(cache_root, "hosted", "pub.dev", name + "-" + version)
         if not os.path.isdir(root_path):
             continue
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
         if name == "ffi":
             language_version = "2.12"
         pkg = dict()
         pkg["name"] = name
-        pkg["rootUri"] = to_file_uri(root_path)
-        pkg["packageUri"] = "lib/" if os.path.isdir(os.path.join(root_path, "lib")) else ""
+        pkg["rootUri"] = rel
+        pkg["packageUri"] = "lib/"
         pkg["languageVersion"] = language_version
         packages.append(pkg)
     elif source == "root":
         pkg = dict()
         pkg["name"] = name
-        pkg["rootUri"] = to_file_uri(workspace_root)
+        pkg["rootUri"] = "."
         pkg["packageUri"] = "lib/"
         pkg["languageVersion"] = language_version
         packages.append(pkg)
@@ -694,9 +453,10 @@ for entry in data.get("packages", []):
             root_path = os.path.join(flutter_root, "packages", name)
         if not os.path.isdir(root_path):
             continue
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
         pkg = dict()
         pkg["name"] = name
-        pkg["rootUri"] = to_file_uri(root_path)
+        pkg["rootUri"] = rel
         pkg["packageUri"] = "lib/"
         pkg["languageVersion"] = language_version
         packages.append(pkg)
@@ -765,8 +525,8 @@ echo "Workspace output: {workspace_dir}" >> "$LOG_FILE"
 echo "Prepared at: $(date)" >> "$LOG_FILE"
 echo "" >> "$LOG_FILE"
 
-if [ -f "$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.json" ]; then
-    cp "$PACKAGE_WORKSPACE_DIR_ABS/pub_deps.json" "{pub_deps}"
+if [ -f "$WORKSPACE_DIR_ABS/pub_deps.json" ]; then
+    cp "$WORKSPACE_DIR_ABS/pub_deps.json" "{pub_deps}"
     echo "✓ Generated pub_deps.json" >> "$LOG_FILE"
 else
     echo "{{}}" > "{pub_deps}"
@@ -775,11 +535,11 @@ fi
 
 rm -rf "{dart_tool_dir}"
 mkdir -p "{dart_tool_dir}"
-if [ -d "$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool" ]; then
+if [ -d "$WORKSPACE_DIR_ABS/.dart_tool" ]; then
     if command -v rsync >/dev/null 2>&1; then
-        rsync -a "$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool/" "{dart_tool_dir}/"
+        rsync -a "$WORKSPACE_DIR_ABS/.dart_tool/" "{dart_tool_dir}/"
     else
-        cp -RL "$PACKAGE_WORKSPACE_DIR_ABS/.dart_tool/." "{dart_tool_dir}/"
+        cp -RL "$WORKSPACE_DIR_ABS/.dart_tool/." "{dart_tool_dir}/"
     fi
     echo "✓ Created .dart_tool/package_config.json" >> "$LOG_FILE"
 else
@@ -1113,13 +873,9 @@ package_name, package_language_spec = read_pubspec_meta(package_pubspec_path)
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
+    spec = spec.replace(">=", "").replace("<", "").split()
     if spec:
-        version = spec[0].split("+")[0]
-        parts = version.split(".")
-        if len(parts) >= 2:
-            return parts[0] + "." + parts[1]
-        return version
+        return spec[0].split("+")[0]
     return "3.0"
 
 def _as_uri(path):
