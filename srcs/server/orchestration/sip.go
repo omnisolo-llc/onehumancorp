@@ -602,9 +602,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
 	_ = CheckDocumentationGate(task.Content)
 
-	return withSipRetry(ctx, func() error {
-		if s.ContextRoot != "" {
-			s.groundingOnce.Do(func() {
+	if s.ContextRoot != "" {
+		s.groundingOnce.Do(func() {
 			var combinedGrounding strings.Builder
 
 			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
@@ -641,14 +640,15 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		}
 	}
 
-		wrapper := struct {
-			Role string  `json:"role"`
-			Task Message `json:"task"`
-		}{
-			Role: role,
-			Task: task,
-		}
-		taskBytes, _ := json.Marshal(wrapper)
+	wrapper := struct {
+		Role string  `json:"role"`
+		Task Message `json:"task"`
+	}{
+		Role: role,
+		Task: task,
+	}
+	taskBytes, _ := json.Marshal(wrapper)
+	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)",
 			missionID, string(taskBytes), s.orgID,
@@ -669,7 +669,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE status = 'PENDING' AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
 		if err != nil {
 			return err
 		}
@@ -677,9 +677,9 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		// 2. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR (status = 'FAILED' AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		}
 
 		return err
