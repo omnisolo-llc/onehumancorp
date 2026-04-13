@@ -16,6 +16,14 @@ func (m *mockPgProvider) IsSQLite() bool {
 	return false
 }
 
+type mockPgProvider struct {
+	db.Provider
+}
+
+func (m *mockPgProvider) IsSQLite() bool {
+	return false
+}
+
 func TestClaimTask_SQLite(t *testing.T) {
 	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
 	if err != nil {
