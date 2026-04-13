@@ -184,9 +184,7 @@ def generate_package_build(repository_ctx, package_name, package_dir = ".", sdk_
             dependencies (e.g. `@flutter_sdk`). When omitted, a sensible
             default for the current host platform is used.
         include_hosted_deps: When true, emit hosted pub.dev dependencies from
-            pub_deps.json as external repositories. Flutter SDK packages pass
-            False because their hosted deps are already vendored in the SDK and
-            should not pull from pub.dev.
+            pub_deps.json as external repositories.
     """
 
     _ensure_pub_deps(repository_ctx, package_name, package_dir)
@@ -221,7 +219,7 @@ def generate_package_build(repository_ctx, package_name, package_dir = ".", sdk_
             lines.append('        "{}",'.format(dep))
         lines.append("    ],")
 
-    if rule_kind == "dart_library":
+    if not package_dir.startswith("flutter/"):
         lines.append("    pub_package = True,")
 
     lines.append(_DEF_VISIBILITY)
