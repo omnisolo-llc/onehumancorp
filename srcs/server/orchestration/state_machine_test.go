@@ -26,7 +26,7 @@ func TestStateMachine_Concurrent(t *testing.T) {
 	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub3', 'org1', 'title1', 'parent', 'EXECUTING')`)
 	tx.Commit(ctx)
 
-	sm := NewTaskStateMachine(provider)
+	sm := NewTaskStateMachine(provider, nil)
 
 	var wg sync.WaitGroup
 	subtasks := []string{"sub1", "sub2", "sub3"}
