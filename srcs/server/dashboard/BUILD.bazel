@@ -16,7 +16,6 @@ go_library(
         "handlers_wizard.go",
         "seeder.go",
         "server.go",
-        "kairos_stream.go",
         "tenant.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/dashboard",
@@ -36,7 +35,6 @@ go_library(
         "//srcs/server/tools/blobinspector",
         "//lib/integrations/hybridfsmcp",
         "@io_opentelemetry_go_otel//:otel",
-        "@com_github_gorilla_websocket//:websocket",
         "//srcs/server/utils",
     ],
 )
@@ -56,7 +54,6 @@ go_test(
         "server_rate_limit_test.go",
         "health_test.go",
         "server_test.go",
-        "kairos_stream_test.go",
         "tenant_test.go",
     ],
     embed = [":dashboard"],
