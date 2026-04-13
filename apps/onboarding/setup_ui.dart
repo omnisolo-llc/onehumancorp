@@ -1,34 +1,49 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class SetupUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'OHC Hybrid OS Setup',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.compose(
+          outer: ColorFilter.matrix(const <double>[
+            1.168, -0.153, -0.015, 0, 0,
+            -0.046, 1.061, -0.015, 0, 0,
+            -0.046, -0.152, 1.198, 0, 0,
+            0, 0, 0, 1, 0,
+          ]),
+          inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.03),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 20),
-          _buildChecklistItem('1. Setup PostgreSQL', true),
-          _buildChecklistItem('2. Configure Redis', true),
-          _buildChecklistItem('3. Hire Initial Agent', false),
-          _buildChecklistItem('4. Launch Standalone Mode', false),
-        ],
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'OHC Hybrid OS Setup',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildChecklistItem('1. Setup PostgreSQL', true),
+              _buildChecklistItem('2. Configure Redis', true),
+              _buildChecklistItem('3. Hire Initial Agent', false),
+              _buildChecklistItem('4. Launch Standalone Mode', false),
+            ],
+          ),
+        ),
       ),
     );
   }

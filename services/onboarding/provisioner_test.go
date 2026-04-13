@@ -86,7 +86,6 @@ func TestCheckEnvironment_Cloud(t *testing.T) {
 	os.RemoveAll(".ohc-cloud-data")
 }
 
-
 func TestHealthHandler_Local(t *testing.T) {
 	os.RemoveAll(".ohc-local-data")
 
@@ -104,10 +103,17 @@ func TestHealthHandler_Local(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	var res map[string]string
+	var res map[string]interface{}
 	json.NewDecoder(rr.Body).Decode(&res)
 	if res["status"] != "error" {
 		t.Errorf("handler returned wrong json status: got %v want error", res["status"])
+	}
+	if details, ok := res["details"].(map[string]interface{}); ok {
+		if details["db"] != false {
+			t.Errorf("expected db details to be false")
+		}
+	} else {
+		t.Errorf("expected details to be present in error response")
 	}
 
 	ProvisionEnvironment(context.Background(), false)
@@ -120,10 +126,17 @@ func TestHealthHandler_Local(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	var res2 map[string]string
+	var res2 map[string]interface{}
 	json.NewDecoder(rr2.Body).Decode(&res2)
 	if res2["status"] != "ok" {
 		t.Errorf("handler returned wrong json status: got %v want ok", res2["status"])
+	}
+	if details, ok := res2["details"].(map[string]interface{}); ok {
+		if details["db"] != true {
+			t.Errorf("expected db details to be true")
+		}
+	} else {
+		t.Errorf("expected details to be present in ok response")
 	}
 
 	os.RemoveAll(".ohc-local-data")
@@ -146,10 +159,17 @@ func TestHealthHandler_Cloud(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	var res map[string]string
+	var res map[string]interface{}
 	json.NewDecoder(rr.Body).Decode(&res)
 	if res["status"] != "error" {
 		t.Errorf("handler returned wrong json status: got %v want error", res["status"])
+	}
+	if details, ok := res["details"].(map[string]interface{}); ok {
+		if details["db"] != false {
+			t.Errorf("expected db details to be false")
+		}
+	} else {
+		t.Errorf("expected details to be present in error response")
 	}
 
 	ProvisionEnvironment(context.Background(), true)
@@ -162,10 +182,17 @@ func TestHealthHandler_Cloud(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	var res2 map[string]string
+	var res2 map[string]interface{}
 	json.NewDecoder(rr2.Body).Decode(&res2)
 	if res2["status"] != "ok" {
 		t.Errorf("handler returned wrong json status: got %v want ok", res2["status"])
+	}
+	if details, ok := res2["details"].(map[string]interface{}); ok {
+		if details["db"] != true {
+			t.Errorf("expected db details to be true")
+		}
+	} else {
+		t.Errorf("expected details to be present in ok response")
 	}
 
 	os.RemoveAll(".ohc-cloud-data")

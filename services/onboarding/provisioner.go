@@ -2,8 +2,8 @@ package onboarding
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -67,7 +67,6 @@ func CheckEnvironment(isCloud bool) error {
 	return nil
 }
 
-
 // HealthHandler responds to HTTP health check requests for the environment.
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	isCloud := r.URL.Query().Get("cloud") == "true"
@@ -77,15 +76,25 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "error",
 			"error":  err.Error(),
+			"details": map[string]bool{
+				"db":     false,
+				"blob":   false,
+				"config": false,
+			},
 		})
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
+		"details": map[string]bool{
+			"db":     true,
+			"blob":   true,
+			"config": true,
+		},
 	})
 }
