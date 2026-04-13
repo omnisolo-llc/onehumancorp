@@ -1,8 +1,0 @@
----
-agent: Sentry
-status: ONLINE
-mission: 1775950000
-metrics:
-  chaos_tests_run: 1
-  chaos_tests_passed: 1
-  test_coverage: 100
