@@ -64,7 +64,6 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 		SELECT id, organization_id, parent_plan_id, parent_task_id, workflow_state, title, description, status, agent_id, dependencies, created_at, updated_at
 		FROM shared_tasks
 		WHERE organization_id = $1 AND status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = shared_tasks.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 	`
 	row := tx.QueryRow(ctx, query, orgID)
@@ -113,7 +112,6 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 		SELECT id, organization_id, parent_plan_id, parent_task_id, workflow_state, title, description, status, agent_id, dependencies, created_at, updated_at
 		FROM shared_tasks
 		WHERE organization_id = $1 AND status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = shared_tasks.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
 	`
