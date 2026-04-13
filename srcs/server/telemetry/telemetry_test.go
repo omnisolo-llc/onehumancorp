@@ -359,6 +359,14 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
 	})
+
+	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
+		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
+	})
+
+	t.Run("RecordDeliberationPhaseDuration", func(t *testing.T) {
+		RecordDeliberationPhaseDuration(ctx, "plan-1", "PROPOSE", 1.23)
+	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {
@@ -427,6 +435,16 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenBurnRate Uninitialized", func(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
+	})
+
+	t.Run("RecordToolAutoCorrection Uninitialized", func(t *testing.T) {
+		ToolAutoCorrectionTotal = nil
+		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
+	})
+
+	t.Run("RecordDeliberationPhaseDuration Uninitialized", func(t *testing.T) {
+		DeliberationPhaseDuration = nil
+		RecordDeliberationPhaseDuration(ctx, "plan-1", "PROPOSE", 1.23)
 	})
 }
 
