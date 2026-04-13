@@ -80,6 +80,14 @@ func TestBlobInspectorMCP_LocalProvider(t *testing.T) {
 	if len(results) != 1 || results[0]["key"] != "test.txt" {
 		t.Fatalf("Unexpected list response: %v", listData)
 	}
+	// Test ListBlobs missing prefix
+	resListMissing, errLocalMiss := mcp.CallTool(ctx, "list_blobs", map[string]interface{}{})
+	if errLocalMiss != nil {
+		t.Fatalf("CallTool failed: %v", errLocalMiss)
+	}
+	if resListMissing.(map[string]interface{})["status"] != "success" {
+		t.Fatalf("Unexpected missing prefix behavior")
+	}
 }
 
 func TestBlobInspectorMCP_CloudProvider(t *testing.T) {
@@ -121,6 +129,36 @@ func TestBlobInspectorMCP_CloudProvider(t *testing.T) {
 	urlData := resURL.(map[string]interface{})
 	if urlData["status"] != "success" || urlData["url"] == "" {
 		t.Fatalf("Unexpected url response: %v", urlData)
+	}
+
+
+	// Test Cloud list blobs
+	resListCloud, errCloudList := mcp.CallTool(ctxWithClaims, "list_blobs", map[string]interface{}{
+		"prefix": "test",
+	})
+	if errCloudList != nil {
+		t.Fatalf("CallTool failed: %v", errCloudList)
+	}
+	listDataCloud := resListCloud.(map[string]interface{})
+	if listDataCloud["status"] != "success" || listDataCloud["mode"] != "cloud" {
+		t.Fatalf("Unexpected list response: %v", listDataCloud)
+	}
+
+	// Test invalid tool
+	_, errInv := mcp.CallTool(ctxWithClaims, "invalid_tool", map[string]interface{}{})
+	if errInv == nil {
+		t.Fatalf("Expected error for invalid tool")
+	}
+
+	// Test missing keys
+	_, errMiss := mcp.CallTool(ctxWithClaims, "read_blob_metadata", map[string]interface{}{})
+	if errMiss == nil {
+		t.Fatalf("Expected error for missing key")
+	}
+
+	_, errMiss2 := mcp.CallTool(ctxWithClaims, "get_blob_url", map[string]interface{}{})
+	if errMiss2 == nil {
+		t.Fatalf("Expected error for missing key")
 	}
 }
 
