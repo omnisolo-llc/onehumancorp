@@ -11,9 +11,17 @@
    To support both Cloud-Native and Standalone Desktop modes, the Shared Task List relies on a hybrid DB schema `shared_tasks`.
 
    ## Realtime Teammate Mesh APIs
-   The Teammate Mesh facilitates inter-agent communication and task state broadcasting via `mesh:tasks` and `mesh:coordination`.
+   The Teammate Mesh facilitates inter-agent communication via `CentrifugeNode` hub integration. Standardized OHC-SIP compliance is enforced, requiring `agent_id`, `action`, and `status` at the JSON root. Key channels:
+   - `mesh:tasks`: Standard task state broadcasts.
+   - `mesh:coordination`: High-priority agent-to-agent alignment.
+   - `mesh:capabilities`: Agent skill discovery and advertisement.
 
-   ## AutoDream Data Pipeline
-   The AutoDream pipeline is responsible for long-term memory consolidation, ensuring agents share a global intelligence pool.
+   ## Omni-Context Sub-agent Routing
+   KAIROS eliminates discovery latency by pre-injecting architectural grounding into `shared_tasks`.
+   - **Grounding Files:** `CLAUDE_OHC.md`, `AGENTS.md`.
+   - **Namespace:** `[SYSTEM GROUNDING]` within the `payload` JSONB.
+
+   ## AutoDream & Hybrid RAG Sync
+   The AutoDream pipeline handles long-term memory. The **Hybrid MCP RAG Sync** daemon bridges Standalone (SQLite) and Cloud (Postgres) by synchronizing `rag_records` to the `consolidated_memory` vector index.
 
    </div>
