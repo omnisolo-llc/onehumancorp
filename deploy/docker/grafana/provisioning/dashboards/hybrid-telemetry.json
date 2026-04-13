@@ -613,6 +613,118 @@
       ],
       "title": "Mesh Broadcast Total",
       "type": "timeseries"
+    },
+    {
+      "id": 120,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "title": "AutoDream RAG Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
+          "legendFormat": "Sync - {{deployment_mode}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "Query - {{deployment_mode}}"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 121,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "title": "AutoDream Memory Pipeline",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (autodream_memories_ingested_total)",
+          "legendFormat": "Ingested - {{agent_id}}"
+        },
+        {
+          "expr": "sum by (agent_id) (autodream_memories_compressed_total)",
+          "legendFormat": "Compressed - {{agent_id}}"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 122,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "title": "LLM Cache Efficiency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (operation, cache_type) (ohc_cache_hits_total)",
+          "legendFormat": "Hits - {{operation}} ({{cache_type}})"
+        },
+        {
+          "expr": "sum by (operation, cache_type) (ohc_cache_misses_total)",
+          "legendFormat": "Misses - {{operation}} ({{cache_type}})"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 123,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "title": "Sync Daemon Health",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "ohc_sync_daemon_batch_size",
+          "legendFormat": "Batch Size"
+        },
+        {
+          "expr": "ohc_sync_latency_seconds",
+          "legendFormat": "Latency (s)"
+        },
+        {
+          "expr": "ohc_sync_escalations_total",
+          "legendFormat": "Escalations"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     }
   ],
   "refresh": "",
