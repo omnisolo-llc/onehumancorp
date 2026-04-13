@@ -1,3 +1,3 @@
-feat: Add Shared Task List purely additive files
+🛡️ Sentinel: Fix potential data leakage in SIPDB standalone mode execution path.
 
-This PR adds the purely additive and isolated files for the Shared Task List UI to avoid conflict.
+Applying security hardening for SIPDB and local storage synchronization by strictly preventing shared memory context and metrics payloads from crossing tenant boundaries, ensuring tenant state remains truly isolated in cloud environments.
