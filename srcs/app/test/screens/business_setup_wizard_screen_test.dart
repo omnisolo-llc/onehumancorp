@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 
 void main() {
-  testWidgets('BusinessSetupWizardScreen renders and next button progresses', (WidgetTester tester) async {
+  testWidgets('BusinessSetupWizardScreen renders and completes flow', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -20,10 +20,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Company Name'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'Test Company');
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     expect(find.text('Select Goals'), findsOneWidget);
+    await tester.tap(find.text('Support'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Deployment Preference'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Admin Name'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Admin Name'), 'Admin');
+
+    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.pump();
   });
 }

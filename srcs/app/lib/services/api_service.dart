@@ -235,6 +235,17 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
+  // ── Onboarding ──────────────────────────────────────────────────────────
+
+  Future<void> submitBusinessSetup(Map<String, dynamic> data) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/onboarding/business-setup'),
+      headers: _headers,
+      body: jsonEncode(data),
+    );
+    _checkStatus(res);
+  }
+
   // ── Meetings ─────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> listMeetings() async {

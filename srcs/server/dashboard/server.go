@@ -494,6 +494,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		mux.HandleFunc("/", server.handleApp)
 	}
 	mux.HandleFunc("/api/dashboard", server.handleDashboard)
+	mux.HandleFunc("/api/onboarding/business-setup", server.handleBusinessSetup)
 	mux.HandleFunc("/api/org", server.handleOrg)
 	mux.HandleFunc("/api/meetings", server.handleMeetings)
 	mux.HandleFunc("/api/costs", server.handleCosts)
@@ -1924,4 +1925,12 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+func (s *Server) handleBusinessSetup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
