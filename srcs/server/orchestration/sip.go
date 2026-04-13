@@ -532,6 +532,9 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
 
 			if err != nil {
+				if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "could not serialize access") {
+					telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
+				}
 				// Record doesn't exist or is locked by someone else.
 				// Since we skip locked, if it's locked we might just skip the insert/update to avoid contention,
 				// or we try inserting. For standard upsert logic without waiting:
@@ -541,6 +544,17 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					ON CONFLICT(id) DO NOTHING
 				`
 				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
+				// If the insert did nothing because of a conflict, but we got ErrNoRows on the SELECT,
+				// it means the row exists but was locked by someone else.
+				if errInsert == nil && errors.Is(err, sql.ErrNoRows) {
+					// To truly check if it was contention vs insertion, we could check rows affected on insert
+					// But for simplicity, we can just assume if we failed to insert on conflict and we got ErrNoRows on select for update, it was locked.
+					var exists bool
+					_ = tx.QueryRow(ctx, "SELECT true FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&exists)
+					if exists {
+						telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
+					}
+				}
 				if errInsert != nil {
 					return errInsert
 				}

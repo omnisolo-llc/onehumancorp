@@ -599,3 +599,13 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 	}
 	cleanup()
 }
+
+func TestRecordPostgresLockContention(t *testing.T) {
+	ctx := context.Background()
+	RecordPostgresLockContention(ctx, "test_operation")
+}
+
+func TestRecordLLMNetworkLatency(t *testing.T) {
+	ctx := context.Background()
+	RecordLLMNetworkLatency(ctx, "claude-3-5-sonnet", 0.15)
+}

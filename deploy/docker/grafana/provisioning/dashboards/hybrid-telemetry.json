@@ -532,6 +532,54 @@
       ],
       "title": "API Rate Limits Exceeded",
       "type": "timeseries"
+    },
+    {
+      "id": 105,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "type": "timeseries",
+      "title": "Postgres Lock Contention Rate",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_postgres_lock_contention_total[1m])) by (operation)",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 106,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "type": "timeseries",
+      "title": "LLM Network Latency",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_llm_network_latency_seconds_sum[1m])) by (model) / sum(rate(ohc_llm_network_latency_seconds_count[1m])) by (model)",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     }
   ],
   "refresh": "",
