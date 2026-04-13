@@ -1,0 +1,5 @@
+1. We modified `srcs/app/lib/screens/business_setup_wizard_screen.dart` with the UI components needed.
+2. We modified `srcs/app/lib/services/api_service.dart` to add the mocked method.
+3. We wrote the tests in `srcs/app/test/screens/business_setup_wizard_screen_test.dart` and ensured it passed.
+4. We've verified all the flutter tests pass.
+5. Complete pre-commit step

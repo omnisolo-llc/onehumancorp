@@ -21,13 +21,13 @@ void main() {
     await tester.pump();
 
     expect(find.text('Company Name'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'Acme Corp');
+    await tester.enterText(find.widgetWithText(TextField, 'Company Name'), 'Acme Corp');
     await tester.pump();
 
     // Tap next to step 2
     await tester.tap(find.text('Next'));
     await tester.pump();
-    expect(find.text('Select Goals'), findsOneWidget);
+    expect(find.text('Goal Selection'), findsOneWidget);
 
     // Tap next to step 3
     await tester.tap(find.text('Next'));
@@ -39,6 +39,10 @@ void main() {
     await tester.pump();
     expect(find.text('Admin Name'), findsOneWidget);
 
-    expect(find.text('Launch My AI Team →'), findsOneWidget);
+        // Tap next to step 5
+    await tester.tap(find.text('Next'));
+    await tester.pump();
+    expect(find.text('Review & Launch'), findsOneWidget);
+    expect(find.text('Launch My AI Team'), findsOneWidget);
   });
 }

@@ -26,6 +26,12 @@ class ApiService {
   // Custom timeout to ensure graceful degradation when backend is unreachable or latency spikes
   final Duration _timeout = const Duration(seconds: 15);
 
+  Future<void> submitBusinessSetup(Map<String, dynamic> data) async {
+    // Mocked endpoint for business setup wizard
+    await Future.delayed(const Duration(seconds: 1));
+  }
+
+
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer $token',
