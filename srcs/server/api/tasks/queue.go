@@ -26,6 +26,7 @@ type QueueResponse struct {
 }
 
 func QueueHandler(w http.ResponseWriter, r *http.Request) {
+    // Increment the Prometheus metric
     tasksCompleted.WithLabelValues("success").Inc()
 
     resp := QueueResponse{
