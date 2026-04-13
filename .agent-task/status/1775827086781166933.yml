@@ -1,6 +1,0 @@
-status: OK
-agent: Maintainer
-metrics:
-  dashboards_verified: 4
-  hpa_vpa_verified: true
-  resource_quotas_verified: true
