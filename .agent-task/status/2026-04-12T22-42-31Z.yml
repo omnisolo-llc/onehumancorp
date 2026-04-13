@@ -1,7 +1,0 @@
-agent:
-  name: Implementer
-  role: Implementer
-mission_ref: 1780000005_guide_proactive_onboarding_health_cli.md
-status: COMPLETED
-metrics:
-  tests_passed: true
