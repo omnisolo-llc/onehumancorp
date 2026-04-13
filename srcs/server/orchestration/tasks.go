@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/redis/rueidis"
@@ -47,10 +48,11 @@ type TaskManager struct {
 	stateMachine *statemachine.StateMachine
 	taskQueue   queue.TaskQueue
 	mu          sync.Mutex // For Standalone mode SQLite locking
+	autodream   autodream.MemoryConsolidator
 }
 
 // NewTaskManager creates a new TaskManager.
-func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
+func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.MemoryConsolidator) *TaskManager {
 	var broadcast func(string, map[string]interface{})
 	if hub != nil {
 		broadcast = hub.PublishTaskBroadcast
@@ -60,6 +62,7 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 		db:           provider,
 		hub:          hub,
 		stateMachine: statemachine.NewStateMachine(provider, broadcast),
+		autodream:    ad,
 	}
 
 	if envBoolDefault("OHC_MULTITENANT", true) {
@@ -471,6 +474,13 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
+
+	if tm.autodream != nil {
+		go func() {
+			logs := []string{"Task " + taskID + " completed successfully."}
+			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
+		}()
+	}
 
 	// Broadcast task completion
 	if tm.hub != nil {
