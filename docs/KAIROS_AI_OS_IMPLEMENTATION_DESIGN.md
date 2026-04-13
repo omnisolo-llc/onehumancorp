@@ -1,18 +1,18 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
-# KAIROS AI OS IMPLEMENTATION DESIGN
+# Master Architecture Design: KAIROS AI OS Implementations
 
-## Phase 1: Shared Task List
-- **Database**: PostgreSQL / SQLite
-- **Tables**: `shared_tasks`, `task_dependencies`
-- **Distributed Locking**: `FOR UPDATE SKIP LOCKED` / Redis SET NX EX
+## 1. Shared Task List
+- **Cloud-Native**: PostgreSQL `shared_tasks` table.
+- **Standalone**: SQLite fallback.
+- **Migrations**: Required in `srcs/server/db/migrations/`.
 
-## Phase 2: Realtime Teammate Mesh APIs
-- **Channels**: `mesh:tasks`, `mesh:coordination`
-- **Transport**: WebSockets / gRPC / Redis Pub/Sub
+## 2. Teammate Mesh
+- **Cloud-Native**: Redis Pub/Sub channels `mesh:tasks`, `mesh:coordination`.
+- **Standalone**: Memory Pub/Sub fallback.
 
-## Phase 3: AutoDream Data Pipeline
-- **Storage**: `consolidated_memory` (pgvector / SQLite fallback)
-- **Worker**: AutoDream pipeline logic (`srcs/server/orchestration/autodream_pipeline.go`) for background chunking and LLM embeddings.
+## 3. autoDream Pipelines
+- **Cloud-Native**: pgvector/Pinecone for vector storage in `consolidated_memory`.
+- **Worker**: `AutoDreamWorker` with proper auth extraction handling.
 
 </div>
