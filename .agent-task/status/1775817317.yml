@@ -1,6 +1,0 @@
-status: HEALTHY
-metrics:
-  agent_id: Jules
-  phase: design_shared_task_list
-  latency_ms: 250
-  tasks_processed: 1

@@ -1,0 +1,6 @@
+agent: Sentry (Maintainer)
+status: healthy
+metrics:
+  tests_passed: true
+  chaos_tests_executed: 2
+  coverage: 95%
