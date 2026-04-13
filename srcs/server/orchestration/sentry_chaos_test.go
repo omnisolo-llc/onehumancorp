@@ -14,7 +14,7 @@ import (
 func TestSentry_Chaos_NetworkPartition(t *testing.T) {
 	// 1. Standalone (SQLite) Resilience against sync lag
 	t.Run("Standalone Network Partition", func(t *testing.T) {
-		t.Setenv("OHC_STANDALONE", "true")
+		t.Setenv("OHC_MULTITENANT", "false")
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "sentry_chaos_standalone.db")
 		db, err := NewSIPDB(dbPath)

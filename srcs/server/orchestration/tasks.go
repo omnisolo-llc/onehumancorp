@@ -62,7 +62,7 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 		stateMachine: statemachine.NewStateMachine(provider, broadcast),
 	}
 
-	if os.Getenv("OHC_MULTITENANT") == "true" {
+	if envBoolDefault("OHC_MULTITENANT", true) {
 		redisURL := os.Getenv("REDIS_URL")
 		if redisURL != "" {
 			opts, err := rueidis.ParseURL(redisURL)

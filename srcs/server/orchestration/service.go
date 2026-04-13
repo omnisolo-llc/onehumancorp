@@ -225,7 +225,7 @@ func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
 
 	err := h.Publish(task)
 	if err == nil && h.sipDB != nil {
-		isStandalone := envBoolDefault("OHC_STANDALONE", false)
+		isStandalone := !envBoolDefault("OHC_MULTITENANT", true)
 		if isStandalone {
 			// In standalone mode, synchronously delegate to prevent connection contention
 			// caused by thousands of unbounded goroutines hitting the SIPDB.
