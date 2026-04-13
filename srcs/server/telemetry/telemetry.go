@@ -1,3 +1,4 @@
+
 package telemetry
 
 import (
@@ -124,7 +125,7 @@ func RedactInterfacePII(val interface{}) interface{} {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitTelemetry() (func(), error) {
-	if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
+	if !envBoolDefault("OHC_MULTITENANT", true) && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
 		// Enforce user data privacy and local sovereignty in Standalone Mode.
 		// Exporter is strictly opt-in and disabled by default.
 		BufferMetricFunc = nil // Disable local buffer when opt-out
@@ -1227,4 +1228,13 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		attribute.String("plan_id", planID),
 		attribute.String("phase", phase),
 	))
+}
+
+// envBoolDefault returns the boolean value of an environment variable, or a fallback if not set.
+func envBoolDefault(key string, fallback bool) bool {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	return val == "true"
 }

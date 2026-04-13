@@ -138,7 +138,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 func TestSIPDB_CUJ_StressVerification(t *testing.T) {
 	// 1. High-concurrency Standalone Wrapper (SQLite limit simulation)
 	t.Run("StandaloneWrapperStress", func(t *testing.T) {
-		t.Setenv("OHC_STANDALONE", "true")
+		t.Setenv("OHC_MULTITENANT", "false")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "cuj_standalone.db")
@@ -187,7 +187,7 @@ func TestSIPDB_CUJ_StressVerification(t *testing.T) {
 
 	// 2. High-concurrency Cloud Pod (Mock Postgres stress)
 	t.Run("CloudPodStress", func(t *testing.T) {
-		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("OHC_MULTITENANT", "true")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "cuj_cloud.db")
@@ -237,7 +237,7 @@ func TestSIPDB_CUJ_StressVerification(t *testing.T) {
 func TestSIPDB_ChaosParity(t *testing.T) {
 	// First, run with Standalone (SQLite)
 	t.Run("SQLite", func(t *testing.T) {
-		t.Setenv("OHC_STANDALONE", "true")
+		t.Setenv("OHC_MULTITENANT", "false")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos.db")
@@ -265,7 +265,7 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 
 	// Second, run with Mock Postgres DB Provider behavior
 	t.Run("PostgresMock", func(t *testing.T) {
-		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("OHC_MULTITENANT", "true")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos_pg.db") // Just using SQLite to mock the interface here
@@ -277,7 +277,7 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 		defer dbInstance.Close()
 
 		// Force Postgres behavior if possible by injecting a custom provider or just running under the flag
-		// Here we just test the code path with OHC_STANDALONE=false
+		// Here we just test the code path with OHC_MULTITENANT=true
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
