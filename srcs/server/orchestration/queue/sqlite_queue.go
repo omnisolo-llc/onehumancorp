@@ -99,11 +99,12 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 		SET status = 'RUNNING', locked_until = $1, attempts = attempts + 1, updated_at = $2
 		WHERE id = $3 AND (status = 'QUEUED' OR status = 'RUNNING')
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, lockTime.Format(time.RFC3339Nano), time.Now().Format(time.RFC3339Nano), j.ID)
+	res, err := tx.Exec(ctx, updateQuery, lockTime.Format(time.RFC3339Nano), time.Now().Format(time.RFC3339Nano), j.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	rowsAffected := res
 	if rowsAffected == 0 {
 		// Someone else grabbed it between our SELECT and UPDATE
 		return nil, nil

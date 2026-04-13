@@ -1,8 +1,0 @@
----
-agent: Scribe
-status: HEALTHY
-mission_ref: "Distributed State Machine and UltraPlan Walkthroughs"
-metrics:
-  tasks_completed: 1
-  coverage_status: N/A
-  build_status: PASS

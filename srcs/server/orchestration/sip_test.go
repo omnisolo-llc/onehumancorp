@@ -808,7 +808,6 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 
 	claudeMdContent4 := "Fallback CLAUDE."
 	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE_OHC.md"), []byte(claudeMdContent4), 0644)
-	os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte("CLAUDE.md content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
@@ -834,7 +833,7 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4 + "\n\n" + "CLAUDE.md content" + "\n\n" + claudeMdContent4
+	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4 + "\n\n" + claudeMdContent4
 	if missions4[0].Content != expectedContent4 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}
@@ -891,7 +890,6 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 
 	claudeMdContent := "CLAUDE_OHC.md rules"
 	err = os.WriteFile(filepath.Join(tempDir3, "CLAUDE_OHC.md"), []byte(claudeMdContent), 0644)
-	os.WriteFile(filepath.Join(tempDir3, "CLAUDE.md"), []byte("CLAUDE.md rules"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write CLAUDE_OHC.md: %v", err)
 	}
@@ -917,7 +915,7 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent + "\n\n" + "CLAUDE.md rules" + "\n\n" + claudeMdContent
+	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent + "\n\n" + claudeMdContent
 	if missions4[0].Content != expectedContent3 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 	"time"
+	"os"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -12,7 +13,13 @@ func TestRecordOtherMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	t.Setenv("OHC_STANDALONE", "")
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
 
 	cleanup, err := InitTelemetry()
 	if err != nil {
@@ -147,7 +154,13 @@ func TestMinimaxMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	t.Setenv("OHC_STANDALONE", "")
+	originalStandalone := os.Getenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_STANDALONE")
+	defer func() {
+		if originalStandalone != "" {
+			os.Setenv("OHC_STANDALONE", originalStandalone)
+		}
+	}()
 
 	cleanup, _ := InitTelemetry()
 	if cleanup != nil {
