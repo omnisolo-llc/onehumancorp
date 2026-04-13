@@ -65,6 +65,15 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateCompany(String name) => state = state.copyWith(companyName: name);
   void updateIndustry(String val) => state = state.copyWith(industry: val);
   void updateSize(String val) => state = state.copyWith(size: val);
+  void toggleGoal(String goal) {
+    final goals = List<String>.from(state.goals);
+    if (goals.contains(goal)) {
+      goals.remove(goal);
+    } else {
+      goals.add(goal);
+    }
+    state = state.copyWith(goals: goals);
+  }
   void updateDeployment(String val) => state = state.copyWith(deployment: val);
   void updateAdminName(String name) => state = state.copyWith(adminName: name);
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
@@ -108,14 +117,61 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                       onChanged: notifier.updateCompany,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Industry'),
+                      onChanged: notifier.updateIndustry,
+                      style: const TextStyle(fontFamily: 'Inter'),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: state.size,
+                      decoration: const InputDecoration(labelText: 'Size'),
+                      items: const [
+                        DropdownMenuItem(value: 'S', child: Text('Small')),
+                        DropdownMenuItem(value: 'M', child: Text('Medium')),
+                        DropdownMenuItem(value: 'L', child: Text('Large')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) notifier.updateSize(val);
+                      },
+                    ),
                   ] else if (state.step == 2) ...[
-                     const Text('Select Goals', style: TextStyle(fontFamily: 'Inter')),
+                     const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+                     ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
+                      title: Text(goal, style: const TextStyle(fontFamily: 'Inter')),
+                      value: state.goals.contains(goal),
+                      onChanged: (bool? value) {
+                        notifier.toggleGoal(goal);
+                      },
+                    )),
                   ] else if (state.step == 3) ...[
-                     const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter')),
+                     const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+                     ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
+                      title: Text(dep, style: const TextStyle(fontFamily: 'Inter')),
+                      value: dep,
+                      groupValue: state.deployment,
+                      onChanged: (String? value) {
+                        if (value != null) notifier.updateDeployment(value);
+                      },
+                    )),
                   ] else if (state.step == 4) ...[
                     TextField(
                       decoration: const InputDecoration(labelText: 'Admin Name'),
                       onChanged: notifier.updateAdminName,
+                      style: const TextStyle(fontFamily: 'Inter'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Admin Email'),
+                      onChanged: notifier.updateAdminEmail,
+                      style: const TextStyle(fontFamily: 'Inter'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Admin Password'),
+                      obscureText: true,
+                      onChanged: notifier.updateAdminPassword,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
                   ],
