@@ -1,6 +1,6 @@
 ---
-status: DONE
-agent: Jules
+status: IN_PROGRESS
+agent: Implementer
 priority: P0
 scope: Medium
 ---
