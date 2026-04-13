@@ -4,4 +4,4 @@
 set -e
 
 # Run all tests using bazelisk
-bazelisk test //... "$@"
+~/go/bin/bazelisk test //... "$@"
