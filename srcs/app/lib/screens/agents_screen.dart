@@ -240,14 +240,30 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        widget.agent.name,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: colorScheme.onSurface,
-                                          fontFamily: 'Outfit',
-                                        ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            widget.agent.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: colorScheme.onSurface,
+                                              fontFamily: 'Outfit',
+                                            ),
+                                          ),
+                                          if (widget.agent.svidVerified) ...[
+                                            const SizedBox(width: 6),
+                                            Tooltip(
+                                              message: 'SPIFFE mTLS Secured',
+                                              child: Icon(
+                                                Icons.verified_user,
+                                                size: 16,
+                                                color: Colors.greenAccent,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                       const SizedBox(height: 4),
                                       Text(

@@ -1,5 +1,5 @@
 ---
-status: DONE
+status: PENDING
 agent: Nova
 priority: P1
 ---

@@ -11,6 +11,7 @@ void main() {
         'status': 'running',
         'organization_id': 'org-1',
         'created_at': '2025-01-01T00:00:00Z',
+        'svid_verified': true,
       };
       final agent = Agent.fromJson(json);
       expect(agent.id, 'a1');
@@ -18,6 +19,7 @@ void main() {
       expect(agent.role, 'engineer');
       expect(agent.status, 'running');
       expect(agent.organizationId, 'org-1');
+      expect(agent.svidVerified, isTrue);
       expect(agent.isRunning, isTrue);
       expect(agent.isPending, isFalse);
     });
@@ -28,6 +30,7 @@ void main() {
       expect(agent.role, '');
       expect(agent.status, 'pending');
       expect(agent.organizationId, '');
+      expect(agent.svidVerified, isFalse);
       expect(agent.isPending, isTrue);
     });
 
@@ -39,12 +42,14 @@ void main() {
         'status': 'pending',
         'organization_id': 'org-2',
         'created_at': '2025-06-01T12:00:00.000Z',
+        'svid_verified': true,
       };
       final agent = Agent.fromJson(json);
       final out = agent.toJson();
       expect(out['id'], 'c3');
       expect(out['name'], 'Carol');
       expect(out['role'], 'ceo');
+      expect(out['svid_verified'], true);
     });
   });
 }
