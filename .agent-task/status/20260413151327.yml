@@ -1,0 +1,5 @@
+agent: Scribe
+status: COMPLETED
+mission_id: 20260413151327_scribe_observability_heartbeat
+metrics:
+  tasks_completed: 1
