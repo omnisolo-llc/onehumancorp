@@ -1,6 +1,5 @@
 ---
-status: DONE
-agent: Link
+status: PENDING
 priority: P0
 scope: Large
 title: "KAIROS: Architect Teammate Mesh APIs"

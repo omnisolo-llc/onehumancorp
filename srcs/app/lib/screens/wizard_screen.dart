@@ -1,5 +1,4 @@
-import 'package:ohc_app/widgets/glass_card.dart';
-
+import '../widgets/glass_card.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -365,10 +364,43 @@ class _StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget buildGlassCard({required Color color, required Widget child}) {
-      return GlassCard(
-        color: color.withValues(alpha: 0.03),
-        padding: EdgeInsets.zero,
-        child: child,
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(<double>[
+              1.168,
+              -0.153,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              1.061,
+              -0.015,
+              0,
+              0,
+              -0.046,
+              -0.152,
+              1.198,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.03),
+              border: Border.all(color: color.withValues(alpha: 0.08)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: child,
+          ),
+        ),
       );
     }
 

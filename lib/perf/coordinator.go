@@ -4,75 +4,87 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
+// CoordinatorMode implements Claude-inspired parallelization for the OHC Team Mesh
+// It shards work across multiple goroutines to optimize inter-agent communication latency
 type CoordinatorMode struct {
 	concurrency int
 }
 
 func NewCoordinatorMode(concurrency int) *CoordinatorMode {
 	if concurrency <= 0 {
-		concurrency = 4
+		concurrency = 4 // Default parallelism
 	}
 	return &CoordinatorMode{
 		concurrency: concurrency,
 	}
 }
 
+// ExecuteParallel runs tasks in parallel sharded chunks
 func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() error) error {
 	if len(tasks) == 0 {
 		return nil
 	}
 
+	// Use worker pool approach
+	var wg sync.WaitGroup
+	taskChan := make(chan func() error, len(tasks))
+	errChan := make(chan error, len(tasks))
+
+	// Start workers
 	workerCount := c.concurrency
 	if len(tasks) < workerCount {
 		workerCount = len(tasks)
 	}
 
-	var wg sync.WaitGroup
-	var idx atomic.Int64
-	var firstErr atomic.Value
-
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				if err := ctx.Err(); err != nil {
-					firstErr.CompareAndSwap(nil, err)
+			for task := range taskChan {
+				select {
+				case <-ctx.Done():
+					errChan <- ctx.Err()
 					return
-				}
-
-				curr := idx.Add(1) - 1
-				if curr >= int64(len(tasks)) {
-					return
-				}
-
-				if err := tasks[curr](); err != nil {
-					firstErr.CompareAndSwap(nil, err)
-					// don't stop worker on error, keep processing tasks, but we record the first error
+				default:
+					if err := task(); err != nil {
+						errChan <- err
+					}
 				}
 			}
 		}()
 	}
 
-	wg.Wait()
-
-	if err := firstErr.Load(); err != nil {
-		return err.(error)
+	// Enqueue tasks
+	for _, task := range tasks {
+		taskChan <- task
 	}
+	close(taskChan)
+
+	// Wait for completion
+	wg.Wait()
+	close(errChan)
+
+	// Collect first error if any
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
+// ShardedMailbox represents a highly concurrent mailbox for agent communication
 type ShardedMailbox struct {
 	shards []*MailboxShard
 	mask   uint64
 }
 
 type MailboxShard struct {
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	messages map[string][]Message
 }
 
@@ -85,6 +97,7 @@ type Message struct {
 }
 
 func NewShardedMailbox(numShards int) *ShardedMailbox {
+	// Must be power of 2
 	size := 1
 	for size < numShards {
 		size *= 2
@@ -103,11 +116,11 @@ func NewShardedMailbox(numShards int) *ShardedMailbox {
 	}
 }
 
+// hash string to determine shard
 func hash(s string) uint64 {
-	var h uint64 = 14695981039346656037
+	var h uint64 = 5381
 	for i := 0; i < len(s); i++ {
-		h ^= uint64(s[i])
-		h *= 1099511628211
+		h = ((h << 5) + h) + uint64(s[i])
 	}
 	return h
 }
@@ -121,8 +134,7 @@ func (m *ShardedMailbox) Send(msg Message) error {
 	shard := m.shards[shardIdx]
 
 	shard.mu.Lock()
-	msgs := shard.messages[msg.Recipient]
-	shard.messages[msg.Recipient] = append(msgs, msg)
+	shard.messages[msg.Recipient] = append(shard.messages[msg.Recipient], msg)
 	shard.mu.Unlock()
 
 	return nil
@@ -133,9 +145,10 @@ func (m *ShardedMailbox) Read(recipient string) []Message {
 	shard := m.shards[shardIdx]
 
 	shard.mu.Lock()
+	defer shard.mu.Unlock()
+
 	result := shard.messages[recipient]
 	delete(shard.messages, recipient)
-	shard.mu.Unlock()
 
 	return result
 }

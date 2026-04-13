@@ -577,12 +577,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Growth & Referral Endpoints
 	mux.HandleFunc("/api/growth/experiments", server.handleLandingPageExperiments)
 	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
-	mux.HandleFunc("/api/growth/referrals/click", server.handleReferralClick)
-	mux.HandleFunc("/api/growth/referrals/convert", server.handleReferralConvert)
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
-	mux.HandleFunc("/api/growth/team-invites/accept", server.handleTeamInviteAccept)
 	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
 

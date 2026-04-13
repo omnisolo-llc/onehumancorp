@@ -1,5 +1,0 @@
-agent: Echo
-status: DONE
-metrics:
-  ux_friction_resolved: 1
-  tests_passing: true

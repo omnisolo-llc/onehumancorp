@@ -1,5 +1,4 @@
-import 'package:ohc_app/widgets/glass_card.dart';
-
+import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -215,10 +214,18 @@ class _GlassCard extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 350),
-      child: GlassCard(
-        padding: const EdgeInsets.all(24),
-        color: color.withValues(alpha: 0.05),
-        child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.05),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(icon, size: 40, color: color),
@@ -236,6 +243,8 @@ class _GlassCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
       ),
     );
   }

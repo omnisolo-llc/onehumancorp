@@ -4,7 +4,6 @@ go_library(
     name = "queue",
     srcs = [
         "queue.go",
-        "queue_manager.go",
         "redis_queue.go",
         "sqlite_queue.go",
         "postgres_queue.go",
@@ -15,9 +14,6 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/telemetry",
         "@com_github_redis_rueidis//:rueidis",
-        "@io_opentelemetry_go_otel//:otel",
-        "@io_opentelemetry_go_otel//attribute",
-        "@io_opentelemetry_go_otel_metric//:metric",
     ],
 )
 
@@ -28,9 +24,6 @@ go_test(
     deps = [
         "//srcs/server/db",
         "@com_github_redis_rueidis//:rueidis",
-        "@io_opentelemetry_go_otel//:otel",
-        "@io_opentelemetry_go_otel//attribute",
-        "@io_opentelemetry_go_otel_metric//:metric",
         "@org_modernc_sqlite//:sqlite",
     ],
 )

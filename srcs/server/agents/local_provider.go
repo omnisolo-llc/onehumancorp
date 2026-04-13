@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"io"
 	"net"
 	"net/http"
@@ -47,10 +46,6 @@ func NewLocalLLMProvider() *LocalLLMProvider {
 }
 
 func (l *LocalLLMProvider) Reason(ctx context.Context, prompt string) (string, error) {
-	start := time.Now()
-	defer func() {
-		telemetry.RecordLLMNetworkLatency(ctx, l.model, time.Since(start).Seconds())
-	}()
 	reqBody, _ := json.Marshal(map[string]interface{}{
 		"model":  l.model,
 		"prompt": prompt,
@@ -85,10 +80,6 @@ func (l *LocalLLMProvider) Reason(ctx context.Context, prompt string) (string, e
 }
 
 func (l *LocalLLMProvider) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
-	start := time.Now()
-	defer func() {
-		telemetry.RecordLLMNetworkLatency(ctx, l.model, time.Since(start).Seconds())
-	}()
 	reqBody, _ := json.Marshal(map[string]interface{}{
 		"model":  l.model,
 		"prompt": text,

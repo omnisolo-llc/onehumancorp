@@ -373,14 +373,6 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordDeliberationPhaseDuration", func(t *testing.T) {
 		RecordDeliberationPhaseDuration(ctx, "plan-1", "PROPOSE", 1.23)
 	})
-
-	t.Run("RecordPostgresLockContention", func(t *testing.T) {
-		RecordPostgresLockContention(ctx, "test_operation")
-	})
-
-	t.Run("RecordLLMNetworkLatency", func(t *testing.T) {
-		RecordLLMNetworkLatency(ctx, "claude-3-5-sonnet", 1.23)
-	})
 }
 
 func TestRecordFunctionsUninitialized(t *testing.T) {

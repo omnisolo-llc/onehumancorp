@@ -303,7 +303,7 @@ sequenceDiagram
 
 <div class="glass-panel" markdown="1">
 
-### 4.5 KAIROS Distributed State Machine
+### 4.4 KAIROS Distributed State Machine
 
 The **KAIROS Distributed State Machine** manages the lifecycle of autonomous tasks and sub-agent workflows across the Swarm. It provides robust state transition APIs, guaranteeing distributed consistency.
 
@@ -365,7 +365,7 @@ stateDiagram-v2
 </div>
 
 
-### 4.6 Teammate Mesh v2 (Centrifuge)
+### 4.5 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
 Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
@@ -387,7 +387,7 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
 
 <div class="glass-panel" markdown="1">
 
-### 4.7 AutoDream Vector Embedding Workflow
+### 4.6 AutoDream Vector Embedding Workflow
 ```mermaid
 graph TD
     Agent[Agent Shared Memory] -->|Writes to .agent-task/memory| FS[File System]
@@ -473,7 +473,7 @@ graph TD
 ```
 </div>
 
-### 4.8 Health & Diagnostics
+### 4.7 Health & Diagnostics
 
 **Endpoint:** `GET /api/health`
 Verifies the backend health programmatically. Checks connectivity to Postgres, Redis, and the internal agent runtime.
@@ -492,7 +492,7 @@ Verifies the backend health programmatically. Checks connectivity to Postgres, R
 
 <div class="glass-panel" markdown="1">
 
-### 4.9 KAIROS Shared Task List API
+### 4.8 KAIROS Shared Task List API
 
 **Endpoint:** `POST /api/v1/tasks/claim`
 Claims a `PENDING` task from the shared task queue. Uses `FOR UPDATE SKIP LOCKED` (Cloud) or explicit transaction locking (Standalone).
@@ -549,6 +549,60 @@ sequenceDiagram
 ```
 </div>
 
+
+### 4.9 KAIROS Sub-Agent Queue API
+**Endpoint:** `POST /api/queue/subagent`
+Enqueues a sub-agent task into the highly available distributed queue. This queue is backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode.
+
+**Payload:**
+```json
+{
+  "task_type": "doc_audit",
+  "priority": "P1",
+  "payload": {
+     "url": "/docs/api/playbook.md"
+  }
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "queue_id": "queue_9876",
+  "status": "ENQUEUED"
+}
+```
+
+### 4.10 KAIROS State Machine Broadcast
+**Endpoint:** `POST /api/mesh/v2/broadcast`
+Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
+
+**Payload:**
+```json
+{
+  "room_id": "mesh_room_101",
+  "event_type": "state_transition",
+  "payload": {
+     "from_state": "PENDING",
+     "to_state": "IN_PROGRESS"
+  }
+}
+```
+
+#### SubAgent Queue Workflow
+```mermaid
+graph TD
+    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
+    API --> QueueInterface{SubAgent Queue Interface}
+    QueueInterface -->|Cloud-Native| Rueidis[(Redis ZSETs)]
+    QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
+    Rueidis -->|Dequeues| Worker[Sub-Agent Worker]
+    SQLite -->|Dequeues| Worker
+    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh premium;
+```
 
 ## 5. Visualizing the Flow
 ```mermaid

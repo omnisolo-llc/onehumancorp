@@ -229,16 +229,8 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 
 // NewProviderFactory returns a FileSystemProvider based on environment configuration.
 func NewProviderFactory(baseDir string) FileSystemProvider {
-	if envBoolDefault("OHC_MULTITENANT", false) {
+	if os.Getenv("OHC_MULTITENANT") == "true" {
 		return NewCloudFSProvider(baseDir)
 	}
 	return NewLocalFSProvider(baseDir)
-}
-
-func envBoolDefault(key string, fallback bool) bool {
-	val := os.Getenv(key)
-	if val == "" {
-		return fallback
-	}
-	return strings.ToLower(val) == "true" || val == "1"
 }

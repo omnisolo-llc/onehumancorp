@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"regexp"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -45,7 +43,6 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runPruningPipeline(ctx)
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
-	go w.runMissionIngestionPipeline(ctx)
 	go w.runSessionCompressionPipeline(ctx)
 	go w.runCompletedTasksIngestionPipeline(ctx)
 }
@@ -897,115 +894,4 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 
 	slog.Info("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
 	return nil
-}
-
-
-// runMissionIngestionPipeline reads files from .agent-task/missions/ and injects them.
-func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			w.ingestMissionArtifacts(ctx)
-		}
-	}
-}
-
-// ingestMissionArtifacts processes Markdown files from .agent-task/missions/.
-func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
-	missionDir := ".agent-task/missions"
-	files, err := os.ReadDir(missionDir)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			slog.Error("AutoDream: failed to read missions directory", "error", err)
-		}
-		return
-	}
-
-	minimaxKey := os.Getenv("MINIMAX_API_KEY")
-	var client MinimaxClient
-	if minimaxKey != "" {
-		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
-	}
-
-	htmlRe := regexp.MustCompile("(?s)<div[^>]*>|</div>")
-
-	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".md") {
-			continue
-		}
-		filePath := filepath.Join(missionDir, file.Name())
-
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			slog.Error("AutoDream: failed to read mission file", "file", filePath, "error", err)
-			continue
-		}
-
-		contentToEmbed := htmlRe.ReplaceAllString(string(data), "")
-		if contentToEmbed == "" {
-			continue
-		}
-
-		missionID := strings.TrimSuffix(file.Name(), ".md")
-
-		embedding := make([]float32, 1536)
-		if client != nil {
-			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, err := client.GenerateEmbedding(ctxTimeout, contentToEmbed)
-			cancel()
-			if err == nil && len(resp) == 1536 {
-				embedding = resp
-			} else {
-				slog.Warn("AutoDream: failed to embed mission with Minimax", "error", err)
-			}
-		}
-
-		tx, err := w.pool.Begin(ctx)
-		if err != nil {
-			slog.Error("AutoDream: failed to begin tx", "error", err)
-			continue
-		}
-
-		// Check if it already exists to prevent duplication
-		var count int
-		err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = $1 AND source_type = 'mission-artifact'", missionID).Scan(&count)
-		if err == nil && count > 0 {
-			tx.Rollback(ctx)
-			continue
-		} else if err != nil {
-			slog.Error("AutoDream: failed to check duplicate", "error", err)
-		}
-
-		memID := uuid.New().String()
-		embStr := formatFloat32SliceForVector(embedding)
-
-		var query string
-		var args []interface{}
-
-		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
-		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
-		}
-		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "mission-artifact"}
-
-		_, err = tx.Exec(ctx, query, args...)
-		if err != nil {
-			slog.Error("AutoDream: failed to insert mission artifact", "error", err)
-			tx.Rollback(ctx)
-			continue
-		}
-
-		if err := tx.Commit(ctx); err != nil {
-			slog.Error("AutoDream: failed to commit tx", "error", err)
-		} else {
-			slog.Info("AutoDream: processed mission file", "file", filePath)
-			// We don't delete mission files to keep the history in FS
-		}
-	}
 }

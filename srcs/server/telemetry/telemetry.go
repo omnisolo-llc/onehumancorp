@@ -48,8 +48,6 @@ var (
 	TeammateMeshDirectMessagesCounter metric.Int64Counter
 	TaskQueueLengthGauge       metric.Int64UpDownCounter
 	subAgentQueueLengthGauge   metric.Int64UpDownCounter
-	postgresLockContentionCounter       metric.Int64Counter
-	llmNetworkLatencyHistogram          metric.Float64Histogram
 	ToolAutoCorrectionTotal    metric.Int64Counter
 	DeliberationPhaseDuration  metric.Float64Histogram
 	TaskProcessingLatency      metric.Float64Histogram
@@ -392,23 +390,6 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
-
-	postgresLockContentionCounter, err = m.Int64Counter(
-		"ohc.postgres_lock_contention_total",
-		metric.WithDescription("Total PostgreSQL lock contentions"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	llmNetworkLatencyHistogram, err = m.Float64Histogram(
-		"ohc.llm_network_latency_seconds",
-		metric.WithDescription("Network latency to external LLM providers"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 
 	ToolAutoCorrectionTotal, err = m.Int64Counter(
 		"ohc_tool_autocorrection_total",
@@ -954,43 +935,6 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 	))
 }
 
-
-// RecordPostgresLockContention increments the counter for PostgreSQL lock contentions.
-func RecordPostgresLockContention(ctx context.Context, operation string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"operation": operation,
-		}
-		redactedMap := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "postgres_lock_contention", string(payloadBytes))
-	}
-	if postgresLockContentionCounter == nil {
-		return
-	}
-	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("operation", operation),
-	))
-}
-
-// RecordLLMNetworkLatency records the network latency to external LLM providers.
-func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"model":   model,
-			"latency": latency,
-		}
-		redactedMap := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "llm_network_latency", string(payloadBytes))
-	}
-	if llmNetworkLatencyHistogram == nil {
-		return
-	}
-	llmNetworkLatencyHistogram.Record(ctx, latency, metric.WithAttributes(
-		attribute.String("model", model),
-	))
-}
 // RecordTaskQueueLength modifies the queue length gauge.
 func RecordTaskQueueLength(ctx context.Context, amount int64) {
 	if BufferMetricFunc != nil {

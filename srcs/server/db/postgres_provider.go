@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -147,11 +146,7 @@ type PgRow struct {
 }
 
 func (r *PgRow) Scan(dest ...any) error {
-	err := r.row.Scan(dest...)
-	if err != nil && (err == pgx.ErrNoRows || err.Error() == "no rows in result set") {
-		return sql.ErrNoRows
-	}
-	return err
+	return r.row.Scan(dest...)
 }
 
 // PgTx implements Tx using pgx.Tx.

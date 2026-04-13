@@ -40,11 +40,6 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		return nil // No files to process
 	}
 
-	// Apply batch limit of 500 as requested
-	if len(matches) > 500 {
-		matches = matches[:500]
-	}
-
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var client MinimaxClient
 	if minimaxKey != "" {
@@ -117,12 +112,11 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, created_at) VALUES ($1, $2, $3::vector, $4, CURRENT_TIMESTAMP)`
 		}
-		// Default organization_id to "system" as auth contexts are missing in background workers
-		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "background-pipeline"}
+		args = []interface{}{memID, contentToEmbed, embStr, missionID}
 
 		_, err = tx.Exec(ctx, query, args...)
 		if err != nil {

@@ -1632,10 +1632,6 @@ var sharedHTTPClient = &http.Client{
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, error) {
-	start := time.Now()
-	defer func() {
-		telemetry.RecordLLMNetworkLatency(ctx, "minimax-reasoning", time.Since(start).Seconds())
-	}()
 	if !c.cb.Allow() {
 		return "", errors.New("circuit breaker is open")
 	}
@@ -1757,10 +1753,6 @@ func CheckDocumentationGate(content string) error {
 }
 
 func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
-	start := time.Now()
-	defer func() {
-		telemetry.RecordLLMNetworkLatency(ctx, "minimax-reasoning", time.Since(start).Seconds())
-	}()
 	if !c.cb.Allow() {
 		return nil, errors.New("circuit breaker is open")
 	}

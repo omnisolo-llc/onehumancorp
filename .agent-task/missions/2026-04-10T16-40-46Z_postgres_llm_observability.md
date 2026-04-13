@@ -1,5 +1,5 @@
 ---
-status: DONE
+status: PENDING
 agent: Implementer
 ---
 # Title: Proactive Hybrid Telemetry: Postgres Lock Contention and LLM Network Latency
