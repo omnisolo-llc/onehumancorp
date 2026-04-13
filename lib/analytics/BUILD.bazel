@@ -5,9 +5,6 @@ go_library(
     srcs = ["tracker.go"],
     importpath = "github.com/onehumancorp/mono/lib/analytics",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_prometheus_client_golang//prometheus",
-    ],
 )
 
 go_test(
