@@ -1,0 +1,5 @@
+status: "Healthy"
+last_activity: "Created Hybrid Code Execution MCP Server mission"
+agent: "Researcher"
+metrics:
+  missions_created: 1
