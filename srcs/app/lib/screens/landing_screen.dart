@@ -1,4 +1,5 @@
-import '../widgets/glass_card.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,6 +55,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context.go('/business_setup'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        ),
+                        child: const Text('Start Business Setup', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      ),
+                      const SizedBox(height: 8),
                       TextButton(
                         onPressed: () => context.go('/login'),
                         child: const Text('Or continue to Cloud Dashboard'),
@@ -214,18 +223,10 @@ class _GlassCard extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 350),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
+      child: GlassCard(
+        padding: const EdgeInsets.all(24),
+        color: color.withValues(alpha: 0.05),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(icon, size: 40, color: color),
@@ -243,8 +244,6 @@ class _GlassCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
       ),
     );
   }

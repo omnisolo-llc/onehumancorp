@@ -312,3 +312,115 @@ func (s *Server) handleOnboardingMetrics(w http.ResponseWriter, r *http.Request)
 
 	writeJSON(w, metrics)
 }
+
+type growthIdRequest struct {
+	ID string `json:"id"`
+}
+
+func (s *Server) handleTeamInviteAccept(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req growthIdRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	found := false
+	var updated TeamInvite
+	for i, inv := range s.teamInvites {
+		if inv.ID == req.ID {
+			s.teamInvites[i].Status = "ACCEPTED"
+			updated = s.teamInvites[i]
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		http.Error(w, "invite not found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, updated)
+}
+
+func (s *Server) handleReferralClick(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req growthIdRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	found := false
+	var updated Referral
+	for i, ref := range s.referrals {
+		if ref.ID == req.ID {
+			s.referrals[i].Clicks++
+			updated = s.referrals[i]
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		http.Error(w, "referral not found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, updated)
+}
+
+func (s *Server) handleReferralConvert(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req growthIdRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	found := false
+	var updated Referral
+	for i, ref := range s.referrals {
+		if ref.ID == req.ID {
+			s.referrals[i].Conversions++
+			updated = s.referrals[i]
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		http.Error(w, "referral not found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, updated)
+}
