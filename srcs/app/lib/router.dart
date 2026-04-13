@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
+import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
+
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
 import 'package:ohc_app/screens/channels_screen.dart';
@@ -129,6 +131,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/users',
             builder: (context, state) => const UserManagementScreen(),
+          ),
+          GoRoute(
+            path: '/agents/:id/tune',
+            builder: (context, state) => PromptTuningWizardScreen(agentId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: '/agents/hire',

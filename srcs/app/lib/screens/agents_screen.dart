@@ -261,7 +261,31 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.more_vert),
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      builder: (ctx) => SafeArea(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ListTile(
+                                              leading: const Icon(Icons.tune),
+                                              title: const Text('Tune this agent'),
+                                              onTap: () {
+                                                Navigator.pop(ctx);
+                                                context.go('/agents/${widget.agent.name}/tune');
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
                                 AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
                                   curve: Curves.easeInOut,

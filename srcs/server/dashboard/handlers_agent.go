@@ -428,3 +428,21 @@ func (s *Server) handleSnapshotRestore(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, snapshot)
 }
+
+func (s *Server) handleTuneAgent(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		AgentID string `json:"agentId"`
+		Prompt  string `json:"prompt"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}

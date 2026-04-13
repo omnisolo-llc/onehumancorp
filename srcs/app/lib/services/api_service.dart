@@ -235,6 +235,15 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
+  Future<void> updateAgentPrompt(String agentId, String prompt) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/agents/tune'),
+      headers: _headers,
+      body: jsonEncode({'agentId': agentId, 'prompt': prompt}),
+    );
+    _checkStatus(res);
+  }
+
   // ── Meetings ─────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> listMeetings() async {

@@ -497,6 +497,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/costs", server.handleCosts)
 	mux.HandleFunc("/api/messages", server.handleSendMessage)
 	mux.HandleFunc("/api/agents/hire", server.handleHireAgent)
+	mux.HandleFunc("/api/agents/tune", server.handleTuneAgent)
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)
 	mux.HandleFunc("/api/agents/delegate", server.handleDelegateTask)
 	// Agent provider management
