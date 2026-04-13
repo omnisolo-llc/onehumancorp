@@ -31,7 +31,15 @@ func TestCalculateCost(t *testing.T) {
 			promptTokens:     1000,
 			completionTokens: 1000,
 			cachedTokens:     2000,
-			expectedCost:     (1000.0 * 5.0 / 1000000.0) + (1000.0 * 15.0 / 1000000.0) + (2000.0 * 2.50 / 1000000.0),
+			expectedCost:     (1000.0 * 2.50 / 1000000.0) + (1000.0 * 10.0 / 1000000.0) + (2000.0 * 1.25 / 1000000.0),
+		},
+		{
+			name:             "Gemini 2.0 Flash",
+			model:            "gemini-2.0-flash",
+			promptTokens:     1000,
+			completionTokens: 500,
+			cachedTokens:     1000,
+			expectedCost:     (1000.0 * 0.10 / 1000000.0) + (500.0 * 0.40 / 1000000.0) + (1000.0 * 0.02 / 1000000.0),
 		},
 		{
 			name:             "Unknown model",
@@ -106,5 +114,48 @@ func TestCalculateCostDetails(t *testing.T) {
 	}
 	if math.Abs(details.TotalCost-expectedTotalCost) > 1e-9 {
 		t.Errorf("expected total cost %f, got %f", expectedTotalCost, details.TotalCost)
+	}
+}
+
+func TestCalculateSavings(t *testing.T) {
+	tests := []struct {
+		name         string
+		model        string
+		cachedTokens int
+		expected     float64
+	}{
+		{
+			name:         "GPT-4o Savings",
+			model:        "gpt-4o",
+			cachedTokens: 1000000,
+			expected:     1.25, // 2.50 - 1.25
+		},
+		{
+			name:         "Claude 3.5 Sonnet Savings",
+			model:        "claude-3-5-sonnet-20240620",
+			cachedTokens: 500000,
+			expected:     1.35, // (3.00 - 0.30) / 2
+		},
+		{
+			name:         "Unknown Model",
+			model:        "unknown",
+			cachedTokens: 10000,
+			expected:     0.0,
+		},
+		{
+			name:         "Zero Tokens",
+			model:        "gpt-4o",
+			cachedTokens: 0,
+			expected:     0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CalculateSavings(tt.model, tt.cachedTokens)
+			if math.Abs(got-tt.expected) > 1e-9 {
+				t.Errorf("CalculateSavings() = %f, want %f", got, tt.expected)
+			}
+		})
 	}
 }
