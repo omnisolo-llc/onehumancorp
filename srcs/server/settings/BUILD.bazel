@@ -5,6 +5,7 @@ go_library(
     srcs = ["settings.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/settings",
     visibility = ["//visibility:public"],
+    deps = ["//srcs/server/utils"],
 )
 
 go_test(
