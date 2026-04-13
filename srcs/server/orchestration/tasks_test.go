@@ -53,7 +53,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 }
 
 func TestTaskManager_CreateTask(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -75,7 +75,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 }
 
 func TestTaskManager_ClaimTask(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -123,7 +123,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 }
 
 func TestTaskManager_PollTasks(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -188,7 +188,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 }
 
 func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -237,7 +237,7 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 }
 
 func TestTaskManager_CompleteTask(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -270,7 +270,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 }
 
 func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
@@ -335,7 +335,7 @@ func getTaskHelper(t *testing.T, ctx context.Context, tm *TaskManager, taskID st
 }
 
 func TestTaskManager_PollTasks_TeammateMesh(t *testing.T) {
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
