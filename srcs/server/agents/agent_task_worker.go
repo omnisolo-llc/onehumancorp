@@ -219,6 +219,11 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 			}
 			slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", activeAgent.ID)
 
+			if IsManagedBuiltin(activeAgent) {
+				agentFound = true
+				break
+			}
+
 			if activeAgent.ProviderType == string(ProviderTypeBuiltin) || activeAgent.ProviderType == "" {
 				go tw.launchBuiltinTask(activeAgent, issue, string(payload))
 			}

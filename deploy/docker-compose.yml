@@ -61,6 +61,8 @@ services:
       # to `docker`, `podman`, or `nerdctl` only when the runtime is available.
       OHC_AGENT_RUNTIME: ${OHC_AGENT_RUNTIME:-process}
       OHC_AGENT_IMAGE: ${OHC_AGENT_IMAGE:-onehumancorp/server:latest}
+      GRPC_PORT: ${GRPC_PORT:-9090}
+      OHC_HUB_GRPC_ADDRESS: ${OHC_HUB_GRPC_ADDRESS:-127.0.0.1:9090}
       # Rust core sidecar address.
       OHC_CORE_URL: http://ohc-core:18789
     depends_on:

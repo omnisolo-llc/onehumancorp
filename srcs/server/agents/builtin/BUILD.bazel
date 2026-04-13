@@ -11,13 +11,16 @@ go_library(
         "bash.go",
         "edit.go",
         "glob.go",
+        "grpc_hub_adapter.go",
         "grep.go",
+        "hub_adapter.go",
         "llm_anthropic.go",
         "llm_ollama.go",
         "llm_openai.go",
         "loop.go",
         "prompt.go",
         "read.go",
+        "runner.go",
         "sendmessage.go",
         "task.go",
         "todowrite.go",
@@ -30,6 +33,14 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto:agent_service_go_proto",
+        "//srcs/proto:hub_go_proto",
+        "//srcs/server/agents/builtinclient",
+        "//srcs/server/orchestration",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
 
 go_test(

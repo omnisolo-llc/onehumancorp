@@ -54,6 +54,7 @@ type Server struct {
 	authHandlers          *auth.Handlers
 	settings              settings.AppSettings
 	agentProviderRegistry *agents.Registry
+	workerController      agents.WorkerController
 	dynamicMCPTools       []MCPTool
 	rateLimitStates       map[string]*RateLimitState
 	staticDir             string
@@ -450,6 +451,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		authStore:             store,
 		authHandlers:          auth.NewHandlers(store),
 		agentProviderRegistry: agents.DefaultRegistry(),
+		workerController:      agents.NewWorkerControllerFromEnv(hub),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
 		rateLimitStates:       make(map[string]*RateLimitState),
 		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),

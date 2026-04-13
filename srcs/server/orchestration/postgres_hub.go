@@ -70,13 +70,14 @@ func NewPgHubRepository(pool db.Provider, orgID string) *PgHubRepository {
 func (r *PgHubRepository) RegisterAgent(ctx context.Context, agent Agent) error {
 	return pgWithRetry(ctx, func() error {
 		_, err := r.pool.Exec(ctx, `
-			INSERT INTO agents (id, name, role, organization_id, status, provider_type, region)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO agents (id, name, role, organization_id, status, provider_type, region, managed)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (id) DO UPDATE SET
 				name=EXCLUDED.name, role=EXCLUDED.role, organization_id=EXCLUDED.organization_id,
-				status=EXCLUDED.status, provider_type=EXCLUDED.provider_type, region=EXCLUDED.region`,
+				status=EXCLUDED.status, provider_type=EXCLUDED.provider_type, region=EXCLUDED.region,
+				managed=EXCLUDED.managed`,
 			agent.ID, agent.Name, agent.Role, agent.OrganizationID,
-			string(agent.Status), agent.ProviderType, agent.Region,
+			string(agent.Status), agent.ProviderType, agent.Region, agent.Managed,
 		)
 		if err != nil {
 			return fmt.Errorf("pg: register agent: %w", err)
@@ -92,14 +93,14 @@ func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool,
 	var isNotFound bool
 
 	err := pgWithRetry(ctx, func() error {
-		query := `SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE id = $1`
+		query := `SELECT id, name, role, organization_id, status, provider_type, region, managed FROM agents WHERE id = $1`
 		args := []any{id}
 		if r.orgID != "" {
 			query += ` AND organization_id = $2`
 			args = append(args, r.orgID)
 		}
 		queryErr = r.pool.QueryRow(ctx, query, args...).Scan(
-			&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region,
+			&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region, &a.Managed,
 		)
 		if queryErr != nil {
 			if queryErr.Error() == "no rows in result set" {
@@ -126,7 +127,7 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 	var agents []Agent
 	err := pgWithRetry(ctx, func() error {
 		agents = nil // Reset on retry
-		query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
+		query := "SELECT id, name, role, organization_id, status, provider_type, region, managed FROM agents"
 		var args []any
 		if r.orgID != "" {
 			query += " WHERE organization_id = $1"
@@ -142,7 +143,7 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 		for rows.Next() {
 			var a Agent
 			var status string
-			if err := rows.Scan(&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region); err != nil {
+			if err := rows.Scan(&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region, &a.Managed); err != nil {
 				return fmt.Errorf("pg: scan agent: %w", err)
 			}
 			a.Status = Status(status)

@@ -44,6 +44,7 @@ go_test(
     srcs = [
         "autodream_test.go",
         "handlers_b2b_extra_test.go",
+        "handlers_agent_provisioning_test.go",
         "handlers_mcp_test.go",
         "handlers_ops_extra_test.go",
         "handlers_ops_test.go",

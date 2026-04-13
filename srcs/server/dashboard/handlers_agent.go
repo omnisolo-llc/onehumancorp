@@ -69,7 +69,18 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 		ProviderType:   providerType,
 		Region:         region,
 	}
+	if providerType == string(agents.ProviderTypeBuiltin) {
+		agent.Managed = true
+	}
 	s.hub.RegisterAgent(agent)
+	if agent.Managed && s.workerController != nil {
+		if err := s.workerController.EnsureProvisioned(r.Context(), agent); err != nil {
+			s.hub.FireAgent(agent.ID)
+			s.mu.Unlock()
+			http.Error(w, "failed to provision agent worker: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	snapshot := s.snapshotLocked()
 	s.mu.Unlock()
 
@@ -104,6 +115,9 @@ func (s *Server) handleFireAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
+	if s.workerController != nil {
+		_ = s.workerController.Deprovision(r.Context(), req.AgentID)
+	}
 	s.hub.FireAgent(req.AgentID)
 	snapshot := s.snapshotLocked()
 	s.mu.Unlock()

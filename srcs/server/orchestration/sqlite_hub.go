@@ -21,13 +21,14 @@ func NewSqliteHubRepository(pool db.Provider, orgID string) *SqliteHubRepository
 
 func (r *SqliteHubRepository) RegisterAgent(ctx context.Context, agent Agent) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO agents (id, name, role, organization_id, status, provider_type, region)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO agents (id, name, role, organization_id, status, provider_type, region, managed)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET
 			name=EXCLUDED.name, role=EXCLUDED.role, organization_id=EXCLUDED.organization_id,
-			status=EXCLUDED.status, provider_type=EXCLUDED.provider_type, region=EXCLUDED.region`,
+			status=EXCLUDED.status, provider_type=EXCLUDED.provider_type, region=EXCLUDED.region,
+			managed=EXCLUDED.managed`,
 		agent.ID, agent.Name, agent.Role, agent.OrganizationID,
-		string(agent.Status), agent.ProviderType, agent.Region,
+		string(agent.Status), agent.ProviderType, agent.Region, agent.Managed,
 	)
 	if err != nil {
 		return fmt.Errorf("sqlite: register agent: %w", err)
@@ -38,14 +39,14 @@ func (r *SqliteHubRepository) RegisterAgent(ctx context.Context, agent Agent) er
 func (r *SqliteHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool, error) {
 	var a Agent
 	var status string
-	query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents WHERE id = ?"
+	query := "SELECT id, name, role, organization_id, status, provider_type, region, managed FROM agents WHERE id = ?"
 	var args []any = []any{id}
 	if r.orgID != "" {
 		query += " AND organization_id = ?"
 		args = append(args, r.orgID)
 	}
 	err := r.pool.QueryRow(ctx, query, args...).Scan(
-		&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region,
+		&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region, &a.Managed,
 	)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
@@ -58,7 +59,7 @@ func (r *SqliteHubRepository) GetAgent(ctx context.Context, id string) (Agent, b
 }
 
 func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
-	query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
+	query := "SELECT id, name, role, organization_id, status, provider_type, region, managed FROM agents"
 	var args []any
 	if r.orgID != "" {
 		query += " WHERE organization_id = ?"
@@ -76,7 +77,7 @@ func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 	for rows.Next() {
 		var a Agent
 		var status string
-		if err := rows.Scan(&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region); err != nil {
+		if err := rows.Scan(&a.ID, &a.Name, &a.Role, &a.OrganizationID, &status, &a.ProviderType, &a.Region, &a.Managed); err != nil {
 			return nil, fmt.Errorf("sqlite: scan agent: %w", err)
 		}
 		a.Status = Status(status)

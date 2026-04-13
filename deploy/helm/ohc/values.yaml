@@ -10,6 +10,7 @@ backend:
   agentWorkDir: /workspace
   service:
     port: 8080
+    grpcPort: 9090
   autoscaling:
     enabled: true
     minReplicas: 2

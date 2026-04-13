@@ -36,9 +36,16 @@ spec:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           ports:
             - containerPort: {{ .Values.backend.service.port }}
+              name: http
+            - containerPort: {{ .Values.backend.service.grpcPort }}
+              name: grpc
           env:
             - name: PORT
               value: "{{ .Values.backend.service.port }}"
+            - name: GRPC_PORT
+              value: "{{ .Values.backend.service.grpcPort }}"
+            - name: OHC_HUB_GRPC_ADDRESS
+              value: "{{ .Release.Name }}-backend:{{ .Values.backend.service.grpcPort }}"
             {{- if .Values.redis.enabled }}
             - name: REDIS_ADDR
               value: "{{ .Release.Name }}-redis-master:6379"

@@ -115,7 +115,7 @@ When the backend starts with an empty workforce, it now bootstraps an **internal
 
 For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 
-Helm defaults builtin agent jobs to `OHC_AGENT_RUNTIME=kubernetes`. Docker Compose keeps `OHC_AGENT_RUNTIME=process` by default so a single-container deployment stays functional without a nested container runtime; override it only when the server has access to the chosen runtime.
+Helm defaults builtin hires to `OHC_AGENT_RUNTIME=kubernetes`, which now provisions one long-lived worker Deployment per managed builtin agent and exposes the hub gRPC port for those workers. Docker Compose keeps `OHC_AGENT_RUNTIME=process` by default so a single-container deployment stays functional without a nested container runtime; in that mode each managed builtin hire becomes one lightweight child worker process that stays idle on a gRPC inbox stream until it receives a task.
 
 ### Bazel (full build + test)
 
@@ -170,15 +170,16 @@ bazelisk run //srcs/server:ohc
 | `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
 | `OHC_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
-| `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to the detected runtime: `kubernetes`, `docker`, `podman`, `nerdctl`, `sandbox`, or `process`) |
-| `OHC_AGENT_RUNTIME` | Optional runtime selector for builtin agent tasks: `auto`, `kubernetes`, `docker`, `podman`, `nerdctl`, `sandbox`, or `process` |
+| `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to the managed worker runtime: `kubernetes` in cluster, otherwise `process`) |
+| `OHC_AGENT_RUNTIME` | Optional runtime selector for managed builtin hires. `kubernetes` provisions durable worker Deployments; every other value falls back to durable local worker processes |
 | `OHC_AGENT_IMAGE` | Optional OCI image used when builtin agent tasks launch through Docker, Podman, nerdctl, or Kubernetes |
 | `OHC_AGENT_WORKSPACE_CLAIM` | Optional Kubernetes PVC name mounted at `OHC_AGENT_K8S_WORKDIR` for cluster-launched builtin agent tasks |
-| `OHC_AGENT_K8S_NAMESPACE` | Optional Kubernetes namespace used for builtin agent task Jobs |
-| `OHC_AGENT_K8S_SERVICE_ACCOUNT` | Optional Kubernetes service account assigned to builtin agent task Jobs |
-| `OHC_AGENT_K8S_WORKDIR` | Optional working directory mount path inside Kubernetes-launched builtin agent task Jobs |
-| `OHC_AGENT_TASK_BINARY` | Optional override path to the standalone builtin task runner executable |
+| `OHC_AGENT_K8S_NAMESPACE` | Optional Kubernetes namespace used for durable builtin worker Deployments |
+| `OHC_AGENT_K8S_SERVICE_ACCOUNT` | Optional Kubernetes service account assigned to durable builtin worker Deployments |
+| `OHC_AGENT_K8S_WORKDIR` | Optional working directory mount path inside Kubernetes-launched builtin worker Pods |
+| `OHC_AGENT_TASK_BINARY` | Optional override path to the standalone builtin worker/task runner executable |
 | `OHC_AGENT_WORKDIR` | Optional host working directory used when launching builtin tasks from the main server process |
+| `OHC_HUB_GRPC_ADDRESS` | Optional address the durable builtin workers should use to connect back to the hub gRPC service. Defaults to `127.0.0.1:$GRPC_PORT` for local process workers |
 
 Kubernetes secrets are used to inject credentials at runtime without committing them to source.
 

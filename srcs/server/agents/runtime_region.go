@@ -1,9 +1,12 @@
 package agents
 
-import agentruntime "github.com/onehumancorp/mono/srcs/server/agents/runtime"
+import "os"
 
 // DefaultRuntimeRegion returns the runtime label used when agent requests do
 // not provide an explicit region.
 func DefaultRuntimeRegion() string {
-	return agentruntime.NewLauncherFromEnv().DefaultRegion()
+	if region := os.Getenv("OHC_DEFAULT_AGENT_REGION"); region != "" {
+		return region
+	}
+	return defaultManagedRuntimeRegion()
 }
