@@ -24,6 +24,8 @@ var (
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
+	SIPSyncLatencyRecorder     metric.Float64Histogram
+	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
@@ -179,6 +181,24 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_mesh_latency",
 		metric.WithDescription("Latency of Teammate Mesh RPC operations"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SIPSyncLatencyRecorder, err = m.Float64Histogram(
+		"ohc_sync_latency_seconds",
+		metric.WithDescription("Latency of offline-to-cloud synchronization"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SIPSyncPayloadSizeRecorder, err = m.Int64Histogram(
+		"ohc_sync_payload_bytes",
+		metric.WithDescription("Size of JSON payloads synced to the remote endpoint"),
+		metric.WithUnit("By"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1106,6 +1126,22 @@ func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode stri
 			attribute.String("deployment_mode", mode),
 		))
 	}
+}
+
+// RecordSIPSyncLatency records the latency of synchronization.
+func RecordSIPSyncLatency(ctx context.Context, latency time.Duration) {
+	if SIPSyncLatencyRecorder == nil {
+		return
+	}
+	SIPSyncLatencyRecorder.Record(ctx, latency.Seconds())
+}
+
+// RecordSIPSyncPayloadSize records the payload size in bytes.
+func RecordSIPSyncPayloadSize(ctx context.Context, bytes int) {
+	if SIPSyncPayloadSizeRecorder == nil {
+		return
+	}
+	SIPSyncPayloadSizeRecorder.Record(ctx, int64(bytes))
 }
 
 // RecordMeshBroadcast increments the mesh broadcast counter.
