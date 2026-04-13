@@ -15,33 +15,6 @@ The Shared Task List relies on database-backed state machines to prevent race co
 - **shared_tasks**: Stores `id`, `organization_id`, `title`, `status`, `agent_id`.
 - **task_dependencies**: Stores `task_id` and `depends_on_task_id`.
 
-### Database Schema
-```sql
-CREATE TABLE IF NOT EXISTS shared_tasks (
-    id TEXT PRIMARY KEY,
-    organization_id TEXT NOT NULL,
-    parent_plan_id TEXT,
-    title TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'PENDING',
-    assigned_agent_id TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Sequence Diagram
-```mermaid
-sequenceDiagram
-    participant WorkerAgent
-    participant PostgresDB
-    participant CentrifugeMesh
-
-    WorkerAgent->>PostgresDB: SELECT * FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED
-    PostgresDB-->>WorkerAgent: Returns Task Data
-    WorkerAgent->>PostgresDB: UPDATE shared_tasks SET status = 'IN_PROGRESS'
-    WorkerAgent->>CentrifugeMesh: Broadcast MeshEvent {topic: 'task.assigned'}
-```
-
 ## 3. Realtime Teammate Mesh APIs
 The Teammate Mesh ensures agents coordinate without delays.
 
@@ -51,27 +24,11 @@ The Teammate Mesh ensures agents coordinate without delays.
 **API Contracts:**
 Agents use `POST /api/mesh/broadcast` to announce task claims and updates. All updates sent to the Centrifuge channel must enforce the OHC-SIP JSON structure, guaranteeing that `agent_id`, `action`, and `status` reside at the root level.
 
-### Protocol (Proto RPCs)
-```protobuf
-message MeshEvent {
-    string event_id = 1;
-    string topic = 2;
-    bytes payload = 3;
-    int64 timestamp = 4;
-}
-rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
-```
-
 ## 4. AutoDream Vector Pipeline (Memory Consolidation)
 The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
 
 *   **Worker:** A Go daemon polls `.agent-task/memory/*.yml`.
 *   **Vector DB:** The content is passed through an LLM to generate an embedding (e.g., Ada 1536), which is upserted into PostgreSQL (via `pgvector`) in the `agent_memories` table.
-
-### Data Pipeline Flow
-1.  `AutoDreamWorker` queries `shared_tasks` where `status = 'COMPLETED'`.
-2.  Invokes `MinimaxClient` LLM to generate `[]float32` embeddings.
-3.  Upserts memory vector into Postgres (`VECTOR(1536)`).
 
 ## 5. Visual Excellence Mandate
 All associated UI components must represent the OHC "Premium Feel".
