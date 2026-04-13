@@ -24,8 +24,8 @@ func NewKairosStreamHandler(tm orchestration.TeammateMesh) *KairosStreamHandler 
 }
 
 type wsMessage struct {
-	Type    string `json:"type"`
-	Payload string `json:"payload"`
+	Type    string \`json:"type"\`
+	Payload string \`json:"payload"\`
 }
 
 func (h *KairosStreamHandler) ServeWS(w http.ResponseWriter, r *http.Request) {

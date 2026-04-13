@@ -46,7 +46,7 @@ func TestKairosStreamHandler_ServeWS(t *testing.T) {
 		t.Fatalf("could not read message: %v", err)
 	}
 
-	expected := `{"payload":"task1","type":"mesh:tasks"}`
+	expected := \`{"type":"mesh:tasks","payload":"task1"}\`
 	if string(msg) != expected {
 		t.Fatalf("expected %v, got %v", expected, string(msg))
 	}

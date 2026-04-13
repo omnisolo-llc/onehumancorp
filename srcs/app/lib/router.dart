@@ -4,8 +4,6 @@ import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:app/screens/kairos_dashboard.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:app/screens/kairos_dashboard.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
@@ -48,79 +46,31 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/agents',
             builder: (context, state) => const AgentsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/meetings',
             builder: (context, state) => const MeetingsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/chat',
             builder: (context, state) => const ChatScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
           GoRoute(
             path: '/kairos',
             builder: (context, state) => KairosDashboardScreen(
@@ -131,172 +81,70 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ChannelsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/ai-config',
             builder: (context, state) => const AiConfigScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/skills',
             builder: (context, state) => const SkillsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/logs',
             builder: (context, state) => const LogsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/security',
             builder: (context, state) => const SecurityScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/service',
             builder: (context, state) => const ServiceScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/wizard',
             builder: (context, state) => const SetupWizardScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/handoffs',
             builder: (context, state) => const HandoffsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/cost',
             builder: (context, state) => const CostDashboardScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/scaling',
             builder: (context, state) => const ScalingScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/pipelines',
             builder: (context, state) => const PipelinesScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/integrations',
             builder: (context, state) => const IntegrationsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/users',
             builder: (context, state) => const UserManagementScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/agents/hire',
             builder: (context, state) => const AgentHireWizardScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/swarm-memory',
             builder: (context, state) => const SwarmMemoryScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
           GoRoute(
-        GoRoute(
-          path: '/kairos',
-          builder: (context, state) => KairosDashboardScreen(
-            channel: WebSocketChannel.connect(Uri.parse('ws://localhost:3000/api/kairos/stream')),
-          ),
-        ),
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
