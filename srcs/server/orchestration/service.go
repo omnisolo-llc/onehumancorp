@@ -1048,7 +1048,7 @@ func (h *Hub) Publish(message Message) error {
 			if m.MeetingID != "" {
 				cn.PublishMeetingMessage(m.MeetingID, m)
 			}
-			if m.ToAgent != "" && m.Type != "mesh:tasks" && m.Type != "mesh:coordination" && m.Type != "mesh:direct" {
+			if m.ToAgent != "" && m.Type != "mesh:tasks" && m.Type != "mesh:coordination" && m.Type != "mesh:direct" && m.Type != "mesh:presence" {
 				cn.PublishAgentNotification(m.ToAgent, m)
 			}
 			if m.Type == "mesh:tasks" {
@@ -1058,6 +1058,13 @@ func (h *Hub) Publish(message Message) error {
 				}
 			} else if m.Type == "mesh:coordination" {
 				cn.PublishCoordinationMessage(m)
+			} else if m.Type == "mesh:presence" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(m.Content), &payload); err == nil {
+					agentID, _ := payload["agent_id"].(string)
+					status, _ := payload["status"].(string)
+					cn.PublishPresenceBroadcast(agentID, status)
+				}
 			} else if m.Type == "mesh:direct" && m.ToAgent != "" {
 				cn.PublishAgentNotification(m.ToAgent, m)
 			}
@@ -1131,7 +1138,7 @@ func (h *Hub) publishRepository(message Message) error {
 			if message.MeetingID != "" {
 				cn.PublishMeetingMessage(message.MeetingID, message)
 			}
-			if message.ToAgent != "" && message.Type != "mesh:tasks" && message.Type != "mesh:coordination" && message.Type != "mesh:direct" {
+			if message.ToAgent != "" && message.Type != "mesh:tasks" && message.Type != "mesh:coordination" && message.Type != "mesh:direct" && message.Type != "mesh:presence" {
 				cn.PublishAgentNotification(message.ToAgent, message)
 			}
 			if message.Type == "mesh:tasks" {
@@ -1141,6 +1148,13 @@ func (h *Hub) publishRepository(message Message) error {
 				}
 			} else if message.Type == "mesh:coordination" {
 				cn.PublishCoordinationMessage(message)
+			} else if message.Type == "mesh:presence" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(message.Content), &payload); err == nil {
+					agentID, _ := payload["agent_id"].(string)
+					status, _ := payload["status"].(string)
+					cn.PublishPresenceBroadcast(agentID, status)
+				}
 			} else if message.Type == "mesh:direct" && message.ToAgent != "" {
 				cn.PublishAgentNotification(message.ToAgent, message)
 			}
