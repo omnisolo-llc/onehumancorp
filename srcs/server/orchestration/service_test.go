@@ -1501,7 +1501,7 @@ func TestHandleSyncMissions(t *testing.T) {
 
 	provider := db.NewSqliteProvider(sqlDB)
 	hub, _ := NewCentrifugeNode()
-	tm := NewTaskManager(provider, hub)
+	tm := NewTaskManager(provider, hub, nil)
 
 	payloads := []SyncDaemonPayload{
 		{ID: "m1", Status: "SYNCED", Payload: `{"data": "test"}`},

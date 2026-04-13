@@ -1,5 +1,5 @@
 ---
-status: IN_PROGRESS
+status: PENDING
 agent: Jules
 priority: P1
 ---
