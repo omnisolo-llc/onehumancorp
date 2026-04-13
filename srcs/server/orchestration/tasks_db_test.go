@@ -1,202 +1,213 @@
 package orchestration
 
 import (
-	"context"
-	"testing"
+    "context"
+    "testing"
 
-	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
+    "github.com/onehumancorp/mono/srcs/server/auth"
+    "github.com/onehumancorp/mono/srcs/server/db"
+    "github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestClaimTask_SQLite(t *testing.T) {
-	telemetry.InitTelemetry()
-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
-	if err != nil {
-		t.Fatalf("failed to create sqlite provider: %v", err)
-	}
+    telemetry.InitTelemetry()
+    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    if err != nil {
+        t.Fatalf("failed to create sqlite provider: %v", err)
+    }
 
-	ctx := context.Background()
+    ctx := context.Background()
 
-	// Create tables
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks_dag (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_plan_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            assigned_agent_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create shared_tasks_dag: %v", err)
+    }
 
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS task_dependencies_dag (
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL,
+            PRIMARY KEY (task_id, depends_on_task_id)
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create task_dependencies_dag: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
-			parent_plan_id TEXT,
-			title TEXT NOT NULL,
-			description TEXT,
-			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
-			dependencies JSONB,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create swarm_tasks: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create state_machine_transitions: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS state_machine_transitions (
-			id TEXT PRIMARY KEY,
-			entity_id TEXT NOT NULL,
-			entity_type TEXT NOT NULL,
-			from_state TEXT NOT NULL,
-			to_state TEXT NOT NULL,
-			agent_id TEXT,
-			reason TEXT,
-			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create state_machine_transitions: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
+    if err != nil {
+        t.Fatalf("failed to insert: %v", err)
+    }
 
-	// Insert test tasks. task-2 depends on task-1 (which is COMPLETED)
-	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies)
-		VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')
-	`)
-	if err != nil {
-		t.Fatalf("failed to insert test task 1: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING')")
+    if err != nil {
+        t.Fatalf("failed to insert: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies)
-		VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')
-	`)
-	if err != nil {
-		t.Fatalf("failed to insert test task 2: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO task_dependencies_dag (task_id, depends_on_task_id) VALUES ('task-2', 'task-1')")
+    if err != nil {
+        t.Fatalf("failed to insert dep: %v", err)
+    }
 
-	// task-3 depends on task-2 (which is PENDING)
-	_, err = dbProvider.Exec(ctx, `
-		INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies)
-		VALUES ('task-3', 'org-1', 'p-1', 'Test Task 3', 'PENDING', '["task-2"]')
-	`)
-	if err != nil {
-		t.Fatalf("failed to insert test task 3: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING')")
+    if err != nil {
+        t.Fatalf("failed to insert: %v", err)
+    }
 
-	claims := &auth.Claims{
-		OrganizationID: "org-1",
-	}
-	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+    _, err = dbProvider.Exec(ctx, "INSERT INTO task_dependencies_dag (task_id, depends_on_task_id) VALUES ('task-3', 'task-2')")
+    if err != nil {
+        t.Fatalf("failed to insert dep: %v", err)
+    }
 
-	to := NewSharedTaskOrchestrator(dbProvider)
+    claims := &auth.Claims{OrganizationID: "org-1"}
+    ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
-	// Claim task-2 (since task-1 is COMPLETED)
-	task, err := to.ClaimTask(ctxWithClaims, "agent-1")
-	if err != nil {
-		t.Fatalf("ClaimTask failed: %v", err)
-	}
+    to := NewSharedTaskOrchestrator(dbProvider)
 
-	if task == nil {
-		t.Fatalf("expected to claim task-2, got nil")
-	}
+    task, err := to.ClaimTask(ctxWithClaims, "agent-1")
+    if err != nil {
+        t.Fatalf("ClaimTask failed: %v", err)
+    }
 
-	if task.ID != "task-2" {
-		t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
-	}
+    if task == nil {
+        t.Fatalf("expected to claim task-2, got nil")
+    }
 
-	if task.Status != "ASSIGNED" {
-		t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
-	}
+    if task.ID != "task-2" {
+        t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
+    }
 
-	// Try to claim task-3, should return nil because task-2 is not COMPLETED
-	task3, err := to.ClaimTask(ctxWithClaims, "agent-2")
-	if err != nil {
-		t.Fatalf("ClaimTask failed: %v", err)
-	}
+    if task.Status != "IN_PROGRESS" {
+        t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
+    }
 
-	if task3 != nil {
-		t.Fatalf("expected nil task for task-3, got %v", task3)
-	}
+    task3, err := to.ClaimTask(ctxWithClaims, "agent-2")
+    if err != nil {
+        t.Fatalf("ClaimTask failed: %v", err)
+    }
 
-	// Transition task-2
-	err = to.TransitionTask(ctxWithClaims, "task-2", "agent-1", "ASSIGNED", "EXECUTING", "Starting work")
-	if err != nil {
-		t.Fatalf("TransitionTask failed: %v", err)
-	}
+    if task3 != nil {
+        t.Fatalf("expected nil task for task-3, got %v", task3)
+    }
+
+    err = to.TransitionTask(ctxWithClaims, "task-2", "agent-1", "IN_PROGRESS", "COMPLETED", "Starting work")
+    if err != nil {
+        t.Fatalf("TransitionTask failed: %v", err)
+    }
 }
 
 func TestClaimTask_Postgres(t *testing.T) {
-	telemetry.InitTelemetry()
-	// We simulate the Postgres method by passing a SQLite provider and utilizing the db layer's `convertBindVars`
-	// which implicitly handles FOR UPDATE SKIP LOCKED compatibility when run against SQLite.
-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
-	if err != nil {
-		t.Fatalf("failed to create sqlite provider: %v", err)
-	}
+    telemetry.InitTelemetry()
+    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    if err != nil {
+        t.Fatalf("failed to create sqlite provider: %v", err)
+    }
 
-	ctx := context.Background()
+    ctx := context.Background()
 
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks_dag (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_plan_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            assigned_agent_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create shared_tasks_dag: %v", err)
+    }
 
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS task_dependencies_dag (
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL,
+            PRIMARY KEY (task_id, depends_on_task_id)
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create task_dependencies_dag: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
-			parent_plan_id TEXT,
-			title TEXT NOT NULL,
-			description TEXT,
-			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
-			dependencies JSONB,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create swarm_tasks: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create state_machine_transitions: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS state_machine_transitions (
-			id TEXT PRIMARY KEY,
-			entity_id TEXT NOT NULL,
-			entity_type TEXT NOT NULL,
-			from_state TEXT NOT NULL,
-			to_state TEXT NOT NULL,
-			agent_id TEXT,
-			reason TEXT,
-			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create state_machine_transitions: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
+    if err != nil {
+        t.Fatalf("failed to insert: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'p-1', 'Test Task 1', 'COMPLETED', '[]')")
-	if err != nil {
-		t.Fatalf("failed to insert: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING')")
+    if err != nil {
+        t.Fatalf("failed to insert: %v", err)
+    }
 
-	_, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, parent_plan_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'p-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
-	if err != nil {
-		t.Fatalf("failed to insert: %v", err)
-	}
+    _, err = dbProvider.Exec(ctx, "INSERT INTO task_dependencies_dag (task_id, depends_on_task_id) VALUES ('task-2', 'task-1')")
+    if err != nil {
+        t.Fatalf("failed to insert dep: %v", err)
+    }
 
-	to := NewSharedTaskOrchestrator(dbProvider)
+    to := NewSharedTaskOrchestrator(dbProvider)
 
-	// Direct call to Postgres branch logic, SQLite provider ignores FOR UPDATE SKIP LOCKED
-	task, err := to.claimTaskPostgres(ctx, "org-1", "agent-pg")
-	if err != nil {
-		t.Fatalf("claimTaskPostgres failed: %v", err)
-	}
+    task, err := to.claimTaskPostgres(ctx, "org-1", "agent-pg")
+    if err != nil {
+        t.Fatalf("claimTaskPostgres failed: %v", err)
+    }
 
-	if task == nil {
-		t.Fatalf("expected to claim task-2, got nil")
-	}
+    if task == nil {
+        t.Fatalf("expected to claim task-2, got nil")
+    }
 
-	if task.ID != "task-2" {
-		t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
-	}
+    if task.ID != "task-2" {
+        t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
+    }
 
-	if task.Status != "ASSIGNED" {
-		t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
-	}
+    if task.Status != "IN_PROGRESS" {
+        t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
+    }
 }
