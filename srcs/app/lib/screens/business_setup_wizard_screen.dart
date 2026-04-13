@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
@@ -57,8 +58,6 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void nextStep() {
     if (state.step < 4) {
       state = state.copyWith(step: state.step + 1);
-    } else {
-      _launch();
     }
   }
 
@@ -70,9 +69,9 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
 
-  void _launch() {
-    // Perform launch logic
-    // Mocking launch logic here since the actual API might not exist yet based on exploration.
+  void launch(BuildContext context) {
+    // Navigate to dashboard
+    GoRouter.of(context).go('/dashboard');
   }
 }
 
@@ -121,7 +120,13 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                   ],
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: notifier.nextStep,
+                    onPressed: () {
+                      if (state.step < 4) {
+                        notifier.nextStep();
+                      } else {
+                        notifier.launch(context);
+                      }
+                    },
                     child: Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
                   ),
                 ],
