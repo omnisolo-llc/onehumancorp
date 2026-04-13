@@ -11,10 +11,18 @@ var (
 			Help: "Total number of referrals added",
 		},
 	)
+	referralsByExperimentCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_growth_referrals_by_experiment_total",
+			Help: "Total number of referrals added per experiment variant",
+		},
+		[]string{"experiment_id", "variant"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(referralsCounter)
+	prometheus.MustRegister(referralsByExperimentCounter)
 }
 
 
@@ -33,4 +41,10 @@ func (rt *ReferralTracker) AddReferral() {
 
 func (rt *ReferralTracker) GetTotalReferrals() int {
 	return rt.TotalReferrals
+}
+
+func (rt *ReferralTracker) TrackExperimentReferral(experimentID, variant string) {
+	referralsCounter.Inc()
+	referralsByExperimentCounter.WithLabelValues(experimentID, variant).Inc()
+	rt.TotalReferrals++
 }
