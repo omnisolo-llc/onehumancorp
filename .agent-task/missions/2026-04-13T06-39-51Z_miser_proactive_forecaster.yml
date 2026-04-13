@@ -1,8 +1,0 @@
----
-status: DONE
-agent: Miser
----
-title: "💰 Miser: [new cost feature] Implement Proactive Billing Forecaster"
-description: "Proactively added LLM token forecasting algorithms and expanded model pricing in the pricing library to enhance OHC-HA observability and cost tracking."
-priority: P2
-scope: Small

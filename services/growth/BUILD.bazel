@@ -8,9 +8,6 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_prometheus_client_golang//prometheus",
-    ],
 )
 
 go_test(

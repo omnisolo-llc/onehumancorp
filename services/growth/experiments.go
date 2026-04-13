@@ -4,24 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"sync"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
-
-
-var (
-	experimentsCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "ohc_growth_experiments_total",
-			Help: "Total number of experiments evaluated",
-		},
-		[]string{"experiment_id", "variant"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(experimentsCounter)
-}
 
 type Experiment struct {
 	ID           string
@@ -56,7 +39,6 @@ func (em *ExperimentManager) GetVariant(id, userID string) string {
 	em.mu.RUnlock()
 
 	if !ok {
-		experimentsCounter.WithLabelValues(id, "control").Inc()
 		return "control"
 	}
 
@@ -64,9 +46,7 @@ func (em *ExperimentManager) GetVariant(id, userID string) string {
 	val := float64(binary.BigEndian.Uint64(hash[:8])) / float64(1<<64-1)
 
 	if val < exp.TrafficSplit {
-		experimentsCounter.WithLabelValues(id, "treatment").Inc()
 		return "treatment"
 	}
-	experimentsCounter.WithLabelValues(id, "control").Inc()
 	return "control"
 }
