@@ -600,13 +600,18 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
+
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
 		s.groundingOnce.Do(func() {
 			var combinedGrounding strings.Builder
 
-			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
+			for _, filename := range []string{"AGENTS.md", "CLAUDE.md", "CLAUDE_OHC.md"} {
 				path := filepath.Join(s.ContextRoot, filename)
 
 				// Stat the file first to distinguish between missing vs permissions/errors
@@ -648,13 +653,30 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		Task: task,
 	}
 	taskBytes, _ := json.Marshal(wrapper)
-	return withSipRetry(ctx, func() error {
-		_, err := s.db.Exec(ctx,
+
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		_, err = s.db.Exec(ctx,
 			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)",
 			missionID, string(taskBytes), s.orgID,
 		)
+		if err == nil {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
+			time.Sleep(retryInterval)
+			continue
+		}
 		return err
-	})
+	}
+	return err
 }
 
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
@@ -921,7 +943,8 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	}
 	payloadBuilder.WriteString("]")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadBuilder.String()))
+	payloadStr := payloadBuilder.String()
+	req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadStr))
 	if err != nil {
 		return 0, fmt.Errorf("failed to create sync request: %w", err)
 	}
@@ -929,6 +952,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	start := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("failed to sync metrics: %w", err)
@@ -938,6 +962,9 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
 	}
+
+	telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds())
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(payloadStr)))
 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
@@ -1019,7 +1046,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 
 		sanitizedPayload, _ := json.Marshal(payloadData)
 
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
+		payloadStr := string(sanitizedPayload)
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(payloadStr))
 		if err != nil {
 			continue
 		}
@@ -1027,12 +1055,16 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		// robust conflict resolution prioritising local client
 		req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
+		start := time.Now()
 		resp, err := client.Do(req)
 		if err == nil {
 			// treat 409 Conflict as success for local parity
 			if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
 				idsToDelete = append(idsToDelete, rec.id)
 				syncedCount++
+
+				telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds())
+				telemetry.RecordSyncPayloadSize(ctx, int64(len(payloadStr)))
 			}
 			resp.Body.Close()
 		}

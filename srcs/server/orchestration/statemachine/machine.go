@@ -30,9 +30,10 @@ var ValidTransitions = map[string][]string{
 	StatePending:           {StateInProgress, StateAssigned},
 	StateAssigned:          {StateExecuting, StateWaitingDelegation, StateTerminatedError},
 	StateInProgress:        {StateReview, StateCompleted, StateFailed, StateTerminatedError, StateWaitingDelegation},
-	StateExecuting:         {StateReview, StateSuccess, StateTerminatedError},
+	StateExecuting:         {StateReview, StateSuccess, StateTerminatedError, StateCompleted, StateFailed, "DELIBERATING"},
 	StateWaitingDelegation: {StateExecuting, StateTerminatedError},
 	StateReview:            {StateCompleted, StateSuccess, StateTerminatedError, StateExecuting, StateInProgress},
+	"DELIBERATING": {StateExecuting, StateFailed, StateCompleted},
 }
 
 // StateMachine manages state transitions for entities
@@ -113,6 +114,20 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 			}
 			return nil, fmt.Errorf("failed to read current state: %w", err)
 		}
+	} else if entityType == "ULTRAPLAN" {
+		if sm.dbProvider.IsSQLite() {
+			query = `SELECT status FROM swarm_ultra_plans WHERE id = $1`
+		} else {
+			query = `SELECT status FROM swarm_ultra_plans WHERE id = $1 FOR UPDATE`
+		}
+
+		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, fmt.Errorf("entity not found: %s", entityID)
+			}
+			return nil, fmt.Errorf("failed to read current state: %w", err)
+		}
 	} else {
 		return nil, fmt.Errorf("unsupported entity type: %s", entityType)
 	}
@@ -130,6 +145,12 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 	if entityType == "SHARED_TASK" {
 		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
 		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update entity state: %w", err)
+		}
+	} else if entityType == "ULTRAPLAN" {
+		updateQuery := `UPDATE swarm_ultra_plans SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+		_, err := tx.Exec(ctx, updateQuery, toState, entityID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update entity state: %w", err)
 		}
