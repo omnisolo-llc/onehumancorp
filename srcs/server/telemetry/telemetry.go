@@ -217,16 +217,16 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncLatency, err = m.Float64Histogram(
-		"ohc.sync.latency_ms",
-		metric.WithDescription("Latency of mission synchronization in milliseconds"),
-		metric.WithUnit("ms"),
+		"ohc_sync_latency_seconds",
+		metric.WithDescription("Latency of synchronization in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
 	SyncPayloadSize, err = m.Int64Histogram(
-		"ohc.sync.payload_size_bytes",
+		"ohc_sync_payload_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
 	)
