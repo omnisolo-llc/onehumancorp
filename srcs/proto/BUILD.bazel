@@ -2,7 +2,6 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library")
 load("//bazel/rules:proto_ts_library.bzl", "proto_ts_library")
 load("//bazel/rules:proto_dart_library.bzl", "proto_dart_library")
-load("//bazel/rules:proto_cc_grpc_library.bzl", "proto_cc_grpc_library")
 
 proto_library(
     name = "hub_proto",
@@ -27,25 +26,5 @@ proto_dart_library(
     name = "hub_dart_proto",
     protos = ":hub_proto",
     use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-# ── C++ agent service proto ───────────────────────────────────────────────────
-proto_library(
-    name = "agent_service_proto",
-    srcs = ["agent_service.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "agent_service_go_proto",
-    protos = ":agent_service_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/agentservice",
-    visibility = ["//visibility:public"],
-)
-
-proto_cc_grpc_library(
-    name = "agent_service_cc_grpc",
-    protos = ":agent_service_proto",
     visibility = ["//visibility:public"],
 )
