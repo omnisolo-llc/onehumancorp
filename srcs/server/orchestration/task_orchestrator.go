@@ -11,6 +11,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/redis/rueidis"
 	"crypto/rand"
 	"encoding/hex"
@@ -34,12 +35,23 @@ type DefaultTaskOrchestrator struct {
 	workerCtx    context.Context
 	workerCancel context.CancelFunc
 	workerWg     sync.WaitGroup
+	taskQueue    queue.TaskQueue
+	subWorker    *SubAgentWorker
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh MeshTransport) TaskOrchestrator {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	spawner := NewDefaultSubAgentSpawner(provider, nil, hub, 10)
+
+	var tq queue.TaskQueue
+	if redisClient == nil {
+		tq = queue.NewSQLiteTaskQueue(provider)
+	} else {
+		tq = queue.NewPostgresTaskQueue(provider)
+	}
+
+	subWorker := NewSubAgentWorker(tq, spawner)
 
 	to := &DefaultTaskOrchestrator{
 		db:           provider,
@@ -49,8 +61,11 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 		spawner:      spawner,
 		workerCtx:    ctx,
 		workerCancel: cancel,
+		taskQueue:    tq,
+		subWorker:    subWorker,
 	}
 	to.StartBackgroundWorker()
+	subWorker.Start(ctx)
 	return to
 }
 
@@ -143,17 +158,28 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		return
 	}
 
-	// Spawn sub-agent
-	task := &SharedTask{
-		ID:             taskID,
-		OrganizationID: orgID,
-		Priority:       "DELEGATED",
+	// Spawn sub-agent by enqueuing to sub_agent_queue
+	jobPayload := map[string]interface{}{
+		"task_id": taskID,
+		"organization_id": orgID,
+	}
+	payloadBytes, _ := json.Marshal(jobPayload)
+
+	job := &queue.Job{
+		ID:           generateID(),
+		ParentTaskID: taskID,
+		AgentRole:    "sub-agent-spawner",
+		Payload:      string(payloadBytes),
+		MaxAttempts:  3,
 	}
 
-	_ = to.spawner.Spawn(to.workerCtx, task)
+	_ = to.taskQueue.Enqueue(to.workerCtx, job)
 }
 
 func (to *DefaultTaskOrchestrator) Stop() {
+	if to.subWorker != nil {
+		to.subWorker.Stop()
+	}
 	if to.workerCancel != nil {
 		to.workerCancel()
 	}
@@ -537,7 +563,7 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 
 	tx.Commit(ctx)
 
-	sm := NewTaskStateMachine(to.db)
+	sm := NewTaskStateMachine(to.db, to.redisClient)
 	err = sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
 	if err != nil {
 		return "", err
