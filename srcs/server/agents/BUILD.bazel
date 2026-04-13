@@ -15,6 +15,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/proto:hub_go_proto",
         "//srcs/server/agents/builtin",
         "//srcs/server/agents/builtinclient",
         "//srcs/server/agents/local",
@@ -22,6 +23,7 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
+        "@org_golang_google_protobuf//proto",
     ],
 )
 
@@ -35,9 +37,11 @@ go_test(
         "coverage_test.go",
         "provider_test.go",
         "resilient_provider_test.go",
+        "worker_controller_test.go",
     ],
     embed = [":agents"],
     deps = [
+        "//srcs/server/agents/builtin",
         "//srcs/server/agents/runtime",
         "//srcs/server/db",
         "//srcs/server/integrations",

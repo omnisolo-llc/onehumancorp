@@ -9,6 +9,7 @@ go_library(
     srcs = [
         "agent.go",
         "bash.go",
+        "control_messages.go",
         "edit.go",
         "glob.go",
         "grpc_hub_adapter.go",
@@ -45,8 +46,17 @@ go_library(
 
 go_test(
     name = "builtin_test",
-    srcs = ["agent_test.go"],
+    srcs = [
+        "agent_test.go",
+        "runner_test.go",
+    ],
     embed = [":builtin"],
+    deps = [
+        "//srcs/proto:agent_service_go_proto",
+        "//srcs/proto:hub_go_proto",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
 
 # ── Common copts for all C++ targets ─────────────────────────────────────────

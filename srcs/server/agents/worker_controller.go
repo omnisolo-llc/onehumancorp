@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -21,9 +20,11 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"github.com/onehumancorp/mono/srcs/server/agents/builtinclient"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -36,6 +37,7 @@ const (
 	defaultK8sHTTPSPort     = "443"
 	defaultK8sCAPath        = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	defaultK8sTokenPath     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultWorkerReadyWait  = 30 * time.Second
 )
 
 type WorkerController interface {
@@ -61,6 +63,7 @@ type workerControllerOptions struct {
 	k8sWorkDir     string
 	hubAddress     string
 	builtinAddress string
+	readyTimeout   time.Duration
 	lookPath       func(string) (string, error)
 	environ        []string
 	inCluster      bool
@@ -99,17 +102,6 @@ type kubernetesWorkerHandle struct {
 	alive bool
 }
 
-type workerProcessConfig struct {
-	AgentID        string `json:"agentId"`
-	AgentName      string `json:"agentName,omitempty"`
-	Role           string `json:"role,omitempty"`
-	OrganizationID string `json:"organizationId,omitempty"`
-	ProviderType   string `json:"providerType,omitempty"`
-	Region         string `json:"region,omitempty"`
-	HubAddress     string `json:"hubAddress"`
-	BuiltinAddress string `json:"builtinAddress,omitempty"`
-}
-
 func NewWorkerControllerFromEnv(hub *orchestration.Hub) WorkerController {
 	return &workerController{
 		hub:     hub,
@@ -124,6 +116,7 @@ func NewWorkerControllerFromEnv(hub *orchestration.Hub) WorkerController {
 			k8sWorkDir:     envOrDefault("OHC_AGENT_K8S_WORKDIR", defaultK8sWorkDir),
 			hubAddress:     resolveHubGRPCAddress(),
 			builtinAddress: builtinclient.AddressFromEnv(),
+			readyTimeout:   durationEnvOrDefault("OHC_AGENT_READY_TIMEOUT", defaultWorkerReadyWait),
 			lookPath:       exec.LookPath,
 			environ:        os.Environ(),
 			inCluster:      os.Getenv("KUBERNETES_SERVICE_HOST") != "",
@@ -173,6 +166,13 @@ func (c *workerController) EnsureProvisioned(ctx context.Context, agent orchestr
 	c.mu.Lock()
 	c.handles[agent.ID] = newHandle
 	c.mu.Unlock()
+
+	if err := c.waitUntilReady(ctx, agent.ID); err != nil {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = c.Deprovision(stopCtx, agent.ID)
+		return err
+	}
 	return nil
 }
 
@@ -225,16 +225,7 @@ func (c *workerController) provisionInline(agent orchestration.Agent) managedWor
 }
 
 func (c *workerController) provisionProcess(agent orchestration.Agent) (managedWorker, error) {
-	payload, err := encodeWorkerConfig(workerProcessConfig{
-		AgentID:        agent.ID,
-		AgentName:      agent.Name,
-		Role:           agent.Role,
-		OrganizationID: agent.OrganizationID,
-		ProviderType:   agent.ProviderType,
-		Region:         agent.Region,
-		HubAddress:     c.opts.hubAddress,
-		BuiltinAddress: c.opts.builtinAddress,
-	})
+	payload, err := builtin.EncodeWorkerConfig(workerConfig(agent, c.opts.hubAddress, c.opts.builtinAddress))
 	if err != nil {
 		return nil, err
 	}
@@ -261,16 +252,7 @@ func (c *workerController) provisionProcess(agent orchestration.Agent) (managedW
 }
 
 func (c *workerController) provisionKubernetes(ctx context.Context, agent orchestration.Agent) (managedWorker, error) {
-	payload, err := encodeWorkerConfig(workerProcessConfig{
-		AgentID:        agent.ID,
-		AgentName:      agent.Name,
-		Role:           agent.Role,
-		OrganizationID: agent.OrganizationID,
-		ProviderType:   agent.ProviderType,
-		Region:         agent.Region,
-		HubAddress:     c.opts.hubAddress,
-		BuiltinAddress: "127.0.0.1:50051",
-	})
+	payload, err := builtin.EncodeWorkerConfig(workerConfig(agent, c.opts.hubAddress, "127.0.0.1:50051"))
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +280,18 @@ func (c *workerController) provisionKubernetes(ctx context.Context, agent orches
 		return nil, err
 	}
 	return &kubernetesWorkerHandle{name: name, opts: c.opts, alive: true}, nil
+}
+
+func (c *workerController) waitUntilReady(ctx context.Context, agentID string) error {
+	if c.hub == nil {
+		return nil
+	}
+	readyCtx, cancel := context.WithTimeout(ctx, c.opts.readyTimeout)
+	defer cancel()
+	if _, err := c.hub.WaitForWorkerPhase(readyCtx, agentID, "READY"); err != nil {
+		return fmt.Errorf("wait for worker %s readiness: %w", agentID, err)
+	}
+	return nil
 }
 
 func (c *workerController) workerDeploymentManifest(agent orchestration.Agent, payload string) ([]byte, string, error) {
@@ -528,12 +522,17 @@ func (h *kubernetesWorkerHandle) Stop(ctx context.Context) error {
 	return controller.deleteDeployment(ctx, h.name)
 }
 
-func encodeWorkerConfig(cfg workerProcessConfig) (string, error) {
-	raw, err := json.Marshal(cfg)
-	if err != nil {
-		return "", fmt.Errorf("marshal worker config: %w", err)
-	}
-	return base64.StdEncoding.EncodeToString(raw), nil
+func workerConfig(agent orchestration.Agent, hubAddress, builtinAddress string) *pb.WorkerConfig {
+	return pb.WorkerConfig_builder{
+		AgentId:        proto.String(agent.ID),
+		AgentName:      proto.String(agent.Name),
+		Role:           proto.String(agent.Role),
+		OrganizationId: proto.String(agent.OrganizationID),
+		ProviderType:   proto.String(agent.ProviderType),
+		Region:         proto.String(agent.Region),
+		HubAddress:     proto.String(hubAddress),
+		BuiltinAddress: proto.String(builtinAddress),
+	}.Build()
 }
 
 func resolveHubGRPCAddress() string {
@@ -593,6 +592,21 @@ func envOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func durationEnvOrDefault(key string, fallback time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	if parsed <= 0 {
+		return fallback
+	}
+	return parsed
 }
 
 func isBuiltinProvider(providerType string) bool {

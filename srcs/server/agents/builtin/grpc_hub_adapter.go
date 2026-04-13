@@ -61,7 +61,15 @@ func (a *GRPCHubAdapter) RegisterAgent(agent HubAgent) {
 			OrganizationId: proto.String(agent.OrganizationID),
 			Status:         proto.String(string(agent.Status)),
 			ProviderType:   proto.String(agent.ProviderType),
+			Region:         proto.String(agent.Region),
+			Managed:        proto.Bool(agent.Managed),
 		}.Build(),
+	}.Build())
+}
+
+func (a *GRPCHubAdapter) ReportWorkerState(state *pb.WorkerState) {
+	_, _ = a.client.ReportWorkerState(context.Background(), pb.ReportWorkerStateRequest_builder{
+		State: state,
 	}.Build())
 }
 

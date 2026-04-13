@@ -1003,6 +1003,63 @@ func (h *Hub) WorkerState(agentID string) (WorkerState, bool) {
 	return state, ok
 }
 
+func (h *Hub) WaitForWorkerPhase(ctx context.Context, agentID string, phases ...string) (WorkerState, error) {
+	wanted := make(map[string]struct{}, len(phases))
+	for _, phase := range phases {
+		trimmed := strings.ToUpper(strings.TrimSpace(phase))
+		if trimmed != "" {
+			wanted[trimmed] = struct{}{}
+		}
+	}
+	if len(wanted) == 0 {
+		wanted["READY"] = struct{}{}
+	}
+
+	matches := func(state WorkerState) (bool, error) {
+		phase := strings.ToUpper(strings.TrimSpace(state.Phase))
+		if phase == "FAILED" {
+			return false, fmt.Errorf("worker %s reported failed state: %s", agentID, state.Detail)
+		}
+		_, ok := wanted[phase]
+		return ok, nil
+	}
+
+	if state, ok := h.WorkerState(agentID); ok {
+		matched, err := matches(state)
+		if err != nil {
+			return state, err
+		}
+		if matched {
+			return state, nil
+		}
+	}
+
+	notifyCh, unsubscribe := h.Subscribe(agentID)
+	defer unsubscribe()
+
+	for {
+		select {
+		case <-ctx.Done():
+			if state, ok := h.WorkerState(agentID); ok {
+				return state, ctx.Err()
+			}
+			return WorkerState{}, ctx.Err()
+		case <-notifyCh:
+			state, ok := h.WorkerState(agentID)
+			if !ok {
+				continue
+			}
+			matched, err := matches(state)
+			if err != nil {
+				return state, err
+			}
+			if matched {
+				return state, nil
+			}
+		}
+	}
+}
+
 // Publish validates and routes a message to a direct recipient, a meeting room, or both.
 //
 //   - message: Message; The event payload containing routing headers and content.

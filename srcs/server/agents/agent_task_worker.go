@@ -9,9 +9,12 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	agentruntime "github.com/onehumancorp/mono/srcs/server/agents/runtime"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"google.golang.org/protobuf/proto"
 )
 
 type builtinTaskLauncher interface {
@@ -198,13 +201,22 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				"issue_name": issue.Name,
 				"directive":  "Please resolve the attached issue descriptor.",
 			})
+			content := string(payload)
+			if IsManagedBuiltin(a) {
+				encoded, err := builtin.EncodeTaskAssignment(workerTaskAssignment(issue))
+				if err != nil {
+					slog.Error("agent task worker: failed to encode task assignment", "issue_id", issue.ID, "agent_id", a.ID, "err", err)
+					continue
+				}
+				content = encoded
+			}
 
 			msg := orchestration.Message{
 				ID:         "task-" + issue.ID,
 				FromAgent:  a.ID,
 				ToAgent:    a.ID,
 				Type:       "TaskAssignment",
-				Content:    string(payload),
+				Content:    content,
 				OccurredAt: time.Now().UTC(),
 			}
 
@@ -236,6 +248,15 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 	if !agentFound {
 		slog.Warn("agent task worker: issue marked in_progress but no available agents to delegate to")
 	}
+}
+
+func workerTaskAssignment(issue plane.Issue) *pb.TaskAssignment {
+	return pb.TaskAssignment_builder{
+		IssueId:   proto.String(issue.ID),
+		IssueName: proto.String(issue.Name),
+		Directive: proto.String("Please resolve the attached issue descriptor."),
+		WorkDir:   proto.String(defaultAgentWorkDir()),
+	}.Build()
 }
 
 func (tw *TaskWorker) launchBuiltinTask(agent orchestration.Agent, issue plane.Issue, payload string) {

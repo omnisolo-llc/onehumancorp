@@ -3,6 +3,7 @@ package builtin
 import (
 	"time"
 
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
@@ -24,6 +25,16 @@ func (a *OrchestrationHubAdapter) RegisterAgent(agent HubAgent) {
 		ProviderType:   agent.ProviderType,
 		Region:         agent.Region,
 		Managed:        agent.Managed,
+	})
+}
+
+func (a *OrchestrationHubAdapter) ReportWorkerState(state *pb.WorkerState) {
+	a.hub.UpdateWorkerState(orchestration.WorkerState{
+		AgentID:    state.GetAgentId(),
+		Phase:      NormalizeWorkerPhase(state.GetPhase()),
+		Runtime:    state.GetRuntime(),
+		ObservedAt: time.Unix(state.GetObservedAtUnix(), 0).UTC(),
+		Detail:     state.GetDetail(),
 	})
 }
 

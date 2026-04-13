@@ -26,25 +26,25 @@ func main() {
 	flag.Parse()
 
 	if workerEncoded != "" {
-		cfg, err := decodeWorkerConfig(workerEncoded)
+		cfg, err := builtin.DecodeWorkerConfig(workerEncoded)
 		if err != nil {
 			fatalf("decode worker config: %v", err)
 		}
-		adapter, err := builtin.NewGRPCHubAdapter(ctx, cfg.HubAddress)
+		adapter, err := builtin.NewGRPCHubAdapter(ctx, cfg.GetHubAddress())
 		if err != nil {
 			fatalf("connect hub: %v", err)
 		}
 		defer adapter.Close()
 
 		runner := builtin.NewRunner(adapter, builtin.HubAgent{
-			ID:             cfg.AgentID,
-			Name:           cfg.AgentName,
-			Role:           cfg.Role,
-			OrganizationID: cfg.OrganizationID,
-			ProviderType:   cfg.ProviderType,
-			Region:         cfg.Region,
+			ID:             cfg.GetAgentId(),
+			Name:           cfg.GetAgentName(),
+			Role:           cfg.GetRole(),
+			OrganizationID: cfg.GetOrganizationId(),
+			ProviderType:   cfg.GetProviderType(),
+			Region:         cfg.GetRegion(),
 			Managed:        true,
-		}, cfg.BuiltinAddress)
+		}, cfg.GetBuiltinAddress())
 		runner.Start(ctx)
 		return
 	}
@@ -83,17 +83,6 @@ func main() {
 	}
 }
 
-type workerConfig struct {
-	AgentID        string `json:"agentId"`
-	AgentName      string `json:"agentName,omitempty"`
-	Role           string `json:"role,omitempty"`
-	OrganizationID string `json:"organizationId,omitempty"`
-	ProviderType   string `json:"providerType,omitempty"`
-	Region         string `json:"region,omitempty"`
-	HubAddress     string `json:"hubAddress"`
-	BuiltinAddress string `json:"builtinAddress,omitempty"`
-}
-
 func decodeTaskRequest(encoded string) (agentruntime.TaskRequest, error) {
 	var request agentruntime.TaskRequest
 	raw, err := base64.StdEncoding.DecodeString(encoded)
@@ -104,18 +93,6 @@ func decodeTaskRequest(encoded string) (agentruntime.TaskRequest, error) {
 		return request, err
 	}
 	return request, nil
-}
-
-func decodeWorkerConfig(encoded string) (workerConfig, error) {
-	var cfg workerConfig
-	raw, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return cfg, err
-	}
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return cfg, err
-	}
-	return cfg, nil
 }
 
 func fatalf(format string, args ...interface{}) {

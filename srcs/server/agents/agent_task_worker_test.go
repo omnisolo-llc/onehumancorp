@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	agentruntime "github.com/onehumancorp/mono/srcs/server/agents/runtime"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
@@ -318,5 +319,40 @@ func TestTaskWorker_processIssueSkipsBusyAgents(t *testing.T) {
 	case req := <-launcher.requests:
 		t.Fatalf("unexpected launch request: %+v", req)
 	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+func TestTaskWorker_processIssueEncodesManagedTaskAssignmentWithProto(t *testing.T) {
+	plane.ResetGlobalPlaneCircuitBreakerForTest()
+	hub := orchestration.NewHub()
+	defer hub.Close()
+	hub.RegisterAgent(orchestration.Agent{
+		ID:           "managed-1",
+		Name:         "Managed Builder",
+		Role:         "SOFTWARE_ENGINEER",
+		ProviderType: string(ProviderTypeBuiltin),
+		Managed:      true,
+		Status:       orchestration.StatusIdle,
+	})
+
+	worker := NewTaskWorker(nil, hub)
+	worker.processIssue(plane.Issue{ID: "issue-42", Name: "Migrate control plane"})
+
+	inbox := hub.Inbox("managed-1")
+	if len(inbox) != 1 {
+		t.Fatalf("expected one task assignment message, got %d", len(inbox))
+	}
+	assignment, err := builtin.DecodeTaskAssignment(inbox[0].Content)
+	if err != nil {
+		t.Fatalf("DecodeTaskAssignment: %v", err)
+	}
+	if assignment.GetIssueId() != "issue-42" {
+		t.Fatalf("expected issue-42, got %q", assignment.GetIssueId())
+	}
+	if assignment.GetIssueName() != "Migrate control plane" {
+		t.Fatalf("unexpected issue name %q", assignment.GetIssueName())
+	}
+	if assignment.GetDirective() == "" {
+		t.Fatal("expected directive to be populated")
 	}
 }

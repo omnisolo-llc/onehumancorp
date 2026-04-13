@@ -2,15 +2,15 @@ package builtin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
 	"github.com/onehumancorp/mono/srcs/server/agents/builtinclient"
+	"google.golang.org/protobuf/proto"
 )
 
 type HubAgent struct {
@@ -41,26 +41,11 @@ type HubMessage struct {
 
 type Hub interface {
 	RegisterAgent(agent HubAgent)
+	ReportWorkerState(state *pb.WorkerState)
 	Subscribe(agentID string) (<-chan struct{}, func())
 	Inbox(agentID string) []HubMessage
 	Publish(msg HubMessage) error
 }
-
-type TaskAssignmentPayload struct {
-	IssueID   string `json:"issue_id"`
-	IssueName string `json:"issue_name"`
-	Directive string `json:"directive"`
-	Prompt    string `json:"prompt,omitempty"`
-	WorkDir   string `json:"work_dir,omitempty"`
-}
-
-type TaskStatus string
-
-const (
-	TaskStatusCompleted TaskStatus = "completed"
-	TaskStatusFailed    TaskStatus = "failed"
-	TaskStatusKilled    TaskStatus = "killed"
-)
 
 type Runner struct {
 	agent          HubAgent
@@ -82,10 +67,10 @@ type activeTask struct {
 type taskResult struct {
 	id           string
 	description  string
-	status       TaskStatus
+	status       pb.TaskStatus
 	result       string
 	errText      string
-	toolUseCount int
+	toolUseCount int32
 	startedAt    time.Time
 	endedAt      time.Time
 }
@@ -110,7 +95,9 @@ func NewRunner(hub Hub, agent HubAgent, builtinAddress string) *Runner {
 }
 
 func (r *Runner) Start(ctx context.Context) {
+	r.reportWorkerState(pb.WorkerPhase_WORKER_PHASE_STARTING, "worker starting")
 	r.register(HubStatusIdle)
+	r.reportWorkerState(pb.WorkerPhase_WORKER_PHASE_READY, "worker ready")
 
 	notifyCh, unsubscribe := r.hub.Subscribe(r.agent.ID)
 	defer unsubscribe()
@@ -121,12 +108,15 @@ func (r *Runner) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			r.reportWorkerState(pb.WorkerPhase_WORKER_PHASE_STOPPING, "worker stopping")
 			r.cancelActiveTask()
 			return
 		case <-notifyCh:
 			r.drainInbox(ctx)
 		case <-ticker.C:
-			r.register(r.currentStatus())
+			status := r.currentStatus()
+			r.register(status)
+			r.reportWorkerState(WorkerPhaseForStatus(status), "worker heartbeat")
 			r.drainInbox(ctx)
 		}
 	}
@@ -164,21 +154,21 @@ func (r *Runner) drainInbox(ctx context.Context) {
 }
 
 func (r *Runner) handleTaskAssignment(ctx context.Context, msg HubMessage) {
-	var payload TaskAssignmentPayload
-	if err := json.Unmarshal([]byte(msg.Content), &payload); err != nil {
+	payload, err := DecodeTaskAssignment(msg.Content)
+	if err != nil {
 		slog.Error("builtin runner: failed to parse task assignment", "agent_id", r.agent.ID, "error", err)
 		return
 	}
 
-	prompt := payload.Prompt
+	prompt := payload.GetPrompt()
 	if prompt == "" {
 		prompt = buildPrompt(payload)
 	}
-	description := payload.IssueName
+	description := payload.GetIssueName()
 	if description == "" {
-		description = payload.Directive
+		description = payload.GetDirective()
 	}
-	taskID := firstNonEmpty(payload.IssueID, msg.ID, fmt.Sprintf("task-%d", time.Now().UTC().UnixNano()))
+	taskID := firstNonEmpty(payload.GetIssueId(), msg.ID, fmt.Sprintf("task-%d", time.Now().UTC().UnixNano()))
 
 	r.mu.Lock()
 	if r.active != nil {
@@ -198,14 +188,13 @@ func (r *Runner) handleTaskAssignment(ctx context.Context, msg HubMessage) {
 	r.mu.Unlock()
 
 	r.register(HubStatusActive)
+	r.reportWorkerState(pb.WorkerPhase_WORKER_PHASE_BUSY, description)
 	go r.executeTask(taskCtx, active, prompt)
 }
 
 func (r *Runner) handleKill(msg HubMessage) {
-	var payload struct {
-		TaskID string `json:"task_id"`
-	}
-	if err := json.Unmarshal([]byte(msg.Content), &payload); err != nil {
+	payload, err := DecodeKillTaskRequest(msg.Content)
+	if err != nil {
 		return
 	}
 
@@ -214,7 +203,7 @@ func (r *Runner) handleKill(msg HubMessage) {
 	if r.active == nil {
 		return
 	}
-	if payload.TaskID != "" && payload.TaskID != r.active.id {
+	if payload.GetTaskId() != "" && payload.GetTaskId() != r.active.id {
 		return
 	}
 	r.active.cancel()
@@ -230,10 +219,10 @@ func (r *Runner) executeTask(ctx context.Context, active *activeTask, prompt str
 	client, err := builtinclient.DialContext(ctx, r.builtinAddress)
 	if err != nil {
 		if ctx.Err() != nil {
-			result.status = TaskStatusKilled
+			result.status = pb.TaskStatus_TASK_STATUS_KILLED
 			result.errText = ctx.Err().Error()
 		} else {
-			result.status = TaskStatusFailed
+			result.status = pb.TaskStatus_TASK_STATUS_FAILED
 			result.errText = err.Error()
 		}
 		r.finishTask(active, result)
@@ -249,13 +238,13 @@ func (r *Runner) executeTask(ctx context.Context, active *activeTask, prompt str
 	result.endedAt = time.Now().UTC()
 
 	if ctx.Err() != nil {
-		result.status = TaskStatusKilled
+		result.status = pb.TaskStatus_TASK_STATUS_KILLED
 		result.errText = ctx.Err().Error()
 	} else if err != nil {
-		result.status = TaskStatusFailed
+		result.status = pb.TaskStatus_TASK_STATUS_FAILED
 		result.errText = err.Error()
 	} else {
-		result.status = TaskStatusCompleted
+		result.status = pb.TaskStatus_TASK_STATUS_COMPLETED
 		result.result = output
 	}
 
@@ -274,13 +263,29 @@ func (r *Runner) finishTask(active *activeTask, result taskResult) {
 	r.mu.Unlock()
 
 	r.register(HubStatusIdle)
+	r.reportWorkerState(pb.WorkerPhase_WORKER_PHASE_READY, "worker idle")
 	r.publishCompletion(active.origin, result)
 }
 
 func (r *Runner) publishCompletion(originMsg HubMessage, result taskResult) {
 	replyTo := originMsg.FromAgent
 	if replyTo == "" || replyTo == "SYSTEM" || replyTo == r.agent.ID {
-		slog.Info("builtin runner: task complete", "agent_id", r.agent.ID, "task_id", result.id, "status", result.status)
+		slog.Info("builtin runner: task complete", "agent_id", r.agent.ID, "task_id", result.id, "status", result.status.String())
+		return
+	}
+	status := result.status
+	content, err := EncodeTaskResultEnvelope(pb.TaskResultEnvelope_builder{
+		TaskId:        proto.String(result.id),
+		Description:   proto.String(result.description),
+		Status:        &status,
+		Result:        proto.String(result.result),
+		Error:         proto.String(result.errText),
+		ToolUseCount:  proto.Int32(result.toolUseCount),
+		StartedAtUnix: proto.Int64(result.startedAt.Unix()),
+		EndedAtUnix:   proto.Int64(result.endedAt.Unix()),
+	}.Build())
+	if err != nil {
+		slog.Error("builtin runner: failed to encode task result", "agent_id", r.agent.ID, "task_id", result.id, "error", err)
 		return
 	}
 
@@ -289,7 +294,7 @@ func (r *Runner) publishCompletion(originMsg HubMessage, result taskResult) {
 		FromAgent: r.agent.ID,
 		ToAgent:   replyTo,
 		Type:      "TaskResult",
-		Content:   buildNotification(result),
+		Content:   content,
 	}); err != nil {
 		slog.Error("builtin runner: failed to publish task result", "agent_id", r.agent.ID, "task_id", result.id, "error", err)
 	}
@@ -300,74 +305,30 @@ func (r *Runner) register(status HubStatus) {
 	r.hub.RegisterAgent(r.agent)
 }
 
-func buildPrompt(p TaskAssignmentPayload) string {
-	prompt := p.Directive
-	if p.IssueName != "" {
-		prompt = fmt.Sprintf("Issue: %s\n\n%s", p.IssueName, p.Directive)
+func (r *Runner) reportWorkerState(phase pb.WorkerPhase, detail string) {
+	r.hub.ReportWorkerState(pb.WorkerState_builder{
+		AgentId:        proto.String(r.agent.ID),
+		Phase:          &phase,
+		Runtime:        proto.String(firstNonEmpty(r.agent.Region, "process")),
+		ObservedAtUnix: proto.Int64(time.Now().UTC().Unix()),
+		Detail:         proto.String(detail),
+	}.Build())
+	if phase == pb.WorkerPhase_WORKER_PHASE_BUSY {
+		return
+	}
+	if phase == pb.WorkerPhase_WORKER_PHASE_READY {
+		if r.agent.Status != HubStatusIdle {
+			r.agent.Status = HubStatusIdle
+		}
+	}
+}
+
+func buildPrompt(p *pb.TaskAssignment) string {
+	prompt := p.GetDirective()
+	if p.GetIssueName() != "" {
+		prompt = fmt.Sprintf("Issue: %s\n\n%s", p.GetIssueName(), p.GetDirective())
 	}
 	return prompt
-}
-
-func buildNotification(result taskResult) string {
-	summary := fmt.Sprintf("Task %q completed.", result.description)
-	if result.status == TaskStatusFailed {
-		summary = fmt.Sprintf("Task %q failed: %s", result.description, result.errText)
-	}
-	if result.status == TaskStatusKilled {
-		summary = fmt.Sprintf("Task %q was killed.", result.description)
-	}
-	if result.status == TaskStatusCompleted && result.result != "" {
-		summary = summary + " Result: " + truncate(result.result, 500)
-	}
-
-	resultSection := ""
-	if result.result != "" {
-		resultSection = fmt.Sprintf("\n<result>%s</result>", escapeXML(truncate(result.result, 2000)))
-	}
-
-	durationMs := result.endedAt.Sub(result.startedAt).Milliseconds()
-	if durationMs < 0 {
-		durationMs = 0
-	}
-
-	errorSection := ""
-	if result.errText != "" {
-		errorSection = fmt.Sprintf("\n<error>%s</error>", escapeXML(truncate(result.errText, 1000)))
-	}
-
-	return fmt.Sprintf(`<task-notification>
-<task-id>%s</task-id>
-<output-file></output-file>
-<status>%s</status>
-<summary>%s</summary>%s%s
-<usage><total_tokens>0</total_tokens><tool_uses>%d</tool_uses><duration_ms>%d</duration_ms></usage>
-</task-notification>`,
-		result.id,
-		string(result.status),
-		escapeXML(summary),
-		resultSection,
-		errorSection,
-		result.toolUseCount,
-		durationMs,
-	)
-}
-
-func truncate(value string, max int) string {
-	if len(value) <= max {
-		return value
-	}
-	return value[:max] + "..."
-}
-
-func escapeXML(value string) string {
-	replacer := strings.NewReplacer(
-		"&", "&amp;",
-		"<", "&lt;",
-		">", "&gt;",
-		`"`, "&quot;",
-		"'", "&apos;",
-	)
-	return replacer.Replace(value)
 }
 
 func firstNonEmpty(values ...string) string {

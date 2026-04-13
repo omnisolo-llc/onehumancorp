@@ -76,6 +76,59 @@ func TestOpenMeetingViaGRPC(t *testing.T) {
 	}
 }
 
+func TestReportWorkerStateViaGRPC(t *testing.T) {
+	hub := NewHub()
+	defer hub.Close()
+	hub.RegisterAgent(Agent{ID: "worker-1", Name: "Worker", Role: "SWE", OrganizationID: "org-1", Status: StatusActive})
+	srv := NewHubServiceServer(hub, nil)
+	phase := pb.WorkerPhase_WORKER_PHASE_READY
+	now := time.Now().Unix()
+
+	res, err := srv.ReportWorkerState(context.Background(), pb.ReportWorkerStateRequest_builder{
+		State: pb.WorkerState_builder{
+			AgentId:        proto.String("worker-1"),
+			Phase:          &phase,
+			Runtime:        proto.String("process"),
+			ObservedAtUnix: proto.Int64(now),
+			Detail:         proto.String("ready"),
+		}.Build(),
+	}.Build())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.GetSuccess() {
+		t.Fatal("expected successful worker state report")
+	}
+	state, ok := hub.WorkerState("worker-1")
+	if !ok {
+		t.Fatal("expected worker state to be stored")
+	}
+	if state.Phase != "READY" {
+		t.Fatalf("expected READY phase, got %q", state.Phase)
+	}
+	agent, ok := hub.Agent("worker-1")
+	if !ok {
+		t.Fatal("expected agent to remain registered")
+	}
+	if agent.Status != StatusIdle {
+		t.Fatalf("expected READY worker to map to idle agent status, got %q", agent.Status)
+	}
+}
+
+func TestReportWorkerStateViaGRPCRequiresAgentID(t *testing.T) {
+	hub := NewHub()
+	defer hub.Close()
+	srv := NewHubServiceServer(hub, nil)
+	phase := pb.WorkerPhase_WORKER_PHASE_READY
+
+	_, err := srv.ReportWorkerState(context.Background(), pb.ReportWorkerStateRequest_builder{
+		State: pb.WorkerState_builder{Phase: &phase}.Build(),
+	}.Build())
+	if err == nil {
+		t.Fatal("expected invalid argument error")
+	}
+}
+
 func TestPublishViaGRPC(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
