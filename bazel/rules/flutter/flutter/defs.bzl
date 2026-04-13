@@ -813,6 +813,20 @@ copy_tree() {{
     fi
 }}
 
+# copy_tree_preserve_symlinks: like copy_tree but preserves symlinks instead of
+# dereferencing them. Used for pub_cache where all package paths are absolute
+# symlinks into bazel-out – preserving them saves disk space while remaining
+# readable by dart/flutter (which follows symlinks).
+copy_tree_preserve_symlinks() {{
+    local src="$1"
+    local dest="$2"
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a "$src/" "$dest/"
+    else
+        cp -Rl "$src/." "$dest/" 2>/dev/null || cp -RL "$src/." "$dest/"
+    fi
+}}
+
 resolve_path() {{
     local rel="$1"
     local fallback="$2"
@@ -912,8 +926,11 @@ chmod -R u+w "$RUNTIME_WORKSPACE" 2>/dev/null || true
 
 mkdir -p "$RUNTIME_PUB_CACHE"
 if [ -n "$PUB_CACHE_ABS" ] && [ -d "$PUB_CACHE_ABS" ] && [ -n "$(ls -A "$PUB_CACHE_ABS" 2>/dev/null)" ]; then
-    copy_tree "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
+    # Preserve symlinks (absolute bazel-out paths) to avoid copying package files
+    # onto disk - symlinks are followed transparently by dart/flutter at runtime.
+    copy_tree_preserve_symlinks "$PUB_CACHE_ABS" "$RUNTIME_PUB_CACHE"
 fi
+# Only chmod real files; do not follow symlinks into bazel-out artifacts.
 chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
 
 if [ -n "$DART_TOOL_ABS" ] && [ -d "$DART_TOOL_ABS" ]; then
