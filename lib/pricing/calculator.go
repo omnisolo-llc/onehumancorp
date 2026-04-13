@@ -30,9 +30,11 @@ type PricingRates struct {
 }
 
 var ModelPricing = map[string]PricingRates{
-	"claude-3-5-sonnet-20240620": {Input: 3.0, Output: 15.0, Cached: 0.30}, // Example rates
+	"claude-3-5-sonnet-20240620": {Input: 3.0, Output: 15.0, Cached: 0.30},
+	"claude-3-haiku-20240307":    {Input: 0.25, Output: 1.25, Cached: 0.03},
 	"gpt-4o":                     {Input: 5.0, Output: 15.0, Cached: 2.50},
 	"gpt-4o-mini":                {Input: 0.15, Output: 0.60, Cached: 0.075},
+	"gpt-4-turbo":                {Input: 10.0, Output: 30.0, Cached: 5.0},
 }
 
 // CalculateCost computes the cost of an LLM request in USD.
