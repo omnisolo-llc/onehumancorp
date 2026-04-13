@@ -331,3 +331,24 @@ func getTaskHelper(t *testing.T, ctx context.Context, tm *TaskManager, taskID st
 	)
 	return &task, err
 }
+
+func TestTaskManager_PollTasks_TeammateMesh(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+
+	_, err := tm.CreateTask(ctx, "org-1", "Test Mesh", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	tasks, err := tm.PollTasks(ctx, "agent-mesh", 1)
+	if err != nil {
+		t.Fatalf("failed to poll tasks: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+}
