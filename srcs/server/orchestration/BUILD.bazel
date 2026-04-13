@@ -61,6 +61,7 @@ go_test(
         "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
+        "mission_ingestion_test.go",
         "benchmark_test.go",
         "cached_minimax_client_test.go",
         "centrifuge_hub_test.go",
