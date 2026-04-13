@@ -68,13 +68,13 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	}
 	defer tx.Rollback(ctx)
 
-	// SQLite DAG: check swarm_task_dependencies table
+	// SQLite DAG: check task_dependencies table
 	// We claim the first pending task whose dependencies are either empty or all completed.
 	query := `
 		SELECT st.id, st.mission_id, st.organization_id, st.dependencies, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-		FROM swarm_tasks st
+		FROM shared_tasks st
 		WHERE st.organization_id = $1 AND st.status = 'PENDING'
-		AND (SELECT COUNT(*) FROM swarm_task_dependencies std INNER JOIN swarm_tasks d ON std.depends_on_task_id = d.id WHERE std.task_id = st.id AND d.status != 'COMPLETED') = 0
+		AND (SELECT COUNT(*) FROM task_dependencies std INNER JOIN shared_tasks d ON std.depends_on_task_id = d.id WHERE std.task_id = st.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 	`
 	row := tx.QueryRow(ctx, query, orgID)
@@ -91,7 +91,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 	}
 
 	updateQuery := `
-		UPDATE swarm_tasks
+		UPDATE shared_tasks
 		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
@@ -119,12 +119,12 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	}
 	defer tx.Rollback(ctx)
 
-	// Postgres DAG using swarm_task_dependencies with SKIP LOCKED
+	// Postgres DAG using task_dependencies with SKIP LOCKED
 	query := `
 		SELECT st.id, st.mission_id, st.organization_id, st.dependencies::text, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-		FROM swarm_tasks st
+		FROM shared_tasks st
 		WHERE st.organization_id = $1 AND st.status = 'PENDING'
-		AND (SELECT COUNT(*) FROM swarm_task_dependencies std INNER JOIN swarm_tasks d ON std.depends_on_task_id = d.id WHERE std.task_id = st.id AND d.status != 'COMPLETED') = 0
+		AND (SELECT COUNT(*) FROM task_dependencies std INNER JOIN shared_tasks d ON std.depends_on_task_id = d.id WHERE std.task_id = st.id AND d.status != 'COMPLETED') = 0
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
 	`
@@ -142,7 +142,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 	}
 
 	updateQuery := `
-		UPDATE swarm_tasks
+		UPDATE shared_tasks
 		SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
@@ -173,7 +173,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
 	// Validate current state
 	var current string
-	if err := tx.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = $1", taskID).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", taskID).Scan(&current); err != nil {
 		return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
 	}
 
@@ -182,7 +182,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 	}
 
 	// Update state
-	if _, err := tx.Exec(ctx, "UPDATE swarm_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+	if _, err := tx.Exec(ctx, "UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
 		return err
 	}
 
