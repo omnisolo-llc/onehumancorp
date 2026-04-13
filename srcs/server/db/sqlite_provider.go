@@ -27,6 +27,7 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 // and dynamically strips natively unsupported clauses like `FOR UPDATE SKIP LOCKED`.
 func convertBindVars(query string) string {
 	query = strings.ReplaceAll(query, "FOR UPDATE SKIP LOCKED", "")
+	query = strings.ReplaceAll(query, "::vector", "")
 
 	var result strings.Builder
 	result.Grow(len(query))
