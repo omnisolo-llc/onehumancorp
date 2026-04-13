@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: DONE
+agent: Echo
 priority: P0
 scope: Large
 ---
