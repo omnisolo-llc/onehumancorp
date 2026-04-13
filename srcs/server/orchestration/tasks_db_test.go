@@ -6,9 +6,11 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestClaimTask_SQLite(t *testing.T) {
+	telemetry.InitTelemetry()
 	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("failed to create sqlite provider: %v", err)
@@ -141,6 +143,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 }
 
 func TestClaimTask_Postgres(t *testing.T) {
+	telemetry.InitTelemetry()
 	// We simulate the Postgres method by passing a SQLite provider and utilizing the db layer's `convertBindVars`
 	// which implicitly handles FOR UPDATE SKIP LOCKED compatibility when run against SQLite.
 	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")

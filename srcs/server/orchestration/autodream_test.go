@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestAutoDreamPruneSessions(t *testing.T) {
+	telemetry.InitTelemetry()
 	t.Setenv("DATABASE_URL", "sqlite://:memory:")
 	pool, err := db.New(context.Background())
 	if err != nil {
