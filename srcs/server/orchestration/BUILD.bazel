@@ -60,7 +60,6 @@ go_library(
 
 go_test(
     name = "orchestration_test",
-    size = "large",
     srcs = [
         "auth_interceptor_test.go",
         "autodream_test.go",

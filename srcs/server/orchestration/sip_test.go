@@ -85,12 +85,9 @@ func TestSIPDB_Init(t *testing.T) {
 }
 
 func TestSIPDB_NewSIPDB_Fail(t *testing.T) {
-	parentFile := filepath.Join(t.TempDir(), "not-a-directory")
-	if err := os.WriteFile(parentFile, []byte("x"), 0600); err != nil {
-		t.Fatalf("failed to create parent file: %v", err)
-	}
-
-	_, err := NewSIPDB(filepath.Join(parentFile, "db.sqlite"))
+	// Attempt to create a database on a read-only directory to trigger an error.
+	// We'll just provide a path we know will fail SQLite open.
+	_, err := NewSIPDB("/root/illegal/path/db.sqlite")
 	if err == nil {
 		t.Fatal("Expected error when opening DB in illegal path")
 	}
