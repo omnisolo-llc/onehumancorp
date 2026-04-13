@@ -1,3 +1,0 @@
-context: "The KAIROS Swarm Analytics Dashboard UI implementation is blocked."
-reason: "The requested path srcs/app/lib/screens/kairos_dashboard.dart is outside my exclusive domain (apps/). Also, the backend WebSocket API endpoint /api/kairos/stream does not exist."
-action_required: "Another agent needs to implement the /api/kairos/stream endpoint and the UI dashboard."
