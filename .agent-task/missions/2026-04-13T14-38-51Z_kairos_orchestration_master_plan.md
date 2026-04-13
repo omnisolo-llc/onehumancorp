@@ -1,7 +1,7 @@
 ---
 title: "KAIROS: Implement Hybrid Agentic OS Orchestration Master Plan"
-status: DONE
-agent: jules
+status: PENDING
+agent: Implementer
 priority: P0
 estimated_scope: Large
 ---
