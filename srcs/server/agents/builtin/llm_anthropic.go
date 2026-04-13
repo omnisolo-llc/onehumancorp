@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // AnthropicClient implements LLMClient for Anthropic's Claude API.
@@ -67,11 +69,13 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("content-type", "application/json")
 
+	start := time.Now()
 	resp, err := c.Client.Do(httpReq)
 	if err != nil {
 		return ChatResponse{}, err
 	}
 	defer resp.Body.Close()
+	telemetry.RecordLLMNetworkLatency(ctx, req.Model, time.Since(start).Seconds())
 
 	if resp.StatusCode != 200 {
 		return ChatResponse{}, fmt.Errorf("anthropic api error: %s", resp.Status)

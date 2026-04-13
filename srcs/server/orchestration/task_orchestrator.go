@@ -2,7 +2,9 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/redis/rueidis"
 )
@@ -132,6 +135,9 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		`
 		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				telemetry.RecordPostgresLockContention(to.workerCtx, "task_orchestrator_poll_delegated")
+			}
 			return // sql.ErrNoRows or locking issue
 		}
 	}
@@ -317,6 +323,9 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	}
 
 	if err != nil {
+		if !to.db.IsSQLite() && errors.Is(err, sql.ErrNoRows) {
+			telemetry.RecordPostgresLockContention(ctx, "task_orchestrator_acquire_ready_task")
+		}
 		tx.Rollback(ctx)
 		// sql.ErrNoRows is fine
 		return nil, nil // No task available

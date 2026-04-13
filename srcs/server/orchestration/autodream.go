@@ -2,7 +2,9 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -100,6 +102,10 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 	}
 	rows.Close()
+
+	if len(tasks) == 0 && !w.pool.IsSQLite() {
+		telemetry.RecordPostgresLockContention(ctx, "autodream_ingest_completed_tasks")
+	}
 
 	for _, task := range tasks {
 		content := "Task: " + task.Title
@@ -226,6 +232,10 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 	}
 	rows.Close()
 
+	if len(records) == 0 && !w.pool.IsSQLite() {
+		telemetry.RecordPostgresLockContention(ctx, "autodream_compress_session_data")
+	}
+
 	for _, rec := range records {
 		var insertQuery string
 		if w.pool.IsSQLite() {
@@ -341,6 +351,9 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 			var check string
 			err = w.pool.QueryRow(ctx, "SELECT session_id FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", s.ID).Scan(&check)
 			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					telemetry.RecordPostgresLockContention(ctx, "autodream_compress_session_contexts_lock")
+				}
 				continue // Skip if locked by another worker
 			}
 		}
@@ -558,6 +571,10 @@ func (w *AutoDreamWorker) pruneStaleSessions(ctx context.Context) {
 		}
 	}
 	rows.Close()
+
+	if len(sessions) == 0 && !w.pool.IsSQLite() {
+		telemetry.RecordPostgresLockContention(ctx, "autodream_prune_stale_sessions")
+	}
 
 	for _, s := range sessions {
 		// In a real system, we'd batch or offload this to a separate worker due to the external API call

@@ -59,6 +59,9 @@ var (
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
+	postgresLockContentionCounter metric.Int64Counter
+	llmNetworkLatencyHistogram    metric.Float64Histogram
+
 	autoDreamSyncDuration       metric.Float64Histogram
 	autoDreamQueryDuration      metric.Float64Histogram
 	meshBroadcastTotal          metric.Int64Counter
@@ -440,6 +443,23 @@ func InitWithMeter(m mockableMeter) error {
 	sqliteRetryExhaustedCounter, err = m.Int64Counter(
 		"ohc_sqlite_retry_exhausted_total",
 		metric.WithDescription("Total times an SQLite transaction failed after exhausting retries."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	postgresLockContentionCounter, err = m.Int64Counter(
+		"ohc_postgres_lock_contention_total",
+		metric.WithDescription("Total times PostgreSQL database lock contention (FOR UPDATE SKIP LOCKED) was encountered."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	llmNetworkLatencyHistogram, err = m.Float64Histogram(
+		"ohc_llm_network_latency_seconds",
+		metric.WithDescription("Latency of external LLM API network requests in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -850,6 +870,43 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 	}
 	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
+	))
+}
+
+// RecordPostgresLockContention increments the global counter for PostgreSQL database lock contention.
+func RecordPostgresLockContention(ctx context.Context, operation string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "postgres_lock_contention", string(payloadBytes))
+	}
+	if postgresLockContentionCounter == nil {
+		return
+	}
+	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordLLMNetworkLatency records the duration of an external LLM API network request.
+func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"model":   model,
+			"latency": latency,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "llm_network_latency", string(payloadBytes))
+	}
+	if llmNetworkLatencyHistogram == nil {
+		return
+	}
+	llmNetworkLatencyHistogram.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("model", model),
 	))
 }
 

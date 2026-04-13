@@ -100,6 +100,7 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
+		telemetry.RecordPostgresLockContention(ctx, "sub_agent_queue_dequeue_skip_locked")
 		return nil, nil // No jobs available
 	} else if err != nil {
 		return nil, err

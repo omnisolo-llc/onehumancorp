@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // OllamaClient implements LLMClient for Ollama (local LLM).
@@ -58,11 +60,13 @@ func (c *OllamaClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 
 	httpReq.Header.Set("Content-Type", "application/json")
 
+	start := time.Now()
 	resp, err := c.Client.Do(httpReq)
 	if err != nil {
 		return ChatResponse{}, err
 	}
 	defer resp.Body.Close()
+	telemetry.RecordLLMNetworkLatency(ctx, req.Model, time.Since(start).Seconds())
 
 	if resp.StatusCode != 200 {
 		return ChatResponse{}, fmt.Errorf("ollama api error: %s", resp.Status)

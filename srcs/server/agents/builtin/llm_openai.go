@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // OpenAIClient implements LLMClient for OpenAI API.
@@ -56,11 +58,13 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	httpReq.Header.Set("Authorization", "Bearer "+c.APIKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
+	start := time.Now()
 	resp, err := c.Client.Do(httpReq)
 	if err != nil {
 		return ChatResponse{}, err
 	}
 	defer resp.Body.Close()
+	telemetry.RecordLLMNetworkLatency(ctx, req.Model, time.Since(start).Seconds())
 
 	if resp.StatusCode != 200 {
 		return ChatResponse{}, fmt.Errorf("openai api error: %s", resp.Status)

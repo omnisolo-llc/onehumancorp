@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // PgTaskRepository implements TaskRepository backed by PostgreSQL.
@@ -176,6 +177,10 @@ func (r *PgTaskRepository) PollDue(ctx context.Context) ([]Task, error) {
 		tasks = append(tasks, t)
 	}
 	rows.Close()
+
+	if len(tasks) == 0 && !r.pool.IsSQLite() {
+		telemetry.RecordPostgresLockContention(ctx, "scheduler_poll_due")
+	}
 
 	now := time.Now().UTC()
 	for _, t := range tasks {

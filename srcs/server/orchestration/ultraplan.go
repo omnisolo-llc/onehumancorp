@@ -264,6 +264,9 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			if !m.db.IsSQLite() {
+				telemetry.RecordPostgresLockContention(ctx, "ultraplan_modify_skip_locked")
+			}
 			return errors.New("ultra plan not found or currently locked by another agent")
 		}
 		return fmt.Errorf("fetch ultra plan: %w", err)
@@ -401,6 +404,9 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus, &existingStateMachineJSON, &updatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			if !m.db.IsSQLite() {
+				telemetry.RecordPostgresLockContention(ctx, "ultraplan_update_status_lock")
+			}
 			return errors.New("ultra plan not found")
 		}
 		return fmt.Errorf("fetch status: %w", err)

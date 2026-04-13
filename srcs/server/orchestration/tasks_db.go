@@ -8,6 +8,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type SharedTaskDB struct {
@@ -124,6 +125,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 		&task.Dependencies, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			telemetry.RecordPostgresLockContention(ctx, "claim_task_postgres_skip_locked")
 			return nil, nil // No task found
 		}
 		return nil, fmt.Errorf("failed to query pending task: %w", err)

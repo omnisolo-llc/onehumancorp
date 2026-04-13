@@ -245,6 +245,9 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 	rows.Close()
 
 	if len(sessions) == 0 {
+		if !p.pool.IsSQLite() {
+			telemetry.RecordPostgresLockContention(ctx, "autodream_pipeline_process_batch")
+		}
 		return
 	}
 

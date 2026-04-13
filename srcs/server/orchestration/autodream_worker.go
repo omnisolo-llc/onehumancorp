@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"gopkg.in/yaml.v3"
 )
 
@@ -104,8 +107,12 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 			// requirement gracefully without breaking insertion idempotency.
 			// This locks a specific mission id in the agent_session_data table if it exists, to ensure another
 			// worker process isn't concurrently processing the same memory pipeline task.
-			_, lockErr := tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID)
+			var check int
+			lockErr := tx.QueryRow(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID).Scan(&check)
 			if lockErr != nil {
+				if errors.Is(lockErr, sql.ErrNoRows) {
+					telemetry.RecordPostgresLockContention(ctx, "autodream_worker_lock_session")
+				}
 				tx.Rollback(ctx)
 				continue
 			}

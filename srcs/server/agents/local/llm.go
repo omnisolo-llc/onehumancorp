@@ -268,11 +268,13 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("anthropic-beta", "prompt-caching-2024-07-31") // Ensure prompt caching is active
 
+	start := time.Now()
 	resp, err := c.hc.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: http: %w", err)
 	}
 	defer resp.Body.Close()
+	telemetry.RecordLLMNetworkLatency(ctx, c.model, time.Since(start).Seconds())
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -498,11 +500,13 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
 
+	start := time.Now()
 	resp, err := c.hc.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("openai-compat: http: %w", err)
 	}
 	defer resp.Body.Close()
+	telemetry.RecordLLMNetworkLatency(ctx, c.model, time.Since(start).Seconds())
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
