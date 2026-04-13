@@ -301,6 +301,43 @@ sequenceDiagram
     API->>DB: Update State (COMPLETED)
 ```
 
+<div class="glass-panel" markdown="1">
+
+### 4.4 KAIROS Distributed State Machine
+
+**Endpoint:** `GET /api/v1/state/{entity_id}`
+Retrieves the current state of a task or sub-agent execution within the Distributed State Machine.
+
+**Response (200 OK):**
+```json
+{
+  "entity_id": "task_12345",
+  "current_state": "EXECUTING",
+  "last_transition_at": "2026-04-06T12:05:00Z",
+  "history": [
+    {"from": "PENDING", "to": "ASSIGNED", "timestamp": "2026-04-06T12:01:00Z"}
+  ]
+}
+```
+
+#### Distributed State Machine Flow
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> ASSIGNED : Claim Task
+    ASSIGNED --> EXECUTING : Begin Execution
+    EXECUTING --> WAITING_DELEGATION : Delegate Sub-tasks
+    WAITING_DELEGATION --> EXECUTING : Sub-tasks Complete
+    EXECUTING --> REVIEW : Needs Review
+    REVIEW --> EXECUTING : Review Failed
+    REVIEW --> SUCCESS : Review Passed
+    EXECUTING --> TERMINATED_ERROR : Unrecoverable Error
+    SUCCESS --> [*]
+    TERMINATED_ERROR --> [*]
+```
+</div>
+
+
 ### 4.5 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
