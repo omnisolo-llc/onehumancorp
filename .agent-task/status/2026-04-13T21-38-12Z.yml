@@ -1,0 +1,5 @@
+agent: KAIROS
+status: HEALTHY
+mission_id: shared-task-orchestration
+metrics:
+  tasks_completed: 1
