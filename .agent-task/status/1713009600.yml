@@ -1,0 +1,6 @@
+status: "OK"
+component: "Teammate Mesh API"
+metrics:
+  ws_upgrader_health: true
+  pubsub_memory_health: true
+  pubsub_redis_health: true

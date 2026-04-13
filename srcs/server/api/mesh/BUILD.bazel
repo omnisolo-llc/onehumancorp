@@ -1,0 +1,34 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mesh",
+    srcs = [
+        "memory_pubsub.go",
+        "publish.go",
+        "pubsub.go",
+        "redis_pubsub.go",
+        "ws.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/api/mesh",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/orchestration",
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
+
+go_test(
+    name = "mesh_test",
+    srcs = [
+        "publish_test.go",
+        "pubsub_test.go",
+        "ws_test.go",
+    ],
+    embed = [":mesh"],
+    deps = [
+        "@com_github_gorilla_websocket//:websocket",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
+    ],
+)

@@ -50,7 +50,12 @@ go_library(
         "migrations/031_agent_missions_updated_at.sql",
         "migrations/032_hybrid_rag_sync.sql",
         "migrations/033_kairos_shared_tasks.sql",
-
+        "migrations/032_kairos_mission.sql",
+        "migrations/032_mcp_telemetry_mesh_mission.sql",
+        "migrations/033_swarm_tasks_kairos.sql",
+        "migrations/037_kairos_tasks_state_machine.sql",
+        "migrations/038_kairos_triad.sql",
+        "migrations/20260410_kairos_tasks.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
