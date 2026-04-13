@@ -5,7 +5,8 @@ test --config=remote
 
 # Disk cache in /tmp so it does not eat into the home-directory quota.
 # Size-limited to 5 GB to prevent disk exhaustion on CI runners.
-build --disk_cache=/tmp/bazel-disk-cache
+# build --disk_cache=~/.cache/bazel-disk-cache
+# build --disk_cache=/tmp/bazel-disk-cache
 build --experimental_disk_cache_gc_max_size=5G
 
 # Enable Build without the Bytes for faster remote builds.
