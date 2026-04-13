@@ -3,8 +3,10 @@
 build --config=remote
 test --config=remote
 
-# Enable disk cache for fast incremental builds
-build --disk_cache=~/.cache/bazel-disk-cache
+# Disk cache in /tmp so it does not eat into the home-directory quota.
+# Size-limited to 5 GB to prevent disk exhaustion on CI runners.
+build --disk_cache=/tmp/bazel-disk-cache
+build --experimental_disk_cache_gc_max_size=5G
 
 # Enable Build without the Bytes for faster remote builds.
 # For tests under --config=remote we override this to download all outputs,
@@ -104,9 +106,9 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 
 # Set buildbuddy as the default configuration for all builds
 build:remote --config=buildbuddy-official
-# Avoid local test host overload for targets that cannot run remotely
-# (e.g. no-remote-exec Playwright/integration tests).
-test:remote --local_test_jobs=8
+# Limit concurrent local test jobs to prevent disk exhaustion on CI runners
+# (Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR).
+test:remote --local_test_jobs=4
 
 # Optimize testing globally by automatically discovering max parallelism
 test --jobs=200
