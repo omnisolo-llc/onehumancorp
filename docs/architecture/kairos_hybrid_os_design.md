@@ -3,12 +3,14 @@
 # OHC AI OS Orchestration: KAIROS Hybrid Agentic OS Master Design
 
 ## 1. Executive Summary
-The One Human Corp (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**. This architecture relies on three primary pillars: a distributed state machine for tasks, a low-latency Teammate Mesh for communication, and the autoDream pipeline for long-term vector memory consolidation.
+The One Human Corp (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**. This architecture relies on four primary pillars: a distributed state machine for tasks, a low-latency Teammate Mesh for communication, an isolated sub-agent orchestration queue, and the autoDream pipeline for long-term vector memory consolidation.
 
-## 2. Shared Task List & DAG Schema
-The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming. Tasks are represented as nodes in a Directed Acyclic Graph (DAG) using a JSONB `dependencies` array.
+## 2. Shared Task List & Distributed State Machine
+The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming and transition.
 
+### 2.1 Schema Design
 ```sql
+-- Core Shared Task Storage
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
@@ -23,96 +25,91 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Distributed Audit Trail
+CREATE TABLE IF NOT EXISTS state_machine_transitions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_id UUID NOT NULL,
+    entity_type VARCHAR NOT NULL, -- 'TASK' or 'ULTRAPLAN'
+    from_state VARCHAR NOT NULL,
+    to_state VARCHAR NOT NULL,
+    agent_id VARCHAR,
+    reason TEXT,
+    occurred_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### Shared Task Claiming Workflow
+### 2.2 Transition Workflow
 ```mermaid
 sequenceDiagram
     participant Agent as Worker Agent
+    participant DSM as Distributed State Machine
     participant DB as Postgres (shared_tasks)
-    participant Hub as Teammate Mesh Hub
+    participant Mesh as Teammate Mesh (Redis)
 
-    Agent->>DB: BEGIN
-    Agent->>DB: SELECT id FROM shared_tasks WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 1
-    alt Task Found
-        DB-->>Agent: Returns Task 123
-        Agent->>DB: UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = 'worker-1' WHERE id = 123
-        Agent->>DB: COMMIT
-        Agent->>Hub: Publish MeshEvent {topic: 'task.assigned', payload: Task 123}
-    else No Task Found
-        DB-->>Agent: Returns 0 rows
-        Agent->>DB: ROLLBACK
-    end
+    Agent->>DSM: Transition(Task-123, COMPLETE)
+    DSM->>DB: SELECT status FROM shared_tasks WHERE id=123 FOR UPDATE
+    DB-->>DSM: Returns 'IN_PROGRESS'
+    DSM->>DB: UPDATE shared_tasks SET status='DONE' WHERE id=123
+    DSM->>DB: INSERT INTO state_machine_transitions (...)
+    DSM->>Mesh: Broadcast(OHC-SIP: {action: 'STATE_TRANSITION', status: 'SUCCESS'})
+    DSM-->>Agent: Transition Successful
 ```
 
-## 3. Teammate Mesh APIs
-The Teammate Mesh ensures agents coordinate without delays.
+## 3. Teammate Mesh (OHC-SIP Compliance)
+The Teammate Mesh ensures agents coordinate without delays. All messages MUST follow the OHC Swarm Intelligence Protocol (OHC-SIP).
 
-- **Endpoint:** `POST /api/mesh/v2/broadcast`
-  Broadcasts a state machine event over structured channels.
-
+### 3.1 SIP Message Schema
 ```json
 {
-  "channel": "mesh:tasks",
-  "event_type": "TASK_TRANSITION",
-  "data": {
+  "agent_id": "orchestrator-01",
+  "action": "TASK_BROADCAST",
+  "status": "PENDING",
+  "timestamp": "2026-04-13T08:00:00Z",
+  "payload": {
     "task_id": "task_12345",
-    "previous_state": "PENDING",
-    "new_state": "IN_PROGRESS"
+    "required_skills": ["golang", "postgres"]
   }
 }
 ```
 
-## 4. autoDream Memory Vector Architecture
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
+## 4. Sub-Agent Orchestration Queue (Phase 4)
+Scalable execution via isolated worker spawning.
 
-```sql
-CREATE TABLE IF NOT EXISTS consolidated_memory (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_id UUID REFERENCES shared_tasks(id),
-    content TEXT NOT NULL,
-    embedding vector(1536),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
+| Component | Responsibility | Isolation Logic |
+| :--- | :--- | :--- |
+| **Manager** | Polls `shared_tasks` | Singleton in Standalone, Multi-pod in Cloud |
+| **Spawner** | Executes isolated workers | `os/exec` (Local) / K8s Jobs (Cloud) |
+| **Watchdog** | Monitors agent health | Heartbeat check in `.agent-task/status/` |
 
-```mermaid
-graph TD
-    Agent[Agent Shared Memory] -->|Writes to .agent-task/memory| FS[File System]
-    FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
-    AutoDream --> Chunk[Chunk & Tokenize]
-    Chunk --> Embed[Minimax/Cohere Embedding API]
-    Embed --> VectorDB[(pgvector / Local SQLite)]
-    VectorDB -->|RAG Sync| API[KAIROS Orchestration API]
+## 5. autoDream Memory Consolidation (Phase 3)
+The Swarm Intelligence Protocol dictates that temporary context be consolidated into long-term durable state.
 
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Agent,FS,AutoDream,Chunk,Embed,VectorDB,API premium;
-```
+- **Extraction**: Efficient sweep of `DONE` tasks.
+- **Synthesis**: Semantic compression via LLM (Minimax/Anthropic).
+- **Embedding**: High-dimensional vector generation (pgvector).
 
-## 5. Hybrid Architecture Degradation Matrix
-The system is designed to degrade gracefully based on environment context.
+## 6. Hybrid Architecture Degradation Strategy
+Designed to degrade gracefully based on environment context.
 
 | Feature Area | Cloud-Native Mode | Standalone Desktop Mode |
 | :--- | :--- | :--- |
-| **Shared Task Locking** | PostgreSQL `FOR UPDATE SKIP LOCKED` | Local SQLite Transactions & Go Mutexes |
-| **Teammate Mesh** | Redis Pub/Sub (Centrifuge WebSocket hubs) | In-Memory Go channel broadcast |
-| **Memory Vector Store** | pgvector / Pinecone | Local SQLite FTS/Vector extensions |
+| **Distributed Locking** | Redis (rueidis Redlock) | SQLite Transactions + App Mutex |
+| **Task Queue** | Redis Lists / BullMQ | SQLite `local_queue_jobs` Table |
+| **Teammate Mesh** | Redis Pub/Sub + Centrifuge | In-Memory Channels + Sharding |
+| **Vector Storage** | pgvector / Cloud RAG | SQLite BLOB + App-level Similarity |
 
-## 6. Visual Excellence Mandate
-All associated UI components must represent the OHC "Premium Feel". The application of these styles is mandatory for all KAIROS dashboards and visualization interfaces.
+## 7. Visual Excellence Mandate
+All KAIROS dashboards and visualization interfaces MUST apply the OHC "Premium Feel".
 
 ```css
 <style>
-body {
+.ohc-glass {
   backdrop-filter: blur(20px) saturate(200%);
   background: rgba(255, 255, 255, 0.03);
   font-family: 'Outfit', 'Inter', sans-serif;
-  color: #fff;
-}
-.glass-panel {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  padding: 20px;
 }
 </style>
 ```
