@@ -235,3 +235,48 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, res)
 }
+
+// OnboardingFunnel defines a tracked onboarding funnel drop-off.
+type OnboardingFunnel struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	Step      string    `json:"step"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type onboardingCreateRequest struct {
+	UserID string `json:"userId"`
+	Step   string `json:"step"`
+}
+
+func (s *Server) handleOnboardingFunnel(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		funnels := append([]OnboardingFunnel(nil), s.onboardingFunnels...)
+		s.mu.RUnlock()
+		writeJSON(w, funnels)
+	case http.MethodPost:
+		var req onboardingCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.UserID == "" || req.Step == "" {
+			http.Error(w, "userId and step are required", http.StatusBadRequest)
+			return
+		}
+		funnel := OnboardingFunnel{
+			ID:        "funnel-" + time.Now().UTC().Format("20060102150405"),
+			UserID:    req.UserID,
+			Step:      req.Step,
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.onboardingFunnels = append(s.onboardingFunnels, funnel)
+		s.mu.Unlock()
+		writeJSON(w, funnel)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

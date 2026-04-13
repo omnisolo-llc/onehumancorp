@@ -261,3 +261,50 @@ func TestHandleDownloads(t *testing.T) {
 		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
 	}
 }
+
+func TestHandleOnboardingFunnel(t *testing.T) {
+	s := &Server{}
+
+	// Test POST
+	payload := `{"userId": "user-A", "step": "step-1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/onboarding-funnel", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleOnboardingFunnel(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created OnboardingFunnel
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.UserID != "user-A" || created.Step != "step-1" {
+		t.Errorf("unexpected values: %+v", created)
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/onboarding-funnel", nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleOnboardingFunnel(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var list []OnboardingFunnel
+	if err := json.NewDecoder(wGet.Body).Decode(&list); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("expected 1 funnel, got %d", len(list))
+	}
+	if list[0].ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, list[0].ID)
+	}
+}
