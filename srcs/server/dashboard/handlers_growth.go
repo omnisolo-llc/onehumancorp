@@ -236,56 +236,46 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, res)
 }
 
-// FreeTierQuota defines a user's free-tier limits.
-type FreeTierQuota struct {
-	ID             string    `json:"id"`
-	UserID         string    `json:"userId"`
-	TasksUsed      int       `json:"tasksUsed"`
-	TasksLimit     int       `json:"tasksLimit"`
-	IsLimitReached bool      `json:"isLimitReached"`
-	CreatedAt      time.Time `json:"createdAt"`
+// OnboardingFunnel defines a tracked onboarding funnel drop-off.
+type OnboardingFunnel struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	Step      string    `json:"step"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
-type quotaCreateRequest struct {
-	UserID     string `json:"userId"`
-	TasksLimit int    `json:"tasksLimit"`
+type onboardingCreateRequest struct {
+	UserID string `json:"userId"`
+	Step   string `json:"step"`
 }
 
-func (s *Server) handleFreeTierQuota(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleOnboardingFunnel(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		s.mu.RLock()
-		quotas := append([]FreeTierQuota(nil), s.quotas...)
+		funnels := append([]OnboardingFunnel(nil), s.onboardingFunnels...)
 		s.mu.RUnlock()
-		writeJSON(w, quotas)
+		writeJSON(w, funnels)
 	case http.MethodPost:
-		var req quotaCreateRequest
+		var req onboardingCreateRequest
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
 			return
 		}
-		if req.UserID == "" {
-			http.Error(w, "userId is required", http.StatusBadRequest)
+		if req.UserID == "" || req.Step == "" {
+			http.Error(w, "userId and step are required", http.StatusBadRequest)
 			return
 		}
-
-		limit := req.TasksLimit
-		if limit <= 0 {
-			limit = 100 // Default limit
-		}
-
-		q := FreeTierQuota{
-			ID:             "quota-" + time.Now().UTC().Format("20060102150405"),
-			UserID:         req.UserID,
-			TasksUsed:      0,
-			TasksLimit:     limit,
-			IsLimitReached: false,
-			CreatedAt:      time.Now().UTC(),
+		funnel := OnboardingFunnel{
+			ID:        "funnel-" + time.Now().UTC().Format("20060102150405"),
+			UserID:    req.UserID,
+			Step:      req.Step,
+			CreatedAt: time.Now().UTC(),
 		}
 		s.mu.Lock()
-		s.quotas = append(s.quotas, q)
+		s.onboardingFunnels = append(s.onboardingFunnels, funnel)
 		s.mu.Unlock()
-		writeJSON(w, q)
+		writeJSON(w, funnel)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
