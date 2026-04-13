@@ -55,6 +55,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context.go('/business_setup'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        ),
+                        child: const Text('Start Business Setup', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      ),
+                      const SizedBox(height: 8),
                       TextButton(
                         onPressed: () => context.go('/login'),
                         child: const Text('Or continue to Cloud Dashboard'),
