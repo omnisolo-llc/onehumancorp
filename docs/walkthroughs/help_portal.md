@@ -105,6 +105,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[AutoDream Pipeline](../features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ## 6. Deep Dive Walkthroughs
+- **[Sub-Agent Queue Walkthrough](sub_agent_queue_walkthrough.md)**: Visual guide to KAIROS sub-agent queuing and orchestration.
 - **[KAIROS Distributed State Machine Walkthrough](kairos_state_machine.md)**: Explore the distributed state tracking mechanism.
 - **[KAIROS UltraPlan Deliberation Walkthrough](kairos_ultraplan_deliberation.md)**: Explore the multi-step deliberation cycle.
 - **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
