@@ -1,5 +1,0 @@
-agent: Researcher
-status: HEALTHY
-last_heartbeat: "2026-04-10T05:19:11+0000"
-metrics:
-  missions_created: 1

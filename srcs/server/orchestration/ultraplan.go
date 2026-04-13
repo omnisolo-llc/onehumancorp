@@ -10,10 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -87,15 +89,17 @@ type UltraPlanManager struct {
 	db          db.Provider
 	redisClient rueidis.Client
 	hub         *CentrifugeNode // Reusing CentrifugeNode for Mesh integration
+	sm          *statemachine.StateMachine
 	mu          sync.Mutex
 }
 
 // NewUltraPlanManager initializes a new UltraPlanManager.
-func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode) *UltraPlanManager {
+func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, sm *statemachine.StateMachine) *UltraPlanManager {
 	return &UltraPlanManager{
 		db:          provider,
 		redisClient: redisClient,
 		hub:         hub,
+		sm:          sm,
 	}
 }
 
@@ -430,12 +434,17 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, duration)
 	}
 
+	broadcastFunc, err := m.sm.TransitionWithTx(ctx, tx, planID, "ULTRAPLAN", newStatus, "system", "status update")
+	if err != nil {
+		return fmt.Errorf("state machine transition failed: %w", err)
+	}
+
 	updateQuery := `
 		UPDATE swarm_ultra_plans
-		SET status = $1, state_machine = $2, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $3
+		SET state_machine = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, newStatus, compressedStateMachineJSON, planID)
+	rowsAffected, err := tx.Exec(ctx, updateQuery, compressedStateMachineJSON, planID)
 	if err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
@@ -446,6 +455,10 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	if broadcastFunc != nil {
+		broadcastFunc()
 	}
 
 	if m.hub != nil {
@@ -487,4 +500,82 @@ func (m *UltraPlanManager) GetUltraPlan(ctx context.Context, planID string) (*Ul
 		_ = json.Unmarshal(stateMachineJSON, &plan.StateMachine)
 	}
 	return &plan, nil
+}
+
+// UltraPlanDeliberator orchestrates the deep-deliberation cycle.
+type UltraPlanDeliberator struct {
+	manager *UltraPlanManager
+	llm     MinimaxClient
+}
+
+// NewUltraPlanDeliberator creates a new UltraPlanDeliberator.
+func NewUltraPlanDeliberator(manager *UltraPlanManager, llm MinimaxClient) *UltraPlanDeliberator {
+	return &UltraPlanDeliberator{
+		manager: manager,
+		llm:     llm,
+	}
+}
+
+// Deliberate executes the Propose -> Critique -> Refine cycle.
+func (d *UltraPlanDeliberator) Deliberate(ctx context.Context, missionID string, prompt string) (*UltraPlan, error) {
+	// 1. Create initial plan
+	state := map[string]interface{}{
+		"phase": "PROPOSE",
+	}
+	plan, err := d.manager.CreatePlan(ctx, missionID, state)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create plan: %w", err)
+	}
+
+	// 2. Propose
+	proposal, err := d.llm.Reason(ctx, "Propose a design for: "+prompt)
+	if err != nil {
+		return nil, fmt.Errorf("proposal failed: %w", err)
+	}
+
+	plan.StateMachine["proposal"] = proposal
+	if err := d.manager.UpdatePlanStatus(ctx, plan.ID, "DELIBERATING", plan.StateMachine); err != nil {
+		return nil, fmt.Errorf("failed to update state with proposal: %w", err)
+	}
+
+	// 3. Critique
+	critique, err := d.llm.Reason(ctx, "Critique this proposal: "+proposal)
+	if err != nil {
+		return nil, fmt.Errorf("critique failed: %w", err)
+	}
+	if err := d.manager.SubmitCritique(ctx, plan.ID, "system-critique", critique); err != nil {
+		return nil, fmt.Errorf("failed to submit critique: %w", err)
+	}
+
+	// Refresh plan state after critique
+	plan, err = d.manager.GetUltraPlan(ctx, plan.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get plan after critique: %w", err)
+	}
+
+	// 4. Refine
+	refinementPrompt := fmt.Sprintf("Refine this proposal based on the critique.\nProposal: %s\nCritique: %s", proposal, critique)
+	refined, err := d.llm.Reason(ctx, refinementPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("refinement failed: %w", err)
+	}
+
+	plan.StateMachine["final_plan"] = refined
+	plan.StateMachine["phase"] = "APPROVED"
+	if err := d.manager.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", plan.StateMachine); err != nil {
+		return nil, fmt.Errorf("failed to update state with final plan: %w", err)
+	}
+
+	// 5. Write to file
+	dir := ".agent-task/ultraplans"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create ultraplans directory: %w", err)
+	}
+
+	filepath := fmt.Sprintf("%s/%s.md", dir, missionID)
+	if err := os.WriteFile(filepath, []byte(refined), 0644); err != nil {
+		return nil, fmt.Errorf("failed to write ultraplan file: %w", err)
+	}
+
+	return plan, nil
 }
