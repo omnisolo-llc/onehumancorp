@@ -1,0 +1,4 @@
+timestamp: "2026-04-13T11-47-15Z"
+agent: "KAIROS"
+type: "architectural_decision"
+context: "Decided to delegate SubAgentSpawner synchronous execution to a background queue (sub_agent_queue) and decouple TaskStateMachine via distributed Redis Mutex."
