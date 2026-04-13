@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -206,7 +207,7 @@ func (t *fileWriteTool) Execute(_ context.Context, workDir string, input map[str
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", fmt.Errorf("file_write: mkdir: %w", err)
 	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := utils.WriteFileAtomic(path, []byte(content), 0o644); err != nil {
 		return "", fmt.Errorf("file_write: %w", err)
 	}
 	return fmt.Sprintf("File written: %s (%d bytes)", path, len(content)), nil
@@ -268,7 +269,7 @@ func (t *fileEditTool) Execute(_ context.Context, workDir string, input map[stri
 	}
 
 	updated := strings.Replace(content, oldStr, newStr, 1)
-	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+	if err := utils.WriteFileAtomic(path, []byte(updated), 0o644); err != nil {
 		return "", fmt.Errorf("file_edit: write %s: %w", path, err)
 	}
 	return fmt.Sprintf("File edited: %s", path), nil
