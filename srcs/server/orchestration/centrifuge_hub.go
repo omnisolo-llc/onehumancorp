@@ -188,6 +188,29 @@ func (cn *CentrifugeNode) PublishCoordinationMessage(msg Message) {
 
 // PublishTaskBroadcast fans out a task update to all subscribers of the
 // "mesh:tasks" Centrifuge channel (Teammate Mesh).
+
+// PublishPresenceBroadcast fans out a presence update to all subscribers of the
+// "mesh:presence" Centrifuge channel (Teammate Mesh).
+func (cn *CentrifugeNode) PublishPresenceBroadcast(agentID string, status string) {
+	payload := map[string]interface{}{
+		"agent_id": agentID,
+		"status":   status,
+	}
+
+	dataBytes, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("[centrifuge] marshal presence broadcast", "error", err)
+		return
+	}
+
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "presence", dataBytes)
+	}
+	channel := "mesh:presence"
+
+	_, _ = cn.node.Publish(channel, dataBytes)
+}
+
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
 	if cn.meshTransport != nil {
 		data, err := json.Marshal(payload)
