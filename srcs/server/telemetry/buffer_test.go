@@ -101,6 +101,45 @@ func TestBufferMetricFunc(t *testing.T) {
 	RecordTaskFailed(ctx, "task1", "err1")
 	if !called { t.Errorf("expected buffer call") }
 	called = false
+	RecordTeammateMeshBroadcast(ctx, "channel1")
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordTeammateMeshDirectMessage(ctx)
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordAutoDreamSyncLatency(ctx, 1.5, "mode1")
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordAutoDreamQueryLatency(ctx, 1.5, "mode1")
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordMeshBroadcast(ctx, "mode1")
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordMeshLatency(ctx, "op1", 10)
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordSyncEscalation(ctx, 1)
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordSyncLatency(ctx, 1.5)
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordSyncPayloadSize(ctx, 10)
+	if !called { t.Errorf("expected buffer call") }
+	called = false
+
+	RecordSyncDaemonBatchSize(ctx, 10)
+	if !called { t.Errorf("expected buffer call") }
+	called = false
 	// Restore
 	tokenUsageCounter = origTokenUsage
 	agentApiCallsCounter = origAgentCalls
