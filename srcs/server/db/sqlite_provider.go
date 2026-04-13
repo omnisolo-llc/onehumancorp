@@ -238,4 +238,3 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback()
 }
-
