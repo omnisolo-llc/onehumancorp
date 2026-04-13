@@ -1,7 +1,12 @@
 # Release Notes
 ## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
-- Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package. Exposed HybridHealthProbe through the orchestrator Hub to check database availability and mesh channel connectivity.
-- Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization. Strict enforcement of user data privacy in standalone mode by correctly handling telemetry opt-ins.
+- Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package.
+- Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization.
+
+
+## v0.2.9 (Cloud) / v0.1.9+1 (Standalone)
+- Scaling (Cloud): Exposed HybridHealthProbe through the orchestrator Hub to check database availability and mesh channel connectivity.
+- Privacy/Offline (Standalone): Strict enforcement of user data privacy in standalone mode by correctly handling telemetry opt-ins.
 
 ## v0.2.8 (Cloud) / v0.1.8+1 (Standalone)
 - Scaling (Cloud): Ensured AutoDream pipeline >90% coverage for memory consolidation scaling.
