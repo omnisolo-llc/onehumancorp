@@ -15,9 +15,7 @@ go_library(
 
 go_test(
     name = "hybridfsmcp_test",
-    srcs = [
-        "mcp_test.go",
-    ],
+    srcs = ["mcp_test.go"],
     embed = [":hybridfsmcp"],
     deps = [
         "//srcs/server/auth",
