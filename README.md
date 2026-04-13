@@ -10,13 +10,7 @@ To begin your onboarding journey and easily set up the platform in your desired 
 *This interactive wizard will guide you through generating your environment variables, switching modes (Cloud, Standalone, Headless), and seeding mock data.*
 
 ## Identity
-**OHC-HA Hybrid Architecture:** One Human Corp operates on an innovative Hybrid Architecture (OHC-HA) seamlessly scaling from Cloud-Native K8s to Standalone Desktop Mode (Agentic OS). It empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents across the Hybrid Architecture. Our primary goal is to provide a framework where a customer can tackle any business area. The core structure revolves around:
-
-1. **Domain Knowledge**: The industry the corporation operates in. Our foundational domain is the "Software Company". The system allows continuous import of new skills, domains, and knowledge bases.
-2. **Roles**: The specific positions required within the domain. For a Software Company, these include CEO, Director, Product Manager (PM), Software Engineer (SWE), Security Engineer, QA Tester, Marketing Manager, Sales Representative, and Customer Support.
-3. **Organization**: The management hierarchy, allowing a single human CEO to direct a vast array of specialized agents.
-4. **Collaboration (Virtual Meeting Rooms)**: Agents convene in Virtual Meeting Rooms to define scopes, debate technical constraints, and finalize designs before execution.
-
+One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
 
 ## Product Vision & Market Strategy
 One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/vision/market_strategy.md)**.
