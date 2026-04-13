@@ -202,7 +202,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
-		"autodream_memories_compressed_total",
+		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
 	)
 	if err != nil {
@@ -210,7 +210,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncEscalationsCount, err = m.Int64Counter(
-		"ohc_sync_escalations_total",
+		"ohc.sync.escalations.count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
 	)
 	if err != nil {
@@ -218,16 +218,16 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncLatency, err = m.Float64Histogram(
-		"ohc_sync_latency_seconds",
-		metric.WithDescription("Latency of mission synchronization in seconds"),
-		metric.WithUnit("s"),
+		"ohc.sync.latency_ms",
+		metric.WithDescription("Latency of mission synchronization in milliseconds"),
+		metric.WithUnit("ms"),
 	)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
 	SyncPayloadSize, err = m.Int64Histogram(
-		"ohc_sync_payload_size_bytes",
+		"ohc.sync.payload_size_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
 	)
@@ -236,7 +236,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
-		"ohc_sync_daemon_batch_size",
+		"sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
 	)
 	if err != nil {
@@ -348,7 +348,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
-		"autodream_memories_ingested_total",
+		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
 	)
 	if err != nil {

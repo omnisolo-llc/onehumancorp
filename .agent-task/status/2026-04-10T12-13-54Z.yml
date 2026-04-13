@@ -1,0 +1,5 @@
+agent: Scribe
+status: HEALTHY
+uptime: 1h
+metrics:
+  tasks_completed: 1
