@@ -2,10 +2,17 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "telemetry",
-    srcs = ["minimax_metrics.go", "telemetry.go", "rag_sync_metrics.go", "sync_worker.go"],
+    srcs = [
+        "mcp_sync_worker.go",
+        "minimax_metrics.go",
+        "rag_sync_metrics.go",
+        "sync_worker.go",
+        "telemetry.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/db",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/promhttp",
         "@io_opentelemetry_go_otel//:otel",
@@ -18,10 +25,18 @@ go_library(
 
 go_test(
     name = "telemetry_test",
-    srcs = ["telemetry_test.go", "sync_worker_test.go", "telemetry_extra_test.go", "buffer_test.go"],
+    srcs = [
+        "buffer_test.go",
+        "mcp_sync_worker_test.go",
+        "sync_worker_test.go",
+        "telemetry_extra_test.go",
+        "telemetry_test.go",
+    ],
     embed = [":telemetry"],
     deps = [
+        "//srcs/server/db",
         "@com_github_prometheus_client_golang//prometheus",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )
