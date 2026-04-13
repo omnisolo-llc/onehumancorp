@@ -3,20 +3,31 @@
 # OHC: KAIROS Orchestration Design
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
-## 1. Phase 1: Shared Task List (Decomposition)
-The Shared Task List tracks complex feature decomposition into actionable, sequenced `shared_tasks`.
+## Overview
+The OHC swarm relies on the **KAIROS** distributed orchestration system. KAIROS unifies multi-agent coordination, task decomposition, and memory retention across Cloud-Native Mode (PostgreSQL, Redis), Standalone Mode (SQLite), and Thin Client Mode.
 
-**Database Schema (PostgreSQL):**
+## 1. Phase 1: Shared Task List (Decomposition)
+The Shared Task List tracks complex feature decomposition into actionable, sequenced `shared_tasks`. It relies on strict database locking mechanisms (`FOR UPDATE SKIP LOCKED` on PostgreSQL, and application mutexes or `BEGIN EXCLUSIVE` on SQLite) to ensure autonomous agents safely pull from the queue.
+
+**Database Schema (PostgreSQL/SQLite):**
 ```sql
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
-    status VARCHAR NOT NULL DEFAULT 'PENDING',
-    agent_id VARCHAR,
+    status VARCHAR NOT NULL DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, COMPLETED, BLOCKED
+    agent_id VARCHAR, -- Nullable until claimed
     priority VARCHAR NOT NULL DEFAULT 'P2',
-    payload JSONB
+    payload JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS task_dependencies (
+    task_id UUID REFERENCES shared_tasks(id) ON DELETE CASCADE,
+    depends_on_task_id UUID REFERENCES shared_tasks(id) ON DELETE CASCADE,
+    PRIMARY KEY (task_id, depends_on_task_id)
 );
 ```
 
@@ -33,12 +44,48 @@ sequenceDiagram
 ```
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via transport components like `LocalTeammateMesh` utilizing the `mesh:tasks` and `mesh:coordination` channels.
+To coordinate in real-time, the agents rely on a publish-subscribe Teammate Mesh utilizing Redis via the `rueidis` library.
+It operates over two primary channels:
+- `mesh:tasks`: For broadcasting task claims and completion events.
+- `mesh:coordination`: For generic inter-agent negotiation and synchronization.
+
+*In Standalone mode, this degrades gracefully to an in-memory Go channel bus.*
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
-Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
+Continuous evolution demands that agents retain long-term memory. The AutoDream worker processes isolated agent sessions and pushes consolidated findings into the vector database.
+- Consumes from `.agent-task/memory/*.yml`
+- Stores in `autodream_memories` table using `pgvector` for retrieval and LLM context injection.
+
+```sql
+CREATE TABLE IF NOT EXISTS agent_memories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    embedding vector(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
 
 ## 4. Phase 4: Sub-Agent Orchestration Queue
-Background worker system with Redis or SQLite implementations for spawning isolated sub-agents.
+For isolating smaller sub-tasks, KAIROS leverages a dedicated `sub_agent_jobs` queue.
+- Jobs have exponential backoff for retries (`attempts`, `max_attempts`).
+- Lock durations managed via `locked_until`.
+
+```sql
+CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+    id TEXT PRIMARY KEY,
+    parent_task_id TEXT,
+    agent_role TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'QUEUED', -- QUEUED, RUNNING, FAILED, COMPLETED
+    attempts INTEGER DEFAULT 0,
+    max_attempts INTEGER DEFAULT 3,
+    run_after DATETIME DEFAULT CURRENT_TIMESTAMP,
+    locked_until DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';
+```
 
 </div>
