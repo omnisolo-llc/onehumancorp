@@ -67,13 +67,6 @@ resolve_path() {{
             echo "$candidate"
             return 0
         fi
-        if [[ "$rel" == external/* ]]; then
-            candidate="$RUNFILES_ROOT/${{rel#external/}}"
-            if [ -e "$candidate" ]; then
-                echo "$candidate"
-                return 0
-            fi
-        fi
     fi
     if [ -n "$fallback" ] && [ -e "$fallback" ]; then
         echo "$fallback"
@@ -237,7 +230,6 @@ def _flutter_library_impl(ctx):
         pubspec_file,
         transitive_pub_caches,
         ctx.attr.codegen,
-        is_pub_package = ctx.attr.pub_package,
         workspace_pubspec = ctx.file.workspace_pubspec,
     )
 
@@ -299,10 +291,6 @@ _flutter_library_rule = rule(
         "codegen": attr.string_list(
             doc = "List of code generation commands to run via `dart run` (e.g., ['intl_utils:generate'])",
             default = [],
-        ),
-        "pub_package": attr.bool(
-            doc = "True if this target represents a hosted pub.dev package (enables cache publishing).",
-            default = False,
         ),
         "workspace_pubspec": attr.label(
             allow_single_file = True,
@@ -426,6 +414,7 @@ def _create_flutter_run_script(ctx, build_artifacts):
         script_lines.extend([
             'PORT="${1:-8080}"',
             'echo "Serving Flutter web build from $ARTIFACTS_DIR on http://localhost:$PORT"',
+            'echo "Press Ctrl+C to stop the server."',
             'cd "$ARTIFACTS_DIR"',
             "if command -v python3 >/dev/null 2>&1; then",
             '    exec python3 -m http.server "$PORT"',
@@ -730,7 +719,7 @@ def _flutter_test_impl(ctx):
     if not flutter_toolchain.flutterinfo.tool_files:
         fail("No tool files found in Flutter toolchain")
 
-    flutter_bin = flutter_toolchain.flutterinfo.target_tool_path
+    flutter_bin = flutter_toolchain.flutterinfo.tool_files[0].path
 
     # Build a mapping of relative paths to actual file objects
     test_file_mappings = [
@@ -839,13 +828,6 @@ resolve_path() {{
             echo "$candidate"
             return 0
         fi
-        if [[ "$rel" == external/* ]]; then
-            candidate="$RUNFILES_ROOT/${{rel#external/}}"
-            if [ -e "$candidate" ]; then
-                echo "$candidate"
-                return 0
-            fi
-        fi
     fi
     if [ -n "$fallback" ] && [ -e "$fallback" ]; then
         echo "$fallback"
@@ -875,7 +857,25 @@ PUB_DEPS_SRC="{pub_deps_short}"
 DART_TOOL_SRC="{dart_tool_short}"
 FLUTTER_BIN_REL="{flutter_bin}"
 
-FLUTTER_BIN_ABS="$(resolve_path "$FLUTTER_BIN_REL" "")"
+FLUTTER_BIN_ABS="$RUNFILES_ROOT/$FLUTTER_BIN_REL"
+if [ ! -f "$FLUTTER_BIN_ABS" ]; then
+    SEARCH_ROOT="$RUNFILES_ROOT"
+    while [ "$SEARCH_ROOT" != "/" ]; do
+        if [ -f "$SEARCH_ROOT/$FLUTTER_BIN_REL" ]; then
+            FLUTTER_BIN_ABS="$SEARCH_ROOT/$FLUTTER_BIN_REL"
+            break
+        fi
+        PARENT_DIR="$(dirname "$SEARCH_ROOT")"
+        if [ "$PARENT_DIR" = "$SEARCH_ROOT" ]; then
+            break
+        fi
+        SEARCH_ROOT="$PARENT_DIR"
+    done
+fi
+
+if [ ! -f "$FLUTTER_BIN_ABS" ] && [ -f "$FLUTTER_BIN_REL" ]; then
+    FLUTTER_BIN_ABS="$FLUTTER_BIN_REL"
+fi
 
 if [ ! -f "$FLUTTER_BIN_ABS" ]; then
     echo "✗ Flutter binary not found: $FLUTTER_BIN_REL" >&2
@@ -929,28 +929,6 @@ fi
 
 FLUTTER_BIN_DIR="$(dirname "$FLUTTER_BIN_ABS")"
 FLUTTER_ROOT_ORIG="$(cd "$FLUTTER_BIN_DIR/.." && pwd)"
-FLUTTER_TOOLS_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/packages/flutter_tools/.pub_cache"
-FLUTTER_GPU_PUB_CACHE="${{FLUTTER_ROOT_ORIG}}/bin/cache/pkg/flutter_gpu/.pub_cache"
-
-if [ -d "$FLUTTER_TOOLS_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_TOOLS_PUB_CACHE" 2>/dev/null)" ]; then
-    copy_tree "$FLUTTER_TOOLS_PUB_CACHE" "$RUNTIME_PUB_CACHE"
-    chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-fi
-
-if [ -d "$FLUTTER_GPU_PUB_CACHE" ] && [ -n "$(ls -A "$FLUTTER_GPU_PUB_CACHE" 2>/dev/null)" ]; then
-    copy_tree "$FLUTTER_GPU_PUB_CACHE" "$RUNTIME_PUB_CACHE"
-    chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-fi
-
-# Seed runtime pub cache from Flutter SDK package caches so transitive deps
-# (e.g. leak_tracker_flutter_testing, characters, vector_math) are available
-# with their proper lib/ directory structure.
-for _SDK_PKG_CACHE in "${{FLUTTER_ROOT_ORIG}}/packages"/*/.pub_cache; do
-    if [ -d "$_SDK_PKG_CACHE" ] && [ -n "$(ls -A "$_SDK_PKG_CACHE" 2>/dev/null)" ]; then
-        copy_tree "$_SDK_PKG_CACHE" "$RUNTIME_PUB_CACHE"
-        chmod -R u+w "$RUNTIME_PUB_CACHE" 2>/dev/null || true
-    fi
-done
 
 # ── Create a writable Flutter SDK overlay ────────────────────────────────────
 # The external Flutter SDK is mounted read-only inside the Bazel linux-sandbox
@@ -965,37 +943,12 @@ done
 FLUTTER_WRITABLE="${{TEST_TMPDIR}}/flutter_root"
 mkdir -p "${{FLUTTER_WRITABLE}}/bin"
 
-# Symlink root-level entries except 'bin' and 'packages'
+# Symlink root-level entries except 'bin'
 for _f in "${{FLUTTER_ROOT_ORIG}}"/* "${{FLUTTER_ROOT_ORIG}}"/.[!.]*; do
     _n="$(basename -- "$_f")" || continue
-    case "$_n" in
-        bin|packages) continue ;;
-    esac
+    [ "$_n" = "bin" ] && continue
     [ -e "$_f" ] || [ -L "$_f" ] || continue
     ln -sf "$_f" "${{FLUTTER_WRITABLE}}/$_n" 2>/dev/null || true
-done
-
-mkdir -p "${{FLUTTER_WRITABLE}}/packages"
-for _pkg in "${{FLUTTER_ROOT_ORIG}}/packages"/* "${{FLUTTER_ROOT_ORIG}}/packages"/.[!.]*; do
-    _pkg_name="$(basename -- "$_pkg")" || continue
-    [ -e "$_pkg" ] || [ -L "$_pkg" ] || continue
-
-    if [ "$_pkg_name" = "flutter_tools" ]; then
-        mkdir -p "${{FLUTTER_WRITABLE}}/packages/flutter_tools"
-        for _entry in "$_pkg"/* "$_pkg"/.[!.]*; do
-            _entry_name="$(basename -- "$_entry")" || continue
-            [ -e "$_entry" ] || [ -L "$_entry" ] || continue
-            [ "$_entry_name" = ".dart_tool" ] && continue
-            ln -sf "$_entry" "${{FLUTTER_WRITABLE}}/packages/flutter_tools/$_entry_name" 2>/dev/null || true
-        done
-        mkdir -p "${{FLUTTER_WRITABLE}}/packages/flutter_tools/.dart_tool"
-        if [ -f "$_pkg/.dart_tool/package_config.json" ]; then
-            cp "$_pkg/.dart_tool/package_config.json" "${{FLUTTER_WRITABLE}}/packages/flutter_tools/.dart_tool/package_config.json"
-            chmod u+w "${{FLUTTER_WRITABLE}}/packages/flutter_tools/.dart_tool/package_config.json" 2>/dev/null || true
-        fi
-    else
-        ln -sf "$_pkg" "${{FLUTTER_WRITABLE}}/packages/$_pkg_name" 2>/dev/null || true
-    fi
 done
 
 # Symlink bin/internal (shell scripts; only read by flutter)
@@ -1057,15 +1010,12 @@ chmod u+w "${{FLUTTER_WRITABLE}}/bin/cache" 2>/dev/null || true
 
 FLUTTER_BIN_ABS="${{FLUTTER_WRITABLE}}/bin/flutter"
 FLUTTER_BIN_DIR="${{FLUTTER_WRITABLE}}/bin"
-DART_BIN_ABS="${{FLUTTER_WRITABLE}}/bin/cache/dart-sdk/bin/dart"
-FLUTTER_SNAPSHOT_ABS="${{FLUTTER_WRITABLE}}/bin/cache/flutter_tools.snapshot"
 # ─────────────────────────────────────────────────────────────────────────────
 
 export FLUTTER_SUPPRESS_ANALYTICS=true
 export CI=true
 export PUB_ENVIRONMENT="flutter_tool:bazel"
 export PUB_CACHE="$RUNTIME_PUB_CACHE"
-export FLUTTER_ROOT="${{FLUTTER_WRITABLE}}"
 export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
 export PATH="$FLUTTER_BIN_DIR:$PATH"
@@ -1073,134 +1023,6 @@ PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
     echo "✗ python interpreter not found on PATH" | tee -a "$TEST_LOG"
     exit 1
-fi
-
-PACKAGE_DIR="{package_dir}"
-
-FLUTTER_ROOT_ORIGINAL="$FLUTTER_ROOT_ORIG" \
-RUNTIME_PUB_CACHE="$RUNTIME_PUB_CACHE" \
-"$PYTHON_BIN" <<'PY'
-import json
-import os
-import urllib.parse
-
-
-config_path = os.path.join(
-    os.environ["FLUTTER_ROOT"],
-    "packages",
-    "flutter_tools",
-    ".dart_tool",
-    "package_config.json",
-)
-
-if not os.path.exists(config_path):
-    raise SystemExit(0)
-
-overlay_root = os.environ["FLUTTER_ROOT"]
-original_root = os.environ["FLUTTER_ROOT_ORIGINAL"]
-runtime_pub_cache = os.environ["RUNTIME_PUB_CACHE"]
-config_dir = os.path.dirname(config_path)
-
-
-def resolve_root_uri(root_uri):
-    if root_uri.startswith("file:"):
-        return os.path.normpath(urllib.parse.unquote(urllib.parse.urlparse(root_uri).path))
-    return os.path.normpath(os.path.join(config_dir, root_uri.replace("/", os.sep)))
-
-
-def remap_root(original_path):
-    normalized = original_path.replace(os.sep, "/")
-    marker = "/flutter/"
-    marker_index = normalized.rfind(marker)
-    flutter_relative = ""
-    if marker_index != -1:
-        flutter_relative = normalized[marker_index + len(marker):]
-
-    if flutter_relative.startswith("packages/flutter_tools/.pub_cache/"):
-        relative = flutter_relative[len("packages/flutter_tools/.pub_cache/"):]
-        target = os.path.join(runtime_pub_cache, relative.replace("/", os.sep))
-    elif flutter_relative.startswith("packages/") or flutter_relative.startswith("bin/cache/"):
-        target = os.path.join(overlay_root, flutter_relative.replace("/", os.sep))
-    else:
-        target = original_path
-    return os.path.relpath(target, config_dir).replace(os.sep, "/")
-
-
-with open(config_path, "r", encoding = "utf-8") as fh:
-    config = json.load(fh)
-
-for package in config.get("packages", []):
-    root_uri = package.get("rootUri")
-    if not root_uri:
-        continue
-    package["rootUri"] = remap_root(resolve_root_uri(root_uri))
-
-with open(config_path, "w", encoding = "utf-8") as fh:
-    json.dump(config, fh, indent = 2)
-    fh.write("\\n")
-
-missing = []
-for package in config.get("packages", []):
-    root_uri = package.get("rootUri")
-    if not root_uri:
-        continue
-    root_path = resolve_root_uri(root_uri)
-    if not os.path.exists(os.path.join(root_path, "pubspec.yaml")):
-        missing.append((package.get("name"), root_uri))
-
-print("flutter_tools package_config:", config_path)
-print("flutter_tools package count:", len(config.get("packages", [])))
-print("flutter_tools missing pubspec count:", len(missing))
-for name, root_uri in missing[:10]:
-    print("missing flutter_tools package:", name, root_uri)
-PY
-
-if [ -n "${{PACKAGE_DIR:-}}" ]; then
-    WORKSPACE_RUNTIME_ROOT="$RUNTIME_WORKSPACE" \
-    WORKSPACE_RUNTIME_PACKAGE="$PACKAGE_DIR" \
-    "$PYTHON_BIN" <<'PY'
-import os
-
-
-def rewrite_pubspec(path, remove_workspace_block):
-    if not os.path.exists(path):
-        return
-
-    with open(path, "r", encoding = "utf-8") as fh:
-        lines = fh.readlines()
-
-    rewritten = []
-    skipping_workspace = False
-
-    for line in lines:
-        stripped = line.lstrip()
-        indent = len(line) - len(stripped)
-
-        if skipping_workspace:
-            if stripped and indent == 0:
-                skipping_workspace = False
-            else:
-                continue
-
-        if indent == 0 and stripped.startswith("resolution:"):
-            continue
-
-        if remove_workspace_block and indent == 0 and stripped.startswith("workspace:"):
-            skipping_workspace = True
-            continue
-
-        rewritten.append(line)
-
-    with open(path, "w", encoding = "utf-8") as fh:
-        fh.writelines(rewritten)
-
-
-workspace_root = os.environ["WORKSPACE_RUNTIME_ROOT"]
-package_dir = os.environ["WORKSPACE_RUNTIME_PACKAGE"]
-
-rewrite_pubspec(os.path.join(workspace_root, "pubspec.yaml"), True)
-rewrite_pubspec(os.path.join(workspace_root, package_dir, "pubspec.yaml"), False)
-PY
 fi
 
 # Regenerate package_config.json with correct paths to RUNTIME_PUB_CACHE
@@ -1219,28 +1041,16 @@ fi
 export PUBSPEC_PATH="$(pwd)/pubspec.yaml"
 export PUB_DEPS_PATH="$(pwd)/pub_deps.json"
 export PACKAGE_CONFIG_PATH="$(pwd)/.dart_tool/package_config.json"
-export WORKSPACE_ROOT_PATH="$RUNTIME_WORKSPACE"
-if [ -n "$PACKAGE_DIR" ]; then
-    export PACKAGE_DIR_REL="$PACKAGE_DIR"
-    export WORKSPACE_PACKAGE_CONFIG_PATH="$RUNTIME_WORKSPACE/.dart_tool/package_config.json"
-else
-    export PACKAGE_DIR_REL=""
-    unset WORKSPACE_PACKAGE_CONFIG_PATH || true
-fi
 PACKAGE_CONFIG_OUT="$LOG_ROOT/package_config_regen.log"
 if "$PYTHON_BIN" > "$PACKAGE_CONFIG_OUT" 2>&1 <<'PY'
 import json
 import os
-import re
 
 pubspec_path = os.environ["PUBSPEC_PATH"]
 deps_path = os.environ["PUB_DEPS_PATH"]
 config_path = os.environ["PACKAGE_CONFIG_PATH"]
 cache_root = os.environ["PUB_CACHE"]
-package_root = os.getcwd()
-workspace_root_path = os.environ.get("WORKSPACE_ROOT_PATH") or package_root
-workspace_config_path = os.environ.get("WORKSPACE_PACKAGE_CONFIG_PATH") or ""
-package_dir_rel = (os.environ.get("PACKAGE_DIR_REL") or "").replace(os.sep, "/")
+workspace_root = os.getcwd()
 flutter_root = os.environ.get("FLUTTER_ROOT") or ""
 
 name = ""
@@ -1268,245 +1078,69 @@ for i, line in enumerate(lines):
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace("^", "").replace(">=", "").replace("<", "").split()
+    spec = spec.replace(">=", "").replace("<", "").split()
     if spec:
-        version = spec[0].split("+")[0]
-        parts = version.split(".")
-        if len(parts) >= 2:
-            return parts[0] + "." + parts[1]
-        return version
+        return spec[0].split("+")[0]
     return "3.0"
 
 language_version = _parse_language(language_spec)
 
-def finish_dependency(dep_name, block):
-    if not dep_name:
-        return None
-    if block != None and block.get("sdk"):
-        return dict(name = dep_name, source = "sdk")
-    if block != None and block.get("path"):
-        return dict(name = dep_name, source = "path", path = block.get("path"))
-    return dict(name = dep_name, source = "hosted")
+with open(deps_path, "r", encoding="utf-8") as fh:
+    data = json.load(fh)
 
-
-def parse_pubspec_dependencies(pubspec_lines, include_dev):
-    sections = ["dependencies"]
-    if include_dev:
-        sections.append("dev_dependencies")
-
-    deps = []
-    current_section = None
-    section_indent = 0
-    current_name = ""
-    current_indent = 0
-    current_block = None
-
-    def flush_current():
-        nonlocal current_name, current_block
-        entry = finish_dependency(current_name, current_block)
-        if entry:
-            deps.append(entry)
-        current_name = ""
-        current_block = None
-
-    for raw_line in pubspec_lines:
-        stripped = raw_line.strip()
-        indent = len(raw_line) - len(raw_line.lstrip(" "))
-
-        if not stripped or stripped.startswith("#"):
+packages = []
+for entry in data.get("packages", []):
+    pkg_name = entry.get("name")
+    source = entry.get("source")
+    version = entry.get("version")
+    if not pkg_name:
+        continue
+    if source == "hosted" and version:
+        root_path = os.path.join(cache_root, "hosted", "pub.dev", pkg_name + "-" + version)
+        if not os.path.isdir(root_path):
             continue
-
-        if current_section == None:
-            if stripped.endswith(":") and stripped[:-1] in sections:
-                current_section = stripped[:-1]
-                section_indent = indent
-            continue
-
-        if indent <= section_indent:
-            flush_current()
-            current_section = None
-            if stripped.endswith(":") and stripped[:-1] in sections:
-                current_section = stripped[:-1]
-                section_indent = indent
-            continue
-
-        if current_name and indent > current_indent:
-            if ":" in stripped:
-                sub_key, sub_value = stripped.split(":", 1)
-                if current_block == None:
-                    current_block = dict()
-                current_block[sub_key.strip()] = sub_value.strip().strip('"').strip("'")
-            continue
-
-        if ":" not in stripped:
-            continue
-
-        dep_name, remainder = stripped.split(":", 1)
-        dep_name = dep_name.strip()
-        remainder = remainder.strip()
-        if not dep_name:
-            continue
-
-        flush_current()
-
-        current_name = dep_name
-        current_indent = indent
-        if remainder:
-            deps.append(dict(name = current_name, source = "hosted"))
-            current_name = ""
-            current_block = None
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
+        packages.append(dict(
+            name = pkg_name,
+            rootUri = rel,
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
+    elif source == "root":
+        packages.append(dict(
+            name = pkg_name,
+            rootUri = ".",
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
+    elif source == "sdk" and flutter_root:
+        if pkg_name == "sky_engine":
+            root_path = os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
         else:
-            current_block = dict()
-
-    if current_section != None:
-        flush_current()
-
-    return deps
-
-
-def version_key(version):
-    parts = re.split("([0-9]+)", version)
-    key = []
-    for part in parts:
-        if not part:
+            root_path = os.path.join(flutter_root, "packages", pkg_name)
+        if not os.path.isdir(root_path):
             continue
-        if part.isdigit():
-            key.append((0, int(part)))
-        else:
-            key.append((1, part))
-    return key
+        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
+        packages.append(dict(
+            name = pkg_name,
+            rootUri = rel,
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
 
-
-def build_hosted_index(cache_dir):
-    index = dict()
-    hosted_root = os.path.join(cache_dir, "hosted", "pub.dev")
-    if not os.path.isdir(hosted_root):
-        return index
-
-    for entry in os.listdir(hosted_root):
-        full_path = os.path.join(hosted_root, entry)
-        if not os.path.isdir(full_path):
-            continue
-        match = re.match("^([a-z0-9_]+)-(.+)$", entry)
-        if not match:
-            continue
-        pkg_name = match.group(1)
-        version = match.group(2)
-        index.setdefault(pkg_name, []).append((version, full_path))
-
-    for versions in index.values():
-        versions.sort(key = lambda item: version_key(item[0]))
-
-    return index
-
-
-def sdk_package_dir(pkg_name):
-    if not flutter_root:
-        return ""
-    if pkg_name == "sky_engine":
-        return os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
-    return os.path.join(flutter_root, "packages", pkg_name)
-
-
-def to_file_uri(path):
-    return "file://" + os.path.abspath(path).replace(os.sep, "/")
-
-
-def add_package(packages, seen, pkg_name, root_path, package_uri):
-    if not pkg_name or pkg_name in seen or not os.path.isdir(root_path):
-        return
-    packages.append(dict(
-        name = pkg_name,
-        rootUri = to_file_uri(root_path),
-        packageUri = package_uri,
-        languageVersion = language_version,
-    ))
-    seen.add(pkg_name)
-
-
-def collect_packages(root_path):
-    packages = [dict(
-        name = name,
-        rootUri = to_file_uri(root_path),
-        packageUri = "lib/",
-        languageVersion = language_version,
-    )]
-    seen = set([name])
-
-    hosted_index = build_hosted_index(cache_root)
-    queue = []
-    for dep in parse_pubspec_dependencies(lines, True):
-        queue.append((dep, False))
-
-    while queue:
-        dep, include_dev = queue.pop(0)
-        pkg_name = dep.get("name")
-        source = dep.get("source")
-
-        if not pkg_name or pkg_name in seen:
-            continue
-
-        if source == "hosted":
-            versions = hosted_index.get(pkg_name) or []
-            if not versions:
-                continue
-            version, root_path = versions[-1]
-            package_uri = "lib/" if os.path.isdir(os.path.join(root_path, "lib")) else ""
-            add_package(packages, seen, pkg_name, root_path, package_uri)
-            pubspec_file = os.path.join(root_path, "pubspec.yaml")
-            if os.path.exists(pubspec_file):
-                with open(pubspec_file, "r", encoding = "utf-8") as fh:
-                    child_lines = fh.readlines()
-                for child in parse_pubspec_dependencies(child_lines, False):
-                    queue.append((child, False))
-        elif source == "sdk":
-            root_path = sdk_package_dir(pkg_name)
-            add_package(packages, seen, pkg_name, root_path, "lib/")
-            pubspec_file = os.path.join(root_path, "pubspec.yaml")
-            if os.path.exists(pubspec_file):
-                with open(pubspec_file, "r", encoding = "utf-8") as fh:
-                    child_lines = fh.readlines()
-                for child in parse_pubspec_dependencies(child_lines, False):
-                    queue.append((child, False))
-
-    return packages
-
-
-def write_config(path, packages):
-    os.makedirs(os.path.dirname(path), exist_ok = True)
-    config = dict(
-        configVersion = 2,
-        generated = True,
-        generator = "rules_flutter",
-        packages = packages,
-    )
-    with open(path, "w", encoding = "utf-8") as fh:
-        json.dump(config, fh, indent = 2)
-        fh.write("\\n")
-
-
-package_packages = collect_packages(package_root)
-write_config(config_path, package_packages)
-package_names = set([pkg.get("name") for pkg in package_packages])
-print("app package_config:", config_path)
-print("app package count:", len(package_packages))
-print("app has flutter_test:", "flutter_test" in package_names)
-print("app has test_api:", "test_api" in package_names)
-
-if workspace_config_path:
-    workspace_config_abs = os.path.abspath(workspace_config_path)
-    if workspace_config_abs != os.path.abspath(config_path):
-        workspace_packages = collect_packages(package_root)
-        write_config(workspace_config_path, workspace_packages)
-        workspace_names = set([pkg.get("name") for pkg in workspace_packages])
-        print("workspace package_config:", workspace_config_path)
-        print("workspace package count:", len(workspace_packages))
-        print("workspace has flutter_test:", "flutter_test" in workspace_names)
-        print("workspace has test_api:", "test_api" in workspace_names)
+os.makedirs(os.path.dirname(config_path), exist_ok=True)
+config = dict(
+    configVersion = 2,
+    generated = True,
+    generator = "rules_flutter",
+    packages = packages,
+)
+with open(config_path, "w", encoding="utf-8") as fh:
+    json.dump(config, fh, indent=2)
+    fh.write("\\n")
 PY
 then
     echo "✓ Package config regenerated successfully" | tee -a "$TEST_LOG"
-    cat "$PACKAGE_CONFIG_OUT" | tee -a "$TEST_LOG"
 else
     echo "✗ package_config.json regeneration failed" | tee -a "$TEST_LOG"
     cat "$PACKAGE_CONFIG_OUT" | tee -a "$TEST_LOG"
@@ -1518,12 +1152,7 @@ fi
 if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
 popd >/dev/null
 
-FLUTTER_CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics")
-if [ -x "$DART_BIN_ABS" ] && [ -f "$FLUTTER_SNAPSHOT_ABS" ]; then
-    FLUTTER_CMD=("$DART_BIN_ABS" "$FLUTTER_SNAPSHOT_ABS" "--suppress-analytics")
-fi
-
-CMD=("${{FLUTTER_CMD[@]}}" "test" "--verbose" "--no-pub")
+CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test")
 if [ "{coverage_flag}" = "true" ]; then
     CMD+=("--coverage")
 fi
@@ -1615,7 +1244,7 @@ exit "$RESULT"
                     library_info.pub_cache,
                     library_info.pub_deps,
                     library_info.dart_tool,
-                ] + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
+                ],
             ),
         ),
     ]
