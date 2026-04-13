@@ -591,3 +591,46 @@ graph TD
     class Client,API,Auth,Hub,401,K8s,Agents premium;
 ```
 </div>
+
+
+<div class="glass-panel" markdown="1">
+
+### 4.11 KAIROS Elastic Swarm Bursting
+
+**Endpoint:** `POST /api/v1/bursting/sync`
+Offloads heavy `agent_missions` from Standalone Mode to the multi-tenant Cloud-Native API when local compute is saturated.
+
+**Payload:**
+```json
+{
+  "mission_id": "mission_8899",
+  "payload": {
+    "redacted": true,
+    "instruction": "Compute massive parallel RAG search"
+  },
+  "status": "BURSTING"
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "burst_id": "burst_cloud_001",
+  "status": "ACCEPTED"
+}
+```
+
+#### Elastic Swarm Bursting Workflow
+```mermaid
+graph TD
+    LocalQueue[Local SQLite Queue] -->|Detect High Load| Daemon[Sync Daemon]
+    Daemon -->|Redact PII| BurstAPI[POST /api/v1/bursting/sync]
+    BurstAPI -->|Authenticate SPIFFE| CloudQueue[(Cloud Redis ZSETs)]
+    CloudQueue -->|Execute| CloudWorker[Cloud Worker Pod]
+    CloudWorker -->|Sync Result| LocalQueue
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class LocalQueue,Daemon,BurstAPI,CloudQueue,CloudWorker premium;
+```
+
+</div>
