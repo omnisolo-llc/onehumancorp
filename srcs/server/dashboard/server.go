@@ -61,7 +61,6 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	onboardingFunnels []OnboardingFunnel
 }
 
 // RateLimitState functionality.
@@ -457,7 +456,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		onboardingFunnels: []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -581,7 +579,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
-	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
@@ -1027,14 +1024,7 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	for _, p := range payloads {
 		var data map[string]interface{}
-		errJSON := json.Unmarshal([]byte(p.Payload), &data)
-
-		if errJSON != nil && p.MetricType == "sub_agent_queue_length" {
-			delta := 0
-			fmt.Sscanf(p.Payload, "%d", &delta)
-			telemetry.RecordQueueLength(ctx, delta)
-			continue
-		} else if errJSON != nil {
+		if err := json.Unmarshal([]byte(p.Payload), &data); err != nil {
 			continue // Skip malformed payloads
 		}
 
@@ -1068,57 +1058,6 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 		case "swarm_task_completed":
 			missionID, _ := data["mission_id"].(string)
 			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
-		case "cache_hit":
-			operation, _ := data["operation"].(string)
-			cacheType, _ := data["cache_type"].(string)
-			telemetry.RecordCacheHit(ctx, operation, cacheType)
-		case "api_rate_limit_exceeded":
-			endpoint, _ := data["endpoint"].(string)
-			telemetry.RecordApiRateLimitExceeded(ctx, endpoint)
-		case "sqlite_lock_contention":
-			operation, _ := data["operation"].(string)
-			telemetry.RecordSQLiteLockContention(ctx, operation)
-		case "sqlite_retry_exhausted":
-			operation, _ := data["operation"].(string)
-			telemetry.RecordSQLiteRetryExhausted(ctx, operation)
-		case "autodream_memory_ingested":
-			agentID, _ := data["agent_id"].(string)
-			telemetry.RecordAutoDreamMemoryIngested(ctx, agentID)
-		case "autodream_memory_compressed":
-			agentID, _ := data["agent_id"].(string)
-			telemetry.RecordAutoDreamMemoryCompressed(ctx, agentID)
-		case "task_queue_length":
-			amount, _ := data["amount"].(float64)
-			telemetry.RecordTaskQueueLength(ctx, int64(amount))
-		case "task_processed":
-			latency, _ := data["latency"].(float64)
-			telemetry.RecordTaskProcessed(ctx, time.Duration(latency*float64(time.Second)))
-		case "agent_transition_latency":
-			transitionType, _ := data["transition_type"].(string)
-			duration, _ := data["duration"].(float64)
-			telemetry.RecordAgentTransitionLatency(ctx, transitionType, duration)
-		case "swarm_task_queue_length":
-			delta, _ := data["delta"].(float64)
-			telemetry.RecordSwarmTaskQueueLength(ctx, int(delta))
-		case "swarm_task_processing_latency":
-			latencyMs, _ := data["latency_ms"].(float64)
-			telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMs)
-		case "task_enqueued":
-			taskID, _ := data["task_id"].(string)
-			telemetry.RecordTaskEnqueued(ctx, taskID)
-		case "task_failed":
-			taskID, _ := data["task_id"].(string)
-			errStr, _ := data["error"].(string)
-			telemetry.RecordTaskFailed(ctx, taskID, errStr)
-		case "cache_miss":
-			operation, _ := data["operation"].(string)
-			cacheType, _ := data["cache_type"].(string)
-			telemetry.RecordCacheMiss(ctx, operation, cacheType)
-		case "sub_agent_queue_length":
-			deltaStr, _ := data["delta"].(string)
-			delta := 0
-			fmt.Sscanf(deltaStr, "%d", &delta)
-			telemetry.RecordQueueLength(ctx, delta)
 		default:
 			if telemetry.BufferMetricFunc != nil {
 				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
