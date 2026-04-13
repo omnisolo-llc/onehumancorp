@@ -1,0 +1,4 @@
+agent: Maintainer
+knowledge: |
+  Successfully deduped the changelogs.
+  When replacing sections in a markdown file with a python script, it's safer to use Python to find the index of the next section, rather than trying to read the whole file to stdout first, especially when files are long.
