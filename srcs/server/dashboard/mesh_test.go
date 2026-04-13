@@ -180,3 +180,55 @@ func TestHandleMeshMailbox(t *testing.T) {
 		}
 	})
 }
+
+
+func TestHandleMeshV2Broadcast(t *testing.T) {
+	org := domain.Organization{ID: "org-mesh"}
+	hub := orchestration.NewHub("test-mesh-db", "memory://")
+	srv := &Server{
+		org: org,
+		hub: hub,
+	}
+
+	cn, _ := orchestration.NewCentrifugeNode()
+	hub.SetCentrifugeNode(cn)
+
+	t.Run("RequiresmTLS", func(t *testing.T) {
+		req := createMockTLSRequest(http.MethodPost, "/api/mesh/v2/broadcast", nil, false)
+		w := httptest.NewRecorder()
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected status 403 Forbidden, got %v", w.Code)
+		}
+	})
+
+	t.Run("ValidBroadcastMeshTasks", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"channel": "mesh:tasks",
+			"data": map[string]interface{}{
+				"event": "status_update",
+				"status": "IN_PROGRESS",
+			},
+		}
+		body, _ := json.Marshal(payload)
+
+		req := createMockTLSRequest(http.MethodPost, "/api/mesh/v2/broadcast", body, true)
+
+		// Setup context to bypass auth middleware but satisfy auth role check
+		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
+			Role: "system",
+			OrganizationID: "org-mesh",
+		})
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200 OK, got %v", w.Code)
+		}
+	})
+}
