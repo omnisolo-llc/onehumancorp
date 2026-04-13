@@ -592,7 +592,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
+<<<<<<< HEAD
+=======
 	mux.HandleFunc("/connection/kairos_stream", api.HandleKairosStream(hub))
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)

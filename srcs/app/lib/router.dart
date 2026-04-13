@@ -1,4 +1,7 @@
+<<<<<<< HEAD
+=======
 import 'package:ohc_app/screens/kairos_dashboard.dart';
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/login_screen.dart';
@@ -50,11 +53,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(
+<<<<<<< HEAD
+=======
             path: '/kairos-dashboard',
             builder: (context, state) => const KairosDashboardScreen(),
           ),
 
           GoRoute(
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
@@ -178,7 +184,10 @@ class _Sidebar extends StatelessWidget {
         ),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+<<<<<<< HEAD
+=======
         _NavItem(icon: Icons.analytics, label: 'Swarm Analytics Dashboard', path: '/kairos-dashboard'),
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),

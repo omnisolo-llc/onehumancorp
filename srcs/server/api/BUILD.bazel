@@ -4,13 +4,19 @@ go_library(
     name = "api",
     srcs = [
         "sync_handler.go",
+<<<<<<< HEAD
+=======
         "kairos_stream.go",
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
         "sync_escalation_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
     deps = [
+<<<<<<< HEAD
+=======
         "@com_github_gorilla_websocket//:websocket",
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/orchestration/queue",
@@ -21,6 +27,13 @@ go_library(
 
 go_test(
     name = "api_test",
+<<<<<<< HEAD
+    srcs = ["sync_escalation_handler_test.go"],
+    embed = [":api"],
+    deps = [
+        "//srcs/server/orchestration",
+        "//srcs/server/orchestration/hybrid_sync",
+=======
     srcs = ["sync_escalation_handler_test.go", "kairos_stream_test.go"],
     embed = [":api"],
     deps = [
@@ -30,5 +43,6 @@ go_test(
         "//srcs/server/orchestration/queue",
         "//srcs/server/telemetry",
         "@io_opentelemetry_go_otel//:otel",
+>>>>>>> 5137f0d8 (🧹 Maintainer: Fix local Prometheus telemetry targets in Standalone mode (#3657))
     ],
 )
