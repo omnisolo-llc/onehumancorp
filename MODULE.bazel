@@ -1,6 +1,6 @@
 module(
     name = "mono",
-    version = "0.2.11",
+    version = "0.2.10",
 )
 
 bazel_dep(name = "rules_go", version = "0.60.0")
