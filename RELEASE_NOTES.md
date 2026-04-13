@@ -1,8 +1,4 @@
 # Release Notes
-## v0.2.11 (Cloud) / v0.2.11+1 (Standalone)
-- Scaling (Cloud): Upgraded dependencies and optimized hybrid CI/CD tests for multi-tenant isolation.
-- Privacy/Offline (Standalone): Ensured robust local UI tests execution and verified local data isolation.
-
 ## v0.2.10 (Cloud) / v0.2.10+1 (Standalone)
 - Scaling (Cloud): Coordinated multi-environment promotions across staging and desktop beta builds.
 - Privacy/Offline (Standalone): Maintained local-to-cloud synchronization and state fidelity across hybrid environments.
