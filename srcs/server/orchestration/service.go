@@ -651,6 +651,9 @@ func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byt
 		}
 	}
 
+
+	telemetry.RecordToolAutoCorrection(context.Background(), agentID, "unknown", corrected)
+
 	tempBytes, _ := json.Marshal(temp)
 
 	// Create protobuf event representing the autocoorection

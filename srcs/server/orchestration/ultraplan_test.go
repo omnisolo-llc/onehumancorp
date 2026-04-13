@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestUltraPlanManager(t *testing.T) {
@@ -29,6 +30,17 @@ func TestUltraPlanManager(t *testing.T) {
 
 	upm := NewUltraPlanManager(prov, nil, nil)
 	ctx := context.Background()
+
+	// Mock telemetry buffer
+	var telemetryCalled bool
+	oldBuffer := telemetry.BufferMetricFunc
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricName string, payload string) error {
+		if metricName == "deliberation_phase_duration" {
+			telemetryCalled = true
+		}
+		return nil
+	}
+	defer func() { telemetry.BufferMetricFunc = oldBuffer }()
 
 	// Create
 	plan, err := upm.CreatePlan(ctx, "m-123")
@@ -76,6 +88,9 @@ func TestUltraPlanManager(t *testing.T) {
 	}
 	if planResult.StateMachine["phase"] != "REVISION_REQUIRED" {
 		t.Errorf("expected phase REVISION_REQUIRED, got %v", planResult.StateMachine["phase"])
+	}
+	if !telemetryCalled {
+		t.Errorf("Expected RecordDeliberationPhaseDuration to be called")
 	}
 
 	// Approve Plan

@@ -25,6 +25,9 @@ var (
 	latencyHistogram metric.Float64Histogram
 	MeshLatencyRecorder metric.Float64Histogram
 
+	ohcToolAutocorrectionTotal          metric.Int64Counter
+	ohcDeliberationPhaseDurationSeconds metric.Float64Histogram
+
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
 	agentApiCallsCounter       metric.Int64Counter
@@ -176,6 +179,23 @@ func InitWithMeter(m mockableMeter) error {
 	MeshLatencyRecorder, err = m.Float64Histogram(
 		"ohc_mesh_latency",
 		metric.WithDescription("Latency of Teammate Mesh RPC operations"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ohcToolAutocorrectionTotal, err = m.Int64Counter(
+		"ohc_tool_autocorrection_total",
+		metric.WithDescription("Total number of tool parameter auto-corrections attempted by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ohcDeliberationPhaseDurationSeconds, err = m.Float64Histogram(
+		"ohc_deliberation_phase_duration_seconds",
+		metric.WithDescription("Duration of UltraPlan deliberation phases"),
 		metric.WithUnit("s"),
 	)
 	if err != nil {
@@ -1116,5 +1136,50 @@ func RecordQueueLength(ctx context.Context, delta int) {
 	}
 	if subAgentQueueLengthGauge != nil {
 		subAgentQueueLengthGauge.Add(ctx, int64(delta))
+	}
+}
+
+// RecordToolAutoCorrection increments the total number of tool autocorrection attempts.
+func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success bool) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id": agentID,
+			"role":     role,
+			"success":  success,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "tool_autocorrection_total", string(payloadBytes))
+	}
+	if ohcToolAutocorrectionTotal != nil {
+		status := "failure"
+		if success {
+			status = "success"
+		}
+		ohcToolAutocorrectionTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("role", role),
+			attribute.String("status", status),
+		))
+	}
+}
+
+// RecordDeliberationPhaseDuration records the duration an UltraPlan spent in a specific deliberation phase.
+func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, durationSeconds float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"plan_id": planID,
+			"phase":   phase,
+			"duration": durationSeconds,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
+	}
+	if ohcDeliberationPhaseDurationSeconds != nil {
+		ohcDeliberationPhaseDurationSeconds.Record(ctx, durationSeconds, metric.WithAttributes(
+			attribute.String("plan_id", planID),
+			attribute.String("phase", phase),
+		))
 	}
 }

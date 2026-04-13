@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -598,4 +599,53 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
+}
+
+func TestRecordToolAutoCorrection(t *testing.T) {
+	ctx := context.Background()
+	var capturedMetric string
+	var capturedPayload string
+
+	oldBuffer := BufferMetricFunc
+	BufferMetricFunc = func(ctx context.Context, metricName string, payload string) error {
+		capturedMetric = metricName
+		capturedPayload = payload
+		return nil
+	}
+	defer func() { BufferMetricFunc = oldBuffer }()
+
+	RecordToolAutoCorrection(ctx, "agent123", "Implementer", true)
+
+	if capturedMetric != "tool_autocorrection_total" {
+		t.Errorf("Expected metric tool_autocorrection_total, got %s", capturedMetric)
+	}
+	if !strings.Contains(capturedPayload, "agent123") {
+		t.Errorf("Expected payload to contain agent123, got %s", capturedPayload)
+	}
+}
+
+func TestRecordDeliberationPhaseDuration(t *testing.T) {
+	ctx := context.Background()
+	var capturedMetric string
+	var capturedPayload string
+
+	oldBuffer := BufferMetricFunc
+	BufferMetricFunc = func(ctx context.Context, metricName string, payload string) error {
+		capturedMetric = metricName
+		capturedPayload = payload
+		return nil
+	}
+	defer func() { BufferMetricFunc = oldBuffer }()
+
+	RecordDeliberationPhaseDuration(ctx, "plan123", "PROPOSE", 10.5)
+
+	if capturedMetric != "deliberation_phase_duration" {
+		t.Errorf("Expected metric deliberation_phase_duration, got %s", capturedMetric)
+	}
+	if !strings.Contains(capturedPayload, "plan123") {
+		t.Errorf("Expected payload to contain plan123, got %s", capturedPayload)
+	}
+	if !strings.Contains(capturedPayload, "10.5") {
+		t.Errorf("Expected payload to contain duration 10.5, got %s", capturedPayload)
+	}
 }

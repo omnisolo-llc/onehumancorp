@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -276,12 +277,31 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 		plan.StateMachine = make(map[string]interface{})
 	}
 
+	oldPhase := "UNKNOWN"
+	if p, ok := plan.StateMachine["phase"].(string); ok {
+		oldPhase = p
+	}
+
 	changed, err := modifier(&plan)
 	if err != nil {
 		return err
 	}
 	if !changed {
 		return nil // No changes needed
+	}
+
+	newPhase := "UNKNOWN"
+	if p, ok := plan.StateMachine["phase"].(string); ok {
+		newPhase = p
+	}
+
+	if oldPhase != newPhase {
+		startTime := plan.UpdatedAt
+		if startTime.IsZero() {
+			startTime = plan.CreatedAt
+		}
+		durationSeconds := time.Since(startTime).Seconds()
+		telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, durationSeconds)
 	}
 
 	updatedJSON, err := json.Marshal(plan.StateMachine)
@@ -371,17 +391,44 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 	defer tx.Rollback(ctx)
 
 	var currentStatus string
-	query := `SELECT status FROM swarm_ultra_plans WHERE id = $1`
+	var oldStateMachineJSON []byte
+	var updatedAt, createdAt time.Time
+	query := `SELECT status, state_machine, updated_at, created_at FROM swarm_ultra_plans WHERE id = $1`
 	if !m.db.IsSQLite() {
 		query += ` FOR UPDATE`
 	}
 
-	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus)
+	err = tx.QueryRow(ctx, query, planID).Scan(&currentStatus, &oldStateMachineJSON, &updatedAt, &createdAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("ultra plan not found")
 		}
 		return fmt.Errorf("fetch status: %w", err)
+	}
+
+	var oldStateMachine map[string]interface{}
+	oldStateMachineJSON, err = decompressStateMachine(oldStateMachineJSON)
+	if err == nil {
+		_ = json.Unmarshal(oldStateMachineJSON, &oldStateMachine)
+	}
+
+	oldPhase := "UNKNOWN"
+	if p, ok := oldStateMachine["phase"].(string); ok {
+		oldPhase = p
+	}
+
+	newPhase := "UNKNOWN"
+	if p, ok := stateMachine["phase"].(string); ok {
+		newPhase = p
+	}
+
+	if oldPhase != newPhase {
+		startTime := updatedAt
+		if startTime.IsZero() {
+			startTime = createdAt
+		}
+		durationSeconds := time.Since(startTime).Seconds()
+		telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, durationSeconds)
 	}
 
 	updateQuery := `
