@@ -3,7 +3,7 @@
 # One Human Corp: Platform Documentation
 
 ## Identity
-One Human Corp (OHC) is the world's most autonomous, aesthetically superior, and market-aware **Hybrid Agentic OS**. Utilizing a unique **Hybrid Architecture (OHC-HA)**, the platform seamlessly scales from a horizontally scalable Cloud-Native multi-tenant service to a resource-efficient Standalone Desktop deployment. This empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents with zero friction and maximum visual delight. Our primary goal is to provide a framework where a customer can tackle any business area. The core structure revolves around:
+One Human Corp is an innovative Hybrid Architecture (OHC-HA) seamlessly scaling from Cloud-Native K8s to Standalone Desktop Mode (Agentic OS) that empowers a single individual to run an entire enterprise by orchestrating highly specialized AI agents across the Hybrid Architecture. Our primary goal is to provide a framework where a customer can tackle any business area. The core structure revolves around:
 1. **Domain Knowledge**: The industry the corporation operates in. Our foundational domain is the "Software Company". The system allows continuous import of new skills, domains, and knowledge bases.
 2. **Roles**: The specific positions required within the domain. For a Software Company, these include:
    - **CEO**: Always the human user, overseeing high-level goals.
