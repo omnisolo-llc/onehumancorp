@@ -102,6 +102,9 @@ func (e *AutoDreamSyncEngine) getOrchestrationWorker() *orchestration.AutoDreamW
 }
 
 func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
+	start := time.Now()
+	defer func() { telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds()) }()
+
 	rows, err := e.dbWrapper.Query(ctx, "SELECT content_hash, embedding FROM embedding_cache WHERE synced_to_cloud = false LIMIT 50")
 	if err != nil {
 		slog.Error("sync: failed to query embedding_cache", "error", err)
@@ -132,10 +135,10 @@ func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
 		return
 	}
 
+	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
+
 	if err := e.sendToCloud(ctx, payloads); err != nil {
-		if telemetry.SyncFailedCount != nil {
-			telemetry.SyncFailedCount.Add(ctx, int64(len(payloads)))
-		}
+		telemetry.RecordSyncFailed(ctx, int64(len(payloads)))
 		slog.Error("sync: failed to send embedding_cache to cloud", "error", err)
 		return
 	}
@@ -148,13 +151,14 @@ func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
 		}
 	}
 
-	if telemetry.SyncCompletedCount != nil {
-		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)))
-	}
+	telemetry.RecordSyncCompleted(ctx, int64(len(payloads)))
 	slog.Debug("sync: successfully synced embeddings", "count", len(payloads))
 }
 
 func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
+	start := time.Now()
+	defer func() { telemetry.RecordSyncLatency(ctx, time.Since(start).Seconds()) }()
+
 	rows, err := e.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 50")
 	if err != nil {
 		slog.Error("sync: failed to query agent_missions", "error", err)
@@ -193,10 +197,10 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 		return
 	}
 
+	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
+
 	if err := e.sendToCloud(ctx, payloads); err != nil {
-		if telemetry.SyncFailedCount != nil {
-			telemetry.SyncFailedCount.Add(ctx, int64(len(payloads)))
-		}
+		telemetry.RecordSyncFailed(ctx, int64(len(payloads)))
 		slog.Error("sync: failed to send agent_missions to cloud", "error", err)
 		return
 	}
@@ -209,9 +213,7 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 		}
 	}
 
-	if telemetry.SyncCompletedCount != nil {
-		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)))
-	}
+	telemetry.RecordSyncCompleted(ctx, int64(len(payloads)))
 	slog.Debug("sync: successfully synced agent_missions", "count", len(payloads))
 }
 
@@ -225,6 +227,8 @@ func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, payloads []AutoDr
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
+
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.cloudAPIURL, bytes.NewBuffer(jsonData))
 	if err != nil {

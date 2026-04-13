@@ -647,6 +647,24 @@
           "expr": "sum(rate(ohc_sync_escalations_total[5m]))",
           "legendFormat": "Escalations Rate",
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_sync_completed_count_total[5m]))",
+          "legendFormat": "Sync Completed",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ohc_sync_failed_count_total[5m]))",
+          "legendFormat": "Sync Failed",
+          "refId": "F"
         }
       ],
       "transparent": true

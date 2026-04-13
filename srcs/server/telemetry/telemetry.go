@@ -1187,3 +1187,17 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		_ = BufferMetricFunc(ctx, "deliberation_phase_duration", string(payloadBytes))
 	}
 }
+
+// RecordSyncCompleted increments the global counter for successfully synced elements.
+func RecordSyncCompleted(ctx context.Context, count int64) {
+	if SyncCompletedCount != nil {
+		SyncCompletedCount.Add(ctx, count)
+	}
+}
+
+// RecordSyncFailed increments the global counter for failed syncs.
+func RecordSyncFailed(ctx context.Context, count int64) {
+	if SyncFailedCount != nil {
+		SyncFailedCount.Add(ctx, count)
+	}
+}
