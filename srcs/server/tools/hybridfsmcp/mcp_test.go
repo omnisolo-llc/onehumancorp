@@ -134,7 +134,7 @@ func TestNewProviderFactory(t *testing.T) {
 		t.Fatalf("expected CloudFSProvider")
 	}
 
-	t.Setenv("OHC_MULTITENANT", "")
+	t.Setenv("OHC_MULTITENANT", "false")
 	provider = NewProviderFactory("/tmp")
 	if _, ok := provider.(*LocalFSProvider); !ok {
 		t.Fatalf("expected LocalFSProvider")
