@@ -104,13 +104,16 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                         child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Teammate Mesh Live Feed',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
-                          color: Colors.white,
+                      const Expanded(
+                        child: Text(
+                          'Teammate Mesh Live Feed',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Outfit',
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const Spacer(),
