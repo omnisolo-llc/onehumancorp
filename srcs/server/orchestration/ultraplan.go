@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
-
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/rueidis"
 )
@@ -278,20 +276,12 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 		plan.StateMachine = make(map[string]interface{})
 	}
 
-	oldPhase, _ := plan.StateMachine["phase"].(string)
-
 	changed, err := modifier(&plan)
 	if err != nil {
 		return err
 	}
 	if !changed {
 		return nil // No changes needed
-	}
-
-	newPhase, _ := plan.StateMachine["phase"].(string)
-	if oldPhase != "" && newPhase != "" && oldPhase != newPhase {
-		duration := time.Since(plan.UpdatedAt).Seconds()
-		telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, duration)
 	}
 
 	updatedJSON, err := json.Marshal(plan.StateMachine)
@@ -392,25 +382,6 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 			return errors.New("ultra plan not found")
 		}
 		return fmt.Errorf("fetch status: %w", err)
-	}
-
-	var oldStateMachineJSON []byte
-	var oldPlan UltraPlan
-	oldPlanQuery := `SELECT state_machine, updated_at FROM swarm_ultra_plans WHERE id = $1`
-	err = tx.QueryRow(ctx, oldPlanQuery, planID).Scan(&oldStateMachineJSON, &oldPlan.UpdatedAt)
-	if err == nil {
-		decompressed, decompErr := decompressStateMachine(oldStateMachineJSON)
-		if decompErr == nil {
-			var oldSM map[string]interface{}
-			if json.Unmarshal(decompressed, &oldSM) == nil {
-				oldPhase, _ := oldSM["phase"].(string)
-				newPhase, _ := stateMachine["phase"].(string)
-				if oldPhase != "" && (oldPhase != newPhase || currentStatus != newStatus) {
-					duration := time.Since(oldPlan.UpdatedAt).Seconds()
-					telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, duration)
-				}
-			}
-		}
 	}
 
 	updateQuery := `

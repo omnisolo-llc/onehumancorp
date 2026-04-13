@@ -11,7 +11,6 @@ type HybridHealthProbe struct {
 	Status      string        `json:"status"`
 	DBPing      time.Duration `json:"db_ping"`
 	SyncBacklog int           `json:"sync_backlog"`
-	StuckMissions int         `json:"stuck_missions"`
 	MeshActive  bool          `json:"mesh_active"`
 }
 
@@ -22,7 +21,6 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 		Status:      "healthy",
 		MeshActive:  false,
 		SyncBacklog: 0,
-		StuckMissions: 0,
 	}
 
 	start := time.Now()
@@ -41,13 +39,6 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING'").Scan(&count)
 			if err == nil {
 				probe.SyncBacklog = count
-			}
-
-			// Get stuck missions
-			var stuckCount int
-			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'").Scan(&stuckCount)
-			if err == nil {
-				probe.StuckMissions = stuckCount
 			}
 		}
 	} else {

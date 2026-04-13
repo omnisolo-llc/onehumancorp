@@ -600,8 +600,7 @@ func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payloa
 // Returns ToolParameterAutoCorrection(eventID, agentID string, payload []byte) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byte) (err error) {
-	defer func() { telemetry.RecordToolAutoCorrection(context.Background(), agentID, "agent", err == nil) }()
+func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byte) error {
 	h.mu.Lock()
 	if _, exists := h.autoCorTrack[eventID]; exists {
 		h.mu.Unlock()

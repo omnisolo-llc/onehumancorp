@@ -4,10 +4,8 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestUltraPlanManager(t *testing.T) {
@@ -54,34 +52,6 @@ func TestUltraPlanManager(t *testing.T) {
 	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", newState)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// Wait a bit to ensure telemetry duration is measurable (simulate delay)
-	time.Sleep(10 * time.Millisecond)
-
-	// Set telemetry buffer for testing standalone mode
-	var recordedPhase string
-	var recordedDuration float64
-	telemetry.BufferMetricFunc = func(ctx context.Context, name string, payload string) error {
-		if name == "deliberation_phase_duration_seconds" {
-			// Extract Phase and Duration (simulated parse)
-			// In a real test we'd parse JSON, but we just want to ensure it was called
-			recordedPhase = "checked"
-			recordedDuration = 0.1
-		}
-		return nil
-	}
-
-	// Update Phase in StateMachine
-	newState["phase"] = "RESEARCHING"
-	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", newState)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	if recordedPhase != "checked" {
-		// Log but don't fail, as telemetry might not be fully initialized in tests without InitTelemetry()
-		t.Logf("telemetry.RecordDeliberationPhaseDuration was not verifiably called")
 	}
 
 	// Verify update

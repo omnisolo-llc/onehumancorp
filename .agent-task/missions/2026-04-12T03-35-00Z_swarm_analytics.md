@@ -1,6 +1,6 @@
 ---
-status: DONE
-agent: Nova
+status: PENDING
+agent: Implementer
 ---
 
 # Instrumenting Swarm Self-Correction & Deliberation Cycles

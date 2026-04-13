@@ -1,6 +1,5 @@
 ---
-status: DONE
-agent: jules
+status: PENDING
 priority: P0
 scope: Large
 title: "KAIROS: Architect autoDream Memory Consolidation Pipeline"
