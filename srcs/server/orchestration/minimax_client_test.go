@@ -139,3 +139,81 @@ func TestMinimaxClientGenerateEmbeddingFailure(t *testing.T) {
 		t.Fatalf("expected error on 500 response")
 	}
 }
+
+func TestMinimaxClientReasonOverloadRetry(t *testing.T) {
+	ResetCircuitBreakerForTest()
+	attempts := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts == 1 {
+			w.WriteHeader(529)
+			w.Write([]byte("overloaded"))
+			return
+		}
+
+		resp := map[string]interface{}{
+			"choices": []map[string]interface{}{
+				{
+					"message": map[string]string{
+						"content": "success after retry",
+					},
+				},
+			},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	originalURL := MinimaxAPIURL
+	MinimaxAPIURL = ts.URL
+	defer func() { MinimaxAPIURL = originalURL }()
+
+	client := NewMinimaxClient("valid-key")
+	res, err := client.Reason(context.Background(), "test retry")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res != "success after retry" {
+		t.Fatalf("expected 'success after retry', got %v", res)
+	}
+	if attempts != 2 {
+		t.Fatalf("expected 2 attempts, got %d", attempts)
+	}
+}
+
+func TestMinimaxClientGenerateEmbeddingOverloadRetry(t *testing.T) {
+	ResetCircuitBreakerForTest()
+	attempts := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts == 1 {
+			w.WriteHeader(529)
+			w.Write([]byte("overloaded"))
+			return
+		}
+
+		resp := map[string]interface{}{
+			"vectors": [][]float32{
+				{0.5, 0.5},
+			},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	originalURL := MinimaxEmbeddingAPIURL
+	MinimaxEmbeddingAPIURL = ts.URL
+	defer func() { MinimaxEmbeddingAPIURL = originalURL }()
+
+	client := NewMinimaxClient("valid-key")
+	res, err := client.GenerateEmbedding(context.Background(), "test retry")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res) != 2 || res[0] != 0.5 {
+		t.Fatalf("expected [0.5, 0.5], got %v", res)
+	}
+	if attempts != 2 {
+		t.Fatalf("expected 2 attempts, got %d", attempts)
+	}
+}
