@@ -96,7 +96,7 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 
 	// SWE uses Minimax to reason about the task and produce an implementation plan.
 	client := orchestration.NewMinimaxClient(key)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	prompt := fmt.Sprintf(
@@ -193,7 +193,7 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	)
 
 	client := orchestration.NewMinimaxClient(key)
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	type turn struct {
