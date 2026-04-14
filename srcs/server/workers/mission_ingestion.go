@@ -54,7 +54,8 @@ func (w *MissionIngestionWorker) IngestMissions(ctx context.Context) {
 	}
 
 	for _, file := range files {
-		if file.IsDir() || filepath.Ext(file.Name()) != ".md" {
+		ext := filepath.Ext(file.Name())
+		if file.IsDir() || (ext != ".md" && ext != ".yml") {
 			continue
 		}
 
@@ -70,7 +71,7 @@ func (w *MissionIngestionWorker) IngestMissions(ctx context.Context) {
 		// Strip HTML glassmorphism styling
 		content = stripHTML(content)
 
-		missionID := strings.TrimSuffix(file.Name(), ".md")
+		missionID := strings.TrimSuffix(file.Name(), ext)
 
 		// Let AutoDream logic inject truth, skipping if it already exists or using it to upset.
 		// Wait, AutoDream InjectTruth expects embedding?
