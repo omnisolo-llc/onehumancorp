@@ -189,3 +189,108 @@ func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPaylo
 
 	return nil
 }
+
+type AgentMission struct {
+	ID             string    `json:"id"`
+	OrganizationID string    `json:"organization_id"`
+	Status         string    `json:"status"`
+	Payload        string    `json:"payload"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type MissionSynchronizer interface {
+	SyncLocalToCloud(ctx context.Context, mission *AgentMission) error
+}
+
+type DefaultMissionSynchronizer struct {
+	dbWrapper   *db.DB
+	cloudAPIURL string
+}
+
+func NewDefaultMissionSynchronizer(dbWrapper *db.DB, cloudAPIURL string) *DefaultMissionSynchronizer {
+	if cloudAPIURL == "" {
+		cloudAPIURL = os.Getenv("OHC_CORE_URL")
+	}
+	if cloudAPIURL == "" {
+		cloudAPIURL = "http://localhost:8080"
+	}
+	return &DefaultMissionSynchronizer{dbWrapper: dbWrapper, cloudAPIURL: cloudAPIURL}
+}
+
+func (s *DefaultMissionSynchronizer) SyncLocalToCloud(ctx context.Context, mission *AgentMission) error {
+	// Copy the payload to avoid mutating the original
+	payloadStr := mission.Payload
+
+	// Scrub PII from payload
+	var parsedPayload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadStr), &parsedPayload); err == nil {
+		redactedInterface := telemetry.RedactInterfacePII(parsedPayload)
+		if redactedMap, ok := redactedInterface.(map[string]interface{}); ok {
+			parsedPayload = redactedMap
+		}
+		if redactedBytes, err := json.Marshal(parsedPayload); err == nil {
+			payloadStr = string(redactedBytes)
+		}
+	} else {
+		payloadStr = telemetry.RedactPII(payloadStr)
+	}
+
+	missionCopy := *mission
+	missionCopy.Payload = payloadStr
+
+	if s.dbWrapper.IsSQLite() {
+		// In standalone mode, we must send via HTTP to the cloud orchestrator to bridge the RAG context
+		jsonData, err := json.Marshal(missionCopy)
+		if err != nil {
+			return fmt.Errorf("marshal mission: %w", err)
+		}
+
+		syncEndpoint := fmt.Sprintf("%s/api/sync/mission", s.cloudAPIURL)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return fmt.Errorf("create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
+			req.Header.Set("Authorization", "Bearer "+spiffeToken)
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("do request: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 300 {
+			body, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+		}
+		return nil
+	}
+
+	tx, err := s.dbWrapper.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// If we're already in cloud mode, directly sync to the pgvector/Postgres orchestrator
+	query := `
+		INSERT INTO agent_missions (id, organization_id, status, payload, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (id) DO UPDATE SET
+			status = EXCLUDED.status,
+			payload = EXCLUDED.payload,
+			updated_at = EXCLUDED.updated_at
+	`
+	_, err = tx.Exec(ctx, query, missionCopy.ID, missionCopy.OrganizationID, missionCopy.Status, missionCopy.Payload, missionCopy.CreatedAt, missionCopy.UpdatedAt)
+	if err != nil {
+		slog.Error("hybrid_sync: failed to sync mission to cloud db", "error", err)
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
