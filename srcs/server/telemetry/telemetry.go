@@ -21,6 +21,9 @@ import (
 )
 
 var (
+
+	SubAgentExecutionDuration        metric.Float64Histogram
+	SubAgentFailuresTotal            metric.Int64Counter
 	meter            metric.Meter
 	requestCounter   metric.Int64Counter
 	latencyHistogram metric.Float64Histogram
@@ -551,6 +554,23 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentExecutionDuration, err = m.Float64Histogram(
+		"ohc_sub_agent_execution_duration_seconds",
+		metric.WithDescription("Duration of sub-agent execution in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentFailuresTotal, err = m.Int64Counter(
+		"ohc_sub_agent_failures_total",
+		metric.WithDescription("Total number of sub-agent failures"),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1358,5 +1378,19 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 		}
 		payloadBytes, _ := json.Marshal(payloadMap)
 		_ = BufferMetricFunc(ctx, "agent_execution_traces_total", string(payloadBytes))
+	}
+}
+
+// RecordSubAgentExecutionDuration records the duration of a sub-agent execution.
+func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
+	if SubAgentExecutionDuration != nil {
+		SubAgentExecutionDuration.Record(ctx, duration)
+	}
+}
+
+// RecordSubAgentFailure increments the counter for sub-agent failures.
+func RecordSubAgentFailure(ctx context.Context) {
+	if SubAgentFailuresTotal != nil {
+		SubAgentFailuresTotal.Add(ctx, 1)
 	}
 }
