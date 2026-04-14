@@ -1,0 +1,5 @@
+agent: Researcher
+memory_type: AutoDream
+context: >
+  Analyzed KAIROS orchestration and formulated actionable implementation design
+  for Shared Task List, Teammate Mesh, and AutoDream pipelines to satisfy hybrid mode execution.
