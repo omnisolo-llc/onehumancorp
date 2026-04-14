@@ -31,7 +31,7 @@
       },
       "id": 100,
       "options": {
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">OHC Hybrid Telemetry Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">Unified Analytics & Escalation Flow</p>\n</div>\n<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -536,6 +536,389 @@
     {
       "datasource": {
         "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "id": 1003,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "AutoDream Sync Duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "id": 1004,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "AutoDream Query Duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "id": 1005,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(ohc_mesh_broadcast_total[5m])) by (deployment_mode)",
+          "legendFormat": "{{deployment_mode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Mesh Broadcast Total",
+      "type": "timeseries"
+    },
+    {
+      "id": 120,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "title": "AutoDream RAG Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
+          "legendFormat": "Sync - {{deployment_mode}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "Query - {{deployment_mode}}"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 121,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "title": "AutoDream Memory Pipeline",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (autodream_memories_ingested_total)",
+          "legendFormat": "Ingested - {{agent_id}}"
+        },
+        {
+          "expr": "sum by (agent_id) (autodream_memories_compressed_total)",
+          "legendFormat": "Compressed - {{agent_id}}"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 122,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "title": "LLM Cache Efficiency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (operation, cache_type) (ohc_cache_hits_total)",
+          "legendFormat": "Hits - {{operation}} ({{cache_type}})"
+        },
+        {
+          "expr": "sum by (operation, cache_type) (ohc_cache_misses_total)",
+          "legendFormat": "Misses - {{operation}} ({{cache_type}})"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 123,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "title": "Sync Daemon Health",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "ohc_sync_daemon_batch_size",
+          "legendFormat": "Batch Size"
+        },
+        {
+          "expr": "ohc_sync_latency_seconds",
+          "legendFormat": "Latency (s)"
+        },
+        {
+          "expr": "ohc_sync_escalations_total",
+          "legendFormat": "Escalations"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 100
+      },
+      "id": 1001,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ohc_postgres_lock_contention_total[5m])",
+          "legendFormat": "{{operation}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Postgres Lock Contention Rate",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Seconds",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 100
+      },
+      "id": 1002,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "LLM Network Latency",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
         "uid": "prometheus"
       },
       "fieldConfig": {
@@ -598,7 +981,7 @@
         "x": 0,
         "y": 108
       },
-      "id": 1003,
+      "id": 1006,
       "options": {
         "legend": {
           "calcs": [],
@@ -693,7 +1076,7 @@
         "x": 12,
         "y": 108
       },
-      "id": 1004,
+      "id": 1007,
       "options": {
         "legend": {
           "calcs": [],
