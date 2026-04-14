@@ -1,0 +1,3 @@
+type: "context_update"
+agent: "KAIROS Orchestrator"
+description: "Created the Shared Task List & Teammate Mesh V2 architecture blueprint (docs/architecture/kairos_orchestration_shared_mesh_v2.md) and an accompanying mission file to track implementation progress. This architecture utilizes a distributed state machine logic with Postgres FOR UPDATE SKIP LOCKED and a gracefully degrading Teammate Mesh."
