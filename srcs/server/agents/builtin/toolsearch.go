@@ -3,19 +3,47 @@ package builtin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
-// ToolSearchTool definition
+// toolManifest is a static manifest used by ToolSearch.
+// It mirrors AllTools + coordinator tools without creating an init cycle.
+var toolManifest = []struct{ Name, Desc string }{
+	{"Bash", "Execute a bash command. Use for build/test/git/shell operations."},
+	{"Read", "Read a file from the local filesystem."},
+	{"Write", "Create or overwrite a file on the local filesystem."},
+	{"Edit", "Edit a file: replace an exact string with a new string."},
+	{"Glob", "List files matching a glob pattern."},
+	{"Grep", "Search for a regex pattern in files."},
+	{"WebFetch", "Fetch a URL and return its content as text."},
+	{"WebSearch", "Search the web using DuckDuckGo."},
+	{"SendMessage", "Send a message to the user or another agent."},
+	{"TodoWrite", "Create or update the session todo list."},
+	{"TodoRead", "Read the current session todo list."},
+	{"ToolSearch", "Search available tools by name or description."},
+	{"TaskCreate", "Create a new task in the task list."},
+	{"TaskGet", "Get details of a task by ID."},
+	{"TaskList", "List all tasks."},
+	{"TaskUpdate", "Update a task (subject, description, status, owner, etc.)."},
+	{"Sleep", "Sleep for N seconds; use while waiting for CI/builds."},
+	{"Agent", "Spawn a background sub-agent to perform a task concurrently."},
+	{"TaskStop", "Stop a running background agent task."},
+	{"TaskStatus", "Get the status and progress of a background agent task."},
+}
+
+// ToolSearchTool definition - returns available tools matching an optional query.
+// Mirrors CC-Source's ToolSearchTool which searches available tool definitions.
 var ToolSearchTool = Tool{
-	Name:        "ToolSearch",
-	Description: "Search for available tools and their descriptions.",
+	Name: "ToolSearch",
+	Description: "Search for available tools and their descriptions. " +
+		"Use this when you are unsure which tool to use for a given task.",
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {
 			"query": {
 				"type": "string",
-				"description": "Optional search query to filter tools."
+				"description": "Optional search query to filter tools by name or description."
 			}
 		}
 	}`),
@@ -29,28 +57,13 @@ var ToolSearchTool = Tool{
 			}
 		}
 
-		// Hardcoded list of tools since we can't easily access the agent's actual tool list
-		// from within the tool definition without a global registry or passing it in.
-		tools := []struct {
-			Name string
-			Desc string
-		}{
-			{"Bash", "Execute a bash script."},
-			{"Read", "Read a file from the local filesystem."},
-			{"Write", "Write content to a file on the local filesystem."},
-			{"Glob", "List files matching a glob pattern."},
-			{"Grep", "Search for a pattern in files in the specified directory."},
-			{"WebFetch", "Fetch the content of a URL."},
-			{"WebSearch", "Search the web for a query."},
-			{"SendMessage", "Send a message to the user."},
-			{"TodoWrite", "Write to the active TODO list."},
-			{"ToolSearch", "Search for available tools and their descriptions."},
-		}
-
+		q := strings.ToLower(input.Query)
 		var results []string
-		for _, t := range tools {
-			if input.Query == "" || strings.Contains(strings.ToLower(t.Name), strings.ToLower(input.Query)) || strings.Contains(strings.ToLower(t.Desc), strings.ToLower(input.Query)) {
-				results = append(results, t.Name+": "+t.Desc)
+		for _, t := range toolManifest {
+			if q == "" ||
+				strings.Contains(strings.ToLower(t.Name), q) ||
+				strings.Contains(strings.ToLower(t.Desc), q) {
+				results = append(results, fmt.Sprintf("%-16s %s", t.Name+":", t.Desc))
 			}
 		}
 

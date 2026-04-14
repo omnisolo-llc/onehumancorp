@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 )
 
@@ -53,11 +52,8 @@ func TestTools(t *testing.T) {
 		t.Fatal("WebSearchTool returned empty result")
 	}
 
-	// Test TodoWriteTool — point it at a temp file so the test is sandboxed.
-	todoFile := filepath.Join(t.TempDir(), "todo.txt")
-	t.Setenv("OHC_TODO_FILE", todoFile)
-
-	res, err = TodoWriteTool.Execute(ctx, []byte(`{"todo":"test todo"}`))
+	// Test TodoWriteTool — new list-based API
+	res, err = TodoWriteTool.Execute(ctx, []byte(`{"todos":[{"content":"test todo","status":"pending"}]}`))
 	if err != nil {
 		t.Fatalf("TodoWriteTool err: %v", err)
 	}
@@ -67,8 +63,8 @@ func TestTools(t *testing.T) {
 
     // Verify all tools are correctly registered
     allTools := AllTools()
-    if len(allTools) != 15 {
-        t.Fatalf("Expected 15 tools, got %d", len(allTools))
+    if len(allTools) != 17 {
+        t.Fatalf("Expected 17 tools, got %d", len(allTools))
     }
 }
 

@@ -128,6 +128,11 @@ type TaskState struct {
 	startAt time.Time
 	endAt   atomic.Value // stores time.Time
 
+	// done is closed when the task enters a terminal state.
+	// Callers may wait on Done() instead of polling Status().
+	done     chan struct{}
+	doneOnce sync.Once
+
 	// notified is flipped true when the completion notification has been sent.
 	// Guards against double-delivery.
 	notifiedOnce sync.Once
@@ -144,6 +149,7 @@ func newTaskState(id, description, prompt, workDir, outputFile, toolUseID string
 		cancel:      cancel,
 		startAt:     time.Now(),
 		progress:    newProgressTracker(),
+		done:        make(chan struct{}),
 	}
 	ts.status.Store(TaskStatusPending)
 	return ts
@@ -154,7 +160,17 @@ func (ts *TaskState) Status() TaskStatus {
 	return ts.status.Load().(TaskStatus)
 }
 
-func (ts *TaskState) setStatus(s TaskStatus) { ts.status.Store(s) }
+func (ts *TaskState) setStatus(s TaskStatus) {
+	ts.status.Store(s)
+	if s.IsTerminal() {
+		ts.doneOnce.Do(func() { close(ts.done) })
+	}
+}
+
+// Done returns a channel that is closed when the task enters a terminal state
+// (completed, failed, or killed).  Callers may use this instead of polling
+// Status() to avoid busy-waiting.
+func (ts *TaskState) Done() <-chan struct{} { return ts.done }
 
 // Err returns the error string if the task failed.
 func (ts *TaskState) Err() string {
