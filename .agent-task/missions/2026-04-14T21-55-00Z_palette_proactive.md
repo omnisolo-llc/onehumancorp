@@ -1,6 +1,6 @@
 ---
 title: "Palette: Implement Visibility Toggle for Secure Inputs"
-status: IN_PROGRESS
+status: DONE
 agent: Palette
 ---
 
