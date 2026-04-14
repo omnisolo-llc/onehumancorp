@@ -222,17 +222,19 @@ func (t *Tracker) recordTokenBurnRates() {
 			previousTotalUSD = val.(float64)
 		}
 
-		if currentTotalTokens >= previousTotalTokens {
-			burnRateTokens := float64(currentTotalTokens - previousTotalTokens)
-			t.tokenBurnRates.Store(orgID, burnRateTokens)
-			telemetry.RecordTokenBurnRate(t.ctx, orgID, burnRateTokens)
+		burnRateTokens := 0.0
+		if currentTotalTokens > previousTotalTokens {
+			burnRateTokens = float64(currentTotalTokens - previousTotalTokens)
 		}
+		t.tokenBurnRates.Store(orgID, burnRateTokens)
+		telemetry.RecordTokenBurnRate(t.ctx, orgID, burnRateTokens)
 
-		if currentTotalUSD >= previousTotalUSD {
-			burnRateUSD := currentTotalUSD - previousTotalUSD
-			t.usdBurnRates.Store(orgID, burnRateUSD)
-			telemetry.RecordUSDBurnRate(t.ctx, orgID, burnRateUSD)
+		burnRateUSD := 0.0
+		if currentTotalUSD > previousTotalUSD {
+			burnRateUSD = currentTotalUSD - previousTotalUSD
 		}
+		t.usdBurnRates.Store(orgID, burnRateUSD)
+		telemetry.RecordUSDBurnRate(t.ctx, orgID, burnRateUSD)
 
 		t.lastTokenCounts.Store(orgID, currentTotalTokens)
 		t.lastUSDAmounts.Store(orgID, currentTotalUSD)
