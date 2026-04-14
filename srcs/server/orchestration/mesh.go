@@ -15,6 +15,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
 
 // MeshMessage represents a realtime message sent over the mesh.
@@ -34,6 +36,12 @@ var upgrader = websocket.Upgrader{
 		return true // Allow all for now
 	},
 }
+
+var (
+	meter = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration")
+	meshMsgThroughput, _ = meter.Int64Counter("mesh.message.throughput")
+	meshLatency, _ = meter.Float64Histogram("mesh.latency", metric.WithUnit("ms"))
+)
 
 // LegacyTeammateMesh manages real-time pub/sub for agents
 type LegacyTeammateMesh struct {
