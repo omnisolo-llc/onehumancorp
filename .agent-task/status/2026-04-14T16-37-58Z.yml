@@ -1,0 +1,5 @@
+---
+status: HEALTHY
+metrics:
+  uptime: "100%"
+agent: Palette

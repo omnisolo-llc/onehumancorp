@@ -28,6 +28,7 @@ import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/swarm_observability_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -151,6 +152,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SwarmMemoryScreen(),
           ),
           GoRoute(
+            path: '/swarm-observability',
+            builder: (context, state) => const SwarmObservabilityScreen(),
+          ),
+          GoRoute(
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
@@ -197,6 +202,7 @@ class _Sidebar extends StatelessWidget {
           path: '/orchestration/tasks',
         ),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
+        _NavItem(icon: Icons.hub, label: 'Swarm Observability', path: '/swarm-observability'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(
