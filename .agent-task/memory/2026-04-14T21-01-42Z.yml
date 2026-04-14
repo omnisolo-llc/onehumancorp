@@ -1,0 +1,4 @@
+---
+timestamp: 2026-04-14T21-01-42Z
+agent: Guide
+context: "Proactively implemented an Environment Validation Endpoint in the onboarding service to ensure configuration parameters like database and cache correspond correctly to the selected mode (Cloud or Standalone). Also included an InteractiveWizard logic. All tests run and pass."
