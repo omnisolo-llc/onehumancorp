@@ -204,7 +204,7 @@ func (cn *CentrifugeNode) PublishPresenceBroadcast(agentID string, status string
 	}
 
 	if cn.meshTransport != nil {
-		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "presence", dataBytes)
+		_ = cn.meshTransport.Publish(context.Background(), "presence", dataBytes)
 	}
 	channel := "mesh:presence"
 
@@ -215,7 +215,7 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 	if cn.meshTransport != nil {
 		data, err := json.Marshal(payload)
 		if err == nil {
-			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", data)
+			_ = cn.meshTransport.Publish(context.Background(), "tasks", data)
 		}
 	}
 	channel := "mesh:tasks"
