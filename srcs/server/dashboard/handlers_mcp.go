@@ -409,7 +409,7 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			fsProvider = hybridfsmcp.NewCloudFSProvider("/tmp/ohc-cloud-fs")
 		}
 
-		inspector := hybridfsmcp.NewHybridFSMCP(fsProvider)
+		inspector := hybridfsmcp.NewHybridFSMCP(fsProvider, s.ragEscalator)
 		var params map[string]interface{}
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return nil, fmt.Errorf("invalid hybridfs-mcp parameters: %w", err)

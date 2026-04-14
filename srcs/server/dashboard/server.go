@@ -16,6 +16,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
+		"github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridfsmcp"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	growthapi "github.com/onehumancorp/mono/services/growth/api"
@@ -59,6 +60,7 @@ type Server struct {
 	rateLimitStates       map[string]*RateLimitState
 	staticDir             string
 	serveUI               bool
+	ragEscalator          hybridfsmcp.Escalator
 	experiments           []LandingPageExperiment
 	referrals             []Referral
 	downloads             []Download
@@ -435,6 +437,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		rpc[string(rp.Role)] = rp
 	}
 
+	escalator, err := hybridfsmcp.NewDynamicEscalator(10)
+	if err != nil {
+		// Log the error and fall back to nil, which effectively disables escalation
+		fmt.Printf("Warning: failed to initialize dynamic escalator: %v\n", err)
+	}
+
 	server := &Server{
 		org:                   org,
 		roleProfileCache:      rpc,
@@ -457,6 +465,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		rateLimitStates:       make(map[string]*RateLimitState),
 		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),
 		serveUI:               shouldServeUI(),
+		ragEscalator:          escalator,
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},

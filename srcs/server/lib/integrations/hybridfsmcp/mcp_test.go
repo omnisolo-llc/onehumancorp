@@ -85,26 +85,47 @@ func TestCloudFSProvider(t *testing.T) {
 func TestHybridFSMCP(t *testing.T) {
 	tempDir := t.TempDir()
 	provider := NewLocalFSProvider(tempDir)
-	mcp := NewHybridFSMCP(provider)
+	escalator, _ := NewDynamicEscalator(10)
+	mcp := NewHybridFSMCP(provider, escalator)
 	ctx := context.Background()
 
 	tools := mcp.ListTools()
-	if len(tools) != 3 {
-		t.Errorf("expected 3 tools, got %d", len(tools))
+	if len(tools) != 4 {
+		t.Errorf("expected 4 tools, got %d", len(tools))
+	}
+
+	// RAG query short
+	res, err := mcp.CallTool(ctx, "rag_query", map[string]interface{}{"query": "short"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resMap := res.(map[string]interface{})
+	if resMap["result"] != "local_rag_result" {
+		t.Errorf("expected 'local_rag_result', got '%v'", resMap["result"])
+	}
+
+	// RAG query long
+	res, err = mcp.CallTool(ctx, "rag_query", map[string]interface{}{"query": "this is a long query to trigger escalation"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resMap = res.(map[string]interface{})
+	if resMap["result"] != "cloud_rag_result" {
+		t.Errorf("expected 'cloud_rag_result', got '%v'", resMap["result"])
 	}
 
 	// Write
-	_, err := mcp.CallTool(ctx, "write_file", map[string]interface{}{"path": "test.txt", "content": "hello"})
+	_, err = mcp.CallTool(ctx, "write_file", map[string]interface{}{"path": "test.txt", "content": "hello"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Read
-	res, err := mcp.CallTool(ctx, "read_file", map[string]interface{}{"path": "test.txt"})
+	res, err = mcp.CallTool(ctx, "read_file", map[string]interface{}{"path": "test.txt"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	resMap := res.(map[string]interface{})
+	resMap = res.(map[string]interface{})
 	if resMap["content"] != "hello" {
 		t.Errorf("expected 'hello', got '%v'", resMap["content"])
 	}

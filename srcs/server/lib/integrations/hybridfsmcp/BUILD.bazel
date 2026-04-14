@@ -4,6 +4,7 @@ go_library(
     name = "hybridfsmcp",
     srcs = [
         "mcp.go",
+        "escalator.go",
         "provider.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridfsmcp",
@@ -11,6 +12,8 @@ go_library(
     deps = [
         "//srcs/server/utils",
         "//srcs/server/auth",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
     ],
 )
 
@@ -18,10 +21,13 @@ go_test(
     name = "hybridfsmcp_test",
     srcs = [
         "mcp_test.go",
+        "escalator_test.go",
     ],
     embed = [":hybridfsmcp"],
     deps = [
         "//srcs/server/utils",
         "//srcs/server/auth",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
     ],
 )
