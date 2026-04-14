@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package ohc.agent.service;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto/agentservice;agentservicepb";
+
+// AgentRuntimeConfig is the control surface for agent defaults and
+// per-request execution settings.
+message AgentRuntimeConfig {
+  string llm_provider = 1;
+  string model = 2;
+  string llm_endpoint = 3;
+  string system_prompt = 4;
+  int32 max_tokens = 5;
+  float temperature = 6;
+  int32 max_iterations = 7;
+  int32 max_context_messages = 8;
+}
+
+// RunTaskRequest is sent from the main server to the agent to start a task.
+message RunTaskRequest {
+  // Unique task identifier for tracing and output file naming.
+  string task_id = 11;
+  // The task description / user prompt.
+  string task = 1;
+  // LLM model name (e.g. "gpt-4o", "claude-3-5-sonnet", "llama3").
+  string model = 2;
+  // LLM provider: "openai" | "anthropic" | "ollama".
+  string llm_provider = 3;
+  // Optional endpoint override (primarily for Ollama).
+  string llm_endpoint = 4;
+  // System prompt override. Empty → use built-in default.
+  string system_prompt = 5;
+  // Maximum tokens for a single LLM response.
+  int32 max_tokens = 6;
+  // LLM temperature in [0, 2].
+  float temperature = 7;
+  // Maximum number of messages retained in the context window before trimming.
+  int32 max_context_messages = 8;
+  // Preferred configuration surface; when populated these values override
+  // the process defaults and supersede the legacy fields above.
+  AgentRuntimeConfig runtime_config = 9;
+  // Toolset configuration: which built-in tools, MCP servers, and skills to
+  // make available for this specific run.  When absent the agent uses its
+  // process-level defaults.
+  ToolsetConfig toolset_config = 10;
+}
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  // A partial text chunk from the assistant.
+  TEXT_CHUNK = 1;
+  // A tool has been invoked.
+  TOOL_CALL = 2;
+  // The agent has finished (final response in content).
+  TASK_COMPLETE = 3;
+  // A fatal error has occurred.
+  TASK_ERROR = 4;
+  // The agent accepted the task and initialized its runtime state.
+  RUN_STARTED = 5;
+  // A new ReAct iteration began.
+  ITERATION_STARTED = 6;
+}
+
+// RunTaskEvent is a single streamed event from the agent back to the server.
+message RunTaskEvent {
+  EventType type = 1;
+  // Present for TEXT_CHUNK and TASK_COMPLETE.
+  string content = 2;
+  // Present for TOOL_CALL.
+  string tool_name = 3;
+  string tool_args_json = 4;
+  string tool_result = 5;
+  // Present for TASK_ERROR.
+  string error = 6;
+  // Present for RUN_STARTED and ITERATION_STARTED.
+  int32 iteration = 7;
+  int32 message_count = 8;
+}
+
+// PingRequest / PingResponse for health-check.
+message PingRequest {}
+
+message PingResponse {
+  string agent_id = 1;
+  string version = 2;
+}
+
+// SubAgentRequest dispatches work to a sub-agent.
+message SubAgentRequest {
+  string task = 1;
+  string model = 2;
+  string llm_provider = 3;
+  string llm_endpoint = 4;
+  string system_prompt = 5;
+  int32 max_tokens = 6;
+  float temperature = 7;
+  // Optional remote gRPC endpoint for the sub-agent (host:port).
+  // When empty, the receiving agent executes the request in-process via goroutine.
+  string sub_agent_address = 8;
+  // Preferred configuration surface for sub-agent execution.
+  AgentRuntimeConfig runtime_config = 9;
+  // Toolset configuration for the sub-agent.
+  ToolsetConfig toolset_config = 10;
+}
+
+// SubAgentResponse carries the sub-agent's final answer.
+message SubAgentResponse {
+  string result = 1;
+  string error = 2;
+}
+
+// ── Toolset / MCP / Skill configuration ──────────────────────────────────────
+
+// MCPTransportType specifies the transport used to connect to an MCP server.
+enum MCPTransportType {
+  MCP_TRANSPORT_UNSPECIFIED = 0;
+  // Launch a subprocess and communicate over stdin/stdout (stdio transport).
+  MCP_TRANSPORT_STDIO = 1;
+  // Connect to a running HTTP server via Server-Sent Events.
+  MCP_TRANSPORT_SSE = 2;
+}
+
+// MCPServerConfig describes a single MCP server the agent should connect to.
+message MCPServerConfig {
+  // Logical name for this server (used in logs and tool namespacing).
+  string name = 1;
+  // Transport type.
+  MCPTransportType transport = 2;
+  // STDIO transport: command and arguments to launch the MCP process.
+  // command[0] is the executable; subsequent elements are its arguments.
+  repeated string command = 3;
+  // SSE transport: base URL of the MCP HTTP endpoint.
+  string endpoint = 4;
+  // Environment variables forwarded to the MCP subprocess (STDIO only).
+  map<string, string> env = 5;
+  // If non-empty, expose only these tool names from this server.
+  // An empty list means all tools from the server are exposed.
+  repeated string allowed_tools = 6;
+}
+
+// SkillConfig defines a named skill that the agent can use as a sub-capability.
+// Skills are modelled as sub-agents with a focused instruction.
+message SkillConfig {
+  // Unique name for the skill.
+  string name = 1;
+  // One-line description used when the orchestrator selects this skill.
+  string description = 2;
+  // The instruction / system prompt for this skill sub-agent.
+  string instruction = 3;
+}
+
+// ToolsetConfig fully describes the tools, MCP servers, and skills that should
+// be available to a builtin agent instance.  It replaces hardcoded Go tool
+// lists and is the single source of truth for agent capability.
+message ToolsetConfig {
+  // Built-in tool names to expose (Bash, Read, Write, Glob, Grep, WebFetch,
+  // WebSearch, SendMessage, TodoWrite, ToolSearch, TaskCreate, TaskGet,
+  // TaskList, TaskUpdate).
+  // An empty list enables ALL built-in tools (default behaviour).
+  repeated string builtin_tools = 1;
+  // MCP servers to connect; tools from each server are added to the agent.
+  repeated MCPServerConfig mcp_servers = 2;
+  // Skills to register as callable sub-capabilities.
+  repeated SkillConfig skills = 3;
+}
+
+// AgentService is exposed by every agent process.
+// The main Go server connects as a client; agents connect to sub-agent
+// processes as clients as well.
+service AgentService {
+  // RunTask streams progress events back to the caller.
+  rpc RunTask(RunTaskRequest) returns (stream RunTaskEvent);
+  // Ping is used for health-checking and service discovery.
+  rpc Ping(PingRequest) returns (PingResponse);
+  // DispatchToSubAgent delegates work to a sub-agent and awaits its result.
+  // When sub_agent_address is empty the agent runs the work in-process via
+  // a goroutine and communicates with it over a channel.
+  rpc DispatchToSubAgent(SubAgentRequest) returns (SubAgentResponse);
+}
