@@ -2,7 +2,7 @@
 
 # Interactive KAIROS API Playbook
 
-This interactive playbook provides a walkthrough for the KAIROS AI OS Orchestration APIs, specifically focusing on the Teammate Mesh, Shared Task List, and AutoDream integration.
+This interactive playbook provides a walkthrough for the KAIROS AI OS Orchestration APIs, specifically focusing on the Teammate Mesh, Shared Task List, AutoDream integration, Hybrid Health Probes, and CRDT Sync tools.
 
 ## Teammate Mesh Architecture
 
@@ -41,5 +41,47 @@ graph TD
 ### 2. Broadcast Message
 **POST** `/api/mesh/v2/broadcast`
 - **Payload**: `{"channel": "swarm-events", "data": {"event": "status_update", "status": "IN_PROGRESS"}}`
+
+### 3. Hybrid Health Probe
+**GET** `/api/v1/health`
+- **Response**: `{"mode": "cloud", "status": "healthy", "db_ping": 15000000, "sync_backlog": 0, "stuck_missions": 0, "mesh_active": true}`
+
+### 4. Hybrid CRDT Sync MCP Tools
+**Tool Invoke**: `crdt_push`
+- **Payload**: `{"entity_id": "task_12345", "mutations": [{"clock": 42, "op": "set", "path": "status", "value": "COMPLETED"}]}`
+
+## Hybrid Architecture Visualizations
+
+### Hybrid Health Probe Flow
+
+```mermaid
+graph TD
+    A[Client Request] -->|GET /api/v1/health| B(Orchestrator Hub)
+    B -.->|Ping| C[(Shared Task DB)]
+    B -.->|Check Backlog| C
+    B -.->|Publish mesh:health| D((Teammate Mesh))
+    D -.->|pong| B
+    B -->|Returns HybridHealthProbe JSON| A
+
+    style A fill:#003366,stroke:#333,stroke-width:2px,color:#fff
+    style B fill:#006699,stroke:#333,stroke-width:2px,color:#fff
+    style C fill:#0099cc,stroke:#333,stroke-width:2px,color:#fff
+    style D fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
+```
+
+### Hybrid CRDT State Synchronization
+
+```mermaid
+graph TD
+    A[Standalone Mode] -->|Local Edits| B(SQLite DB)
+    B -.->|crdt_push via MCP| C{Cloud MCP Gateway}
+    C -->|crdt_merge| D(PostgreSQL DB)
+    D -->|crdt_pull| E[Cloud Swarm Orchestration]
+
+    style A fill:#003366,stroke:#333,stroke-width:2px,color:#fff
+    style B fill:#006699,stroke:#333,stroke-width:2px,color:#fff
+    style D fill:#0099cc,stroke:#333,stroke-width:2px,color:#fff
+    style E fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
+```
 
 </div>
