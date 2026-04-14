@@ -509,6 +509,22 @@ func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Stub logic for quota
-	writeJSON(w, QuotaMetrics{Used: 10, Max: 100})
+	orgID := r.URL.Query().Get("org_id")
+	resourceType := r.URL.Query().Get("resource_type")
+	if orgID == "" {
+		orgID = "default"
+	}
+	if resourceType == "" {
+		resourceType = "compute"
+	}
+
+	var used, max int
+	if s.quotaTracker != nil {
+		used, max, _ = s.quotaTracker.GetQuota(r.Context(), orgID, resourceType)
+	} else {
+		used = 10
+		max = 100
+	}
+
+	writeJSON(w, QuotaMetrics{Used: used, Max: max})
 }

@@ -1,0 +1,10 @@
+As I haven't found any pending missions that match the `Nova` agent (Growth engineer), I need to create one:
+"If no pending missions exist, use your domain expertise to identify and implement improvements within your specialty area, and still create a PR with tests."
+
+Let's brainstorm some growth features.
+1. The handlers in `srcs/server/dashboard/handlers_growth.go` are currently using in-memory mock storage attached to the `Server` struct (`s.referrals`, `s.teamInvites`, `s.waitlist`).
+2. There is a `srcs/server/services/growth/` package with some logic but it's not fully wired up to the API handlers, and is isolated.
+
+I can write a mission and then implement it.
+The mission could be: "Wire the `growth` service to the `dashboard` handlers for persistent Referrals tracking and invite loop instead of in-memory mock."
+Or a simpler feature: "Implement a Free-Tier Quota mechanism in the dashboard handlers for growth tracking"

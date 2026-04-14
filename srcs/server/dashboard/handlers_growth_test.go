@@ -512,7 +512,8 @@ func TestHandleQuota(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&metrics); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
+	// Fallback when DB is nil
 	if metrics.Used != 10 || metrics.Max != 100 {
-		t.Errorf("expected 10/100, got %d/%d", metrics.Used, metrics.Max)
+		t.Errorf("expected fallback 10/100, got %d/%d", metrics.Used, metrics.Max)
 	}
 }
