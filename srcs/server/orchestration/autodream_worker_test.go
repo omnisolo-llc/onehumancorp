@@ -29,7 +29,7 @@ func setupTestDB(t *testing.T) db.Provider {
 		content TEXT NOT NULL,
 		embedding TEXT,
 		source_type TEXT NOT NULL,
-		metadata TEXT,
+		metadata JSON,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
@@ -134,7 +134,6 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 	}
 }
 
-
 func TestAutoDreamWorker_ProcessMemories_MissingOrg(t *testing.T) {
 	provider := setupTestDB(t)
 	setupMockMemories(t, 1)
@@ -145,5 +144,38 @@ func TestAutoDreamWorker_ProcessMemories_MissingOrg(t *testing.T) {
 	err := worker.ProcessMemories(ctx)
 	if err == nil || err.Error() != "missing organization_id in context" {
 		t.Fatalf("expected missing organization_id error, got %v", err)
+	}
+}
+
+func TestAutoDreamWorker_SearchNearestNeighbor(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to open sqlite in-memory db: %v", err)
+	}
+	provider := db.NewSqliteProvider(sqlDB)
+
+	query := `CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
+		memory_id TEXT PRIMARY KEY,
+		context TEXT,
+		embedding TEXT,
+		created_at TEXT DEFAULT CURRENT_TIMESTAMP
+	);`
+	if _, err := provider.Exec(context.Background(), query); err != nil {
+		t.Fatalf("failed to create swarm_truth_embeddings table: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(provider)
+	ctx := context.Background()
+
+	if _, err := provider.Exec(ctx, "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ('1', 'A', '[0.1]')"); err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	results, err := worker.SearchTruth(ctx, "[0.1]", 1)
+	if err != nil {
+		t.Fatalf("failed to search truth: %v", err)
+	}
+	if len(results) != 1 || results[0].MemoryID != "1" {
+		t.Fatalf("expected 1 result with ID '1'")
 	}
 }
