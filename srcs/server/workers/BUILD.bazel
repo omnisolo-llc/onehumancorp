@@ -4,6 +4,7 @@ go_library(
     name = "workers",
     srcs = [
         "mission_ingestion.go",
+        "hybrid_sync_worker.go",
         "competitor_audit.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/workers",
@@ -14,6 +15,7 @@ go_library(
         "@com_github_google_uuid//:uuid",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "//srcs/server/telemetry",
     ],
 )
 
@@ -21,6 +23,7 @@ go_test(
     name = "workers_test",
     srcs = [
         "mission_ingestion_test.go",
+        "hybrid_sync_worker_test.go",
         "competitor_audit_test.go",
     ],
     embed = [":workers"],

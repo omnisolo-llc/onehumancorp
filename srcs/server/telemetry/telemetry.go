@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	VectorsSyncedCount          metric.Int64Counter
 
 	SubAgentExecutionDuration        metric.Float64Histogram
 	SubAgentFailuresTotal            metric.Int64Counter
@@ -193,6 +194,10 @@ type mockableMeter interface {
 func InitWithMeter(m mockableMeter) error {
 	var err error
 	var errs []error
+	VectorsSyncedCount, err = m.Int64Counter("vectors_synced_count")
+	if err != nil {
+		errs = append(errs, err)
+	}
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
