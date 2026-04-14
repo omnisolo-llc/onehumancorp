@@ -5,9 +5,14 @@ go_library(
     srcs = [
         "referrals.go",
         "experiments.go",
+        "viral_loop.go",
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
+    deps = [
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
 )
 
 go_test(
@@ -15,6 +20,7 @@ go_test(
     srcs = [
         "referrals_test.go",
         "experiments_test.go",
+        "viral_loop_test.go",
     ],
     embed = [":growth"],
 )
