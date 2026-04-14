@@ -1,20 +1,16 @@
 package hybridfsmcp
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 	"path/filepath"
 	"strings"
 
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // FileSystemProvider abstracts the file system operations.
@@ -79,115 +75,75 @@ func (p *LocalFSProvider) ListDir(ctx context.Context, path string) ([]string, e
 	return names, nil
 }
 
-// S3ClientInterface abstracts S3 methods used by CloudFSProvider to enable testing.
-type S3ClientInterface interface {
-	GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (io.ReadCloser, error)
-	PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error)
-	ListObjects(ctx context.Context, bucketName string, opts minio.ListObjectsOptions) <-chan minio.ObjectInfo
-}
-
-// CloudFSProvider implements FileSystemProvider using an S3 backend.
+// CloudFSProvider implements FileSystemProvider for a tenant-scoped environment.
+// In this stub, we map it to a local base directory suffixed with the organization ID.
 type CloudFSProvider struct {
-	client     S3ClientInterface
-	bucketName string
+	baseDir string
 }
 
-// NewCloudFSProvider creates a new CloudFSProvider.
-func NewCloudFSProvider(client S3ClientInterface, bucketName string) *CloudFSProvider {
-	return &CloudFSProvider{client: client, bucketName: bucketName}
+func NewCloudFSProvider(baseDir string) *CloudFSProvider {
+	return &CloudFSProvider{baseDir: baseDir}
+}
+
+func (p *CloudFSProvider) getTenantDir(ctx context.Context) (string, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.OrganizationID == "" {
+		return "", errors.New("unauthorized: missing claims or organization ID")
+	}
+	return filepath.Join(p.baseDir, claims.OrganizationID), nil
 }
 
 func (p *CloudFSProvider) sanitizePath(ctx context.Context, path string) (string, error) {
 	if strings.Contains(path, "..") {
 		return "", errors.New("directory traversal not allowed")
 	}
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil || claims.OrganizationID == "" {
-		return "", errors.New("unauthorized: missing claims or organization ID")
+	tenantDir, err := p.getTenantDir(ctx)
+	if err != nil {
+		return "", err
 	}
-
 	cleanPath := filepath.Clean("/" + path)
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
-
-	// S3 keys must be tenant/{org_id}/fs/{path}
-	s3Key := fmt.Sprintf("tenant/%s/fs/%s", claims.OrganizationID, cleanPath)
-	return s3Key, nil
+	fullPath := filepath.Join(tenantDir, cleanPath)
+	return fullPath, nil
 }
 
 func (p *CloudFSProvider) ReadFile(ctx context.Context, path string) ([]byte, error) {
-	s3Key, err := p.sanitizePath(ctx, path)
+	fullPath, err := p.sanitizePath(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-	object, err := p.client.GetObject(ctx, p.bucketName, s3Key, minio.GetObjectOptions{})
-	if err != nil {
-		return nil, err
-	}
-	defer object.Close()
-
-	// MinIO GetObject returns a *minio.Object which implements io.Reader
-	// Need to check for NotFound error when actually reading
-	data, err := io.ReadAll(object)
-	if err != nil {
-		// minio-go returns error responses that we can check
-		errResp := minio.ToErrorResponse(err)
-		if errResp.Code == "NoSuchKey" {
-			return nil, os.ErrNotExist
-		}
-		return nil, err
-	}
-	return data, nil
+	return os.ReadFile(fullPath)
 }
 
 func (p *CloudFSProvider) WriteFile(ctx context.Context, path string, data []byte) error {
-	s3Key, err := p.sanitizePath(ctx, path)
+	fullPath, err := p.sanitizePath(ctx, path)
 	if err != nil {
 		return err
 	}
-
-	reader := bytes.NewReader(data)
-	_, err = p.client.PutObject(ctx, p.bucketName, s3Key, reader, int64(len(data)), minio.PutObjectOptions{
-		ContentType: "application/octet-stream",
-	})
-	return err
+	dir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	return utils.WriteFileAtomic(fullPath, data, 0644)
 }
 
 func (p *CloudFSProvider) ListDir(ctx context.Context, path string) ([]string, error) {
-	s3Key, err := p.sanitizePath(ctx, path)
+	fullPath, err := p.sanitizePath(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-
-	// For S3 directory listing, we append a trailing slash if not empty
-	prefix := s3Key
-	if prefix != "" && !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
-
-	// We only want files directly under this prefix, not recursively
-	// minio-go uses an empty string separator by default if not set? We should set it if we only want immediate children.
-	opts := minio.ListObjectsOptions{
-		Prefix:    prefix,
-		Recursive: false, // Not recursive, we just want immediate children
-	}
-
-	var entries []string
-	objectCh := p.client.ListObjects(ctx, p.bucketName, opts)
-	for object := range objectCh {
-		if object.Err != nil {
-			return nil, object.Err
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
 		}
-
-		// Remove the prefix to get the relative name
-		name := strings.TrimPrefix(object.Key, prefix)
-		if name != "" {
-			// Trim trailing slash for directories returned by minio if any
-			name = strings.TrimSuffix(name, "/")
-			entries = append(entries, name)
-		}
+		return nil, err
 	}
-
-	return entries, nil
+	var names []string
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	return names, nil
 }
 
 // HybridFSMCP implements the MCP interface for filesystem operations.
@@ -272,55 +228,12 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 	}
 }
 
-// RealS3ClientWrapper wraps a real *minio.Client to implement S3ClientInterface
-type RealS3ClientWrapper struct {
-	client *minio.Client
-}
-
-func (w *RealS3ClientWrapper) GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (io.ReadCloser, error) {
-	obj, err := w.client.GetObject(ctx, bucketName, objectName, opts)
-	if err != nil {
-		return nil, err
-	}
-	return obj, nil
-}
-
-func (w *RealS3ClientWrapper) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
-	return w.client.PutObject(ctx, bucketName, objectName, reader, objectSize, opts)
-}
-
-func (w *RealS3ClientWrapper) ListObjects(ctx context.Context, bucketName string, opts minio.ListObjectsOptions) <-chan minio.ObjectInfo {
-	return w.client.ListObjects(ctx, bucketName, opts)
-}
-
 // NewProviderFactory returns a FileSystemProvider based on environment configuration.
-func NewProviderFactory(baseDir string) (FileSystemProvider, error) {
+func NewProviderFactory(baseDir string) FileSystemProvider {
 	if envBoolDefault("OHC_MULTITENANT", false) {
-		endpoint := os.Getenv("S3_ENDPOINT")
-		accessKey := os.Getenv("S3_ACCESS_KEY")
-		secretKey := os.Getenv("S3_SECRET_KEY")
-		bucketName := os.Getenv("S3_BUCKET_NAME")
-		if bucketName == "" {
-			bucketName = "ohc-tenant-data"
-		}
-
-		if endpoint == "" {
-			return nil, errors.New("S3_ENDPOINT is required in Cloud Mode")
-		}
-
-		// Initialize minio client object.
-		minioClient, err := minio.New(endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-			Secure: envBoolDefault("S3_SECURE", true),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		wrapper := &RealS3ClientWrapper{client: minioClient}
-		return NewCloudFSProvider(wrapper, bucketName), nil
+		return NewCloudFSProvider(baseDir)
 	}
-	return NewLocalFSProvider(baseDir), nil
+	return NewLocalFSProvider(baseDir)
 }
 
 func envBoolDefault(key string, fallback bool) bool {

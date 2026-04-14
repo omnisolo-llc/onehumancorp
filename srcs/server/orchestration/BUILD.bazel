@@ -5,7 +5,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
-        "autodream_sync_daemon.go",
         "auth_interceptor.go",
         "autodream.go",
         "autodream_worker.go",
@@ -61,7 +60,6 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
-        "autodream_sync_daemon_test.go",
         "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
@@ -88,7 +86,6 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
-        "@com_github_stretchr_testify//assert",
         "//srcs/server/utils",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_gorilla_websocket//:websocket",

@@ -1,9 +1,4 @@
 # Release Notes
-## v0.3.0 (Cloud) / v0.3.0+1 (Standalone)
-- Scaling (Cloud): Formalized the Realtime Teammate Mesh APIs using Redis Pub/Sub for horizontal scalability and broadcasting across pods.
-- Privacy/Offline (Standalone): Implemented MemoryMeshTransport for the Teammate Mesh to run without external dependencies.
-- Scaling (Cloud): Architected Shared Task List and OHC Core Systems for Agent coordination.
-
 ## v0.2.9 (Cloud) / v0.2.9+1 (Standalone)
 - Scaling (Cloud): Enhanced Cloud multi-tenant architecture with robust tests and SPIFFE auth support for new MCP package.
 - Privacy/Offline (Standalone): Implemented the `statesyncmcp` MCP package for seamless local-to-cloud synchronization.

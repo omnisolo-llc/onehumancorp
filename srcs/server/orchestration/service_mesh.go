@@ -102,7 +102,7 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 		return fmt.Errorf("meshTransport is not configured")
 	}
 
-	eventsChan, err := cn.meshTransport.Subscribe(ctx, req.GetTopic())
+	eventsChan, err := cn.meshTransport.SubscribeMeshEvents(ctx, req.GetTopic())
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to mesh events: %w", err)
 	}
@@ -135,27 +135,4 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			}
 		}
 	}
-}
-
-// PublishMeshEvent publishes a real-time event to the mesh
-func (s *HubServiceServer) PublishMeshEvent(ctx context.Context, req *pb.PublishMeshEventRequest) (*pb.PublishMessageResponse, error) {
-	if req.GetTopic() == "" {
-		return nil, fmt.Errorf("topic is required")
-	}
-
-	cn := s.hub.CentrifugeNode()
-	if cn == nil {
-		return nil, fmt.Errorf("CentrifugeNode is nil")
-	}
-
-	if cn.meshTransport == nil {
-		return nil, fmt.Errorf("meshTransport is not configured")
-	}
-
-	err := cn.meshTransport.Publish(ctx, req.GetTopic(), req.GetPayload())
-	if err != nil {
-		return nil, fmt.Errorf("failed to publish mesh event: %w", err)
-	}
-
-	return &pb.PublishMessageResponse{Success: true}, nil
 }

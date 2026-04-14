@@ -1,8 +1,0 @@
---- srcs/server/orchestration/autodream_worker_test.go
-+++ srcs/server/orchestration/autodream_worker_test.go
-@@ -220,5 +220,6 @@
-	if len(results) != 1 || results[0].MemoryID != "1" {
-		t.Fatalf("expected 1 result with ID '1'")
-	}
- }
-+

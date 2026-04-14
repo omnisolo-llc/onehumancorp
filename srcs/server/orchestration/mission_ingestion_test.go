@@ -50,7 +50,7 @@ func TestAutoDreamWorker_IngestMissionArtifacts(t *testing.T) {
 
 	worker.ingestMissionArtifacts(ctx)
 
-	rows, err := provider.Query(ctx, "SELECT count(*) FROM consolidated_memory WHERE source_type = 'mission-artifact' AND metadata LIKE '%test_mission_%'")
+	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories WHERE source_type = 'mission-artifact' AND source_mission_id LIKE 'test_mission_%'")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestAutoDreamWorker_IngestMissionArtifacts(t *testing.T) {
 	}
 
 	// Verify content stripping
-	rows2, err := provider.Query(ctx, "SELECT content FROM consolidated_memory WHERE source_type = 'mission-artifact' AND metadata LIKE '%test_mission_%'")
+	rows2, err := provider.Query(ctx, "SELECT content FROM autodream_memories WHERE source_type = 'mission-artifact' AND source_mission_id LIKE 'test_mission_%'")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}

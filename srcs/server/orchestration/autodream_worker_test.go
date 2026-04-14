@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"gopkg.in/yaml.v3"
 )
@@ -22,19 +21,19 @@ func setupTestDB(t *testing.T) db.Provider {
 	provider := db.NewSqliteProvider(sqlDB)
 
 	// Create required tables
-	query := `CREATE TABLE IF NOT EXISTS consolidated_memory (
+	query := `CREATE TABLE IF NOT EXISTS autodream_memories (
 		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		agent_id TEXT,
 		content TEXT NOT NULL,
 		embedding TEXT,
-		source_type TEXT NOT NULL,
-		metadata JSON,
+		source_mission_id TEXT,
+		organization_id TEXT,
+		agent_id TEXT,
+		source_type TEXT,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
 	if err != nil {
-		t.Fatalf("failed to create consolidated_memory table: %v", err)
+		t.Fatalf("failed to create autodream_memories table: %v", err)
 	}
 
 	return provider
@@ -85,7 +84,7 @@ func TestAutoDreamWorker_ProcessMemories(t *testing.T) {
 
 	worker := NewAutoDreamWorker(provider)
 
-	ctx, cancel := context.WithTimeout(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	err := worker.ProcessMemories(ctx)
@@ -94,7 +93,7 @@ func TestAutoDreamWorker_ProcessMemories(t *testing.T) {
 	}
 
 	// Verify insertion
-	rows, err := provider.Query(ctx, "SELECT count(*) FROM consolidated_memory")
+	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}
@@ -126,56 +125,10 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 	})
 
 	worker := NewAutoDreamWorker(provider)
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
+	ctx := context.Background()
 
 	err := worker.ProcessMemories(ctx)
 	if err != nil {
 		t.Fatalf("ProcessMemories failed on empty dir: %v", err)
-	}
-}
-
-func TestAutoDreamWorker_ProcessMemories_MissingOrg(t *testing.T) {
-	provider := setupTestDB(t)
-	setupMockMemories(t, 1)
-
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	err := worker.ProcessMemories(ctx)
-	if err == nil || err.Error() != "missing organization_id in context" {
-		t.Fatalf("expected missing organization_id error, got %v", err)
-	}
-}
-
-func TestAutoDreamWorker_SearchNearestNeighbor(t *testing.T) {
-	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
-	if err != nil {
-		t.Fatalf("failed to open sqlite in-memory db: %v", err)
-	}
-	provider := db.NewSqliteProvider(sqlDB)
-
-	query := `CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
-		memory_id TEXT PRIMARY KEY,
-		context TEXT,
-		embedding TEXT,
-		created_at TEXT DEFAULT CURRENT_TIMESTAMP
-	);`
-	if _, err := provider.Exec(context.Background(), query); err != nil {
-		t.Fatalf("failed to create swarm_truth_embeddings table: %v", err)
-	}
-
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	if _, err := provider.Exec(ctx, "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ('1', 'A', '[0.1]')"); err != nil {
-		t.Fatalf("failed to insert test data: %v", err)
-	}
-
-	results, err := worker.SearchTruth(ctx, "[0.1]", 1)
-	if err != nil {
-		t.Fatalf("failed to search truth: %v", err)
-	}
-	if len(results) != 1 || results[0].MemoryID != "1" {
-		t.Fatalf("expected 1 result with ID '1'")
 	}
 }
