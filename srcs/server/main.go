@@ -326,6 +326,9 @@ func run(now time.Time, listen listenFunc) error {
 			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
 				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
 			}
+
+			// Proactive cost-engineering: Start local SQLite background vacuuming and telemetry garbage collection
+			db.StartStorageOptimizerDaemon(ctx, pool, 24*time.Hour)
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
 			if missionsEndpoint != "" {

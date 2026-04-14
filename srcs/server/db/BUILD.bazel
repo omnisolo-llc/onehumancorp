@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "database.go",
         "flextime.go",
+        "maintenance.go",
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
@@ -70,6 +71,7 @@ go_library(
 go_test(
     name = "db_test",
     srcs = [
+        "maintenance_test.go",
         "provider_test.go",
         "test_provider_test.go",
     ],
