@@ -469,3 +469,105 @@ func TestHandleWaitlist(t *testing.T) {
         t.Errorf("expected 1 waitlist entry, got %d", len(list))
     }
 }
+
+
+func TestHandleABTestExposure(t *testing.T) {
+	s := &Server{}
+
+	payload := `{"variant": "Local Sovereignty", "userId": "user-X"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/ab-test/exposure", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleABTestExposure(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created ABTestExposure
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.Variant != "Local Sovereignty" || created.UserID != "user-X" {
+		t.Errorf("unexpected values: %+v", created)
+	}
+
+	if len(s.abTestExposures) != 1 {
+		t.Errorf("expected 1 internal exposure, got %d", len(s.abTestExposures))
+	}
+}
+
+func TestHandleABTestConversion(t *testing.T) {
+	s := &Server{}
+
+	payload := `{"variant": "Cloud Convenience", "userId": "user-Y"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/ab-test/conversion", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleABTestConversion(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created ABTestConversion
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.Variant != "Cloud Convenience" || created.UserID != "user-Y" {
+		t.Errorf("unexpected values: %+v", created)
+	}
+
+	if len(s.abTestConversions) != 1 {
+		t.Errorf("expected 1 internal conversion, got %d", len(s.abTestConversions))
+	}
+}
+
+func TestHandleABTestMetrics(t *testing.T) {
+	s := &Server{
+		abTestExposures: []ABTestExposure{
+			{Variant: "Local Sovereignty"},
+			{Variant: "Local Sovereignty"},
+			{Variant: "Cloud Convenience"},
+		},
+		abTestConversions: []ABTestConversion{
+			{Variant: "Local Sovereignty"}, // 1/2 = 0.5
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/growth/ab-test/metrics", nil)
+	w := httptest.NewRecorder()
+
+	s.handleABTestMetrics(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var metrics []ABTestMetricsResponse
+	if err := json.NewDecoder(w.Body).Decode(&metrics); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Fatalf("expected 2 metric variants, got %d", len(metrics))
+	}
+
+	for _, m := range metrics {
+		if m.Variant == "Local Sovereignty" {
+			if m.TotalExposures != 2 || m.TotalConversions != 1 || m.ConversionRate != 0.5 {
+				t.Errorf("unexpected metrics for Local Sovereignty: %+v", m)
+			}
+		} else if m.Variant == "Cloud Convenience" {
+			if m.TotalExposures != 1 || m.TotalConversions != 0 || m.ConversionRate != 0.0 {
+				t.Errorf("unexpected metrics for Cloud Convenience: %+v", m)
+			}
+		} else {
+			t.Errorf("unexpected variant: %s", m.Variant)
+		}
+	}
+}

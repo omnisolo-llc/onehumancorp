@@ -63,6 +63,8 @@ type Server struct {
 	teamInvites           []TeamInvite
 	onboardingFunnels []OnboardingFunnel
 	waitlist          []WaitlistEntry
+	abTestExposures   []ABTestExposure
+	abTestConversions []ABTestConversion
 }
 
 // RateLimitState functionality.
@@ -588,6 +590,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
 	mux.HandleFunc("/api/growth/waitlist", server.handleWaitlist)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
+	mux.HandleFunc("/api/growth/ab-test/exposure", server.handleABTestExposure)
+	mux.HandleFunc("/api/growth/ab-test/conversion", server.handleABTestConversion)
+	mux.HandleFunc("/api/growth/ab-test/metrics", server.handleABTestMetrics)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)

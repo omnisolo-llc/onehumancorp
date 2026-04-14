@@ -465,3 +465,135 @@ func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
     }
 }
+
+
+// ABTestExposure represents a tracked instance of a user seeing an A/B test variant.
+type ABTestExposure struct {
+	ID        string    `json:"id"`
+	Variant   string    `json:"variant"` // e.g. "Local Sovereignty", "Cloud Convenience"
+	UserID    string    `json:"userId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// ABTestConversion represents a tracked instance of a user converting after seeing an A/B test variant.
+type ABTestConversion struct {
+	ID        string    `json:"id"`
+	Variant   string    `json:"variant"`
+	UserID    string    `json:"userId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type abTestExposureRequest struct {
+	Variant string `json:"variant"`
+	UserID  string `json:"userId"`
+}
+
+func (s *Server) handleABTestExposure(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req abTestExposureRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.Variant == "" || req.UserID == "" {
+		http.Error(w, "variant and userId are required", http.StatusBadRequest)
+		return
+	}
+
+	exp := ABTestExposure{
+		ID:        "exp-" + time.Now().UTC().Format("20060102150405"),
+		Variant:   req.Variant,
+		UserID:    req.UserID,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	s.mu.Lock()
+	s.abTestExposures = append(s.abTestExposures, exp)
+	s.mu.Unlock()
+
+	writeJSON(w, exp)
+}
+
+type abTestConversionRequest struct {
+	Variant string `json:"variant"`
+	UserID  string `json:"userId"`
+}
+
+func (s *Server) handleABTestConversion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req abTestConversionRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.Variant == "" || req.UserID == "" {
+		http.Error(w, "variant and userId are required", http.StatusBadRequest)
+		return
+	}
+
+	conv := ABTestConversion{
+		ID:        "conv-" + time.Now().UTC().Format("20060102150405"),
+		Variant:   req.Variant,
+		UserID:    req.UserID,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	s.mu.Lock()
+	s.abTestConversions = append(s.abTestConversions, conv)
+	s.mu.Unlock()
+
+	writeJSON(w, conv)
+}
+
+// ABTestMetricsResponse represents the aggregated conversion rates per variant.
+type ABTestMetricsResponse struct {
+	Variant        string  `json:"variant"`
+	TotalExposures int     `json:"totalExposures"`
+	TotalConversions int   `json:"totalConversions"`
+	ConversionRate float64 `json:"conversionRate"`
+}
+
+func (s *Server) handleABTestMetrics(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	exposures := append([]ABTestExposure(nil), s.abTestExposures...)
+	conversions := append([]ABTestConversion(nil), s.abTestConversions...)
+	s.mu.RUnlock()
+
+	expCount := make(map[string]int)
+	convCount := make(map[string]int)
+
+	for _, e := range exposures {
+		expCount[e.Variant]++
+	}
+	for _, c := range conversions {
+		convCount[c.Variant]++
+	}
+
+	var metrics []ABTestMetricsResponse
+	for variant, totalExp := range expCount {
+		totalConv := convCount[variant]
+		rate := 0.0
+		if totalExp > 0 {
+			rate = float64(totalConv) / float64(totalExp)
+		}
+		metrics = append(metrics, ABTestMetricsResponse{
+			Variant:          variant,
+			TotalExposures:   totalExp,
+			TotalConversions: totalConv,
+			ConversionRate:   rate,
+		})
+	}
+
+	writeJSON(w, metrics)
+}
