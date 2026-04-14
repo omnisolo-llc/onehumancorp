@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -81,11 +82,13 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create test memory directory
-	os.MkdirAll(".agent-task/memory", 0755)
-	defer os.RemoveAll(".agent-task")
+	// Create a temporary memory directory and point the pipeline at it.
+	memDir := t.TempDir()
+	t.Setenv("OHC_MEMORY_DIR", memDir)
 
-	os.WriteFile(".agent-task/memory/test.yml", []byte("file context"), 0644)
+	if err := os.WriteFile(filepath.Join(memDir, "test.yml"), []byte("file context"), 0o644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
 
 	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
 	pipeline.llm = &mockLLM{response: "Summarized file context"}
@@ -103,7 +106,7 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 	}
 
 	// File should be deleted
-	if _, err := os.Stat(".agent-task/memory/test.yml"); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(memDir, "test.yml")); !os.IsNotExist(err) {
 		t.Errorf("expected test file to be deleted")
 	}
 }

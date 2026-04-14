@@ -22,7 +22,7 @@ func setupTestDBSharedTasks(t *testing.T) db.Provider {
 
     // Create the required table
     _, err = p.Exec(ctx, `
-CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     id VARCHAR PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
@@ -83,7 +83,7 @@ func TestClaimTask(t *testing.T) {
     }
 
     var status string
-    err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", claimedTask.ID).Scan(&status)
+    err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1", claimedTask.ID).Scan(&status)
     if err != nil {
         t.Fatalf("failed to query status: %v", err)
     }
