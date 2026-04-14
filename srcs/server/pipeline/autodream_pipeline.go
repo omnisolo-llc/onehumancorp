@@ -85,7 +85,7 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 		SELECT a.id, a.content, b.id, b.content
 		FROM consolidated_memory a
 		JOIN consolidated_memory b ON a.id < b.id
-		WHERE a.embedding <=> b.embedding < 0.05
+		WHERE a.embedding <-> b.embedding < 0.05
 		LIMIT 10
 	`
 
@@ -189,7 +189,7 @@ func (p *AutoDreamPipeline) SearchTruth(ctx context.Context, embedding string, l
 	}
 
 	query := `
-		SELECT id, content, embedding <=> $1::vector as distance
+		SELECT id, content, embedding <-> $1::vector as distance
 		FROM consolidated_memory
 		ORDER BY distance ASC
 		LIMIT $2
