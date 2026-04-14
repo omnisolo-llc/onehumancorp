@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/auth_service.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
@@ -13,6 +16,8 @@ class BusinessSetupState {
   final String adminName;
   final String adminEmail;
   final String adminPassword;
+  final bool isLoading;
+  final String? errorMessage;
 
   const BusinessSetupState({
     this.step = 0,
@@ -24,6 +29,8 @@ class BusinessSetupState {
     this.adminName = '',
     this.adminEmail = '',
     this.adminPassword = '',
+    this.isLoading = false,
+    this.errorMessage,
   });
 
   BusinessSetupState copyWith({
@@ -36,6 +43,8 @@ class BusinessSetupState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    bool? isLoading,
+    String? errorMessage,
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
@@ -47,6 +56,8 @@ class BusinessSetupState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 }
@@ -58,6 +69,12 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void nextStep() {
     if (state.step < 4) {
       state = state.copyWith(step: state.step + 1);
+    }
+  }
+
+  void prevStep() {
+    if (state.step > 0) {
+      state = state.copyWith(step: state.step - 1);
     }
   }
 
@@ -78,9 +95,50 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
 
-  void launch(BuildContext context) {
-    // Navigate to dashboard
-    GoRouter.of(context).go('/dashboard');
+  Future<void> launch(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      final body = {
+        'extras': {
+          'company_name': state.companyName,
+          'industry': state.industry,
+          'company_size': state.size,
+          'goals': state.goals.join(','),
+          'deployment_preference': state.deployment,
+          'admin_name': state.adminName,
+          'admin_email': state.adminEmail,
+        }
+      };
+
+      try {
+        final res = await http.post(
+          Uri.parse('$baseUrl/api/wizard/configure'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+
+        if (res.statusCode != 200) {
+          state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
+          return;
+        }
+      } catch (e) {
+        state = state.copyWith(isLoading: false, errorMessage: 'Network error: $e');
+        return;
+      }
+    }
+
+    state = state.copyWith(isLoading: false);
+
+    if (context.mounted) {
+      GoRouter.of(context).go('/dashboard');
+    }
   }
 }
 
@@ -108,6 +166,10 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                 children: [
                   const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
+                  if (state.errorMessage != null) ...[
+                    Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                  ],
                   if (state.step == 0) ...[
                     const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter')),
                   ] else if (state.step == 1) ...[
@@ -174,16 +236,30 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (state.step < 4) {
-                        notifier.nextStep();
-                      } else {
-                        notifier.launch(context);
-                      }
-                    },
-                    child: Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (state.step > 0)
+                        TextButton(
+                          onPressed: state.isLoading ? null : notifier.prevStep,
+                          child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
+                        )
+                      else
+                        const SizedBox(),
+                      ElevatedButton(
+                        onPressed: state.isLoading ? null : () {
+                          if (state.step < 4) {
+                            notifier.nextStep();
+                          } else {
+                            notifier.launch(context, ref);
+                          }
+                        },
+                        child: state.isLoading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                      ),
+                    ],
                   ),
                 ],
               ),
