@@ -498,3 +498,17 @@ func (s *Server) handleViralCoefficientMetrics(w http.ResponseWriter, r *http.Re
 	res := ViralCoefficientMetricsResponse{ViralCoefficient: kFactor, OrganizationID: "default"}
 	writeJSON(w, res)
 }
+
+type QuotaMetrics struct {
+	Used int `json:"used"`
+	Max  int `json:"max"`
+}
+
+func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Stub logic for quota
+	writeJSON(w, QuotaMetrics{Used: 10, Max: 100})
+}
