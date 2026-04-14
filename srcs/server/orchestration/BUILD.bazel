@@ -22,6 +22,9 @@ go_library(
         "sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
+        "models.go",
+        "task_store.go",
+
         "mesh.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
@@ -83,6 +86,8 @@ go_test(
         "sip_mesh_test.go",
         "sip_test.go",
         "throttle_test.go",
+        "task_store_test.go",
+
         "reliability_chaos_test.go",
         "sanitizer_test.go",
         "sync_daemon_test.go",
