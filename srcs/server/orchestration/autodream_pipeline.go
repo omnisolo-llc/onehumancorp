@@ -131,18 +131,16 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 		if p.db.IsSQLite() {
 			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
+				INSERT INTO autodream_memories (content, embedding, source_mission_id)
+				VALUES (?, ?, ?)
 			`
-			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
+			insertArgs = []interface{}{contentToEmbed, embeddingStr, missionID}
 		} else {
 			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+				INSERT INTO autodream_memories (content, embedding, source_mission_id)
+				VALUES ($1, $2::vector, $3)
 			`
-			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
+			insertArgs = []interface{}{contentToEmbed, embeddingStr, missionID}
 		}
 
 		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {

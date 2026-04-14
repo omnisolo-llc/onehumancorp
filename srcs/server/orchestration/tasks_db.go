@@ -67,11 +67,11 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
     query := `
         SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-        FROM shared_tasks_dag st
+        FROM shared_tasks st
         WHERE st.status = 'PENDING' AND st.organization_id = $1
         AND NOT EXISTS (
-            SELECT 1 FROM task_dependencies_dag td
-            JOIN shared_tasks_dag d ON d.id = td.depends_on_task_id
+            SELECT 1 FROM task_dependencies td
+            JOIN shared_tasks d ON d.id = td.depends_on_task_id
             WHERE td.task_id = st.id AND d.status != 'COMPLETED'
         )
         LIMIT 1
@@ -89,7 +89,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
         return nil, fmt.Errorf("failed to query pending task: %w", err)
     }
 
-    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_dag SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
         return nil, fmt.Errorf("failed to update task status: %w", err)
     }
 
@@ -115,11 +115,11 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
     query := `
         SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-        FROM shared_tasks_dag st
+        FROM shared_tasks st
         WHERE st.status = 'PENDING' AND st.organization_id = $1
         AND NOT EXISTS (
-            SELECT 1 FROM task_dependencies_dag td
-            JOIN shared_tasks_dag d ON d.id = td.depends_on_task_id
+            SELECT 1 FROM task_dependencies td
+            JOIN shared_tasks d ON d.id = td.depends_on_task_id
             WHERE td.task_id = st.id AND d.status != 'COMPLETED'
         )
         LIMIT 1
@@ -138,7 +138,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
         return nil, fmt.Errorf("failed to query pending task: %w", err)
     }
 
-    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_dag SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
         return nil, fmt.Errorf("failed to update task status: %w", err)
     }
 
@@ -163,7 +163,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
     defer tx.Rollback(ctx)
 
     var current string
-    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_dag WHERE id = $1", taskID).Scan(&current); err != nil {
+    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", taskID).Scan(&current); err != nil {
         return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
     }
 
@@ -171,7 +171,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
     }
 
-    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_dag SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+    if _, err := tx.Exec(ctx, "UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
         return err
     }
 
