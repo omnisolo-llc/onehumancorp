@@ -1,4 +1,10 @@
 # Changelog
+
+## [0.3.1] - 2026-04-14
+### Added
+- Hybrid MCP RAG Protocol (Phases 1-3) implementation for scalable knowledge retrieval (Cloud).
+- Local context integration through the Hybrid MCP RAG Protocol for standalone offline support (Standalone).
+
 ## [0.3.0] - 2026-04-13
 
 ### Added

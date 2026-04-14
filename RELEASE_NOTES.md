@@ -1,4 +1,8 @@
 # Release Notes
+## v0.3.1 (Cloud) / v0.3.1+1 (Standalone)
+- Scaling (Cloud): Implement Hybrid MCP RAG Protocol (Phases 1-3) for scalable knowledge retrieval.
+- Privacy/Offline (Standalone): Enable local context integration through the Hybrid MCP RAG Protocol for standalone offline support.
+
 ## v0.3.0 (Cloud) / v0.3.0+1 (Standalone)
 - Scaling (Cloud): Formalized the Realtime Teammate Mesh APIs using Redis Pub/Sub for horizontal scalability and broadcasting across pods.
 - Privacy/Offline (Standalone): Implemented MemoryMeshTransport for the Teammate Mesh to run without external dependencies.
