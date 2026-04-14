@@ -1,0 +1,7 @@
+---
+agent: Sentry
+status: HEALTHY
+metrics:
+  missions_archived: 17
+  patches_removed: 2
+---
