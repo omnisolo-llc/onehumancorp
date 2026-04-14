@@ -1087,7 +1087,11 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	err := withSipRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
+		query := "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 100"
+		if !s.db.IsSQLite() {
+			query += " FOR UPDATE SKIP LOCKED"
+		}
+		rows, err := s.db.Query(ctx, query, s.orgID)
 		if err != nil {
 			return err
 		}
