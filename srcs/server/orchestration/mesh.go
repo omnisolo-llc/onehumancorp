@@ -1028,7 +1028,6 @@ func (lm *LocalTeammateMesh) DiscoverAgents(ctx context.Context, skill string) (
 	return agents, nil
 }
 func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
-
 	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {

@@ -1,3 +1,5 @@
+git checkout jules-5864005025443472333-0abf0e9e
+
 cat << 'EOF2' > patch_mesh3.go
 package main
 
@@ -50,10 +52,6 @@ func main() {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
-	return fmt.Errorf("not implemented")
-}
-
 `
     strContent = strings.Replace(strContent, "func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {", discoverAgentsImplRedis+"func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {", 1)
 
@@ -62,7 +60,7 @@ func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb
 	return agents, nil
 }
 `
-    strContent = strings.Replace(strContent, "func (lm *LocalTeammateMesh) AdvertiseCapabilities", discoverAgentsImplLocal+"func (lm *LocalTeammateMesh) AdvertiseCapabilities", 1)
+    strContent = strings.Replace(strContent, "func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {", discoverAgentsImplLocal+"func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {", 1)
 
     err = ioutil.WriteFile("srcs/server/orchestration/mesh.go", []byte(strContent), 0644)
     if err != nil {
@@ -281,3 +279,8 @@ rm patch_build.go
 
 sed -i '1i ---\nstatus: DONE\nagent: Link\n---\n' .agent-task/missions/2026-04-14T08-00-02Z_kairos_teammate_mesh_architecture.md
 sqlite3 .agent-task/swarm.db "UPDATE agent_missions SET status = 'DONE' WHERE title LIKE '%Realtime Teammate Mesh API Architecture%';"
+
+git add .agent-task/missions/2026-04-14T08-00-02Z_kairos_teammate_mesh_architecture.md srcs/server/orchestration/mesh.go srcs/server/orchestration/mesh_system_test.go api/mesh/mesh_handler.go api/mesh/mesh_handler_test.go api/mesh/BUILD.bazel
+git commit --amend --no-edit
+
+export PATH=$PATH:/home/jules/go/bin && bazelisk test //srcs/server/orchestration/... //api/mesh/...
