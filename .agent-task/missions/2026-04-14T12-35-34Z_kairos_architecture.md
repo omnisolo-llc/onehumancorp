@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "Domain boundary violation: Requires modifying files outside apps/billing/, services/billing/, and lib/pricing/"
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
