@@ -23,7 +23,6 @@ go_library(
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh.go",
-        "shared_tasks.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -88,7 +87,6 @@ go_test(
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
-        "shared_tasks_test.go",
     ],
     embed = [":orchestration"],
     deps = [
