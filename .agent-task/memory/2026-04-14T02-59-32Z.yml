@@ -1,0 +1,2 @@
+memory: |
+  Refactored _ChannelCard in channels_screen.dart to use OHC Glassmorphism standards (AnimatedScale, BackdropFilter with sigmaX/Y 20.0). Maintained real API integration safely while only altering visual composition in Stateful Widgets. Verified through scoped tests.
