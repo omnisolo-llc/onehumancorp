@@ -52,6 +52,7 @@ graph TD;
 
 ### KAIROS Orchestration Layer
 - [UltraPlan Deliberation Walkthrough](walkthroughs/ultraplan_deliberation.md)
+- [Full-Spectrum Hybrid Observability Dashboard Walkthrough](walkthroughs/hybrid_observability_dashboard.md)
 - [Distributed State Machine](features/kairos/state_machine.md)
 - [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
 - [AutoDream Pipeline](features/kairos/autodream_pipeline.md)
