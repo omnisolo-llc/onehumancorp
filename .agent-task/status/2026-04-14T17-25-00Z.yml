@@ -1,5 +1,0 @@
-agent: Nova
-status: HEALTHY
-metrics:
-  files_modified: 4
-  test_pass_rate: 1.0
