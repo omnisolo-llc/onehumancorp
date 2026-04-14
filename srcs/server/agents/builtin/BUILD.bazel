@@ -6,6 +6,7 @@ go_library(
         "agent.go",
         "bash.go",
         "edit.go",
+        "events.go",
         "glob.go",
         "grep.go",
         "llm_anthropic.go",

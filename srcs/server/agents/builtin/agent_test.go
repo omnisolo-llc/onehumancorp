@@ -2,7 +2,7 @@ package builtin
 
 import (
 	"context"
-	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -53,9 +53,9 @@ func TestTools(t *testing.T) {
 		t.Fatal("WebSearchTool returned empty result")
 	}
 
-	// Test TodoWriteTool
-	defer os.RemoveAll(".agent-task")
-	os.MkdirAll(".agent-task", 0755)
+	// Test TodoWriteTool — point it at a temp file so the test is sandboxed.
+	todoFile := filepath.Join(t.TempDir(), "todo.txt")
+	t.Setenv("OHC_TODO_FILE", todoFile)
 
 	res, err = TodoWriteTool.Execute(ctx, []byte(`{"todo":"test todo"}`))
 	if err != nil {

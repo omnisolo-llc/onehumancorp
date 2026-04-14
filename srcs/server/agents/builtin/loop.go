@@ -2,14 +2,31 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
 // Run executes the agent loop until completion or error.
 func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Message, error) {
+	return a.RunWithCallback(ctx, initialMessages, nil)
+}
+
+// RunWithCallback executes the agent loop, calling cb for each event.
+// cb may be nil, in which case the behaviour is identical to Run.
+func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Message, cb EventCallback) ([]Message, error) {
 	messages := append([]Message(nil), initialMessages...)
+	iteration := 0
 
 	for {
+		iteration++
+		if cb != nil {
+			cb(AgentEvent{
+				Type:         AgentEventTypeIterationStarted,
+				Iteration:    iteration,
+				MessageCount: len(messages),
+			})
+		}
+
 		// Prepare request
 		req := ChatRequest{
 			Model:       a.Model,
@@ -29,7 +46,13 @@ func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Me
 		messages = append(messages, resp.Message)
 
 		if len(resp.Message.ToolCalls) == 0 {
-			// No tool calls, we are done
+			// No tool calls — the agent produced a final response.
+			if cb != nil {
+				cb(AgentEvent{
+					Type:    AgentEventTypeTaskComplete,
+					Content: resp.Message.Content,
+				})
+			}
 			break
 		}
 
@@ -38,13 +61,29 @@ func (a *BuiltinAgent) Run(ctx context.Context, initialMessages []Message) ([]Me
 		for _, tc := range resp.Message.ToolCalls {
 			result, err := a.executeToolCall(ctx, tc)
 			if err != nil {
-				// We can return the error as a tool result instead of failing the whole loop
 				toolResults = append(toolResults, ToolResult{
 					ToolCallID: tc.ID,
 					Error:      err.Error(),
 				})
 			} else {
 				toolResults = append(toolResults, result)
+			}
+
+			if cb != nil {
+				argsJSON := ""
+				if raw, ok := any(tc.Arguments).(json.RawMessage); ok {
+					argsJSON = string(raw)
+				}
+				content := result.Content
+				if result.Error != "" {
+					content = result.Error
+				}
+				cb(AgentEvent{
+					Type:         AgentEventTypeToolCall,
+					ToolName:     tc.Name,
+					ToolArgsJSON: argsJSON,
+					ToolResult:   content,
+				})
 			}
 		}
 
