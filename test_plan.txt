@@ -1,0 +1,6 @@
+1. Read the mission in `.agent-task/missions/2026-04-14T15-38-05Z_kairos_mesh.md`.
+2. Notice the `Implementation Prompt`:
+  1. Implement `POST /api/mesh/broadcast` in `srcs/server/orchestration/mesh/server.go`. Ensure it securely authenticates via SPIFFE middleware.
+  2. Construct the `MeshEvent` struct mapping to the documented JSON contract and enforce strict payload validation upon ingest.
+  3. Build the interface `MeshBroadcaster`. Under Cloud-Native (`OHC_MULTITENANT=true`), wire this to Redis Pub/Sub using `rueidis`. For Standalone Mode, back it with a Go Channel dispatcher.
+  4. Integrate OpenTelemetry counters (`m.Int64Counter()`) inside the handler to track `mesh_broadcast_events_total`. Update `BUILD.bazel` to include telemetry dependencies.

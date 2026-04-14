@@ -6,11 +6,15 @@ go_library(
         "local_mesh.go",
         "mesh.go",
         "redis_mesh.go",
+        "server.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/mesh",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_redis_rueidis//:rueidis",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
     ],
 )
 
