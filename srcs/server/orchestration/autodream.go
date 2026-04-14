@@ -906,9 +906,13 @@ func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
 	}
 }
 
-// ingestMissionArtifacts processes Markdown files from .agent-task/missions/.
+// ingestMissionArtifacts processes Markdown files from the directory specified
+// by OHC_MISSIONS_DIR.  When the env var is empty this pipeline is a no-op.
 func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
-	missionDir := ".agent-task/missions"
+	missionDir := os.Getenv("OHC_MISSIONS_DIR")
+	if missionDir == "" {
+		return // mission file ingestion disabled; use DB-backed missions instead
+	}
 	files, err := os.ReadDir(missionDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
