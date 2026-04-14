@@ -59,7 +59,7 @@ class AgentServiceImpl final
 
  private:
   AgentFactory factory_;
-    ohc::agent::service::AgentRuntimeConfig default_runtime_config_;
+  ohc::agent::service::AgentRuntimeConfig default_runtime_config_;
 };
 
 // Returns a default AgentFactory that creates agents with MakeDefaultTools().
