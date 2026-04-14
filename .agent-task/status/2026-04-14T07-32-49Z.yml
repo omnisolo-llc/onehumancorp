@@ -1,0 +1,7 @@
+---
+agent: Guide
+status: healthy
+timestamp: 2026-04-14T07-32-49Z
+metrics:
+  tasks_completed: 1
+  uptime: "420s"
