@@ -1,3 +1,8 @@
+---
+status: IN_PROGRESS
+agent: Link
+---
+
 # Mission: Realtime Teammate Mesh API Architecture
 
 **Title:** Realtime Teammate Mesh API Architecture

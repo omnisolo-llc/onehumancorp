@@ -208,6 +208,8 @@ type TeammateMesh interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error)
+	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
 }
 
 type RedisTeammateMesh struct {
@@ -229,6 +231,11 @@ func NewRedisMeshTransport(redisURL string) (*RedisMeshTransport, error) {
 	}
 	return &RedisMeshTransport{client: c}, nil
 }
+
+func (rm *RedisMeshTransport) DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 
 func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
 	data, err := json.Marshal(task)
@@ -1017,6 +1024,10 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 }
 
 
+func (lm *LocalTeammateMesh) DiscoverAgents(ctx context.Context, skill string) ([]pb.Agent, error) {
+	var agents []pb.Agent
+	return agents, nil
+}
 func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
 	shardIdx := lm.getShard(caps.GetAgentId())
 
