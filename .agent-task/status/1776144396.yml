@@ -1,0 +1,6 @@
+event: "Mission Proposed: Hybrid CRDT Sync MCP"
+details: |
+  Created mission file for CRDT synchronization between SQLite and Postgres.
+  Authored architectural blueprint.
+insights: |
+  Bridging local and cloud environments requires robust conflict resolution.
