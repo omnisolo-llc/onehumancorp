@@ -293,9 +293,6 @@ func run(now time.Time, listen listenFunc) error {
 		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
 		go competitorAuditWorker.Start(ctx)
 
-		hybridSyncWorker := workers.NewHybridSyncWorker(pool.Provider, os.Getenv("OHC_CORE_URL"), nil)
-		go hybridSyncWorker.Start(ctx)
-
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
 	}
