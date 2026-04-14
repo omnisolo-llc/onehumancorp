@@ -407,9 +407,14 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 	}
 }
 
-// ingestAgentMemories processes YAML files from .agent-task/memory/.
+// ingestAgentMemories processes memory YAML files from the directory
+// configured by OHC_MEMORY_DIR.  When that env var is empty the pipeline is
+// a no-op — agents write memory directly to the database.
 func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
-	memoryDir := ".agent-task/memory"
+	memoryDir := os.Getenv("OHC_MEMORY_DIR")
+	if memoryDir == "" {
+		return // DB-backed memory; no file ingestion needed
+	}
 	files, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

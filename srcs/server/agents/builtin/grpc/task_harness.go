@@ -186,43 +186,43 @@ func packMessages(msgs []agentMessage) (string, error) {
 	return "[gz]" + buf.String(), nil
 }
 
-// ── task output file ──────────────────────────────────────────────────────────
+// ── task output writer ────────────────────────────────────────────────────────
 
-// TaskOutputWriter streams task output to a per-task file, following the
-// Claude Code LocalAgentTask pattern of ".agent-task/output/<taskID>.log".
+// TaskOutputWriter collects task output in memory.  It replaces the former
+// filesystem-based approach (.agent-task/output/<taskID>.log) so that the
+// agent works correctly inside a Bazel sandbox and in any production
+// environment without local filesystem access.
+//
 // Writes are best-effort; errors are logged but never returned to the caller.
 type TaskOutputWriter struct {
-	f *os.File
+	taskID string
+	buf    strings.Builder
 }
 
-// NewTaskOutputWriter opens (or creates) the output file for taskID.
-// Returns nil when the directory cannot be created.
+// NewTaskOutputWriter creates an in-memory writer for the given taskID.
+// It never returns nil.
 func NewTaskOutputWriter(taskID string) *TaskOutputWriter {
-	if err := os.MkdirAll(taskOutputDir, 0o755); err != nil {
-		return nil
-	}
-	path := filepath.Join(taskOutputDir, sanitizeID(taskID)+".log")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return nil
-	}
-	return &TaskOutputWriter{f: f}
+	return &TaskOutputWriter{taskID: sanitizeID(taskID)}
 }
 
-// Write appends text to the file.
+// Write appends text.
 func (w *TaskOutputWriter) Write(text string) {
-	if w == nil || w.f == nil {
+	if w == nil {
 		return
 	}
-	_, _ = fmt.Fprintln(w.f, text)
+	fmt.Fprintln(&w.buf, text)
 }
 
-// Close flushes and closes the file.
-func (w *TaskOutputWriter) Close() {
-	if w == nil || w.f == nil {
-		return
+// Close flushes the buffer.  For the in-memory implementation this is a no-op.
+func (w *TaskOutputWriter) Close() {}
+
+// String returns the accumulated output.
+func (w *TaskOutputWriter) String() string {
+	if w == nil {
+		return ""
 	}
-	_ = w.f.Close()
+	return w.buf.String()
+}
 }
 
 // ── self-reflection helper ────────────────────────────────────────────────────
