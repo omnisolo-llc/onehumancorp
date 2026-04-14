@@ -1169,3 +1169,10 @@ func (lm *LocalTeammateMesh) runEvents(topic string, shardIdx int) {
 		lm.eventsGlobalMu.RUnlock()
 	}
 }
+
+// TeammateMeshEvent is the payload structure for Teammate Mesh coordination
+type TeammateMeshEvent struct {
+	AgentID string `json:"agent_id"`
+	Action  string `json:"action"`
+	Status  string `json:"status"`
+}
