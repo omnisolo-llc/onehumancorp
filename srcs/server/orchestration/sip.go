@@ -610,42 +610,45 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
 	_ = CheckDocumentationGate(task.Content)
 
-	if s.ContextRoot != "" {
-		s.groundingOnce.Do(func() {
-			var combinedGrounding strings.Builder
+	root := s.ContextRoot
+	if root == "" {
+		root = "."
+	}
 
-			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
-				path := filepath.Join(s.ContextRoot, filename)
+	s.groundingOnce.Do(func() {
+		var combinedGrounding strings.Builder
 
-				// Stat the file first to distinguish between missing vs permissions/errors
-				_, statErr := os.Stat(path)
-				if statErr == nil {
-					// File exists
-					content, err := os.ReadFile(path)
-					if err != nil {
-						s.cachedGroundErr = err
-						return // Enforce fail-closed if there's a read error
-					}
-					combinedGrounding.WriteString("\n" + string(content) + "\n")
-				} else if !os.IsNotExist(statErr) {
-					s.cachedGroundErr = statErr
-					return
+		for _, filename := range []string{"AGENTS.md", "CLAUDE.md", "CLAUDE_OHC.md"} {
+			path := filepath.Join(root, filename)
+
+			// Stat the file first to distinguish between missing vs permissions/errors
+			_, statErr := os.Stat(path)
+			if statErr == nil {
+				// File exists
+				content, err := os.ReadFile(path)
+				if err != nil {
+					s.cachedGroundErr = err
+					return // Enforce fail-closed if there's a read error
 				}
+				combinedGrounding.WriteString("\n" + string(content) + "\n")
+			} else if !os.IsNotExist(statErr) {
+				s.cachedGroundErr = statErr
+				return
 			}
-
-			if combinedGrounding.Len() > 0 {
-				s.cachedGrounding = "\n\n[SYSTEM GROUNDING]\n" + strings.TrimSpace(combinedGrounding.String())
-			}
-		})
-
-		// Adhering to the Fail-Closed security mandate
-		if s.cachedGroundErr != nil {
-			return fmt.Errorf("fail-closed: unable to read project grounding files: %w", s.cachedGroundErr)
 		}
 
-		if s.cachedGrounding != "" {
-			task.Content += s.cachedGrounding
+		if combinedGrounding.Len() > 0 {
+			s.cachedGrounding = "\n\n[SYSTEM GROUNDING]\n" + strings.TrimSpace(combinedGrounding.String())
 		}
+	})
+
+	// Adhering to the Fail-Closed security mandate
+	if s.cachedGroundErr != nil {
+		return fmt.Errorf("fail-closed: unable to read project grounding files: %w", s.cachedGroundErr)
+	}
+
+	if s.cachedGrounding != "" {
+		task.Content += s.cachedGrounding
 	}
 
 	wrapper := struct {
