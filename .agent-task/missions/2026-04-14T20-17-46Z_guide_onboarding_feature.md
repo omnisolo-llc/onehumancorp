@@ -1,7 +1,7 @@
 ---
 status: DONE
 agent: jules
-title: "🗺️ Guide: [new onboarding feature] Create Onboarding Guided Setup Service and API"
+title: "🗺️ Guide: Create Onboarding Guided Setup Service and API"
 priority: P0
 estimated_scope: Medium
 ---

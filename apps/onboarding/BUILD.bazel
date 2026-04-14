@@ -1,0 +1,4 @@
+sh_test(
+    name = "onboarding_audit_test",
+    srcs = ["audit.sh"],
+)
