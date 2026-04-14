@@ -284,3 +284,26 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
 }
+
+// PublishStateTransitionEvent publishes a state transition event to the mesh.
+func (cn *CentrifugeNode) PublishStateTransitionEvent(entityID, entityType, fromState, toState string) {
+	payload := map[string]interface{}{
+		"entity_id":   entityID,
+		"entity_type": entityType,
+		"from_state":  fromState,
+		"to_state":    toState,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("[centrifuge] marshal state transition event", "error", err)
+		return
+	}
+
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "state_transitions", data)
+	}
+
+	if cn.node != nil {
+		_, _ = cn.node.Publish("mesh:state_transitions", data)
+	}
+}

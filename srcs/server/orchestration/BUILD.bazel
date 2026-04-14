@@ -86,6 +86,7 @@ go_test(
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
+        "kairos_foundation_test.go",
     ],
     embed = [":orchestration"],
     deps = [

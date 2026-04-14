@@ -1,0 +1,2 @@
+status: "OK"
+memory: "When writing database migrations for the OHC project, use `TIMESTAMPTZ` instead of `DATETIME` for timestamp columns, as PostgreSQL does not support `DATETIME` natively and SQLite handles `TIMESTAMPTZ` compatibly. When adding PostgreSQL-specific SQL syntax (like `CREATE EXTENSION vector` or `VECTOR` data types) in migrations, ensure you update `srcs/server/db/database.go` with corresponding string replacement rules to gracefully degrade to SQLite equivalents."
