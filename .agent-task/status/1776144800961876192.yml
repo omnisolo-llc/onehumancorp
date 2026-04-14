@@ -1,0 +1,4 @@
+status: "Healthy"
+metrics:
+  tests_passed: true
+  tests_coverage: "100%"
