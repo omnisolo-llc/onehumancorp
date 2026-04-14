@@ -124,9 +124,9 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 
 	query := `
 		SELECT st.id, st.status
-		FROM shared_tasks st
+		FROM shared_tasks_v4 st
 		WHERE st.status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+		AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 	`
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
@@ -192,14 +192,14 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6)
+			INSERT INTO shared_tasks_v4 (id, organization_id, title, description, payload, status, priority, dependencies)
+			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7)
 			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6)
+			INSERT INTO shared_tasks_v4 (id, organization_id, title, description, payload, status, priority, dependencies)
+			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7)
 			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, created_at, updated_at
 		`
 	}
@@ -216,7 +216,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	task.Priority = priority
 
 	for _, dep := range dependencies {
-		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
+		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies_dag (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert dependency: %w", err)
 		}
@@ -292,9 +292,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		// SQLite doesn't support UPDATE ... RETURNING with a LIMIT, so we use explicit two-step select-then-update within the transaction.
 		selectQuery := `
 			SELECT st.id
-			FROM shared_tasks st
+			FROM shared_tasks_v4 st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1
 		`
@@ -303,9 +303,9 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		// PostgreSQL with FOR UPDATE SKIP LOCKED
 		selectQuery := `
 			SELECT st.id
-			FROM shared_tasks st
+			FROM shared_tasks_v4 st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1 FOR UPDATE SKIP LOCKED
 		`
@@ -330,7 +330,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	// Fetch updated task data
 	readQuery := `
 		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
-		FROM shared_tasks
+		FROM shared_tasks_v4
 		WHERE id = $1
 	`
 	errQuery = tx.QueryRow(ctx, readQuery, fetchedTaskID).Scan(
@@ -341,8 +341,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
 	}
 
-	// Fetch dependencies from task_dependencies table
-	depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+	// Fetch dependencies from task_dependencies_dag table
+	depQuery := `SELECT depends_on_task_id FROM task_dependencies_dag WHERE task_id = $1`
 	depRows, err := tx.Query(ctx, depQuery, task.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dependencies: %w", err)
@@ -406,7 +406,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 	// Verify ownership first
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -454,7 +454,7 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 
 	var createdAt time.Time
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks_v4 WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -512,9 +512,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	if tm.db.IsSQLite() {
 		query = `
 			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
-			FROM shared_tasks st
+			FROM shared_tasks_v4 st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -523,9 +523,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	} else {
 		query = `
 			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
-			FROM shared_tasks st
+			FROM shared_tasks_v4 st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -587,9 +587,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		// SQLite: explicit select-then-update to bypass limit/returning issues
 		selectQuery := `
 			SELECT st.id
-			FROM shared_tasks st
+			FROM shared_tasks_v4 st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
 		`
@@ -626,7 +626,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			// Fetch updated task data
 			readQuery := `
 				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
-				FROM shared_tasks
+				FROM shared_tasks_v4
 				WHERE id = $1
 			`
 			task := &SharedTask{}
@@ -654,9 +654,9 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		// PostgreSQL with SKIP LOCKED
 		selectQuery := `
 				SELECT st.id
-				FROM shared_tasks st
+				FROM shared_tasks_v4 st
 				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+				AND (SELECT COUNT(*) FROM jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep WHERE d.status != 'COMPLETED') = 0
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
 		`
@@ -690,7 +690,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			// Fetch updated task data
 			readQuery := `
 				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
-				FROM shared_tasks
+				FROM shared_tasks_v4
 				WHERE id = $1
 			`
 			task := &SharedTask{}
@@ -716,8 +716,8 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	for _, task := range claimedTasks {
-		// Fetch dependencies from task_dependencies table
-		depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+		// Fetch dependencies from task_dependencies_dag table
+		depQuery := `SELECT depends_on_task_id FROM task_dependencies_dag WHERE task_id = $1`
 		depRows, err := tx.Query(ctx, depQuery, task.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get dependencies: %w", err)

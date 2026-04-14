@@ -53,6 +53,8 @@ go_library(
         "migrations/034_kairos_sub_agent_queue.sql",
         "migrations/046_autodream_pgvector.sql",
         "migrations/047_competitor_metrics.sql",
+        "migrations/047_shared_tasks_v4.up.sql",
+        "migrations/047_shared_tasks_v4.down.sql",
         "migrations/049_consolidated_memory.sql",
 
     ],

@@ -62,6 +62,7 @@ func convertBindVars(query string) string {
 	resStr := result.String()
 	// Map json paths `col::json->>'key'` to `json_extract(col, '$.key')`
 	resStr = jsonPathRe.ReplaceAllString(resStr, "json_extract($1, '$.$2')")
+	resStr = strings.ReplaceAll(resStr, "jsonb_array_elements_text(st.dependencies::jsonb) AS dep JOIN shared_tasks_v4 d ON d.id = dep", "json_each(st.dependencies) AS dep JOIN shared_tasks_v4 d ON d.id = dep.value")
 
 	return resStr
 }
