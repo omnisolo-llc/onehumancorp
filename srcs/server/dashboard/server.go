@@ -608,6 +608,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	} else {
 		opts, err := rueidis.ParseURL(os.Getenv("REDIS_URL"))
 		if err != nil {
+			// Fallback to local mesh broker for testing without valid REDIS_URL
 			broker = orchmesh.NewLocalMeshBroker()
 		} else {
 			rClient, err := rueidis.NewClient(opts)
