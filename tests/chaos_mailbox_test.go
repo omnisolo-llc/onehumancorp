@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/lib/resilience"
+	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 )
 
 // TestMeshFallback_MailboxCorruption simulates a scenario where .agent-task/mailbox/
