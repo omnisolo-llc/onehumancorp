@@ -5,6 +5,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
+        "decomposition_tasks_store.go",
+        "models.go",
         "auth_interceptor.go",
         "autodream.go",
         "autodream_worker.go",
@@ -63,6 +65,7 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
+        "tasks_store_test.go",
         "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
