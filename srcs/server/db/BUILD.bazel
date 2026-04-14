@@ -53,6 +53,7 @@ go_library(
         "migrations/034_kairos_sub_agent_queue.sql",
         "migrations/046_autodream_pgvector.sql",
         "migrations/047_competitor_metrics.sql",
+        "migrations/049_consolidated_memory.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",

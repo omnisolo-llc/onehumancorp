@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"gopkg.in/yaml.v3"
 )
 
@@ -116,13 +117,20 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 			}
 		}
 
-		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
-		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+		orgID := auth.OrganizationIDFromContext(ctx)
+		if orgID == "" {
+			slog.Error("AutoDream: missing organization_id in context, rejecting task")
+			return fmt.Errorf("missing organization_id in context")
 		}
-		// Default organization_id to "system" as auth contexts are missing in background workers
-		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "background-pipeline"}
+
+		metadataJSON := fmt.Sprintf("{\"source_mission_id\": \"%s\"}", missionID)
+
+		if w.pool.IsSQLite() {
+			query = `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+		} else {
+			query = `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES ($1, $2, $3, $4, $5::vector, $6, $7, CURRENT_TIMESTAMP)`
+		}
+		args = []interface{}{memID, orgID, "auto-dream-worker", contentToEmbed, embStr, "background-pipeline", metadataJSON}
 
 		_, err = tx.Exec(ctx, query, args...)
 		if err != nil {
