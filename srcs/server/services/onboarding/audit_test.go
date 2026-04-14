@@ -32,3 +32,23 @@ func TestGenerateAuditReport_Failed(t *testing.T) {
 		t.Fatalf("expected report to contain details about missing directory, got: %s", report)
 	}
 }
+
+func TestRunFrictionAnalysis_Passed(t *testing.T) {
+	os.RemoveAll(".ohc-local-data")
+	ProvisionEnvironment(context.Background(), false)
+	defer os.RemoveAll(".ohc-local-data")
+
+	analysis := RunFrictionAnalysis(context.Background(), false)
+	if analysis.FrictionScore != 10 {
+		t.Fatalf("expected FrictionScore 10, got: %d", analysis.FrictionScore)
+	}
+}
+
+func TestRunFrictionAnalysis_Failed(t *testing.T) {
+	os.RemoveAll(".ohc-cloud-data")
+
+	analysis := RunFrictionAnalysis(context.Background(), true)
+	if analysis.FrictionScore != 80 {
+		t.Fatalf("expected FrictionScore 80, got: %d", analysis.FrictionScore)
+	}
+}

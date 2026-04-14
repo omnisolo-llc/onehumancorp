@@ -2,7 +2,7 @@
 title: "KAIROS Master Orchestration Interfaces"
 priority: P0
 estimated_scope: Large
-status: PENDING
+status: BLOCKED
 ---
 
 # Title: KAIROS Master Orchestration Interfaces
@@ -25,3 +25,6 @@ Your mission is to implement the KAIROS Orchestrator feature set.
 2. **Teammate Mesh API**: Implement `POST /api/mesh/broadcast` in `srcs/server/orchestration/mesh/server.go`. Payload must enforce `MeshEvent` JSON validation (`agent_id`, `action`, `status`). Connect it to Redis Pub/Sub via `rueidis` when `OHC_MULTITENANT=true` is set, fallback to Go channels. Write tests verifying payload compliance. Wrap the handler with `mesh.ValidationMiddleware` and `auth.RequireRole("system", ...)` in `server.go`.
 3. **AutoDream Pipeline**: Build the background worker in `srcs/server/orchestration/autodream.go`. It should scan `.agent-task/memory/*.yml`, embed using `srcs/server/agents/local/llm.go`, and insert into `autodream_memories`. Verify using `db.NewTestProvider(t)` mock DB.
 4. **Sub-Agent Queue**: Create `srcs/server/orchestration/queue/queue.go` with functions `EnqueueJob` and `DequeueJob`. In cloud, back this with Redis ZSETs. In Standalone, back it with a new `sub_agent_jobs` SQLite table. Test enqueueing and dequeueing with mock payloads.
+
+blockers:
+  - The mission requires modifying `srcs/server/db/migrations/`, `srcs/server/orchestration/`, etc., which are outside the strictly restricted domain of the Guide agent. The Guide agent may exclusively operate within `apps/onboarding/` and `srcs/server/services/onboarding/`.

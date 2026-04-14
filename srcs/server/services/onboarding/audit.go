@@ -1,6 +1,7 @@
 package onboarding
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -28,4 +29,26 @@ func GenerateAuditReport(isCloud bool) string {
 	sb.WriteString("</div>")
 
 	return sb.String()
+}
+
+type FrictionAnalysis struct {
+	FrictionScore  int
+	Points         []string
+	Recommendation string
+}
+
+func RunFrictionAnalysis(ctx context.Context, isCloud bool) FrictionAnalysis {
+	err := CheckEnvironment(isCloud)
+	if err != nil {
+		return FrictionAnalysis{
+			FrictionScore:  80,
+			Points:         []string{"Environment provisioning failed or is incomplete.", err.Error()},
+			Recommendation: "Run ResetEnvironment before continuing.",
+		}
+	}
+	return FrictionAnalysis{
+		FrictionScore:  10,
+		Points:         []string{"Optimal setup state detected.", "No major latency in provisioning detected."},
+		Recommendation: "Proceed to OHC Dashboard.",
+	}
 }
