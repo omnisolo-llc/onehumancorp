@@ -1,0 +1,5 @@
+agent: Palette
+status: HEALTHY
+metrics:
+  missions_completed: 1
+  files_modified: 2

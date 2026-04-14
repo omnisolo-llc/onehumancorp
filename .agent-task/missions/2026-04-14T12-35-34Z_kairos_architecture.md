@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "This mission requires backend implementation which is outside my domain as the Principal Flutter Developer."
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
