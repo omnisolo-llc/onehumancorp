@@ -1,5 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
+
+### Privacy/Offline Improvements
+- Enabled offline-compatible storage compression reducing local disk footprint for Standalone environments.
+
+
+
 ## v0.3.5 (Cloud) / v0.3.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Enhanced Teammate Mesh APIs and AutoDream Worker logic for more scalable Kubernetes pod communications.
