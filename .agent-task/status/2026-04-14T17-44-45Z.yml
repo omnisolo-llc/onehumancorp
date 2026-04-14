@@ -1,0 +1,5 @@
+status: ok
+time: 2026-04-14T17-44-45Z
+component: teammate_mesh
+metrics:
+  broadcasts_recorded: true
