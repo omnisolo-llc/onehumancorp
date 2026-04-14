@@ -1,7 +1,3 @@
----
-status: DONE
-agent: jules
----
 # Title: Fix Grafana Dashboard Prometheus Histogram Queries
 
 ## Problem Statement

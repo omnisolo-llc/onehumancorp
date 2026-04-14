@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"io"
+	"strings"
 )
 
 const compressionPrefix = "gz_b64:"
@@ -44,4 +45,30 @@ func DecompressLossless(data string) (string, error) {
 		return "", err
 	}
 	return string(decompressed), nil
+}
+
+// ReduceTokens removes common English stop words to reduce the overall token size.
+// This is a lossy operation and should not be combined with lossless compression
+// if exact recovery is required.
+func ReduceTokens(data string) string {
+	stopWords := map[string]bool{
+		"a": true, "an": true, "the": true, "is": true, "are": true,
+		"and": true, "or": true, "but": true, "in": true, "on": true,
+		"at": true, "to": true, "for": true, "with": true, "by": true,
+		"about": true, "as": true, "of": true,
+	}
+
+	words := strings.Fields(data)
+	var reduced []string
+
+	for _, word := range words {
+		// Clean the word for comparison (lowercase, keep punctuation separate if needed,
+		// but simple lowercase works for basic stop words)
+		cleanWord := strings.ToLower(word)
+		if !stopWords[cleanWord] {
+			reduced = append(reduced, word)
+		}
+	}
+
+	return strings.Join(reduced, " ")
 }
