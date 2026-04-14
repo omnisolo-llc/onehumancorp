@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
+	"gopkg.in/yaml.v3"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -65,66 +68,52 @@ func (p *AutoDreamPipeline) Stop() {
 func (p *AutoDreamPipeline) process(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
 
-	// Limit to process batches and prevent unbound queue growth
-	limit := 500
-
-	// 1. Fetch recently completed shared_tasks
-	var query string
-	var args []interface{}
-
-	if p.db.IsSQLite() {
-		// SQLite degradation mode
-		query = `
-			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks_v4
-			WHERE status = 'COMPLETED'
-			ORDER BY updated_at DESC LIMIT ?
-		`
-		args = append(args, limit)
-	} else {
-		// Postgres mode using SKIP LOCKED for concurrent worker safety
-		query = `
-			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks_v4
-			WHERE status = 'COMPLETED'
-			ORDER BY updated_at DESC LIMIT $1 FOR UPDATE SKIP LOCKED
-		`
-		args = append(args, limit)
-	}
-
-	rows, err := p.db.Query(ctx, query, args...)
+	matches, err := filepath.Glob(".agent-task/memory/*.yml")
 	if err != nil {
-		slog.Error("AutoDreamPipeline: failed to query shared_tasks", "error", err)
+		slog.Error("AutoDreamPipeline: failed to glob memory files", "error", err)
 		return
 	}
-	defer rows.Close()
-
-	type taskMem struct {
-		id      string
-		orgID   string
-		agentID string
-		payload string
-	}
-
-	var memories []taskMem
-	for rows.Next() {
-		var m taskMem
-		if err := rows.Scan(&m.id, &m.orgID, &m.agentID, &m.payload); err == nil {
-			memories = append(memories, m)
-		}
-	}
-	rows.Close()
-
-	if len(memories) == 0 {
+	if len(matches) == 0 {
 		return // nothing to process
 	}
 
-	for _, m := range memories {
-		embeddingStr := "[0.0, 0.0, 0.0]"
+	limit := 500
+	if len(matches) > limit {
+		matches = matches[:limit]
+	}
 
+	for _, file := range matches {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			slog.Error("AutoDreamPipeline: failed to read memory file", "file", file, "error", err)
+			continue
+		}
+
+		var memFile struct {
+			AgentSessionData string `yaml:"agent_session_data"`
+			Content          string `yaml:"content"`
+		}
+
+		if err := yaml.Unmarshal(data, &memFile); err != nil {
+			slog.Error("AutoDreamPipeline: failed to unmarshal memory file", "file", file, "error", err)
+			continue
+		}
+
+		contentToEmbed := memFile.AgentSessionData
+		if contentToEmbed == "" {
+			contentToEmbed = memFile.Content
+		}
+		if contentToEmbed == "" {
+			os.Remove(file)
+			continue
+		}
+
+		missionID := strings.TrimSuffix(filepath.Base(file), ".yml")
+
+		embeddingStr := "[0.0, 0.0, 0.0]"
 		if p.client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, err := p.client.GenerateEmbedding(ctxTimeout, m.payload)
+			resp, err := p.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
 			cancel()
 			if err == nil && len(resp) > 0 {
 				if bytes, err := json.Marshal(resp); err == nil {
@@ -135,32 +124,34 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			}
 		}
 
-		// 2. Load into autodream_memories
 		var insertQuery string
 		var insertArgs []interface{}
 
+		memID := missionID
+
 		if p.db.IsSQLite() {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES (?, ?, ?, ?, ?, 'shared_task', CURRENT_TIMESTAMP)
+				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
+			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
 		} else {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES ($1, $2, $3, $4, $5::vector, 'shared_task', NOW())
+				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
+			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
 		}
 
 		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
-			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", m.id, "error", err)
+			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", memID, "error", err)
 		} else {
-			slog.Debug("AutoDreamPipeline: consolidated memory", "id", m.id)
+			slog.Debug("AutoDreamPipeline: consolidated memory", "id", memID)
+			os.Remove(file)
 		}
 	}
 
-	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(memories))
+	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(matches))
 }
