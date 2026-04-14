@@ -2034,20 +2034,10 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 	for _, st := range req.SubTasks {
 		// Sub-tasks do not depend on the parent task. The parent task should ideally depend on them, but
 		// for now we just create the sub-tasks with their own explicitly provided dependencies.
-		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, st.Dependencies, st.Title, st.Description, st.Priority)
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, req.TaskID, st.Dependencies, st.Title, st.Description, st.Priority)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
 			return
-		}
-		// Set parent_plan_id and inherit parent's depth + 1
-		if tx, err := tm.db.Begin(r.Context()); err == nil {
-			_, _ = tx.Exec(r.Context(), `
-				UPDATE shared_tasks
-				SET parent_plan_id = $1,
-				    depth = (SELECT depth FROM shared_tasks WHERE id = $1) + 1
-				WHERE id = $2
-			`, req.TaskID, t.ID)
-			_ = tx.Commit(r.Context())
 		}
 		createdTasks = append(createdTasks, t)
 	}
