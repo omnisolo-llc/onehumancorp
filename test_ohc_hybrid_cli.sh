@@ -12,10 +12,11 @@ sqlite3() {
 }
 export -f sqlite3
 
-touch local_standalone.db
+mkdir -p "$HOME/.ohc-local-data"
+touch "$HOME/.ohc-local-data/standalone.db"
 OUTPUT=$(./ohc_hybrid_cli.sh << CMD
 7
-q
+x
 CMD
 )
 
@@ -24,7 +25,7 @@ if echo "$OUTPUT" | grep -q "Migrations appear successful"; then
 else
     echo "Test failed."
     echo "$OUTPUT"
-    rm local_standalone.db
+    rm "$HOME/.ohc-local-data/standalone.db"
     kill -SIGINT $$
 fi
-rm local_standalone.db
+rm "$HOME/.ohc-local-data/standalone.db"
