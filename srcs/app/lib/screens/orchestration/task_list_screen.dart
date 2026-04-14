@@ -28,7 +28,7 @@ class TaskListScreen extends ConsumerWidget {
         data: (tasks) => ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: tasks.length,
-          itemBuilder: (context, index) => _TaskGlassCard(task: tasks[index]),
+          itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
@@ -100,5 +100,64 @@ class _TaskGlassCard extends StatelessWidget {
       default:
         return Colors.grey;
     }
+  }
+}
+
+class _AnimatedTaskGlassCard extends StatefulWidget {
+  final SharedTask task;
+  final int index;
+
+  const _AnimatedTaskGlassCard({required this.task, required this.index});
+
+  @override
+  State<_AnimatedTaskGlassCard> createState() => _AnimatedTaskGlassCardState();
+}
+
+class _AnimatedTaskGlassCardState extends State<_AnimatedTaskGlassCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.5, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutQuart,
+    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: _TaskGlassCard(task: widget.task),
+      ),
+    );
   }
 }
