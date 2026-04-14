@@ -524,6 +524,24 @@ class ApiService {
     }
   }
 
+
+  Future<void> trackSovereignToCloudInvite(String inviter, String assetId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/growth/viral-bridge'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'inviter': inviter,
+        'asset_id': assetId,
+      }),
+    );
+    if (response.statusCode != 202) {
+      throw Exception('Failed to track sovereign to cloud invite');
+    }
+  }
+
   Future<void> createReferral(String userId, String referralCode) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/referrals'),

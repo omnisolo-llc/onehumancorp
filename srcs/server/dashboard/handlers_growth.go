@@ -465,3 +465,31 @@ func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
     }
 }
+
+type viralBridgeRequest struct {
+	Inviter string `json:"inviter"`
+	AssetID string `json:"asset_id"`
+}
+
+func (s *Server) handleSovereignToCloudInvite(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req viralBridgeRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.Inviter == "" || req.AssetID == "" {
+		http.Error(w, "inviter and asset_id are required", http.StatusBadRequest)
+		return
+	}
+
+	// Simulated logging of the bridge event
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	w.WriteHeader(http.StatusAccepted)
+	writeJSON(w, map[string]string{"status": "bridge_initiated"})
+}

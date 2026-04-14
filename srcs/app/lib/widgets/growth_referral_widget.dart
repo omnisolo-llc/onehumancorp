@@ -98,6 +98,10 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                               "anonymous",
                               "xYz8vQ_local_sovereign",
                             );
+                            await ref.read(apiServiceProvider)!.trackSovereignToCloudInvite(
+                              "anonymous",
+                              "asset_market_audit",
+                            );
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(

@@ -16,6 +16,7 @@ void main() {
 
   testWidgets('GrowthReferralWidget displays quota and invite button', (WidgetTester tester) async {
     when(() => mockApiService.createReferral(any(), any())).thenAnswer((_) async {});
+    when(() => mockApiService.trackSovereignToCloudInvite(any(), any())).thenAnswer((_) async {});
 
     await tester.pumpWidget(
       ProviderScope(
@@ -39,6 +40,7 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign")).called(1);
+    verify(() => mockApiService.trackSovereignToCloudInvite("anonymous", "asset_market_audit")).called(1);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.textContaining('Cloud-Bridge invite link copied'), findsOneWidget);
   });
