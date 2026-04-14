@@ -30,6 +30,7 @@ var (
 
 	tokenUsageCounter          metric.Int64Counter
 	tokenBurnRateGauge         metric.Float64Gauge
+	usdBurnRateGauge           metric.Float64Gauge
 	agentApiCallsCounter       metric.Int64Counter
 	agentApiErrorsCounter      metric.Int64Counter
 	humanInteractionsCounter   metric.Int64Counter
@@ -284,6 +285,14 @@ func InitWithMeter(m mockableMeter) error {
 	tokenBurnRateGauge, err = m.Float64Gauge(
 		"ohc_token_burn_rate_forecast",
 		metric.WithDescription("Predicted moving average of token burn rate per minute per tenant"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	usdBurnRateGauge, err = m.Float64Gauge(
+		"ohc_usd_burn_rate_forecast",
+		metric.WithDescription("Predicted moving average of USD burn rate per minute per tenant"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -802,6 +811,24 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 	}
 	if tokenBurnRateGauge != nil {
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+			attribute.String("organization_id", organizationID),
+		))
+	}
+}
+
+// RecordUSDBurnRate updates the forecast gauge for a tenant's USD burn rate.
+func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"rate":            rate,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "usd_burn_rate_forecast", string(payloadBytes))
+	}
+	if usdBurnRateGauge != nil {
+		usdBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
 		))
 	}

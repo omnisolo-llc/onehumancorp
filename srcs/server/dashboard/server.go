@@ -1786,6 +1786,8 @@ type BudgetAlert struct {
 	OrganizationID string    `json:"organizationId"`
 	ThresholdUSD   float64   `json:"thresholdUsd"`
 	NotifyAtPct    float64   `json:"notifyAtPct"` // e.g. 0.8 → notify at 80 %
+	Predictive     bool      `json:"predictive"`
+	ForecastHours  int       `json:"forecastHours"`
 	Triggered      bool      `json:"triggered"`
 	CreatedAt      time.Time `json:"createdAt"`
 }
@@ -1794,6 +1796,8 @@ type budgetAlertRequest struct {
 	OrganizationID string  `json:"organizationId"`
 	ThresholdUSD   float64 `json:"thresholdUsd"`
 	NotifyAtPct    float64 `json:"notifyAtPct"`
+	Predictive     bool    `json:"predictive"`
+	ForecastHours  int     `json:"forecastHours"`
 }
 
 // ── Automated SDLC / Pipelines ────────────────────────────────────────────────
