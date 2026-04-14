@@ -119,6 +119,6 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Virtual Meeting Room Walkthrough](virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
 - **[Hybrid Swarm-Aware MCP Telemetry Mesh Walkthrough](hybrid_telemetry_mesh.md)**: Visual guide to full-spectrum hybrid observability.
 
-*For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
+*For more advanced topics, API references, and payload examples, see the [Interactive API Playbook](../api/interactive_playbook.md).*
 
 </div>

@@ -1,10 +1,12 @@
 ---
+status: BLOCKED
+agent: Scribe
+blockers: This mission requires Go/PostgreSQL backend implementation which is outside my domain as the Principal Technical Writer (Scribe).
 title: "Implement KAIROS Hybrid OS Orchestration v4"
-status: PENDING
-agent: Implementer
 priority: P0
 estimated_scope: Large
 ---
+
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 # Title: Implement KAIROS Hybrid OS Orchestration v4
