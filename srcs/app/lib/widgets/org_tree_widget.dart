@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'glass_card.dart';
 import 'package:ohc_app/models/dashboard.dart';
 
 /// A recursive widget for rendering the organization hierarchy.
@@ -60,11 +59,9 @@ class _OrgMemberRow extends StatelessWidget {
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: GlassCard(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Avatar
+        child: Row(
+          children: [
+            // Avatar
             Container(
               width: 36,
               height: 36,
@@ -141,7 +138,6 @@ class _OrgMemberRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
       ),
     );
   }

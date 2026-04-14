@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mesh",
+    srcs = ["mesh.go"],
+    importpath = "github.com/onehumancorp/mono/api/mesh",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_gorilla_websocket//:websocket",
+    ],
+)
+
+go_test(
+    name = "mesh_test",
+    srcs = ["mesh_test.go"],
+    embed = [":mesh"],
+    deps = [
+        "@com_github_gorilla_websocket//:websocket",
+    ],
+)

@@ -135,7 +135,7 @@ func init() {
 	var handler slog.Handler = slog.NewJSONHandler(os.Stdout, opts)
 	// Provide unified logging across Cloud and Local standalone modes
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
 	logger := slog.New(handler)
 	slog.SetDefault(logger)

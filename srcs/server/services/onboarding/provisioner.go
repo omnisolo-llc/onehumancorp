@@ -13,8 +13,6 @@ import (
 var (
 	provisionsCounter metric.Int64Counter
 	cleanupsCounter   metric.Int64Counter
-	LocalBaseDir      = ".ohc-local-data"
-	CloudBaseDir      = ".ohc-cloud-data"
 )
 
 func init() {
@@ -29,9 +27,9 @@ func ProvisionEnvironment(ctx context.Context, isCloud bool) error {
 		provisionsCounter.Add(ctx, 1)
 	}
 
-	baseDir := LocalBaseDir
+	baseDir := ".ohc-local-data"
 	if isCloud {
-		baseDir = CloudBaseDir
+		baseDir = ".ohc-cloud-data"
 	}
 
 	dirs := []string{
@@ -46,20 +44,14 @@ func ProvisionEnvironment(ctx context.Context, isCloud bool) error {
 		}
 	}
 
-	configPath := filepath.Join(baseDir, "config", "config.yml")
-	configContent := []byte(fmt.Sprintf("version: 1\nmode: %s\n", map[bool]string{true: "cloud", false: "standalone"}[isCloud]))
-	if err := os.WriteFile(configPath, configContent, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
 	return nil
 }
 
 // CheckEnvironment verifies that the necessary folders for Day One Hybrid OS onboarding exist.
 func CheckEnvironment(isCloud bool) error {
-	baseDir := LocalBaseDir
+	baseDir := ".ohc-local-data"
 	if isCloud {
-		baseDir = CloudBaseDir
+		baseDir = ".ohc-cloud-data"
 	}
 
 	dirs := []string{
@@ -83,9 +75,9 @@ func CleanupEnvironment(ctx context.Context, isCloud bool) error {
 		cleanupsCounter.Add(ctx, 1)
 	}
 
-	baseDir := LocalBaseDir
+	baseDir := ".ohc-local-data"
 	if isCloud {
-		baseDir = CloudBaseDir
+		baseDir = ".ohc-cloud-data"
 	}
 
 	return os.RemoveAll(baseDir)
