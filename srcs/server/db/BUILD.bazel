@@ -56,6 +56,7 @@ go_library(
         "migrations/049_mesh_bridges.sql",
         "migrations/051_team_invites.sql",
         "migrations/052_cached_tokens.sql",
+        "migrations/053_shared_tasks_v4.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
