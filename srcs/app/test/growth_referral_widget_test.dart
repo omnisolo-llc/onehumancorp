@@ -15,6 +15,7 @@ void main() {
   });
 
   testWidgets('GrowthReferralWidget displays quota and invite button', (WidgetTester tester) async {
+    when(() => mockApiService.getQuota()).thenAnswer((_) async => {'used': 10, 'max': 100});
     when(() => mockApiService.createReferral(any(), any())).thenAnswer((_) async {});
 
     await tester.pumpWidget(
@@ -33,6 +34,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Free Tier Quota'), findsOneWidget);
+    expect(find.text('10 / 100 missions used'), findsOneWidget);
     expect(find.text('Invite Team to Expand Quota'), findsOneWidget);
 
     await tester.tap(find.text('Invite Team to Expand Quota'));

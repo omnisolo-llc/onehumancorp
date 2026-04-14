@@ -588,6 +588,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
 	mux.HandleFunc("/api/growth/waitlist", server.handleWaitlist)
 	mux.HandleFunc("/api/growth/viral-coefficient-metrics", server.handleViralCoefficientMetrics)
+	mux.HandleFunc("/api/growth/quota", server.handleQuota)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
 
 	// Phase 5 - PowerSync

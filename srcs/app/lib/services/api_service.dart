@@ -524,6 +524,15 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getQuota() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/growth/quota'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   Future<void> createReferral(String userId, String referralCode) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/referrals'),
