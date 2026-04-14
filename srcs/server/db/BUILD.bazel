@@ -55,7 +55,10 @@ go_library(
         "migrations/047_competitor_metrics.sql",
         "migrations/049_mesh_bridges.sql",
         "migrations/051_team_invites.sql",
+<<<<<<< HEAD
         "migrations/052_kairos_foundation.sql",
+=======
+>>>>>>> origin/main
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
