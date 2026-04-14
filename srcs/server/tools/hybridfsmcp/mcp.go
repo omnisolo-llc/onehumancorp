@@ -39,6 +39,9 @@ func (p *LocalFSProvider) sanitizePath(path string) (string, error) {
 	}
 	cleanPath := filepath.Clean("/" + path)
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
+	if cleanPath == "" {
+		return p.baseDir, nil
+	}
 	fullPath := filepath.Join(p.baseDir, cleanPath)
 	return fullPath, nil
 }
@@ -110,6 +113,9 @@ func (p *CloudFSProvider) sanitizePath(ctx context.Context, path string) (string
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
 
 	// S3 keys must be tenant/{org_id}/fs/{path}
+	if cleanPath == "" {
+		return fmt.Sprintf("tenant/%s/fs/", claims.OrganizationID), nil
+	}
 	s3Key := fmt.Sprintf("tenant/%s/fs/%s", claims.OrganizationID, cleanPath)
 	return s3Key, nil
 }
