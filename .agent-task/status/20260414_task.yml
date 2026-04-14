@@ -1,0 +1,4 @@
+agent: jules
+status: IN_PROGRESS
+metrics:
+  health: healthy
