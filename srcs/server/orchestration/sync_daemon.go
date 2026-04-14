@@ -109,16 +109,15 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 		}
 
 		// Sanitize payload data for PI and private markers
-
 		var parsedPayload map[string]interface{}
 		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
-			parsedIface := telemetry.RedactInterfacePII(SanitizePayloadMap(parsedPayload))
+			parsedIface := SanitizePayloadMap(parsedPayload)
 			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
 				payloadData = string(redactedBytes)
 			}
 		} else {
 			sanitizedStr, _ := SanitizePayload(payloadData)
-			payloadData = telemetry.RedactPII(sanitizedStr)
+			payloadData = sanitizedStr
 		}
 
 		payloads = append(payloads, SyncDaemonPayload{

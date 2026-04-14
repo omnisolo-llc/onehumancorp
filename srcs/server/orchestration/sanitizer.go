@@ -20,7 +20,9 @@ func SanitizePayload(payload string) (string, error) {
 	return sanitized, nil
 }
 
-// SanitizePayloadMap recursively sanitizes a map interface
+// SanitizePayloadMap recursively sanitizes a map interface.
+// It removes [PRIVATE] tags, applies PII redaction to strings,
+// and explicitly deletes sensitive keys like `rag_context`.
 func SanitizePayloadMap(data interface{}) interface{} {
 	switch v := data.(type) {
 	case string:
@@ -29,6 +31,9 @@ func SanitizePayloadMap(data interface{}) interface{} {
 	case map[string]interface{}:
 		res := make(map[string]interface{}, len(v))
 		for key, val := range v {
+			if key == "rag_context" {
+				continue
+			}
 			res[key] = SanitizePayloadMap(val)
 		}
 		return res
@@ -38,7 +43,23 @@ func SanitizePayloadMap(data interface{}) interface{} {
 			res[i] = SanitizePayloadMap(val)
 		}
 		return res
+	case []string:
+		res := make([]string, len(v))
+		for i, val := range v {
+			sanitized, _ := SanitizePayload(val)
+			res[i] = sanitized
+		}
+		return res
+	case []map[string]interface{}:
+		res := make([]map[string]interface{}, len(v))
+		for i, val := range v {
+			res[i] = SanitizePayloadMap(val).(map[string]interface{})
+		}
+		return res
 	default:
-		return v
+		// Attempt deep scrubbing for complex types by delegating to telemetry.RedactInterfacePII.
+		// We first try our custom recursive logic above to ensure rag_context and [PRIVATE] tags
+		// are handled correctly in maps/slices.
+		return telemetry.RedactInterfacePII(v)
 	}
 }
