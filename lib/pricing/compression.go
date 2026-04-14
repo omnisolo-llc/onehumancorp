@@ -72,3 +72,16 @@ func ReduceTokens(data string) string {
 
 	return strings.Join(reduced, " ")
 }
+
+// TruncateByWordCount limits the data to a maximum number of words.
+// This is a lossy operation intended for cost safety boundaries.
+func TruncateByWordCount(data string, maxWords int) string {
+	if maxWords <= 0 {
+		return ""
+	}
+	words := strings.Fields(data)
+	if len(words) <= maxWords {
+		return data
+	}
+	return strings.Join(words[:maxWords], " ")
+}
