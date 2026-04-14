@@ -85,26 +85,42 @@ func TestCloudFSProvider(t *testing.T) {
 func TestHybridFSMCP(t *testing.T) {
 	tempDir := t.TempDir()
 	provider := NewLocalFSProvider(tempDir)
-	mcp := NewHybridFSMCP(provider)
+	escalator := NewHybridEscalator(provider, provider)
+	mcp := NewHybridFSMCP(provider, escalator)
 	ctx := context.Background()
 
+	err := provider.WriteFile(ctx, "test.txt", []byte("hello"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	tools := mcp.ListTools()
-	if len(tools) != 3 {
-		t.Errorf("expected 3 tools, got %d", len(tools))
+	if len(tools) != 4 {
+		t.Errorf("expected 4 tools, got %d", len(tools))
+	}
+
+	// rag_query
+	res, err := mcp.CallTool(ctx, "rag_query", map[string]interface{}{"query": "test.txt"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resMap := res.(map[string]interface{})
+	if resMap["result"] != "hello" {
+		t.Errorf("expected 'hello', got '%v'", resMap["result"])
 	}
 
 	// Write
-	_, err := mcp.CallTool(ctx, "write_file", map[string]interface{}{"path": "test.txt", "content": "hello"})
+	_, err = mcp.CallTool(ctx, "write_file", map[string]interface{}{"path": "test.txt", "content": "hello"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Read
-	res, err := mcp.CallTool(ctx, "read_file", map[string]interface{}{"path": "test.txt"})
+	res, err = mcp.CallTool(ctx, "read_file", map[string]interface{}{"path": "test.txt"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	resMap := res.(map[string]interface{})
+	resMap = res.(map[string]interface{})
 	if resMap["content"] != "hello" {
 		t.Errorf("expected 'hello', got '%v'", resMap["content"])
 	}

@@ -13,15 +13,21 @@ type Tool struct {
 }
 
 type HybridFSMCP struct {
-	provider FileSystemProvider
+	provider  FileSystemProvider
+	escalator Escalator
 }
 
-func NewHybridFSMCP(provider FileSystemProvider) *HybridFSMCP {
-	return &HybridFSMCP{provider: provider}
+func NewHybridFSMCP(provider FileSystemProvider, escalator Escalator) *HybridFSMCP {
+	return &HybridFSMCP{provider: provider, escalator: escalator}
 }
 
 func (m *HybridFSMCP) ListTools() []Tool {
 	return []Tool{
+		{
+			Name:        "rag_query",
+			Description: "Executes a RAG query.",
+			InputSchema: `{"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}`,
+		},
 		{
 			Name:        "read_file",
 			Description: "Reads the contents of a file.",
@@ -42,6 +48,19 @@ func (m *HybridFSMCP) ListTools() []Tool {
 
 func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
 	switch toolName {
+	case "rag_query":
+		query, ok := arguments["query"].(string)
+		if !ok {
+			return nil, errors.New("missing or invalid 'query' argument")
+		}
+		if m.escalator == nil {
+			return nil, errors.New("escalator not configured")
+		}
+		result, err := m.escalator.AnalyzeAndExecute(ctx, query)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"status": "success", "result": result}, nil
 	case "read_file":
 		path, ok := arguments["path"].(string)
 		if !ok {
