@@ -10,11 +10,15 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-var provisionsCounter metric.Int64Counter
+var (
+	provisionsCounter metric.Int64Counter
+	cleanupsCounter   metric.Int64Counter
+)
 
 func init() {
 	meter := otel.Meter("github.com/onehumancorp/mono/ohc")
 	provisionsCounter, _ = meter.Int64Counter("provisions_total")
+	cleanupsCounter, _ = meter.Int64Counter("cleanups_total")
 }
 
 // ProvisionEnvironment sets up the necessary folders for Day One Hybrid OS onboarding.
@@ -63,4 +67,18 @@ func CheckEnvironment(isCloud bool) error {
 	}
 
 	return nil
+}
+
+// CleanupEnvironment removes the necessary folders for Day One Hybrid OS onboarding, useful for resetting state.
+func CleanupEnvironment(ctx context.Context, isCloud bool) error {
+	if cleanupsCounter != nil {
+		cleanupsCounter.Add(ctx, 1)
+	}
+
+	baseDir := ".ohc-local-data"
+	if isCloud {
+		baseDir = ".ohc-cloud-data"
+	}
+
+	return os.RemoveAll(baseDir)
 }
