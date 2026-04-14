@@ -1058,6 +1058,11 @@ FLUTTER_BIN_ABS="${{FLUTTER_WRITABLE}}/bin/flutter"
 FLUTTER_BIN_DIR="${{FLUTTER_WRITABLE}}/bin"
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Write the bypass stamp so Flutter skips recompiling the Dart tool on every
+# test run.  shared.sh computes compilekey as "$(git rev-parse HEAD):" and our
+# patched git stub returns "bypassed", so the stamp must contain "bypassed:".
+echo "bypassed:" > "${{FLUTTER_WRITABLE}}/bin/cache/flutter_tools.stamp" 2>/dev/null || true
+
 export FLUTTER_SUPPRESS_ANALYTICS=true
 export CI=true
 export PUB_ENVIRONMENT="flutter_tool:bazel"
@@ -1065,6 +1070,7 @@ export PUB_CACHE="$RUNTIME_PUB_CACHE"
 export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
 export PATH="$FLUTTER_BIN_DIR:$PATH"
+export FLUTTER_ROOT="${{FLUTTER_WRITABLE}}"
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
     echo "✗ python interpreter not found on PATH" | tee -a "$TEST_LOG"
@@ -1124,9 +1130,14 @@ for i, line in enumerate(lines):
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
+    # Strip caret/tilde constraint prefixes before splitting on range operators.
+    spec = spec.lstrip("^~").replace(">=", "").replace("<", "").split()
     if spec:
-        return spec[0].split("+")[0]
+        ver = spec[0].split("+")[0]
+        parts = ver.split(".")
+        if len(parts) >= 2:
+            return ".".join(parts[:2])
+        return ver
     return "3.0"
 
 language_version = _parse_language(language_spec)
@@ -1135,11 +1146,13 @@ with open(deps_path, "r", encoding="utf-8") as fh:
     data = json.load(fh)
 
 packages = []
+added_names = set()
+
 for entry in data.get("packages", []):
     pkg_name = entry.get("name")
     source = entry.get("source")
     version = entry.get("version")
-    if not pkg_name:
+    if not pkg_name or pkg_name in added_names:
         continue
     if source == "hosted" and version:
         root_path = os.path.join(cache_root, "hosted", "pub.dev", pkg_name + "-" + version)
@@ -1152,6 +1165,7 @@ for entry in data.get("packages", []):
             packageUri = "lib/",
             languageVersion = language_version,
         ))
+        added_names.add(pkg_name)
     elif source == "root":
         packages.append(dict(
             name = pkg_name,
@@ -1159,6 +1173,7 @@ for entry in data.get("packages", []):
             packageUri = "lib/",
             languageVersion = language_version,
         ))
+        added_names.add(pkg_name)
     elif source == "sdk" and flutter_root:
         if pkg_name == "sky_engine":
             root_path = os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
@@ -1173,6 +1188,69 @@ for entry in data.get("packages", []):
             packageUri = "lib/",
             languageVersion = language_version,
         ))
+        added_names.add(pkg_name)
+
+# Add workspace sub-packages by scanning the workspace pubspec.yaml for
+# "workspace:" members.  These have source=="path" or "workspace" in
+# pub_deps but are often absent when the fallback generator was used.
+workspace_pubspec_path = os.path.join(workspace_root, "pubspec.yaml")
+if os.path.isfile(workspace_pubspec_path):
+    in_workspace_block = False
+    with open(workspace_pubspec_path, "r", encoding="utf-8") as wf:
+        for wline in wf:
+            stripped_w = wline.rstrip()
+            indent = len(stripped_w) - len(stripped_w.lstrip())
+            stripped_w = stripped_w.strip()
+            if indent == 0:
+                in_workspace_block = stripped_w.startswith("workspace:")
+                continue
+            if not in_workspace_block:
+                continue
+            if stripped_w.startswith("- "):
+                sub_pkg_relpath = stripped_w[2:].strip()
+                sub_pkg_dir = os.path.join(workspace_root, sub_pkg_relpath)
+                sub_pubspec = os.path.join(sub_pkg_dir, "pubspec.yaml")
+                if not os.path.isfile(sub_pubspec):
+                    continue
+                sub_name = ""
+                with open(sub_pubspec, "r", encoding="utf-8") as spf:
+                    for spline in spf:
+                        if spline.strip().startswith("name:"):
+                            sub_name = spline.split(":", 1)[1].strip().strip('"').strip("'")
+                            break
+                if sub_name and sub_name not in added_names:
+                    sub_rel = os.path.relpath(sub_pkg_dir, workspace_root).replace(os.sep, "/")
+                    packages.append(dict(
+                        name = sub_name,
+                        rootUri = sub_rel,
+                        packageUri = "lib/",
+                        languageVersion = language_version,
+                    ))
+                    added_names.add(sub_name)
+
+# Add Flutter SDK packages when FLUTTER_ROOT is available.  They are absent
+# from pub_deps.json when the fallback generator was used (no pubspec.lock),
+# so we add them unconditionally here.
+if flutter_root:
+    _SDK_PKGS = [
+        ("sky_engine", os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")),
+        ("flutter", os.path.join(flutter_root, "packages", "flutter")),
+        ("flutter_test", os.path.join(flutter_root, "packages", "flutter_test")),
+        ("flutter_web_plugins", os.path.join(flutter_root, "packages", "flutter_web_plugins")),
+    ]
+    for sdk_name, sdk_path in _SDK_PKGS:
+        if sdk_name in added_names:
+            continue
+        if not os.path.isdir(sdk_path):
+            continue
+        rel = os.path.relpath(sdk_path, workspace_root).replace(os.sep, "/")
+        packages.append(dict(
+            name = sdk_name,
+            rootUri = rel,
+            packageUri = "lib/",
+            languageVersion = language_version,
+        ))
+        added_names.add(sdk_name)
 
 os.makedirs(os.path.dirname(config_path), exist_ok=True)
 config = dict(
@@ -1213,6 +1291,25 @@ unset IFS
 pushd "$RUNTIME_WORKSPACE" >/dev/null
 if [ -n "$PACKAGE_DIR" ]; then
     pushd "$PACKAGE_DIR" >/dev/null
+fi
+
+# When the pubspec.yaml at the package directory is a Dart workspace root
+# (has a "workspace:" section), flutter test enters workspace mode and refuses
+# to run without pubspec.lock.  Replace the workspace pubspec with the first
+# workspace member's pubspec so flutter test treats this as a regular package.
+# Python already ran above and added the sub-package to package_config.json.
+if grep -q "^workspace:" "pubspec.yaml" 2>/dev/null; then
+    _first_member=""
+    while IFS= read -r _wline; do
+        case "$_wline" in
+            "  - "*)  _first_member="${_wline#  - }"; break ;;
+            "- "*)    _first_member="${_wline#- }"; break ;;
+        esac
+    done < <(awk '/^workspace:/{f=1;next} f&&/^[^ ]/{exit} f{print}' pubspec.yaml)
+    if [ -n "$_first_member" ] && [ -f "$_first_member/pubspec.yaml" ]; then
+        cp "$_first_member/pubspec.yaml" "pubspec.yaml"
+        echo "Replaced workspace pubspec with $_first_member/pubspec.yaml" | tee -a "$TEST_LOG"
+    fi
 fi
 
 set +e
