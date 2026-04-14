@@ -130,12 +130,12 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			memID := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
-			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr, task.ID)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr)
 		}
 
 		if err != nil {
@@ -368,18 +368,19 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		var insertQuery string
 		missionID := "session-" + s.ID
 
+		_ = missionID
 		var embedPtr *string
 		if embeddingStr != "[0.0]" {
 			embedPtr = &embeddingStr
 		}
 
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
+			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
-			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr, missionID)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr)
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
@@ -472,12 +473,12 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr, memoryID)
+			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
-			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr, memoryID)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr)
 		}
 
 		if err != nil {
