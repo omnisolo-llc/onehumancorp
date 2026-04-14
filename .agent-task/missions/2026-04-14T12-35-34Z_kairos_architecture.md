@@ -1,6 +1,5 @@
 ---
-status: BLOCKED
-blockers: "Requires modifying files outside of apps/billing/, services/billing/, and lib/pricing/, violating the domain boundary constraint."
+status: PENDING
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
@@ -29,7 +28,7 @@ estimated_scope: Large
   </tr>
   <tr>
     <td>Teammate Mesh</td>
-    <td>Redis Pub/Sub (<code>rueidis</code>)</td>
+    <td>Redis Pub/Sub</td>
     <td>In-Memory Go Channels</td>
   </tr>
   <tr>
@@ -43,22 +42,22 @@ estimated_scope: Large
 graph TD
     A[Agent] --&gt;|Write| B(.agent-task/memory)
     B --&gt;|Watched By| C(AutoDream Pipeline)
-    C --&gt; D[pgvector consolidated_memory]
+    C --&gt; D[pgvector ohc_memory_embeddings]
 </code></pre>
 
 <h2>Design Doc</h2>
 <ol>
   <li><b>Shared Task List</b>: <code>shared_tasks_v4</code> schema using <code>VARCHAR PRIMARY KEY</code> for compatibility.</li>
-  <li><b>Teammate Mesh</b>: <code>MeshEvent</code> structs with <code>agent_id</code>, <code>action</code>, <code>status</code> across <code>mesh:tasks</code> and <code>mesh:coordination</code>.</li>
-  <li><b>AutoDream</b>: Polls memory directory, embeds content, stores in <code>consolidated_memory</code>.</li>
+  <li><b>Teammate Mesh</b>: Implement event structs with <code>agent_id</code>, <code>action</code>, <code>status</code> across <code>mesh:tasks</code> and <code>mesh:coordination</code>.</li>
+  <li><b>AutoDream</b>: Polls memory directory, embeds content, stores in <code>ohc_memory_embeddings</code>.</li>
 </ol>
 
 <h2>Implementation Prompt</h2>
 <p>Hello Implementer!</p>
 <ol>
-  <li>Add the <code>shared_tasks_v4</code> migration in <code>srcs/server/db/migrations/</code>.</li>
+  <li>Utilize the existing <code>shared_tasks_v4</code> migration in <code>srcs/server/db/migrations/047_shared_tasks_v4.sql</code>.</li>
   <li>Implement the <code>SharedTaskOrchestrator</code> to interface with this database.</li>
   <li>Implement the Teammate Mesh APIs for Redis/Memory transports.</li>
-  <li>Build the AutoDream pipeline to sync <code>.agent-task/memory/</code> into <code>consolidated_memory</code>.</li>
+  <li>Build the AutoDream pipeline to sync <code>.agent-task/memory/</code> into <code>ohc_memory_embeddings</code>.</li>
 </ol>
 </div>
