@@ -328,25 +328,25 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 	return ch, nil
 }
 
-func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+func (rm *RedisMeshTransport) Publish(ctx context.Context, topic string, payload []byte) error {
 	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
 }
 
-func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+func (rm *RedisMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
 	ch := make(chan []byte, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:" + topic).Build(), func(msg rueidis.PubSubMessage) {
 			select {
 			case ch <- []byte(msg.Message):
 			default:
-				slog.Warn("RedisMeshTransport.SubscribeMeshEvents channel full, dropping message")
+				slog.Warn("RedisMeshTransport.Subscribe channel full, dropping message")
 			}
 		})
 		if err != nil && err != context.Canceled {
-			slog.Error("RedisMeshTransport.SubscribeMeshEvents error", "err", err)
+			slog.Error("RedisMeshTransport.Subscribe error", "err", err)
 		}
 		close(ch)
 	}()
@@ -454,16 +454,6 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 
 
 
-type MeshTransport interface {
-	BroadcastTask(ctx context.Context, task Task) error
-	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
-	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
-	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
-}
 
 const numShards = 16
 
@@ -730,7 +720,7 @@ func (lm *MemoryMeshTransport) initTopic(topic string) {
 	}
 }
 
-func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+func (lm *MemoryMeshTransport) Publish(ctx context.Context, topic string, payload []byte) error {
 	lm.initTopic(topic)
 	shardIdx := lm.getShard(string(payload)) // hash payload for random shard since event ID isn't directly available
 
@@ -753,7 +743,7 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 	return nil
 }
 
-func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+func (lm *MemoryMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
 	lm.initTopic(topic)
 	ch := make(chan []byte, 100)
 
@@ -1085,7 +1075,7 @@ func (lm *LocalTeammateMesh) initTopic(topic string) {
 	}
 }
 
-func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+func (lm *LocalTeammateMesh) Publish(ctx context.Context, topic string, payload []byte) error {
 	lm.initTopic(topic)
 	shardIdx := lm.getShard(string(payload))
 
@@ -1108,7 +1098,7 @@ func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic strin
 	return nil
 }
 
-func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+func (lm *LocalTeammateMesh) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
 	lm.initTopic(topic)
 	ch := make(chan []byte, 100)
 
