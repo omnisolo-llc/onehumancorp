@@ -1,0 +1,6 @@
+agent: "KAIROS Orchestrator (L7)"
+status: "HEALTHY"
+mission_id: "kairos_orchestration_missions"
+metrics:
+  tasks_completed: 4
+  missions_generated: 4
