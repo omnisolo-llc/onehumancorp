@@ -567,3 +567,54 @@ graph TD
 
 
 
+
+<div class="glass-panel" markdown="1">
+
+### 4.10 Hybrid MCP RAG Protocol
+
+The **Hybrid MCP RAG Protocol** enables seamless database synchronization between local Standalone agents (SQLite) and Cloud orchestration (pgvector). This guarantees full context preservation even when an agent goes offline.
+
+**Endpoint:** POST /api/v1/mcp/sync
+Synchronizes local vector insights up to the Cloud PostgreSQL instance via the AutoDream pipeline.
+
+**Payload:**
+```json
+{
+  "agent_id": "standalone_swe_007",
+  "sync_type": "full",
+  "vectors": [
+    {
+      "id": "v_1234",
+      "context": "SQLite mutex locking approach for shared_tasks.",
+      "embedding": [0.012, -0.054, 0.089, "..."]
+    }
+  ]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "synchronized",
+  "vectors_upserted": 150
+}
+```
+
+#### Hybrid RAG Sync Flow
+```mermaid
+sequenceDiagram
+    participant Local as Standalone (SQLite)
+    participant API as MCP Gateway
+    participant AutoDream as AutoDream Sync Engine
+    participant Cloud as Cloud DB (pgvector)
+
+    Local->>API: POST /api/v1/mcp/sync (Local Vectors)
+    API->>AutoDream: Authenticate & Route Payload
+    AutoDream->>Cloud: Upsert to autodream_memories
+    Cloud-->>AutoDream: Acknowledge Transaction
+    AutoDream-->>Local: Return Sync Status
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Local,API,AutoDream,Cloud premium;
+```
+</div>
