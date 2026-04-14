@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "Requires modifying files outside of designated domain (apps/growth/, services/growth/, lib/analytics/)."
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0

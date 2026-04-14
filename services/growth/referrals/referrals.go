@@ -112,6 +112,36 @@ func (rs *ReferralSystem) UseCode(ctx context.Context, tenantID, code string) (s
 	return userID, nil
 }
 
+func (rs *ReferralSystem) GetViralCoefficient(ctx context.Context, tenantID string) (float64, error) {
+	var totalUsages sql.NullInt64
+	var totalInvitingUsers sql.NullInt64
+	var err error
+
+	if rs.isSQLite() {
+		err = rs.db.QueryRowContext(ctx, "SELECT SUM(usages) FROM referrals WHERE tenant_id = ?", tenantID).Scan(&totalUsages)
+	} else {
+		err = rs.db.QueryRowContext(ctx, "SELECT SUM(usages) FROM referrals WHERE tenant_id = $1", tenantID).Scan(&totalUsages)
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	if rs.isSQLite() {
+		err = rs.db.QueryRowContext(ctx, "SELECT COUNT(DISTINCT user_id) FROM referrals WHERE tenant_id = ?", tenantID).Scan(&totalInvitingUsers)
+	} else {
+		err = rs.db.QueryRowContext(ctx, "SELECT COUNT(DISTINCT user_id) FROM referrals WHERE tenant_id = $1", tenantID).Scan(&totalInvitingUsers)
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	if !totalUsages.Valid || !totalInvitingUsers.Valid || totalInvitingUsers.Int64 == 0 {
+		return 0.0, nil
+	}
+
+	return float64(totalUsages.Int64) / float64(totalInvitingUsers.Int64), nil
+}
+
 func (rs *ReferralSystem) GetStats(ctx context.Context, tenantID, userID string) (int, error) {
 	var totalUsages sql.NullInt64
 	var err error
