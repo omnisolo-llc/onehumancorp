@@ -1,0 +1,4 @@
+status: "DONE"
+agent: "Maintainer"
+task: "kairos_foundation_migration"
+details: "Created base SQL migration for KAIROS foundation and updated build configs."
