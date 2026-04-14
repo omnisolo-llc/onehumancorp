@@ -10,6 +10,7 @@ go_library(
         "sqlite_provider.go",
     ],
     embedsrcs = [
+        "migrations/20260412_shared_tasks_decomposition.sql",
         "migrations/001_users.sql",
         "migrations/002_billing.sql",
         "migrations/003_scheduler.sql",
