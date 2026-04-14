@@ -31,6 +31,7 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
+	Extras        map[string]string `json:"extras,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
 
@@ -92,6 +93,14 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	if req.MinimaxAPIKey != "" {
 		cfg.MinimaxAPIKey = req.MinimaxAPIKey
 		s.hub.SetMinimaxAPIKey(req.MinimaxAPIKey)
+	}
+	if len(req.Extras) > 0 {
+		for k, v := range req.Extras {
+			if cfg.Extras == nil {
+				cfg.Extras = make(map[string]string)
+			}
+			cfg.Extras[k] = v
+		}
 	}
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders
