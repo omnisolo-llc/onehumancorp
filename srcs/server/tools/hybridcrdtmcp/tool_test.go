@@ -7,13 +7,42 @@ import (
 	"reflect"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func TestToolHandlers(t *testing.T) {
 	os.Setenv("OHC_MULTITENANT", "true")
 	defer os.Unsetenv("OHC_MULTITENANT")
 
-	mcp := NewHybridCRDTMCP()
+	os.Setenv("DATABASE_URL", "sqlite://:memory:")
+	defer os.Unsetenv("DATABASE_URL")
+
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create test db: %v", err)
+	}
+	defer pool.Close()
+
+	_, err = pool.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT,
+			crdt_vector JSONB DEFAULT '{}'
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+
+	_, err = pool.Exec(context.Background(), `
+		INSERT INTO shared_tasks (id, organization_id, crdt_vector)
+		VALUES ('test-entity', 'org-123', '{"clock": 5.0}')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert data: %v", err)
+	}
+
+	mcp := NewHybridCRDTMCP(pool)
 
 	t.Run("Pull with Claims", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-123"})
@@ -21,8 +50,15 @@ func TestToolHandlers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if res == nil {
-			t.Fatalf("expected response, got nil")
+
+		resMap, ok := res.(map[string]interface{})
+		if !ok || resMap["status"] != "pulled" {
+			t.Fatalf("expected pulled status")
+		}
+
+		vec, ok := resMap["vector"].(map[string]interface{})
+		if !ok || vec["clock"] != 5.0 {
+			t.Fatalf("expected clock to be 5, got %v", vec["clock"])
 		}
 	})
 

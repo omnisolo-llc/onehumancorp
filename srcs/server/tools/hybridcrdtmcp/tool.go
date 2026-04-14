@@ -5,24 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
-)
-
-// In-memory mock database for CRDT vectors (keyed by orgID -> entityID)
-var (
-	mockDB      = make(map[string]map[string]map[string]interface{})
-	mockDBMutex sync.RWMutex
+	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 // HybridCRDTMCP implements the MCP interface for CRDT state synchronization.
 type HybridCRDTMCP struct {
+	dbWrapper *db.DB
 }
 
 // NewHybridCRDTMCP creates a new HybridCRDTMCP instance.
-func NewHybridCRDTMCP() *HybridCRDTMCP {
-	return &HybridCRDTMCP{}
+func NewHybridCRDTMCP(dbWrapper *db.DB) *HybridCRDTMCP {
+	return &HybridCRDTMCP{
+		dbWrapper: dbWrapper,
+	}
 }
 
 // Tool represents an MCP tool definition.
@@ -62,11 +59,11 @@ func (m *HybridCRDTMCP) CallTool(ctx context.Context, toolName string, arguments
 
 	switch toolName {
 	case "crdt_pull":
-		return PullHandler(ctx, input)
+		return m.PullHandler(ctx, input)
 	case "crdt_push":
-		return PushHandler(ctx, input)
+		return m.PushHandler(ctx, input)
 	case "crdt_merge":
-		return MergeHandler(ctx, input)
+		return m.MergeHandler(ctx, input)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}
@@ -89,7 +86,7 @@ func getOrgIDFromContext(ctx context.Context) (string, error) {
 	return "local-standalone-org", nil
 }
 
-func PullHandler(ctx context.Context, input json.RawMessage) (interface{}, error) {
+func (m *HybridCRDTMCP) PullHandler(ctx context.Context, input json.RawMessage) (interface{}, error) {
 	orgID, err := getOrgIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -102,13 +99,15 @@ func PullHandler(ctx context.Context, input json.RawMessage) (interface{}, error
 		return nil, fmt.Errorf("invalid input: %w", err)
 	}
 
-	mockDBMutex.RLock()
-	defer mockDBMutex.RUnlock()
-
 	vector := map[string]interface{}{}
-	if orgData, ok := mockDB[orgID]; ok {
-		if entityVector, ok := orgData[args.EntityID]; ok {
-			vector = entityVector
+
+	if m.dbWrapper != nil {
+		var crdtVector string
+		query := "SELECT crdt_vector FROM shared_tasks WHERE id = $1 AND organization_id = $2"
+
+		err := m.dbWrapper.QueryRow(ctx, query, args.EntityID, orgID).Scan(&crdtVector)
+		if err == nil && crdtVector != "" {
+			_ = json.Unmarshal([]byte(crdtVector), &vector)
 		}
 	}
 
@@ -118,7 +117,7 @@ func PullHandler(ctx context.Context, input json.RawMessage) (interface{}, error
 	}, nil
 }
 
-func PushHandler(ctx context.Context, input json.RawMessage) (interface{}, error) {
+func (m *HybridCRDTMCP) PushHandler(ctx context.Context, input json.RawMessage) (interface{}, error) {
 	orgID, err := getOrgIDFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -132,38 +131,43 @@ func PushHandler(ctx context.Context, input json.RawMessage) (interface{}, error
 		return nil, fmt.Errorf("invalid input: %w", err)
 	}
 
-	mockDBMutex.Lock()
-	defer mockDBMutex.Unlock()
+	if m.dbWrapper != nil {
+		var crdtVectorStr string
+		query := "SELECT crdt_vector FROM shared_tasks WHERE id = $1 AND organization_id = $2"
+		err := m.dbWrapper.QueryRow(ctx, query, args.EntityID, orgID).Scan(&crdtVectorStr)
 
-	if _, ok := mockDB[orgID]; !ok {
-		mockDB[orgID] = make(map[string]map[string]interface{})
-	}
-
-	// Simulate simple merge on server by updating keys where local clock > remote clock
-	currentVector := mockDB[orgID][args.EntityID]
-	if currentVector == nil {
-		currentVector = make(map[string]interface{})
-	}
-
-	for k, v := range args.Vector {
-		if curV, ok := currentVector[k]; ok {
-			if vNum, ok1 := v.(float64); ok1 {
-				if curNum, ok2 := curV.(float64); ok2 && vNum > curNum {
-					currentVector[k] = v
-				}
-			}
-		} else {
-			currentVector[k] = v
+		currentVector := make(map[string]interface{})
+		if err == nil && crdtVectorStr != "" {
+			_ = json.Unmarshal([]byte(crdtVectorStr), &currentVector)
 		}
+
+		for k, v := range args.Vector {
+			if curV, ok := currentVector[k]; ok {
+				if vNum, ok1 := v.(float64); ok1 {
+					if curNum, ok2 := curV.(float64); ok2 && vNum > curNum {
+						currentVector[k] = v
+					}
+				}
+			} else {
+				currentVector[k] = v
+			}
+		}
+
+		newVectorBytes, _ := json.Marshal(currentVector)
+
+		updateQuery := "UPDATE shared_tasks SET crdt_vector = $1 WHERE id = $2 AND organization_id = $3"
+		if m.dbWrapper.IsSQLite() {
+			updateQuery = "UPDATE shared_tasks SET crdt_vector = ? WHERE id = ? AND organization_id = ?"
+		}
+		_, _ = m.dbWrapper.Exec(ctx, updateQuery, string(newVectorBytes), args.EntityID, orgID)
 	}
-	mockDB[orgID][args.EntityID] = currentVector
 
 	return map[string]interface{}{
 		"status": "pushed",
 	}, nil
 }
 
-func MergeHandler(ctx context.Context, input json.RawMessage) (interface{}, error) {
+func (m *HybridCRDTMCP) MergeHandler(ctx context.Context, input json.RawMessage) (interface{}, error) {
 	var args struct {
 		LocalVector  map[string]interface{} `json:"local_vector"`
 		RemoteVector map[string]interface{} `json:"remote_vector"`
