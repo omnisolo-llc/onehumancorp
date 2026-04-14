@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybrid_sync_daemon",
+    srcs = ["daemon.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync_daemon",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "hybrid_sync_daemon_test",
+    srcs = ["daemon_test.go"],
+    embed = [":hybrid_sync_daemon"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
