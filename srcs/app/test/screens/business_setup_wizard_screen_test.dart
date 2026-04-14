@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 void main() {
-  testWidgets('BusinessSetupWizardScreen navigates steps and updates state', (WidgetTester tester) async {
+  testWidgets('BusinessSetupWizardScreen renders and navigates steps', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -13,40 +14,48 @@ void main() {
       ),
     );
 
+    // Initial state
     expect(find.text('Business Setup'), findsOneWidget);
     expect(find.text('Welcome! Your AI team, ready in minutes.'), findsOneWidget);
+    expect(find.text('Next'), findsOneWidget);
 
-    // Tap next
+    // Step 1: Business Profile
     await tester.tap(find.text('Next'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('Company Name'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Company Name'), 'Acme Corp');
-    await tester.enterText(find.widgetWithText(TextField, 'Industry'), 'Tech');
-    await tester.pump();
+    expect(find.byType(TextField), findsNWidgets(2)); // Company Name, Industry
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget); // Size
 
-    // Tap next to step 2
+    await tester.enterText(find.byType(TextField).first, 'Test Company');
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Next'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // Step 2: Goal selection
     expect(find.text('Select Goals'), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNWidgets(5));
+
     await tester.tap(find.text('Support'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    // Tap next to step 3
     await tester.tap(find.text('Next'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // Step 3: Deployment Preference
     expect(find.text('Deployment Preference'), findsOneWidget);
-    await tester.tap(find.text('Desktop'));
-    await tester.pump();
+    expect(find.byType(RadioListTile<String>), findsNWidgets(3));
 
-    // Tap next to step 4
     await tester.tap(find.text('Next'));
-    await tester.pump();
-    expect(find.text('Admin Name'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Admin Name'), 'Admin');
-    await tester.enterText(find.widgetWithText(TextField, 'Admin Email'), 'admin@example.com');
-    await tester.enterText(find.widgetWithText(TextField, 'Admin Password'), 'password123');
-    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // Step 4: Administrator account
+    expect(find.byType(TextField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
+
+    await tester.enterText(find.byType(TextField).at(0), 'Admin');
+    await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
+    await tester.enterText(find.byType(TextField).at(2), 'password');
+    await tester.pumpAndSettle();
 
     expect(find.text('Launch My AI Team →'), findsOneWidget);
   });
