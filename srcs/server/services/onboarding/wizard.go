@@ -41,3 +41,13 @@ func (w *InteractiveWizard) GenerateWizardUI(isCloud bool) string {
 
     return sb.String()
 }
+
+func (w *InteractiveWizard) ResetEnvironment(ctx context.Context, isCloud bool) error {
+    if err := CleanupEnvironment(ctx, isCloud); err != nil {
+        return fmt.Errorf("cleanup failed: %w", err)
+    }
+    if err := ProvisionEnvironment(ctx, isCloud); err != nil {
+        return fmt.Errorf("provision failed: %w", err)
+    }
+    return nil
+}
