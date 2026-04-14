@@ -29,14 +29,15 @@ func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, erro
 	}
 
 	usage.CostUSD = (float64(usage.PromptTokens)/1_000_000.0)*price.InputPerMillionUSD +
-		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD
+		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD +
+		(float64(usage.CachedTokens)/1_000_000.0)*price.CachedPerMillionUSD
 	usage.OccurredAt = usage.OccurredAt.UTC()
 
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cost_usd, occurred_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cached_tokens, cost_usd, occurred_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		usage.AgentID, usage.AgentRole, usage.OrganizationID, usage.Model,
-		usage.PromptTokens, usage.CompletionTokens, usage.CostUSD, usage.OccurredAt,
+		usage.PromptTokens, usage.CompletionTokens, usage.CachedTokens, usage.CostUSD, usage.OccurredAt,
 	)
 	if err != nil {
 		return Usage{}, fmt.Errorf("pg: track usage: %w", err)
@@ -48,7 +49,7 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 	rows, err := r.pool.Query(ctx, `
 		SELECT agent_id,
 		       COALESCE(SUM(cost_usd), 0),
-		       COALESCE(SUM(prompt_tokens + completion_tokens), 0)
+		       COALESCE(SUM(prompt_tokens + completion_tokens + cached_tokens), 0)
 		FROM usage_events
 		WHERE organization_id = $1
 		GROUP BY agent_id
