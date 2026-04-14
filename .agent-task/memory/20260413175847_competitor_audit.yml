@@ -1,3 +1,0 @@
-type: Context
-tags: [workers, observability]
-description: Added competitor audit worker and migration. Noticed that OpenTelemetry metrics should be integrated correctly into worker constructs. Ensure workers are started in server/main.go.

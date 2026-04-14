@@ -1,6 +1,0 @@
-journal_entry:
-  type: "performance_optimization"
-  description: |
-    Implemented worker pool and task batching (sharding) in `TaskWorker` for `agent_task_worker.go`. This change handles parallel task execution, directly dispatching to concurrent idle agents and vastly improving throughput.
-    Discovered that using native Go testing (`go test`) directly on modules managed by Bazel causes dependency download failures because Bazel fully hermeticises the workspace (`bazelisk test` must be used instead). Tests and benchmarks confirmed working and safe.
-  impact: "Parallelized Issue task assignment, avoiding sequential locks and increasing system concurrency."

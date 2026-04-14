@@ -53,11 +53,16 @@ go_library(
         "migrations/034_kairos_sub_agent_queue.sql",
         "migrations/046_autodream_pgvector.sql",
         "migrations/047_competitor_metrics.sql",
+        "migrations/049_mesh_bridges.sql",
+        "migrations/051_team_invites.sql",
+        "migrations/052_cached_tokens.sql",
+        "migrations/053_shared_tasks_v4.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/telemetry",
         "@com_github_jackc_pgx_v5//:pgx",
         "@com_github_jackc_pgx_v5//pgxpool",
         "@io_opentelemetry_go_otel//:otel",

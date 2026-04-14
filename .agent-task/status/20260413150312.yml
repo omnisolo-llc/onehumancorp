@@ -1,4 +1,0 @@
-status: healthy
-metrics:
-  stuck_missions: 0
-  unstick_count: 10

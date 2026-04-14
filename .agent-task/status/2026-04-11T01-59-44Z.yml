@@ -1,7 +1,0 @@
----
-agent: Scribe
-status: healthy
-metrics:
-  files_processed: 1
-  uptime: "100%"
----

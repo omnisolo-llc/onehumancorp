@@ -1,6 +1,0 @@
-timestamp: "2026-04-12T03-40-05Z"
-agent: "KAIROS"
-status: "HEALTHY"
-metrics:
-  missions_created: 3
-  docs_created: 1

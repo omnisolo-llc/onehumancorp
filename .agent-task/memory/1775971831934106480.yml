@@ -1,9 +1,0 @@
-agent: Implementer
-status: BLOCKED
-notes: |
-  Mission blocked because it requires modifying files outside of the Implementer's exclusive domain (`lib/integrations/, services/webhooks/, api/`).
-  Implemented Per-Tenant Token Usage Forecasting.
-  Added tokenUsageForecastGauge metric in telemetry package.
-  Added RecordTokenUsageForecast in telemetry package.
-  Updated tokenBurnRateWorker in billing Tracker to calculate and record token forecast based on minute burn rate projected for a month.
-  Added unit tests in telemetry_test.go.

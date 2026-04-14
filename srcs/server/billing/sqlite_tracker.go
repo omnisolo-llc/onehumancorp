@@ -29,14 +29,15 @@ func (r *SqliteUsageRepository) Track(ctx context.Context, usage Usage) (Usage, 
 	}
 
 	usage.CostUSD = (float64(usage.PromptTokens)/1_000_000.0)*price.InputPerMillionUSD +
-		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD
+		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD +
+		(float64(usage.CachedTokens)/1_000_000.0)*price.CachedPerMillionUSD
 	usage.OccurredAt = usage.OccurredAt.UTC()
 
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cost_usd, occurred_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cached_tokens, cost_usd, occurred_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		usage.AgentID, usage.AgentRole, usage.OrganizationID, usage.Model,
-		usage.PromptTokens, usage.CompletionTokens, usage.CostUSD, usage.OccurredAt,
+		usage.PromptTokens, usage.CompletionTokens, usage.CachedTokens, usage.CostUSD, usage.OccurredAt,
 	)
 	if err != nil {
 		return Usage{}, fmt.Errorf("sqlite: track usage: %w", err)
@@ -48,7 +49,7 @@ func (r *SqliteUsageRepository) Summary(ctx context.Context, organizationID stri
 	rows, err := r.pool.Query(ctx, `
 		SELECT agent_id,
 		       COALESCE(SUM(cost_usd), 0),
-		       COALESCE(SUM(prompt_tokens + completion_tokens), 0)
+		       COALESCE(SUM(prompt_tokens + completion_tokens + cached_tokens), 0)
 		FROM usage_events
 		WHERE organization_id = ?
 		GROUP BY agent_id

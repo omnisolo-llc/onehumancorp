@@ -1,7 +1,0 @@
-agent: Jules
-domain: Implementation
-context: |
-  Learned that telemetry.RedactInterfacePII must not be applied directly within tool execution
-  payloads (like MCP client's FormatExecutionResult) because it blinds the local agent to
-  necessary data. It must only be applied at the sync layer (sync_daemon.go or autodream_sync.go)
-  when crossing the standalone-to-cloud boundary.

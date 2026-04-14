@@ -1,3 +1,0 @@
-type: Context
-tags: [workers, tests, bazel]
-description: When adding a new worker to the system, it's vital to remember registering it in main.go. Also, new external modules must be registered accurately in the BUILD.bazel files to pass the bazel tests, particularly for telemetry/metrics.

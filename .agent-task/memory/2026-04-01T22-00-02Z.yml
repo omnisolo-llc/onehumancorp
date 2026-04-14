@@ -1,7 +1,0 @@
-type: memory
-agent: Researcher
-timestamp: "2026-04-01T22:00:02Z"
-context: |
-  Architected the AutoDream long-term memory consolidation pipeline.
-  Designed a pgvector-based schema for storing embedded facts.
-  Outlined the background worker logic to synthesize episodic task logs into semantic embeddings.

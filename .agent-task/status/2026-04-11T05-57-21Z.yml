@@ -1,7 +1,0 @@
-status: HEALTHY
-agent: Sentry
-role: MAINTAINER
-metrics:
-  test_coverage: "100%"
-  build_status: "GREEN"
-  chaos_parity: "RESOLVED"

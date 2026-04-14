@@ -46,6 +46,7 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
 	go w.runMissionIngestionPipeline(ctx)
+	go w.runMemoryIngestionPipeline(ctx)
 	go w.runSessionCompressionPipeline(ctx)
 	go w.runCompletedTasksIngestionPipeline(ctx)
 }
@@ -76,9 +77,9 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 	var query string
 	if w.pool.IsSQLite() {
-		query = "SELECT id, title, description, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50"
+		query = "SELECT id, title, description, payload FROM shared_tasks_v4 WHERE status = 'COMPLETED' LIMIT 50"
 	} else {
-		query = "SELECT id, title, description, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50 FOR UPDATE SKIP LOCKED"
+		query = "SELECT id, title, description, payload FROM shared_tasks_v4 WHERE status = 'COMPLETED' LIMIT 50 FOR UPDATE SKIP LOCKED"
 	}
 
 	rows, err := tx.Query(ctx, query)
@@ -130,12 +131,12 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			memID := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
-			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr, task.ID)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr)
 		}
 
 		if err != nil {
@@ -144,9 +145,9 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		// Update task to ARCHIVED to avoid re-processing
-		updateQuery := "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = $1"
+		updateQuery := "UPDATE shared_tasks_v4 SET status = 'ARCHIVED' WHERE id = $1"
 		if w.pool.IsSQLite() {
-			updateQuery = "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = ?"
+			updateQuery = "UPDATE shared_tasks_v4 SET status = 'ARCHIVED' WHERE id = ?"
 		}
 		_, err = tx.Exec(ctx, updateQuery, task.ID)
 		if err != nil {
@@ -358,32 +359,31 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 			}
 		}
 
-		// Store into autodream_memories using a short transaction
-		innerTx, txErr := w.pool.Begin(ctx)
-		if txErr != nil {
-			continue
+		// Store into consolidated_memory using the current transaction (if any) or pool
+		type execer interface {
+			Exec(ctx context.Context, sql string, arguments ...any) (int64, error)
 		}
-		defer innerTx.Rollback(ctx)
+		var target execer = w.pool
+		if tx != nil {
+			target = tx
+		}
 
 		var insertQuery string
-		missionID := "session-" + s.ID
-
 		var embedPtr *string
 		if embeddingStr != "[0.0]" {
 			embedPtr = &embeddingStr
 		}
 
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
+			_, err = target.Exec(ctx, insertQuery, id, summary, embedPtr)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
-			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr, missionID)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			_, err = target.Exec(ctx, insertQuery, summary, embedPtr)
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
-			tx.Rollback(ctx)
 			continue
 		}
 
@@ -394,15 +394,10 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		if w.pool.IsSQLite() {
 			deleteQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
 		}
-		_, err = tx.Exec(ctx, deleteQuery, s.ID)
+		_, err = target.Exec(ctx, deleteQuery, s.ID)
 		if err != nil {
 			slog.Error("AutoDream: failed to delete compressed session", "session", s.ID, "error", err)
-			tx.Rollback(ctx)
 			continue
-		}
-
-		if err := tx.Commit(ctx); err != nil {
-			slog.Error("AutoDream: failed to commit compression transaction", "error", err)
 		}
 	}
 
@@ -472,12 +467,12 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr, memoryID)
+			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
-			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr, memoryID)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr)
 		}
 
 		if err != nil {
@@ -815,7 +810,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		rows, errQuery = w.pool.Query(ctx, `
 			SELECT 'session-' || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
 			UNION ALL
-			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks_v4 WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
 		`)
 	} else {
 		// Postgres mode
@@ -823,7 +818,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		rows, errQuery = w.pool.Query(ctx, `
 			SELECT 'session-' || session_id, CAST(context_data AS TEXT) FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
 			UNION ALL
-			SELECT 'task-' || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT 'task-' || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), '{}') FROM shared_tasks_v4 WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
 		`)
 	}
 

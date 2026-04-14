@@ -1,13 +1,14 @@
 # One Human Corp
 
 ## Getting Started (Day One Onboarding)
-To begin your onboarding journey and easily set up the platform in your desired mode, simply run the **OHC Hybrid Setup CLI** from the root of the repository:
+To begin your onboarding journey and easily set up the platform in your desired mode, run the setup and mode helpers from the root of the repository:
 
 ```bash
-./ohc_hybrid_cli.sh
+./deploy/scripts/ohc-setup.sh
+source deploy/scripts/ohc-mode.sh standalone
 ```
 
-*This interactive wizard will guide you through generating your environment variables, switching modes (Cloud, Standalone, Headless), and seeding mock data.*
+This initializes local configuration and lets you switch between `cloud`, `standalone`, and `headless` modes without an extra wrapper layer.
 
 ## Identity
 One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
@@ -45,9 +46,13 @@ graph TD;
 |-----------|----------|---------|
 | `srcs/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
 | `srcs/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
+| `srcs/server/lib/` | **Go** | Shared backend support libraries used by benchmarks, integrations, and resilience flows |
+| `srcs/server/services/` | **Go** | Lightweight backend service packages kept alongside the server source tree |
 | `srcs/server/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
 | `srcs/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
 | `srcs/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
+| `srcs/examples/` | **Go / YAML** | Example agent binaries and supporting assets |
+| `srcs/benchmarks/` | **Go** | Performance benchmarks for coordination and messaging helpers |
 | `srcs/proto/` | **Protobuf** | gRPC service definitions |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
@@ -167,18 +172,14 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 
 ## Developer Workflow
 
-### Day One Onboarding CLI (Recommended)
-To simplify setup and environment management, use the interactive wizard located at the root of the repository:
+### Day One Setup (Recommended)
+To simplify setup and environment management, use the maintained deploy scripts directly:
 
 ```bash
-./ohc_hybrid_cli.sh
+./deploy/scripts/ohc-setup.sh
+source deploy/scripts/ohc-mode.sh standalone
 ```
-This tool provides a guided menu to:
-- Run the initial setup
-- Switch environment modes (Cloud, Standalone, Headless)
-- Execute builds and run tests
-- Launch the app natively or via cloud services
-- **Verify System State (Diagnostics)** for deeper dependency analysis
+These scripts generate local config, switch runtime modes, and keep setup logic in one place under `deploy/scripts/`.
 
 ### Setup and Mode Switching (Manual)
 We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets:

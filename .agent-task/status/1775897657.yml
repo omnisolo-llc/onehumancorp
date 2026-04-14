@@ -1,7 +1,0 @@
----
-timestamp: 1775897657
-status: healthy
-agent: Scribe
-metrics:
-  tasks_completed: 1
-  documentation_updated: docs/api/playbook.md

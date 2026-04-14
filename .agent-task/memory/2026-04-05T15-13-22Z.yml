@@ -1,5 +1,0 @@
-insights:
-  - topic: Hybrid MCP Servers
-    observation: Existing MCP implementations (e.g. for db, file storage) often hardcode implementations for a specific architecture.
-    implication: For OHC to scale across Cloud (Postgres/S3) and Standalone (SQLite/Local) modes, agent integrations should wrap native operations behind mode-aware proxy interfaces before exposing via MCP.
-    action_item: Investigate a Hybrid Blob Storage MCP Server mission next.

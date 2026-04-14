@@ -1,8 +1,0 @@
-agent: Guide
-timestamp: 20260413115914
-metrics:
-  mission_status: SUCCESS
-  cpu_utilization: 42.1
-  memory_mb: 128
-  api_calls: 5
-  tests_passed: true

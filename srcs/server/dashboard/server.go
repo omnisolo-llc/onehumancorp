@@ -17,6 +17,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
@@ -62,6 +63,7 @@ type Server struct {
 	downloads             []Download
 	teamInvites           []TeamInvite
 	onboardingFunnels []OnboardingFunnel
+	waitlist          []WaitlistEntry
 }
 
 // RateLimitState functionality.
@@ -457,6 +459,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
+		waitlist:          []WaitlistEntry{},
 		onboardingFunnels: []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
@@ -584,6 +587,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)
 	mux.HandleFunc("/api/growth/team-invites/accept", server.handleTeamInviteAccept)
 	mux.HandleFunc("/api/growth/onboarding-funnel", server.handleOnboardingFunnel)
+	mux.HandleFunc("/api/growth/waitlist", server.handleWaitlist)
+	mux.HandleFunc("/api/growth/viral-coefficient-metrics", server.handleViralCoefficientMetrics)
+	mux.HandleFunc("/api/growth/quota", server.handleQuota)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
 
 	// Phase 5 - PowerSync
@@ -593,8 +599,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 
 	// Teammate Mesh APIs
-	mux.HandleFunc("/api/mesh/broadcast", auth.RequireRole("system", server.handleMeshBroadcast))
-	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
+	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
+	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
@@ -1783,6 +1790,8 @@ type BudgetAlert struct {
 	OrganizationID string    `json:"organizationId"`
 	ThresholdUSD   float64   `json:"thresholdUsd"`
 	NotifyAtPct    float64   `json:"notifyAtPct"` // e.g. 0.8 → notify at 80 %
+	Predictive     bool      `json:"predictive"`
+	ForecastHours  int       `json:"forecastHours"`
 	Triggered      bool      `json:"triggered"`
 	CreatedAt      time.Time `json:"createdAt"`
 }
@@ -1791,6 +1800,8 @@ type budgetAlertRequest struct {
 	OrganizationID string  `json:"organizationId"`
 	ThresholdUSD   float64 `json:"thresholdUsd"`
 	NotifyAtPct    float64 `json:"notifyAtPct"`
+	Predictive     bool    `json:"predictive"`
+	ForecastHours  int     `json:"forecastHours"`
 }
 
 // ── Automated SDLC / Pipelines ────────────────────────────────────────────────
@@ -1928,4 +1939,85 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	telemetry.RecordMeshBroadcast(r.Context(), mode)
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Enforce mTLS checks
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+	cert := r.TLS.PeerCertificates[0]
+	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+
+	var req struct {
+		Channel string                 `json:"channel"`
+		Data    map[string]interface{} `json:"data"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Channel == "" {
+		http.Error(w, "invalid channel", http.StatusBadRequest)
+		return
+	}
+
+	payloadBytes, err := json.Marshal(req.Data)
+	if err != nil {
+		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
+		return
+	}
+
+	err = s.hub.Publish(orchestration.Message{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		FromAgent: "system",
+		ToAgent:   "system",
+		Type:      req.Channel,
+		Content:   string(payloadBytes),
+	})
+
+	if err == nil {
+		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
+
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			if req.Channel == "mesh:tasks" || req.Channel == "swarm-events" {
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), req.Data)
+			} else if req.Channel == "mesh:coordination" {
+				agentID, _ := req.Data["agent_id"].(string)
+				if agentID == "" {
+					agentID = "system"
+				}
+				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: agentID,
+					ToAgent:   "system",
+					Type:      req.Channel,
+					Content:   string(payloadBytes),
+				})
+			}
+		}
+	} else {
+		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }

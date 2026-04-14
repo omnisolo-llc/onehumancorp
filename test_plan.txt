@@ -1,6 +1,0 @@
-1. Implement a generic `BlobProvider` interface in `srcs/server/agents/mcp/blob.go` to provide a common API for saving, loading, and deleting blobs.
-2. Implement a `LocalBlobProvider` in `srcs/server/agents/mcp/local_blob.go` that implements the `BlobProvider` using the local filesystem (writing to `/var/tmp/ohc/blobs` or a configurable path).
-3. Implement an `S3BlobProvider` in `srcs/server/agents/mcp/s3_blob.go` that implements the `BlobProvider` using AWS S3 (simulated or real SDK depending on what dependencies exist; I'll check Go dependencies next to decide the implementation details).
-4. Add a `Factory` method to select either `LocalBlobProvider` or `S3BlobProvider` based on environment variables (`OHC_STANDALONE` or `OHC_MULTITENANT`).
-5. Update `srcs/server/agents/mcp/BUILD.bazel` to include the new files.
-6. Write tests for these components.

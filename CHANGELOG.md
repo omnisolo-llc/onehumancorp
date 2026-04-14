@@ -1,34 +1,31 @@
-# Changelog
-## [0.2.9] - 2026-04-10
+# OHC Hybrid Agentic OS - Changelog
 
-### Added
-- Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries.
-- New cost feature: Hybrid Local-to-Cloud State Sync MCP Proxy (statesyncmcp).
+## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
 
-### Changed
-- Coordinated promotions across Cloud staging and Local desktop beta builds.
-- Synchronized version configurations across `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
+### Privacy/Offline Improvements
+- Enabled offline-compatible storage compression reducing local disk footprint for Standalone environments.
 
 
-## [0.2.9] - 2026-04-11
 
-### Added
-- HybridHealthProbe for verification of hybrid-mode switching and local-to-cloud mission sync reliability.
+## v0.3.5 (Cloud) / v0.3.5+1 (Standalone)
+### Cloud Scaling Improvements
+- Enhanced Teammate Mesh APIs and AutoDream Worker logic for more scalable Kubernetes pod communications.
 
-### Changed
-- Improved AutoDream Memory consolidation pipeline test coverage to >90%.
+### Privacy/Offline Improvements
+- Continued stabilization of the offline KAIROS state machine functionality via SQLite fallbacks.
 
-### Fixed
-- Enforced strict opt-in telemetry for Hybrid Architecture Privacy in standalone mode.
+## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
+### Cloud Scaling Improvements
+- Enhanced Cloud multi-tenant architecture and Hybrid Teammate Mesh APIs for improved coordination across Kubernetes pods.
 
-## [0.2.8] - 2026-04-03
+### Privacy/Offline Improvements
+- Implemented fully offline-capable KAIROS state machine via SQLite with safe fallbacks.
 
-### Added
-- Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries.
+## v0.3.3 (Cloud) / v0.3.3+1 (Standalone)
+### Cloud Scaling Improvements
+- Enhanced Cloud multi-tenant architecture with robust onboarding tests and removed obsolete test files for cleaner CI/CD execution.
 
-### Changed
-- Coordinated promotions across Cloud staging and Local desktop beta builds.
-- Synchronized version configurations across `MODULE.bazel`, `package.json`, and `srcs/app/pubspec.yaml`.
-
-### Fixed
-- Stabilized hybrid test scenarios ensuring both PostgreSQL (Cloud) and SQLite (Standalone) compatibilities.
+### Privacy/Offline Improvements
+- Improved standalone offline test parity by ensuring onboarding integration tests run smoothly in isolated local environments without heavy Cloud dependencies.

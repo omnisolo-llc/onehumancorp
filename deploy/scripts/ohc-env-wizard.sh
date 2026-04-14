@@ -99,5 +99,5 @@ update_env "MCP_ENABLED" "$mcp_enabled"
 chmod 0600 "$ENV_FILE"
 
 echo -e "\n${GREEN}✓ Setup Complete! Your .env file is configured.${RESET}"
-echo -e "${DIM}Note: You can run this wizard again anytime from ohc_hybrid_cli.sh.${RESET}"
+echo -e "${DIM}Note: You can run this wizard again anytime via deploy/scripts/ohc-env-wizard.sh.${RESET}"
 echo ""

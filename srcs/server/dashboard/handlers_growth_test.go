@@ -434,3 +434,85 @@ func TestHandleReferralClickAndConvert(t *testing.T) {
 		t.Errorf("expected internal state to be updated")
 	}
 }
+
+func TestHandleWaitlist(t *testing.T) {
+    s := &Server{}
+
+    // Test POST
+    payload := `{"email": "test@example.com"}`
+    req := httptest.NewRequest(http.MethodPost, "/api/growth/waitlist", bytes.NewBufferString(payload))
+    req.Header.Set("Content-Type", "application/json")
+    w := httptest.NewRecorder()
+
+    s.handleWaitlist(w, req)
+
+    if w.Result().StatusCode != http.StatusOK {
+        t.Errorf("expected 200 OK, got %d", w.Result().StatusCode)
+    }
+    var created WaitlistEntry
+    json.NewDecoder(w.Result().Body).Decode(&created)
+    if created.Email != "test@example.com" {
+        t.Errorf("expected email test@example.com, got %s", created.Email)
+    }
+
+    // Test GET
+    reqGET := httptest.NewRequest(http.MethodGet, "/api/growth/waitlist", nil)
+    wGET := httptest.NewRecorder()
+    s.handleWaitlist(wGET, reqGET)
+
+    if wGET.Result().StatusCode != http.StatusOK {
+        t.Errorf("expected 200 OK, got %d", wGET.Result().StatusCode)
+    }
+    var list []WaitlistEntry
+    json.NewDecoder(wGET.Result().Body).Decode(&list)
+    if len(list) != 1 {
+        t.Errorf("expected 1 waitlist entry, got %d", len(list))
+    }
+}
+
+func TestHandleViralCoefficientMetrics(t *testing.T) {
+	server := &Server{}
+
+	// Add mock referrals
+	server.referrals = []Referral{
+		{UserID: "user1", Conversions: 2},
+		{UserID: "user2", Conversions: 4},
+	}
+
+	req, err := http.NewRequest("GET", "/api/growth/viral-coefficient-metrics", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(server.handleViralCoefficientMetrics)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+	if resp["viral_coefficient"] != float64(3.0) { t.Errorf("expected 3.0, got %v", resp["viral_coefficient"]) }
+	if resp["organization_id"] != "default" { t.Errorf("expected default, got %v", resp["organization_id"]) }
+}
+
+func TestHandleQuota(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodGet, "/api/growth/quota", nil)
+	w := httptest.NewRecorder()
+	s.handleQuota(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+	var metrics QuotaMetrics
+	if err := json.NewDecoder(w.Body).Decode(&metrics); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if metrics.Used != 10 || metrics.Max != 100 {
+		t.Errorf("expected 10/100, got %d/%d", metrics.Used, metrics.Max)
+	}
+}

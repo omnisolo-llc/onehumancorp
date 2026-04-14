@@ -1,4 +1,3 @@
-
 package telemetry
 
 import (
@@ -21,64 +20,89 @@ import (
 )
 
 var (
-	meter            metric.Meter
-	requestCounter   metric.Int64Counter
-	latencyHistogram metric.Float64Histogram
-	MeshLatencyRecorder metric.Float64Histogram
+	IdentityVerificationSuccessTotal metric.Int64Counter
+	IdentityVerificationFailureTotal metric.Int64Counter
+	SyncConflictsResolvedTotal       metric.Int64Counter
+	OmniContextBytesRouted           metric.Int64Counter
+
+	SubAgentExecutionDuration  metric.Float64Histogram
+	SubAgentFailuresTotal      metric.Int64Counter
+	meter                      metric.Meter
+	requestCounter             metric.Int64Counter
+	latencyHistogram           metric.Float64Histogram
+	MeshLatencyRecorder        metric.Float64Histogram
 	SIPSyncLatencyRecorder     metric.Float64Histogram
 	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
-	tokenUsageCounter          metric.Int64Counter
-	tokenBurnRateGauge         metric.Float64Gauge
-	agentApiCallsCounter       metric.Int64Counter
-	agentApiErrorsCounter      metric.Int64Counter
-	humanInteractionsCounter   metric.Int64Counter
-	meetingEventsCounter       metric.Int64Counter
-	swarmTasksCompletedCounter metric.Int64Counter
-	swarmTaskTransitionsCounter metric.Int64Counter
-	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
-	swarmTaskProcessingLatency  metric.Float64Histogram
-	taskEnqueuedCounter metric.Int64Counter
-	taskFailedCounter metric.Int64Counter
-	cacheHitsCounter           metric.Int64Counter
-	cacheMissesCounter         metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	tokenUsageCounter                  metric.Int64Counter
+	tokenBurnRateGauge                 metric.Float64Gauge
+	usdBurnRateGauge                   metric.Float64Gauge
+	agentApiCallsCounter               metric.Int64Counter
+	agentExecutionTracesTotal          metric.Int64Counter
+	agentApiErrorsCounter              metric.Int64Counter
+	humanInteractionsCounter           metric.Int64Counter
+	meetingEventsCounter               metric.Int64Counter
+	swarmTasksCompletedCounter         metric.Int64Counter
+	swarmTaskTransitionsCounter        metric.Int64Counter
+	swarmTaskQueueLengthGauge          metric.Int64UpDownCounter
+	swarmTaskProcessingLatency         metric.Float64Histogram
+	taskEnqueuedCounter                metric.Int64Counter
+	taskFailedCounter                  metric.Int64Counter
+	cacheHitsCounter                   metric.Int64Counter
+	cacheMissesCounter                 metric.Int64Counter
+	tokensSavedCounter                 metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	TeammateMeshBroadcastsCounter    metric.Int64Counter
-	TeammateMeshDirectMessagesCounter metric.Int64Counter
-	TaskQueueLengthGauge       metric.Int64UpDownCounter
-	subAgentQueueLengthGauge   metric.Int64UpDownCounter
-	postgresLockContentionCounter       metric.Int64Counter
-	llmNetworkLatencyHistogram          metric.Float64Histogram
-	ToolAutoCorrectionTotal    metric.Int64Counter
-	DeliberationPhaseDuration  metric.Float64Histogram
-	TaskProcessingLatency      metric.Float64Histogram
-	AgentTransitionLatency     metric.Float64Histogram
+	TeammateMeshBroadcastsCounter      metric.Int64Counter
+	TeammateMeshDirectMessagesCounter  metric.Int64Counter
+	TaskQueueLengthGauge               metric.Int64UpDownCounter
+	subAgentQueueLengthGauge           metric.Int64UpDownCounter
+	postgresLockContentionCounter      metric.Int64Counter
+	llmNetworkLatencyHistogram         metric.Float64Histogram
+	ToolAutoCorrectionTotal            metric.Int64Counter
+	DeliberationPhaseDuration          metric.Float64Histogram
+	TaskProcessingLatency              metric.Float64Histogram
+	AgentTransitionLatency             metric.Float64Histogram
 
-	SyncCompletedCount metric.Int64Counter
-	SyncFailedCount    metric.Int64Counter
-	SyncEscalationsCount metric.Int64Counter
-	SyncLatency metric.Float64Histogram
-	SyncPayloadSize metric.Int64Histogram
+	SyncCompletedCount     metric.Int64Counter
+	SyncFailedCount        metric.Int64Counter
+	SyncEscalationsCount   metric.Int64Counter
+	SyncLatency            metric.Float64Histogram
+	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
-	syncDaemonBatchSize metric.Int64Histogram
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
-	autoDreamSyncDuration       metric.Float64Histogram
-	autoDreamQueryDuration      metric.Float64Histogram
-	meshBroadcastTotal          metric.Int64Counter
+	autoDreamSyncDuration  metric.Float64Histogram
+	autoDreamQueryDuration metric.Float64Histogram
+	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
+
+	// Credit cards usually have dashes or spaces, or at least shouldn't be confused with timestamps (13 digits).
+	// We'll require at least one separator to reduce false positives with timestamps.
+	creditCardRegex   = regexp.MustCompile(`\b\d{4}[- ]\d{4}[- ]\d{4}[- ]\d{4}\b`)
+	openaiKeyRegex    = regexp.MustCompile(`\bsk-[a-zA-Z0-9]{48}\b`)
+	anthropicKeyRegex = regexp.MustCompile(`\bsk-ant-api03-[a-zA-Z0-9\-_]{93,95}\b`)
+	awsAccessKeyRegex = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
+	// Use lookaround-like boundaries for AWS Secret Key as it can contain / or + which are non-word chars for \b
+	awsSecretKeyRegex = regexp.MustCompile(`(^|[^a-zA-Z0-9/+])[a-zA-Z0-9/+]{40}([^a-zA-Z0-9/+]|$)`)
 )
 
 func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
+	s = creditCardRegex.ReplaceAllString(s, "[REDACTED_CREDIT_CARD]")
+	s = openaiKeyRegex.ReplaceAllString(s, "[REDACTED_OPENAI_KEY]")
+	s = anthropicKeyRegex.ReplaceAllString(s, "[REDACTED_ANTHROPIC_KEY]")
+	s = awsAccessKeyRegex.ReplaceAllString(s, "[REDACTED_AWS_ACCESS_KEY]")
+	// Secret key needs careful replacement because of captured groups
+	s = awsSecretKeyRegex.ReplaceAllString(s, "$1[REDACTED_AWS_SECRET_KEY]$2")
 	return s
 }
 
@@ -144,6 +168,7 @@ func InitTelemetry() (func(), error) {
 
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
 
+	initBridgeMetrics()
 	err = InitWithMeter(meter)
 	if err != nil {
 		return nil, err
@@ -170,6 +195,9 @@ type mockableMeter interface {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitWithMeter(m mockableMeter) error {
+	if m == nil {
+		return fmt.Errorf("meter is nil")
+	}
 	var err error
 	var errs []error
 	requestCounter, err = m.Int64Counter(
@@ -232,7 +260,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncEscalationsCount, err = m.Int64Counter(
-		"ohc.sync.escalations.count",
+		"ohc_sync_escalations_count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
 	)
 	if err != nil {
@@ -240,7 +268,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncLatency, err = m.Float64Histogram(
-		"ohc.sync.latency_ms",
+		"ohc_sync_latency_ms",
 		metric.WithDescription("Latency of mission synchronization in milliseconds"),
 		metric.WithUnit("ms"),
 	)
@@ -249,7 +277,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncPayloadSize, err = m.Int64Histogram(
-		"ohc.sync.payload_size_bytes",
+		"ohc_sync_payload_size_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
 	)
@@ -289,9 +317,25 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	usdBurnRateGauge, err = m.Float64Gauge(
+		"ohc_usd_burn_rate_forecast",
+		metric.WithDescription("Predicted moving average of USD burn rate per minute per tenant"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	agentApiCallsCounter, err = m.Int64Counter(
 		"ohc_agent_api_calls_total",
 		metric.WithDescription("Total API calls made by or for agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentExecutionTracesTotal, err = m.Int64Counter(
+		"ohc_agent_execution_traces_total",
+		metric.WithDescription("Total number of agent execution traces"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -369,6 +413,14 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	tokensSavedCounter, err = m.Int64Counter(
+		"ohc_tokens_saved_by_cache_total",
+		metric.WithDescription("Estimated tokens saved by utilizing cache hits"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
@@ -386,7 +438,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
-		"ohc.sub_agent.queue_length",
+		"ohc_sub_agent_queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
 	)
 	if err != nil {
@@ -394,7 +446,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	postgresLockContentionCounter, err = m.Int64Counter(
-		"ohc.postgres_lock_contention_total",
+		"ohc_postgres_lock_contention_total",
 		metric.WithDescription("Total PostgreSQL lock contentions"),
 	)
 	if err != nil {
@@ -402,13 +454,12 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	llmNetworkLatencyHistogram, err = m.Float64Histogram(
-		"ohc.llm_network_latency_seconds",
+		"ohc_llm_network_latency_seconds",
 		metric.WithDescription("Network latency to external LLM providers"),
 	)
 	if err != nil {
 		errs = append(errs, err)
 	}
-
 
 	ToolAutoCorrectionTotal, err = m.Int64Counter(
 		"ohc_tool_autocorrection_total",
@@ -532,6 +583,23 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initMinimaxMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentExecutionDuration, err = m.Float64Histogram(
+		"ohc_sub_agent_execution_duration_seconds",
+		metric.WithDescription("Duration of sub-agent execution in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentFailuresTotal, err = m.Int64Counter(
+		"ohc_sub_agent_failures_total",
+		metric.WithDescription("Total number of sub-agent failures"),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -807,6 +875,24 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 	}
 }
 
+// RecordUSDBurnRate updates the forecast gauge for a tenant's USD burn rate.
+func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"rate":            rate,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "usd_burn_rate_forecast", string(payloadBytes))
+	}
+	if usdBurnRateGauge != nil {
+		usdBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+			attribute.String("organization_id", organizationID),
+		))
+	}
+}
+
 // RecordSwarmTaskCompleted increments the global counter for completed swarm tasks.
 func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 	if swarmTasksCompletedCounter == nil {
@@ -824,6 +910,27 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
+}
+
+// RecordTokensSaved increments the global counter for estimated tokens saved by cache hits.
+func RecordTokensSaved(ctx context.Context, operation string, cacheType string, estimatedTokens int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":        operation,
+			"cache_type":       cacheType,
+			"estimated_tokens": estimatedTokens,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "tokens_saved", string(payloadBytes))
+	}
+	if tokensSavedCounter == nil {
+		return
+	}
+	tokensSavedCounter.Add(ctx, estimatedTokens, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("cache_type", cacheType),
+	))
 }
 
 // RecordCacheHit increments the global counter for LLM cache hits.
@@ -954,7 +1061,6 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 	))
 }
 
-
 // RecordPostgresLockContention increments the counter for PostgreSQL lock contentions.
 func RecordPostgresLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
@@ -991,6 +1097,7 @@ func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64)
 		attribute.String("model", model),
 	))
 }
+
 // RecordTaskQueueLength modifies the queue length gauge.
 func RecordTaskQueueLength(ctx context.Context, amount int64) {
 	if BufferMetricFunc != nil {
@@ -1293,4 +1400,74 @@ func envBoolDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return val == "true"
+}
+
+// RecordAgentExecutionTrace increments the global counter for agent execution traces.
+//
+//   - ctx: context.Context; The context of the active trace or request.
+//   - agentID: string; The identifier of the agent.
+//   - traceType: string; The type of execution trace.
+//
+// Accepts parameters: ctx context.Context, agentID, traceType string (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
+	if agentExecutionTracesTotal == nil {
+		return
+	}
+	agentExecutionTracesTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("trace_type", traceType),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"trace_type": traceType,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "agent_execution_traces_total", string(payloadBytes))
+	}
+}
+
+// RecordSubAgentExecutionDuration records the duration of a sub-agent execution.
+func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
+	if SubAgentExecutionDuration != nil {
+		SubAgentExecutionDuration.Record(ctx, duration)
+	}
+}
+
+// RecordSubAgentFailure increments the counter for sub-agent failures.
+func RecordSubAgentFailure(ctx context.Context) {
+	if SubAgentFailuresTotal != nil {
+		SubAgentFailuresTotal.Add(ctx, 1)
+	}
+}
+
+// RecordIdentityVerification increments either success or failure counter based on the success flag.
+func RecordIdentityVerification(ctx context.Context, success bool) {
+	if success {
+		if IdentityVerificationSuccessTotal != nil {
+			IdentityVerificationSuccessTotal.Add(ctx, 1)
+		}
+	} else {
+		if IdentityVerificationFailureTotal != nil {
+			IdentityVerificationFailureTotal.Add(ctx, 1)
+		}
+	}
+}
+
+// RecordSyncConflictResolved increments the sync conflicts resolved counter.
+func RecordSyncConflictResolved(ctx context.Context) {
+	if SyncConflictsResolvedTotal != nil {
+		SyncConflictsResolvedTotal.Add(ctx, 1)
+	}
+}
+
+// RecordOmniContextBytes increments the OmniContext bytes routed counter.
+func RecordOmniContextBytes(ctx context.Context, bytes int64) {
+	if OmniContextBytesRouted != nil {
+		OmniContextBytesRouted.Add(ctx, bytes)
+	}
 }

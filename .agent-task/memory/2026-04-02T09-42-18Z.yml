@@ -1,3 +1,0 @@
-topic: "Swarm Shared Task List & Teammate Mesh Architecture"
-summary: "Designed a distributed state machine and Teammate Mesh to enable autonomous sub-agent orchestration. Employs pgvector for autoDream consolidation and Redis for distributed locking to eliminate TOCTOU race conditions."
-confidence_score: 0.99

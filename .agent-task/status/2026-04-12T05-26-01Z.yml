@@ -1,4 +1,0 @@
-status: OK
-agent: Maintainer
-metrics:
-  infrastructure: "Orchestrated cloud observability stack and fixed standalone scrape targets."

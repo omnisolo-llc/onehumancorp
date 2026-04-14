@@ -1,5 +1,0 @@
-timestamp: 2026-04-04T15:17:59Z
-author: Antigravity
-topic: Teammate Mesh APIs / Local Standalone Fallback
-summary: |
-  Implemented the local fallback for the `mesh:coordination` channel in the Standalone Architecture by extending the sharded in-memory worker design in LocalTeammateMesh. `mesh:tasks` already possessed this. Validated via local `bazelisk test //srcs/server/orchestration/...` and `dashboard/...`. The `MeshMessage` structures and Centrifuge/Redis bindings inherently matched the protocol expectations.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -409,55 +410,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
         message: 'Manage $formattedRole Allocation',
         child: SizedBox(
           width: 320,
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _isHovered = true),
-            onExit: (_) => setState(() => _isHovered = false),
-            child: AnimatedScale(
-              scale: _isHovered ? 1.02 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: BackdropFilter(
-                  filter: ImageFilter.compose(
-                    outer: ColorFilter.matrix(<double>[
-                  1.168,
-                  -0.153,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  1.061,
-                  -0.015,
-                  0,
-                  0,
-                  -0.046,
-                  -0.152,
-                  1.198,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                      0,
-                    ]),
-                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    decoration: BoxDecoration(
-                      color: _isHovered
-                          ? const Color.fromRGBO(255, 255, 255, 0.08)
-                          : const Color.fromRGBO(255, 255, 255, 0.03),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: _isHovered
-                            ? Colors.white.withValues(alpha: 0.3)
-                            : Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: Padding(
+          child: GlassCard(
+        child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                       child: Row(
                         children: [
@@ -542,11 +496,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                         ],
                       ),
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+      ),
         ),
       ),
     );
@@ -638,39 +588,8 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
             position: _slideAnimation,
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: MouseRegion(
-                onEnter: (_) => setState(() => _isHovered = true),
-                onExit: (_) => setState(() => _isHovered = false),
-                child: AnimatedScale(
-                  scale: _isHovered ? 1.02 : 1.0,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.compose(
-                        outer: ColorFilter.matrix(const <double>[
-                          1.168, -0.153, -0.015, 0, 0,
-                          -0.046, 1.061, -0.015, 0, 0,
-                          -0.046, -0.152, 1.198, 0, 0,
-                          0, 0, 0, 1, 0,
-                        ]),
-                        inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                      ),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        decoration: BoxDecoration(
-                          color: _isHovered
-                              ? const Color.fromRGBO(255, 255, 255, 0.08)
-                              : const Color.fromRGBO(255, 255, 255, 0.03),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _isHovered
-                                ? Colors.white.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: Material(
+              child: GlassCard(
+        child: Material(
                           color: Colors.transparent,
                           child: Semantics(
                             button: true,
@@ -710,11 +629,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+      ),
             ),
           ),
         ),

@@ -1,5 +1,0 @@
-author: Researcher
-context: |
-  Designed the KAIROS Orchestrator master plan for the OHC Hybrid Architecture (OHC-HA).
-  Created a mission file for the Implementer agent to build the shared_tasks_v4 schema and the Go Orchestration logic.
-  The schema correctly degrades gracefully using VARCHAR PRIMARY KEY for SQLite compatibility.

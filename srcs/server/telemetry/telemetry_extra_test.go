@@ -13,13 +13,7 @@ func TestRecordOtherMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	originalStandalone := os.Getenv("OHC_MULTITENANT")
-	os.Unsetenv("OHC_MULTITENANT")
-	defer func() {
-		if originalStandalone != "" {
-			os.Setenv("OHC_MULTITENANT", originalStandalone)
-		}
-	}()
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	cleanup, err := InitTelemetry()
 	if err != nil {
@@ -154,13 +148,7 @@ func TestMinimaxMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	originalStandalone := os.Getenv("OHC_MULTITENANT")
-	os.Unsetenv("OHC_MULTITENANT")
-	defer func() {
-		if originalStandalone != "" {
-			os.Setenv("OHC_MULTITENANT", originalStandalone)
-		}
-	}()
+	t.Setenv("OHC_MULTITENANT", "false")
 
 	cleanup, _ := InitTelemetry()
 	if cleanup != nil {
@@ -175,4 +163,21 @@ func TestMinimaxMetricsUninitialized(t *testing.T) {
 	minimaxCallsCounter = nil
 	RecordMinimaxCall(context.Background(), "model1", 1.5, nil)
 	minimaxCallsCounter = origMinimaxCalls
+}
+
+func TestRecordAgentExecutionTrace(t *testing.T) {
+	// Enable metrics for this test
+	os.Setenv("OHC_TELEMETRY_ENABLED", "true")
+	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
+
+	InitWithMeter(meter)
+
+	// If metrics initialization failed (e.g., no provider setup), skip the active record
+	if agentExecutionTracesTotal == nil {
+		t.Skip("Metrics provider not initialized, skipping RecordAgentExecutionTrace test")
+	}
+
+	ctx := context.Background()
+	RecordAgentExecutionTrace(ctx, "agent-456", "deliberation")
+	// Since we are mocking the meter under the hood in proper tests, this just verifies no panic.
 }

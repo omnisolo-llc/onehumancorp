@@ -1,8 +1,0 @@
-mission: "Observability Gap Analysis for Hybrid KAIROS Orchestration"
-findings:
-  - "The system recently implemented AutoDream vector RAG pipelines and KAIROS orchestration APIs."
-  - "The OHC API playbook outlines `/api/v1/stream` (SSE Server-Sent Events) but it is missing from `srcs/server/dashboard/server.go`."
-  - "The endpoints `/api/v1/autodream/sync`, `/api/v1/autodream/query`, and Teammate Mesh APIs lack corresponding OpenTelemetry / Prometheus metric instrumentation."
-  - "This creates an observability gap: We cannot distinguish hybrid performance differences (e.g., Latency, Throughput, RAG Sync duration) between Cloud PostgreSQL multi-tenant modes and Standalone SQLite single-user modes."
-architectural_insight:
-  - "We must wrap KAIROS orchestration endpoints with custom Prometheus metrics specifically targeting the unique hybrid execution contexts."

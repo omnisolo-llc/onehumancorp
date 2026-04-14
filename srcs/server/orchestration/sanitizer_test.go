@@ -79,4 +79,48 @@ func TestSanitizePayloadMap(t *testing.T) {
 			t.Errorf("Expected original slice to be unchanged, got %v", s[0])
 		}
 	})
+
+	t.Run("Remove rag_context and complex redaction", func(t *testing.T) {
+		input := map[string]interface{}{
+			"email":       "test@example.com",
+			"rag_context": "highly sensitive internal data",
+			"nested": map[string]interface{}{
+				"secret": "[PRIVATE:password]",
+				"cc":     "4111-1111-1111-1111",
+			},
+			"list": []interface{}{
+				"sk-123456789012345678901234567890123456789012345678",
+				map[string]interface{}{
+					"ssn": "000-00-0000",
+				},
+			},
+		}
+
+		got := SanitizePayloadMap(input).(map[string]interface{})
+
+		if _, ok := got["rag_context"]; ok {
+			t.Errorf("SanitizePayloadMap should have deleted 'rag_context'")
+		}
+
+		if got["email"] != "[REDACTED_EMAIL]" {
+			t.Errorf("Email not redacted: %v", got["email"])
+		}
+
+		nested := got["nested"].(map[string]interface{})
+		if nested["secret"] != "" {
+			t.Errorf("Private tag not removed, got: %q", nested["secret"])
+		}
+		if nested["cc"] != "[REDACTED_CREDIT_CARD]" {
+			t.Errorf("Credit card not redacted: %v", nested["cc"])
+		}
+
+		list := got["list"].([]interface{})
+		if list[0] != "[REDACTED_OPENAI_KEY]" {
+			t.Errorf("OpenAI key in list not redacted: %v", list[0])
+		}
+		innerMap := list[1].(map[string]interface{})
+		if innerMap["ssn"] != "[REDACTED_SSN]" {
+			t.Errorf("SSN in nested list map not redacted: %v", innerMap["ssn"])
+		}
+	})
 }

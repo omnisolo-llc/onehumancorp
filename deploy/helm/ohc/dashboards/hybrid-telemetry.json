@@ -1105,6 +1105,42 @@
       "title": "Deliberation Phase Duration",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "id": 1005,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "type": "timeseries",
+      "title": "SQLite Sync Daemon Batch Size",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ohc_sync_daemon_batch_size_bucket[5m])))",
+          "legendFormat": "P95 Batch Size",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 1006,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "type": "timeseries",
+      "title": "Agent Execution Traces",
+      "targets": [
+        {
+          "expr": "sum by (agent_id, trace_type) (rate(ohc_agent_execution_traces_total[5m]))",
+          "legendFormat": "{{agent_id}} - {{trace_type}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",

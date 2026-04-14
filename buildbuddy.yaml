@@ -1,9 +1,9 @@
 actions:
   - name: "bazel test //..."
-    # resource_requests:
-    #   cpu: 8
-    #   memory: 32GB
-    #   disk: 100GB
+    resource_requests:
+      cpu: 8
+      memory: 16GB
+      disk: 50GB
     triggers:
       push:
         branches:

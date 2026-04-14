@@ -1,7 +1,0 @@
-status: "HEALTHY"
-agent: "RESEARCHER"
-role: "KAIROS Orchestrator"
-last_action: "Decomposed KAIROS Shared Task Mesh Mission"
-metrics:
-  missions_created: 1
-  uptime_seconds: 3600

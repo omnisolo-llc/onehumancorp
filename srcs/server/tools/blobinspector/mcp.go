@@ -83,25 +83,35 @@ func (m *BlobInspectorMCP) CallTool(ctx context.Context, toolName string, argume
 	}
 }
 
-func (m *BlobInspectorMCP) resolveKey(claims *auth.Claims, key string) string {
+func (m *BlobInspectorMCP) resolveKey(claims *auth.Claims, key string) (string, error) {
+	if strings.Contains(key, "..") {
+		return "", errors.New("directory traversal not allowed")
+	}
 	if m.provider.IsLocal() || claims == nil {
-		return key
+		return key, nil
 	}
 
 	// Cloud mode enforces tenant isolation
 	cleanKey := filepath.Clean("/" + key)
 	cleanKey = strings.TrimPrefix(cleanKey, "/")
 
-	// Ensure we don't prepend if it already starts with it (which would be weird, but defensive)
-	if strings.HasPrefix(cleanKey, claims.OrganizationID+"/") {
-		return cleanKey
+	if cleanKey == "" {
+		return claims.OrganizationID + "/", nil
 	}
 
-	return fmt.Sprintf("%s/%s", claims.OrganizationID, cleanKey)
+	// Ensure we don't prepend if it already starts with it (which would be weird, but defensive)
+	if strings.HasPrefix(cleanKey, claims.OrganizationID+"/") {
+		return cleanKey, nil
+	}
+
+	return fmt.Sprintf("%s/%s", claims.OrganizationID, cleanKey), nil
 }
 
 func (m *BlobInspectorMCP) listBlobs(ctx context.Context, claims *auth.Claims, prefix string) (interface{}, error) {
-	scopedPrefix := m.resolveKey(claims, prefix)
+	scopedPrefix, err := m.resolveKey(claims, prefix)
+	if err != nil {
+		return nil, err
+	}
 
 	blobs, err := m.provider.ListBlobs(ctx, scopedPrefix)
 	if err != nil {
@@ -130,14 +140,17 @@ func (m *BlobInspectorMCP) listBlobs(ctx context.Context, claims *auth.Claims, p
 	}
 
 	return map[string]interface{}{
-		"status": "success",
-		"mode":   mode,
+		"status":  "success",
+		"mode":    mode,
 		"results": results,
 	}, nil
 }
 
 func (m *BlobInspectorMCP) readBlobMetadata(ctx context.Context, claims *auth.Claims, key string) (interface{}, error) {
-	scopedKey := m.resolveKey(claims, key)
+	scopedKey, err := m.resolveKey(claims, key)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := m.provider.ReadBlobMetadata(ctx, scopedKey)
 	if err != nil {
@@ -166,7 +179,10 @@ func (m *BlobInspectorMCP) readBlobMetadata(ctx context.Context, claims *auth.Cl
 }
 
 func (m *BlobInspectorMCP) getBlobURL(ctx context.Context, claims *auth.Claims, key string) (interface{}, error) {
-	scopedKey := m.resolveKey(claims, key)
+	scopedKey, err := m.resolveKey(claims, key)
+	if err != nil {
+		return nil, err
+	}
 
 	url, err := m.provider.GetBlobURL(ctx, scopedKey)
 	if err != nil {

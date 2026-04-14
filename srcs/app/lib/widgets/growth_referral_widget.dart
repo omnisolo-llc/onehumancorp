@@ -26,7 +26,15 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.787, -0.715, -0.072, 0, 0,
+                -0.213, 1.285, -0.072, 0, 0,
+                -0.213, -0.715, 1.928, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(24),
@@ -82,13 +90,25 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Text(
-                        '10 / 100 missions used',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                      FutureBuilder<Map<String, dynamic>>(
+                        future: ref.read(apiServiceProvider)!.getQuota(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const CircularProgressIndicator();
+                          }
+                          if (snapshot.hasError || !snapshot.hasData) {
+                            return const Text('Error loading quota', style: TextStyle(color: Colors.red));
+                          }
+                          final data = snapshot.data!;
+                          return Text(
+                            '${data['used']} / ${data['max']} missions used',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(

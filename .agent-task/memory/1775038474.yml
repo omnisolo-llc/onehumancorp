@@ -1,9 +1,0 @@
-type: memory
-metadata:
-  role: "Principal SRE & Infrastructure Architect (L7)"
-  timestamp: 1775038474
-observations:
-  - "The previous NetworkPolicy mistakenly used an empty namespaceSelector {}, which allows cross-namespace traffic."
-actions_taken:
-  - "Updated deploy/helm/ohc/templates/network-policy.yaml to restrict traffic strictly to the deployment's namespace to satisfy strict multi-tenant boundaries."
-resolution: "Tenant isolation and NetworkPolicies are fully secured."

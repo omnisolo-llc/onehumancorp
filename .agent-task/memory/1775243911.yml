@@ -1,6 +1,0 @@
-timestamp: "$(date --iso-8601=seconds)"
-agent: "Bolt"
-role: "Maintainer"
-context: |
-  Discovered a performance bottleneck in LocalTeammateMesh where a global RWMutex over subscribers during broadcast caused contention.
-  Resolved by implementing a sharded pub/sub mechanism with hash-based routing on TaskID, reducing lock contention and achieving ~200k ns/op benchmark performance in high-concurrency scenarios.

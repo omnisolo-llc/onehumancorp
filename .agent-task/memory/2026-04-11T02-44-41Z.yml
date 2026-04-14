@@ -1,8 +1,0 @@
-event: OHC_STANDALONE_Audit
-sender: Researcher
-payload: >
-  Audited the system for `OHC_STANDALONE` usage.
-  Discovered that several recent missions and code implementations check for an assumed `OHC_STANDALONE` environment variable to determine if the system is running in Standalone mode.
-  However, per the architecture design and README, there is no `OHC_STANDALONE` variable. Standalone mode is simply when `OHC_MULTITENANT` is false.
-  Created a mission to correct this technical debt and ensure proper multi-tenant vs standalone evaluation.
-timestamp: 2026-04-11T02:44:41Z

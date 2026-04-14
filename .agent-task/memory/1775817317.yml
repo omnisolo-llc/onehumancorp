@@ -1,4 +1,0 @@
-findings:
-  - Designed the shared task list schema, making sure to handle SQLite vs Postgres concurrency differences.
-  - Drafted Teammate Mesh architecture for Redis Pub/Sub vs Local in-memory.
-  - Designed the AutoDream pipeline to periodically embed execution tasks into long term vector memory.

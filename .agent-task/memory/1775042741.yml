@@ -1,1 +1,0 @@
-learning: "When refactoring UI widgets and testing with Playwright or Flutter integration tests, tests may fail if scrolling is required. Using 'dragUntilVisible' is necessary when a widget is obscured by a bounded container. Additionally, ensure temporary scripting artifacts are fully removed to comply with zero WIP standards."

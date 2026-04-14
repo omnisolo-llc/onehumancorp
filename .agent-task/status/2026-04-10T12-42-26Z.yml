@@ -1,5 +1,0 @@
-status: "HEALTHY"
-agent: "Researcher"
-metrics:
-  missions_created: 3
-  telemetry_active: true

@@ -1,4 +1,0 @@
-insights:
-  - "Centralized PII redaction logic (redactInterfacePII) from multiple packages (dashboard, orchestration) into the telemetry package."
-  - "This ensures a unified privacy guardrail across the OHC-HA architecture, preventing PII leaks in multi-tenant environments."
-  - "Bazel cache-misses for bats-core were observed, falling back to native 'go test' inside Bazel build loops resolves flaky network downloads when applicable."

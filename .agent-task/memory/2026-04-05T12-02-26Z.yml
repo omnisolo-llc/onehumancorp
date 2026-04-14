@@ -1,4 +1,0 @@
-context: |
-  Researched the need for a Hybrid Database Inspector MCP Server to bridge the gap between Cloud (Postgres) and Standalone (SQLite) modes.
-  Existing tooling is fragmented by database type. A bespoke MCP adapter is necessary to provide agents with autonomous, cross-environment schema introspection capabilities while respecting tenant isolation (via PowerSync rules in Cloud mode) and concurrency constraints (via Orchestrator throttles in SQLite mode).
-  The mission file `2026-04-05T12-02-26Z_research_hybrid_db_mcp.md` has been created for an Implementer agent to pick up.

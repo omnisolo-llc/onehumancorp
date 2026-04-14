@@ -1,13 +1,8 @@
 package orchestration
 
-
 import (
 	"google.golang.org/protobuf/proto"
 
-
-
-
-	"strings"
 	"bufio"
 	"bytes"
 	"context"
@@ -21,24 +16,23 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/storage"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 )
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -330,7 +324,6 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
-
 	// Default to a stub S3 provider if we can't initialize a local one
 	h.storage = storage.NewS3Provider("ohc-blobs")
 	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
@@ -362,8 +355,6 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 		}
 	}
 }
-
-
 
 func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
 	if h.GetTokenUsage == nil {
@@ -1677,7 +1668,7 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 
 	// Retry loop to handle transient empty responses from Minimax.
 	var lastErr error
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
@@ -1699,10 +1690,10 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode == 529 {
+			if resp.StatusCode >= 500 {
 				// Retry on high load without recording circuit breaker failure immediately
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
 				time.Sleep(2 * time.Second) // Longer backoff for overloaded
 				continue
 			}
@@ -1798,7 +1789,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	payloadBytes := buf.Bytes()
 	var lastErr error
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
 			return nil, err
@@ -1816,9 +1807,9 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode == 529 {
+			if resp.StatusCode >= 500 {
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
 				time.Sleep(2 * time.Second)
 				continue
 			}
@@ -1856,6 +1847,14 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 	mux.HandleFunc("/api/sync/missions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleSyncMissions(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	mux.HandleFunc("/api/orchestration/tasks/decompose", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleDecomposeTask(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -1910,10 +1909,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action": "sync",
-			"status": payload.Status,
+			"action":   "sync",
+			"status":   payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload": payload.Payload,
+			"payload":  payload.Payload,
 		})
 	}
 
@@ -2002,5 +2001,93 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	w.WriteHeader(http.StatusOK)
 }
 
+func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var req struct {
+		OrganizationID string `json:"organization_id"`
+		TaskID         string `json:"task_id"`
+		SubTasks       []struct {
+			Title        string   `json:"title"`
+			Description  string   `json:"description"`
+			Priority     string   `json:"priority"`
+			Dependencies []string `json:"dependencies"`
+		} `json:"sub_tasks"`
+	}
 
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
+	var createdTasks []*SharedTask
+	for _, st := range req.SubTasks {
+		var filteredDeps []string
+		for _, dep := range st.Dependencies {
+			if dep != req.TaskID {
+				filteredDeps = append(filteredDeps, dep)
+			}
+		}
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
+			return
+		}
+		createdTasks = append(createdTasks, t)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(createdTasks)
+}
+
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.mesh == nil {
+		return nil, status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	if err := s.mesh.AdvertiseCapabilities(ctx, *req); err != nil {
+		return nil, err
+	}
+	if meshMsgThroughput != nil {
+		meshMsgThroughput.Add(ctx, 1)
+	}
+	return (&pb.PublishMessageResponse_builder{Success: proto.Bool(true)}).Build(), nil
+}
+
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.mesh == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	ch, err := s.mesh.SubscribeCapabilities(stream.Context())
+	if err != nil {
+		return err
+	}
+	for cap := range ch {
+		if err := stream.Send(&cap); err != nil {
+			return err
+		}
+		if meshMsgThroughput != nil {
+			meshMsgThroughput.Add(stream.Context(), 1)
+		}
+	}
+	return nil
+}
+
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.mesh == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	ch, err := s.mesh.SubscribeMeshEvents(stream.Context(), req.GetTopic())
+	if err != nil {
+		return err
+	}
+	for payload := range ch {
+		event := (&pb.MeshEvent_builder{
+			Topic:   proto.String(req.GetTopic()),
+			Payload: payload,
+		}).Build()
+		if err := stream.Send(event); err != nil {
+			return err
+		}
+		if meshMsgThroughput != nil {
+			meshMsgThroughput.Add(stream.Context(), 1)
+		}
+	}
+	return nil
+}

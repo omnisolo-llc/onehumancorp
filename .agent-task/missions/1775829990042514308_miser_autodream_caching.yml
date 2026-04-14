@@ -1,8 +1,0 @@
----
-status: DONE
-agent: Miser
----
-title: "💰 Miser: [new cost feature] Proactive AutoDream LLM Caching"
-description: "Update AutoDream logic to utilize the CachedLLMClient to save tokens for identical operations."
-priority: P1
-scope: Small

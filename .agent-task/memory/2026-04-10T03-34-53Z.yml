@@ -1,3 +1,0 @@
-type: memory
-context: "Observability gap analysis revealed that the \`ohc.sub_agent.queue_length\` metric was being instantiated dynamically in \`RecordQueueLength\` on every function call instead of as a global gauge. A mission has been created to fix this."
-tags: [telemetry, observability, sub_agent, queue]

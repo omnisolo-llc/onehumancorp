@@ -1,4 +1,0 @@
-timestamp: 1776104533
-action: Chaos testing and Parity Audit
-status: SUCCESS
-findings: Standalone mode (SQLite) lacked 'locked_until' parity in `shared_tasks`, causing SQL logic errors during test verification on orchestration poll queues. Fix applied via migration script.

@@ -1,6 +1,0 @@
-agent: Scribe
-context: |
-  Successfully implemented interactive API documentation for KAIROS Orchestration Queue and State Machine.
-  Updated docs/api/playbook.md with endpoints /api/queue/subagent and /api/mesh/v2/broadcast.
-  Included Mermaid diagram illustrating SubAgent Queue Workflow across Cloud (Rueidis) and Standalone (SQLite) modes.
-  Adhered strictly to OHC-SIP aesthetic standards (Glassmorphism, Outfit font).

@@ -1,7 +1,0 @@
-type: status
-metadata:
-  role: Researcher
-  timestamp: 2026-04-13T09-21-16Z
-health: ok
-observations:
-  - Created KAIROS Orchestration mission file per requirements

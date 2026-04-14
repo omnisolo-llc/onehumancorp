@@ -1,6 +1,8 @@
 package local
 
 import (
+	"math/rand"
+
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -66,6 +68,23 @@ func decompressData(data []byte) ([]byte, error) {
 		return data, nil
 	}
 	return decompressed, nil
+}
+
+// PruneCache periodically removes DB cache entries older than 24 hours to prevent unbounded local storage growth.
+func (c *CachedLLMClient) PruneCache(ctx context.Context) {
+	if c.db == nil {
+		return
+	}
+
+	query := "DELETE FROM llm_completion_cache WHERE created_at < NOW() - INTERVAL '1 day'"
+	if c.db.IsSQLite() {
+		query = "DELETE FROM llm_completion_cache WHERE created_at < datetime('now', '-1 day')"
+	}
+
+	_, err := c.db.Exec(ctx, query)
+	if err != nil {
+		slog.Warn("CachedLLMClient: failed to prune llm_completion_cache", "err", err)
+	}
 }
 
 // CachedLLMClient wraps an LLMClient and caches AssistantMessage responses
@@ -143,6 +162,10 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 
 	// 4. Cache miss: generate response
 	telemetry.RecordCacheMiss(ctx, "llm_completion", "all")
+
+	if rand.Float32() < 0.01 {
+		go c.PruneCache(context.Background())
+	}
 	resp, err := c.client.Complete(ctx, req)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,0 @@
-timestamp: 1776105500
-action: Chaos testing and Parity Audit
-status: SUCCESS
-findings: Standalone mode (SQLite) lacked 'locked_until' parity in `shared_tasks`, causing SQL logic errors during test verification on orchestration poll queues. Fix applied via a new dedicated migration script `20260411_kairos_tasks_add_locked_until.sql` ensuring both Postgres and SQLite retain this column without causing schema conflicts on fresh DB initialization.

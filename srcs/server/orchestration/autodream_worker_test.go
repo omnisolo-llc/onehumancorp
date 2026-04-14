@@ -132,3 +132,17 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 		t.Fatalf("ProcessMemories failed on empty dir: %v", err)
 	}
 }
+
+func TestAutoDreamWorkerDaemon_StartStop(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	provider := setupTestDB(t)
+	worker := &AutoDreamWorker{pool: provider}
+	daemon := NewAutoDreamWorkerDaemon(worker)
+
+	go daemon.Start(ctx)
+
+	// ensure it doesn't panic on multiple stops
+	daemon.Stop()
+	daemon.Stop()
+	cancel() // to clean up contexts and verify ctx.Done doesn't panic
+}

@@ -35,6 +35,9 @@ type SharedTask struct {
 	Priority        string     `json:"priority"`
 	Payload         string     `json:"payload"`
 	LockedUntil     *time.Time `json:"locked_until,omitempty"`
+	UltraPlanPhase  string     `json:"ultraplan_phase,omitempty"`
+	DeliberationLog string     `json:"deliberation_log,omitempty"`
+	Depth           int        `json:"depth,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
@@ -49,6 +52,7 @@ type TaskManager struct {
 	taskQueue   queue.TaskQueue
 	mu          sync.Mutex // For Standalone mode SQLite locking
 	autodream   autodream.MemoryConsolidator
+	mesh        MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -156,14 +160,22 @@ func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 	tm.hub = hub
 }
 
+func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
+	tm.mesh = mt
+}
+
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
 func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, description, priority string) (*SharedTask, error) {
-	return tm.CreateTaskWithPlan(ctx, organizationID, nil, title, description, priority)
+	return tm.CreateTaskWithPlan(ctx, organizationID, "", nil, title, description, priority)
 }
 
 // CreateTaskWithPlan creates a new pending task with plan association.
-func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+	// When creating a new task, we don't have its ID yet to check for a cycle
+	// The real risk of circular dependencies is when updating dependencies.
+	// But we can verify that the new task doesn't add a dependency on itself, which is trivially true here.
+
 	var task SharedTask
 
 	id := generateID()
@@ -192,20 +204,20 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	}
 
-	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.CreatedAt, &task.UpdatedAt,
+	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID).Scan(
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
 	)
 
 	if err != nil {
@@ -293,7 +305,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		selectQuery := `
 			SELECT st.id
 			FROM shared_tasks st
-			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1
@@ -304,7 +316,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		selectQuery := `
 			SELECT st.id
 			FROM shared_tasks st
-			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1 FOR UPDATE SKIP LOCKED
@@ -329,12 +341,12 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	// Fetch updated task data
 	readQuery := `
-		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		FROM shared_tasks
 		WHERE id = $1
 	`
 	errQuery = tx.QueryRow(ctx, readQuery, fetchedTaskID).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
 	)
 
 	if errQuery != nil {
@@ -791,4 +803,44 @@ func generateID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b[0:4]) + "-" + hex.EncodeToString(b[4:6]) + "-" + hex.EncodeToString(b[6:8]) + "-" + hex.EncodeToString(b[8:10]) + "-" + hex.EncodeToString(b[10:])
+}
+
+// CheckCircularDependency ensures that the dependencies do not create a cycle.
+func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID string, dependencies []string) error {
+	if len(dependencies) == 0 {
+		return nil
+	}
+
+	visited := make(map[string]bool)
+	queue := append([]string{}, dependencies...)
+
+	for len(queue) > 0 {
+		currID := queue[0]
+		queue = queue[1:]
+
+		if currID == taskID {
+			return fmt.Errorf("circular dependency detected for task %s", taskID)
+		}
+
+		if visited[currID] {
+			continue
+		}
+		visited[currID] = true
+
+		depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+		rows, err := tm.db.Query(ctx, depQuery, currID)
+		if err != nil {
+			return fmt.Errorf("failed to check dependencies: %w", err)
+		}
+
+		for rows.Next() {
+			var childDep string
+			if err := rows.Scan(&childDep); err == nil {
+				queue = append(queue, childDep)
+			}
+		}
+		rows.Close()
+	}
+
+	return nil
 }

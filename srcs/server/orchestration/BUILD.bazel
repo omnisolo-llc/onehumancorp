@@ -33,6 +33,7 @@ go_library(
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
         "//srcs/server/db",
+        "//srcs/server/orchestration/mesh",
         "//srcs/server/scheduler",
         "//srcs/server/auth",
         "//srcs/server/settings",
@@ -54,7 +55,8 @@ go_library(
         "@org_modernc_sqlite//:sqlite",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
-    ],
+            "//srcs/server/lib/resilience",
+],
 )
 
 go_test(
@@ -67,6 +69,7 @@ go_test(
         "benchmark_test.go",
         "cached_minimax_client_test.go",
         "centrifuge_hub_test.go",
+        "chaos_integration_test.go",
         "chaos_test.go",
         "delegation_test.go",
         "eventlog_test.go",
@@ -80,6 +83,7 @@ go_test(
         "sip_mesh_test.go",
         "sip_test.go",
         "throttle_test.go",
+        "reliability_chaos_test.go",
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
@@ -92,6 +96,7 @@ go_test(
         "//srcs/proto:hub_go_proto",
         "//srcs/server/billing",
         "//srcs/server/db",
+        "//srcs/server/orchestration/mesh",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "@com_github_centrifugal_centrifuge//:centrifuge",

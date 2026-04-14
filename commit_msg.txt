@@ -1,3 +1,0 @@
-🛡️ Sentinel: Fix potential data leakage in SIPDB standalone mode execution path.
-
-Applying security hardening for SIPDB and local storage synchronization by strictly preventing shared memory context and metrics payloads from crossing tenant boundaries, ensuring tenant state remains truly isolated in cloud environments.

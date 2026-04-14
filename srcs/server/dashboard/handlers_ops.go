@@ -147,11 +147,19 @@ func (s *Server) handleBudgetAlerts(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.mu.RLock()
 		alerts := append([]BudgetAlert(nil), s.budgetAlerts...)
+		orgID := s.org.ID
 		s.mu.RUnlock()
-		// Evaluate triggered state against current spend.
-		summary := s.tracker.Summary(s.org.ID)
+
+		summary := s.tracker.Summary(orgID)
+		_, usdBurnRate := s.tracker.GetBurnRates(orgID)
+
 		for i, a := range alerts {
-			alerts[i].Triggered = summary.TotalCostUSD >= a.ThresholdUSD*a.NotifyAtPct
+			effectiveSpend := summary.TotalCostUSD
+			if a.Predictive && a.ForecastHours > 0 {
+				// Forecasted spend = Current spend + (USD burn rate per minute * 60 minutes * hours)
+				effectiveSpend += usdBurnRate * 60 * float64(a.ForecastHours)
+			}
+			alerts[i].Triggered = effectiveSpend >= a.ThresholdUSD*a.NotifyAtPct
 		}
 		writeJSON(w, alerts)
 	case http.MethodPost:
@@ -178,6 +186,8 @@ func (s *Server) handleBudgetAlerts(w http.ResponseWriter, r *http.Request) {
 			OrganizationID: orgID,
 			ThresholdUSD:   req.ThresholdUSD,
 			NotifyAtPct:    req.NotifyAtPct,
+			Predictive:     req.Predictive,
+			ForecastHours:  req.ForecastHours,
 			Triggered:      false,
 			CreatedAt:      time.Now().UTC(),
 		}

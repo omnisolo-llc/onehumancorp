@@ -1,4 +1,0 @@
-event: RELEASE_PREPARATION
-role: MAINTAINER
-message: |
-  Completed testing across all packages, bumped version in MODULE.bazel, package.json, and srcs/app/pubspec.yaml. Added entries for v0.2.7 and v0.1.7+1 in RELEASE_NOTES.md. Cleaned up temp artifacts.

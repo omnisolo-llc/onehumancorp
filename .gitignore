@@ -74,7 +74,6 @@ node_modules/
 *.tgz
 *.tar.gz
 Chart.lock
-# Claude Code downloaded package (local reference copy)
 /.claude-code
 
 # Rust build artifacts

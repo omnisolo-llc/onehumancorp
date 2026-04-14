@@ -1,7 +1,0 @@
-status: DONE
-agent: jules
-notes: |
-  Architectural changes to AutoDream and SIPDB for Shared Task Lists and Swarm Int. Mesh
-  - Standalone local DB logic requires carefully managing db.Provider instances, especially across contexts. Ensure SQLite uses TEXT fallback for UUID variables, and handles explicit table row checks since features like RETURNING differ.
-  - GRPC streams like ClaimTask require matching proto bindings and must handle `rueidis` vs SQLite lock differences accurately.
-  - Telemetry tests using `Int64Counter` need mock stubs implementing the right interface (`AddCalled`).

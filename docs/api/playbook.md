@@ -116,6 +116,24 @@ Submit a new task to the swarm.
 **Endpoint:** `POST /api/mesh/broadcast`
 Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.
 
+**Payload:**
+```json
+{
+  "agent_id": "agent-123",
+  "action": "task_completed",
+  "status": "success",
+  "data": {
+    "message": "Hello mesh!"
+  }
+}
+```
+
+**Endpoint:** `GET /api/mesh/subscribe`
+Subscribe to Teammate Mesh events.
+
+**Query Parameters:**
+- `channel`: The channel to subscribe to (e.g., `mesh:tasks`)
+
 ### 3.6 Client Integrations
 
 Whether you are developing against the **Local SQLite SIPDB** or the **Cloud Postgres/Redis** stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.
@@ -550,6 +568,32 @@ sequenceDiagram
 </div>
 
 
+
+<div class="glass-panel" markdown="1">
+
+### 4.10 Hybrid CRDT Sync MCP Tools
+
+The Hybrid CRDT Sync MCP exposes tools to facilitate Conflict-free Replicated Data Type (CRDT) based synchronization between local Standalone and Cloud-Native environments.
+
+**Tools Exposed:**
+- `crdt_pull`: Fetch the latest CRDT state vector for a given entity from the Cloud backend (or return local if standalone).
+- `crdt_push`: Submit local CRDT mutations to the Cloud backend.
+- `crdt_merge`: Locally compute the intersection of state vectors.
+
+**Input Schema:**
+All CRDT tools accept their arguments as a raw JSON object (`json.RawMessage`) to prevent runtime validation failures during complex structural merges.
+
+**Example `crdt_push` Execution:**
+```json
+{
+  "entity_id": "task_12345",
+  "mutations": [
+    { "clock": 42, "op": "set", "path": "status", "value": "COMPLETED" }
+  ]
+}
+```
+</div>
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
@@ -567,3 +611,77 @@ graph TD
 
 
 
+
+<div class="glass-panel" markdown="1">
+
+### 4.10 Hybrid MCP RAG Protocol
+
+The **Hybrid MCP RAG Protocol** enables seamless database synchronization between local Standalone agents (SQLite) and Cloud orchestration (pgvector). This guarantees full context preservation even when an agent goes offline.
+
+**Endpoint:** POST /api/v1/mcp/sync
+Synchronizes local vector insights up to the Cloud PostgreSQL instance via the AutoDream pipeline.
+
+**Payload:**
+```json
+{
+  "agent_id": "standalone_swe_007",
+  "sync_type": "full",
+  "vectors": [
+    {
+      "id": "v_1234",
+      "context": "SQLite mutex locking approach for shared_tasks.",
+      "embedding": [0.012, -0.054, 0.089, "..."]
+    }
+  ]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "synchronized",
+  "vectors_upserted": 150
+}
+```
+
+#### Hybrid RAG Sync Flow
+```mermaid
+sequenceDiagram
+    participant Local as Standalone (SQLite)
+    participant API as MCP Gateway
+    participant AutoDream as AutoDream Sync Engine
+    participant Cloud as Cloud DB (pgvector)
+
+    Local->>API: POST /api/v1/mcp/sync (Local Vectors)
+    API->>AutoDream: Authenticate & Route Payload
+    AutoDream->>Cloud: Upsert to autodream_memories
+    Cloud-->>AutoDream: Acknowledge Transaction
+    AutoDream-->>Local: Return Sync Status
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Local,API,AutoDream,Cloud premium;
+```
+</div>
+
+<div class="glass-panel" markdown="1">
+
+### 4.11 Hybrid Health Probe
+
+The **HybridHealthProbe** is used to check system availability across standalone and cloud modes.
+
+**Endpoint:** `GET /api/v1/health`
+Checks database availability, sync backlogs, and mesh channel connectivity.
+
+**Response (200 OK):**
+```json
+{
+  "mode": "cloud",
+  "status": "healthy",
+  "db_ping": 15000000,
+  "sync_backlog": 0,
+  "stuck_missions": 0,
+  "mesh_active": true
+}
+```
+
+</div>

@@ -9,35 +9,40 @@ Welcome to the One Human Corp (OHC) Hybrid Development Model guide. The OHC plat
 1. **Cloud-Native Mode**
    - **Scale:** Multi-tenant, Kubernetes-orchestrated (PostgreSQL, Redis).
    - **Traits:** Horizontally scaling, isolated workspaces, optimized for concurrency.
-   - **Command:** `./deploy/ohc_hybrid_cli.sh cloud`
+   - **Command:** `source deploy/scripts/ohc-mode.sh cloud`
 
 2. **Standalone Desktop Mode**
    - **Scale:** Single user, local machine (SQLite).
    - **Traits:** Minimal resource usage, host-machine efficiency. Backend services start on demand.
-   - **Command:** `./deploy/ohc_hybrid_cli.sh standalone`
+   - **Command:** `source deploy/scripts/ohc-mode.sh standalone`
 
 3. **Headless Cloud API**
    - **Scale:** Remote UI clients (Mobile/Desktop) connecting to the Cloud via API.
    - **Traits:** Purely API and metrics, no UI assets served from the backend.
-   - **Command:** `./deploy/ohc_hybrid_cli.sh headless`
+   - **Command:** `source deploy/scripts/ohc-mode.sh headless`
 
 ## Onboarding: First Day Zero Friction
 
-We automated our dev paths into a unified CLI tool ensuring zero friction onboarding for new developers.
+The maintained setup flow lives directly under `deploy/scripts/`, which avoids an extra wrapper layer while keeping setup and mode switching explicit.
 
-### Quick Start with OHC Hybrid CLI
+### Quick Start with Deploy Scripts
 
-The CLI tool orchestrates Bazel targets and Docker Compose configurations dynamically. Run the CLI tool from the repository root:
+Run the setup and launch helpers from the repository root:
 
 ```bash
-# Launch full Cloud-Native Multi-Tenant Stack
-./deploy/ohc_hybrid_cli.sh cloud
+# Initialize local config and verify the workspace
+./deploy/scripts/ohc-setup.sh
 
-# Launch Standalone Desktop Mode
-./deploy/ohc_hybrid_cli.sh standalone
+# Launch standalone-oriented local backend flow
+source deploy/scripts/ohc-mode.sh standalone
+./deploy/scripts/ohc-quick-start.sh
 
-# Launch Headless API Server Stack
-./deploy/ohc_hybrid_cli.sh headless
+# Prepare cloud/headless env variants
+source deploy/scripts/ohc-mode.sh cloud
+source deploy/scripts/ohc-mode.sh headless
+
+# Cloud bootstrap helper
+./deploy/scripts/ohc-cloud-start.sh
 ```
 
 ### Validating Your Workspace

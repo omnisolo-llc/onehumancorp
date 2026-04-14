@@ -26,7 +26,7 @@ void main() {
       when(() => mockPowerSyncService.db).thenReturn(mockPowerSyncDatabase);
     });
 
-    testWidgets('renders basic UI structure', (tester) async {
+    testWidgets('renders basic UI structure with Glassmorphism', (tester) async {
       when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
@@ -49,6 +49,13 @@ void main() {
       expect(find.text('Swarm Memory Mesh'), findsOneWidget);
       expect(find.text('Live Mesh Activity'), findsOneWidget);
       expect(find.text('Durable Swarm Memory'), findsOneWidget);
+
+      // Verify Scaffold and AppBar are transparent for Glassmorphism
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, Colors.transparent);
+
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      expect(appBar.backgroundColor, Colors.transparent);
     });
 
     testWidgets('shows loading state for durable memory when db is null', (tester) async {

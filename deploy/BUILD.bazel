@@ -6,7 +6,6 @@ exports_files([
     "deploy_dev.sh",
     "docker-compose.yml",
     "setup_k8s.sh",
-    "ohc_hybrid_cli.sh",
 ])
 
 # ── server image (onehumancorp/server) ────────────────────────────────────────

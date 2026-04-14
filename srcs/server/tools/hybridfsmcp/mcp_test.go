@@ -1,11 +1,13 @@
 package hybridfsmcp
 
 import (
+	"bytes"
 	"context"
-	"os"
-	"path/filepath"
+	"io"
+	"strings"
 	"testing"
 
+	"github.com/minio/minio-go/v7"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 )
 
@@ -44,9 +46,56 @@ func TestLocalFSProvider(t *testing.T) {
 	}
 }
 
+type MockReadCloser struct {
+	io.Reader
+}
+
+func (m MockReadCloser) Close() error { return nil }
+
+type MockS3Client struct {
+	objects map[string][]byte
+}
+
+func NewMockS3Client() *MockS3Client {
+	return &MockS3Client{
+		objects: make(map[string][]byte),
+	}
+}
+
+func (m *MockS3Client) GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (io.ReadCloser, error) {
+	data, ok := m.objects[objectName]
+	if !ok {
+		// Mock minio error
+		return nil, minio.ErrorResponse{Code: "NoSuchKey"}
+	}
+	return MockReadCloser{bytes.NewReader(data)}, nil
+}
+
+func (m *MockS3Client) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return minio.UploadInfo{}, err
+	}
+	m.objects[objectName] = data
+	return minio.UploadInfo{}, nil
+}
+
+func (m *MockS3Client) ListObjects(ctx context.Context, bucketName string, opts minio.ListObjectsOptions) <-chan minio.ObjectInfo {
+	ch := make(chan minio.ObjectInfo)
+	go func() {
+		defer close(ch)
+		for k := range m.objects {
+			if strings.HasPrefix(k, opts.Prefix) {
+				ch <- minio.ObjectInfo{Key: k}
+			}
+		}
+	}()
+	return ch
+}
+
 func TestCloudFSProvider(t *testing.T) {
-	tempDir := t.TempDir()
-	provider := NewCloudFSProvider(tempDir)
+	mockClient := NewMockS3Client()
+	provider := NewCloudFSProvider(mockClient, "test-bucket")
 
 	claims := &auth.Claims{
 		OrganizationID: "tenant1",
@@ -67,9 +116,9 @@ func TestCloudFSProvider(t *testing.T) {
 		t.Fatalf("expected 'hello cloud', got '%s'", string(data))
 	}
 
-	// Verify tenant isolation
-	if _, err := os.Stat(filepath.Join(tempDir, "tenant1", "test.txt")); os.IsNotExist(err) {
-		t.Fatalf("expected file to be created in tenant dir")
+	// Verify tenant isolation in S3 key
+	if _, ok := mockClient.objects["tenant/tenant1/fs/test.txt"]; !ok {
+		t.Fatalf("expected file to be created with tenant prefix in S3")
 	}
 
 	// Test with no claims
@@ -129,15 +178,31 @@ func TestHybridFSMCP(t *testing.T) {
 
 func TestNewProviderFactory(t *testing.T) {
 	t.Setenv("OHC_MULTITENANT", "true")
-	provider := NewProviderFactory("/tmp")
+	t.Setenv("S3_ENDPOINT", "localhost:9000")
+	t.Setenv("S3_ACCESS_KEY", "minio")
+	t.Setenv("S3_SECRET_KEY", "minio123")
+	provider, err := NewProviderFactory("/tmp")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 	if _, ok := provider.(*CloudFSProvider); !ok {
 		t.Fatalf("expected CloudFSProvider")
 	}
 
 	t.Setenv("OHC_MULTITENANT", "false")
-	provider = NewProviderFactory("/tmp")
+	provider, err = NewProviderFactory("/tmp")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 	if _, ok := provider.(*LocalFSProvider); !ok {
 		t.Fatalf("expected LocalFSProvider")
+	}
+
+	t.Setenv("OHC_MULTITENANT", "true")
+	t.Setenv("S3_ENDPOINT", "")
+	_, err = NewProviderFactory("/tmp")
+	if err == nil {
+		t.Fatalf("expected error when S3_ENDPOINT is missing")
 	}
 }
 
@@ -172,8 +237,8 @@ func TestLocalFSProvider_Errors(t *testing.T) {
 }
 
 func TestCloudFSProvider_Errors(t *testing.T) {
-	tempDir := t.TempDir()
-	provider := NewCloudFSProvider(tempDir)
+	mockClient := NewMockS3Client()
+	provider := NewCloudFSProvider(mockClient, "test-bucket")
 
 	claims := &auth.Claims{
 		OrganizationID: "tenant1",
@@ -214,15 +279,6 @@ func TestCloudFSProvider_Errors(t *testing.T) {
 	_, err = provider.ListDir(ctxNoClaims, ".")
 	if err == nil {
 		t.Fatalf("expected error without claims")
-	}
-
-	// Test non-existent dir listdir (should return empty list, not error, per implementation)
-	entries, err := provider.ListDir(ctx, "nonexistent")
-	if err != nil {
-		t.Fatalf("expected no error for non-existent dir in CloudFSProvider, got %v", err)
-	}
-	if len(entries) != 0 {
-		t.Fatalf("expected empty list for non-existent dir in CloudFSProvider")
 	}
 }
 

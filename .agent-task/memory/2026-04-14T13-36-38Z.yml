@@ -1,0 +1,9 @@
+type: architecture_context
+author: Principal Product Architect & KAIROS Orchestrator
+topic: KAIROS AI OS Orchestration
+summary: |
+  Decomposed KAIROS Orchestration into 4 pillars:
+  1. Shared Task List (PostgreSQL / SQLite distributed state machine)
+  2. Teammate Mesh (Realtime pub/sub via Redis / memory channels)
+  3. autoDream (Vector pipeline syncing agent-task/memory/ to pgvector)
+  4. Sub-Agent Queue (Asynchronous background worker execution)

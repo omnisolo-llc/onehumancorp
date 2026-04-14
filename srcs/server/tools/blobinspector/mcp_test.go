@@ -131,7 +131,6 @@ func TestBlobInspectorMCP_CloudProvider(t *testing.T) {
 		t.Fatalf("Unexpected url response: %v", urlData)
 	}
 
-
 	// Test Cloud list blobs
 	resListCloud, errCloudList := mcp.CallTool(ctxWithClaims, "list_blobs", map[string]interface{}{
 		"prefix": "test",
