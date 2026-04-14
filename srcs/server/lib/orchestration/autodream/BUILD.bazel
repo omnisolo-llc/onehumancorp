@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "autodream",
+    srcs = ["listener.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/lib/orchestration/autodream",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/lib/orchestration/tasks",
+    ],
+)
+
+go_test(
+    name = "autodream_test",
+    srcs = ["listener_test.go"],
+    embed = [":autodream"],
+    deps = [
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

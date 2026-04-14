@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tasks",
+    srcs = ["tasks.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/lib/orchestration/tasks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "tasks_test",
+    srcs = ["tasks_test.go"],
+    embed = [":tasks"],
+    deps = [
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
