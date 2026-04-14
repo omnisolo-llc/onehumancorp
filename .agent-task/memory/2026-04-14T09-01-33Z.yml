@@ -1,0 +1,4 @@
+task: Implement KAIROS Foundation schemas and state machine events
+learnings:
+  - When updating a struct and its constructor arguments, ensure all usages of the constructor across the codebase (e.g. tests, orchestrator instances) are updated correctly.
+  - Using string replacements for `Node` mock interfaces is tricky if it causes compilation issues. Make sure the type matches exactly.
