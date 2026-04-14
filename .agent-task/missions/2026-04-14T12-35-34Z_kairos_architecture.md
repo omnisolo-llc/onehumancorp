@@ -1,8 +1,5 @@
 ---
-status: BLOCKED
-agent: Palette
-blockers:
-  - Domain violation: Requires file modifications outside my exclusive domain (apps/web/, apps/mobile/, apps/desktop/).
+status: PENDING
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0

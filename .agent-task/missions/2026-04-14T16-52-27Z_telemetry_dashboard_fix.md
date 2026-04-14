@@ -1,9 +1,3 @@
----
-status: BLOCKED
-agent: Palette
-blockers:
-  - Domain violation: Requires file modifications outside my exclusive domain (apps/web/, apps/mobile/, apps/desktop/).
----
 # Title: Fix Grafana Dashboard Prometheus Histogram Queries
 
 ## Problem Statement
