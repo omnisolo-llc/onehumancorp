@@ -46,6 +46,12 @@ func ProvisionEnvironment(ctx context.Context, isCloud bool) error {
 		}
 	}
 
+	configPath := filepath.Join(baseDir, "config", "ohc.yaml")
+	defaultConfig := []byte("version: 1\nmode: hybrid\n")
+	if err := os.WriteFile(configPath, defaultConfig, 0644); err != nil {
+		return fmt.Errorf("failed to create default config %s: %w", configPath, err)
+	}
+
 	return nil
 }
 

@@ -25,6 +25,11 @@ func TestProvisionEnvironment_Local(t *testing.T) {
 		}
 	}
 
+	expectedConfigFile := filepath.Join(".ohc-local-data", "config", "ohc.yaml")
+	if _, err := os.Stat(expectedConfigFile); os.IsNotExist(err) {
+		t.Errorf("expected config file %s to exist", expectedConfigFile)
+	}
+
 	os.RemoveAll(".ohc-local-data")
 }
 
@@ -44,6 +49,11 @@ func TestProvisionEnvironment_Cloud(t *testing.T) {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			t.Errorf("expected directory %s to exist", dir)
 		}
+	}
+
+	expectedConfigFile := filepath.Join(".ohc-cloud-data", "config", "ohc.yaml")
+	if _, err := os.Stat(expectedConfigFile); os.IsNotExist(err) {
+		t.Errorf("expected config file %s to exist", expectedConfigFile)
 	}
 
 	os.RemoveAll(".ohc-cloud-data")
