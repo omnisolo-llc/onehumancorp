@@ -50,6 +50,10 @@ func main() {
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	return fmt.Errorf("not implemented")
+}
+
 `
     strContent = strings.Replace(strContent, "func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {", discoverAgentsImplRedis+"func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {", 1)
 
@@ -58,7 +62,7 @@ func main() {
 	return agents, nil
 }
 `
-    strContent = strings.Replace(strContent, "func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {", discoverAgentsImplLocal+"func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {", 1)
+    strContent = strings.Replace(strContent, "func (lm *LocalTeammateMesh) AdvertiseCapabilities", discoverAgentsImplLocal+"func (lm *LocalTeammateMesh) AdvertiseCapabilities", 1)
 
     err = ioutil.WriteFile("srcs/server/orchestration/mesh.go", []byte(strContent), 0644)
     if err != nil {
