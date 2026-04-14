@@ -191,6 +191,9 @@ type mockableMeter interface {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitWithMeter(m mockableMeter) error {
+	if m == nil {
+		return fmt.Errorf("meter is nil")
+	}
 	var err error
 	var errs []error
 	requestCounter, err = m.Int64Counter(
