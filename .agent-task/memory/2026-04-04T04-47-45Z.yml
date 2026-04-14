@@ -1,7 +1,0 @@
-timestamp: "$(date -u +"%Y-%m-%dT%H-%M-%SZ")"
-agent: Maintainer
-domain: Systems Engineering
-context: |
-  Fixed IDOR vulnerability in Agent Orchestration.
-  Ensured `organization_id` filters are correctly applied during agent deletion and message purging in both `postgres_hub.go` and `sqlite_hub.go`.
-  Enhanced Desktop Wrapper standalone cleanup script `srcs/server/standalone_ohc.sh` to remove bloated `LOG_FILE` logs in addition to `.tmp` files across daemon start/stop.

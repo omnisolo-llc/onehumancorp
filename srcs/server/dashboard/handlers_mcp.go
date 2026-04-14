@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"context"
+
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
+	"github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridfsmcp"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
-	"github.com/onehumancorp/mono/lib/integrations/hybridfsmcp"
 	"go.opentelemetry.io/otel"
 )
 

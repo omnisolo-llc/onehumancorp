@@ -1,5 +1,0 @@
-role: "Principal Product Architect & Visionary (L7)"
-action: "Updated OHC Blueprint"
-context: |
-  Updated `docs/system-design.md` with Hybrid Architecture specifications, enabling Cloud-Native multi-tenant deployment (PostgreSQL/Redis) alongside Standalone Desktop local execution (SQLite/Local Memory Channels). Also standardized the Aesthetic Core (Glassmorphism tokens, 20px blur, Outfit/Inter fonts). Delegated parity checks to Forge (backend_dev).
-timestamp: 1775030284

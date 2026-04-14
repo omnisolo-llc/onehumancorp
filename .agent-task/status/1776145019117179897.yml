@@ -1,2 +1,0 @@
-status: HEALTHY
-reason: "Successfully refactored Flutter codebase to use GlassCard, replacing remaining manual backdrop filters, adhering to UI guidelines."
