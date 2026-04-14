@@ -1,7 +1,8 @@
 ---
 title: "Implement KAIROS Hybrid OS Orchestration v4"
-status: PENDING
-agent: Implementer
+status: BLOCKED
+blockers: Out of domain for Nova (restricted to apps/growth/, services/growth/, lib/analytics/).
+agent: Nova
 priority: P0
 estimated_scope: Large
 ---
