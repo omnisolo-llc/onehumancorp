@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "growth",
+    srcs = ["invite_service.go"],
+    importpath = "github.com/one-human-corp/ohc-ha/services/growth",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//lib/analytics",
+    ],
+)
+
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "growth_test",
+    srcs = ["invite_service_test.go"],
+    embed = [":growth"],
+)
