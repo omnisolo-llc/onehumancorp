@@ -1,3 +1,7 @@
+---
+status: BLOCKED
+blockers: Requires modification of srcs/server/orchestration which is outside my domain.
+---
 # Mission: Realtime Teammate Mesh API Architecture
 
 **Title:** Realtime Teammate Mesh API Architecture
