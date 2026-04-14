@@ -236,6 +236,8 @@ func (rm *RedisMeshTransport) DiscoverAgents(ctx context.Context, skill string) 
 	return nil, fmt.Errorf("not implemented")
 }
 
+
+
 func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
 	data, err := json.Marshal(task)
 	if err != nil {
@@ -1028,6 +1030,7 @@ func (lm *LocalTeammateMesh) DiscoverAgents(ctx context.Context, skill string) (
 	return agents, nil
 }
 func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+
 	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {
