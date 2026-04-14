@@ -1,5 +1,5 @@
 ---
-status: "PENDING"
+status: FAILED
 Title: "KAIROS Orchestration: Unified Shared Task List & Architecture"
 Priority: "P0"
 Estimated Scope: "Large"

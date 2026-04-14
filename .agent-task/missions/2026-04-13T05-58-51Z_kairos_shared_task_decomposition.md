@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: FAILED
 priority: P0
 scope: Large
 title: "KAIROS: Architect Shared Task List Decomposition"

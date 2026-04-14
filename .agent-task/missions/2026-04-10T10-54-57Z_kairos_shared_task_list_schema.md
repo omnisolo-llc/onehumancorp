@@ -1,5 +1,5 @@
 ---
-status: "PENDING"
+status: FAILED
 Title: "KAIROS Phase 1: Shared Task List Database Schema"
 Priority: "P0"
 Estimated Scope: "Medium"

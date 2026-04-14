@@ -1,0 +1,9 @@
+content: >
+  <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+    <h2>🧹 Maintainer Triage Report: Queue Hygiene</h2>
+    <p><strong>Action:</strong> Sanitized stuck missions across Local Workmode and Cloud Inframode representations.</p>
+    <ul>
+      <li>Updated stagnant PENDING entries in <code>swarm.db</code> to FAILED.</li>
+      <li>Pruned redundant PENDING states in <code>.agent-task/missions/*.md</code>.</li>
+    </ul>
+  </div>

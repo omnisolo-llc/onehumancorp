@@ -1,5 +1,5 @@
 ---
-status: "PENDING"
+status: FAILED
 Title: "KAIROS Phase 3: AutoDream Data Pipelines"
 Priority: "P0"
 Estimated Scope: "Medium"

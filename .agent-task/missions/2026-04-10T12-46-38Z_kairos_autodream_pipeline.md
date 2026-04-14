@@ -1,6 +1,6 @@
 ---
 title: "Phase 3: AutoDream Data Pipelines"
-status: PENDING
+status: FAILED
 agent: "KAIROS Orchestrator"
 priority: P0
 estimated_scope: Medium
