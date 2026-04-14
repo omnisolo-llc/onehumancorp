@@ -2,27 +2,8 @@ package orchestration
 
 import (
 	"context"
-<<<<<<< HEAD
 	"encoding/json"
 	"go.opentelemetry.io/otel"
-=======
->>>>>>> origin/main
-	"fmt"
-	"time"
-
-	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/redis/rueidis"
-)
-
-<<<<<<< HEAD
-type StateTransitionEvent struct {
-	TaskID   string `json:"task_id"`
-	Event    string `json:"event"`
-	NewState string `json:"new_state"`
-}
-
-=======
->>>>>>> origin/main
 const (
 	TaskStatePending     = "PENDING"
 	TaskStateDecomposing = "DECOMPOSING"
@@ -39,7 +20,6 @@ const (
 type TaskStateMachine struct {
 	dbProvider db.Provider
 	mutexProvider MutexProvider
-<<<<<<< HEAD
 	node Node
 }
 
@@ -52,17 +32,6 @@ func NewTaskStateMachine(provider db.Provider, redisClient rueidis.Client, node 
 func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, event string) error {
 	ctx, span := otel.Tracer("orchestration").Start(ctx, "ProcessEvent")
 	defer span.End()
-=======
-}
-
-func NewTaskStateMachine(provider db.Provider, redisClient rueidis.Client) *TaskStateMachine {
-	ctx := context.Background()
-	mp, _ := NewMutexProvider(ctx, provider, redisClient)
-	return &TaskStateMachine{dbProvider: provider, mutexProvider: mp}
-}
-
-func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, event string) error {
->>>>>>> origin/main
 	if sm.mutexProvider != nil {
 		mx := sm.mutexProvider.NewMutex("sm:" + taskID)
 		if err := mx.Lock(ctx, 30*time.Second); err != nil {
@@ -132,7 +101,6 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 		}
 	}
 
-<<<<<<< HEAD
 	err = tx.Commit(ctx)
 	if err != nil {
 		return err
@@ -142,7 +110,4 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 		sm.node.Publish("mesh:coordination", b)
 	}
 	return nil
-=======
-	return tx.Commit(ctx)
->>>>>>> origin/main
 }
