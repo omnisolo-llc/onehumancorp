@@ -567,3 +567,35 @@ graph TD
 
 
 
+
+<div class="glass-panel" markdown="1">
+
+### 4.6 Hybrid MCP Telemetry Mesh
+
+The **Hybrid MCP Telemetry Mesh** provides endpoints for the standalone synchronization daemon to push buffered metrics and for agents to query telemetry.
+
+**Endpoint:** `POST /api/v1/telemetry/sync`
+Transmits batched observability metrics from the local SQLite SIPDB to the Cloud-Native stack.
+
+**Payload:**
+```json
+{
+  "tenant_id": "org_123",
+  "metrics": [
+    {
+      "name": "ohc_agent_execution_traces_total",
+      "value": 42,
+      "timestamp": "2026-04-10T12:00:00Z"
+    }
+  ]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "synced_count": 1
+}
+```
+</div>
