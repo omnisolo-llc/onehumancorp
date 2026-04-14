@@ -57,7 +57,6 @@ go_library(
         "migrations/051_team_invites.sql",
         "migrations/052_cached_tokens.sql",
         "migrations/053_shared_tasks_v4.sql",
-        "migrations/20260412_shared_tasks_decomposition.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
