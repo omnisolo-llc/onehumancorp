@@ -140,8 +140,15 @@ var AgentTool = Tool{
 			return "", fmt.Errorf("Agent: prompt is required")
 		}
 
+		// Compress the prompt for agent-to-agent communication (caveman full mode).
+		// This saves ~75% of output tokens while keeping full technical accuracy.
+		compressedPrompt := CavemanCompress(input.Prompt, CavemanFull)
+		agentCfg := AgentConfig{
+			SystemPromptSuffix: cavemanSystemPrompt(CavemanFull),
+		}
+
 		// Spawn the sub-task using the local runtime.
-		taskState, err := SpawnTask(ctx, input.Description, input.Prompt, "", AgentConfig{})
+		taskState, err := SpawnTask(ctx, input.Description, compressedPrompt, "", agentCfg)
 		if err != nil {
 			return "", fmt.Errorf("Agent: spawn failed: %w", err)
 		}

@@ -6,6 +6,7 @@ go_library(
         "agent.go",
         "agent_tool.go",
         "bash.go",
+        "caveman.go",
         "coordinator.go",
         "edit.go",
         "events.go",
@@ -44,6 +45,7 @@ go_test(
     name = "builtin_test",
     srcs = [
         "agent_test.go",
+        "caveman_test.go",
         "features_test.go",
         "notification_test.go",
         "pubsub_test.go",

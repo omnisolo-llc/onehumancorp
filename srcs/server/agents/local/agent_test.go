@@ -2,6 +2,7 @@ package local_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -340,11 +341,16 @@ func TestRunner_ReceivesTaskAndPublishesResult(t *testing.T) {
 	if result.Type != "TaskResult" {
 		t.Errorf("expected TaskResult, got %s", result.Type)
 	}
-	if !strings.Contains(result.Content, "<task-notification>") {
-		t.Errorf("result should contain XML notification tag; got: %s", result.Content)
+	// Notification should be valid JSON (no XML)
+	if strings.Contains(result.Content, "<task-notification>") {
+		t.Errorf("result should NOT contain XML tag; got: %s", result.Content)
 	}
-	if !strings.Contains(result.Content, "<status>completed</status>") {
-		t.Errorf("result should show completed status; got: %s", result.Content)
+	var notif local.TaskNotificationPayload
+	if err := json.Unmarshal([]byte(result.Content), &notif); err != nil {
+		t.Fatalf("result should be valid JSON TaskNotificationPayload: %v — content: %s", err, result.Content)
+	}
+	if notif.Status != "completed" {
+		t.Errorf("expected status=completed, got %q", notif.Status)
 	}
 }
 
