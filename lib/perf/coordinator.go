@@ -35,6 +35,16 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 	var idx atomic.Int64
 	var firstErr atomic.Value
 
+	// Dynamically calculate batch size to ensure all workers get tasks
+	batchSize := int64(len(tasks) / (workerCount * 4))
+	if batchSize < 1 {
+		batchSize = 1
+	}
+	// Cap maximum batch size to prevent starvation on very large queues
+	if batchSize > 64 {
+		batchSize = 64
+	}
+
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
@@ -45,14 +55,21 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 					return
 				}
 
-				curr := idx.Add(1) - 1
-				if curr >= int64(len(tasks)) {
+				endIdx := idx.Add(batchSize)
+				startIdx := endIdx - batchSize
+
+				if startIdx >= int64(len(tasks)) {
 					return
 				}
 
-				if err := tasks[curr](); err != nil {
-					firstErr.CompareAndSwap(nil, err)
-					// don't stop worker on error, keep processing tasks, but we record the first error
+				if endIdx > int64(len(tasks)) {
+					endIdx = int64(len(tasks))
+				}
+
+				for curr := startIdx; curr < endIdx; curr++ {
+					if err := tasks[curr](); err != nil {
+						firstErr.CompareAndSwap(nil, err)
+					}
 				}
 			}
 		}()
@@ -74,6 +91,7 @@ type ShardedMailbox struct {
 type MailboxShard struct {
 	mu       sync.Mutex
 	messages map[string][]Message
+	_        [64]byte // padding to prevent false sharing
 }
 
 type Message struct {
@@ -103,11 +121,14 @@ func NewShardedMailbox(numShards int) *ShardedMailbox {
 	}
 }
 
+// hash uses FNV-1a hash algorithm
 func hash(s string) uint64 {
-	var h uint64 = 14695981039346656037
+	const offset64 = 14695981039346656037
+	const prime64 = 1099511628211
+	h := uint64(offset64)
 	for i := 0; i < len(s); i++ {
 		h ^= uint64(s[i])
-		h *= 1099511628211
+		h *= prime64
 	}
 	return h
 }
