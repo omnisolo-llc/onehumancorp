@@ -1,6 +1,7 @@
 import '../widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
@@ -279,35 +280,8 @@ class _LocalBackendStatusCardState
         return Semantics(
           label:
               'Local Backend Service Status: ${running ? "Running" : "Stopped"}',
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _isHovered = true),
-            onExit: (_) => setState(() => _isHovered = false),
-            child: AnimatedScale(
-              scale: _isHovered ? 1.02 : 1.0,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: BackdropFilter(
-                  filter: ImageFilter.compose(
-                    outer: ColorFilter.matrix(const <double>[
-                      1.168, -0.153, -0.015, 0, 0,
-                      -0.046, 1.061, -0.015, 0, 0,
-                      -0.046, -0.152, 1.198, 0, 0,
-                      0, 0, 0, 1, 0,
-                    ]),
-                    inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    decoration: BoxDecoration(
-                      color: const Color.fromRGBO(255, 255, 255, 0.03),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
+          child: GlassCard(
+        child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                 children: [
@@ -401,11 +375,7 @@ class _LocalBackendStatusCardState
                 ],
               ),
             ),
-          ),
-        ),
       ),
-    ),
-  ),
 );
       },
     );
