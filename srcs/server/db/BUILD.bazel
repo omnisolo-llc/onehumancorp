@@ -58,6 +58,7 @@ go_library(
         "migrations/052_cached_tokens.sql",
         "migrations/053_shared_tasks_v4.sql",
         "migrations/054_shared_tasks_decomposition.sql",
+        "migrations/20260414130500_create_autodream_memories.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
