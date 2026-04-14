@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type SubAgentWorker struct {
@@ -51,28 +52,25 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
+
+
 		go func(job *queue.Job) {
-			var payload map[string]interface{}
-			_ = json.Unmarshal([]byte(job.Payload), &payload)
+			startTime := time.Now()
 
-			orgID := ""
-			if val, ok := payload["organization_id"].(string); ok {
-				orgID = val
-			}
+			err := w.spawner.SpawnIsolated(ctx, job)
 
-			task := &SharedTask{
-				ID:             job.ParentTaskID,
-				OrganizationID: orgID,
-				Priority:       "DELEGATED",
-			}
+			duration := time.Since(startTime).Seconds()
+			telemetry.RecordSubAgentExecutionDuration(ctx, duration)
 
-			err := w.spawner.Spawn(ctx, task)
 			if err != nil {
+				telemetry.RecordSubAgentFailure(ctx)
 				_ = w.taskQueue.Fail(ctx, job.ID, err.Error())
 			} else {
 				_ = w.taskQueue.Complete(ctx, job.ID)
 			}
 		}(job)
+
+
 	}
 }
 
