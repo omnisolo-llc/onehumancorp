@@ -24,8 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -222,7 +220,6 @@ func (w *TaskOutputWriter) String() string {
 		return ""
 	}
 	return w.buf.String()
-}
 }
 
 // ── self-reflection helper ────────────────────────────────────────────────────

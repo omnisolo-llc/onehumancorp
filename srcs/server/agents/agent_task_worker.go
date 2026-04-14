@@ -3,13 +3,14 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"os"
 )
 
@@ -194,19 +195,14 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
 					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
 					go func(agent orchestration.Agent, payload string) {
-						client := builtin.NewOpenAIClient(os.Getenv("OPENAI_API_KEY"))
-						builtinAgent := &builtin.BuiltinAgent{
-							Client:      client,
-							Model:       "gpt-4o",
-							System:      builtin.GetSystemPrompt(),
-							Tools:       builtin.AllTools(),
-							MaxTokens:   4096,
-							Temperature: 0.1,
-						}
-						_, err := builtinAgent.Run(context.Background(), []builtin.Message{{
-							Role:    builtin.RoleUser,
-							Content: payload,
-						}})
+						workDir, _ := os.Getwd()
+						_, err := builtin.SpawnTask(
+							context.Background(),
+							fmt.Sprintf("plane issue %s", issue.ID),
+							payload,
+							workDir,
+							builtin.AgentConfig{},
+						)
 						if err != nil {
 							slog.Error("builtin agent run error", "err", err, "agent_id", agent.ID)
 						}

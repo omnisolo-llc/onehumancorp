@@ -140,6 +140,8 @@ message MCPServerConfig {
 
 // SkillConfig defines a named skill that the agent can use as a sub-capability.
 // Skills are modelled as sub-agents with a focused instruction.
+// All fields are stored in the database and passed from user → agent → subagent
+// without any additional serialization step.
 message SkillConfig {
   // Unique name for the skill.
   string name = 1;
@@ -147,6 +149,14 @@ message SkillConfig {
   string description = 2;
   // The instruction / system prompt for this skill sub-agent.
   string instruction = 3;
+  // Optional: which built-in tools to enable for this skill.
+  // When empty, the skill inherits the parent agent's toolset.
+  repeated string allowed_tools = 4;
+  // Optional: override the LLM model for this skill sub-agent.
+  string model = 5;
+  // Optional: the toolset configuration for this skill's sub-agent.
+  // Overrides the parent toolset if provided.
+  ToolsetConfig toolset = 6;
 }
 
 // ToolsetConfig fully describes the tools, MCP servers, and skills that should
@@ -176,4 +186,59 @@ service AgentService {
   // When sub_agent_address is empty the agent runs the work in-process via
   // a goroutine and communicates with it over a channel.
   rpc DispatchToSubAgent(SubAgentRequest) returns (SubAgentResponse);
+}
+
+// ── Protobuf pub/sub messages for agent lifecycle ─────────────────────────────
+// These messages replace all XML-based notification formats.
+// They are designed to be stored in the database, passed through the Hub,
+// and forwarded from user → agent → subagent unchanged.
+
+// TaskNotification is sent to the parent agent when a sub-agent task completes.
+// It replaces the legacy XML <task-notification> format.
+message TaskNotification {
+  string task_id = 1;
+  string tool_use_id = 2;
+  string output_file = 3;
+  // Terminal status: "completed" | "failed" | "killed"
+  string status = 4;
+  string summary = 5;
+  string result = 6;
+  int64 token_count = 7;
+  int64 tool_uses = 8;
+  int64 duration_ms = 9;
+}
+
+// SubagentHeartbeat is published periodically by a running sub-agent.
+// The parent considers the sub-agent dead if no heartbeat arrives within
+// the configured heartbeat_timeout window (default 30 minutes).
+message SubagentHeartbeat {
+  string task_id = 1;
+  int64 timestamp_ms = 2;
+  // Current status: "running" | "completed" | "failed"
+  string status = 3;
+  int64 token_count = 4;
+  int64 tool_use_count = 5;
+  string last_activity = 6;
+}
+
+// SubagentLifecycleEvent is the unified event type for the subagent pub/sub bus.
+// Agents publish and subscribe to these events instead of polling.
+message SubagentLifecycleEvent {
+  enum EventType {
+    EVENT_UNSPECIFIED = 0;
+    SPAWNED = 1;
+    HEARTBEAT = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+    KILLED = 5;
+  }
+  EventType event_type = 1;
+  string task_id = 2;
+  // parent_task_id links this sub-agent to its spawning parent.
+  string parent_task_id = 3;
+  int64 timestamp_ms = 4;
+  // payload is set according to event_type.
+  // HEARTBEAT → heartbeat; COMPLETED/FAILED/KILLED → notification.
+  SubagentHeartbeat heartbeat = 5;
+  TaskNotification notification = 6;
 }

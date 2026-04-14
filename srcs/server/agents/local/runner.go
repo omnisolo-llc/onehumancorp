@@ -326,69 +326,42 @@ prompt = fmt.Sprintf("Issue: %s\n\n%s", p.IssueName, p.Directive)
 return prompt
 }
 
-// buildNotification constructs an XML-tagged task notification message that
-// matches the CC-Source TASK_NOTIFICATION_TAG format for interoperability.
+// buildNotification constructs a JSON-encoded TaskNotification that is sent
+// back to the parent agent via the Hub.  Replaces the legacy XML format.
 func buildNotification(state *TaskState, status TaskStatus, summary string) string {
-progress := state.Progress()
-durationMs := int64(0)
-if v := state.endAt.Load(); v != nil {
-durationMs = v.(time.Time).Sub(state.startAt).Milliseconds()
-}
+	progress := state.Progress()
+	durationMs := int64(0)
+	if v := state.endAt.Load(); v != nil {
+		durationMs = v.(time.Time).Sub(state.startAt).Milliseconds()
+	}
 
-toolUseID := ""
-if state.ToolUseID != "" {
-toolUseID = fmt.Sprintf("\n<tool_use_id>%s</tool_use_id>", state.ToolUseID)
-}
+	result := ""
+	if res := state.Result(); res != "" {
+		result = truncate(res, 2000)
+	}
 
-resultSection := ""
-if res := state.Result(); res != "" {
-resultSection = fmt.Sprintf("\n<result>%s</result>", escapeXML(truncate(res, 2000)))
-}
+	n := TaskNotificationPayload{
+		TaskID:     state.ID,
+		ToolUseID:  state.ToolUseID,
+		OutputFile: state.OutputFile,
+		Status:     string(status),
+		Summary:    truncate(summary, 1000),
+		Result:     result,
+		TokenCount: progress.TokenCount,
+		ToolUses:   int64(progress.ToolUseCount),
+		DurationMs: durationMs,
+	}
 
-usageSection := fmt.Sprintf(
-"\n<usage><total_tokens>%d</total_tokens><tool_uses>%d</tool_uses><duration_ms>%d</duration_ms></usage>",
-progress.TokenCount, progress.ToolUseCount, durationMs,
-)
-
-return fmt.Sprintf(`<task-notification>
-<task-id>%s</task-id>%s
-<output-file>%s</output-file>
-<status>%s</status>
-<summary>%s</summary>%s%s
-</task-notification>`,
-state.ID, toolUseID,
-state.OutputFile,
-string(status),
-escapeXML(summary),
-resultSection,
-usageSection,
-)
+	b, err := json.Marshal(n)
+	if err != nil {
+		return fmt.Sprintf(`{"task_id":%q,"status":%q}`, state.ID, status)
+	}
+	return string(b)
 }
 
 func truncate(s string, max int) string {
-if len(s) <= max {
-return s
-}
-return s[:max] + "…"
-}
-
-func escapeXML(s string) string {
-result := ""
-for i := 0; i < len(s); {
-switch s[i] {
-case '&':
-result += "&amp;"
-i++
-case '<':
-result += "&lt;"
-i++
-case '>':
-result += "&gt;"
-i++
-default:
-result += s[i : i+1]
-i++
-}
-}
-return result
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }

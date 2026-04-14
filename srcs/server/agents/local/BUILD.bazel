@@ -6,6 +6,7 @@ go_library(
         "agent.go",
         "cached_llm.go",
         "llm.go",
+        "notification.go",
         "output.go",
         "runner.go",
         "task.go",

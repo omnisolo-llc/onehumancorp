@@ -41,6 +41,10 @@ type AgentConfig struct {
 	// SystemPrompt overrides the default system prompt.
 	SystemPrompt string
 
+	// SystemPromptSuffix is appended to the effective system prompt.
+	// Used to inject communication-mode instructions (e.g. caveman mode) into sub-agents.
+	SystemPromptSuffix string
+
 	// MaxTurns is the maximum number of LLM turns.  Defaults to maxAgentTurns.
 	MaxTurns int
 
@@ -68,6 +72,10 @@ func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
 	}
 	if cfg.SystemPrompt == "" {
 		cfg.SystemPrompt = systemPrompt
+	}
+	// Append the suffix (e.g. caveman communication mode instructions).
+	if cfg.SystemPromptSuffix != "" {
+		cfg.SystemPrompt += cfg.SystemPromptSuffix
 	}
 	if cfg.MaxTurns <= 0 {
 		cfg.MaxTurns = maxAgentTurns
