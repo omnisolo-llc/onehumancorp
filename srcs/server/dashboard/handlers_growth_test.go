@@ -499,3 +499,20 @@ func TestHandleViralCoefficientMetrics(t *testing.T) {
 	if resp["viral_coefficient"] != float64(3.0) { t.Errorf("expected 3.0, got %v", resp["viral_coefficient"]) }
 	if resp["organization_id"] != "default" { t.Errorf("expected default, got %v", resp["organization_id"]) }
 }
+
+func TestHandleQuota(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodGet, "/api/growth/quota", nil)
+	w := httptest.NewRecorder()
+	s.handleQuota(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+	var metrics QuotaMetrics
+	if err := json.NewDecoder(w.Body).Decode(&metrics); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if metrics.Used != 10 || metrics.Max != 100 {
+		t.Errorf("expected 10/100, got %d/%d", metrics.Used, metrics.Max)
+	}
+}
