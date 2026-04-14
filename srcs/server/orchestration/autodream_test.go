@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -26,7 +25,7 @@ func TestAutoDreamPruneSessions(t *testing.T) {
 
 	worker := NewAutoDreamWorker(pool.Provider)
 
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
+	ctx := context.Background()
 	_, _ = pool.Exec(ctx, "DELETE FROM agent_session_data") // clear table
 
 	oldTime := time.Now().Add(-48 * time.Hour).UTC().Format("2006-01-02 15:04:05")
@@ -78,7 +77,7 @@ func TestAutoDreamTruthInjectionAndConflict(t *testing.T) {
 	}
 
 	worker := NewAutoDreamWorker(pool.Provider)
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
+	ctx := context.Background()
 
 	// Clear out truth table
 	_, _ = pool.Exec(ctx, "DELETE FROM swarm_truth_embeddings")
@@ -127,7 +126,7 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		t.Fatalf("failed to create db: %v", err)
 	}
 
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
+	ctx := context.Background()
 
 	// Ensure table exists
 	_, err = pool.Provider.Exec(ctx, `
@@ -143,19 +142,14 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
 	_, err = pool.Provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS consolidated_memory (
+		CREATE TABLE IF NOT EXISTS autodream_memories (
 			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
-			agent_id TEXT,
 			content TEXT NOT NULL,
-			embedding TEXT,
-			source_type TEXT NOT NULL,
-			metadata TEXT,
-			created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			source_mission_id TEXT
 		)
 	`)
 	if err != nil {
-		t.Fatalf("failed to create consolidated_memory: %v", err)
+		t.Fatalf("failed to create autodream_memories: %v", err)
 	}
 
 	_, err = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess-1', 'agent-1', 'test context')")
@@ -177,7 +171,7 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 	}
 
 	// Verify the memory was inserted
-	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE metadata LIKE '%sess-1%'").Scan(&count)
+	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 'sess-1'").Scan(&count)
 	if err != nil {
 		t.Fatalf("failed to query count: %v", err)
 	}
@@ -199,7 +193,7 @@ func TestAutoDreamConsolidateEpoch(t *testing.T) {
 	}
 
 	worker := NewAutoDreamWorker(pool.Provider)
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
+	ctx := context.Background()
 
 	err = worker.ConsolidateEpoch(ctx)
 	if err != nil {
