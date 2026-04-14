@@ -13,11 +13,15 @@ type Tool struct {
 }
 
 type HybridFSMCP struct {
-	provider FileSystemProvider
+	provider  FileSystemProvider
+	escalator Escalator
 }
 
-func NewHybridFSMCP(provider FileSystemProvider) *HybridFSMCP {
-	return &HybridFSMCP{provider: provider}
+func NewHybridFSMCP(provider FileSystemProvider, escalator Escalator) *HybridFSMCP {
+	return &HybridFSMCP{
+		provider:  provider,
+		escalator: escalator,
+	}
 }
 
 func (m *HybridFSMCP) ListTools() []Tool {
@@ -37,7 +41,17 @@ func (m *HybridFSMCP) ListTools() []Tool {
 			Description: "Lists the contents of a directory.",
 			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}`,
 		},
+		{
+			Name:        "rag_query",
+			Description: "Queries the vector database.",
+			InputSchema: `{"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}`,
+		},
 	}
+}
+
+func (m *HybridFSMCP) processLocalQuery(ctx context.Context, query string) (interface{}, error) {
+	// In a real implementation, this would query the local SQLite Vector DB
+	return map[string]interface{}{"status": "success", "source": "local", "result": "local_result"}, nil
 }
 
 func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
@@ -76,6 +90,21 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 			return nil, err
 		}
 		return map[string]interface{}{"status": "success", "entries": entries}, nil
+	case "rag_query":
+		query, ok := arguments["query"].(string)
+		if !ok {
+			return nil, errors.New("missing or invalid 'query' argument")
+		}
+
+		if m.escalator != nil && m.escalator.ShouldEscalate(ctx, query) {
+			res, err := m.escalator.Escalate(ctx, query)
+			if err != nil {
+				// Fallback to local processing if cloud is unreachable
+				return m.processLocalQuery(ctx, query)
+			}
+			return map[string]interface{}{"status": "success", "source": "cloud", "result": res}, nil
+		}
+		return m.processLocalQuery(ctx, query)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}

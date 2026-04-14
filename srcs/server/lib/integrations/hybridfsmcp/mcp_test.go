@@ -2,7 +2,7 @@ package hybridfsmcp
 
 import (
 	"context"
-
+	"strings"
 
 	"testing"
 
@@ -85,12 +85,12 @@ func TestCloudFSProvider(t *testing.T) {
 func TestHybridFSMCP(t *testing.T) {
 	tempDir := t.TempDir()
 	provider := NewLocalFSProvider(tempDir)
-	mcp := NewHybridFSMCP(provider)
+	mcp := NewHybridFSMCP(provider, nil)
 	ctx := context.Background()
 
 	tools := mcp.ListTools()
-	if len(tools) != 3 {
-		t.Errorf("expected 3 tools, got %d", len(tools))
+	if len(tools) != 4 {
+		t.Errorf("expected 4 tools, got %d", len(tools))
 	}
 
 	// Write
@@ -118,5 +118,45 @@ func TestHybridFSMCP(t *testing.T) {
 	entries := resMap["entries"].([]string)
 	if len(entries) != 1 || entries[0] != "test.txt" {
 		t.Errorf("unexpected directory contents: %v", entries)
+	}
+}
+
+func TestHybridFSMCP_RAGQuery(t *testing.T) {
+	tempDir := t.TempDir()
+	provider := NewLocalFSProvider(tempDir)
+	escalator := NewDefaultEscalator()
+	mcp := NewHybridFSMCP(provider, escalator)
+	ctx := context.Background()
+
+	// Short query - should use local
+	res, err := mcp.CallTool(ctx, "rag_query", map[string]interface{}{"query": "short query"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resMap := res.(map[string]interface{})
+	if resMap["source"] != "local" {
+		t.Errorf("expected local source, got %v", resMap["source"])
+	}
+
+	// Long query - should escalate to cloud
+	longQuery := strings.Repeat("a", 501)
+	res, err = mcp.CallTool(ctx, "rag_query", map[string]interface{}{"query": longQuery})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resMap = res.(map[string]interface{})
+	if resMap["source"] != "cloud" {
+		t.Errorf("expected cloud source, got %v", resMap["source"])
+	}
+
+	// Long query but cloud unreachable - should fallback to local
+	escalator.CloudModeReachable = false
+	res, err = mcp.CallTool(ctx, "rag_query", map[string]interface{}{"query": longQuery})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resMap = res.(map[string]interface{})
+	if resMap["source"] != "local" {
+		t.Errorf("expected fallback to local source, got %v", resMap["source"])
 	}
 }
