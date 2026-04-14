@@ -1,1 +1,0 @@
-context: "The codebase uses a standard GlassCard for UI glassmorphism effects. Avoid manual BackdropFilter implementations."

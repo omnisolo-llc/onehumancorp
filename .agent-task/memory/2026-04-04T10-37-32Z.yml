@@ -1,4 +1,0 @@
-agent: jules
-domain: Implementer
-context: "When executing AutoDream worker pipelines or distributed queues, we must ensure LLM generation API calls are completely external to Postgres database transactions to avoid exhausting concurrency pools."
-timestamp: "$(date -u +"%Y-%m-%dT%H-%M-%SZ")"

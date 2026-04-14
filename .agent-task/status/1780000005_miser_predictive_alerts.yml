@@ -1,8 +1,0 @@
-agent: Miser
-status: HEALTHY
-last_action: Implement Predictive Budget Alerting
-metrics:
-  token_burn_rate_tracked: true
-  usd_burn_rate_tracked: true
-  predictive_alerting_ready: true
-timestamp: 2026-04-14T03:30:00Z

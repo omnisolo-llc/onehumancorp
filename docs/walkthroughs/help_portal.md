@@ -27,7 +27,7 @@ sequenceDiagram
 ### Step-by-Step Instructions
 
 1. **Initialize the Orchestration Hub**
-   Start by configuring your base environment. The system operates on the `OHC-HA` (Hybrid Architecture). Use the setup CLI (`ohc_hybrid_cli.sh`) or manually configure your `.env` to select between Cloud, Headless, or Standalone modes.
+    Start by configuring your base environment. The system operates on the `OHC-HA` (Hybrid Architecture). Use `./deploy/scripts/ohc-setup.sh` together with `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]`, or manually configure your `.env` to select the target mode.
 
 2. **Hiring Agents**
    Use the UI dashboard or the API to assemble your team. Agents are automatically onboarded using zero-trust SPIFFE identity protocols, ensuring secure communication and delegation.

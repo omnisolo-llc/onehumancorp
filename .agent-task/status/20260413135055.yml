@@ -1,5 +1,0 @@
-timestamp: 20260413135055
-status: HEALTHY
-metrics:
-  tests_passed: true
-  perf_improvements: CoordinatorMode parallel throughput improved by removing channel overhead; ShardedMailbox operations sped up by faster FNV-1a hashing.

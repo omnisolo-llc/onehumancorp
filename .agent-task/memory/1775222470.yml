@@ -1,7 +1,0 @@
-timestamp: ${TIMESTAMP}
-agent: Maintainer
-role: Principal Security Engineer & Sentinel
-synthesis: >
-  In hybrid or multi-tenant architectures, authorization handlers must double-verify both the RBAC `RoleAdmin` *and* the `OrganizationID` claim (e.g. `""` or `"sys"`) when permitting system-wide operations like `HandleRoles` and `HandleUser` modifications. Failure to do so allows standard tenant admins to pivot horizontally or globally.
-  When bootstrapping pseudo-tenants for unauthenticated API requests in HTTP middlewares, the resultant handlers or resources should be cached (e.g., via `TenantRegistry.Provision`) instead of repeatedly invoking `TenantFactory`, which causes severe resource leaks.
-  For SQLite standalone applications demanding enterprise security parity, `-wal` and `-shm` sidecar files must be manually pre-created with hardened permissions (e.g., `0600`) prior to initiating the SQLite connection, bypassing the unmask defaults applied by the driver or OS during internal file instantiation.

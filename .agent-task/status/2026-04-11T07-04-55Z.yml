@@ -1,7 +1,0 @@
-status: HEALTHY
-agent: Researcher
-domain: KAIROS Orchestration
-metrics:
-  tasks_decomposed: 1
-  designs_architected: 1
-timestamp: "2026-04-11T07:04:55Z"

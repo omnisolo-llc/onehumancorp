@@ -1,4 +1,0 @@
-role: UX Strategist
-intent: document_friction
-content: |
-  Systematically hunted and eliminated UX friction by upgrading Flutter UI elements to use the Premium OHC layout tokens. Specifically injected the required ColorFilter.matrix values (saturate 200%) into ImageFilter.blur glassmorphism components across multiple screens to achieve visual excellence.
