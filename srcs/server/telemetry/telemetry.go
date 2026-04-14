@@ -32,6 +32,7 @@ var (
 	tokenBurnRateGauge         metric.Float64Gauge
 	usdBurnRateGauge           metric.Float64Gauge
 	agentApiCallsCounter       metric.Int64Counter
+	agentExecutionTracesTotal metric.Int64Counter
 	agentApiErrorsCounter      metric.Int64Counter
 	humanInteractionsCounter   metric.Int64Counter
 	meetingEventsCounter       metric.Int64Counter
@@ -302,6 +303,14 @@ func InitWithMeter(m mockableMeter) error {
 	agentApiCallsCounter, err = m.Int64Counter(
 		"ohc_agent_api_calls_total",
 		metric.WithDescription("Total API calls made by or for agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentExecutionTracesTotal, err = m.Int64Counter(
+		"ohc.agent.execution.traces_total",
+		metric.WithDescription("Total number of agent execution traces"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1321,4 +1330,33 @@ func envBoolDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return val == "true"
+}
+
+// RecordAgentExecutionTrace increments the global counter for agent execution traces.
+//
+//   - ctx: context.Context; The context of the active trace or request.
+//   - agentID: string; The identifier of the agent.
+//   - traceType: string; The type of execution trace.
+//
+// Accepts parameters: ctx context.Context, agentID, traceType string (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
+	if agentExecutionTracesTotal == nil {
+		return
+	}
+	agentExecutionTracesTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("trace_type", traceType),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"trace_type": traceType,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "agent_execution_traces_total", string(payloadBytes))
+	}
 }
