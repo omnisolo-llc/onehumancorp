@@ -23,11 +23,45 @@
   "liveNow": false,
   "panels": [
     {
+      "id": 1010,
+      "title": "RAG Records Synced Total",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "rate(rag_records_synced_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 1011,
+      "title": "RAG Sync Errors Total",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "rate(rag_sync_errors_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "id": 100,
       "options": {
@@ -101,7 +135,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 11
       },
       "id": 1,
       "options": {
@@ -141,7 +175,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 11
       },
       "id": 2,
       "targets": [
@@ -168,7 +202,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 19
       },
       "id": 3,
       "targets": [
@@ -195,7 +229,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 19
       },
       "id": 4,
       "targets": [
@@ -222,7 +256,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 27
       },
       "id": 7,
       "targets": [
@@ -249,7 +283,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 27
       },
       "id": 6,
       "targets": [
@@ -330,7 +364,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "id": 1008,
       "options": {
@@ -425,7 +459,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 35
       },
       "id": 1009,
       "options": {
@@ -464,7 +498,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "targets": [
         {
@@ -482,7 +516,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 43
       },
       "id": 8,
       "options": {
@@ -512,7 +546,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 51
       },
       "type": "timeseries",
       "title": "Task Queue Length",
@@ -537,7 +571,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 51
       },
       "type": "timeseries",
       "title": "Task Processing Latency",
@@ -562,7 +596,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 51
+        "y": 59
       },
       "type": "timeseries",
       "title": "Task Failed Rate",
@@ -588,7 +622,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 59
       },
       "type": "timeseries",
       "title": "SQLite Retry Exhaustion",
@@ -617,7 +651,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "id": 999,
       "targets": [
@@ -644,7 +678,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 67
       },
       "id": 1000,
       "targets": [
@@ -671,7 +705,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 67
+        "y": 75
       },
       "id": 1001,
       "targets": [
@@ -706,7 +740,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 67
+        "y": 75
       },
       "id": 1002,
       "targets": [
@@ -732,7 +766,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 75
+        "y": 83
       },
       "id": 1003,
       "targets": [
@@ -759,7 +793,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 75
+        "y": 83
       },
       "id": 1004,
       "targets": [
@@ -786,7 +820,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 83
+        "y": 91
       },
       "id": 1005,
       "targets": [
@@ -810,7 +844,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "title": "AutoDream RAG Latency",
       "type": "timeseries",
@@ -837,7 +871,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 36
       },
       "title": "AutoDream Memory Pipeline",
       "type": "timeseries",
@@ -864,7 +898,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "title": "LLM Cache Efficiency",
       "type": "timeseries",
@@ -891,7 +925,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 44
       },
       "title": "Sync Daemon Health",
       "type": "timeseries",
@@ -979,7 +1013,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 108
+        "y": 116
       },
       "id": 1001,
       "options": {
@@ -1074,7 +1108,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 108
+        "y": 116
       },
       "id": 1002,
       "options": {
@@ -1169,7 +1203,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 116
+        "y": 124
       },
       "id": 1006,
       "options": {
@@ -1264,7 +1298,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 116
+        "y": 124
       },
       "id": 1007,
       "options": {
@@ -1302,7 +1336,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 32
       },
       "type": "timeseries",
       "title": "SQLite Sync Daemon Batch Size",
@@ -1320,7 +1354,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 32
       },
       "type": "timeseries",
       "title": "Agent Execution Traces",

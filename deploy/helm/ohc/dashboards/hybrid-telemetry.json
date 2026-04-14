@@ -23,11 +23,45 @@
   "liveNow": false,
   "panels": [
     {
+      "id": 1007,
+      "title": "RAG Records Synced Total",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "rate(rag_records_synced_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 1008,
+      "title": "RAG Sync Errors Total",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "rate(rag_sync_errors_total[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "id": 100,
       "options": {
@@ -101,7 +135,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 11
       },
       "id": 1,
       "options": {
@@ -141,7 +175,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 11
       },
       "id": 2,
       "targets": [
@@ -168,7 +202,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 19
       },
       "id": 3,
       "targets": [
@@ -195,7 +229,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 19
       },
       "id": 4,
       "targets": [
@@ -222,7 +256,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 27
       },
       "id": 7,
       "targets": [
@@ -249,7 +283,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 27
       },
       "id": 6,
       "targets": [
@@ -274,7 +308,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "targets": [
         {
@@ -292,7 +326,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 35
       },
       "id": 8,
       "options": {
@@ -322,7 +356,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "type": "timeseries",
       "title": "Task Queue Length",
@@ -347,7 +381,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 43
       },
       "type": "timeseries",
       "title": "Task Processing Latency",
@@ -372,7 +406,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 51
       },
       "type": "timeseries",
       "title": "Task Failed Rate",
@@ -398,7 +432,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 51
       },
       "type": "timeseries",
       "title": "SQLite Retry Exhaustion",
@@ -427,7 +461,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 51
+        "y": 59
       },
       "id": 999,
       "targets": [
@@ -454,7 +488,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 59
       },
       "id": 1000,
       "targets": [
@@ -481,7 +515,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "id": 1001,
       "targets": [
@@ -516,7 +550,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 67
       },
       "id": 1002,
       "targets": [
@@ -596,7 +630,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 108
+        "y": 116
       },
       "id": 1003,
       "options": {
@@ -691,7 +725,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 108
+        "y": 116
       },
       "id": 1004,
       "options": {
@@ -729,7 +763,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 32
       },
       "type": "timeseries",
       "title": "SQLite Sync Daemon Batch Size",
@@ -747,7 +781,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 32
       },
       "type": "timeseries",
       "title": "Agent Execution Traces",
