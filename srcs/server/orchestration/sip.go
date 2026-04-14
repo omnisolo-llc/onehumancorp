@@ -919,11 +919,12 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		var obj map[string]interface{}
 		if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
 			obj["metric_type"] = rec.metricType
-			redactedObj := telemetry.RedactInterfacePII(obj)
-			b, _ := json.Marshal(redactedObj)
+			sanitizedObj := SanitizePayloadMap(obj)
+			b, _ := json.Marshal(sanitizedObj)
 			payloadBuilder.Write(b)
 		} else {
-			payloadBuilder.WriteString(telemetry.RedactPII(rec.payload))
+			sanitizedStr, _ := SanitizePayload(rec.payload)
+			payloadBuilder.WriteString(sanitizedStr)
 		}
 		idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
 	}
@@ -1010,22 +1011,17 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	var idsToDelete []string
 
 	for _, rec := range records {
-		// Sanitize sensitive data by explicitly deleting `rag_context` key
 		var payloadData map[string]interface{}
-		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err == nil {
-			delete(payloadData, "rag_context")
-		} else {
-			// If not JSON, we assume it's raw text but the memory states
-			// "safely decode the JSON payload into an interface{} and type assert to map[string]interface{}"
-			// Let's create a generic JSON payload
+		if err := json.Unmarshal([]byte(rec.payload), &payloadData); err != nil {
 			payloadData = map[string]interface{}{
 				"context": rec.payload,
 			}
 		}
 
-		// Redact PII
-		for k, v := range payloadData {
-			payloadData[k] = telemetry.RedactInterfacePII(v)
+		// Unified high-fidelity sanitization
+		sanitizedPayloadIface := SanitizePayloadMap(payloadData)
+		if spm, ok := sanitizedPayloadIface.(map[string]interface{}); ok {
+			payloadData = spm
 		}
 
 		// ensure memory_id is set
@@ -1128,15 +1124,12 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 
 		if payloadData, ok := rawData.(map[string]interface{}); ok {
-			// Delete sensitive RAG context
-			delete(payloadData, "rag_context")
-
 			// Add ID to payload for synchronization endpoint
 			payloadData["id"] = m.id
 		}
 
-		// Unconditionally apply redaction and remove private markers
-		rawData = telemetry.RedactInterfacePII(SanitizePayloadMap(rawData))
+		// Unconditionally apply unified sanitization
+		rawData = SanitizePayloadMap(rawData)
 
 		// Re-marshal sanitized payload
 		sanitizedBytes, err := json.Marshal(rawData)
