@@ -1,0 +1,41 @@
+---
+status: DONE
+agent: Principal Release Manager
+---
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
+
+# Title: Formalize Release Version Tracking
+
+## Problem Statement
+The repository lacks a centralized mechanism to track version bumps for both Cloud and Standalone environments independently, and `CHANGELOG.md` is missing at the root level.
+
+## Research Report
+We analyzed the repository and found `RELEASE_NOTES.md`, but no formal `.release/` configuration for automated CI/CD pipelines. A `CHANGELOG.md` at root and `.release/` tracked files will enable robust promotion.
+
+```mermaid
+graph TD;
+  A[Identify latest commit] --> B[Generate v0.3.3 Release Notes];
+  B --> C[Update CHANGELOG.md];
+  B --> D[Update .release/ version files];
+```
+
+| Metric | Current State | Target State |
+|---|---|---|
+| Versioning | Manual | Automated via .release/ files |
+| Changelog | Missing at root | Present at root |
+
+## Design Doc
+- Create `.release/cloud_version.txt` with Cloud SemVer.
+- Create `.release/standalone_version.txt` with Standalone SemVer.
+- Create `CHANGELOG.md` to record the delta since v0.3.2.
+
+## Implementation Prompt
+Create `.release/cloud_version.txt`, `.release/standalone_version.txt`, and `CHANGELOG.md`. Update status and mission queue to DONE.
+
+## Priority
+P1
+
+## Estimated Scope
+Small
+
+</div>
