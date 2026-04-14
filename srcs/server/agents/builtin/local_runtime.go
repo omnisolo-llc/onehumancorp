@@ -39,3 +39,18 @@ func NewRunner(hub Hub, agentID, agentName, role string, cfg AgentConfig) *Runne
 func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg AgentConfig) (*TaskState, error) {
 	return local.SpawnTask(ctx, description, prompt, workDir, cfg)
 }
+
+// LocalLLMClient is the interface for interacting with a language model using the local runner.
+// It is distinct from the builtin package's LLMClient (which uses Chat/ChatRequest).
+// Use LocalLLMClient when you want to pass a client to AgentConfig.LLM.
+type LocalLLMClient = local.LLMClient
+
+// NewLocalAnthropicClient creates an Anthropic LLM client compatible with AgentConfig.LLM.
+func NewLocalAnthropicClient(apiKey, model, endpoint string) LocalLLMClient {
+	return local.NewAnthropicClient(apiKey, model, endpoint)
+}
+
+// NewLocalOpenAICompatClient creates an OpenAI-compatible LLM client compatible with AgentConfig.LLM.
+func NewLocalOpenAICompatClient(endpoint, apiKey, model string) LocalLLMClient {
+	return local.NewOpenAICompatClient(endpoint, apiKey, model)
+}
