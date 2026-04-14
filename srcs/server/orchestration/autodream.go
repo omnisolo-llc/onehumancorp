@@ -358,17 +358,16 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 			}
 		}
 
-		// Store into autodream_memories using a short transaction
-		innerTx, txErr := w.pool.Begin(ctx)
-		if txErr != nil {
-			continue
+		// Store into consolidated_memory using the current transaction (if any) or pool
+		type execer interface {
+			Exec(ctx context.Context, sql string, arguments ...any) (int64, error)
 		}
-		defer innerTx.Rollback(ctx)
+		var target execer = w.pool
+		if tx != nil {
+			target = tx
+		}
 
 		var insertQuery string
-		missionID := "session-" + s.ID
-
-		_ = missionID
 		var embedPtr *string
 		if embeddingStr != "[0.0]" {
 			embedPtr = &embeddingStr
@@ -377,14 +376,13 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		if w.pool.IsSQLite() {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr)
+			_, err = target.Exec(ctx, insertQuery, id, summary, embedPtr)
 		} else {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
-			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr)
+			_, err = target.Exec(ctx, insertQuery, summary, embedPtr)
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
-			tx.Rollback(ctx)
 			continue
 		}
 
@@ -395,15 +393,10 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		if w.pool.IsSQLite() {
 			deleteQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
 		}
-		_, err = tx.Exec(ctx, deleteQuery, s.ID)
+		_, err = target.Exec(ctx, deleteQuery, s.ID)
 		if err != nil {
 			slog.Error("AutoDream: failed to delete compressed session", "session", s.ID, "error", err)
-			tx.Rollback(ctx)
 			continue
-		}
-
-		if err := tx.Commit(ctx); err != nil {
-			slog.Error("AutoDream: failed to commit compression transaction", "error", err)
 		}
 	}
 
