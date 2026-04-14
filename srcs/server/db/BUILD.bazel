@@ -10,7 +10,6 @@ go_library(
         "sqlite_provider.go",
     ],
     embedsrcs = [
-        "migrations/20260412_shared_tasks_decomposition.sql",
         "migrations/001_users.sql",
         "migrations/002_billing.sql",
         "migrations/003_scheduler.sql",
@@ -58,6 +57,7 @@ go_library(
         "migrations/051_team_invites.sql",
         "migrations/052_cached_tokens.sql",
         "migrations/053_shared_tasks_v4.sql",
+        "migrations/054_shared_tasks_decomposition.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",

@@ -2,13 +2,15 @@ package onboarding
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
 
 func TestGenerateAuditReport_Passed(t *testing.T) {
-	LocalBaseDir = t.TempDir()
+	os.RemoveAll(".ohc-local-data")
 	ProvisionEnvironment(context.Background(), false)
+	defer os.RemoveAll(".ohc-local-data")
 
 	report := GenerateAuditReport(false)
 	if !strings.Contains(report, "PASSED") {
@@ -20,7 +22,7 @@ func TestGenerateAuditReport_Passed(t *testing.T) {
 }
 
 func TestGenerateAuditReport_Failed(t *testing.T) {
-	CloudBaseDir = t.TempDir()
+	os.RemoveAll(".ohc-cloud-data")
 
 	report := GenerateAuditReport(true)
 	if !strings.Contains(report, "FAILED") {

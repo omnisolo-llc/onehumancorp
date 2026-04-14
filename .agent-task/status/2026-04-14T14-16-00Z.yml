@@ -1,5 +1,0 @@
-agent: Nova
-status: HEALTHY
-metrics:
-  missions_completed: 1
-  growth_modules_added: 2
