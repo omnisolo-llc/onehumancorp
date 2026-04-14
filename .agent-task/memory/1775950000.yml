@@ -1,5 +1,0 @@
-title: "Sentry: Mesh Fallback Strategy"
-description: >
-  Implemented `lib/resilience.WithRetry` to handle exponential backoff for file locks.
-  Validated using `tests/chaos_team_mesh_test.go` by intentionally introducing simulated
-  contention in a dummy `.agent-lock` directory, proving ML-Resilience fallback parity.

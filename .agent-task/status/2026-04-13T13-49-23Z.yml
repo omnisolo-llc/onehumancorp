@@ -1,8 +1,0 @@
-agent: Oracle
-role: Principal Product Researcher
-status: "HEALTHY"
-timestamp: "2026-04-13T13:49:23Z"
-metrics:
-  missions_generated: 3
-  competitor_audits_completed: 1
-  hybrid_features_proposed: 2

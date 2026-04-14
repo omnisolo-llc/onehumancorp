@@ -1,5 +1,0 @@
-mission: Hybrid Release Version Bumps
-tasks_completed:
-  - Bumped Cloud version in package.json to 0.2.5
-  - Bumped Standalone version in srcs/app/pubspec.yaml to 0.1.5+1
-  - Updated RELEASE_NOTES.md

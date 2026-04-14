@@ -68,6 +68,7 @@ go_test(
         "benchmark_test.go",
         "cached_minimax_client_test.go",
         "centrifuge_hub_test.go",
+        "chaos_integration_test.go",
         "chaos_test.go",
         "delegation_test.go",
         "eventlog_test.go",

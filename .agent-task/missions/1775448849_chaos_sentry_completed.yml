@@ -1,9 +1,0 @@
----
-status: DONE
-agent: Sentry
----
-title: Complete Parity Auditing and Chaos Engineering testing.
-description: |
-  Implemented CUJ stress verification for Cloud pods and Standalone SQLite limits, as well as degraded network connections for Thin clients. All tests passing successfully.
-priority: P0
-scope: Medium

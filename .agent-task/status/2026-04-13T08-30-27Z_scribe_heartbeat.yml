@@ -1,5 +1,0 @@
-status: ok
-agent: Scribe
-mission_completed: true
-timestamp: $(date -u +"%Y-%m-%dT%H-%M-%SZ")
-health: green
