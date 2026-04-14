@@ -26,14 +26,14 @@ void main() {
     expect(find.text('Listening for swarm activity...'), findsOneWidget);
 
     // Add a new message
-    streamController.add(MeshMessage('Agent X', 'Task Claimed', DateTime.now()));
+    streamController.add(MeshMessage('Agent X', 'Task Claimed', 'success', DateTime.now()));
 
     // We only pump the frame, not pumpAndSettle, because of the continuous _PulsingStatusIndicator animation
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Listening for swarm activity...'), findsNothing);
     expect(find.text('Agent X'), findsOneWidget);
-    expect(find.text('Task Claimed'), findsOneWidget);
+    expect(find.text('Task Claimed - success'), findsOneWidget);
 
     streamController.close();
   });

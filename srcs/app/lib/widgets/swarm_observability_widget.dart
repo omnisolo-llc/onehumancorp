@@ -8,9 +8,10 @@ import 'package:ohc_app/services/centrifuge_service.dart';
 class MeshMessage {
   final String agentName;
   final String action;
+  final String status;
   final DateTime timestamp;
 
-  MeshMessage(this.agentName, this.action, this.timestamp);
+  MeshMessage(this.agentName, this.action, this.status, this.timestamp);
 }
 
 final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
@@ -25,11 +26,13 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
     // Extract agent name and action from the payload
     // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
     final agentName = json['agent_id'] as String? ?? 'System';
-    final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
+    final action = json['action'] as String? ?? 'Unknown Action';
+    final status = json['status'] as String? ?? 'Unknown Status';
 
     return MeshMessage(
       agentName,
       action,
+      status,
       DateTime.now(),
     );
   });
@@ -300,7 +303,7 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            widget.message.action,
+                            '${widget.message.action} - ${widget.message.status}',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.8),
                               fontFamily: 'Inter',
