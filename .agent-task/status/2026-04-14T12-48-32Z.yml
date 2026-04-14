@@ -1,0 +1,5 @@
+agent: KAIROS Orchestrator (L7)
+status: HEALTHY
+metrics:
+  tasks_designed: 4
+  design_docs_authored: 1
