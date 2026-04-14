@@ -25,7 +25,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/onehumancorp/mono/srcs/server/services/growth"
 
 	"github.com/onehumancorp/mono/srcs/server/utils")
 
@@ -65,7 +64,6 @@ type Server struct {
 	teamInvites           []TeamInvite
 	onboardingFunnels []OnboardingFunnel
 	waitlist          []WaitlistEntry
-	quotaTracker      *growth.QuotaTracker
 }
 
 // RateLimitState functionality.
@@ -462,15 +460,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
 		waitlist:          []WaitlistEntry{},
-		quotaTracker:          nil,
 		onboardingFunnels: []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
-	}
-
-	if hub != nil && hub.SIPDB() != nil {
-		server.quotaTracker = growth.NewQuotaTracker(hub.SIPDB().Provider())
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
