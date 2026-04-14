@@ -46,6 +46,7 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
 	go w.runMissionIngestionPipeline(ctx)
+	go w.runMemoryIngestionPipeline(ctx)
 	go w.runSessionCompressionPipeline(ctx)
 	go w.runCompletedTasksIngestionPipeline(ctx)
 }
@@ -76,9 +77,9 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 	var query string
 	if w.pool.IsSQLite() {
-		query = "SELECT id, title, description, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50"
+		query = "SELECT id, title, description, payload FROM shared_tasks_v4 WHERE status = 'COMPLETED' LIMIT 50"
 	} else {
-		query = "SELECT id, title, description, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50 FOR UPDATE SKIP LOCKED"
+		query = "SELECT id, title, description, payload FROM shared_tasks_v4 WHERE status = 'COMPLETED' LIMIT 50 FOR UPDATE SKIP LOCKED"
 	}
 
 	rows, err := tx.Query(ctx, query)
@@ -144,9 +145,9 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		// Update task to ARCHIVED to avoid re-processing
-		updateQuery := "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = $1"
+		updateQuery := "UPDATE shared_tasks_v4 SET status = 'ARCHIVED' WHERE id = $1"
 		if w.pool.IsSQLite() {
-			updateQuery = "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = ?"
+			updateQuery = "UPDATE shared_tasks_v4 SET status = 'ARCHIVED' WHERE id = ?"
 		}
 		_, err = tx.Exec(ctx, updateQuery, task.ID)
 		if err != nil {
@@ -809,7 +810,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		rows, errQuery = w.pool.Query(ctx, `
 			SELECT 'session-' || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
 			UNION ALL
-			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks_v4 WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
 		`)
 	} else {
 		// Postgres mode
@@ -817,7 +818,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		rows, errQuery = w.pool.Query(ctx, `
 			SELECT 'session-' || session_id, CAST(context_data AS TEXT) FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
 			UNION ALL
-			SELECT 'task-' || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), '{}') FROM shared_tasks WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT 'task-' || CAST(id AS TEXT), COALESCE(CAST(payload AS TEXT), '{}') FROM shared_tasks_v4 WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
 		`)
 	}
 
