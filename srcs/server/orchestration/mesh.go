@@ -33,7 +33,9 @@ type MeshMessage struct {
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all for now
+		origin := r.Header.Get("Origin")
+		// Safe default: implement proper origin checking to prevent CSWSH
+		return origin == "http://localhost:3000" || origin == "https://app.onehumancorp.com"
 	},
 }
 
