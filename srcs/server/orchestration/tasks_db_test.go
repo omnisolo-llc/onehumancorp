@@ -65,19 +65,19 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("failed to create state_machine_transitions: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', `["task-1"]`)")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
 
 
-    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING', '["task-2"]')`)
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING', `["task-2"]`)")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
@@ -177,12 +177,12 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Fatalf("failed to create state_machine_transitions: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', `["task-1"]`)")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
