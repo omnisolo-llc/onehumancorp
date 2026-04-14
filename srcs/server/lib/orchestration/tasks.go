@@ -1,15 +1,62 @@
 package orchestration
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
+
+func broadcastMeshEvent(action string, taskID string, priority string, agentID string) {
+	baseURL := os.Getenv("OHC_SERVER_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+	url := fmt.Sprintf("%s/api/mesh/broadcast", baseURL)
+
+	payload := map[string]interface{}{
+		"agent_id": "kairos-orchestrator-1",
+		"channel":  "orchestration.tasks",
+		"action":   action,
+		"status":   "SUCCESS",
+		"payload": map[string]interface{}{
+			"task_id":   taskID,
+			"priority":  priority,
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		},
+	}
+
+	if agentID != "" {
+		payload["agent_id"] = agentID
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	go func() {
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Do(req)
+		if err == nil {
+			resp.Body.Close()
+		}
+	}()
+}
 
 type Mission struct {
 	ID             string
@@ -65,6 +112,10 @@ func (s *DefaultTaskStore) DecomposeMission(ctx context.Context, m Mission) ([]T
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	for _, t := range m.Tasks {
+		broadcastMeshEvent("TASK_DECOMPOSED", t.ID, t.Priority, "")
+	}
+
 	return m.Tasks, nil
 }
 
@@ -98,6 +149,8 @@ func (s *DefaultTaskStore) claimPostgres(ctx context.Context, agentID string) (*
 		}
 		return nil, err
 	}
+	broadcastMeshEvent("TASK_CLAIMED", t.ID, t.Priority, agentID)
+
 	return &t, nil
 }
 
@@ -139,5 +192,7 @@ func (s *DefaultTaskStore) claimSQLite(ctx context.Context, agentID string) (*Ta
 
 	t.Status = "IN_PROGRESS"
 	t.AssignedAgentID = &agentID
+	broadcastMeshEvent("TASK_CLAIMED", t.ID, t.Priority, agentID)
+
 	return &t, nil
 }

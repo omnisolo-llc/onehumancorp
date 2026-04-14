@@ -10,6 +10,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+
 func NewTestProvider(t *testing.T) db.Provider {
 	t.Helper()
 	database, err := sql.Open("sqlite", ":memory:")
