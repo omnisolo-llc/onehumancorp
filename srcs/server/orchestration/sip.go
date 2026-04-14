@@ -527,69 +527,58 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			}
 		} else {
 			// Postgres with FOR UPDATE SKIP LOCKED
-			// Try to select existing row for update
 			var existingID string
 			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
 
-			if err != nil {
-				if err.Error() == "sql: no rows in result set" {
-					// Check if row actually exists. If it does, we skipped it due to a lock.
-					var checkID string
-					checkErr := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&checkID)
-					if checkErr == nil && checkID == missionID {
-						telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
-					}
-				}
-				// Record doesn't exist or is locked by someone else.
-				// Since we skip locked, if it's locked we might just skip the insert/update to avoid contention,
-				// or we try inserting. For standard upsert logic without waiting:
-				insertQuery := `
-					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-					ON CONFLICT(id) DO NOTHING
-				`
-				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
-				if errInsert != nil {
-					return errInsert
-				}
-				// If forceLocal, we still want to update it if it was inserted successfully but not updated.
-				// However ON CONFLICT DO NOTHING will skip if it exists and wasn't locked.
-				// Actually, a simpler standard approach for Postgres with FOR UPDATE SKIP LOCKED is:
+			if err != nil && err.Error() != "sql: no rows in result set" {
+				return err
 			}
 
-			if forceLocal && existingID != "" {
-				updateQuery := `
-					UPDATE agent_missions
-					SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP
-					WHERE id = $3 AND organization_id = $4
-				`
-				_, errUpdate := tx.Exec(ctx, updateQuery, status, payload, missionID, s.orgID)
-				if errUpdate != nil {
+			if err != nil && err.Error() == "sql: no rows in result set" {
+				// Row is either non-existent or locked
+				var checkID string
+				checkErr := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&checkID)
+				if checkErr == nil && checkID == missionID {
+					telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
+					// It's locked. If forceLocal is true, we MUST update.
+					// We'll fallback to a regular UPDATE which will wait for the lock.
+					if forceLocal {
+						_, errUpdate := tx.Exec(ctx, "UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4", status, payload, missionID, s.orgID)
+						return errUpdate
+					}
+					// If not forceLocal, we can safely skip to avoid contention
+					return nil
+				}
+				// Row truly doesn't exist, proceed to insert
+			}
+
+			if existingID != "" {
+				// We have the lock
+				if forceLocal {
+					_, errUpdate := tx.Exec(ctx, "UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4", status, payload, missionID, s.orgID)
 					return errUpdate
 				}
-			} else if existingID == "" {
-				// We tried to select and it failed (either not found or locked).
-				// We will try an insert ON CONFLICT.
-				insertQuery := `
+				return nil
+			}
+
+			// Insert if it didn't exist
+			insertQuery := `
+				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+				ON CONFLICT(id) DO NOTHING
+			`
+			if forceLocal {
+				insertQuery = `
 					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
 					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-					ON CONFLICT(id) DO NOTHING
+					ON CONFLICT(id) DO UPDATE SET
+						status=EXCLUDED.status,
+						payload=EXCLUDED.payload,
+						updated_at=CURRENT_TIMESTAMP
 				`
-				if forceLocal {
-					insertQuery = `
-						INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-						VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-						ON CONFLICT(id) DO UPDATE SET
-							status=EXCLUDED.status,
-							payload=EXCLUDED.payload,
-							updated_at=CURRENT_TIMESTAMP
-					`
-				}
-				_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
-				if errInsert != nil {
-					return errInsert
-				}
 			}
+			_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
+			return errInsert
 		}
 
 		return tx.Commit(ctx)
