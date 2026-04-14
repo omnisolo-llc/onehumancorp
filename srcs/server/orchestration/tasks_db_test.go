@@ -19,7 +19,7 @@ func TestClaimTask_SQLite(t *testing.T) {
     ctx := context.Background()
 
     _, err = dbProvider.Exec(ctx, `
-        CREATE TABLE IF NOT EXISTS shared_tasks_master (
+        CREATE TABLE IF NOT EXISTS shared_tasks_dag (
             id TEXT PRIMARY KEY,
             organization_id TEXT NOT NULL,
             parent_plan_id TEXT,
@@ -32,7 +32,7 @@ func TestClaimTask_SQLite(t *testing.T) {
         )
     `)
     if err != nil {
-        t.Fatalf("failed to create shared_tasks: %v", err)
+        t.Fatalf("failed to create shared_tasks_dag: %v", err)
     }
 
     _, err = dbProvider.Exec(ctx, `
@@ -62,12 +62,12 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("failed to create state_machine_transitions: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
@@ -77,7 +77,7 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("failed to insert dep: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
@@ -134,7 +134,7 @@ func TestClaimTask_Postgres(t *testing.T) {
     ctx := context.Background()
 
     _, err = dbProvider.Exec(ctx, `
-        CREATE TABLE IF NOT EXISTS shared_tasks_master (
+        CREATE TABLE IF NOT EXISTS shared_tasks_dag (
             id TEXT PRIMARY KEY,
             organization_id TEXT NOT NULL,
             parent_plan_id TEXT,
@@ -147,7 +147,7 @@ func TestClaimTask_Postgres(t *testing.T) {
         )
     `)
     if err != nil {
-        t.Fatalf("failed to create shared_tasks: %v", err)
+        t.Fatalf("failed to create shared_tasks_dag: %v", err)
     }
 
     _, err = dbProvider.Exec(ctx, `
@@ -177,12 +177,12 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Fatalf("failed to create state_machine_transitions: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_dag (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
