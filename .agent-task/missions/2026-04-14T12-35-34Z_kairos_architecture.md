@@ -1,5 +1,6 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers: "Domain boundary violation. This mission requires modifications outside the exclusive domain of the Principal Cost Engineer & Miser (L7) agent (apps/billing/, services/billing/, lib/pricing/)."
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
