@@ -24,6 +24,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/storage"
+	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -1667,13 +1668,13 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 	payloadBytes := buf.Bytes()
 
 	// Retry loop to handle transient empty responses from Minimax.
-	var lastErr error
-	for i := 0; i < 3; i++ {
+	var content string
+	err := resilience.WithRetry(ctx, 7, 2*time.Second, func(retryCtx context.Context) error {
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
-		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
+		req, err := http.NewRequestWithContext(retryCtx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		req.Header.Set("Content-Type", "application/json")
@@ -1684,25 +1685,19 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			c.cb.RecordFailure()
-			lastErr = err
-			time.Sleep(1 * time.Second)
-			continue
+			return err
 		}
 
 		if resp.StatusCode != http.StatusOK {
 			if resp.StatusCode == 529 {
 				// Retry on high load without recording circuit breaker failure immediately
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
-				time.Sleep(2 * time.Second) // Longer backoff for overloaded
-				continue
+				return fmt.Errorf("minimax API overloaded (status 529)")
 			}
 			c.cb.RecordFailure()
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-			time.Sleep(1 * time.Second)
-			continue
+			return fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
 		}
 
 		var result struct {
@@ -1718,23 +1713,24 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 
 		if err != nil {
 			c.cb.RecordFailure()
-			lastErr = err
-			time.Sleep(1 * time.Second)
-			continue
+			return err
 		}
 
 		if len(result.Choices) == 0 {
 			c.cb.RecordFailure()
-			lastErr = errors.New("empty response from minimax")
-			time.Sleep(1 * time.Second)
-			continue
+			return errors.New("empty response from minimax")
 		}
 
 		c.cb.RecordSuccess()
-		return result.Choices[0].Message.Content, nil
+		content = result.Choices[0].Message.Content
+		return nil
+	})
+
+	if err != nil {
+		return "", err
 	}
 
-	return "", lastErr
+	return content, nil
 }
 
 func ResetGlobalCircuitBreakerForTest() {
@@ -1787,12 +1783,11 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	buf.WriteString(`]}`)
 
 	payloadBytes := buf.Bytes()
-	var lastErr error
-
-	for i := 0; i < 3; i++ {
-		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
+	var embedding []float32
+	err := resilience.WithRetry(ctx, 7, 2*time.Second, func(retryCtx context.Context) error {
+		req, err := http.NewRequestWithContext(retryCtx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		req.Header.Set("Content-Type", "application/json")
@@ -1801,26 +1796,20 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		resp, err := sharedHTTPClient.Do(req)
 		if err != nil {
 			c.cb.RecordFailure()
-			lastErr = err
-			time.Sleep(1 * time.Second)
-			continue
+			return err
 		}
 
 		if resp.StatusCode != http.StatusOK {
 			if resp.StatusCode == 529 {
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
-				time.Sleep(2 * time.Second)
-				continue
+				return fmt.Errorf("minimax API overloaded (status 529)")
 			}
 			c.cb.RecordFailure()
-			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
+			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			time.Sleep(1 * time.Second)
-			continue
+			return fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
 		}
 
-		// Success path
 		c.cb.RecordSuccess()
 		var result struct {
 			Vectors [][]float32 `json:"vectors"`
@@ -1828,18 +1817,23 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 			resp.Body.Close()
-			return nil, fmt.Errorf("failed to decode response: %w", err)
+			return fmt.Errorf("failed to decode response: %w", err)
 		}
 		resp.Body.Close()
 
 		if len(result.Vectors) == 0 {
-			return nil, errors.New("empty response from minimax")
+			return errors.New("empty response from minimax")
 		}
 
-		return result.Vectors[0], nil
+		embedding = result.Vectors[0]
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
+	return embedding, nil
 }
 
 // RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.

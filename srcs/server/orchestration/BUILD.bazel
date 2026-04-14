@@ -38,6 +38,7 @@ go_library(
         "//srcs/server/auth",
         "//srcs/server/settings",
         "//srcs/server/storage",
+        "//srcs/server/lib/resilience",
         "//srcs/server/telemetry",
         "//srcs/server/orchestration/statemachine",
         "//srcs/server/orchestration/queue",
