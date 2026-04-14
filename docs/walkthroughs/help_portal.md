@@ -106,6 +106,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 
 ## 6. Deep Dive Walkthroughs
 - **[Hybrid FS MCP Architecture Walkthrough](hybrid_fs_mcp_architecture.md)**: Visual guide to the Machine Context Protocol state sync.
+- **[Shared Task List Walkthrough](shared_task_list_visual_walkthrough.md)**: Visual guide to the task decomposition and DAG state transitions.
 - **[Distributed State Machine Walkthrough](distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
 - **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
 - **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
