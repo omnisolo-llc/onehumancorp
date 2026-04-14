@@ -25,3 +25,9 @@ Achieved 100% test coverage for `lib/resilience/mesh_fallback.go` through rigoro
 The `LocalTeammateMesh` has been validated to degrade gracefully under simulated resource exhaustion and filesystem corruption, matching the expected resilience properties of the Cloud-Native Postgres backend. Both modes correctly isolate failures and prevent system-wide panics.
 
 </div>
+
+## Phase 4: Additional Chaos Mesh Parity Extension
+**Target:** `tests/chaos_mailbox_test.go`
+| Subsystem / PR Topic | Risk Level | Rationale |
+|----------------------|------------|-----------|
+| **Chaos Mailbox Parity Testing** | **Low** | Validates `resilience.WithRetry` safely recovers from `mailbox` directory permission corruption in Standalone mode. |
