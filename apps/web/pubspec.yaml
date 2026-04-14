@@ -1,0 +1,19 @@
+name: ohc_web_app
+description: Web application for OHC Hybrid Architecture
+publish_to: 'none'
+
+environment:
+  sdk: '^3.7.2'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ohc_app:
+    path: ../../srcs/app
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
