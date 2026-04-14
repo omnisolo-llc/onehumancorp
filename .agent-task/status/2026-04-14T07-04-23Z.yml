@@ -1,0 +1,4 @@
+health: "OK"
+metrics:
+  features_added: 2
+  domain: "growth"

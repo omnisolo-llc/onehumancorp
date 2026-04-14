@@ -5,6 +5,8 @@ go_library(
     srcs = [
         "referrals.go",
         "experiments.go",
+        "quota.go",
+        "team_invites.go",
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
@@ -15,6 +17,8 @@ go_test(
     srcs = [
         "referrals_test.go",
         "experiments_test.go",
+        "quota_test.go",
+        "team_invites_test.go",
     ],
     embed = [":growth"],
 )
