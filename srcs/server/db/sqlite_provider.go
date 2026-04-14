@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -142,6 +144,16 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, agentID string) (*Task
 	)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
+			// Memory instructions: SQLite lock contention detection parity with Postgres
+			// Secondary check to see if any PENDING tasks exist that were skipped.
+			var exists bool
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'PENDING' AND organization_id = 'system')").Scan(&exists)
+			if checkErr == nil && exists {
+				// We found pending tasks but couldn't acquire any because they are locked.
+				// In SQLite this usually happens if another connection locked them and we timed out or missed.
+				// We simulate lock contention metric.
+				telemetry.RecordPostgresLockContention(ctx, "acquire_task_sqlite")
+			}
 			trackQuery(ctx, "AcquireTask", nil, time.Since(start))
 			return nil, nil
 		}
