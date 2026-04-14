@@ -15,20 +15,25 @@ func setupMockMissions(t *testing.T, count int) string {
 		t.Fatal(err)
 	}
 
-		os.MkdirAll(filepath.Join(dir, ".agent-task", "missions"), 0755)
+	originalDir, _ := os.Getwd()
+	os.MkdirAll(filepath.Join(dir, ".agent-task", "missions"), 0755)
 
-
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := 0; i < count; i++ {
 		content := fmt.Sprintf(`<div markdown="1" style="backdrop-filter: blur(20px);">
 # Problem Statement %d
 </div>`, i)
-		filePath := filepath.Join(dir, ".agent-task", "missions", fmt.Sprintf("test_mission_%d.md", i))
+		filePath := filepath.Join(".agent-task", "missions", fmt.Sprintf("test_mission_%d.md", i))
 		os.WriteFile(filePath, []byte(content), 0644)
 	}
 
 	t.Cleanup(func() {
-			os.RemoveAll(dir)
+		os.Chdir(originalDir)
+		os.RemoveAll(dir)
 	})
 
 	return dir
@@ -36,10 +41,9 @@ func setupMockMissions(t *testing.T, count int) string {
 
 func TestAutoDreamWorker_IngestMissionArtifacts(t *testing.T) {
 	provider := setupTestDB(t)
-	dir := setupMockMissions(t, 2)
+	setupMockMissions(t, 2)
 
 	worker := NewAutoDreamWorker(provider)
-	worker.MissionDir = filepath.Join(dir, ".agent-task", "missions")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

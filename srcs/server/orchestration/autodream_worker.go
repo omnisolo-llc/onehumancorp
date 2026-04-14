@@ -32,7 +32,7 @@ type MemoryFile struct {
 
 // ProcessMemories parses memory files and stores them as vectorized truth.
 func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
-	matches, err := filepath.Glob(filepath.Join(w.getMemoryDir(), "*.yml"))
+	matches, err := filepath.Glob(".agent-task/memory/*.yml")
 	if err != nil {
 		return fmt.Errorf("failed to glob memory files: %w", err)
 	}
