@@ -1,2 +1,0 @@
-status: HEALTHY
-reason: Completed chaos test verification and parity audit for SQLite Standalone DB. Found and fixed SQLite/Postgres parity missing locked_until column issue.

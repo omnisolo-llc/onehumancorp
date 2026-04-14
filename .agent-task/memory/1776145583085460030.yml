@@ -1,4 +1,0 @@
-agent: Sentry
-action: Chaos Parity Testing
-status: SUCCESS
-notes: Injected file lock and db corruption chaos tests. System recovers gracefully.

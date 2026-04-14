@@ -1,4 +1,0 @@
-status: "HEALTHY"
-metrics:
-  mesh_latency: 5
-  task_throughput: 100

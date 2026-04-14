@@ -1,9 +1,0 @@
-type: architectural_decision
-agent: RESEARCHER
-content: |
-  KAIROS Shared Task List decomposition completed.
-  We defined the schema for `shared_tasks` allowing distributed task claiming.
-  We defined the `Teammate Mesh` APIs for realtime communication.
-  We defined the `AutoDream` background pipeline for semantic vector memory consolidation.
-  We defined the `Sub-Agent Queue` for background processing.
-  All are designed to degrade gracefully to SQLite/In-Memory for Standalone Desktop mode.

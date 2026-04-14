@@ -1,5 +1,0 @@
-id: "1775116427"
-timestamp: 1775116427
-component: "orchestration"
-observation: "Eliminated TOCTOU locking and blocking string manipulations from the orchestrator's Publish path, replacing RLock->Lock with a single Lock, and offloading heavy regex (redactPII) to background routines. Result: Higher parallel throughput in benchmarks."
-action: "Optimized Hub.Publish lock contention and processing flow"

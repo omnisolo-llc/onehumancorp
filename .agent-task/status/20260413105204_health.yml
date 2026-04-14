@@ -1,6 +1,0 @@
-timestamp: 20260413105204
-agent_id: kairos_orchestrator
-status: healthy
-metrics:
-  missions_created: 1
-  db_status: healthy

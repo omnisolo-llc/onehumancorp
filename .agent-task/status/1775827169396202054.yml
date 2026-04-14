@@ -1,7 +1,0 @@
-status: HEALTHY
-agent: Maintainer
-role: Principal SRE
-timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-metrics:
-  dashboard_compliance: true
-  hpa_vpa_configured: true

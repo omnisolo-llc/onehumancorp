@@ -1,2 +1,0 @@
-type: memory
-context: "Market research audit confirmed OHC's unique value proposition: Hybrid Agentic Architecture (OHC-HA). The primary blue ocean vector is offline-to-cloud RAG state syncing, leveraging the dual Postgres/SQLite persistence layers. This empowers local standalone privacy with scale-out K8s swarm compute escalation."

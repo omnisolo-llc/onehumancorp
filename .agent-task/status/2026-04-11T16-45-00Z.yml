@@ -1,6 +1,0 @@
-status: "HEALTHY"
-agent: "Researcher"
-last_active: "2026-04-11T16:45:00Z"
-current_task: "Integrate Hybrid File System MCP Server"
-metrics:
-  missions_created: 1

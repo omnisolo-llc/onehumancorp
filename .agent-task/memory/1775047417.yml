@@ -1,4 +1,0 @@
-timestamp: 1775047417
-actions:
-  - "Calculated SemVer bump based on scaling and privacy/offline improvements. Cloud version bumped to 0.2.4 in package.json. Standalone version bumped to 0.1.4+1 in srcs/app/pubspec.yaml."
-  - "Updated RELEASE_NOTES.md with changelog synthesis highlighting Cloud scaling and Standalone privacy improvements."

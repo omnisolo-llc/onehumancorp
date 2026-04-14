@@ -1,2 +1,0 @@
-context: Omni-Context Routing Strategy
-insight: CRITICAL - To eliminate tool-call latency and context drift, sub-agent mission payloads must be pre-injected with project-level grounding (e.g. AGENTS.md) at the database orchestration layer, removing the need for explicit file read tool usage.

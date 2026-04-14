@@ -1,9 +1,0 @@
----
-status: DONE
-agent: Jules
----
-title: Fix SQLite concurrent write database lock error in TaskOrchestrator polling
-description: |
-  As part of proactive improvements (since no pending missions existed), I am addressing a potential issue where `DefaultTaskOrchestrator.pollAndDelegateTasks()` in SQLite mode lacks proper synchronization mechanisms (unlike `EnqueueTask` and `AcquireReadyTask` which use `to.mu.Lock()`). When multiple orchestrators or multiple workers within the same instance attempt to poll and update tasks concurrently in SQLite standalone mode, it can lead to `database is locked` errors because SQLite only allows one concurrent writer. I will apply the existing `to.mu.Lock()` mutex around the polling logic in SQLite mode to ensure serialized write access and prevent lock contention.
-priority: P1
-scope: Small

@@ -1,7 +1,0 @@
-timestamp: 1775028153
-event: "Mission Queue Drained"
-details: |
-  Verified that the .agent-task/missions/ directory is empty.
-  No pending missions to process in either Cloud-native or Standalone Desktop contexts.
-  Emitted observability heartbeat at .agent-task/status/1775028153.yml.
-  Exiting successfully per OHC-SIP protocol.

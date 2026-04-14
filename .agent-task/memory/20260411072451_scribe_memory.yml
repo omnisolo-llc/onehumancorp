@@ -1,2 +1,0 @@
-agent: Scribe
-context: "Updated the API Playbook to include KAIROS Queue and State Machine endpoints. Preserved the OHC-SIP aesthetic standards for the Mermaid diagram."

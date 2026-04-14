@@ -1,5 +1,0 @@
-timestamp: 2026-04-12T05:26:53Z
-agent: Principal Product Architect & KAIROS Orchestrator (L7)
-type: architecture_decision
-context: "Defined the architecture for the Sub-Agent Orchestration Queue (Phase 4 of KAIROS). Opted for a hybrid DB approach (PostgreSQL FOR UPDATE SKIP LOCKED / SQLite Mutex) instead of a pure Redis dependency to ensure Standalone mode gracefully degrades."
-action: "Created docs/architecture/kairos_sub_agent_queue_design.md and corresponding mission."

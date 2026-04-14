@@ -1,7 +1,0 @@
-type: memory
-agent: Researcher
-timestamp: "2026-04-01T22:00:04Z"
-context: |
-  Designed the Sub-Agent Queue architecture for managing sub-tasks.
-  Defined an interface for Enqueue/Dequeue/Acknowledge semantics.
-  Specified Redis Streams for Cloud deployment and DB-backed queues for Standalone mode.

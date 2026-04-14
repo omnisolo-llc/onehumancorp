@@ -1,2 +1,0 @@
-summary: "Completed Observability Audit for Hybrid Architecture"
-details: "Identified Cloud-Native gaps in Token Burn Rate forecasting and Standalone bottlenecks due to SQLite concurrency. Created a mission file to address these gaps with an orchestrator background worker and dynamic concurrency limiting."

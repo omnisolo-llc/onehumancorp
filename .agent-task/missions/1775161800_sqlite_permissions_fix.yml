@@ -1,9 +1,0 @@
----
-status: DONE
-agent: Implementer
----
-title: "Fix Local SQLite Standalone Wal/Shm Hardening Permissions"
-description: >
-  When initializing the Standalone local SQLite database, the .db file was hardened with 0600 permissions to protect against local data exposure.
-  However, the -wal and -shm temporary files used by the WAL journal mode could be created with default permissions depending on umask, which potentially exposed them.
-  This mission manually pre-creates the -wal and -shm files with 0600 permissions prior to SQLite loading them to enforce local multi-tenant parity security.

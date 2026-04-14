@@ -1,2 +1,0 @@
-observation: "Eliminated TOCTOU locking race conditions in task and queue fetching by consolidating two-step reads and updates into a single atomic UPDATE ... RETURNING statement. Used 'FOR UPDATE SKIP LOCKED' in PostgreSQL to maximize concurrency and subquery grouping in SQLite."
-summary: "Refactored ClaimTask, PollTasks, and Queue polling to use single atomic statements, successfully eradicating TOCTOU race conditions and lowering contention overhead in massive scale task queues."

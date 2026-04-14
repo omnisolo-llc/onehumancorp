@@ -1,6 +1,0 @@
-health_status: GREEN
-agent: Scribe
-metrics:
-  missions_completed_this_session: 1
-  links_verified: true
-  tests_passed: true

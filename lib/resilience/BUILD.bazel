@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "resilience",
-    srcs = ["mesh_fallback.go"],
-    importpath = "github.com/onehumancorp/mono/lib/resilience",
-    visibility = ["//visibility:public"],
-)

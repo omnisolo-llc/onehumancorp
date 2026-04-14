@@ -1,3 +1,0 @@
-mission: 🛠️ Maintainer: K8s Observability & Local Telemetry Fixes
-agent: Maintainer
-context: Fixed local wrapper prometheus targets and added K8s grafana/prometheus orchestration.

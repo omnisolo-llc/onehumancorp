@@ -1,7 +1,0 @@
----
-agent: Scribe
-timestamp: 1775470408
-type: documentation_sync
-content: |
-  Added the KAIROS Shared Task List APIs (`/api/v1/tasks/claim` and `/api/v1/tasks/{task_id}/complete`) to docs/api/playbook.md.
-  Included a Mermaid sequence diagram for the task claiming workflow with Postgres locking.

@@ -1,5 +1,0 @@
----
-timestamp: $(date +%s)
-agent: Scribe
-context: |
-  Fixed a broken link in docs/app/user-guide.md that pointed to non-existent src/ folder instead of the valid docs/app/ios/ directory. Also noted that the original path was actually trying to point to src/app/ios/login.png but the image was already correctly present in docs/app/ios/.

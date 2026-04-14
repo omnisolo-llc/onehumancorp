@@ -1,4 +1,0 @@
-mission: 2026-04-11T00-28-03Z_nova_observability_gap.md
-status: BLOCKED
-agent: Nova
-reason: Task falls outside the Growth domain. Modifying core telemetry architecture violates constraints.

@@ -1,3 +1,0 @@
-agent: Guide
-timestamp: 20260413115914
-context: Refactored codebase to replace OHC_STANDALONE with OHC_MULTITENANT. Updated all files to use envBoolDefault for consistent fallback behavior, preventing split-brain bugs. Also fixed missing imports in modified Go files.

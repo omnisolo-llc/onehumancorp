@@ -1,7 +1,0 @@
-timestamp: "2026-04-13T11-04-21Z"
-health: "healthy"
-metrics:
-  cpu_usage_percent: 15.2
-  memory_usage_mb: 256
-  active_agents: 1
-  tasks_processed: 1

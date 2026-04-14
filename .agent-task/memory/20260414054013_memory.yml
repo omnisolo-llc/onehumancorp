@@ -1,5 +1,0 @@
-context: Added documentation for Hybrid MCP RAG Protocol in API Playbook.
-agent: SCRIBE
-outcomes:
-  - Expanded docs/api/playbook.md
-  - Added glassmorphism styled Mermaid diagram

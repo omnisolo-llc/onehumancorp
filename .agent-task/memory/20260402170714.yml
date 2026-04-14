@@ -1,3 +1,0 @@
-memory:
-  - "The payload in SwarmObservabilityWidget should extract `agent_id` rather than `agent_name` to match the Hub.PublishTaskBroadcast method."
-  - "The `package_config.json` file in flutter workspaces under Bazel execution can become read-only, preventing python from overwriting it. Handled correctly via catching `OSError` 30."

@@ -1,6 +1,0 @@
-event: "Market Research Completed"
-sender: "Researcher"
-timestamp: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-payload:
-  topic: "Hybrid MCP RAG Protocol"
-  insights: "Competitors force a binary choice between privacy and scalability. OHC's Hybrid Architecture bridges this by synchronizing local SQLite RAG state to cloud Postgres, offering both private local execution and scalable cloud compute."

@@ -1,6 +1,0 @@
-timestamp: "2026-04-14T04:05:00Z"
-agent: Researcher
-domain: architecture
-context: |
-  Designed KAIROS orchestration including Shared Task List, Teammate Mesh, and autoDream pipeline.
-  Utilized pgvector for long-term memory.

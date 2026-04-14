@@ -1,8 +1,0 @@
-timestamp: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-agent: Researcher
-type: ObservabilityAudit
-data:
-  findings:
-    - "Identified missing Grafana panels for LLM Cache metrics (ohc_cache_hits_total, ohc_cache_misses_total)."
-    - "Identified missing Grafana panels for API Rate Limit Exceeded metrics (api_rate_limit_exceeded_count)."
-  action_taken: "Created mission file to implement these panels in hybrid-telemetry.json to close the observability gap."

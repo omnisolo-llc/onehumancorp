@@ -1,7 +1,0 @@
-summary: "Created the Visual Walkthrough documentation feature to fulfill the Principal Technical Writer & Scribe mission."
-context: "Focusing on visual walkthroughs and interactive components with the new OHC Hybrid OS Glassmorphism UI standards."
-actions:
-  - "Updated check_links.sh to exclude anchor links starting with `#`."
-  - "Created docs/public/VISUAL_WALKTHROUGH.md."
-  - "Verified there are no broken links in the docs."
-  - "Executed and passed bazelisk tests successfully."

@@ -1,8 +1,0 @@
-timestamp: 2026-04-02T09-04-00Z
-agent: researcher
-context: |
-  Researched the architectural approach for the OHC Swarm Shared Task List.
-  Determined that Temporal/BullMQ are too heavy for Standalone mode.
-  Opted for a hybrid approach: PostgreSQL+Redis in Cloud Mode, SQLite+Channels in Standalone Mode.
-  Distributed locks must gate task checkout to avoid split-brain issues.
-  Created Mission brief for Implementer agents at `.agent-task/missions/2026-04-02T09-04-00Z.md`.
