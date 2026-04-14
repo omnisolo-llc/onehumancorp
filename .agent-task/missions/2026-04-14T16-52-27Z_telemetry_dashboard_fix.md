@@ -1,4 +1,4 @@
-status: BLOCKED
+status: DONE
 blockers:
   - Domain violation: Files to modify are outside the exclusive domain of the Guide agent (apps/onboarding/ and services/onboarding/)
 # Title: Fix Grafana Dashboard Prometheus Histogram Queries
