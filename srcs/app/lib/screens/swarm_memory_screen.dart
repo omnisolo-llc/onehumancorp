@@ -21,7 +21,9 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: const Text('Swarm Memory Mesh', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
       ),
       body: Row(
