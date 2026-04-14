@@ -9,8 +9,13 @@ go_library(
         "openclaw_adapter.go",
         "semantickernel_adapter.go",
         "types.go",
+        "lock.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop",
+    deps = [
+        "@com_github_redis_rueidis//:rueidis",
+        "@com_github_google_uuid//:uuid",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -20,6 +25,11 @@ go_test(
         "ironclaw_adapter_test.go",
         "swarm_test.go",
         "types_test.go",
+        "lock_test.go",
+    ],
+    deps = [
+        "@com_github_redis_rueidis//:rueidis",
+        "@com_github_google_uuid//:uuid",
     ],
     embed = [":interop"],
 )
