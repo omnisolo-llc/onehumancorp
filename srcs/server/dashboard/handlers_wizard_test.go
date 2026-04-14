@@ -121,8 +121,7 @@ func TestHandleWizardConfigure_WrongMethod(t *testing.T) {
 }
 
 func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	server := &Server{}
 	req, _ := http.NewRequest("GET", "/api/wizard/onboarding_verify", nil)
@@ -149,10 +148,8 @@ func TestHandleWizardOnboardingVerify_Standalone(t *testing.T) {
 }
 
 func TestHandleWizardOnboardingVerify_Cloud_MissingVars(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "false")
-	defer os.Unsetenv("OHC_STANDALONE")
-	os.Setenv("DATABASE_URL", "")
-	defer os.Unsetenv("DATABASE_URL")
+	t.Setenv("OHC_STANDALONE", "false")
+	t.Setenv("DATABASE_URL", "")
 	os.Setenv("REDIS_URL", "")
 	defer os.Unsetenv("REDIS_URL")
 
@@ -181,8 +178,7 @@ func TestHandleWizardOnboardingVerify_Cloud_MissingVars(t *testing.T) {
 }
 
 func TestHandleWizardDayOneStatus_Standalone(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	t.Setenv("OHC_STANDALONE", "true")
 
 	s, ts := newWizardTestServer(t)
 	_ = s
@@ -205,10 +201,8 @@ func TestHandleWizardDayOneStatus_Standalone(t *testing.T) {
 }
 
 func TestHandleWizardDayOneStatus_Cloud_MissingVars(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "false")
-	defer os.Unsetenv("OHC_STANDALONE")
-	os.Setenv("DATABASE_URL", "")
-	defer os.Unsetenv("DATABASE_URL")
+	t.Setenv("OHC_STANDALONE", "false")
+	t.Setenv("DATABASE_URL", "")
 
 	s, ts := newWizardTestServer(t)
 	_ = s
