@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ohc_app/models/pipeline.dart';
@@ -137,40 +138,9 @@ class _PipelineCardState extends State<_PipelineCard> {
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24),
-        child: MouseRegion(
-          onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          child: AnimatedScale(
-            scale: _isHovered ? 1.02 : 1.0,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.compose(
-                  outer: ColorFilter.matrix(const <double>[
-                    1.168, -0.153, -0.015, 0, 0,
-                    -0.046, 1.046, 0, 0, 0,
-                    -0.046, -0.152, 1.198, 0, 0,
-                    0, 0, 0, 1, 0,
-                  ]),
-                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: _isHovered
-                        ? colors.surfaceContainerHighest.withValues(alpha: 0.3)
-                        : colors.surfaceContainerHighest.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _isHovered
-                          ? colors.outline.withValues(alpha: 0.5)
-                          : colors.outline.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
+        child: GlassCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -283,11 +253,7 @@ class _PipelineCardState extends State<_PipelineCard> {
                       ],
                     ],
                   ),
-                ),
-              ),
-            ),
-          ),
-        ),
+      ),
       ),
     );
   }
