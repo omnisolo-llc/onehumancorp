@@ -1,19 +1,20 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "tasks",
-    srcs = ["tasks.go"],
-    importpath = "github.com/onehumancorp/mono/srcs/server/lib/orchestration/tasks",
+    name = "orchestration",
+    srcs = ["tasks.go", "autodream.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/lib/orchestration",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )
 
 go_test(
-    name = "tasks_test",
+    name = "orchestration_test",
     srcs = ["tasks_test.go"],
-    embed = [":tasks"],
+    embed = [":orchestration"],
     deps = [
         "//srcs/server/db",
         "@org_modernc_sqlite//:sqlite",
