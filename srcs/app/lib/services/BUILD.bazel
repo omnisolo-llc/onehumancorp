@@ -91,6 +91,7 @@ SERVICE_TESTS = glob(["*_test.dart"])
         name = file.replace(".dart", ""),
         srcs = [file],
         embed = [":services_for_tests"],
+        tags = ["no-remote", "no-remote-exec"],
         test_files = [file],
         workspace_pubspec = "//:pubspec.yaml",
     )
@@ -109,7 +110,7 @@ flutter_test(
     coverage = True,
     coverage_min = 90,
     embed = [":services_lib"],
-    tags = ["manual"],
+    tags = ["manual", "no-remote", "no-remote-exec"],
     test_files = ["."],
     workspace_pubspec = "//:pubspec.yaml",
 )

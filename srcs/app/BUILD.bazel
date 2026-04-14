@@ -175,7 +175,7 @@ flutter_test(
     name = "app_desktop_e2e_test",
     srcs = ["test/desktop_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
+    tags = ["manual", "no-remote", "no-remote-exec"],
     test_files = ["test/desktop_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )

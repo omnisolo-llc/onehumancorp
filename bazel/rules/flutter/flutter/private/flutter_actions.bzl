@@ -349,7 +349,7 @@ cd "$WORKSPACE_DIR_ABS"
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
 PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
-generate_fallback_pub_deps() {
+generate_fallback_pub_deps() {{
     "$PYTHON_BIN" <<'PY'
 import json
 import os
@@ -373,9 +373,13 @@ for raw_line in pubspec_path.read_text(encoding="utf-8").splitlines():
     indent = len(line) - len(line.lstrip(" "))
     if indent == 0:
         if stripped.startswith("name:"):
-            name = stripped.split(":", 1)[1].strip().strip("\"'")
+            name = stripped.split(":", 1)[1].strip()
+            if len(name) >= 2 and name[0] == name[-1] and name[0] in ('"', "'"):
+                name = name[1:-1]
         elif stripped.startswith("version:"):
-            version = stripped.split(":", 1)[1].strip().strip("\"'")
+            version = stripped.split(":", 1)[1].strip()
+            if len(version) >= 2 and version[0] == version[-1] and version[0] in ('"', "'"):
+                version = version[1:-1]
         elif stripped in ("dependencies:", "dependency_overrides:"):
             current_section = "deps"
         else:
@@ -390,7 +394,7 @@ for raw_line in pubspec_path.read_text(encoding="utf-8").splitlines():
         has_flutter_sdk = True
     dependencies.append(dep_name)
 
-packages = [{
+packages = [{{
     "name": name or pubspec_path.parent.name,
     "version": version or "0.0.0",
     "kind": "root",
@@ -398,25 +402,25 @@ packages = [{
     "dependencies": dependencies,
     "directDependencies": dependencies,
     "devDependencies": [],
-}]
+}}]
 
 if has_flutter_sdk:
-    packages.append({
+    packages.append({{
         "name": "flutter",
         "version": None,
         "kind": "direct",
         "source": "sdk",
         "dependencies": [],
         "directDependencies": [],
-    })
-    packages.append({
+    }})
+    packages.append({{
         "name": "sky_engine",
         "version": None,
         "kind": "transitive",
         "source": "sdk",
         "dependencies": [],
         "directDependencies": [],
-    })
+    }})
 
 hosted_dir = cache_root / "hosted" / "pub.dev"
 seen = set()
@@ -428,21 +432,21 @@ if hosted_dir.is_dir():
         if not package_name or not package_version or package_name in seen:
             continue
         seen.add(package_name)
-        packages.append({
+        packages.append({{
             "name": package_name,
             "version": package_version,
             "kind": "transitive",
             "source": "hosted",
             "dependencies": [],
             "directDependencies": [],
-        })
+        }})
 
-output_path.write_text(json.dumps({
+output_path.write_text(json.dumps({{
     "root": packages[0]["name"],
     "packages": packages,
-}, indent=2) + "\n", encoding="utf-8")
+}}, indent=2) + "\\n", encoding="utf-8")
 PY
-}
+}}
 if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
     :
 else

@@ -58,6 +58,8 @@ build:nativelink --spawn_strategy=remote
 # execution platform and C++ toolchain onto the default remote endpoint config.
 common:buildbuddy_remote-common --spawn_strategy=remote
 common:buildbuddy_remote-common --genrule_strategy=remote
+common:buildbuddy_remote-common --strategy=PrepareFlutterTestWorkspace=sandboxed,local
+common:buildbuddy_remote-common --strategy=TestRunner=sandboxed,local
 build:buildbuddy_remote-common --remote_timeout=10m
 build:buildbuddy_remote-common --verbose_failures
 # AMD64 Specifics

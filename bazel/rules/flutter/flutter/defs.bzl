@@ -719,7 +719,7 @@ def _flutter_test_impl(ctx):
     if not flutter_toolchain.flutterinfo.tool_files:
         fail("No tool files found in Flutter toolchain")
 
-    flutter_bin = flutter_toolchain.flutterinfo.tool_files[0].path
+    flutter_bin = flutter_toolchain.flutterinfo.tool_files[0].short_path
 
     # Build a mapping of relative paths to actual file objects
     test_file_mappings = [
@@ -781,6 +781,10 @@ done
             library_info.workspace.path,
         ] + test_file_args,
         command = copy_script,
+        execution_requirements = {
+            "no-remote": "1",
+            "no-remote-exec": "1",
+        },
         mnemonic = "PrepareFlutterTestWorkspace",
         progress_message = "Preparing Flutter test workspace for %s" % ctx.label.name,
     )
@@ -967,8 +971,34 @@ for _f in "${{FLUTTER_ROOT_ORIG}}"/* "${{FLUTTER_ROOT_ORIG}}"/.[!.]*; do
     ln -sf "$_f" "${{FLUTTER_WRITABLE}}/$_n" 2>/dev/null || true
 done
 
-# Symlink bin/internal (shell scripts; only read by flutter)
-ln -sf "${{FLUTTER_ROOT_ORIG}}/bin/internal" "${{FLUTTER_WRITABLE}}/bin/internal" 2>/dev/null || true
+# Copy bin/internal/shared.sh so Flutter can run without a git checkout, and
+# symlink the rest of bin/internal.
+mkdir -p "${{FLUTTER_WRITABLE}}/bin/internal"
+for _f in "${{FLUTTER_ROOT_ORIG}}/bin/internal"/* "${{FLUTTER_ROOT_ORIG}}/bin/internal"/.[!.]*; do
+    _n="$(basename -- "$_f")" || continue
+    [ -e "$_f" ] || [ -L "$_f" ] || continue
+    if [ "$_n" = "shared.sh" ]; then
+        cp "$_f" "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+        chmod u+w "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+        sed -i 's/if \\[\\[ ! -e "$FLUTTER_ROOT\\/.git" \\]\\];/if false;/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh" 2>/dev/null || true
+        sed -i 's/git rev-parse HEAD/echo bypassed/g' "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh" 2>/dev/null || true
+        chmod u+x "${{FLUTTER_WRITABLE}}/bin/internal/shared.sh"
+    else
+        ln -sf "$_f" "${{FLUTTER_WRITABLE}}/bin/internal/$_n" 2>/dev/null || true
+    fi
+done
+
+cat > "${{FLUTTER_WRITABLE}}/bin/git" << 'FLUTTER_GIT_HEREDOC'
+#!/usr/bin/env bash
+if [[ "$*" == *"rev-parse HEAD"* ]]; then
+  echo "bypassed"
+elif [[ "$*" == *"describe --match"* ]]; then
+  echo "3.29.3"
+else
+  echo "bypassed"
+fi
+FLUTTER_GIT_HEREDOC
+chmod +x "${{FLUTTER_WRITABLE}}/bin/git"
 
 # Symlink other bin/* except 'flutter', 'cache', 'internal'
 for _f in "${{FLUTTER_ROOT_ORIG}}/bin"/* "${{FLUTTER_ROOT_ORIG}}/bin"/.[!.]*; do
@@ -1168,7 +1198,7 @@ fi
 if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
 popd >/dev/null
 
-CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test")
+CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test" "--no-pub")
 if [ "{coverage_flag}" = "true" ]; then
     CMD+=("--coverage")
 fi
@@ -1260,7 +1290,7 @@ exit "$RESULT"
                     library_info.pub_cache,
                     library_info.pub_deps,
                     library_info.dart_tool,
-                ],
+                ] + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
             ),
         ),
     ]

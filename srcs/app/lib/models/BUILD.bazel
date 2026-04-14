@@ -91,6 +91,7 @@ MODEL_TESTS = glob(["*_test.dart"])
         name = file.replace(".dart", ""),
         srcs = [file],
         embed = [":models_lib"],
+        tags = ["no-remote", "no-remote-exec"],
         test_files = [file],
     )
     for file in MODEL_TESTS
@@ -108,6 +109,6 @@ flutter_test(
     coverage = True,
     coverage_min = 90,
     embed = [":models_lib"],
-    tags = ["manual"],
+    tags = ["manual", "no-remote", "no-remote-exec"],
     test_files = ["."],
 )

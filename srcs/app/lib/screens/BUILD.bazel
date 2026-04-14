@@ -81,6 +81,7 @@ SCREEN_TESTS = glob(["**/*_test.dart"])
         name = file.replace(".dart", "").replace("/", "_"),
         srcs = [file],
         embed = _SCREEN_TEST_EMBEDS.get(file, _DEFAULT_SCREEN_TEST_EMBED),
+        tags = ["no-remote", "no-remote-exec"],
         test_files = [file],
         workspace_pubspec = "//:pubspec.yaml",
     )
@@ -99,7 +100,7 @@ flutter_test(
     coverage = True,
     coverage_min = 90,
     embed = ["//srcs/app:app_for_tests"],
-    tags = ["manual"],
+    tags = ["manual", "no-remote", "no-remote-exec"],
     test_files = ["."],
     workspace_pubspec = "//:pubspec.yaml",
 )
