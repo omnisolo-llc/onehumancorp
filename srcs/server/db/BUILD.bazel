@@ -54,7 +54,6 @@ go_library(
         "migrations/046_autodream_pgvector.sql",
         "migrations/047_competitor_metrics.sql",
         "migrations/049_mesh_bridges.sql",
-        "migrations/050_crdt_sync.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
