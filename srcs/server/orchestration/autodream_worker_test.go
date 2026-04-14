@@ -39,12 +39,19 @@ func setupTestDB(t *testing.T) db.Provider {
 	return provider
 }
 
-// setupMockMemories creates YAML memory files in a temporary directory and
-// configures OHC_MEMORY_DIR to point at it.  Returns the temp dir path.
 func setupMockMemories(t *testing.T, count int) string {
-	t.Helper()
-	dir := t.TempDir()
-	t.Setenv("OHC_MEMORY_DIR", dir)
+	dir, err := os.MkdirTemp("", "agent-task-memory-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	originalDir, _ := os.Getwd()
+	os.MkdirAll(filepath.Join(dir, ".agent-task", "memory"), 0755)
+
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := 0; i < count; i++ {
 		memFile := MemoryFile{
@@ -52,15 +59,21 @@ func setupMockMemories(t *testing.T, count int) string {
 			Content:          "mock content " + fmt.Sprint(i),
 		}
 		data, _ := yaml.Marshal(&memFile)
-		filePath := filepath.Join(dir, fmt.Sprintf("test_memory_%d.yml", i))
-		os.WriteFile(filePath, data, 0o644)
+		filePath := filepath.Join(".agent-task", "memory", fmt.Sprintf("test_memory_%d.yml", i))
+		os.WriteFile(filePath, data, 0644)
 	}
 
 	// Add an empty one to test edge cases
-	os.WriteFile(filepath.Join(dir, "empty.yml"), []byte(""), 0o644)
+	os.WriteFile(filepath.Join(".agent-task", "memory", "empty.yml"), []byte(""), 0644)
 
 	// Add a non-yaml one to test error cases
-	os.WriteFile(filepath.Join(dir, "invalid.yml"), []byte("invalid yaml content: : :"), 0o644)
+	os.WriteFile(filepath.Join(".agent-task", "memory", "invalid.yml"), []byte("invalid yaml content: : :"), 0644)
+
+	// Return a cleanup function
+	t.Cleanup(func() {
+		os.Chdir(originalDir)
+		os.RemoveAll(dir)
+	})
 
 	return dir
 }
@@ -101,8 +114,15 @@ func TestAutoDreamWorker_ProcessMemories(t *testing.T) {
 func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 	provider := setupTestDB(t)
 
-	// Point at an empty temp directory.
-	t.Setenv("OHC_MEMORY_DIR", t.TempDir())
+	// Create empty dir
+	dir, _ := os.MkdirTemp("", "agent-task-memory-empty")
+	originalDir, _ := os.Getwd()
+	os.MkdirAll(filepath.Join(dir, ".agent-task", "memory"), 0755)
+	os.Chdir(dir)
+	t.Cleanup(func() {
+		os.Chdir(originalDir)
+		os.RemoveAll(dir)
+	})
 
 	worker := NewAutoDreamWorker(provider)
 	ctx := context.Background()

@@ -64,17 +64,11 @@ func (p *AutoDreamPipeline) Stop() {
 	close(p.done)
 }
 
-// process performs a sweep to consolidate ephemeral memories from the DB.
-// File-based ingestion via OHC_MEMORY_DIR is handled separately by
-// AutoDreamWorker.ingestAgentMemories.
+// process performs a sweep to consolidate ephemeral memories
 func (p *AutoDreamPipeline) process(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
 
-	memoryDir := os.Getenv("OHC_MEMORY_DIR")
-	if memoryDir == "" {
-		return // DB-backed memory only; no file processing
-	}
-	matches, err := filepath.Glob(filepath.Join(memoryDir, "*.yml"))
+	matches, err := filepath.Glob(".agent-task/memory/*.yml")
 	if err != nil {
 		slog.Error("AutoDreamPipeline: failed to glob memory files", "error", err)
 		return

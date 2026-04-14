@@ -2,7 +2,7 @@
 title: "KAIROS Orchestrator Feature Set"
 priority: P0
 estimated_scope: Large
-status: DONE
+status: IN_PROGRESS
 agent: Palette
 ---
 

@@ -9,19 +9,14 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridfsmcp",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/utils",
         "//srcs/server/auth",
+        "//srcs/server/utils",
     ],
 )
 
 go_test(
     name = "hybridfsmcp_test",
-    srcs = [
-        "mcp_test.go",
-    ],
+    srcs = ["mcp_test.go"],
     embed = [":hybridfsmcp"],
-    deps = [
-        "//srcs/server/utils",
-        "//srcs/server/auth",
-    ],
+    deps = ["//srcs/server/auth"],
 )

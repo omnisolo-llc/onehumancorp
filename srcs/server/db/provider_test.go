@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"os"
 	"testing"
 )
 
@@ -32,8 +33,9 @@ func TestPgProviderIsSQLite(t *testing.T) {
 }
 
 func TestStandaloneFallback(t *testing.T) {
-	// Use an in-memory SQLite database to avoid creating files on disk.
-	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+	os.Setenv("OHC_STANDALONE", "true")
+	os.Setenv("DATABASE_URL", "")
+	defer os.Unsetenv("OHC_STANDALONE")
 
 	db, err := New(context.Background())
 	if err != nil {
@@ -42,6 +44,9 @@ func TestStandaloneFallback(t *testing.T) {
 	defer db.Close()
 
 	if !db.Provider.IsSQLite() {
-		t.Errorf("Expected SQLite provider")
+		t.Errorf("Expected fallback to SQLite provider in standalone mode")
 	}
+
+	// Clean up swarm.db
+	os.RemoveAll(".agent-task")
 }

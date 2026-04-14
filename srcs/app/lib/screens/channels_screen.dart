@@ -327,7 +327,6 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
   _ChannelDef _selected = _channelDefs.first;
   final _nameCtrl = TextEditingController();
   final Map<String, TextEditingController> _fieldCtrls = {};
-  final Map<String, bool> _obscureMap = {};
   bool _loading = false;
 
   @override
@@ -341,10 +340,8 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
       c.dispose();
     }
     _fieldCtrls.clear();
-    _obscureMap.clear();
     for (final f in _selected.fields) {
       _fieldCtrls[f.key] = TextEditingController();
-      _obscureMap[f.key] = f.secret;
     }
   }
 
@@ -451,19 +448,13 @@ class _AddChannelDialogState extends State<_AddChannelDialog> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextField(
                     controller: _fieldCtrls[f.key],
-                    obscureText: _obscureMap[f.key] ?? false,
+                    obscureText: f.secret,
                     decoration: InputDecoration(
                       labelText: f.label,
                       hintText: f.hint,
                       border: const OutlineInputBorder(),
-                      suffixIcon: f.secret ? IconButton(
-                        icon: Icon((_obscureMap[f.key] ?? false) ? Icons.visibility : Icons.visibility_off),
-                        onPressed: () {
-                          setState(() {
-                            _obscureMap[f.key] = !(_obscureMap[f.key] ?? false);
-                          });
-                        },
-                      ) : null,
+                      suffixIcon:
+                          f.secret ? const Icon(Icons.lock_outline) : null,
                     ),
                   ),
                 ),

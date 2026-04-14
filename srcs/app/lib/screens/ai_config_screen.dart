@@ -208,46 +208,35 @@ class _ProviderCardState extends State<_ProviderCard> {
 
   void _showEditKeyDialog(BuildContext context) {
     final ctrl = TextEditingController(text: widget.provider.apiKey);
-    bool _obscureText = true;
     showDialog(
       context: context,
       builder:
-          (_) => StatefulBuilder(
-            builder: (context, setState) => AlertDialog(
-              title: Text('API Key — ${widget.provider.name}'),
-              content: TextField(
-                controller: ctrl,
-                obscureText: _obscureText,
-                decoration: InputDecoration(
-                  labelText: 'API Key',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.key),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
-                  ),
-                ),
+          (_) => AlertDialog(
+            title: Text('API Key — ${widget.provider.name}'),
+            content: TextField(
+              controller: ctrl,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'API Key',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.key),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    final api = widget.ref.read(apiServiceProvider);
-                    await api?.saveAiProviderKey(widget.provider.id, ctrl.text.trim());
-                    widget.ref.invalidate(_providersProvider);
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final api = widget.ref.read(apiServiceProvider);
+                  await api?.saveAiProviderKey(widget.provider.id, ctrl.text.trim());
+                  widget.ref.invalidate(_providersProvider);
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
     );
   }
@@ -289,7 +278,6 @@ class _ProviderDialogState extends State<_ProviderDialog> {
   final _keyCtrl = TextEditingController();
   final _modelsCtrl = TextEditingController();
   bool _loading = false;
-  bool _obscureKey = true;
 
   @override
   void initState() {
@@ -389,19 +377,11 @@ class _ProviderDialogState extends State<_ProviderDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _keyCtrl,
-                obscureText: _obscureKey,
-                decoration: InputDecoration(
+                obscureText: true,
+                decoration: const InputDecoration(
                   labelText: 'API Key',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.key),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureKey ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _obscureKey = !_obscureKey;
-                      });
-                    },
-                  ),
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.key),
                 ),
               ),
               const SizedBox(height: 12),

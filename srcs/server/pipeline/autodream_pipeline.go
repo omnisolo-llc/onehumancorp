@@ -339,10 +339,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 }
 
 func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
-	memoryDir := os.Getenv("OHC_MEMORY_DIR")
-	if memoryDir == "" {
-		return // file-based memory ingestion disabled; use DB-backed memory instead
-	}
+	memoryDir := ".agent-task/memory"
 	files, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

@@ -146,18 +146,11 @@ final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSe
   return BusinessSetupNotifier();
 });
 
-class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
+class BusinessSetupWizardScreen extends ConsumerWidget {
   const BusinessSetupWizardScreen({super.key});
 
   @override
-  ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
-}
-
-class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
-  bool _obscurePassword = true;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
 
@@ -237,20 +230,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     ),
                     const SizedBox(height: 16),
                     TextField(
-                      obscureText: _obscurePassword,
+                      decoration: const InputDecoration(labelText: 'Admin Password'),
+                      obscureText: true,
                       onChanged: notifier.updateAdminPassword,
                       style: const TextStyle(fontFamily: 'Inter'),
-                      decoration: InputDecoration(
-                        labelText: 'Admin Password',
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
                     ),
                   ],
                   const SizedBox(height: 24),

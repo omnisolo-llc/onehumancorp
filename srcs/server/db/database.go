@@ -36,15 +36,23 @@ func New(ctx context.Context) (*DB, error) {
 	if dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
 		var dbPath string
 		if dsn == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("db: find home dir: %w", err)
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				// Standalone local wrapper expects local swarm DB inside .agent-task
+				if err := os.MkdirAll(".agent-task", 0700); err != nil {
+					return nil, fmt.Errorf("db: create .agent-task dir: %w", err)
+				}
+				dbPath = filepath.Join(".agent-task", "swarm.db")
+			} else {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return nil, fmt.Errorf("db: find home dir: %w", err)
+				}
+				openclawDir := filepath.Join(homeDir, ".openclaw")
+				if err := os.MkdirAll(openclawDir, 0700); err != nil {
+					return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
+				}
+				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
-			openclawDir := filepath.Join(homeDir, ".openclaw")
-			if err := os.MkdirAll(openclawDir, 0700); err != nil {
-				return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
-			}
-			dbPath = filepath.Join(openclawDir, "ohc_state.db")
 		} else {
 			dbPath = strings.TrimPrefix(dsn, "sqlite://")
 		}

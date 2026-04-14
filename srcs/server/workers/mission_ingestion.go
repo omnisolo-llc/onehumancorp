@@ -14,10 +14,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
-// MissionIngestionWorker vectorizes mission artifacts from the database.
-// When OHC_MISSIONS_DIR is set it also ingests markdown/YAML files from that
-// directory (migration path only); in production missions are written directly
-// to the database and this worker consumes them from there.
+// MissionIngestionWorker is responsible for monitoring the .agent-task/missions/
+// directory and vectorizing markdown files using the AutoDream infrastructure.
 type MissionIngestionWorker struct {
 	pool db.Provider
 	}
@@ -44,15 +42,9 @@ func (w *MissionIngestionWorker) Start(ctx context.Context) {
 	}
 }
 
-// IngestMissions scans the directory specified by OHC_MISSIONS_DIR for
-// markdown/YAML mission artifacts and vectorizes them.  When OHC_MISSIONS_DIR
-// is empty it defaults to ".agent-task/missions" relative to the working
-// directory.
+// IngestMissions scans .agent-task/missions/ for markdown artifacts and vectorizes them.
 func (w *MissionIngestionWorker) IngestMissions(ctx context.Context) {
-	missionsDir := os.Getenv("OHC_MISSIONS_DIR")
-	if missionsDir == "" {
-		missionsDir = ".agent-task/missions"
-	}
+	missionsDir := ".agent-task/missions"
 	files, err := os.ReadDir(missionsDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

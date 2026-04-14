@@ -38,21 +38,3 @@ func TestReferralTracker(t *testing.T) {
 		t.Fatalf("Expected invalid code referral to fail")
 	}
 }
-
-
-func TestReferralTrackerWithChannel(t *testing.T) {
-	tracker := NewReferralTracker()
-	userID := "user456"
-	code := tracker.GenerateReferralCode(userID)
-
-	ctx := context.Background()
-	success := tracker.RecordReferralWithChannel(ctx, code, "twitter")
-	if !success {
-		t.Fatalf("Expected referral to be recorded successfully")
-	}
-
-	stats := tracker.GetChannelStats()
-	if stats["twitter"] != 1 {
-		t.Fatalf("Expected 1 referral from twitter, got %d", stats["twitter"])
-	}
-}

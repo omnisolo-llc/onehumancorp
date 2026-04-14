@@ -22,7 +22,6 @@ type ReferralTracker struct {
 	UserReferrals  map[string]int
 	UserCodes      map[string]string
 	CodeToUser     map[string]string
-	ChannelStats   map[string]int // Track referral source channels
 }
 
 func NewReferralTracker() *ReferralTracker {
@@ -30,7 +29,6 @@ func NewReferralTracker() *ReferralTracker {
 		UserReferrals: make(map[string]int),
 		UserCodes:     make(map[string]string),
 		CodeToUser:    make(map[string]string),
-		ChannelStats:  make(map[string]int),
 	}
 }
 
@@ -41,12 +39,7 @@ func (rt *ReferralTracker) GenerateReferralCode(userID string) string {
 		return code
 	}
 	bytes := make([]byte, 4)
-	if _, err := rand.Read(bytes); err != nil {
-		// Log error or panic, here returning empty or handle properly.
-		// Changing signature of GenerateReferralCode is bad without changing test.
-		// Since we can't change signature, we fallback to something safe or panic.
-		panic("failed to read random bytes: " + err.Error())
-	}
+	rand.Read(bytes)
 	code := hex.EncodeToString(bytes)
 	rt.UserCodes[userID] = code
 	rt.CodeToUser[code] = userID
@@ -78,35 +71,4 @@ func (rt *ReferralTracker) GetTotalReferrals() int {
 	rt.mu.RLock()
 	defer rt.mu.RUnlock()
 	return rt.TotalReferrals
-}
-
-func (rt *ReferralTracker) RecordReferralWithChannel(ctx context.Context, code string, channel string) bool {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-	userID, exists := rt.CodeToUser[code]
-	if !exists {
-		return false
-	}
-	rt.UserReferrals[userID]++
-	rt.TotalReferrals++
-
-	if channel != "" {
-		rt.ChannelStats[channel]++
-	}
-
-	if referralsCounter != nil {
-		referralsCounter.Add(ctx, 1)
-	}
-	return true
-}
-
-func (rt *ReferralTracker) GetChannelStats() map[string]int {
-	rt.mu.RLock()
-	defer rt.mu.RUnlock()
-
-	stats := make(map[string]int)
-	for k, v := range rt.ChannelStats {
-		stats[k] = v
-	}
-	return stats
 }
