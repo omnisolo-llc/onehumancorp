@@ -24,6 +24,7 @@ var (
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
 	OmniContextBytesRouted           metric.Int64Counter
+	RagEscalationCount               metric.Int64Counter
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
@@ -203,6 +204,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagEscalationCount, err = m.Int64Counter(
+		"rag_escalation_count",
+		metric.WithDescription("Total number of dynamic RAG escalations from local to cloud"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1469,5 +1478,12 @@ func RecordSyncConflictResolved(ctx context.Context) {
 func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 	if OmniContextBytesRouted != nil {
 		OmniContextBytesRouted.Add(ctx, bytes)
+	}
+}
+
+// RecordRagEscalation increments the RAG escalation counter.
+func RecordRagEscalation(ctx context.Context) {
+	if RagEscalationCount != nil {
+		RagEscalationCount.Add(ctx, 1)
 	}
 }
