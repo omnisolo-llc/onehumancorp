@@ -23,6 +23,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	orchestration_mesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
@@ -54,6 +55,7 @@ type Server struct {
 	authHandlers          *auth.Handlers
 	settings              settings.AppSettings
 	agentProviderRegistry *agents.Registry
+	meshBroker            orchestration_mesh.MeshBroker
 	dynamicMCPTools       []MCPTool
 	rateLimitStates       map[string]*RateLimitState
 	staticDir             string
@@ -1964,60 +1966,11 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Channel string                 `json:"channel"`
-		Data    map[string]interface{} `json:"data"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if s.meshBroker != nil {
+		// Let the unified HTTP handler take over now that we checked SPIFFE auth
+		// Note that HandleBroadcast enforces its own method check, JSON parsing, etc.
+		orchestration_mesh.HandleBroadcast(s.meshBroker)(w, r)
 		return
 	}
-
-	if req.Channel == "" {
-		http.Error(w, "invalid channel", http.StatusBadRequest)
-		return
-	}
-
-	payloadBytes, err := json.Marshal(req.Data)
-	if err != nil {
-		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
-		return
-	}
-
-	err = s.hub.Publish(orchestration.Message{
-		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		FromAgent: "system",
-		ToAgent:   "system",
-		Type:      req.Channel,
-		Content:   string(payloadBytes),
-	})
-
-	if err == nil {
-		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
-
-		// Map mesh channels to Centrifuge WebSocket channels for UI updates
-		if s.hub != nil && s.hub.CentrifugeNode() != nil {
-			if req.Channel == "mesh:tasks" || req.Channel == "swarm-events" {
-				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), req.Data)
-			} else if req.Channel == "mesh:coordination" {
-				agentID, _ := req.Data["agent_id"].(string)
-				if agentID == "" {
-					agentID = "system"
-				}
-				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
-					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-					FromAgent: agentID,
-					ToAgent:   "system",
-					Type:      req.Channel,
-					Content:   string(payloadBytes),
-				})
-			}
-		}
-	} else {
-		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}`))
+	http.Error(w, "mesh broker not initialized", http.StatusInternalServerError)
 }
