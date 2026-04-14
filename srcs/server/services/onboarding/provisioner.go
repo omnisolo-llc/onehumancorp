@@ -13,14 +13,12 @@ import (
 var (
 	provisionsCounter metric.Int64Counter
 	cleanupsCounter   metric.Int64Counter
-	validationsCounter metric.Int64Counter
 )
 
 func init() {
 	meter := otel.Meter("github.com/onehumancorp/mono/ohc")
 	provisionsCounter, _ = meter.Int64Counter("provisions_total")
 	cleanupsCounter, _ = meter.Int64Counter("cleanups_total")
-	validationsCounter, _ = meter.Int64Counter("validations_total")
 }
 
 // ProvisionEnvironment sets up the necessary folders for Day One Hybrid OS onboarding.
@@ -83,42 +81,4 @@ func CleanupEnvironment(ctx context.Context, isCloud bool) error {
 	}
 
 	return os.RemoveAll(baseDir)
-}
-
-// ValidateEnvironment verifies that the necessary folders for Day One Hybrid OS onboarding are correctly instantiated and writable.
-func ValidateEnvironment(ctx context.Context, isCloud bool) error {
-	if validationsCounter != nil {
-		validationsCounter.Add(ctx, 1)
-	}
-
-	baseDir := ".ohc-local-data"
-	if isCloud {
-		baseDir = ".ohc-cloud-data"
-	}
-
-	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		return fmt.Errorf("base directory %s does not exist", baseDir)
-	}
-
-	dirs := []string{
-		filepath.Join(baseDir, "db"),
-		filepath.Join(baseDir, "blob"),
-		filepath.Join(baseDir, "config"),
-	}
-
-	for _, dir := range dirs {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			return fmt.Errorf("directory %s does not exist", dir)
-		}
-
-		testFile := filepath.Join(dir, "test.tmp")
-		f, err := os.Create(testFile)
-		if err != nil {
-			return fmt.Errorf("directory %s is not writable: %w", dir, err)
-		}
-		f.Close()
-		os.Remove(testFile)
-	}
-
-	return nil
 }
