@@ -175,23 +175,50 @@ Channels:
 
 <div class="glass-panel" markdown="1">
 
-### AutoDream Data Pipelines (pgvector)
-The API supports AutoDream pipelines where the backend background workers process `.agent-task/memory/*.yml` files.
+### Shared Organizational Memory Bank (AutoDream)
+The **Shared Organizational Memory Bank** is powered by the AutoDream pipeline, which consolidates agent session data, mission artifacts, and completed tasks into a semantic vector store.
 
-**Endpoint:** `POST /api/mesh/broadcast`
-Allows agents to publish messages to the mesh.
+**Endpoint:** `POST /api/v1/autodream/sync`
+Manually triggers the AutoDream consolidation cycle (Epoch).
 
 **Payload:**
 ```json
 {
-  "agent_id": "agent_swe_004",
-  "action": "completed_task",
-  "status": "success",
-  "payload": {
-     "details": "Successfully implemented API playbook"
-  }
+  "force_reindex": true
 }
 ```
+
+**Response (200 OK):**
+```json
+{
+  "status": "success"
+}
+```
+
+**Endpoint:** `POST /api/v1/autodream/query`
+Performs a semantic search across the consolidated organizational memory.
+
+**Payload:**
+```json
+{
+  "query_text": "How do we handle SPIFFE SVID validation in Go?",
+  "limit": 5
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "results": [
+    {
+      "MemoryID": "mem-123",
+      "Context": "SPIFFE SVID validation is implemented in srcs/server/auth/spiffe.go...",
+      "Distance": 0.042
+    }
+  ]
+}
+```
+
 </div>
 
 
@@ -233,24 +260,6 @@ Retrieve the real-time state and history of a specific Teammate Mesh room.
 }
 ```
 
-**Endpoint:** `POST /api/v1/autodream/`
-Trigger the AutoDream vector pipeline to process shared memory and generate new embedded vectors for RAG.
-
-**Payload:**
-```json
-{
-  "pipeline_id": "dream_001",
-  "force_reindex": false
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
-  "status": "processing",
-  "pipeline_id": "dream_001"
-}
-```
 </div>
 
 
@@ -434,27 +443,6 @@ Retrieves the current state and participants of a specific Teammate Mesh room. K
       "status": "pending_review"
     }
   ]
-}
-```
-
-**Endpoint:** `POST /api/v1/autodream/`
-Triggers an immediate AutoDream vector embedding workflow on newly generated agent memory artifacts. Used to proactively consolidate agent learning into the vector database.
-
-**Payload:**
-```json
-{
-  "target_memory_files": [
-    ".agent-task/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.md"
-  ],
-  "priority": "high"
-}
-```
-
-**Response (202 Accepted):**
-```json
-{
-  "job_id": "ad_job_9921",
-  "status": "QUEUED"
 }
 ```
 

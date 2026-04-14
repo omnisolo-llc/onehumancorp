@@ -114,6 +114,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Omni-Context Sub-Agent Routing Walkthrough](omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
 - **[Virtual Meeting Room Walkthrough](virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
 - **[Dynamic Team Assembly Walkthrough](dynamic_team_assembly.md)**: Visual guide to dynamic agent provisioning and scaling.
+- **[Shared Organizational Memory Bank Walkthrough](shared_organizational_memory_bank.md)**: Visual guide to the AutoDream memory consolidation and RAG retrieval.
 
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
