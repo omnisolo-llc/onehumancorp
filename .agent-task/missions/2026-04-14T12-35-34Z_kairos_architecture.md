@@ -1,5 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers:
+  - "Domain boundary violation: requires modifying files outside apps/onboarding/ and services/onboarding/"
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
