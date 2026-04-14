@@ -27,3 +27,9 @@ type TaskQueue interface {
 	Complete(ctx context.Context, jobID string) error
 	Fail(ctx context.Context, jobID string, reason string) error
 }
+
+// JobQueue defines the interface for an orchestrator sub-agent queue
+type JobQueue interface {
+	Push(ctx context.Context, topic string, payload []byte) error
+	Pop(ctx context.Context, topic string) ([]byte, error)
+}
