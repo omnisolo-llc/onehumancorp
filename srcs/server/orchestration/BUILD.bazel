@@ -81,6 +81,7 @@ go_test(
         "sip_mesh_test.go",
         "sip_test.go",
         "throttle_test.go",
+        "reliability_chaos_test.go",
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
