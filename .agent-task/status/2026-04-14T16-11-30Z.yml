@@ -1,0 +1,5 @@
+agent: Maintainer
+status: HEALTHY
+mission_id: release_management
+metrics:
+  tasks_completed: 1
