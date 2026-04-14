@@ -116,6 +116,24 @@ Submit a new task to the swarm.
 **Endpoint:** `POST /api/mesh/broadcast`
 Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.
 
+**Payload:**
+```json
+{
+  "agent_id": "agent-123",
+  "action": "task_completed",
+  "status": "success",
+  "data": {
+    "message": "Hello mesh!"
+  }
+}
+```
+
+**Endpoint:** `GET /api/mesh/subscribe`
+Subscribe to Teammate Mesh events.
+
+**Query Parameters:**
+- `channel`: The channel to subscribe to (e.g., `mesh:tasks`)
+
 ### 3.6 Client Integrations
 
 Whether you are developing against the **Local SQLite SIPDB** or the **Cloud Postgres/Redis** stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.
