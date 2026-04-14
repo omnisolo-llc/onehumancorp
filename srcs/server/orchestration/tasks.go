@@ -52,6 +52,7 @@ type TaskManager struct {
 	taskQueue   queue.TaskQueue
 	mu          sync.Mutex // For Standalone mode SQLite locking
 	autodream   autodream.MemoryConsolidator
+	mesh        MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -157,6 +158,10 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 // SetHub injects the CentrifugeNode dependency into the TaskManager.
 func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 	tm.hub = hub
+}
+
+func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
+	tm.mesh = mt
 }
 
 // CreateTask creates a new shared task.

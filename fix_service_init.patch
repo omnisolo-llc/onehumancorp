@@ -1,0 +1,25 @@
+--- srcs/server/orchestration/service.go
++++ srcs/server/orchestration/service.go
+@@ -2066,7 +2066,7 @@
+	if meshMsgThroughput != nil {
+		meshMsgThroughput.Add(ctx, 1)
+	}
+-	return (&pb.PublishMessageResponse_builder{Success: proto.Bool(true)}).Build(), nil
++	return &pb.PublishMessageResponse{Success: true}, nil
+ }
+
+ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+@@ -2096,10 +2096,10 @@
+		return err
+	}
+	for payload := range ch {
+-		event := (&pb.MeshEvent_builder{
+-			Topic:   proto.String(req.GetTopic()),
++		event := &pb.MeshEvent{
++			Topic:   req.GetTopic(),
+			Payload: payload,
+-		}).Build()
++		}
+		if err := stream.Send(event); err != nil {
+			return err
+		}
