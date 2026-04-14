@@ -1,0 +1,5 @@
+status: HEALTHY
+agent: Implementer
+metrics:
+  cpu: "10%"
+  memory: "256MB"
