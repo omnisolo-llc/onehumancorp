@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -86,8 +87,16 @@ func (p *PgProvider) AcquireTask(ctx context.Context, agentID string) (*TaskReco
 		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &t.Payload, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
-		// No rows is fine, just return nil
+		// No rows is fine, but we check if it's due to lock contention
 		if err == pgx.ErrNoRows || err.Error() == "no rows in result set" {
+			// Memory instructions: Postgres lock contention detection for FOR UPDATE SKIP LOCKED
+			// Secondary check to see if any PENDING tasks exist that were skipped.
+			var exists bool
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'PENDING' AND organization_id = 'system')").Scan(&exists)
+			if checkErr == nil && exists {
+				// We found pending tasks but couldn't acquire any because they are locked.
+				telemetry.RecordPostgresLockContention(ctx, "acquire_task")
+			}
 			trackQuery(ctx, "AcquireTask", nil, time.Since(start))
 			return nil, nil
 		}
