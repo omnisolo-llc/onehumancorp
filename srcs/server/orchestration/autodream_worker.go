@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"sync"
+
 	"context"
 	"fmt"
 	"log/slog"
@@ -140,4 +142,45 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+
+
+// AutoDreamWorkerDaemon runs ProcessMemories periodically.
+type AutoDreamWorkerDaemon struct {
+	worker *AutoDreamWorker
+	done   chan struct{}
+	stopOnce sync.Once
+}
+
+func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
+	return &AutoDreamWorkerDaemon{
+		worker: worker,
+		done:   make(chan struct{}),
+	}
+}
+
+func (d *AutoDreamWorkerDaemon) Start(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			d.Stop()
+			return
+		case <-d.done:
+			return
+		case <-ticker.C:
+			if err := d.worker.ProcessMemories(ctx); err != nil {
+				slog.Error("AutoDreamWorkerDaemon: failed to process memories", "error", err)
+			}
+		}
+	}
+}
+
+func (d *AutoDreamWorkerDaemon) Stop() {
+	d.stopOnce.Do(func() {
+		close(d.done)
+	})
 }
