@@ -19,6 +19,8 @@ import (
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
 	pool db.Provider
+	MemoryDir string
+	MissionDir string
 }
 
 // AutoDreamWorker options
@@ -414,7 +416,7 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 
 // ingestAgentMemories processes YAML files from .agent-task/memory/.
 func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
-	memoryDir := ".agent-task/memory"
+	memoryDir := w.getMemoryDir()
 	files, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -913,7 +915,7 @@ func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
 
 // ingestMissionArtifacts processes Markdown files from .agent-task/missions/.
 func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
-	missionDir := ".agent-task/missions"
+	missionDir := w.getMissionDir()
 	files, err := os.ReadDir(missionDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -1004,4 +1006,18 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 			// We don't delete mission files to keep the history in FS
 		}
 	}
+}
+
+func (w *AutoDreamWorker) getMemoryDir() string {
+	if w != nil && w.MemoryDir != "" {
+		return w.MemoryDir
+	}
+	return ".agent-task/memory"
+}
+
+func (w *AutoDreamWorker) getMissionDir() string {
+	if w != nil && w.MissionDir != "" {
+		return w.MissionDir
+	}
+	return ".agent-task/missions"
 }

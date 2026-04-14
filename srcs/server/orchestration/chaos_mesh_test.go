@@ -94,7 +94,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	// ML-Resilience mandates that the worker gracefully logs the error without panicking.
 
 	// Create temporary corrupted file in actual .agent-task/memory without os.Chdir
-	memoryDir := ".agent-task/memory"
+	memoryDir := filepath.Join(tmpDir, ".agent-task/memory")
 	os.MkdirAll(memoryDir, 0755)
 	dummyMemory := filepath.Join(memoryDir, "chaos_mesh_test_memory.yml")
 	os.WriteFile(dummyMemory, []byte("content: chaos"), 0644)
@@ -108,6 +108,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 
 	// Instantiate the AutoDreamWorker (the real application code)
 	worker := NewAutoDreamWorker(dbInstance)
+	worker.MemoryDir = memoryDir
 
 	// Use a waitgroup to run ingestAgentMemories concurrently
 	var chaosWg sync.WaitGroup

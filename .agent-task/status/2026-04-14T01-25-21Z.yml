@@ -1,0 +1,2 @@
+status: HEALTHY
+reason: Successfully refactored AutoDreamWorker and MissionIngestionWorker to avoid os.Chdir anti-patterns and use isolated test directories, ensuring chaos stress testing passes concurrently.

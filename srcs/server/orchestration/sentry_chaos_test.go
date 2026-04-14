@@ -62,11 +62,12 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 	// use a mock db dependency if possible.
 
 	// Actually, wait, `chaos_mesh_test.go` uses `os.Chdir`. But the reviewer said `os.Chdir` is a very dangerous anti-pattern.
-	// Since I MUST NOT use `os.Chdir`, and the `autodream.go` hardcodes `memoryDir := ".agent-task/memory"`,
+	// Since I MUST NOT use `os.Chdir`, and the `autodream.go` hardcodes `memoryDir := filepath.Join(tmpDir, ".agent-task/memory")`,
 	// we will create `.agent-task/memory` in the actual working directory temporarily with a unique test file,
 	// test it, and then clean it up.
 
-	memoryDir := ".agent-task/memory"
+	tmpDir := t.TempDir()
+	memoryDir := filepath.Join(tmpDir, ".agent-task/memory")
 	err := os.MkdirAll(memoryDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create memory dir: %v", err)
@@ -86,7 +87,6 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 		os.Remove(testFile)
 	}()
 
-	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "sentry_mesh.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -98,6 +98,7 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 	defer cancel()
 
 	worker := NewAutoDreamWorker(db)
+	worker.MemoryDir = memoryDir
 
 	// Since we made the file unreadable, the application code `contentBytes, err := os.ReadFile(filePath)`
 	// will fail. This should gracefully log an error and continue without panicking.

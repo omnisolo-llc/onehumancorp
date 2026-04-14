@@ -18,7 +18,15 @@ import (
 // directory and vectorizing markdown files using the AutoDream infrastructure.
 type MissionIngestionWorker struct {
 	pool db.Provider
+	MissionsDir string
+}
+
+func (w *MissionIngestionWorker) getMissionsDir() string {
+	if w != nil && w.MissionsDir != "" {
+		return w.MissionsDir
 	}
+	return ".agent-task/missions"
+}
 
 func NewMissionIngestionWorker(pool db.Provider) *MissionIngestionWorker {
 	return &MissionIngestionWorker{
@@ -44,7 +52,7 @@ func (w *MissionIngestionWorker) Start(ctx context.Context) {
 
 // IngestMissions scans .agent-task/missions/ for markdown artifacts and vectorizes them.
 func (w *MissionIngestionWorker) IngestMissions(ctx context.Context) {
-	missionsDir := ".agent-task/missions"
+	missionsDir := w.getMissionsDir()
 	files, err := os.ReadDir(missionsDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

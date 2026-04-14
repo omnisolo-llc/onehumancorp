@@ -53,14 +53,14 @@ func TestMissionIngestionWorker_IngestMissions(t *testing.T) {
 	provider := setupTestDB(t)
 
 	// Create a temporary missions directory
-	originalDir, _ := os.Getwd()
+
 	tmpDir, _ := os.MkdirTemp("", "mission-test")
 	defer os.RemoveAll(tmpDir)
 
-	os.Chdir(tmpDir)
-	defer os.Chdir(originalDir)
 
-	missionsDir := ".agent-task/missions"
+
+
+	missionsDir := filepath.Join(tmpDir, ".agent-task/missions")
 	os.MkdirAll(missionsDir, 0755)
 
 	content := `---
@@ -72,6 +72,7 @@ title: Test
 	assert.NoError(t, err)
 
 	worker := NewMissionIngestionWorker(provider)
+	worker.MissionsDir = missionsDir
 	ctx := context.Background()
 
 	// Ingest once
