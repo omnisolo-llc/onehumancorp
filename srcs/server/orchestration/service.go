@@ -1668,7 +1668,7 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 
 	// Retry loop to handle transient empty responses from Minimax.
 	var lastErr error
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
@@ -1690,10 +1690,10 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode == 529 {
+			if resp.StatusCode >= 500 {
 				// Retry on high load without recording circuit breaker failure immediately
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
 				time.Sleep(2 * time.Second) // Longer backoff for overloaded
 				continue
 			}
@@ -1789,7 +1789,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	payloadBytes := buf.Bytes()
 	var lastErr error
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
 			return nil, err
@@ -1807,9 +1807,9 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode == 529 {
+			if resp.StatusCode >= 500 {
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
 				time.Sleep(2 * time.Second)
 				continue
 			}
