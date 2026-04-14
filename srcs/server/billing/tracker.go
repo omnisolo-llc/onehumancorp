@@ -128,6 +128,9 @@ type Tracker struct {
 
 	// For forecasting
 	lastTokenCounts sync.Map // map[string]int64 (orgID -> totalTokens)
+	lastUSDAmounts  sync.Map // map[string]float64 (orgID -> totalCostUSD)
+	tokenBurnRates  sync.Map // map[string]float64 (orgID -> tokensPerMin)
+	usdBurnRates    sync.Map // map[string]float64 (orgID -> usdPerMin)
 	ctx             context.Context
 	cancel          context.CancelFunc
 }
@@ -206,20 +209,47 @@ func (t *Tracker) recordTokenBurnRates() {
 	orgs := t.ActiveOrganizations(t.ctx)
 	for _, orgID := range orgs {
 		summary := t.Summary(orgID)
-		currentTotal := summary.TotalTokens
+		currentTotalTokens := summary.TotalTokens
+		currentTotalUSD := summary.TotalCostUSD
 
-		var previousTotal int64
+		var previousTotalTokens int64
 		if val, ok := t.lastTokenCounts.Load(orgID); ok {
-			previousTotal = val.(int64)
+			previousTotalTokens = val.(int64)
 		}
 
-		if currentTotal >= previousTotal {
-			burnRate := float64(currentTotal - previousTotal)
-			telemetry.RecordTokenBurnRate(t.ctx, orgID, burnRate)
+		var previousTotalUSD float64
+		if val, ok := t.lastUSDAmounts.Load(orgID); ok {
+			previousTotalUSD = val.(float64)
 		}
 
-		t.lastTokenCounts.Store(orgID, currentTotal)
+		burnRateTokens := 0.0
+		if currentTotalTokens > previousTotalTokens {
+			burnRateTokens = float64(currentTotalTokens - previousTotalTokens)
+		}
+		t.tokenBurnRates.Store(orgID, burnRateTokens)
+		telemetry.RecordTokenBurnRate(t.ctx, orgID, burnRateTokens)
+
+		burnRateUSD := 0.0
+		if currentTotalUSD > previousTotalUSD {
+			burnRateUSD = currentTotalUSD - previousTotalUSD
+		}
+		t.usdBurnRates.Store(orgID, burnRateUSD)
+		telemetry.RecordUSDBurnRate(t.ctx, orgID, burnRateUSD)
+
+		t.lastTokenCounts.Store(orgID, currentTotalTokens)
+		t.lastUSDAmounts.Store(orgID, currentTotalUSD)
 	}
+}
+
+// GetBurnRates returns the current moving average burn rates for tokens and USD per minute.
+func (t *Tracker) GetBurnRates(orgID string) (tokensPerMin, usdPerMin float64) {
+	if val, ok := t.tokenBurnRates.Load(orgID); ok {
+		tokensPerMin = val.(float64)
+	}
+	if val, ok := t.usdBurnRates.Load(orgID); ok {
+		usdPerMin = val.(float64)
+	}
+	return
 }
 
 // Track calculates the USD cost for a token consumption event and persists it in memory.
