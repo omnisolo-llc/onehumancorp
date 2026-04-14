@@ -62,14 +62,14 @@ var (
 // getThrottle conditionally acquires the semaphore if in standalone mode
 func acquireThrottle(ctx context.Context) error {
 	standaloneThrottleOnce.Do(func() {
-		if !envBoolDefault("OHC_MULTITENANT", true) {
+		if os.Getenv("OHC_STANDALONE") == "true" {
 			// already initialized to 1
 		} else {
 			// If not standalone, make channel large enough or just ignore
 		}
 	})
 
-	if !envBoolDefault("OHC_MULTITENANT", true) {
+	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case standaloneThrottle <- struct{}{}:
 			return nil
@@ -81,7 +81,7 @@ func acquireThrottle(ctx context.Context) error {
 }
 
 func releaseThrottle() {
-	if !envBoolDefault("OHC_MULTITENANT", true) {
+	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case <-standaloneThrottle:
 		default:

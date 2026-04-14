@@ -12,8 +12,8 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	// Clear the package-level semaphore after the test.
 	defer ClearSemaphore()
 
-	// Temporarily enable OHC_MULTITENANT to trigger the throttle
-	t.Setenv("OHC_MULTITENANT", "false")
+	// Temporarily enable OHC_STANDALONE to trigger the throttle
+	t.Setenv("OHC_STANDALONE", "true")
 
 	dbPath := filepath.Join(t.TempDir(), "throttle.db")
 	db, err := NewSIPDB(dbPath)
