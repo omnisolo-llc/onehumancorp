@@ -550,6 +550,32 @@ sequenceDiagram
 </div>
 
 
+
+<div class="glass-panel" markdown="1">
+
+### 4.10 Hybrid CRDT Sync MCP Tools
+
+The Hybrid CRDT Sync MCP exposes tools to facilitate Conflict-free Replicated Data Type (CRDT) based synchronization between local Standalone and Cloud-Native environments.
+
+**Tools Exposed:**
+- `crdt_pull`: Fetch the latest CRDT state vector for a given entity from the Cloud backend (or return local if standalone).
+- `crdt_push`: Submit local CRDT mutations to the Cloud backend.
+- `crdt_merge`: Locally compute the intersection of state vectors.
+
+**Input Schema:**
+All CRDT tools accept their arguments as a raw JSON object (`json.RawMessage`) to prevent runtime validation failures during complex structural merges.
+
+**Example `crdt_push` Execution:**
+```json
+{
+  "entity_id": "task_12345",
+  "mutations": [
+    { "clock": 42, "op": "set", "path": "status", "value": "COMPLETED" }
+  ]
+}
+```
+</div>
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
