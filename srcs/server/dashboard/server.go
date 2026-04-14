@@ -603,6 +603,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/v2/broadcast", auth.RequireRole("system", server.handleMeshV2Broadcast))
 	mux.HandleFunc("/api/mesh/direct", auth.RequireRole("system", server.handleMeshDirect))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
+	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.handleMeshSubscribe))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
@@ -2020,4 +2021,52 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleMeshSubscribe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Enforce mTLS checks
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+	cert := r.TLS.PeerCertificates[0]
+	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ctx := r.Context()
+	ch, err := mesh.NewMemoryMeshService().Subscribe(ctx)
+	if err != nil {
+		http.Error(w, "Failed to subscribe", http.StatusInternalServerError)
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		}
+	}
 }
