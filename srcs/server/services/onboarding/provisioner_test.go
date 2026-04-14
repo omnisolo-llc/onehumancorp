@@ -82,3 +82,25 @@ func TestCheckEnvironment_Cloud(t *testing.T) {
 	}
 	os.RemoveAll(".ohc-cloud-data")
 }
+
+func TestCleanupEnvironment_Local(t *testing.T) {
+	ProvisionEnvironment(context.Background(), false)
+	err := CleanupEnvironment(context.Background(), false)
+	if err != nil {
+		t.Fatalf("expected nil error for cleanup environment, got %v", err)
+	}
+	if err := CheckEnvironment(false); err == nil {
+		t.Fatalf("expected error for missing environment after cleanup, got nil")
+	}
+}
+
+func TestCleanupEnvironment_Cloud(t *testing.T) {
+	ProvisionEnvironment(context.Background(), true)
+	err := CleanupEnvironment(context.Background(), true)
+	if err != nil {
+		t.Fatalf("expected nil error for cleanup environment, got %v", err)
+	}
+	if err := CheckEnvironment(true); err == nil {
+		t.Fatalf("expected error for missing environment after cleanup, got nil")
+	}
+}
