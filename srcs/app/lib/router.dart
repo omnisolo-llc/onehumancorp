@@ -31,7 +31,6 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:ohc_app/widgets/mode_indicator.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -181,7 +180,6 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return NavigationDrawer(
       children: [
-        const ModeIndicator(),
         const SizedBox(height: 16),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
