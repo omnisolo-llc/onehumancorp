@@ -1,5 +1,9 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers:
+  - "Mission requires modifying core KAIROS backend orchestration files which violates the Senior Developer Advocate status: BLOCKED
+blockers:
+  - "Mission violates domain." Guide domain boundary. Guide is restricted to onboarding-critical features and setup flows."
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
