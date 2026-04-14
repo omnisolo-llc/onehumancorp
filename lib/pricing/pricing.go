@@ -53,3 +53,9 @@ func (c *CostOptimizer) AnalyzeCost(tokens int) float64 {
 func (c *CostOptimizer) GetTokenEfficiency() string {
 	return fmt.Sprintf("Efficiency calculated for base cost: %.2f", c.BaseCost)
 }
+
+// EstimateTokens provides a fast, basic approximation of token count based on string length.
+func (c *CostOptimizer) EstimateTokens(text string) int {
+	// A simple heuristic: 1 token is roughly 4 characters in English
+	return len(text) / 4
+}

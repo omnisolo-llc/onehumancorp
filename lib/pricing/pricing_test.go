@@ -44,3 +44,13 @@ func TestCostOptimizer_Caching(t *testing.T) {
 		t.Errorf("Expected cached response %q, got %q", response, cachedResponse)
 	}
 }
+
+func TestEstimateTokens(t *testing.T) {
+	optimizer := NewCostOptimizer(0.0)
+	text := "This is a test string." // 22 chars
+
+	tokens := optimizer.EstimateTokens(text)
+	if tokens != 5 {
+		t.Fatalf("Expected 5 tokens, got %d", tokens)
+	}
+}

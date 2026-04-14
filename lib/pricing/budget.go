@@ -40,3 +40,19 @@ func (b *BudgetManager) GetRemaining() float64 {
 	defer b.mu.Unlock()
 	return b.TotalLimit - b.current
 }
+
+// RefundSpend refunds previously spent tokens back to the budget.
+func (b *BudgetManager) RefundSpend(amount float64) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if amount < 0 {
+		return fmt.Errorf("refund amount cannot be negative")
+	}
+
+	b.current -= amount
+	if b.current < 0 {
+		b.current = 0
+	}
+	return nil
+}
