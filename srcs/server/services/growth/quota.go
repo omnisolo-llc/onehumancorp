@@ -15,3 +15,8 @@ func NewQuotaTracker(base int, bonus int) *QuotaTracker {
 func (q *QuotaTracker) CalculateQuota(successfulReferrals int) int {
 	return q.BaseQuota + (successfulReferrals * q.BonusPerReferral)
 }
+
+func (q *QuotaTracker) CheckLimit(used int, successfulReferrals int) bool {
+	limit := q.CalculateQuota(successfulReferrals)
+	return used < limit
+}
