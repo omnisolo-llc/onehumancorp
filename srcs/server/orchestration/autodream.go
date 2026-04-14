@@ -626,7 +626,7 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 		SELECT a.memory_id, a.context, b.memory_id, b.context
 		FROM swarm_truth_embeddings a
 		JOIN swarm_truth_embeddings b ON a.memory_id < b.memory_id
-		WHERE a.embedding <=> b.embedding < 0.05
+		WHERE a.embedding <-> b.embedding < 0.05
 		LIMIT 10
 	`
 
@@ -766,7 +766,7 @@ func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, lim
 	}
 
 	query := `
-		SELECT memory_id, context, embedding <=> $1::vector as distance
+		SELECT memory_id, context, embedding <-> $1::vector as distance
 		FROM swarm_truth_embeddings
 		ORDER BY distance ASC
 		LIMIT $2
