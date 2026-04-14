@@ -88,8 +88,8 @@ type mockFloat64Histogram struct {
 	metric.Float64Histogram
 }
 
-func (m *mockFloat64Histogram) Record(ctx context.Context, value float64, options ...metric.RecordOption) {}
-
+func (m *mockFloat64Histogram) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
+}
 
 // mockInt64Counter implements metric.Int64Counter
 type mockInt64Counter struct {
@@ -344,7 +344,6 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordTokensSaved", func(t *testing.T) {
 		RecordTokensSaved(ctx, "reason", "db", 100)
 	})
-
 
 	t.Run("RecordAgentApiCall", func(t *testing.T) {
 		RecordAgentApiCall(ctx, "agent-1", "developer", "get_file")
@@ -634,4 +633,27 @@ func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
+}
+
+func TestIdentityVerificationMetrics(t *testing.T) {
+	IdentityVerificationSuccessTotal = nil
+	IdentityVerificationFailureTotal = nil
+
+	// Should not panic when nil
+	RecordIdentityVerification(context.Background(), true)
+	RecordIdentityVerification(context.Background(), false)
+}
+
+func TestSyncConflictResolvedMetric(t *testing.T) {
+	SyncConflictsResolvedTotal = nil
+
+	// Should not panic when nil
+	RecordSyncConflictResolved(context.Background())
+}
+
+func TestOmniContextBytesRoutedMetric(t *testing.T) {
+	OmniContextBytesRouted = nil
+
+	// Should not panic when nil
+	RecordOmniContextBytes(context.Background(), 1024)
 }

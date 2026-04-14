@@ -70,6 +70,8 @@ func HandleHybridSyncMissions(hub *orchestration.Hub) http.HandlerFunc {
 					// continue syncing the rest
 				} else {
 					syncedCount++
+					telemetry.RecordSyncConflictResolved(ctx)
+					telemetry.RecordOmniContextBytes(ctx, int64(len(p.Payload)))
 
 					// Publish to Teammate Mesh
 					if cnNode := hub.CentrifugeNode(); cnNode != nil {
