@@ -307,6 +307,20 @@ sequenceDiagram
 
 The **KAIROS Distributed State Machine** manages the lifecycle of autonomous tasks and sub-agent workflows across the Swarm. It provides robust state transition APIs, guaranteeing distributed consistency.
 
+
+**State Machine Workflow:**
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Task Created
+    PENDING --> ASSIGNED: Agent Claims Task
+    ASSIGNED --> IN_PROGRESS: Agent Begins Work
+    IN_PROGRESS --> BLOCKED: Awaiting Dependency/Review
+    BLOCKED --> IN_PROGRESS: Unblocked
+    IN_PROGRESS --> DONE: Task Completed
+    DONE --> [*]
+```
+
+
 **Endpoint:** `POST /api/v1/state/transition`
 Transitions an entity from its current state to a new state. Required for tracking Sub-Agent mission progress.
 
