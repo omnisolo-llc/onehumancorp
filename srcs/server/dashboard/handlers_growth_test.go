@@ -469,3 +469,33 @@ func TestHandleWaitlist(t *testing.T) {
         t.Errorf("expected 1 waitlist entry, got %d", len(list))
     }
 }
+
+func TestHandleViralCoefficientMetrics(t *testing.T) {
+	server := &Server{}
+
+	// Add mock referrals
+	server.referrals = []Referral{
+		{UserID: "user1", Conversions: 2},
+		{UserID: "user2", Conversions: 4},
+	}
+
+	req, err := http.NewRequest("GET", "/api/growth/viral-coefficient-metrics", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(server.handleViralCoefficientMetrics)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+	if resp["viral_coefficient"] != float64(3.0) { t.Errorf("expected 3.0, got %v", resp["viral_coefficient"]) }
+	if resp["organization_id"] != "default" { t.Errorf("expected default, got %v", resp["organization_id"]) }
+}
