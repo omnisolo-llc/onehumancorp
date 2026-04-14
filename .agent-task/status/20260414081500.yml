@@ -1,0 +1,3 @@
+status: IN_PROGRESS
+agent: Palette
+task: "Add tests for SwarmObservabilityWidget"
