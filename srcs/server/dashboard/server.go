@@ -16,17 +16,20 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
+	apimesh "github.com/onehumancorp/mono/srcs/server/api/mesh"
 	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -55,6 +58,7 @@ type Server struct {
 	settings              settings.AppSettings
 	agentProviderRegistry *agents.Registry
 	dynamicMCPTools       []MCPTool
+	meshBroker            mesh.MeshBroker
 	rateLimitStates       map[string]*RateLimitState
 	staticDir             string
 	serveUI               bool
@@ -62,8 +66,8 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	onboardingFunnels []OnboardingFunnel
-	waitlist          []WaitlistEntry
+	onboardingFunnels     []OnboardingFunnel
+	waitlist              []WaitlistEntry
 }
 
 // RateLimitState functionality.
@@ -434,11 +438,32 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		rpc[string(rp.Role)] = rp
 	}
 
+	var meshBroker mesh.MeshBroker
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		meshBroker = mesh.NewLocalMeshBroker(mesh.NewLocalMesh())
+	} else {
+		redisURL := os.Getenv("REDIS_URL")
+		if redisURL == "" {
+			redisURL = "redis://localhost:6379"
+		}
+		opts, err := rueidis.ParseURL(redisURL)
+		if err == nil {
+			if c, err := rueidis.NewClient(opts); err == nil {
+				meshBroker = mesh.NewRedisMeshBroker(c)
+			} else {
+				meshBroker = mesh.NewLocalMeshBroker(mesh.NewLocalMesh())
+			}
+		} else {
+			meshBroker = mesh.NewLocalMeshBroker(mesh.NewLocalMesh())
+		}
+	}
+
 	server := &Server{
 		org:                   org,
 		roleProfileCache:      rpc,
 		hub:                   hub,
 		tracker:               tracker,
+		meshBroker:            meshBroker,
 		approvals:             []ApprovalRequest{},
 		handoffs:              []HandoffPackage{},
 		skills:                defaultSkillPacks(),
@@ -459,8 +484,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		waitlist:          []WaitlistEntry{},
-		onboardingFunnels: []OnboardingFunnel{},
+		waitlist:              []WaitlistEntry{},
+		onboardingFunnels:     []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -599,9 +624,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 
 	// Teammate Mesh APIs
-	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
-	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
-	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
+	mux.Handle("/api/mesh/broadcast", apimesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+	mux.Handle("/api/mesh/v2/broadcast", apimesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
+	mux.Handle("/api/mesh/direct", apimesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
@@ -913,7 +938,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -985,7 +1009,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -1968,6 +1991,8 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		Channel string                 `json:"channel"`
 		Data    map[string]interface{} `json:"data"`
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
@@ -1984,13 +2009,7 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.hub.Publish(orchestration.Message{
-		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		FromAgent: "system",
-		ToAgent:   "system",
-		Type:      req.Channel,
-		Content:   string(payloadBytes),
-	})
+	err = s.meshBroker.Broadcast(r.Context(), req.Channel, payloadBytes)
 
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
