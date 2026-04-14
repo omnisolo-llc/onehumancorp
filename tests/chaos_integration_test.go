@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"path/filepath"
 	"sync"
@@ -160,5 +161,40 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 		}
 		wg.Wait()
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
+	})
+}
+
+// TestParity_Corruption ensures that both SQLite and Postgres modes behave gracefully under simulated DB file corruption.
+func TestParity_Corruption(t *testing.T) {
+	t.Run("SQLite_Corruption", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "true")
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_corruption.db")
+
+		if err := os.WriteFile(dbPath, []byte("NOT A REAL DATABASE"), 0644); err != nil {
+			t.Fatalf("Failed to write corrupted db: %v", err)
+		}
+
+		_, err := orchestration.NewSIPDB(dbPath)
+		if err == nil {
+			t.Fatalf("Expected SQLite NewSIPDB to fail on corrupted database file, but it succeeded")
+		}
+		t.Logf("SQLite correctly returned error on corrupted DB: %v", err)
+	})
+
+	t.Run("PostgresMock_Corruption", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_chaos_pg_corruption.db")
+
+		if err := os.WriteFile(dbPath, []byte("GARBAGE PG MOCK"), 0644); err != nil {
+			t.Fatalf("Failed to write corrupted db: %v", err)
+		}
+
+		_, err := orchestration.NewSIPDB(dbPath)
+		if err == nil {
+			t.Fatalf("Expected Postgres mock NewSIPDB to fail on corrupted database file, but it succeeded")
+		}
+		t.Logf("Postgres mock correctly returned error on corrupted DB: %v", err)
 	})
 }
