@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
 )
 
 // TodoWriteTool definition
@@ -29,7 +31,11 @@ var TodoWriteTool = Tool{
 			return "", err
 		}
 
-		f, err := os.OpenFile(".agent-task/todo.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		todoPath := todoFilePath()
+		if err := os.MkdirAll(filepath.Dir(todoPath), 0o755); err != nil {
+			return "", err
+		}
+		f, err := os.OpenFile(todoPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			return "", err
 		}
@@ -41,4 +47,14 @@ var TodoWriteTool = Tool{
 
 		return "Todo added successfully.", nil
 	},
+}
+
+// todoFilePath returns the path for the todo file.
+// It uses OHC_TODO_FILE env var when set; otherwise a per-process temp file
+// so multiple concurrent agent runs don't interfere with each other.
+func todoFilePath() string {
+	if p := os.Getenv("OHC_TODO_FILE"); p != "" {
+		return p
+	}
+	return filepath.Join(os.TempDir(), "ohc-todo-"+strconv.Itoa(os.Getpid())+".txt")
 }
