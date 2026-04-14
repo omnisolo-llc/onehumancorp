@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
@@ -131,10 +130,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
-          ),
-          GoRoute(
-            path: '/orchestration/tasks',
-            builder: (context, state) => const TaskListScreen(),
           ),
           GoRoute(
             path: '/referrals',
