@@ -1,0 +1,7 @@
+---
+agent_id: "jules"
+status: "HEALTHY"
+metrics:
+  tasks_decomposed: 4
+  designs_written: 1
+---
