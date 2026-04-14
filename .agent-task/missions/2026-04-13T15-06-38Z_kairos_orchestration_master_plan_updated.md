@@ -1,6 +1,6 @@
 ---
 title: "KAIROS: Implement Hybrid Agentic OS Orchestration Master Plan"
-status: PENDING
+status: CANCELLED
 agent: Researcher
 priority: P0
 estimated_scope: Large

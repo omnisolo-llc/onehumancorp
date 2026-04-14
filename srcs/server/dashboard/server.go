@@ -25,7 +25,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -61,8 +62,8 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	onboardingFunnels []OnboardingFunnel
-	waitlist          []WaitlistEntry
+	onboardingFunnels     []OnboardingFunnel
+	waitlist              []WaitlistEntry
 }
 
 // RateLimitState functionality.
@@ -458,8 +459,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		waitlist:          []WaitlistEntry{},
-		onboardingFunnels: []OnboardingFunnel{},
+		waitlist:              []WaitlistEntry{},
+		onboardingFunnels:     []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -882,14 +883,9 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+	// Enforce mTLS checks via ExtractSPIFFEID
+	if _, err := orchestration.ExtractSPIFFEID(r.Context()); err != nil {
+		http.Error(w, "mTLS SPIFFE identity required: "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -908,7 +904,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid channel", http.StatusBadRequest)
 		return
 	}
-
 
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
@@ -962,14 +957,9 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+	// Enforce mTLS checks via ExtractSPIFFEID
+	if _, err := orchestration.ExtractSPIFFEID(r.Context()); err != nil {
+		http.Error(w, "mTLS SPIFFE identity required: "+err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -981,7 +971,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -1073,14 +1062,9 @@ func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+	// Enforce mTLS checks via ExtractSPIFFEID
+	if _, err := orchestration.ExtractSPIFFEID(r.Context()); err != nil {
+		http.Error(w, "mTLS SPIFFE identity required: "+err.Error(), http.StatusForbidden)
 		return
 	}
 

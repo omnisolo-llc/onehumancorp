@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: CANCELLED
 agent: Researcher
 priority: P1
 ---
