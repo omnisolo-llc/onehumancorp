@@ -72,9 +72,6 @@ func TestClaimTask_SQLite(t *testing.T) {
     }
 
     // Dependency added directly above in JSON format
-    if err != nil {
-        t.Fatalf("failed to insert dep: %v", err)
-    }
 
     claims := &auth.Claims{OrganizationID: "org-1"}
     ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
