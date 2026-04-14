@@ -454,16 +454,7 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 
 
 
-type MeshTransport interface {
-	BroadcastTask(ctx context.Context, task Task) error
-	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
-	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
-	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
-}
+
 
 const numShards = 16
 
@@ -1160,4 +1151,35 @@ func (lm *LocalTeammateMesh) runEvents(topic string, shardIdx int) {
 		}
 		lm.eventsGlobalMu.RUnlock()
 	}
+}
+
+func (rm *RedisMeshTransport) Publish(ctx context.Context, topic string, data []byte) error {
+	cmd := rm.client.B().Publish().Channel(topic).Message(string(data)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+	ch := make(chan []byte, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(topic).Build(), func(msg rueidis.PubSubMessage) {
+			select {
+			case ch <- []byte(msg.Message):
+			default:
+				slog.Warn("RedisMeshTransport.Subscribe channel full, dropping message")
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.Subscribe error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+func (lm *MemoryMeshTransport) Publish(ctx context.Context, topic string, data []byte) error {
+	return lm.BroadcastMeshEvent(ctx, topic, data)
+}
+
+func (lm *MemoryMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+	return lm.SubscribeMeshEvents(ctx, topic)
 }

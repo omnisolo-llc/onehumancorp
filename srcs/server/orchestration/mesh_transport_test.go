@@ -107,3 +107,49 @@ func TestMemoryMeshTransport_MeshEvents(t *testing.T) {
 // Minimal placeholder for Redis tests.
 // Full integration test for Redis mesh requires a running Redis instance,
 // which is usually handled in chaos_mesh_test.go or similar integration suites.
+
+func TestMemoryMeshTransport_PublishSubscribe(t *testing.T) {
+	provider, err := db.NewSQLiteProvider(":memory:")
+	require.NoError(t, err)
+
+	_, err = provider.Exec(context.Background(), `
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL,
+			priority TEXT,
+			agent_id TEXT,
+			organization_id TEXT NOT NULL,
+			payload TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			synced_to_cloud BOOLEAN DEFAULT 0
+		);
+	`)
+	require.NoError(t, err)
+
+	mesh := NewMemoryMeshTransport(provider)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	topic := "custom-topic-publish"
+	eventsChan, err := mesh.Subscribe(ctx, topic)
+	require.NoError(t, err)
+
+	payload := map[string]string{"foo": "bar"}
+	payloadBytes, _ := json.Marshal(payload)
+
+	err = mesh.Publish(ctx, topic, payloadBytes)
+	require.NoError(t, err)
+
+	select {
+	case receivedBytes := <-eventsChan:
+		var receivedPayload map[string]string
+		err := json.Unmarshal(receivedBytes, &receivedPayload)
+		require.NoError(t, err)
+		assert.Equal(t, payload, receivedPayload)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for mesh event message")
+	}
+}
