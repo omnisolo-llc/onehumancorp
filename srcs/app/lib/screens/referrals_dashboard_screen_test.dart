@@ -16,12 +16,8 @@ void main() {
 
   Widget buildTestWidget() {
     return ProviderScope(
-      overrides: [
-        apiServiceProvider.overrideWithValue(mockApiService),
-      ],
-      child: const MaterialApp(
-        home: ReferralsDashboardScreen(),
-      ),
+      overrides: [apiServiceProvider.overrideWithValue(mockApiService)],
+      child: const MaterialApp(home: ReferralsDashboardScreen()),
     );
   }
 
@@ -63,8 +59,9 @@ void main() {
   });
 
   testWidgets('displays error state', (tester) async {
-    when(() => mockApiService.listReferrals())
-        .thenAnswer((_) => Future.error(Exception('API failure')));
+    when(
+      () => mockApiService.listReferrals(),
+    ).thenAnswer((_) => Future.error(Exception('API failure')));
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();

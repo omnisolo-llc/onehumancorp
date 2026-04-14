@@ -137,7 +137,9 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Icon(
                     Icons.check_circle_outline,
                     size: 64,
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -147,7 +149,9 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                   Text(
                     'Your agents are operating autonomously.',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -181,7 +185,10 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -189,7 +196,10 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                  color:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimaryContainer,
                                 ),
                               ),
                             ),
@@ -199,7 +209,10 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                               ),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -220,14 +233,20 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                             height: 200,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
                               child: Icon(
                                 Icons.image_outlined,
                                 size: 48,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withValues(alpha: 0.7),
                               ),
                             ),
                           ),

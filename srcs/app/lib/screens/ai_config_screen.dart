@@ -123,70 +123,77 @@ class _ProviderCardState extends State<_ProviderCard> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: colors.primary.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.psychology,
-                            color: colors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          widget.provider.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            fontFamily: 'Outfit',
-                            color: colors.onSurface,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (widget.provider.isOfficial)
-                          Chip(
-                            label: const Text('Official', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                            backgroundColor: colors.primaryContainer.withOpacity(0.8),
-                            side: BorderSide.none,
-                          ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          tooltip: 'Edit API key',
-                          color: colors.primary,
-                          onPressed: () => _showEditKeyDialog(context),
-                        ),
-                      ],
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.psychology, color: colors.primary),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  widget.provider.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    fontFamily: 'Outfit',
+                    color: colors.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                if (widget.provider.isOfficial)
+                  Chip(
+                    label: const Text(
+                      'Official',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.provider.baseUrl,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: colors.onSurfaceVariant,
-                        fontSize: 14,
-                      ),
-                    ),
-                    if (widget.provider.models.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: widget.provider.models.map(
+                    backgroundColor: colors.primaryContainer.withOpacity(0.8),
+                    side: BorderSide.none,
+                  ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Edit API key',
+                  color: colors.primary,
+                  onPressed: () => _showEditKeyDialog(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.provider.baseUrl,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: colors.onSurfaceVariant,
+                fontSize: 14,
+              ),
+            ),
+            if (widget.provider.models.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    widget.provider.models
+                        .map(
                           (m) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: colors.secondaryContainer.withOpacity(0.5),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: colors.secondary.withOpacity(0.2)),
+                              border: Border.all(
+                                color: colors.secondary.withOpacity(0.2),
+                              ),
                             ),
                             child: Text(
                               m,
@@ -197,11 +204,12 @@ class _ProviderCardState extends State<_ProviderCard> {
                               ),
                             ),
                           ),
-                        ).toList(),
-                      ),
-                    ],
-                  ],
-                ),
+                        )
+                        .toList(),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -230,7 +238,10 @@ class _ProviderCardState extends State<_ProviderCard> {
               FilledButton(
                 onPressed: () async {
                   final api = widget.ref.read(apiServiceProvider);
-                  await api?.saveAiProviderKey(widget.provider.id, ctrl.text.trim());
+                  await api?.saveAiProviderKey(
+                    widget.provider.id,
+                    ctrl.text.trim(),
+                  );
                   widget.ref.invalidate(_providersProvider);
                   if (context.mounted) Navigator.pop(context);
                 },

@@ -237,14 +237,18 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                       ...data.organization.members
                           .take(3)
                           .map(
-                            (m) => ListTile(
-                              leading: Icon(
-                                m.isHuman ? Icons.person : Icons.smart_toy,
-                                size: 20,
+                            (m) => GlassCard(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: EdgeInsets.zero,
+                              child: ListTile(
+                                leading: Icon(
+                                  m.isHuman ? Icons.person : Icons.smart_toy,
+                                  size: 20,
+                                ),
+                                title: Text(m.name),
+                                subtitle: Text(m.role),
+                                dense: true,
                               ),
-                              title: Text(m.name),
-                              subtitle: Text(m.role),
-                              dense: true,
                             ),
                           ),
                       if (data.organization.members.length > 3)

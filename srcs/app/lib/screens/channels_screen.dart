@@ -287,27 +287,31 @@ class _ChannelCardState extends State<_ChannelCard> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
-          padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        child: GlassCard(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.zero,
           child: ListTile(
-                  leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
-                  title: Text(
-                    widget.channel.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(widget.channel.backend.displayName),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Chip(
-                        label: Text(widget.channel.enabled ? 'Enabled' : 'Disabled'),
-                        backgroundColor:
-                            widget.channel.enabled
-                                ? colorScheme.secondaryContainer
-                                : colorScheme.surfaceContainerHighest,
-                      ),
-                    ],
-                  ),
+            leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
+            title: Text(
+              widget.channel.name,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(widget.channel.backend.displayName),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Chip(
+                  label: Text(widget.channel.enabled ? 'Enabled' : 'Disabled'),
+                  backgroundColor:
+                      widget.channel.enabled
+                          ? colorScheme.secondaryContainer
+                          : colorScheme.surfaceContainerHighest,
                 ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

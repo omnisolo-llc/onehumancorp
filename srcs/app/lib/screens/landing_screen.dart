@@ -51,16 +51,25 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         children: [
                           _DownloadButton(os: 'Mac', icon: Icons.apple),
                           _DownloadButton(os: 'Windows', icon: Icons.window),
-                          _DownloadButton(os: 'Linux', icon: Icons.laptop_chromebook),
+                          _DownloadButton(
+                            os: 'Linux',
+                            icon: Icons.laptop_chromebook,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => context.go('/business_setup'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
                         ),
-                        child: const Text('Start Business Setup', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                        child: const Text(
+                          'Start Business Setup',
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextButton(
@@ -118,9 +127,9 @@ class _HeaderSection extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           'One Human Corp',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -227,23 +236,20 @@ class _GlassCard extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         color: color.withValues(alpha: 0.05),
         child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 40, color: color),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            Text(description, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ),
       ),
     );
   }
@@ -267,10 +273,26 @@ class _DownloadButton extends ConsumerWidget {
         child: BackdropFilter(
           filter: ImageFilter.compose(
             outer: ColorFilter.matrix(const <double>[
-              1.787, -0.715, -0.072, 0, 0,
-              -0.213, 1.285, -0.072, 0, 0,
-              -0.213, -0.715, 1.928, 0, 0,
-              0, 0, 0, 1, 0,
+              1.787,
+              -0.715,
+              -0.072,
+              0,
+              0,
+              -0.213,
+              1.285,
+              -0.072,
+              0,
+              0,
+              -0.213,
+              -0.715,
+              1.928,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
             ]),
             inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
           ),
@@ -298,11 +320,20 @@ class _DownloadButton extends ConsumerWidget {
               }
             },
             icon: Icon(icon, color: Theme.of(context).colorScheme.primary),
-            label: Text('Download for $os', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            label: Text(
+              'Download for $os',
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+            ),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Outfit',
+              ),
             ),
           ),
         ),

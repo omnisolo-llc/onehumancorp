@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -13,7 +14,8 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
       _ReferralsDashboardScreenState();
 }
 
-class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
+class _ReferralsDashboardScreenState
+    extends ConsumerState<ReferralsDashboardScreen> {
   late Future<List<Map<String, dynamic>>> _referralsFuture;
 
   @override
@@ -36,10 +38,7 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
       appBar: AppBar(
         title: const Text('Viral Loop Dashboard'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh),
         ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -73,9 +72,10 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
             child: Wrap(
               spacing: 24,
               runSpacing: 24,
-              children: referrals.map((r) {
-                return _ReferralCard(referral: r);
-              }).toList(),
+              children:
+                  referrals.map((r) {
+                    return _ReferralCard(referral: r);
+                  }).toList(),
             ),
           );
         },
@@ -92,7 +92,8 @@ class _ReferralCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final createdAt = DateTime.tryParse(referral['createdAt'] ?? '') ?? DateTime.now();
+    final createdAt =
+        DateTime.tryParse(referral['createdAt'] ?? '') ?? DateTime.now();
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
@@ -100,53 +101,53 @@ class _ReferralCard extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         color: colors.surface.withValues(alpha: 0.6),
         child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Ref: ${referral['referralCode']}',
-                      style: const TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Icon(
-                      Icons.group_add,
-                      color: colors.primary,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
                 Text(
-                  'User: ${referral['userId']}',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    color: colors.onSurfaceVariant,
+                  'Ref: ${referral['referralCode']}',
+                  style: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _StatColumn(label: 'Clicks', value: '${referral['clicks']}'),
-                    _StatColumn(label: 'Conversions', value: '${referral['conversions']}'),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Created: ${DateFormat.yMMMd().add_jm().format(createdAt)}',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    color: colors.onSurfaceVariant,
-                  ),
+                Icon(Icons.group_add, color: colors.primary),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'User: ${referral['userId']}',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _StatColumn(label: 'Clicks', value: '${referral['clicks']}'),
+                _StatColumn(
+                  label: 'Conversions',
+                  value: '${referral['conversions']}',
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Created: ${DateFormat.yMMMd().add_jm().format(createdAt)}',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

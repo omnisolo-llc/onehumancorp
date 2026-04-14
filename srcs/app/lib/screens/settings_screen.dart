@@ -38,27 +38,36 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(24),
               children: [
                 if (user == null) ...[
-                  ListTile(
-                    leading: Icon(
-                      Icons.logout,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    title: Text(
-                      'Sign Out',
-                      style: TextStyle(
+                  GlassCard(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.logout,
                         color: Theme.of(context).colorScheme.error,
                       ),
+                      title: Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      onTap:
+                          () => ref.read(authStateProvider.notifier).logout(),
                     ),
-                    onTap: () => ref.read(authStateProvider.notifier).logout(),
                   ),
                 ],
                 if (user != null) ...[
-                  ListTile(
-                    leading: CircleAvatar(
-                      child: Text(user.name.substring(0, 1).toUpperCase()),
+                  GlassCard(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Text(user.name.substring(0, 1).toUpperCase()),
+                      ),
+                      title: Text(user.name),
+                      subtitle: Text(user.email),
                     ),
-                    title: Text(user.name),
-                    subtitle: Text(user.email),
                   ),
                   const Divider(),
                 ],
@@ -83,30 +92,41 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('Backend URL'),
-                  subtitle: Text(settings.backendUrl),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    tooltip: 'Edit Backend URL',
-                    onPressed:
-                        () =>
-                            _editBackendUrl(context, ref, settings.backendUrl),
+                GlassCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: const Icon(Icons.link),
+                    title: const Text('Backend URL'),
+                    subtitle: Text(settings.backendUrl),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Edit Backend URL',
+                      onPressed:
+                          () => _editBackendUrl(
+                            context,
+                            ref,
+                            settings.backendUrl,
+                          ),
+                    ),
                   ),
                 ),
 
-                SwitchListTile(
-                  secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
-                  subtitle: const Text(
-                    'Run a local desktop backend. Disable this to use the app as a remote client.',
+                GlassCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.zero,
+                  child: SwitchListTile(
+                    secondary: const Icon(Icons.computer),
+                    title: const Text('Standalone Mode'),
+                    subtitle: const Text(
+                      'Run a local desktop backend. Disable this to use the app as a remote client.',
+                    ),
+                    value: settings.standaloneMode,
+                    onChanged:
+                        (value) => ref
+                            .read(clientSettingsProvider.notifier)
+                            .updateStandaloneMode(value),
                   ),
-                  value: settings.standaloneMode,
-                  onChanged:
-                      (value) => ref
-                          .read(clientSettingsProvider.notifier)
-                          .updateStandaloneMode(value),
                 ),
 
                 if (settings.standaloneMode) ...[
@@ -117,29 +137,41 @@ class SettingsScreen extends ConsumerWidget {
 
                 const Divider(),
                 const _SectionHeader(title: 'Account'),
-                ListTile(
-                  leading: const Icon(Icons.business),
-                  title: const Text('Organization'),
-                  subtitle: Text(user?.organizationId ?? '—'),
+                GlassCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: const Icon(Icons.business),
+                    title: const Text('Organization'),
+                    subtitle: Text(user?.organizationId ?? '—'),
+                  ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.verified_user),
-                  title: const Text('Role'),
-                  subtitle: Text(user?.role ?? '—'),
+                GlassCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: const Icon(Icons.verified_user),
+                    title: const Text('Role'),
+                    subtitle: Text(user?.role ?? '—'),
+                  ),
                 ),
                 const Divider(),
-                ListTile(
-                  leading: Icon(
-                    Icons.logout,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    'Sign Out',
-                    style: TextStyle(
+                GlassCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.logout,
                       color: Theme.of(context).colorScheme.error,
                     ),
+                    title: Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    onTap: () => ref.read(authStateProvider.notifier).logout(),
                   ),
-                  onTap: () => ref.read(authStateProvider.notifier).logout(),
                 ),
               ],
             ),
@@ -165,10 +197,14 @@ class SettingsScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
                   ),
                   child: Column(
@@ -209,17 +245,24 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
+                            onPressed:
+                                () => Navigator.pop(context, controller.text),
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
+                            child: const Text(
+                              'Save',
+                              style: TextStyle(fontFamily: 'Inter'),
+                            ),
                           ),
                         ],
                       ),
@@ -281,9 +324,9 @@ class _LocalBackendStatusCardState
           label:
               'Local Backend Service Status: ${running ? "Running" : "Stopped"}',
           child: GlassCard(
-        child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 children: [
                   Row(
                     children: [
@@ -375,8 +418,8 @@ class _LocalBackendStatusCardState
                 ],
               ),
             ),
-      ),
-);
+          ),
+        );
       },
     );
   }

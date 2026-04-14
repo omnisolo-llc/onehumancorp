@@ -73,10 +73,12 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     }
     state = state.copyWith(goals: goals);
   }
+
   void updateDeployment(String val) => state = state.copyWith(deployment: val);
   void updateAdminName(String name) => state = state.copyWith(adminName: name);
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
-  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
+  void updateAdminPassword(String val) =>
+      state = state.copyWith(adminPassword: val);
 
   void launch(BuildContext context) {
     // Navigate to dashboard
@@ -84,9 +86,10 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   }
 }
 
-final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
-  return BusinessSetupNotifier();
-});
+final businessSetupProvider =
+    NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
+      return BusinessSetupNotifier();
+    });
 
 class BusinessSetupWizardScreen extends ConsumerWidget {
   const BusinessSetupWizardScreen({super.key});
@@ -106,13 +109,25 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Business Setup',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   if (state.step == 0) ...[
-                    const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter')),
+                    const Text(
+                      'Welcome! Your AI team, ready in minutes.',
+                      style: TextStyle(fontFamily: 'Inter'),
+                    ),
                   ] else if (state.step == 1) ...[
                     TextField(
-                      decoration: const InputDecoration(labelText: 'Company Name'),
+                      decoration: const InputDecoration(
+                        labelText: 'Company Name',
+                      ),
                       onChanged: notifier.updateCompany,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
@@ -136,39 +151,73 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                       },
                     ),
                   ] else if (state.step == 2) ...[
-                     const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                     ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
-                      title: Text(goal, style: const TextStyle(fontFamily: 'Inter')),
-                      value: state.goals.contains(goal),
-                      onChanged: (bool? value) {
-                        notifier.toggleGoal(goal);
-                      },
-                    )),
+                    const Text(
+                      'Select Goals',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ...[
+                      'Support',
+                      'Build software',
+                      'Marketing',
+                      'Data',
+                      'Custom',
+                    ].map(
+                      (goal) => CheckboxListTile(
+                        title: Text(
+                          goal,
+                          style: const TextStyle(fontFamily: 'Inter'),
+                        ),
+                        value: state.goals.contains(goal),
+                        onChanged: (bool? value) {
+                          notifier.toggleGoal(goal);
+                        },
+                      ),
+                    ),
                   ] else if (state.step == 3) ...[
-                     const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                     ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
-                      title: Text(dep, style: const TextStyle(fontFamily: 'Inter')),
-                      value: dep,
-                      groupValue: state.deployment,
-                      onChanged: (String? value) {
-                        if (value != null) notifier.updateDeployment(value);
-                      },
-                    )),
+                    const Text(
+                      'Deployment Preference',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ...['Cloud', 'Desktop', 'Mobile-only'].map(
+                      (dep) => RadioListTile<String>(
+                        title: Text(
+                          dep,
+                          style: const TextStyle(fontFamily: 'Inter'),
+                        ),
+                        value: dep,
+                        groupValue: state.deployment,
+                        onChanged: (String? value) {
+                          if (value != null) notifier.updateDeployment(value);
+                        },
+                      ),
+                    ),
                   ] else if (state.step == 4) ...[
                     TextField(
-                      decoration: const InputDecoration(labelText: 'Admin Name'),
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Name',
+                      ),
                       onChanged: notifier.updateAdminName,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
                     const SizedBox(height: 16),
                     TextField(
-                      decoration: const InputDecoration(labelText: 'Admin Email'),
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Email',
+                      ),
                       onChanged: notifier.updateAdminEmail,
                       style: const TextStyle(fontFamily: 'Inter'),
                     ),
                     const SizedBox(height: 16),
                     TextField(
-                      decoration: const InputDecoration(labelText: 'Admin Password'),
+                      decoration: const InputDecoration(
+                        labelText: 'Admin Password',
+                      ),
                       obscureText: true,
                       onChanged: notifier.updateAdminPassword,
                       style: const TextStyle(fontFamily: 'Inter'),
@@ -183,7 +232,10 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         notifier.launch(context);
                       }
                     },
-                    child: Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                    child: Text(
+                      state.step == 4 ? 'Launch My AI Team →' : 'Next',
+                      style: const TextStyle(fontFamily: 'Inter'),
+                    ),
                   ),
                 ],
               ),

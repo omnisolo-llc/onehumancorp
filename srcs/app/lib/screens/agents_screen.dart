@@ -92,8 +92,6 @@ class _EmptyAgents extends StatelessWidget {
   }
 }
 
-
-
 class _AgentList extends StatelessWidget {
   final List<Agent> agents;
   const _AgentList({required this.agents});
@@ -103,11 +101,12 @@ class _AgentList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: agents.length,
-      itemBuilder: (_, i) => _AnimatedAgentCard(
-        key: ValueKey(agents[i].id ?? agents[i].name),
-        agent: agents[i],
-        index: i,
-      ),
+      itemBuilder:
+          (_, i) => _AnimatedAgentCard(
+            key: ValueKey(agents[i].id ?? agents[i].name),
+            agent: agents[i],
+            index: i,
+          ),
     );
   }
 }
@@ -115,13 +114,18 @@ class _AgentList extends StatelessWidget {
 class _AnimatedAgentCard extends StatefulWidget {
   final Agent agent;
   final int index;
-  const _AnimatedAgentCard({super.key, required this.agent, required this.index});
+  const _AnimatedAgentCard({
+    super.key,
+    required this.agent,
+    required this.index,
+  });
 
   @override
   State<_AnimatedAgentCard> createState() => _AnimatedAgentCardState();
 }
 
-class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTickerProviderStateMixin {
+class _AnimatedAgentCardState extends State<_AnimatedAgentCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -138,8 +142,10 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
       begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     Future.delayed(Duration(milliseconds: 100 * widget.index), () {
       if (mounted) {
@@ -162,7 +168,9 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
             ? colorScheme.primary
             : colorScheme.surfaceContainerHighest;
     final isRunningIconColor =
-        widget.agent.isRunning ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
+        widget.agent.isRunning
+            ? colorScheme.onPrimary
+            : colorScheme.onSurfaceVariant;
     final chipBgColor =
         widget.agent.isRunning
             ? colorScheme.primaryContainer
@@ -173,7 +181,8 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
             : colorScheme.onSurfaceVariant;
 
     return Semantics(
-      label: 'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
+      label:
+          'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
       button: true,
       child: SlideTransition(
         position: _slideAnimation,
@@ -182,95 +191,101 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
           child: Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-        child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          // Optional: Handle agent card tap
-                        },
-                        child: Tooltip(
-                          message: 'View details for ${widget.agent.name}',
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                  width: 48,
-                                  height: 48,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isRunningColor.withValues(alpha: 0.8),
-                                  ),
-                                  child: Icon(Icons.smart_toy, color: isRunningIconColor),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            widget.agent.name,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: colorScheme.onSurface,
-                                              fontFamily: 'Outfit',
-                                            ),
-                                          ),
-                                          if (widget.agent.svidVerified) ...[
-                                            const SizedBox(width: 6),
-                                            Tooltip(
-                                              message: 'SPIFFE mTLS Secured',
-                                              child: Icon(
-                                                Icons.verified_user,
-                                                size: 16,
-                                                color: Colors.greenAccent,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        widget.agent.role,
-                                        style: TextStyle(
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: chipBgColor.withValues(alpha: 0.8),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    widget.agent.status,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  // Optional: Handle agent card tap
+                },
+                child: Tooltip(
+                  message: 'View details for ${widget.agent.name}',
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isRunningColor.withValues(alpha: 0.8),
+                          ),
+                          child: Icon(
+                            Icons.smart_toy,
+                            color: isRunningIconColor,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    widget.agent.name,
                                     style: TextStyle(
-                                      color: chipTextColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: colorScheme.onSurface,
+                                      fontFamily: 'Outfit',
                                     ),
                                   ),
+                                  if (widget.agent.svidVerified) ...[
+                                    const SizedBox(width: 6),
+                                    Tooltip(
+                                      message: 'SPIFFE mTLS Secured',
+                                      child: Icon(
+                                        Icons.verified_user,
+                                        size: 16,
+                                        color: Colors.greenAccent,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.agent.role,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: chipBgColor.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            widget.agent.status,
+                            style: TextStyle(
+                              color: chipTextColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
                             ),
                           ),
                         ),
-                      ),
-      ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

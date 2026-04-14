@@ -202,73 +202,80 @@ class _SkillCardState extends State<_SkillCard> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Chip(
-                          label: Text(s.category, style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                          backgroundColor: _categoryColor(context).withValues(alpha: 0.15),
-                          labelStyle: TextStyle(color: _categoryColor(context)),
-                          visualDensity: VisualDensity.compact,
-                          side: BorderSide.none,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          s.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            fontFamily: 'Outfit',
-                            color: colors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'v${s.version}',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            color: colors.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_installed)
-                          Switch(
-                            value: _enabled,
-                            onChanged: _busy ? null : _toggleEnable,
-                          ),
-                        const SizedBox(width: 8),
-                        _busy
-                            ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : OutlinedButton(
-                              onPressed: _toggleInstall,
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
-                              ),
-                              child: Text(_installed ? 'Remove' : 'Install'),
-                            ),
-                      ],
-                    ),
-                    if (s.description.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        s.description,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          color: colors.onSurfaceVariant,
-                          fontSize: 14,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Chip(
+                  label: Text(
+                    s.category,
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+                  ),
+                  backgroundColor: _categoryColor(
+                    context,
+                  ).withValues(alpha: 0.15),
+                  labelStyle: TextStyle(color: _categoryColor(context)),
+                  visualDensity: VisualDensity.compact,
+                  side: BorderSide.none,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  s.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    fontFamily: 'Outfit',
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'v${s.version}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    color: colors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+                const Spacer(),
+                if (_installed)
+                  Switch(
+                    value: _enabled,
+                    onChanged: _busy ? null : _toggleEnable,
+                  ),
+                const SizedBox(width: 8),
+                _busy
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : OutlinedButton(
+                      onPressed: _toggleInstall,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: colors.primary.withValues(alpha: 0.5),
                         ),
                       ),
-                    ],
-                  ],
+                      child: Text(_installed ? 'Remove' : 'Install'),
+                    ),
+              ],
+            ),
+            if (s.description.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                s.description,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  color: colors.onSurfaceVariant,
+                  fontSize: 14,
                 ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

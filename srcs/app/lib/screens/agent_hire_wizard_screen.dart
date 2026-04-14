@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
@@ -333,58 +334,89 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
                       outer: ColorFilter.matrix(const <double>[
-                        1.787, -0.715, -0.072, 0, 0,
-                        -0.213, 1.285, -0.072, 0, 0,
-                        -0.213, -0.715, 1.928, 0, 0,
-                        0, 0, 0, 1, 0,
+                        1.787,
+                        -0.715,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        1.285,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        -0.715,
+                        1.928,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
                       ]),
                       inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                          child: Text(
-                            _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontFamily: 'Outfit',
-                              fontWeight: FontWeight.bold,
+                      child: GlassCard(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: EdgeInsets.zero,
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.2),
+                            child: Text(
+                              _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontFamily: 'Outfit',
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        title: Text(
-                          _nameController.text,
-                          style: const TextStyle(
-                            fontFamily: 'Outfit',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(
-                          _formatRole(_selectedRole),
-                          style: const TextStyle(fontFamily: 'Inter'),
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _selectedProvider.toUpperCase(),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.secondary,
+                          title: Text(
+                            _nameController.text,
+                            style: const TextStyle(
                               fontFamily: 'Outfit',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            _formatRole(_selectedRole),
+                            style: const TextStyle(fontFamily: 'Inter'),
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.secondary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _selectedProvider.toUpperCase(),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.secondary,
+                                fontFamily: 'Outfit',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ),
