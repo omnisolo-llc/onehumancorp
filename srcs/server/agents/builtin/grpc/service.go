@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"google.golang.org/genai"
 
@@ -81,6 +82,9 @@ func (s *AgentServiceServer) RunTask(req *agentservicepb.RunTaskRequest, stream 
 	ctx := stream.Context()
 	cfg := s.resolveAgentConfig(req)
 
+	// Inject past successful memories into system prompt for self-learning.
+	cfg.SystemPrompt = InjectMemoriesIntoPrompt(cfg.SystemPrompt)
+
 	// Build model.LLM.
 	llm, err := s.resolveLLM(cfg)
 	if err != nil {
@@ -123,6 +127,11 @@ func (s *AgentServiceServer) RunTask(req *agentservicepb.RunTaskRequest, stream 
 		return status.Errorf(codes.Internal, "failed to create runner: %v", err)
 	}
 
+	// Progress tracking + task output file (Claude Code harness pattern).
+	progress := NewTaskProgress()
+	outWriter := NewTaskOutputWriter(req.TaskId)
+	defer outWriter.Close()
+
 	// Notify the caller that the run has started.
 	if sendErr := stream.Send(&agentservicepb.RunTaskEvent{
 		Type: agentservicepb.EventType_RUN_STARTED,
@@ -130,30 +139,82 @@ func (s *AgentServiceServer) RunTask(req *agentservicepb.RunTaskRequest, stream 
 		return sendErr
 	}
 
-	userContent := genai.NewContentFromText(req.Task, "user")
-	eventSeq := r.Run(ctx, "user-1", "", userContent, agent.RunConfig{})
+	start := time.Now()
+	task := req.Task
 
-	iteration := 0
-	for evt, err := range eventSeq {
-		if err != nil {
-			sendErr := stream.Send(&agentservicepb.RunTaskEvent{
-				Type:  agentservicepb.EventType_TASK_ERROR,
-				Error: err.Error(),
-			})
-			if sendErr != nil {
-				slog.Error("agentgrpc: send TASK_ERROR failed", "err", sendErr)
-			}
-			return status.Errorf(codes.Internal, "agent error: %v", err)
+	// Retry loop: on failure, offer the LLM a self-reflection prompt.
+	const maxRetries = 1
+	var lastErr string
+	var finalContent string
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			task = SelfReflectionPrompt(req.Task, lastErr)
 		}
-		if evt == nil {
-			continue
-		}
-		if pb := sessionEventToProto(evt, &iteration); pb != nil {
-			if sendErr := stream.Send(pb); sendErr != nil {
-				return sendErr
+
+		userContent := genai.NewContentFromText(task, "user")
+		eventSeq := r.Run(ctx, "user-1", "", userContent, agent.RunConfig{})
+
+		iteration := 0
+		runFailed := false
+		for evt, evtErr := range eventSeq {
+			if evtErr != nil {
+				lastErr = evtErr.Error()
+				runFailed = true
+				sendErr := stream.Send(&agentservicepb.RunTaskEvent{
+					Type:  agentservicepb.EventType_TASK_ERROR,
+					Error: evtErr.Error(),
+				})
+				if sendErr != nil {
+					slog.Error("agentgrpc: send TASK_ERROR failed", "err", sendErr)
+				}
+				break
 			}
+			if evt == nil {
+				continue
+			}
+			pb := sessionEventToProto(evt, &iteration)
+			if pb != nil {
+				// Track progress.
+				if pb.ToolName != "" {
+					progress.RecordToolUse(pb.ToolName)
+				}
+				if pb.Type == agentservicepb.EventType_TASK_COMPLETE {
+					finalContent = pb.Content
+					outWriter.Write("[COMPLETE] " + pb.Content)
+				}
+				if pb.Type == agentservicepb.EventType_TOOL_CALL {
+					outWriter.Write(fmt.Sprintf("[TOOL] %s %s", pb.ToolName, pb.ToolArgsJson))
+				}
+				if sendErr := stream.Send(pb); sendErr != nil {
+					return sendErr
+				}
+			}
+		}
+		if !runFailed {
+			break // success
 		}
 	}
+
+	// Write AutoDream memory entry so the agent can learn from this task.
+	snap := progress.Snapshot()
+	outcome := "success"
+	if lastErr != "" && finalContent == "" {
+		outcome = "failure"
+	}
+	lessons := ""
+	if lastErr != "" {
+		lessons = "Error encountered: " + lastErr
+	}
+	RecordTaskMemory(MemoryEntry{
+		TaskID:      req.TaskId,
+		Summary:     truncateStr(req.Task, 200),
+		Outcome:     outcome,
+		Duration:    time.Since(start).Seconds(),
+		ToolsUsed:   []string{snap.LastActivity},
+		Lessons:     lessons,
+		CompletedAt: time.Now(),
+	})
 
 	return nil
 }

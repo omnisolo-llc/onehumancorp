@@ -11,14 +11,23 @@
 //
 // Configuration is via environment variables:
 //
-//	OHC_AGENT_ADDRESS       gRPC listen address (default: 127.0.0.1:50051)
-//	OHC_AGENT_ID            agent identifier (default: auto-generated UUID)
-//	ANTHROPIC_API_KEY       enables the Anthropic Claude LLM backend
-//	OPENAI_API_KEY          enables the OpenAI LLM backend
-//	OHC_LOCAL_LLM_ENDPOINT  Ollama endpoint (default: http://localhost:11434/api/chat)
-//	OHC_LLM_PROVIDER        explicit provider override: "anthropic"|"openai"|"ollama"
-//	OHC_LLM_MODEL           LLM model name
-//	OHC_MAX_TOKENS          maximum tokens per LLM response (default: 2048)
+//	OHC_AGENT_ADDRESS          gRPC listen address (default: 127.0.0.1:50051)
+//	OHC_AGENT_ID               agent identifier (default: auto-generated UUID)
+//	ANTHROPIC_API_KEY          enables the Anthropic Claude LLM backend
+//	OPENAI_API_KEY             enables the OpenAI LLM backend
+//	OHC_LOCAL_LLM_ENDPOINT     Ollama endpoint (default: http://localhost:11434/api/chat)
+//	OHC_LLM_PROVIDER           explicit provider override: "anthropic"|"openai"|"ollama"
+//	OHC_LLM_MODEL              LLM model name
+//	OHC_MAX_TOKENS             maximum tokens per LLM response (default: 2048)
+//
+// Authentication (choose one):
+//
+//	OHC_AGENT_TOKEN            pre-shared HMAC token (standalone / dev mode)
+//	OHC_AGENT_CERT_FILE        path to agent TLS certificate (PEM) – enables SPIFFE/mTLS
+//	OHC_AGENT_KEY_FILE         path to agent TLS private key (PEM)
+//	OHC_AGENT_CA_FILE          path to CA certificate pool (PEM)
+//	OHC_AGENT_SPIFFE_ID        restrict which SPIFFE ID may call this agent
+//	OHC_AGENT_AUTH_DISABLED    set "true" to skip auth (dev/test ONLY)
 package main
 
 import (
@@ -48,20 +57,45 @@ func run() error {
 	agentID := getEnv("OHC_AGENT_ID", uuid.New().String())
 
 	cfg := agentgrpc.AgentConfig{
-		LLMProvider:  getEnv("OHC_LLM_PROVIDER", ""),
-		Model:        getEnv("OHC_LLM_MODEL", ""),
-		LLMEndpoint:  getEnv("OHC_LOCAL_LLM_ENDPOINT", ""),
-		MaxTokens:    getEnvInt("OHC_MAX_TOKENS", 2048),
-		MaxIterations: getEnvInt("OHC_MAX_ITERATIONS", 0),
+		LLMProvider:        getEnv("OHC_LLM_PROVIDER", ""),
+		Model:              getEnv("OHC_LLM_MODEL", ""),
+		LLMEndpoint:        getEnv("OHC_LOCAL_LLM_ENDPOINT", ""),
+		MaxTokens:          getEnvInt("OHC_MAX_TOKENS", 2048),
+		MaxIterations:      getEnvInt("OHC_MAX_ITERATIONS", 0),
 		MaxContextMessages: getEnvInt("OHC_MAX_CONTEXT_MESSAGES", 0),
 	}
+
+	// Resolve auth and TLS config from environment.
+	authCfg := agentgrpc.AuthConfigFromEnv()
+	tlsCfg := agentgrpc.TLSConfigFromEnv()
+
+	// Build gRPC server options.
+	var serverOpts []grpc.ServerOption
+
+	// Transport security.
+	if tlsCfg.IsSet() {
+		creds, err := tlsCfg.ServerCredentials()
+		if err != nil {
+			return fmt.Errorf("tls server credentials: %w", err)
+		}
+		serverOpts = append(serverOpts, grpc.Creds(creds))
+		slog.Info("agentd: mTLS transport enabled")
+	} else {
+		slog.Warn("agentd: running WITHOUT transport TLS – acceptable only in dev/test")
+	}
+
+	// Auth interceptors (SPIFFE or token) – applied regardless of transport TLS.
+	serverOpts = append(serverOpts,
+		grpc.ChainUnaryInterceptor(authCfg.UnaryInterceptor()),
+		grpc.ChainStreamInterceptor(authCfg.StreamInterceptor()),
+	)
 
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", address, err)
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(serverOpts...)
 	svc := agentgrpc.NewAgentServiceServer(agentID, cfg, nil)
 	agentservicepb.RegisterAgentServiceServer(srv, svc)
 	slog.Info("agentd: starting", "address", address, "agent_id", agentID)

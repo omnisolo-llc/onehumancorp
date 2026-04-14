@@ -245,6 +245,8 @@ func (x *AgentRuntimeConfig) GetMaxContextMessages() int32 {
 // RunTaskRequest is sent from the main server to the agent to start a task.
 type RunTaskRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique task identifier for tracing and output file naming.
+	TaskId string `protobuf:"bytes,11,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	// The task description / user prompt.
 	Task string `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
 	// LLM model name (e.g. "gpt-4o", "claude-3-5-sonnet", "llama3").
@@ -300,6 +302,13 @@ func (x *RunTaskRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RunTaskRequest.ProtoReflect.Descriptor instead.
 func (*RunTaskRequest) Descriptor() ([]byte, []int) {
 	return file_agent_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RunTaskRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
 }
 
 func (x *RunTaskRequest) GetTask() string {
@@ -981,8 +990,9 @@ const file_agent_service_proto_rawDesc = "" +
 	"max_tokens\x18\x05 \x01(\x05R\tmaxTokens\x12 \n" +
 	"\vtemperature\x18\x06 \x01(\x02R\vtemperature\x12%\n" +
 	"\x0emax_iterations\x18\a \x01(\x05R\rmaxIterations\x120\n" +
-	"\x14max_context_messages\x18\b \x01(\x05R\x12maxContextMessages\"\xaf\x03\n" +
-	"\x0eRunTaskRequest\x12\x12\n" +
+	"\x14max_context_messages\x18\b \x01(\x05R\x12maxContextMessages\"\xc8\x03\n" +
+	"\x0eRunTaskRequest\x12\x17\n" +
+	"\atask_id\x18\v \x01(\tR\x06taskId\x12\x12\n" +
 	"\x04task\x18\x01 \x01(\tR\x04task\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12!\n" +
 	"\fllm_provider\x18\x03 \x01(\tR\vllmProvider\x12!\n" +

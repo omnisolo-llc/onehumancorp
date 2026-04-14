@@ -19,6 +19,8 @@ message AgentRuntimeConfig {
 
 // RunTaskRequest is sent from the main server to the agent to start a task.
 message RunTaskRequest {
+  // Unique task identifier for tracing and output file naming.
+  string task_id = 11;
   // The task description / user prompt.
   string task = 1;
   // LLM model name (e.g. "gpt-4o", "claude-3-5-sonnet", "llama3").
