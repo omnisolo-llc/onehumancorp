@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth",
+    srcs = ["referral_db.go"],
+    importpath = "github.com/onehumancorp/mono/apps/growth",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = ["referral_db_test.go"],
+    embed = [":growth"],
+    deps = ["@org_modernc_sqlite//:sqlite"],
+)
