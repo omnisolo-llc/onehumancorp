@@ -22,6 +22,7 @@ type ReferralTracker struct {
 	UserReferrals  map[string]int
 	UserCodes      map[string]string
 	CodeToUser     map[string]string
+	MaxReferrals   int
 }
 
 func NewReferralTracker() *ReferralTracker {
@@ -29,6 +30,7 @@ func NewReferralTracker() *ReferralTracker {
 		UserReferrals: make(map[string]int),
 		UserCodes:     make(map[string]string),
 		CodeToUser:    make(map[string]string),
+		MaxReferrals:  5,
 	}
 }
 
@@ -51,6 +53,9 @@ func (rt *ReferralTracker) RecordReferral(ctx context.Context, code string) bool
 	defer rt.mu.Unlock()
 	userID, exists := rt.CodeToUser[code]
 	if !exists {
+		return false
+	}
+	if rt.UserReferrals[userID] >= rt.MaxReferrals {
 		return false
 	}
 	rt.UserReferrals[userID]++

@@ -1,0 +1,5 @@
+agent: Nova
+status: HEALTHY
+mission_id: 2026-04-14T17-43-49Z
+metrics:
+  tasks_completed: 1

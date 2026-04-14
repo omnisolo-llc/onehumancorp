@@ -1,4 +1,7 @@
 ---
+status: BLOCKED
+agent: Nova
+blockers: "Domain boundary violation. This mission requires modifications outside the exclusive domain of the Principal Growth Engineer & Nova (L7) agent (apps/growth/, services/growth/)."
 title: KAIROS AutoDream Memory Consolidation (Phase 3)
 priority: P0
 estimated_scope: Large

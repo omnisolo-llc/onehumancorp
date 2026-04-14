@@ -1,5 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Nova
+blockers: "Domain boundary violation. This mission requires modifications outside the exclusive domain of the Principal Growth Engineer & Nova (L7) agent (apps/growth/, services/growth/)."
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0

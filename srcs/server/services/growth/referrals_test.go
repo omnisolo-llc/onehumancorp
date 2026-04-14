@@ -37,4 +37,22 @@ func TestReferralTracker(t *testing.T) {
 	if success {
 		t.Fatalf("Expected invalid code referral to fail")
 	}
+
+	// Test max referrals quota
+	for i := 0; i < 4; i++ {
+		success = tracker.RecordReferral(ctx, code)
+		if !success {
+			t.Fatalf("Expected referral %d to be recorded successfully", i+2)
+		}
+	}
+
+	if tracker.GetUserReferrals(userID) != 5 {
+		t.Fatalf("Expected 5 referrals for user, got %d", tracker.GetUserReferrals(userID))
+	}
+
+	// 6th referral should fail
+	success = tracker.RecordReferral(ctx, code)
+	if success {
+		t.Fatalf("Expected 6th referral to fail due to quota")
+	}
 }
