@@ -146,7 +146,7 @@ func TestHubServiceServer_StreamMeshEvents(t *testing.T) {
 	// Background worker to publish event
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		mt.BroadcastMeshEvent(context.Background(), "tasks", []byte("test-payload"))
+		mt.Publish(context.Background(), "tasks", []byte("test-payload"))
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
