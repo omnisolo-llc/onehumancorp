@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.5 (Cloud) / v0.3.5+1 (Standalone)
+### Cloud Scaling Improvements
+- Enhanced Teammate Mesh APIs and AutoDream Worker logic for more scalable Kubernetes pod communications.
+
+### Privacy/Offline Improvements
+- Continued stabilization of the offline KAIROS state machine functionality via SQLite fallbacks.
+
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
 ### Cloud Scaling Improvements
 - Enhanced Cloud multi-tenant architecture and Hybrid Teammate Mesh APIs for improved coordination across Kubernetes pods.
