@@ -55,3 +55,38 @@ func TestDecompressLossless_NotCompressed(t *testing.T) {
 		t.Fatalf("Decompressed string doesn't match original. Got %q, expected %q", decompressed, original)
 	}
 }
+
+func TestTruncateByWordCount(t *testing.T) {
+	original := "The quick brown fox jumps over the lazy dog"
+
+	// Test maxWords < actual words
+	truncated := TruncateByWordCount(original, 5)
+	expected := "The quick brown fox jumps"
+	if truncated != expected {
+		t.Fatalf("Truncated string doesn't match expected. Got %q, expected %q", truncated, expected)
+	}
+
+	// Test maxWords == actual words
+	truncated = TruncateByWordCount(original, 9)
+	if truncated != original {
+		t.Fatalf("Truncated string doesn't match expected. Got %q, expected %q", truncated, original)
+	}
+
+	// Test maxWords > actual words
+	truncated = TruncateByWordCount(original, 20)
+	if truncated != original {
+		t.Fatalf("Truncated string doesn't match expected. Got %q, expected %q", truncated, original)
+	}
+
+	// Test maxWords = 0
+	truncated = TruncateByWordCount(original, 0)
+	if truncated != "" {
+		t.Fatalf("Truncated string doesn't match expected. Got %q, expected %q", truncated, "")
+	}
+
+	// Test negative maxWords
+	truncated = TruncateByWordCount(original, -5)
+	if truncated != "" {
+		t.Fatalf("Truncated string doesn't match expected. Got %q, expected %q", truncated, "")
+	}
+}
