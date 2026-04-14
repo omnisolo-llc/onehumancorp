@@ -120,6 +120,37 @@ func TestMeshFallback_ZeroBackoff(t *testing.T) {
 	}
 }
 
+// TestMeshFallback_Corruption simulates file corruption within the .agent-lock directory.
+func TestMeshFallback_Corruption(t *testing.T) {
+	tmpDir := t.TempDir()
+	lockDir := filepath.Join(tmpDir, ".agent-lock")
+	if err := os.MkdirAll(lockDir, 0755); err != nil {
+		t.Fatalf("Failed to create lock dir: %v", err)
+	}
+	lockFile := filepath.Join(lockDir, "mesh.lock")
+
+	// Corrupt the lock file
+	if err := os.Mkdir(lockFile, 0755); err != nil {
+		t.Fatalf("Failed to corrupt lock file: %v", err)
+	}
+
+	ctx := context.Background()
+	err := resilience.WithRetry(ctx, 3, 10*time.Millisecond, func(c context.Context) error {
+		f, err := os.OpenFile(lockFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+		if err != nil {
+			return err
+		}
+		f.Close()
+		return nil
+	})
+
+	if err == nil {
+		t.Error("Expected failure due to corrupted lock file (is a directory), but succeeded")
+	} else {
+		t.Logf("Successfully caught corruption failure: %v", err)
+	}
+}
+
 // TestMeshFallback_ContextCancelled tests behavior when context is cancelled during retries
 func TestMeshFallback_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

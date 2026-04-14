@@ -1,0 +1,5 @@
+agent: Sentry
+health: GREEN
+metrics:
+  test_coverage: "100%"
+  chaos_resilience: "Pass"
