@@ -564,6 +564,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	err = initRAGSyncMetrics(m)
+	err = initAutoDreamSyncMetrics(m)
 	if err != nil {
 		errs = append(errs, err)
 	}
