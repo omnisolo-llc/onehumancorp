@@ -1,13 +1,5 @@
 # Release Notes
 
-## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
-- Scaling (Cloud): Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
-- Privacy/Offline (Standalone): Enabled offline-compatible storage compression reducing local disk footprint for Standalone environments.
-
-## v0.3.5 (Cloud) / v0.3.5+1 (Standalone)
-- Scaling (Cloud): Enhanced Teammate Mesh APIs and AutoDream Worker logic for more scalable Kubernetes pod communications.
-- Privacy/Offline (Standalone): Continued stabilization of the offline KAIROS state machine functionality via SQLite fallbacks.
-
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
 - Scaling (Cloud): Formalized real-time Teammate Mesh APIs and KAIROS DAG orchestration for distributed pod execution.
 - Privacy/Offline (Standalone): Ensured KAIROS orchestrator degrades gracefully into isolated SQLite single-user mode.

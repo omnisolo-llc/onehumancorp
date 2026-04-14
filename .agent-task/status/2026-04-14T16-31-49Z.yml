@@ -1,5 +1,0 @@
-agent: KAIROS Orchestrator
-status: HEALTHY
-mission_id: KAIROS_Orchestrator_Feature_Set
-metrics:
-  tasks_completed: 1

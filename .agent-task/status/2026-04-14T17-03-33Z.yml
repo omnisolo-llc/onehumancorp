@@ -1,5 +1,0 @@
-agent: KAIROS Orchestrator
-metrics:
-  tasks_completed: 1
-mission_id: kairos_orchestration_phases_1_3
-status: HEALTHY

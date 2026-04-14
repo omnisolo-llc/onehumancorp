@@ -8,17 +8,15 @@ import (
 )
 
 func TestProvisionEnvironment_Local(t *testing.T) {
-	LocalBaseDir = t.TempDir()
-
 	err := ProvisionEnvironment(context.Background(), false)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 
 	expectedDirs := []string{
-		filepath.Join(LocalBaseDir, "db"),
-		filepath.Join(LocalBaseDir, "blob"),
-		filepath.Join(LocalBaseDir, "config"),
+		filepath.Join(".ohc-local-data", "db"),
+		filepath.Join(".ohc-local-data", "blob"),
+		filepath.Join(".ohc-local-data", "config"),
 	}
 
 	for _, dir := range expectedDirs {
@@ -26,20 +24,20 @@ func TestProvisionEnvironment_Local(t *testing.T) {
 			t.Errorf("expected directory %s to exist", dir)
 		}
 	}
+
+	os.RemoveAll(".ohc-local-data")
 }
 
 func TestProvisionEnvironment_Cloud(t *testing.T) {
-	CloudBaseDir = t.TempDir()
-
 	err := ProvisionEnvironment(context.Background(), true)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 
 	expectedDirs := []string{
-		filepath.Join(CloudBaseDir, "db"),
-		filepath.Join(CloudBaseDir, "blob"),
-		filepath.Join(CloudBaseDir, "config"),
+		filepath.Join(".ohc-cloud-data", "db"),
+		filepath.Join(".ohc-cloud-data", "blob"),
+		filepath.Join(".ohc-cloud-data", "config"),
 	}
 
 	for _, dir := range expectedDirs {
@@ -47,10 +45,13 @@ func TestProvisionEnvironment_Cloud(t *testing.T) {
 			t.Errorf("expected directory %s to exist", dir)
 		}
 	}
+
+	os.RemoveAll(".ohc-cloud-data")
 }
 
 func TestCheckEnvironment_Local(t *testing.T) {
-	LocalBaseDir = t.TempDir()
+	// Ensure clean state
+	os.RemoveAll(".ohc-local-data")
 
 	err := CheckEnvironment(false)
 	if err == nil {
@@ -62,10 +63,12 @@ func TestCheckEnvironment_Local(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error for provisioned environment, got %v", err)
 	}
+	os.RemoveAll(".ohc-local-data")
 }
 
 func TestCheckEnvironment_Cloud(t *testing.T) {
-	CloudBaseDir = t.TempDir()
+	// Ensure clean state
+	os.RemoveAll(".ohc-cloud-data")
 
 	err := CheckEnvironment(true)
 	if err == nil {
@@ -77,10 +80,10 @@ func TestCheckEnvironment_Cloud(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error for provisioned environment, got %v", err)
 	}
+	os.RemoveAll(".ohc-cloud-data")
 }
 
 func TestCleanupEnvironment_Local(t *testing.T) {
-	LocalBaseDir = t.TempDir()
 	ProvisionEnvironment(context.Background(), false)
 	err := CleanupEnvironment(context.Background(), false)
 	if err != nil {
@@ -92,7 +95,6 @@ func TestCleanupEnvironment_Local(t *testing.T) {
 }
 
 func TestCleanupEnvironment_Cloud(t *testing.T) {
-	CloudBaseDir = t.TempDir()
 	ProvisionEnvironment(context.Background(), true)
 	err := CleanupEnvironment(context.Background(), true)
 	if err != nil {

@@ -5,8 +5,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
-        "decomposition_tasks_store.go",
-        "models.go",
         "auth_interceptor.go",
         "autodream.go",
         "autodream_worker.go",
@@ -25,6 +23,7 @@ go_library(
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh.go",
+        "shared_tasks.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -64,7 +63,6 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
-        "tasks_store_test.go",
         "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
@@ -90,6 +88,7 @@ go_test(
         "sanitizer_test.go",
         "sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
+        "shared_tasks_test.go",
     ],
     embed = [":orchestration"],
     deps = [
