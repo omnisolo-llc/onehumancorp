@@ -46,11 +46,12 @@ func (w *MissionIngestionWorker) Start(ctx context.Context) {
 
 // IngestMissions scans the directory specified by OHC_MISSIONS_DIR for
 // markdown/YAML mission artifacts and vectorizes them.  When OHC_MISSIONS_DIR
-// is empty this is a no-op — missions are written directly to the database.
+// is empty it defaults to ".agent-task/missions" relative to the working
+// directory.
 func (w *MissionIngestionWorker) IngestMissions(ctx context.Context) {
 	missionsDir := os.Getenv("OHC_MISSIONS_DIR")
 	if missionsDir == "" {
-		return // DB-backed missions; no file ingestion needed
+		missionsDir = ".agent-task/missions"
 	}
 	files, err := os.ReadDir(missionsDir)
 	if err != nil {
