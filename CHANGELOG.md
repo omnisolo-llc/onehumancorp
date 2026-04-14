@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2] - 2026-04-14
+### Added
+- Hybrid SemVer version bump for Cloud server pods and Standalone desktop binaries.
+
+### Changed
+- Scaling (Cloud): Enhanced multi-tenant isolation via Sentinel security fixes for Blob & FS providers.
+- Privacy/Offline (Standalone): Ensured local provider logic mirrors Tenant isolation to maintain standalone robustness.
+
 ## [0.3.1] - 2026-04-14
 ### Added
 - Hybrid MCP RAG Protocol (Phases 1-3) implementation for scalable knowledge retrieval (Cloud).
