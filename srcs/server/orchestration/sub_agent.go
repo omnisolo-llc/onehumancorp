@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,6 +27,7 @@ func writeHeartbeatFile(taskID string, content string) error {
 // SubAgentSpawner defines the interface for spawning and monitoring sub-agents.
 type SubAgentSpawner interface {
 	Spawn(ctx context.Context, task *SharedTask) error
+	SpawnIsolated(ctx context.Context, job *queue.Job) error
 	Monitor(ctx context.Context) error
 }
 
@@ -125,6 +127,11 @@ func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
 		return fmt.Errorf("failed to fail sub-agent task: %w", err)
 	}
 
+	// Update TaskStateMachine
+	if s.tm != nil && s.tm.stateMachine != nil {
+		_ = s.tm.stateMachine.ProcessEvent(context.Background(), task.ID, EventSubTaskFailed)
+	}
+
 	// Emit SUB_AGENT_FAILED event
 	if s.hub != nil {
 		payload := map[string]interface{}{
@@ -191,14 +198,15 @@ isolated_context: %t
 }
 
 func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
-	// Create an admin context for task completion since this is a system worker
-	// Use an explicit background context with necessary claims if needed
-	// For simplicity in this background worker, we might just use the raw DB query
-
 	// Mark task completed
 	_, err := s.db.Exec(context.Background(), "UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID)
 	if err != nil {
 		return fmt.Errorf("failed to complete sub-agent task: %w", err)
+	}
+
+	// Update TaskStateMachine
+	if s.tm != nil && s.tm.stateMachine != nil {
+		_ = s.tm.stateMachine.ProcessEvent(context.Background(), task.ID, EventSubTaskCompleted)
 	}
 
 	// Emit SUB_AGENT_COMPLETED event
@@ -236,4 +244,24 @@ func (s *DefaultSubAgentSpawner) Monitor(ctx context.Context) error {
 func (s *DefaultSubAgentSpawner) Stop() {
 	s.cancel()
 	s.wg.Wait()
+}
+
+func (s *DefaultSubAgentSpawner) SpawnIsolated(ctx context.Context, job *queue.Job) error {
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(job.Payload), &payload); err != nil {
+		return fmt.Errorf("failed to parse job payload: %w", err)
+	}
+
+	orgID := ""
+	if val, ok := payload["organization_id"].(string); ok {
+		orgID = val
+	}
+
+	task := &SharedTask{
+		ID:             job.ParentTaskID,
+		OrganizationID: orgID,
+		Priority:       "DELEGATED",
+	}
+
+	return s.Spawn(ctx, task)
 }
