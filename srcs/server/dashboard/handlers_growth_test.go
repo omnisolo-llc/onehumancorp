@@ -499,3 +499,31 @@ func TestHandleViralCoefficientMetrics(t *testing.T) {
 	if resp["viral_coefficient"] != float64(3.0) { t.Errorf("expected 3.0, got %v", resp["viral_coefficient"]) }
 	if resp["organization_id"] != "default" { t.Errorf("expected default, got %v", resp["organization_id"]) }
 }
+
+func TestHandleReferralShare(t *testing.T) {
+	s := &Server{}
+
+	// Test POST valid payload
+	payload := `{"userId": "user-123", "platform": "twitter"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/referrals/share", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleReferralShare(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created["userId"] != "user-123" {
+		t.Errorf("expected userId 'user-123', got '%v'", created["userId"])
+	}
+	if created["platform"] != "twitter" {
+		t.Errorf("expected platform 'twitter', got '%v'", created["platform"])
+	}
+}

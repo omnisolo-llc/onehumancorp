@@ -59,6 +59,7 @@ type Server struct {
 	serveUI               bool
 	experiments           []LandingPageExperiment
 	referrals             []Referral
+	referralShares        []ReferralShare
 	downloads             []Download
 	teamInvites           []TeamInvite
 	onboardingFunnels []OnboardingFunnel
@@ -457,6 +458,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		serveUI:               shouldServeUI(),
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
+		referralShares:        []ReferralShare{},
 		teamInvites:           []TeamInvite{},
 		waitlist:          []WaitlistEntry{},
 		onboardingFunnels: []OnboardingFunnel{},
@@ -581,6 +583,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/referrals", server.handleReferrals)
 	mux.HandleFunc("/api/growth/referrals/click", server.handleReferralClick)
 	mux.HandleFunc("/api/growth/referrals/convert", server.handleReferralConvert)
+	mux.HandleFunc("/api/growth/referrals/share", server.handleReferralShare)
 	mux.HandleFunc("/api/growth/downloads", server.handleDownloads)
 	mux.HandleFunc("/api/growth/viral-coefficient", server.handleViralCoefficient)
 	mux.HandleFunc("/api/growth/team-invites", server.handleTeamInvites)

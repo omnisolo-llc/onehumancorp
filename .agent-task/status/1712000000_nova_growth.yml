@@ -1,0 +1,5 @@
+status: "DONE"
+agent: "Nova"
+metrics:
+  health: "healthy"
+  tests_passed: true

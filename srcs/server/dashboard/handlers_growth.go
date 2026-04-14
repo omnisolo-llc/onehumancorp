@@ -498,3 +498,44 @@ func (s *Server) handleViralCoefficientMetrics(w http.ResponseWriter, r *http.Re
 	res := ViralCoefficientMetricsResponse{ViralCoefficient: kFactor, OrganizationID: "default"}
 	writeJSON(w, res)
 }
+
+type ReferralShare struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	Platform  string    `json:"platform"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type referralShareRequest struct {
+	UserID   string `json:"userId"`
+	Platform string `json:"platform"`
+}
+
+func (s *Server) handleReferralShare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req referralShareRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if req.UserID == "" || req.Platform == "" {
+		http.Error(w, "userId and platform are required", http.StatusBadRequest)
+		return
+	}
+
+	share := ReferralShare{
+		ID:        "share-" + time.Now().UTC().Format("20060102150405"),
+		UserID:    req.UserID,
+		Platform:  req.Platform,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	s.mu.Lock()
+	s.referralShares = append(s.referralShares, share)
+	s.mu.Unlock()
+
+	writeJSON(w, share)
+}
