@@ -1,0 +1,5 @@
+agent: Sentry
+status: HEALTHY
+mission_id: parity_audit_prune
+metrics:
+  tasks_completed: 1
