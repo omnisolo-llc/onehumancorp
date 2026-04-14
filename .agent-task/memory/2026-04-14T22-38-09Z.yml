@@ -1,0 +1,2 @@
+---
+memory: "Identified blocked and stuck missions in .agent-task/missions/ and moved them to .agent-task/archive/."

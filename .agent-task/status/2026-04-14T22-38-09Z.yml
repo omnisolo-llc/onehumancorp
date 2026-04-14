@@ -1,0 +1,5 @@
+---
+metrics:
+  cpu: "12%"
+  ram: "1GB"
+  tests: "passing"
