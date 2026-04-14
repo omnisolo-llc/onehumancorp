@@ -104,3 +104,33 @@ func TestCleanupEnvironment_Cloud(t *testing.T) {
 		t.Fatalf("expected error for missing environment after cleanup, got nil")
 	}
 }
+
+func TestValidateEnvironment_Local(t *testing.T) {
+	os.RemoveAll(".ohc-local-data")
+
+	// Should fail before provisioning
+	if err := ValidateEnvironment(context.Background(), false); err == nil {
+		t.Fatalf("expected error validating unprovisioned environment, got nil")
+	}
+
+	ProvisionEnvironment(context.Background(), false)
+	if err := ValidateEnvironment(context.Background(), false); err != nil {
+		t.Fatalf("expected nil error validating provisioned environment, got %v", err)
+	}
+	os.RemoveAll(".ohc-local-data")
+}
+
+func TestValidateEnvironment_Cloud(t *testing.T) {
+	os.RemoveAll(".ohc-cloud-data")
+
+	// Should fail before provisioning
+	if err := ValidateEnvironment(context.Background(), true); err == nil {
+		t.Fatalf("expected error validating unprovisioned environment, got nil")
+	}
+
+	ProvisionEnvironment(context.Background(), true)
+	if err := ValidateEnvironment(context.Background(), true); err != nil {
+		t.Fatalf("expected nil error validating provisioned environment, got %v", err)
+	}
+	os.RemoveAll(".ohc-cloud-data")
+}
