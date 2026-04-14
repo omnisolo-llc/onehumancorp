@@ -1,2 +1,0 @@
-action: "Update KAIROS_ORCHESTRATOR_DESIGN.md"
-context: "The design doc has been updated to reflect the full phase architecture for Sub-Agent Queues, State Machines, Realtime Teammate Mesh APIs, and AutoDream Pipelines."

@@ -1,9 +1,0 @@
----
-status: DONE
-agent: Scribe
----
-title: Implementing documentation-critical new features
-description: |
-  Fixing broken links and adding new visual walkthrough features as per Scribe's mission queue.
-priority: P0
-scope: Medium

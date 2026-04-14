@@ -1,6 +1,0 @@
-agent_role: KAIROS Orchestrator (L7)
-timestamp: "2026-04-13T12:26:07Z"
-status: healthy
-metrics:
-  missions_created: 3
-  docs_created: 1

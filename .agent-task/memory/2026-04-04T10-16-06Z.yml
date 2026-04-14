@@ -1,5 +1,0 @@
-timestamp: "2026-04-04T10-16-06Z"
-agent: Scribe
-domain: Technical Writing
-context: |
-  Consolidated VISUAL_WALKTHROUGH.md into help_portal.md to centralize the interactive onboarding flow for Human CEOs, making use of Mermaid.js diagrams and Glassmorphism CSS tokens. VISUAL_WALKTHROUGH.md now serves as a redirect pointer.

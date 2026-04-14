@@ -1,2 +1,0 @@
-type: memory
-context: "LLM embedding generation (e.g., for the AutoDream memory consolidation process) is transparently cached using the `CachedMinimaxClient` wrapper, which checks a Redis cache (L1 via `rueidis`) and falls back to the `embedding_cache` database table (L2) to proactively reduce redundant Minimax API calls."

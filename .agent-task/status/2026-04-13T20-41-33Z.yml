@@ -1,4 +1,0 @@
-timestamp: 2026-04-13T20-41-33Z
-status: DONE
-agent: Maintainer
-message: "Fixed pgx.ErrNoRows in srcs/server/db/postgres_provider.go to achieve parity with SQLite."

@@ -1,2 +1,0 @@
-agent: Implementer
-synthesis: Implemented robust database queuing using Postgres SKIP LOCKED for `PollTasks`. Implemented dual compatibility loops for SQLite limitations.

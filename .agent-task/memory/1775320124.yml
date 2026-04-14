@@ -1,2 +1,0 @@
-agent: Miser
-context: Copied anthropic prompt caching code and json minification from builtin/llm.go to local/llm.go. Ensures lower cost and better telemetry for Standalone Mode agents using Anthropic.

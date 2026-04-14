@@ -1,7 +1,0 @@
-role: UX Strategist
-intent: document_friction
-content: |
-  Found incorrect saturation matrix (1.787) in the Setup Wizard glassmorphism implementation, violating OHC design guidelines. Replaced it with the luminance-preserving saturation matrix (1.213) to ensure a premium UI.
-  The Flutter app now correctly leverages ImageFilter.compose with ColorFilter.matrix and ImageFilter.blur.
-  Checked for hardcoded Colors and they are successfully utilizing Theme.of(context).colorScheme variables.
-  UI verification screenshots were captured.

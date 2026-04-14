@@ -1,1 +1,0 @@
-summary: "AutoDream Background Workers pipeline for Memory Consolidation already thoroughly implemented and tested. I verified the architecture against SQLite and pgvector, and cleared down the associated tasks."
