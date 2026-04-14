@@ -26,7 +26,15 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ImageFilter.compose(
+              outer: ColorFilter.matrix(const <double>[
+                1.787, -0.715, -0.072, 0, 0,
+                -0.213, 1.285, -0.072, 0, 0,
+                -0.213, -0.715, 1.928, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            ),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(24),
