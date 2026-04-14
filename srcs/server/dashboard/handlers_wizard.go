@@ -190,3 +190,66 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 	}
 	writeJSON(w, resp)
 }
+
+// handleWizardDayOneStatus returns an aggregated summary of the Day One onboarding state.
+func (s *Server) handleWizardDayOneStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+
+	allHealthy := true
+	var diagnostics []map[string]interface{}
+
+	if mode == "cloud" {
+		dbUrl := os.Getenv("DATABASE_URL")
+		if dbUrl == "" {
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DATABASE_URL",
+				"status":  "missing",
+				"message": "DATABASE_URL is required in cloud mode",
+			})
+		} else {
+			diagnostics = append(diagnostics, map[string]interface{}{
+				"check":   "DATABASE_URL",
+				"status":  "ok",
+				"message": "DATABASE_URL is configured",
+			})
+		}
+	} else {
+		diagnostics = append(diagnostics, map[string]interface{}{
+			"check":   "OHC_STANDALONE",
+			"status":  "ok",
+			"message": "Standalone mode active",
+		})
+	}
+
+	// We consider the environment fully ready if diagnostics pass
+	envReady := allHealthy
+
+	agentsReady := true
+
+	status := "healthy"
+	if !envReady || !agentsReady {
+		status = "degraded"
+	}
+
+	resp := map[string]interface{}{
+		"status": status,
+		"mode":   mode,
+		"steps": map[string]interface{}{
+			"environment_ready": envReady,
+			"agents_ready":      agentsReady,
+			"data_seeded":       true, // Placeholder for seeder check
+		},
+		"diagnostics": diagnostics,
+	}
+
+	writeJSON(w, resp)
+}

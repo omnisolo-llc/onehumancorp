@@ -24,6 +24,7 @@ func newWizardTestServer(t *testing.T) (*Server, *httptest.Server) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/wizard/status", s.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", s.handleWizardConfigure)
+	mux.HandleFunc("/api/wizard/day_one_status", s.handleWizardDayOneStatus)
 	ts := httptest.NewServer(mux)
 	t.Cleanup(ts.Close)
 	return s, ts
@@ -176,5 +177,58 @@ func TestHandleWizardOnboardingVerify_Cloud_MissingVars(t *testing.T) {
 
 	if resp["status"] != "degraded" {
 		t.Errorf("Expected status degraded, got %v", resp["status"])
+	}
+}
+
+func TestHandleWizardDayOneStatus_Standalone(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	s, ts := newWizardTestServer(t)
+	_ = s
+	resp, err := http.Get(ts.URL + "/api/wizard/day_one_status")
+	if err != nil {
+		t.Fatalf("GET /api/wizard/day_one_status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if result["mode"] != "standalone" {
+		t.Errorf("Expected mode standalone, got %v", result["mode"])
+	}
+}
+
+func TestHandleWizardDayOneStatus_Cloud_MissingVars(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "false")
+	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("DATABASE_URL", "")
+	defer os.Unsetenv("DATABASE_URL")
+
+	s, ts := newWizardTestServer(t)
+	_ = s
+	resp, err := http.Get(ts.URL + "/api/wizard/day_one_status")
+	if err != nil {
+		t.Fatalf("GET /api/wizard/day_one_status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if result["mode"] != "cloud" {
+		t.Errorf("Expected mode cloud, got %v", result["mode"])
+	}
+	if result["status"] != "degraded" {
+		t.Errorf("Expected status degraded, got %v", result["status"])
 	}
 }
