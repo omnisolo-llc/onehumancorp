@@ -24,7 +24,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 
 	// Initialize tables
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE shared_tasks (
+		CREATE TABLE shared_tasks_master (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
@@ -41,7 +41,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE autodream_memories (
+		CREATE TABLE autodream_memories_master (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			agent_id TEXT,
@@ -55,13 +55,13 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 
 	// Insert test data
 	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
+		INSERT INTO shared_tasks_master (id, title, status, organization_id, agent_id, payload)
 		VALUES ('task-1', 'Test Task', 'COMPLETED', 'org-1', 'agent-1', '{"result": "success"}')
 	`)
 	require.NoError(t, err)
 
 	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
+		INSERT INTO shared_tasks_master (id, title, status, organization_id, agent_id, payload)
 		VALUES ('task-2', 'Pending Task', 'PENDING', 'org-1', 'agent-1', '{"result": "waiting"}')
 	`)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	pipeline.process(ctx)
 
 	// Verify only completed tasks were consolidated
-	rows, err := provider.Query(ctx, "SELECT id, content, source_type, embedding FROM autodream_memories")
+	rows, err := provider.Query(ctx, "SELECT id, content, source_type, embedding FROM autodream_memories_master")
 	require.NoError(t, err)
 	defer rows.Close()
 
