@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"google.golang.org/protobuf/proto"
+
 	"context"
 	"errors"
 	"testing"
@@ -137,23 +139,30 @@ func TestHubServiceServer_StreamMeshEvents(t *testing.T) {
 	srv := NewHubServiceServer(hub, mt)
 
 	// Test missing topic
-	req := &pb.EventStreamRequest{}
+	req := pb.EventStreamRequest_builder{}.Build()
 	err := srv.StreamMeshEvents(req, &mockStreamMeshEventsStream{ctx: context.Background()})
 	if err == nil {
 		t.Errorf("expected error for missing topic")
 	}
 
-	// Background worker to publish event
-	go func() {
-		time.Sleep(10 * time.Millisecond)
-		mt.BroadcastMeshEvent(context.Background(), "tasks", []byte("test-payload"))
-	}()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
+	// Background worker to publish event in a loop to avoid race conditions
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				time.Sleep(5 * time.Millisecond)
+				mt.BroadcastMeshEvent(context.Background(), "tasks", []byte("test-payload"))
+			}
+		}
+	}()
+
 	stream := &mockStreamMeshEventsStream{ctx: ctx}
-	req = &pb.EventStreamRequest{Topic: "tasks"}
+	req = pb.EventStreamRequest_builder{Topic: proto.String("tasks")}.Build()
 	err = srv.StreamMeshEvents(req, stream)
 
 	// Should return nil when context is done
@@ -163,8 +172,8 @@ func TestHubServiceServer_StreamMeshEvents(t *testing.T) {
 
 	if len(stream.sent) == 0 {
 		t.Errorf("expected to receive events, got none")
-	} else if string(stream.sent[0].Payload) != "test-payload" {
-		t.Errorf("expected test-payload, got %v", string(stream.sent[0].Payload))
+	} else if string(stream.sent[0].GetPayload()) != "test-payload" {
+		t.Errorf("expected test-payload, got %v", string(stream.sent[0].GetPayload()))
 	}
 }
 
@@ -206,5 +215,56 @@ func TestHubServiceServer_Errors(t *testing.T) {
 	err = srv.StreamMeshEvents(&pb.EventStreamRequest{Topic: "test"}, &mockStreamMeshEventsStream{ctx: context.Background()})
 	if err == nil {
 		t.Errorf("expected error for missing MeshTransport")
+	}
+}
+
+// TestHubServiceServer_StreamMeshEvents_Real is added to provide explicit test coverage for StreamMeshEvents
+func TestHubServiceServer_StreamMeshEvents_Real(t *testing.T) {
+	hub := NewHub()
+	defer hub.Close()
+
+	cn, _ := NewCentrifugeNode()
+	mt := NewMemoryMeshTransport(nil)
+	cn.SetMeshTransport(mt)
+	hub.SetCentrifugeNode(cn)
+
+	srv := NewHubServiceServer(hub, mt)
+
+	// Test missing topic
+	req := pb.EventStreamRequest_builder{}.Build()
+	err := srv.StreamMeshEvents(req, &mockStreamMeshEventsStream{ctx: context.Background()})
+	if err == nil {
+		t.Errorf("expected error for missing topic")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	// Background worker to publish event in a loop to avoid race conditions
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				time.Sleep(5 * time.Millisecond)
+				mt.BroadcastMeshEvent(context.Background(), "tasks", []byte("test-payload"))
+			}
+		}
+	}()
+
+	stream := &mockStreamMeshEventsStream{ctx: ctx}
+	req = pb.EventStreamRequest_builder{Topic: proto.String("tasks")}.Build()
+	err = srv.StreamMeshEvents(req, stream)
+
+	// Should return nil when context is done
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(stream.sent) == 0 {
+		t.Errorf("expected to receive events, got none")
+	} else if string(stream.sent[0].GetPayload()) != "test-payload" {
+		t.Errorf("expected test-payload, got %v", string(stream.sent[0].GetPayload()))
 	}
 }

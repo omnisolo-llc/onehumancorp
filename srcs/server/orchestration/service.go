@@ -1,13 +1,10 @@
 package orchestration
 
-
 import (
+	"github.com/google/uuid"
+
 	"google.golang.org/protobuf/proto"
 
-
-
-
-	"strings"
 	"bufio"
 	"bytes"
 	"context"
@@ -21,24 +18,23 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/storage"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 )
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -330,7 +326,6 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
-
 	// Default to a stub S3 provider if we can't initialize a local one
 	h.storage = storage.NewS3Provider("ohc-blobs")
 	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
@@ -362,8 +357,6 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 		}
 	}
 }
-
-
 
 func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
 	if h.GetTokenUsage == nil {
@@ -1910,10 +1903,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action": "sync",
-			"status": payload.Status,
+			"action":   "sync",
+			"status":   payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload": payload.Payload,
+			"payload":  payload.Payload,
 		})
 	}
 
@@ -2002,5 +1995,43 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	w.WriteHeader(http.StatusOK)
 }
 
+// StreamMeshEvents functionality.
+// Accepts parameters: req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Uses context cancellation to cleanly unsubscribe.
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	ctx := stream.Context()
+	topic := req.GetTopic()
 
+	if s.mesh == nil {
+		return fmt.Errorf("mesh transport is not configured")
+	}
 
+	eventCh, err := s.mesh.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to mesh events: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case payload, ok := <-eventCh:
+			if !ok {
+				return fmt.Errorf("event channel closed")
+			}
+
+			event := pb.MeshEvent_builder{
+				EventId:   proto.String(uuid.New().String()),
+				Topic:     proto.String(topic),
+				Payload:   payload,
+				Timestamp: proto.Int64(time.Now().UnixMilli()),
+			}.Build()
+
+			if err := stream.Send(event); err != nil {
+				return fmt.Errorf("failed to send mesh event: %v", err)
+			}
+		}
+	}
+}
