@@ -1,13 +1,8 @@
 package orchestration
 
-
 import (
 	"google.golang.org/protobuf/proto"
 
-
-
-
-	"strings"
 	"bufio"
 	"bytes"
 	"context"
@@ -21,24 +16,23 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/storage"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 )
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
-
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -330,7 +324,6 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
-
 	// Default to a stub S3 provider if we can't initialize a local one
 	h.storage = storage.NewS3Provider("ohc-blobs")
 	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
@@ -362,8 +355,6 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 		}
 	}
 }
-
-
 
 func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
 	if h.GetTokenUsage == nil {
@@ -1918,10 +1909,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action": "sync",
-			"status": payload.Status,
+			"action":   "sync",
+			"status":   payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload": payload.Payload,
+			"payload":  payload.Payload,
 		})
 	}
 
@@ -2010,9 +2001,6 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	w.WriteHeader(http.StatusOK)
 }
 
-
-
-
 func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 	var req struct {
 		OrganizationID string `json:"organization_id"`
@@ -2032,26 +2020,19 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 
 	var createdTasks []*SharedTask
 	for _, st := range req.SubTasks {
-		// Sub-tasks do not depend on the parent task. The parent task should ideally depend on them, but
-		// for now we just create the sub-tasks with their own explicitly provided dependencies.
-		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, st.Dependencies, st.Title, st.Description, st.Priority)
+		var filteredDeps []string
+		for _, dep := range st.Dependencies {
+			if dep != req.TaskID {
+				filteredDeps = append(filteredDeps, dep)
+			}
+		}
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
 			return
 		}
-		// Set parent_plan_id and inherit parent's depth + 1
-		if tx, err := tm.db.Begin(r.Context()); err == nil {
-			_, _ = tx.Exec(r.Context(), `
-				UPDATE shared_tasks
-				SET parent_plan_id = $1,
-				    depth = (SELECT depth FROM shared_tasks WHERE id = $1) + 1
-				WHERE id = $2
-			`, req.TaskID, t.ID)
-			_ = tx.Commit(r.Context())
-		}
 		createdTasks = append(createdTasks, t)
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(createdTasks)
 }
