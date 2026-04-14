@@ -1,12 +1,9 @@
-import '../screens/swarm_observability_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import '../screens/prompt_tuning_wizard_screen.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
-      case '/swarm-dashboard':
-        return MaterialPageRoute(builder: (_) => const SwarmObservabilityDashboardScreen());
       case '/prompt-tuning':
         return MaterialPageRoute(builder: (_) => const PromptTuningWizardScreen());
       default:
