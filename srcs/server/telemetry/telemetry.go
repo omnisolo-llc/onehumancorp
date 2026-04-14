@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	RagEscalationCount               metric.Int64Counter
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
@@ -200,6 +201,14 @@ func InitWithMeter(m mockableMeter) error {
 	}
 	var err error
 	var errs []error
+	RagEscalationCount, err = m.Int64Counter(
+		"rag_escalation_count",
+		metric.WithDescription("Number of RAG queries escalated to the cloud"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -1470,4 +1479,13 @@ func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 	if OmniContextBytesRouted != nil {
 		OmniContextBytesRouted.Add(ctx, bytes)
 	}
+}
+
+
+// RecordRAGEscalation increments the counter for RAG escalations.
+func RecordRAGEscalation(ctx context.Context) {
+	if RagEscalationCount == nil {
+		return
+	}
+	RagEscalationCount.Add(ctx, 1)
 }

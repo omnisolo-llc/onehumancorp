@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type Tool struct {
@@ -14,10 +16,11 @@ type Tool struct {
 
 type HybridFSMCP struct {
 	provider FileSystemProvider
+	escalator Escalator
 }
 
-func NewHybridFSMCP(provider FileSystemProvider) *HybridFSMCP {
-	return &HybridFSMCP{provider: provider}
+func NewHybridFSMCP(provider FileSystemProvider, escalator Escalator) *HybridFSMCP {
+	return &HybridFSMCP{provider: provider, escalator: escalator}
 }
 
 func (m *HybridFSMCP) ListTools() []Tool {
@@ -35,7 +38,13 @@ func (m *HybridFSMCP) ListTools() []Tool {
 		{
 			Name:        "list_directory",
 			Description: "Lists the contents of a directory.",
-			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}`,
+			InputSchema: `{"type": "object", "properties": {"path": {"type": "string"}},
+		"required": ["path"]}`,
+		},
+		{
+			Name:        "rag_query",
+			Description: "Performs a RAG query on local documents. May escalate to cloud for complex queries.",
+			InputSchema: `{"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}`,
 		},
 	}
 }
@@ -76,6 +85,22 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 			return nil, err
 		}
 		return map[string]interface{}{"status": "success", "entries": entries}, nil
+	case "rag_query":
+
+		query, ok := arguments["query"].(string)
+		if !ok {
+			return nil, errors.New("missing or invalid 'query' argument")
+		}
+
+		if m.escalator != nil && m.escalator.ShouldEscalate(ctx, query) {
+			telemetry.RecordRAGEscalation(ctx)
+
+			// Simulate Cloud pgvector swarm execution
+			return map[string]interface{}{"status": "success", "mode": "cloud_escalated", "result": "Cloud aggregated results for: " + query}, nil
+		}
+
+		// Simulate Local SQLite Vector DB execution
+		return map[string]interface{}{"status": "success", "mode": "local", "result": "Local results for: " + query}, nil
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}

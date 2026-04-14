@@ -85,12 +85,12 @@ func TestCloudFSProvider(t *testing.T) {
 func TestHybridFSMCP(t *testing.T) {
 	tempDir := t.TempDir()
 	provider := NewLocalFSProvider(tempDir)
-	mcp := NewHybridFSMCP(provider)
+	mcp := NewHybridFSMCP(provider, nil)
 	ctx := context.Background()
 
 	tools := mcp.ListTools()
-	if len(tools) != 3 {
-		t.Errorf("expected 3 tools, got %d", len(tools))
+	if len(tools) != 4 {
+		t.Errorf("expected 4 tools, got %d", len(tools))
 	}
 
 	// Write

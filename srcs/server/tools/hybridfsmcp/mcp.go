@@ -202,7 +202,7 @@ type HybridFSMCP struct {
 }
 
 // NewHybridFSMCP creates a new HybridFSMCP instance.
-func NewHybridFSMCP(provider FileSystemProvider) *HybridFSMCP {
+func NewHybridFSMCP(provider FileSystemProvider, escalator interface{}) *HybridFSMCP {
 	return &HybridFSMCP{
 		provider: provider,
 	}
