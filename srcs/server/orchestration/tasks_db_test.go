@@ -59,7 +59,7 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')")
+    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
@@ -163,7 +163,7 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')")
+    _, err = dbProvider.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '["task-1"]')`)
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
