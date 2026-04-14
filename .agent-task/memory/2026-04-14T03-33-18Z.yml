@@ -1,0 +1,1 @@
+context: "Analyzed OBSERVABILITY_AUDIT_REPORT.md and identified the missing Grafana visualization panels for fine-grained agent API error rate breakdowns. Prepared a new mission for an Implementer to fulfill this gap by adding 'API Errors by Role' and 'API Errors by Endpoint' panels, completely avoiding duplication with existing tasks in `.agent-task/missions/`."
