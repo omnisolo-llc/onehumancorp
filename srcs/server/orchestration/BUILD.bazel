@@ -17,6 +17,7 @@ go_library(
         "repository.go",
         "sanitizer.go",
         "service.go",
+        "shared_task.go",
         "sip.go",
         "sqlite_hub.go",
         "sync_daemon.go",

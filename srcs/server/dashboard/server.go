@@ -895,6 +895,13 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Always use orchestration.ExtractSPIFFEID
+	spiffeID, err := orchestration.ExtractSPIFFEID(r.Context())
+	if err != nil || spiffeID == "" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+
 	var req struct {
 		Channel string `json:"channel"`
 		AgentID string `json:"agent_id"`
@@ -903,6 +910,11 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.AgentID == "" || req.Action == "" || req.Status == "" {
+		http.Error(w, "invalid request: missing OHC-SIP root fields", http.StatusBadRequest)
 		return
 	}
 

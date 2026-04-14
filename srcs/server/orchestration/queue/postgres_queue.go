@@ -42,8 +42,8 @@ func (q *PostgresTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	newPayload, _ := json.Marshal(payloadMap)
 
 	query := `
-		INSERT INTO sub_agent_queue (
-			id, parent_task_id, payload, status, scheduled_at
+		INSERT INTO sub_agent_jobs (
+			id, parent_task_id, payload, status, run_after
 		) VALUES (
 			$1, $2, $3, $4, $5
 		)
@@ -77,19 +77,19 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 	nowIdx := len(args)
 
 	query := fmt.Sprintf(`
-		UPDATE sub_agent_queue
+		UPDATE sub_agent_jobs
 		SET status = 'RUNNING'
 		WHERE id = (
 			SELECT id
-			FROM sub_agent_queue
+			FROM sub_agent_jobs
 			WHERE status = 'PENDING'
-			  AND scheduled_at <= $%d
+			  AND run_after <= $%d
 			  %s
-			ORDER BY scheduled_at ASC
+			ORDER BY run_after ASC
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
-		RETURNING id, parent_task_id, payload, status, scheduled_at
+		RETURNING id, parent_task_id, payload, status, run_after
 	`, nowIdx, roleFilter)
 
 	var j Job
@@ -130,8 +130,8 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 
 func (q *PostgresTaskQueue) Complete(ctx context.Context, jobID string) error {
 	query := `
-		UPDATE sub_agent_queue
-		SET status = 'COMPLETED', completed_at = $1
+		UPDATE sub_agent_jobs
+		SET status = 'COMPLETED', updated_at = $1
 		WHERE id = $2
 	`
 	_, err := q.provider.Exec(ctx, query, time.Now(), jobID)
@@ -140,7 +140,7 @@ func (q *PostgresTaskQueue) Complete(ctx context.Context, jobID string) error {
 
 func (q *PostgresTaskQueue) Fail(ctx context.Context, jobID string, reason string) error {
 	// First fetch the payload
-	query := `SELECT payload FROM sub_agent_queue WHERE id = $1`
+	query := `SELECT payload FROM sub_agent_jobs WHERE id = $1`
 	var payloadStr string
 	err := q.provider.QueryRow(ctx, query, jobID).Scan(&payloadStr)
 	if err != nil {
@@ -180,8 +180,8 @@ func (q *PostgresTaskQueue) Fail(ctx context.Context, jobID string, reason strin
 	newPayload, _ := json.Marshal(payload)
 
 	updateQuery := `
-		UPDATE sub_agent_queue
-		SET status = $1, scheduled_at = $2, payload = $3
+		UPDATE sub_agent_jobs
+		SET status = $1, run_after = $2, payload = $3
 		WHERE id = $4
 	`
 	_, err = q.provider.Exec(ctx, updateQuery, status, nextRunAfter, string(newPayload), jobID)

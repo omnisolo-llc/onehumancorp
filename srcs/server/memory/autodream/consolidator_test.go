@@ -46,7 +46,7 @@ func TestAutoDreamConsolidation(t *testing.T) {
 
 	repo := memory.NewVectorRepository(provider)
 	llm := &mockLLM{}
-	service := NewService(repo, llm)
+	service := NewConsolidator(repo, llm)
 
 	err = service.Consolidate(ctx, "task-123", []string{"log 1", "log 2"})
 	if err != nil {

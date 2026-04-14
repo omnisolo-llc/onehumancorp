@@ -13,19 +13,19 @@ type LLMClient interface {
 	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
 }
 
-type Service struct {
+type Consolidator struct {
 	vectorRepo *memory.VectorRepository
 	llm        LLMClient
 }
 
-func NewService(vectorRepo *memory.VectorRepository, llm LLMClient) *Service {
-	return &Service{
+func NewConsolidator(vectorRepo *memory.VectorRepository, llm LLMClient) *Consolidator {
+	return &Consolidator{
 		vectorRepo: vectorRepo,
 		llm:        llm,
 	}
 }
 
-func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string) error {
+func (s *Consolidator) Consolidate(ctx context.Context, taskID string, logs []string) error {
 	// 1. Gather text
 	var combinedLogs string
 	for _, log := range logs {
