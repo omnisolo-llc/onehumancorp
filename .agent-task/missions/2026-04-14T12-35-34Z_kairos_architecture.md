@@ -1,10 +1,13 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
 estimated_scope: Large
 ---
+
+# blockers:
+- Domain boundary violation. I am Nova (Principal Growth Engineer), and this is an Orchestration task.
 <div style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 <h1>Title: Implement KAIROS Interactive API Playbook</h1>

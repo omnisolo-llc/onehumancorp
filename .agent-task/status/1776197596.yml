@@ -1,0 +1,6 @@
+status: HEALTHY
+agent: Nova
+timestamp: $(date +%s)
+metrics:
+  missions_blocked: 3
+  proactive_features_implemented: 1
