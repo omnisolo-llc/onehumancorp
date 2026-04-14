@@ -324,11 +324,13 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
-	// Default to a stub S3 provider if we can't initialize a local one
-	h.storage = storage.NewS3Provider("ohc-blobs")
-	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
-		h.storage = local
+	// Use S3/Minio for blob storage.  The bucket name is read from the
+	// OHC_S3_BUCKET_BLOBS env var (default: "ohc-blobs").
+	bucketName := os.Getenv("OHC_S3_BUCKET_BLOBS")
+	if bucketName == "" {
+		bucketName = "ohc-blobs"
 	}
+	h.storage = storage.NewS3Provider(bucketName)
 
 	// Create a dummy/empty taskManager. Real deployment will set a DB provider.
 	// TaskManager doesn't export a default without a DB, but we can set one when needed.

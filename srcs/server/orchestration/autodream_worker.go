@@ -26,15 +26,23 @@ func formatFloat32SliceForVector(embedding []float32) string {
 	return "[" + strings.Join(strs, ",") + "]"
 }
 
-// MemoryFile represents the structure of .agent-task/memory/*.yml files.
+// MemoryFile represents the structure of agent memory YAML files.
 type MemoryFile struct {
 	AgentSessionData string `yaml:"agent_session_data"`
 	Content          string `yaml:"content"`
 }
 
-// ProcessMemories parses memory files and stores them as vectorized truth.
+// ProcessMemories ingests pending memory YAML files into the autodream_memories table.
+//
+// When OHC_MEMORY_DIR is set the worker reads YAML files from that directory
+// (migration path: legacy agents wrote memory files there).  If the env var is
+// empty this pipeline is a no-op — new agents write directly to the DB.
 func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
-	matches, err := filepath.Glob(".agent-task/memory/*.yml")
+	memoryDir := os.Getenv("OHC_MEMORY_DIR")
+	if memoryDir == "" {
+		return nil // file-based ingestion disabled; agents write to DB directly
+	}
+	matches, err := filepath.Glob(filepath.Join(memoryDir, "*.yml"))
 	if err != nil {
 		return fmt.Errorf("failed to glob memory files: %w", err)
 	}

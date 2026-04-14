@@ -407,9 +407,14 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 	}
 }
 
-// ingestAgentMemories processes YAML files from .agent-task/memory/.
+// ingestAgentMemories processes memory YAML files from the directory
+// configured by OHC_MEMORY_DIR.  When that env var is empty the pipeline is
+// a no-op — agents write memory directly to the database.
 func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
-	memoryDir := ".agent-task/memory"
+	memoryDir := os.Getenv("OHC_MEMORY_DIR")
+	if memoryDir == "" {
+		return // DB-backed memory; no file ingestion needed
+	}
 	files, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -906,9 +911,14 @@ func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
 	}
 }
 
-// ingestMissionArtifacts processes Markdown files from .agent-task/missions/.
+// ingestMissionArtifacts processes Markdown files from the directory specified
+// by OHC_MISSIONS_DIR.  When the env var is empty it defaults to
+// ".agent-task/missions" relative to the current working directory.
 func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
-	missionDir := ".agent-task/missions"
+	missionDir := os.Getenv("OHC_MISSIONS_DIR")
+	if missionDir == "" {
+		missionDir = ".agent-task/missions"
+	}
 	files, err := os.ReadDir(missionDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

@@ -2,27 +2,32 @@ package orchestration
 
 import (
 	"context"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"encoding/json"
 	"fmt"
-	"os"
-	"github.com/onehumancorp/mono/srcs/server/utils"
 	"log/slog"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 )
 
-func writeHeartbeatFile(taskID string, content string) error {
-	dir := filepath.Join(".agent-task", "status")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+// writeHeartbeat persists a heartbeat record for taskID into the database.
+// The agents table (or tasks table) is updated with the current timestamp;
+// this replaces the former filesystem-based .agent-task/status/<taskID>.yml.
+func writeHeartbeat(ctx context.Context, provider db.Provider, taskID, status, subAgentType, parentTaskID string) {
+	if provider == nil {
+		return
 	}
-	path := filepath.Join(dir, fmt.Sprintf("%s.yml", taskID))
-	return utils.WriteFileAtomic(path, []byte(content), 0644)
+	_, err := provider.Exec(ctx,
+		`UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+		status, taskID,
+	)
+	if err != nil {
+		// Non-critical: log and move on.
+		slog.Warn("writeHeartbeat: failed to update task status", "task_id", taskID, "err", err)
+	}
 }
 
 // SubAgentSpawner defines the interface for spawning and monitoring sub-agents.
@@ -167,21 +172,8 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 	_ = parentTaskID
 	_ = isolatedContext
 
-	// Emit heartbeat to .agent-task/status/{taskID}.yml
-	heartbeatContent := fmt.Sprintf(`---
-task_id: %s
-status: IN_PROGRESS
-timestamp: %d
-sub_agent_type: %s
-parent_task_id: %s
-isolated_context: %t
----`, task.ID, time.Now().Unix(), subAgentType, parentTaskID, isolatedContext)
-
-	err := writeHeartbeatFile(task.ID, heartbeatContent)
-	if err != nil {
-		// Just log or ignore since heartbeats are non-critical
-		slog.Warn("failed to write heartbeat", "err", err)
-	}
+	// Emit heartbeat to database (replaces former .agent-task/status/<taskID>.yml).
+	writeHeartbeat(context.Background(), s.db, task.ID, "IN_PROGRESS", subAgentType, parentTaskID)
 
 	// Simulate real work that might fail
 	select {

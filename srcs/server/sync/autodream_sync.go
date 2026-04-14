@@ -82,7 +82,7 @@ func (e *AutoDreamSyncEngine) ProcessForecastTick(ctx context.Context) {
 	e.syncAgentMissions(ctx)
 }
 
-// synthesizeMemory processes and embeds .agent-task/memory files locally.
+// synthesizeMemory consolidates recent memories by invoking AutoDreamWorker.
 func (e *AutoDreamSyncEngine) synthesizeMemory(ctx context.Context) {
 	// AutoDreamWorker handles memory ingestion, conflict resolution, and pruning.
 	// Since we are the sync engine and run in standalone mode, we can invoke the worker methods.
