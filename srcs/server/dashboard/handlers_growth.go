@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/services/growth"
 )
 
 // LandingPageExperiment defines a growth experiment for the OHC platform.
@@ -509,6 +511,23 @@ func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Stub logic for quota
-	writeJSON(w, QuotaMetrics{Used: 10, Max: 100})
+
+	userID := r.URL.Query().Get("userId")
+
+	s.mu.RLock()
+	refs := append([]Referral(nil), s.referrals...)
+	s.mu.RUnlock()
+
+	totalConversions := 0
+	for _, ref := range refs {
+		if userID != "" && ref.UserID != userID {
+			continue
+		}
+		totalConversions += ref.Conversions
+	}
+
+	tracker := growth.NewQuotaTracker(100, 50)
+	maxQuota := tracker.CalculateQuota(totalConversions)
+
+	writeJSON(w, QuotaMetrics{Used: 10, Max: maxQuota})
 }

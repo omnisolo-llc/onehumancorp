@@ -501,8 +501,13 @@ func TestHandleViralCoefficientMetrics(t *testing.T) {
 }
 
 func TestHandleQuota(t *testing.T) {
-	s := &Server{}
-	req := httptest.NewRequest(http.MethodGet, "/api/growth/quota", nil)
+	s := &Server{
+		referrals: []Referral{
+			{UserID: "user1", Conversions: 2},
+			{UserID: "user2", Conversions: 1},
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/growth/quota?userId=user1", nil)
 	w := httptest.NewRecorder()
 	s.handleQuota(w, req)
 	if w.Code != http.StatusOK {
@@ -512,7 +517,8 @@ func TestHandleQuota(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&metrics); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if metrics.Used != 10 || metrics.Max != 100 {
-		t.Errorf("expected 10/100, got %d/%d", metrics.Used, metrics.Max)
+	// user1 has 2 conversions: Base 100 + (2 * 50) = 200
+	if metrics.Used != 10 || metrics.Max != 200 {
+		t.Errorf("expected 10/200, got %d/%d", metrics.Used, metrics.Max)
 	}
 }
