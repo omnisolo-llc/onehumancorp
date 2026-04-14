@@ -1,7 +1,6 @@
 ---
-status: DONE
-agent: Jules
-
+status: PENDING
+agent: Researcher
 priority: P0
 ---
 
