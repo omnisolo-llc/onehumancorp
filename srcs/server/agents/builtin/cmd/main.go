@@ -62,9 +62,8 @@ func run() error {
 	}
 
 	srv := grpc.NewServer()
-	svc := agentgrpc.NewAgentServiceServer(agentID, cfg)
+	svc := agentgrpc.NewAgentServiceServer(agentID, cfg, nil)
 	agentservicepb.RegisterAgentServiceServer(srv, svc)
-
 	slog.Info("agentd: starting", "address", address, "agent_id", agentID)
 
 	// Handle SIGTERM / SIGINT for graceful shutdown.

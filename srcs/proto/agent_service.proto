@@ -38,9 +38,11 @@ message RunTaskRequest {
   // Preferred configuration surface; when populated these values override
   // the process defaults and supersede the legacy fields above.
   AgentRuntimeConfig runtime_config = 9;
+  // Toolset configuration: which built-in tools, MCP servers, and skills to
+  // make available for this specific run.  When absent the agent uses its
+  // process-level defaults.
+  ToolsetConfig toolset_config = 10;
 }
-
-// EventType classifies a RunTaskEvent.
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
   // A partial text chunk from the assistant.
@@ -95,12 +97,69 @@ message SubAgentRequest {
   string sub_agent_address = 8;
   // Preferred configuration surface for sub-agent execution.
   AgentRuntimeConfig runtime_config = 9;
+  // Toolset configuration for the sub-agent.
+  ToolsetConfig toolset_config = 10;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.
 message SubAgentResponse {
   string result = 1;
   string error = 2;
+}
+
+// ── Toolset / MCP / Skill configuration ──────────────────────────────────────
+
+// MCPTransportType specifies the transport used to connect to an MCP server.
+enum MCPTransportType {
+  MCP_TRANSPORT_UNSPECIFIED = 0;
+  // Launch a subprocess and communicate over stdin/stdout (stdio transport).
+  MCP_TRANSPORT_STDIO = 1;
+  // Connect to a running HTTP server via Server-Sent Events.
+  MCP_TRANSPORT_SSE = 2;
+}
+
+// MCPServerConfig describes a single MCP server the agent should connect to.
+message MCPServerConfig {
+  // Logical name for this server (used in logs and tool namespacing).
+  string name = 1;
+  // Transport type.
+  MCPTransportType transport = 2;
+  // STDIO transport: command and arguments to launch the MCP process.
+  // command[0] is the executable; subsequent elements are its arguments.
+  repeated string command = 3;
+  // SSE transport: base URL of the MCP HTTP endpoint.
+  string endpoint = 4;
+  // Environment variables forwarded to the MCP subprocess (STDIO only).
+  map<string, string> env = 5;
+  // If non-empty, expose only these tool names from this server.
+  // An empty list means all tools from the server are exposed.
+  repeated string allowed_tools = 6;
+}
+
+// SkillConfig defines a named skill that the agent can use as a sub-capability.
+// Skills are modelled as sub-agents with a focused instruction.
+message SkillConfig {
+  // Unique name for the skill.
+  string name = 1;
+  // One-line description used when the orchestrator selects this skill.
+  string description = 2;
+  // The instruction / system prompt for this skill sub-agent.
+  string instruction = 3;
+}
+
+// ToolsetConfig fully describes the tools, MCP servers, and skills that should
+// be available to a builtin agent instance.  It replaces hardcoded Go tool
+// lists and is the single source of truth for agent capability.
+message ToolsetConfig {
+  // Built-in tool names to expose (Bash, Read, Write, Glob, Grep, WebFetch,
+  // WebSearch, SendMessage, TodoWrite, ToolSearch, TaskCreate, TaskGet,
+  // TaskList, TaskUpdate).
+  // An empty list enables ALL built-in tools (default behaviour).
+  repeated string builtin_tools = 1;
+  // MCP servers to connect; tools from each server are added to the agent.
+  repeated MCPServerConfig mcp_servers = 2;
+  // Skills to register as callable sub-capabilities.
+  repeated SkillConfig skills = 3;
 }
 
 // AgentService is exposed by every agent process.

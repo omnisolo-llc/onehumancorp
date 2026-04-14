@@ -1,14 +1,3 @@
-// Package agentgrpc implements the gRPC AgentService for the builtin agent.
-//
-// The service exposes three RPCs:
-//   - RunTask: server-streaming; streams RunTaskEvents as the agent executes
-//     a ReAct loop using the configured LLM backend and tool set.
-//   - Ping: unary health-check returning the agent ID and version.
-//   - DispatchToSubAgent: unary; delegates a task to a sub-agent.
-//     When SubAgentRequest.sub_agent_address is empty the sub-agent is run
-//     in-process as a goroutine, and the result is returned over a channel.
-//     When sub_agent_address is set the request is forwarded to that remote
-//     address over a new gRPC connection.
 package agentgrpc
 
 import (
@@ -17,8 +6,15 @@ import (
 	"io"
 	"log/slog"
 
+	"google.golang.org/genai"
+
+	"google.golang.org/adk/agent"
+	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/model"
+	"google.golang.org/adk/runner"
+	"google.golang.org/adk/session"
+
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
-	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -27,27 +23,25 @@ import (
 
 const agentVersion = "1.0.0"
 
-// AgentServiceServer implements agentservicepb.AgentServiceServer using the
-// builtin Go agent loop.
+// AgentServiceServer implements agentservicepb.AgentServiceServer.
+// It uses google.golang.org/adk (llmagent + runner) for the agent loop,
+// custom model.LLM adapters for Anthropic / OpenAI / Ollama, and
+// adk tool.Toolset wrappers loaded from the ToolsetConfig proto.
 type AgentServiceServer struct {
 	agentservicepb.UnimplementedAgentServiceServer
 
 	agentID string
-	// cfg holds the default runtime configuration for new agent instances.
-	cfg AgentConfig
-	// llmOverride, when non-nil, is used instead of constructing a client from cfg.
-	// This is intended for unit tests only.
-	llmOverride builtin.LLMClient
+	cfg     AgentConfig
+
+	// defaultToolsetCfg is the process-level toolset config.
+	// Individual RunTaskRequests can override it via toolset_config.
+	defaultToolsetCfg *agentservicepb.ToolsetConfig
+
+	// llmOverride bypasses newADKModel for unit tests.
+	llmOverride model.LLM
 }
 
-// SetLLMClientOverride sets a test LLM client that bypasses newLLMClient.
-// This is only intended for use in tests.
-func (s *AgentServiceServer) SetLLMClientOverride(c builtin.LLMClient) {
-	s.llmOverride = c
-}
-
-// AgentConfig is the default configuration for agent instances created by the
-// server.  Individual RunTaskRequest fields can override these defaults.
+// AgentConfig is the process-level configuration for all agent instances.
 type AgentConfig struct {
 	LLMProvider        string
 	Model              string
@@ -60,14 +54,20 @@ type AgentConfig struct {
 }
 
 // NewAgentServiceServer creates a new AgentServiceServer.
-func NewAgentServiceServer(agentID string, cfg AgentConfig) *AgentServiceServer {
+func NewAgentServiceServer(agentID string, cfg AgentConfig, defaultToolsetCfg *agentservicepb.ToolsetConfig) *AgentServiceServer {
 	return &AgentServiceServer{
-		agentID: agentID,
-		cfg:     cfg,
+		agentID:           agentID,
+		cfg:               cfg,
+		defaultToolsetCfg: defaultToolsetCfg,
 	}
 }
 
-// Ping handles a health-check RPC.
+// SetLLMClientOverride installs a test model.LLM.  Only for unit tests.
+func (s *AgentServiceServer) SetLLMClientOverride(m model.LLM) {
+	s.llmOverride = m
+}
+
+// Ping implements AgentService.Ping.
 func (s *AgentServiceServer) Ping(_ context.Context, _ *agentservicepb.PingRequest) (*agentservicepb.PingResponse, error) {
 	return &agentservicepb.PingResponse{
 		AgentId: s.agentID,
@@ -75,81 +75,143 @@ func (s *AgentServiceServer) Ping(_ context.Context, _ *agentservicepb.PingReque
 	}, nil
 }
 
-// RunTask streams RunTaskEvents to the caller while executing the agent loop.
+// RunTask implements AgentService.RunTask.
+// It streams RunTaskEvents back to the caller while running the adk agent loop.
 func (s *AgentServiceServer) RunTask(req *agentservicepb.RunTaskRequest, stream agentservicepb.AgentService_RunTaskServer) error {
-	cfg := s.resolveConfig(req)
+	ctx := stream.Context()
+	cfg := s.resolveAgentConfig(req)
 
-	llmClient, err := newLLMClient(cfg)
+	// Build model.LLM.
+	llm, err := s.resolveLLM(cfg)
 	if err != nil {
-		return status.Errorf(codes.Internal, "failed to create LLM client: %v", err)
+		return status.Errorf(codes.Internal, "failed to create LLM: %v", err)
 	}
 
-	agent := &builtin.BuiltinAgent{
-		Client:      llmClient,
-		Model:       cfg.Model,
-		System:      cfg.SystemPrompt,
-		Tools:       builtin.AllTools(),
-		MaxTokens:   cfg.MaxTokens,
-		Temperature: cfg.Temperature,
+	// Resolve toolset config (per-request overrides process default).
+	toolsetCfg := s.defaultToolsetCfg
+	if req.ToolsetConfig != nil {
+		toolsetCfg = req.ToolsetConfig
+	}
+
+	// Build toolsets (built-in wrappers + MCP servers).
+	toolsets, err := BuildToolsets(ctx, toolsetCfg)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to build toolsets: %v", err)
+	}
+
+	// Build the adk llmagent.
+	a, err := llmagent.New(llmagent.Config{
+		Name:        "builtin-agent",
+		Description: "Builtin OHC coding agent",
+		Model:       llm,
+		Instruction: cfg.SystemPrompt,
+		Toolsets:    toolsets,
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to create agent: %v", err)
+	}
+
+	// Create in-memory session service and runner.
+	sessionSvc := session.InMemoryService()
+	r, err := runner.New(runner.Config{
+		AppName:           "ohc-builtin",
+		Agent:             a,
+		SessionService:    sessionSvc,
+		AutoCreateSession: true,
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to create runner: %v", err)
 	}
 
 	// Notify the caller that the run has started.
-	if err := stream.Send(&agentservicepb.RunTaskEvent{
-		Type:      agentservicepb.EventType_RUN_STARTED,
-		Iteration: 0,
-	}); err != nil {
-		return err
+	if sendErr := stream.Send(&agentservicepb.RunTaskEvent{
+		Type: agentservicepb.EventType_RUN_STARTED,
+	}); sendErr != nil {
+		return sendErr
 	}
 
-	initialMessages := []builtin.Message{
-		{Role: builtin.RoleUser, Content: req.Task},
-	}
+	userContent := genai.NewContentFromText(req.Task, "user")
+	eventSeq := r.Run(ctx, "user-1", "", userContent, agent.RunConfig{})
 
-	// Run the agent loop and collect streaming events via the EventCallback.
-	// The agent writes to a channel; we forward events to the gRPC stream here.
-	eventCh := make(chan *agentservicepb.RunTaskEvent, 32)
-	errCh := make(chan error, 1)
-
-	go func() {
-		messages, loopErr := agent.RunWithCallback(stream.Context(), initialMessages, func(evt builtin.AgentEvent) {
-			pb := agentEventToProto(evt)
-			if pb != nil {
-				eventCh <- pb
+	iteration := 0
+	for evt, err := range eventSeq {
+		if err != nil {
+			sendErr := stream.Send(&agentservicepb.RunTaskEvent{
+				Type:  agentservicepb.EventType_TASK_ERROR,
+				Error: err.Error(),
+			})
+			if sendErr != nil {
+				slog.Error("agentgrpc: send TASK_ERROR failed", "err", sendErr)
 			}
-		})
-		_ = messages
-		errCh <- loopErr
-		close(eventCh)
-	}()
-
-	// Forward events from the channel to the gRPC stream until the goroutine
-	// closes eventCh, then check the loop error.
-	for evt := range eventCh {
-		if sendErr := stream.Send(evt); sendErr != nil {
-			return sendErr
+			return status.Errorf(codes.Internal, "agent error: %v", err)
 		}
-	}
-
-	loopErr := <-errCh
-	if loopErr != nil {
-		if err := stream.Send(&agentservicepb.RunTaskEvent{
-			Type:  agentservicepb.EventType_TASK_ERROR,
-			Error: loopErr.Error(),
-		}); err != nil {
-			slog.Error("agentgrpc: failed to send TASK_ERROR event", "err", err)
+		if evt == nil {
+			continue
 		}
-		return status.Errorf(codes.Internal, "agent loop error: %v", loopErr)
+		if pb := sessionEventToProto(evt, &iteration); pb != nil {
+			if sendErr := stream.Send(pb); sendErr != nil {
+				return sendErr
+			}
+		}
 	}
 
 	return nil
 }
 
-// DispatchToSubAgent delegates work to a sub-agent.
-//
+// sessionEventToProto converts an adk session.Event to a RunTaskEvent proto.
+func sessionEventToProto(evt *session.Event, iteration *int) *agentservicepb.RunTaskEvent {
+	if evt == nil || evt.Content == nil {
+		return nil
+	}
+
+	hasFunctionCall := false
+	hasText := false
+	for _, p := range evt.Content.Parts {
+		if p.FunctionCall != nil {
+			hasFunctionCall = true
+		}
+		if p.Text != "" {
+			hasText = true
+		}
+	}
+
+	if evt.IsFinalResponse() && hasText && !hasFunctionCall {
+		*iteration++
+		return &agentservicepb.RunTaskEvent{
+			Type:      agentservicepb.EventType_TASK_COMPLETE,
+			Content:   extractFinalText(evt.Content),
+			Iteration: int32(*iteration),
+		}
+	}
+
+	if hasFunctionCall {
+		for _, p := range evt.Content.Parts {
+			if p.FunctionCall != nil {
+				*iteration++
+				return &agentservicepb.RunTaskEvent{
+					Type:         agentservicepb.EventType_TOOL_CALL,
+					ToolName:     p.FunctionCall.Name,
+					ToolArgsJson: jsonStringify(p.FunctionCall.Args),
+					Iteration:    int32(*iteration),
+				}
+			}
+		}
+	}
+
+	if hasText {
+		return &agentservicepb.RunTaskEvent{
+			Type:    agentservicepb.EventType_TEXT_CHUNK,
+			Content: extractFinalText(evt.Content),
+		}
+	}
+
+	return nil
+}
+
+// DispatchToSubAgent implements AgentService.DispatchToSubAgent.
 // When req.SubAgentAddress is empty the sub-agent runs in-process as a
-// goroutine; the caller goroutine blocks on a result channel.  When
-// req.SubAgentAddress is non-empty the request is forwarded to that remote
-// gRPC endpoint and the response is returned.
+// goroutine communicating over a channel.  Otherwise the request is
+// forwarded to the given gRPC address.
 func (s *AgentServiceServer) DispatchToSubAgent(ctx context.Context, req *agentservicepb.SubAgentRequest) (*agentservicepb.SubAgentResponse, error) {
 	if req.SubAgentAddress == "" {
 		return s.dispatchInProcess(ctx, req)
@@ -157,66 +219,72 @@ func (s *AgentServiceServer) DispatchToSubAgent(ctx context.Context, req *agents
 	return s.dispatchRemote(ctx, req)
 }
 
-// dispatchInProcess runs the sub-agent as a goroutine and returns the result
-// over a channel.  This avoids spawning a new process for every sub-task and
-// takes full advantage of Go's concurrency model.
+// dispatchInProcess runs the sub-agent inside a goroutine and returns the
+// result over a channel.  This avoids spawning a new OS process for every
+// sub-task and leverages Go's lightweight concurrency.
 func (s *AgentServiceServer) dispatchInProcess(ctx context.Context, req *agentservicepb.SubAgentRequest) (*agentservicepb.SubAgentResponse, error) {
 	type result struct {
 		text string
 		err  error
 	}
-
 	resultCh := make(chan result, 1)
 
 	go func() {
-		subReq := &agentservicepb.RunTaskRequest{
-			Task:               req.Task,
-			Model:              req.Model,
-			LlmProvider:        req.LlmProvider,
-			LlmEndpoint:        req.LlmEndpoint,
-			SystemPrompt:       req.SystemPrompt,
-			MaxTokens:          req.MaxTokens,
-			Temperature:        req.Temperature,
-			MaxContextMessages: req.MaxContextMessages,
-			RuntimeConfig:      req.RuntimeConfig,
-		}
+		runReq := subAgentToRunRequest(req)
+		cfg := s.resolveAgentConfig(runReq)
 
-		cfg := s.resolveConfig(subReq)
-
-		llmClient, err := newLLMClient(cfg)
+		llm, err := s.resolveLLM(cfg)
 		if err != nil {
-			resultCh <- result{err: fmt.Errorf("failed to create LLM client: %w", err)}
+			resultCh <- result{err: fmt.Errorf("create LLM: %w", err)}
 			return
 		}
 
-		agent := &builtin.BuiltinAgent{
-			Client:      llmClient,
-			Model:       cfg.Model,
-			System:      cfg.SystemPrompt,
-			Tools:       builtin.AllTools(),
-			MaxTokens:   cfg.MaxTokens,
-			Temperature: cfg.Temperature,
+		toolsetCfg := s.defaultToolsetCfg
+		if runReq.ToolsetConfig != nil {
+			toolsetCfg = runReq.ToolsetConfig
+		}
+		toolsets, err := BuildToolsets(ctx, toolsetCfg)
+		if err != nil {
+			resultCh <- result{err: fmt.Errorf("build toolsets: %w", err)}
+			return
 		}
 
-		messages, err := agent.Run(ctx, []builtin.Message{
-			{Role: builtin.RoleUser, Content: req.Task},
+		a, err := llmagent.New(llmagent.Config{
+			Name:        "sub-agent",
+			Description: "Builtin OHC sub-agent",
+			Model:       llm,
+			Instruction: cfg.SystemPrompt,
+			Toolsets:    toolsets,
 		})
-
 		if err != nil {
-			resultCh <- result{err: err}
+			resultCh <- result{err: fmt.Errorf("create agent: %w", err)}
 			return
 		}
 
-		// Return the last assistant message as the result.
-		var finalText string
-		for i := len(messages) - 1; i >= 0; i-- {
-			if messages[i].Role == builtin.RoleAssistant {
-				finalText = messages[i].Content
-				break
+		sessionSvc := session.InMemoryService()
+		r, err := runner.New(runner.Config{
+			AppName:           "ohc-subagent",
+			Agent:             a,
+			SessionService:    sessionSvc,
+			AutoCreateSession: true,
+		})
+		if err != nil {
+			resultCh <- result{err: fmt.Errorf("create runner: %w", err)}
+			return
+		}
+
+		userContent := genai.NewContentFromText(req.Task, "user")
+		var lastText string
+		for evt, err := range r.Run(ctx, "user-1", "", userContent, agent.RunConfig{}) {
+			if err != nil {
+				resultCh <- result{err: err}
+				return
+			}
+			if evt != nil && evt.IsFinalResponse() {
+				lastText = extractFinalText(evt.Content)
 			}
 		}
-
-		resultCh <- result{text: finalText}
+		resultCh <- result{text: lastText}
 	}()
 
 	select {
@@ -236,40 +304,24 @@ func (s *AgentServiceServer) dispatchRemote(ctx context.Context, req *agentservi
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "cannot connect to sub-agent at %s: %v", req.SubAgentAddress, err)
+		return nil, status.Errorf(codes.Unavailable, "connect to sub-agent at %s: %v", req.SubAgentAddress, err)
 	}
 	defer conn.Close()
 
 	client := agentservicepb.NewAgentServiceClient(conn)
-
-	// Collect all events from the streaming RunTask call.
-	runReq := &agentservicepb.RunTaskRequest{
-		Task:               req.Task,
-		Model:              req.Model,
-		LlmProvider:        req.LlmProvider,
-		LlmEndpoint:        req.LlmEndpoint,
-		SystemPrompt:       req.SystemPrompt,
-		MaxTokens:          req.MaxTokens,
-		Temperature:        req.Temperature,
-		MaxContextMessages: req.MaxContextMessages,
-		RuntimeConfig:      req.RuntimeConfig,
-	}
-
-	stream, err := client.RunTask(ctx, runReq)
+	stream, err := client.RunTask(ctx, subAgentToRunRequest(req))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "RunTask RPC failed: %v", err)
+		return nil, status.Errorf(codes.Internal, "RunTask RPC: %v", err)
 	}
 
-	var lastContent string
-	var taskErr string
-
+	var lastContent, taskErr string
 	for {
 		evt, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "stream receive error: %v", err)
+			return nil, status.Errorf(codes.Internal, "stream recv: %v", err)
 		}
 		switch evt.Type {
 		case agentservicepb.EventType_TASK_COMPLETE:
@@ -278,19 +330,16 @@ func (s *AgentServiceServer) dispatchRemote(ctx context.Context, req *agentservi
 			taskErr = evt.Error
 		}
 	}
-
 	if taskErr != "" {
 		return &agentservicepb.SubAgentResponse{Error: taskErr}, nil
 	}
 	return &agentservicepb.SubAgentResponse{Result: lastContent}, nil
 }
 
-// resolveConfig merges the per-request parameters with the server's defaults.
-func (s *AgentServiceServer) resolveConfig(req *agentservicepb.RunTaskRequest) AgentConfig {
+// resolveAgentConfig merges per-request fields with the server defaults.
+func (s *AgentServiceServer) resolveAgentConfig(req *agentservicepb.RunTaskRequest) AgentConfig {
 	cfg := s.cfg
-
-	// Runtime config proto field takes precedence over per-request legacy fields.
-	if rc := req.RuntimeConfig; rc != nil {
+	if rc := req.GetRuntimeConfig(); rc != nil {
 		if rc.LlmProvider != "" {
 			cfg.LLMProvider = rc.LlmProvider
 		}
@@ -309,15 +358,7 @@ func (s *AgentServiceServer) resolveConfig(req *agentservicepb.RunTaskRequest) A
 		if rc.Temperature > 0 {
 			cfg.Temperature = rc.Temperature
 		}
-		if rc.MaxIterations > 0 {
-			cfg.MaxIterations = int(rc.MaxIterations)
-		}
-		if rc.MaxContextMessages > 0 {
-			cfg.MaxContextMessages = int(rc.MaxContextMessages)
-		}
 	}
-
-	// Fall back to per-request legacy fields.
 	if req.LlmProvider != "" && cfg.LLMProvider == "" {
 		cfg.LLMProvider = req.LlmProvider
 	}
@@ -336,16 +377,11 @@ func (s *AgentServiceServer) resolveConfig(req *agentservicepb.RunTaskRequest) A
 	if req.Temperature > 0 && cfg.Temperature == 0 {
 		cfg.Temperature = req.Temperature
 	}
-	if req.MaxContextMessages > 0 && cfg.MaxContextMessages == 0 {
-		cfg.MaxContextMessages = int(req.MaxContextMessages)
-	}
-
-	// Apply sensible defaults.
 	if cfg.MaxTokens == 0 {
 		cfg.MaxTokens = 2048
 	}
 	if cfg.SystemPrompt == "" {
-		cfg.SystemPrompt = builtin.GetSystemPrompt()
+		cfg.SystemPrompt = defaultSystemPrompt()
 	}
 	if cfg.LLMProvider == "" {
 		cfg.LLMProvider = "ollama"
@@ -353,37 +389,34 @@ func (s *AgentServiceServer) resolveConfig(req *agentservicepb.RunTaskRequest) A
 	if cfg.Model == "" {
 		cfg.Model = "llama3"
 	}
-
 	return cfg
 }
 
-// agentEventToProto converts an internal AgentEvent to a RunTaskEvent proto.
-func agentEventToProto(evt builtin.AgentEvent) *agentservicepb.RunTaskEvent {
-	switch evt.Type {
-	case builtin.AgentEventTypeTextChunk:
-		return &agentservicepb.RunTaskEvent{
-			Type:    agentservicepb.EventType_TEXT_CHUNK,
-			Content: evt.Content,
-		}
-	case builtin.AgentEventTypeToolCall:
-		return &agentservicepb.RunTaskEvent{
-			Type:         agentservicepb.EventType_TOOL_CALL,
-			ToolName:     evt.ToolName,
-			ToolArgsJson: evt.ToolArgsJSON,
-			ToolResult:   evt.ToolResult,
-		}
-	case builtin.AgentEventTypeTaskComplete:
-		return &agentservicepb.RunTaskEvent{
-			Type:    agentservicepb.EventType_TASK_COMPLETE,
-			Content: evt.Content,
-		}
-	case builtin.AgentEventTypeIterationStarted:
-		return &agentservicepb.RunTaskEvent{
-			Type:         agentservicepb.EventType_ITERATION_STARTED,
-			Iteration:    int32(evt.Iteration),
-			MessageCount: int32(evt.MessageCount),
-		}
-	default:
-		return nil
+// resolveLLM returns a model.LLM, using the test override when set.
+func (s *AgentServiceServer) resolveLLM(cfg AgentConfig) (model.LLM, error) {
+	if s.llmOverride != nil {
+		return s.llmOverride, nil
+	}
+	return newADKModel(cfg)
+}
+
+// defaultSystemPrompt returns the built-in system prompt.
+func defaultSystemPrompt() string {
+	// Delegate to the builtin package's system prompt for consistency.
+	return "You are a helpful AI coding assistant. You have access to tools to help you complete tasks. Use them as needed to provide accurate and complete responses."
+}
+
+// subAgentToRunRequest converts a SubAgentRequest to a RunTaskRequest.
+func subAgentToRunRequest(req *agentservicepb.SubAgentRequest) *agentservicepb.RunTaskRequest {
+	return &agentservicepb.RunTaskRequest{
+		Task:               req.Task,
+		Model:              req.Model,
+		LlmProvider:        req.LlmProvider,
+		LlmEndpoint:        req.LlmEndpoint,
+		SystemPrompt:       req.SystemPrompt,
+		MaxTokens:          req.MaxTokens,
+		Temperature:        req.Temperature,
+		RuntimeConfig:      req.RuntimeConfig,
+		ToolsetConfig:      req.ToolsetConfig,
 	}
 }

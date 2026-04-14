@@ -41,7 +41,7 @@ func NewClient(address string) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultDialTimeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, address,
+	conn, err := grpc.DialContext(ctx, address, //nolint:staticcheck
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	)

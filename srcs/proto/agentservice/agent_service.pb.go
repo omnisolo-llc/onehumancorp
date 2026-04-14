@@ -21,7 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// EventType classifies a RunTaskEvent.
 type EventType int32
 
 const (
@@ -87,6 +86,58 @@ func (x EventType) Number() protoreflect.EnumNumber {
 // Deprecated: Use EventType.Descriptor instead.
 func (EventType) EnumDescriptor() ([]byte, []int) {
 	return file_agent_service_proto_rawDescGZIP(), []int{0}
+}
+
+// MCPTransportType specifies the transport used to connect to an MCP server.
+type MCPTransportType int32
+
+const (
+	MCPTransportType_MCP_TRANSPORT_UNSPECIFIED MCPTransportType = 0
+	// Launch a subprocess and communicate over stdin/stdout (stdio transport).
+	MCPTransportType_MCP_TRANSPORT_STDIO MCPTransportType = 1
+	// Connect to a running HTTP server via Server-Sent Events.
+	MCPTransportType_MCP_TRANSPORT_SSE MCPTransportType = 2
+)
+
+// Enum value maps for MCPTransportType.
+var (
+	MCPTransportType_name = map[int32]string{
+		0: "MCP_TRANSPORT_UNSPECIFIED",
+		1: "MCP_TRANSPORT_STDIO",
+		2: "MCP_TRANSPORT_SSE",
+	}
+	MCPTransportType_value = map[string]int32{
+		"MCP_TRANSPORT_UNSPECIFIED": 0,
+		"MCP_TRANSPORT_STDIO":       1,
+		"MCP_TRANSPORT_SSE":         2,
+	}
+)
+
+func (x MCPTransportType) Enum() *MCPTransportType {
+	p := new(MCPTransportType)
+	*p = x
+	return p
+}
+
+func (x MCPTransportType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MCPTransportType) Descriptor() protoreflect.EnumDescriptor {
+	return file_agent_service_proto_enumTypes[1].Descriptor()
+}
+
+func (MCPTransportType) Type() protoreflect.EnumType {
+	return &file_agent_service_proto_enumTypes[1]
+}
+
+func (x MCPTransportType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MCPTransportType.Descriptor instead.
+func (MCPTransportType) EnumDescriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{1}
 }
 
 // AgentRuntimeConfig is the control surface for agent defaults and
@@ -213,6 +264,10 @@ type RunTaskRequest struct {
 	// Preferred configuration surface; when populated these values override
 	// the process defaults and supersede the legacy fields above.
 	RuntimeConfig *AgentRuntimeConfig `protobuf:"bytes,9,opt,name=runtime_config,json=runtimeConfig,proto3" json:"runtime_config,omitempty"`
+	// Toolset configuration: which built-in tools, MCP servers, and skills to
+	// make available for this specific run.  When absent the agent uses its
+	// process-level defaults.
+	ToolsetConfig *ToolsetConfig `protobuf:"bytes,10,opt,name=toolset_config,json=toolsetConfig,proto3" json:"toolset_config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -306,6 +361,13 @@ func (x *RunTaskRequest) GetMaxContextMessages() int32 {
 func (x *RunTaskRequest) GetRuntimeConfig() *AgentRuntimeConfig {
 	if x != nil {
 		return x.RuntimeConfig
+	}
+	return nil
+}
+
+func (x *RunTaskRequest) GetToolsetConfig() *ToolsetConfig {
+	if x != nil {
+		return x.ToolsetConfig
 	}
 	return nil
 }
@@ -519,6 +581,8 @@ type SubAgentRequest struct {
 	SubAgentAddress string `protobuf:"bytes,8,opt,name=sub_agent_address,json=subAgentAddress,proto3" json:"sub_agent_address,omitempty"`
 	// Preferred configuration surface for sub-agent execution.
 	RuntimeConfig *AgentRuntimeConfig `protobuf:"bytes,9,opt,name=runtime_config,json=runtimeConfig,proto3" json:"runtime_config,omitempty"`
+	// Toolset configuration for the sub-agent.
+	ToolsetConfig *ToolsetConfig `protobuf:"bytes,10,opt,name=toolset_config,json=toolsetConfig,proto3" json:"toolset_config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -616,6 +680,13 @@ func (x *SubAgentRequest) GetRuntimeConfig() *AgentRuntimeConfig {
 	return nil
 }
 
+func (x *SubAgentRequest) GetToolsetConfig() *ToolsetConfig {
+	if x != nil {
+		return x.ToolsetConfig
+	}
+	return nil
+}
+
 // SubAgentResponse carries the sub-agent's final answer.
 type SubAgentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -669,6 +740,233 @@ func (x *SubAgentResponse) GetError() string {
 	return ""
 }
 
+// MCPServerConfig describes a single MCP server the agent should connect to.
+type MCPServerConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Logical name for this server (used in logs and tool namespacing).
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Transport type.
+	Transport MCPTransportType `protobuf:"varint,2,opt,name=transport,proto3,enum=ohc.agent.service.MCPTransportType" json:"transport,omitempty"`
+	// STDIO transport: command and arguments to launch the MCP process.
+	// command[0] is the executable; subsequent elements are its arguments.
+	Command []string `protobuf:"bytes,3,rep,name=command,proto3" json:"command,omitempty"`
+	// SSE transport: base URL of the MCP HTTP endpoint.
+	Endpoint string `protobuf:"bytes,4,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	// Environment variables forwarded to the MCP subprocess (STDIO only).
+	Env map[string]string `protobuf:"bytes,5,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// If non-empty, expose only these tool names from this server.
+	// An empty list means all tools from the server are exposed.
+	AllowedTools  []string `protobuf:"bytes,6,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MCPServerConfig) Reset() {
+	*x = MCPServerConfig{}
+	mi := &file_agent_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MCPServerConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MCPServerConfig) ProtoMessage() {}
+
+func (x *MCPServerConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MCPServerConfig.ProtoReflect.Descriptor instead.
+func (*MCPServerConfig) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *MCPServerConfig) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *MCPServerConfig) GetTransport() MCPTransportType {
+	if x != nil {
+		return x.Transport
+	}
+	return MCPTransportType_MCP_TRANSPORT_UNSPECIFIED
+}
+
+func (x *MCPServerConfig) GetCommand() []string {
+	if x != nil {
+		return x.Command
+	}
+	return nil
+}
+
+func (x *MCPServerConfig) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *MCPServerConfig) GetEnv() map[string]string {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *MCPServerConfig) GetAllowedTools() []string {
+	if x != nil {
+		return x.AllowedTools
+	}
+	return nil
+}
+
+// SkillConfig defines a named skill that the agent can use as a sub-capability.
+// Skills are modelled as sub-agents with a focused instruction.
+type SkillConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique name for the skill.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// One-line description used when the orchestrator selects this skill.
+	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// The instruction / system prompt for this skill sub-agent.
+	Instruction   string `protobuf:"bytes,3,opt,name=instruction,proto3" json:"instruction,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillConfig) Reset() {
+	*x = SkillConfig{}
+	mi := &file_agent_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillConfig) ProtoMessage() {}
+
+func (x *SkillConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillConfig.ProtoReflect.Descriptor instead.
+func (*SkillConfig) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SkillConfig) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SkillConfig) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *SkillConfig) GetInstruction() string {
+	if x != nil {
+		return x.Instruction
+	}
+	return ""
+}
+
+// ToolsetConfig fully describes the tools, MCP servers, and skills that should
+// be available to a builtin agent instance.  It replaces hardcoded Go tool
+// lists and is the single source of truth for agent capability.
+type ToolsetConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Built-in tool names to expose (Bash, Read, Write, Glob, Grep, WebFetch,
+	// WebSearch, SendMessage, TodoWrite, ToolSearch, TaskCreate, TaskGet,
+	// TaskList, TaskUpdate).
+	// An empty list enables ALL built-in tools (default behaviour).
+	BuiltinTools []string `protobuf:"bytes,1,rep,name=builtin_tools,json=builtinTools,proto3" json:"builtin_tools,omitempty"`
+	// MCP servers to connect; tools from each server are added to the agent.
+	McpServers []*MCPServerConfig `protobuf:"bytes,2,rep,name=mcp_servers,json=mcpServers,proto3" json:"mcp_servers,omitempty"`
+	// Skills to register as callable sub-capabilities.
+	Skills        []*SkillConfig `protobuf:"bytes,3,rep,name=skills,proto3" json:"skills,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ToolsetConfig) Reset() {
+	*x = ToolsetConfig{}
+	mi := &file_agent_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ToolsetConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ToolsetConfig) ProtoMessage() {}
+
+func (x *ToolsetConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ToolsetConfig.ProtoReflect.Descriptor instead.
+func (*ToolsetConfig) Descriptor() ([]byte, []int) {
+	return file_agent_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ToolsetConfig) GetBuiltinTools() []string {
+	if x != nil {
+		return x.BuiltinTools
+	}
+	return nil
+}
+
+func (x *ToolsetConfig) GetMcpServers() []*MCPServerConfig {
+	if x != nil {
+		return x.McpServers
+	}
+	return nil
+}
+
+func (x *ToolsetConfig) GetSkills() []*SkillConfig {
+	if x != nil {
+		return x.Skills
+	}
+	return nil
+}
+
 var File_agent_service_proto protoreflect.FileDescriptor
 
 const file_agent_service_proto_rawDesc = "" +
@@ -683,7 +981,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"max_tokens\x18\x05 \x01(\x05R\tmaxTokens\x12 \n" +
 	"\vtemperature\x18\x06 \x01(\x02R\vtemperature\x12%\n" +
 	"\x0emax_iterations\x18\a \x01(\x05R\rmaxIterations\x120\n" +
-	"\x14max_context_messages\x18\b \x01(\x05R\x12maxContextMessages\"\xe6\x02\n" +
+	"\x14max_context_messages\x18\b \x01(\x05R\x12maxContextMessages\"\xaf\x03\n" +
 	"\x0eRunTaskRequest\x12\x12\n" +
 	"\x04task\x18\x01 \x01(\tR\x04task\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12!\n" +
@@ -694,7 +992,9 @@ const file_agent_service_proto_rawDesc = "" +
 	"max_tokens\x18\x06 \x01(\x05R\tmaxTokens\x12 \n" +
 	"\vtemperature\x18\a \x01(\x02R\vtemperature\x120\n" +
 	"\x14max_context_messages\x18\b \x01(\x05R\x12maxContextMessages\x12L\n" +
-	"\x0eruntime_config\x18\t \x01(\v2%.ohc.agent.service.AgentRuntimeConfigR\rruntimeConfig\"\x97\x02\n" +
+	"\x0eruntime_config\x18\t \x01(\v2%.ohc.agent.service.AgentRuntimeConfigR\rruntimeConfig\x12G\n" +
+	"\x0etoolset_config\x18\n" +
+	" \x01(\v2 .ohc.agent.service.ToolsetConfigR\rtoolsetConfig\"\x97\x02\n" +
 	"\fRunTaskEvent\x120\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x1c.ohc.agent.service.EventTypeR\x04type\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1b\n" +
@@ -708,7 +1008,7 @@ const file_agent_service_proto_rawDesc = "" +
 	"\vPingRequest\"C\n" +
 	"\fPingResponse\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\"\xe1\x02\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\"\xaa\x03\n" +
 	"\x0fSubAgentRequest\x12\x12\n" +
 	"\x04task\x18\x01 \x01(\tR\x04task\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12!\n" +
@@ -719,10 +1019,31 @@ const file_agent_service_proto_rawDesc = "" +
 	"max_tokens\x18\x06 \x01(\x05R\tmaxTokens\x12 \n" +
 	"\vtemperature\x18\a \x01(\x02R\vtemperature\x12*\n" +
 	"\x11sub_agent_address\x18\b \x01(\tR\x0fsubAgentAddress\x12L\n" +
-	"\x0eruntime_config\x18\t \x01(\v2%.ohc.agent.service.AgentRuntimeConfigR\rruntimeConfig\"@\n" +
+	"\x0eruntime_config\x18\t \x01(\v2%.ohc.agent.service.AgentRuntimeConfigR\rruntimeConfig\x12G\n" +
+	"\x0etoolset_config\x18\n" +
+	" \x01(\v2 .ohc.agent.service.ToolsetConfigR\rtoolsetConfig\"@\n" +
 	"\x10SubAgentResponse\x12\x16\n" +
 	"\x06result\x18\x01 \x01(\tR\x06result\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error*\x91\x01\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"\xba\x02\n" +
+	"\x0fMCPServerConfig\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12A\n" +
+	"\ttransport\x18\x02 \x01(\x0e2#.ohc.agent.service.MCPTransportTypeR\ttransport\x12\x18\n" +
+	"\acommand\x18\x03 \x03(\tR\acommand\x12\x1a\n" +
+	"\bendpoint\x18\x04 \x01(\tR\bendpoint\x12=\n" +
+	"\x03env\x18\x05 \x03(\v2+.ohc.agent.service.MCPServerConfig.EnvEntryR\x03env\x12#\n" +
+	"\rallowed_tools\x18\x06 \x03(\tR\fallowedTools\x1a6\n" +
+	"\bEnvEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"e\n" +
+	"\vSkillConfig\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12 \n" +
+	"\vinstruction\x18\x03 \x01(\tR\vinstruction\"\xb1\x01\n" +
+	"\rToolsetConfig\x12#\n" +
+	"\rbuiltin_tools\x18\x01 \x03(\tR\fbuiltinTools\x12C\n" +
+	"\vmcp_servers\x18\x02 \x03(\v2\".ohc.agent.service.MCPServerConfigR\n" +
+	"mcpServers\x126\n" +
+	"\x06skills\x18\x03 \x03(\v2\x1e.ohc.agent.service.SkillConfigR\x06skills*\x91\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
@@ -732,7 +1053,11 @@ const file_agent_service_proto_rawDesc = "" +
 	"\n" +
 	"TASK_ERROR\x10\x04\x12\x0f\n" +
 	"\vRUN_STARTED\x10\x05\x12\x15\n" +
-	"\x11ITERATION_STARTED\x10\x062\x87\x02\n" +
+	"\x11ITERATION_STARTED\x10\x06*a\n" +
+	"\x10MCPTransportType\x12\x1d\n" +
+	"\x19MCP_TRANSPORT_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13MCP_TRANSPORT_STDIO\x10\x01\x12\x15\n" +
+	"\x11MCP_TRANSPORT_SSE\x10\x022\x87\x02\n" +
 	"\fAgentService\x12O\n" +
 	"\aRunTask\x12!.ohc.agent.service.RunTaskRequest\x1a\x1f.ohc.agent.service.RunTaskEvent0\x01\x12G\n" +
 	"\x04Ping\x12\x1e.ohc.agent.service.PingRequest\x1a\x1f.ohc.agent.service.PingResponse\x12]\n" +
@@ -750,33 +1075,44 @@ func file_agent_service_proto_rawDescGZIP() []byte {
 	return file_agent_service_proto_rawDescData
 }
 
-var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_agent_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agent_service_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_agent_service_proto_goTypes = []any{
 	(EventType)(0),             // 0: ohc.agent.service.EventType
-	(*AgentRuntimeConfig)(nil), // 1: ohc.agent.service.AgentRuntimeConfig
-	(*RunTaskRequest)(nil),     // 2: ohc.agent.service.RunTaskRequest
-	(*RunTaskEvent)(nil),       // 3: ohc.agent.service.RunTaskEvent
-	(*PingRequest)(nil),        // 4: ohc.agent.service.PingRequest
-	(*PingResponse)(nil),       // 5: ohc.agent.service.PingResponse
-	(*SubAgentRequest)(nil),    // 6: ohc.agent.service.SubAgentRequest
-	(*SubAgentResponse)(nil),   // 7: ohc.agent.service.SubAgentResponse
+	(MCPTransportType)(0),      // 1: ohc.agent.service.MCPTransportType
+	(*AgentRuntimeConfig)(nil), // 2: ohc.agent.service.AgentRuntimeConfig
+	(*RunTaskRequest)(nil),     // 3: ohc.agent.service.RunTaskRequest
+	(*RunTaskEvent)(nil),       // 4: ohc.agent.service.RunTaskEvent
+	(*PingRequest)(nil),        // 5: ohc.agent.service.PingRequest
+	(*PingResponse)(nil),       // 6: ohc.agent.service.PingResponse
+	(*SubAgentRequest)(nil),    // 7: ohc.agent.service.SubAgentRequest
+	(*SubAgentResponse)(nil),   // 8: ohc.agent.service.SubAgentResponse
+	(*MCPServerConfig)(nil),    // 9: ohc.agent.service.MCPServerConfig
+	(*SkillConfig)(nil),        // 10: ohc.agent.service.SkillConfig
+	(*ToolsetConfig)(nil),      // 11: ohc.agent.service.ToolsetConfig
+	nil,                        // 12: ohc.agent.service.MCPServerConfig.EnvEntry
 }
 var file_agent_service_proto_depIdxs = []int32{
-	1, // 0: ohc.agent.service.RunTaskRequest.runtime_config:type_name -> ohc.agent.service.AgentRuntimeConfig
-	0, // 1: ohc.agent.service.RunTaskEvent.type:type_name -> ohc.agent.service.EventType
-	1, // 2: ohc.agent.service.SubAgentRequest.runtime_config:type_name -> ohc.agent.service.AgentRuntimeConfig
-	2, // 3: ohc.agent.service.AgentService.RunTask:input_type -> ohc.agent.service.RunTaskRequest
-	4, // 4: ohc.agent.service.AgentService.Ping:input_type -> ohc.agent.service.PingRequest
-	6, // 5: ohc.agent.service.AgentService.DispatchToSubAgent:input_type -> ohc.agent.service.SubAgentRequest
-	3, // 6: ohc.agent.service.AgentService.RunTask:output_type -> ohc.agent.service.RunTaskEvent
-	5, // 7: ohc.agent.service.AgentService.Ping:output_type -> ohc.agent.service.PingResponse
-	7, // 8: ohc.agent.service.AgentService.DispatchToSubAgent:output_type -> ohc.agent.service.SubAgentResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2,  // 0: ohc.agent.service.RunTaskRequest.runtime_config:type_name -> ohc.agent.service.AgentRuntimeConfig
+	11, // 1: ohc.agent.service.RunTaskRequest.toolset_config:type_name -> ohc.agent.service.ToolsetConfig
+	0,  // 2: ohc.agent.service.RunTaskEvent.type:type_name -> ohc.agent.service.EventType
+	2,  // 3: ohc.agent.service.SubAgentRequest.runtime_config:type_name -> ohc.agent.service.AgentRuntimeConfig
+	11, // 4: ohc.agent.service.SubAgentRequest.toolset_config:type_name -> ohc.agent.service.ToolsetConfig
+	1,  // 5: ohc.agent.service.MCPServerConfig.transport:type_name -> ohc.agent.service.MCPTransportType
+	12, // 6: ohc.agent.service.MCPServerConfig.env:type_name -> ohc.agent.service.MCPServerConfig.EnvEntry
+	9,  // 7: ohc.agent.service.ToolsetConfig.mcp_servers:type_name -> ohc.agent.service.MCPServerConfig
+	10, // 8: ohc.agent.service.ToolsetConfig.skills:type_name -> ohc.agent.service.SkillConfig
+	3,  // 9: ohc.agent.service.AgentService.RunTask:input_type -> ohc.agent.service.RunTaskRequest
+	5,  // 10: ohc.agent.service.AgentService.Ping:input_type -> ohc.agent.service.PingRequest
+	7,  // 11: ohc.agent.service.AgentService.DispatchToSubAgent:input_type -> ohc.agent.service.SubAgentRequest
+	4,  // 12: ohc.agent.service.AgentService.RunTask:output_type -> ohc.agent.service.RunTaskEvent
+	6,  // 13: ohc.agent.service.AgentService.Ping:output_type -> ohc.agent.service.PingResponse
+	8,  // 14: ohc.agent.service.AgentService.DispatchToSubAgent:output_type -> ohc.agent.service.SubAgentResponse
+	12, // [12:15] is the sub-list for method output_type
+	9,  // [9:12] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agent_service_proto_init() }
@@ -789,8 +1125,8 @@ func file_agent_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_service_proto_rawDesc), len(file_agent_service_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      2,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
