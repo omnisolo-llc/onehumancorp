@@ -237,6 +237,16 @@ func (rm *RedisMeshTransport) DiscoverAgents(ctx context.Context, skill string) 
 }
 
 
+func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	data, err := json.Marshal(caps)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel("mesh:capabilities").Message(string(data)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
 
 func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
 	data, err := json.Marshal(task)
@@ -302,17 +312,6 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 		close(ch)
 	}()
 	return ch, nil
-}
-
-func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
-	data, err := json.Marshal(caps)
-	if err != nil {
-		return err
-	}
-	cmd := rm.client.B().Publish().Channel("mesh:capabilities").Message(string(data)).Build()
-	return meshWithRetry(ctx, 3, func() error {
-		return rm.client.Do(ctx, cmd).Error()
-	})
 }
 
 func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
