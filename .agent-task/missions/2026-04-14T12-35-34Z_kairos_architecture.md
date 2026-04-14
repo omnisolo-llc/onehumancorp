@@ -1,5 +1,7 @@
 ---
-status: PENDING
+status: BLOCKED
+blockers:
+  - Requires file modifications outside the agent's explicit domain bounds (apps/onboarding/ and services/onboarding/).
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
