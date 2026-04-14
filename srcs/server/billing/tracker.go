@@ -19,6 +19,7 @@ import (
 type Price struct {
 	InputPerMillionUSD  float64
 	OutputPerMillionUSD float64
+	CachedPerMillionUSD float64
 }
 
 // DefaultCatalog provides a comprehensive list of LLM inference prices.
@@ -35,15 +36,15 @@ DefaultCatalog = map[string]Price{
 	"claude-3-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00},
 	"claude-3-haiku":  {InputPerMillionUSD: 0.25, OutputPerMillionUSD: 1.25},
 	// Anthropic — Claude 3.5 family
-	"claude-3.5-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00},
-	"claude-3.5-haiku":  {InputPerMillionUSD: 0.80, OutputPerMillionUSD: 4.00},
+	"claude-3.5-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
+	"claude-3.5-haiku":  {InputPerMillionUSD: 0.80, OutputPerMillionUSD: 4.00, CachedPerMillionUSD: 0.08},
 	// Anthropic — Claude 3.7 family
-	"claude-3.7-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00},
+	"claude-3.7-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
 	// OpenAI — GPT-4 family
 	"gpt-4":       {InputPerMillionUSD: 30.00, OutputPerMillionUSD: 60.00},
 	"gpt-4-turbo": {InputPerMillionUSD: 10.00, OutputPerMillionUSD: 30.00},
-	"gpt-4o":      {InputPerMillionUSD: 5.00, OutputPerMillionUSD: 15.00},
-	"gpt-4o-mini": {InputPerMillionUSD: 0.15, OutputPerMillionUSD: 0.60},
+	"gpt-4o":      {InputPerMillionUSD: 5.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 2.50},
+	"gpt-4o-mini": {InputPerMillionUSD: 0.15, OutputPerMillionUSD: 0.60, CachedPerMillionUSD: 0.075},
 	// OpenAI — GPT-4.1 family
 	"gpt-4.1":      {InputPerMillionUSD: 2.00, OutputPerMillionUSD: 8.00},
 	"gpt-4.1-mini": {InputPerMillionUSD: 0.40, OutputPerMillionUSD: 1.60},
@@ -78,6 +79,7 @@ type Usage struct {
 	Model            string    `json:"model"`
 	PromptTokens     int64     `json:"promptTokens"`
 	CompletionTokens int64     `json:"completionTokens"`
+	CachedTokens     int64     `json:"cachedTokens"`
 	OccurredAt       time.Time `json:"occurredAt"`
 	CostUSD          float64   `json:"costUsd"`
 }
@@ -280,7 +282,8 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	}
 
 	usage.CostUSD = (float64(usage.PromptTokens)/1_000_000.0)*price.InputPerMillionUSD +
-		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD
+		(float64(usage.CompletionTokens)/1_000_000.0)*price.OutputPerMillionUSD +
+		(float64(usage.CachedTokens)/1_000_000.0)*price.CachedPerMillionUSD
 	usage.OccurredAt = usage.OccurredAt.UTC()
 
 	shard := t.shards[getShardIndex(usage.OrganizationID)]
@@ -290,6 +293,7 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 
 	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "prompt", usage.PromptTokens)
 	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "completion", usage.CompletionTokens)
+	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "cached", usage.CachedTokens)
 
 	return usage, nil
 }
@@ -327,10 +331,10 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		agent := byAgent[usage.AgentID]
 		agent.AgentID = usage.AgentID
 		agent.CostUSD += usage.CostUSD
-		agent.TokenUsed += usage.PromptTokens + usage.CompletionTokens
+		agent.TokenUsed += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
 		byAgent[usage.AgentID] = agent
 		totalCost += usage.CostUSD
-		totalTokens += usage.PromptTokens + usage.CompletionTokens
+		totalTokens += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
 	}
 
 	agents := make([]AgentSummary, 0, len(byAgent))
