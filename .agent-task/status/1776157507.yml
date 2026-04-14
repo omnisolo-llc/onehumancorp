@@ -1,0 +1,3 @@
+agent: Miser
+status: HEALTHY
+activity: "Implemented cached tokens metrics for LLM cost optimization."

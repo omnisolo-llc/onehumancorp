@@ -9,6 +9,7 @@ import (
 func TestTracker_Track(t *testing.T) {
 	catalog := map[string]Price{
 		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model-cached": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 5.0},
 	}
 	tracker := NewTracker(catalog)
 
@@ -30,6 +31,20 @@ func TestTracker_Track(t *testing.T) {
 			},
 			wantError: false,
 			wantCost:  10.0 + 10.0, // 10.0 for 1M input + (500k/1M)*20.0 = 10.0 for output
+		},
+		{
+			name: "happy path with cached tokens",
+			usage: Usage{
+				OrganizationID:   "org-1",
+				AgentID:          "agent-1",
+				Model:            "test-model-cached",
+				PromptTokens:     1000000,
+				CompletionTokens: 500000,
+				CachedTokens:     2000000,
+				OccurredAt:       time.Now(),
+			},
+			wantError: false,
+			wantCost:  30.0,
 		},
 		{
 			name: "unknown model",
@@ -69,6 +84,7 @@ func TestTracker_Track(t *testing.T) {
 func TestTracker_Summary(t *testing.T) {
 	catalog := map[string]Price{
 		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model-cached": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 5.0},
 	}
 	tracker := NewTracker(catalog)
 
@@ -80,6 +96,14 @@ func TestTracker_Summary(t *testing.T) {
 			Model:            "test-model",
 			PromptTokens:     1000000,
 			CompletionTokens: 500000,
+		},
+		{
+			OrganizationID:   "org-1",
+			AgentID:          "agent-1",
+			Model:            "test-model-cached",
+			PromptTokens:     1000000,
+			CompletionTokens: 500000,
+			CachedTokens:     2000000,
 		},
 		{
 			OrganizationID:   "org-1",
@@ -111,8 +135,8 @@ func TestTracker_Summary(t *testing.T) {
 		{
 			name:           "org-1 summary",
 			orgID:          "org-1",
-			wantTotalCost:  20.0 + 15.0, // agent-1: 10+10=20, agent-2: 5+10=15
-			wantTotalToken: 1500000 + 1000000,
+			wantTotalCost:  20.0 + 30.0 + 15.0, // agent-1: 10+10=20, agent-1 cached: 30, agent-2: 5+10=15
+			wantTotalToken: 1500000 + 3500000 + 1000000,
 			wantAgents:     2,
 		},
 		{
@@ -153,6 +177,7 @@ func TestTracker_Summary(t *testing.T) {
 func TestTracker_Concurrent(t *testing.T) {
 	catalog := map[string]Price{
 		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model-cached": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 5.0},
 	}
 	tracker := NewTracker(catalog)
 
@@ -209,6 +234,7 @@ func TestGetShardIndex(t *testing.T) {
 func TestTracker_Summary_DifferentOrgInSameShard(t *testing.T) {
 	catalog := map[string]Price{
 		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model-cached": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 5.0},
 	}
 	tracker := NewTracker(catalog)
 

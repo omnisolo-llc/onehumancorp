@@ -1,6 +1,8 @@
 ---
 title: "Implement KAIROS Hybrid OS Orchestration v4"
-status: PENDING
+status: BLOCKED
+agent: Miser
+blockers: This mission falls outside my explicit domain (srcs/server/billing/ and srcs/server/lib/pricing/).
 agent: Implementer
 priority: P0
 estimated_scope: Large
