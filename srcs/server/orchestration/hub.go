@@ -1,8 +1,6 @@
 package orchestration
 
 import (
-	pb "github.com/onehumancorp/mono/srcs/proto"
-
 	"context"
 	"time"
 
@@ -68,17 +66,4 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 			delete(history, orgID)
 		}
 	}
-}
-
-
-type MeshTransport interface {
-	BroadcastTask(ctx context.Context, task Task) error
-	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
-	Publish(ctx context.Context, topic string, payload []byte) error
-	Subscribe(ctx context.Context, topic string) (<-chan []byte, error)
-
 }

@@ -208,10 +208,10 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 	})
 
 	t.Run("MeshEvents", func(t *testing.T) {
-		sub, err := mt.Subscribe(ctx, "tasks")
+		sub, err := mt.SubscribeMeshEvents(ctx, "tasks")
 		require.NoError(t, err)
 
-		err = mt.Publish(ctx, "tasks", []byte("payload"))
+		err = mt.BroadcastMeshEvent(ctx, "tasks", []byte("payload"))
 		require.NoError(t, err)
 
 		select {

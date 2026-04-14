@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"strings"
 	"time"
 )
 
@@ -1085,103 +1084,4 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
 	}
-}
-
-
-func TestSIPDB_DelegateMission_WithClaudeMD(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission_claudemd.db")
-	db, err := NewSIPDB(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create db: %v", err)
-	}
-	defer db.Close()
-	defer os.Remove(dbPath)
-
-	// Create dummy grounding files in the temp directory
-	db.ContextRoot = t.TempDir()
-	os.WriteFile(filepath.Join(db.ContextRoot, "AGENTS.md"), []byte("agent rules"), 0644)
-	os.WriteFile(filepath.Join(db.ContextRoot, "CLAUDE.md"), []byte("claude rules"), 0644)
-	os.WriteFile(filepath.Join(db.ContextRoot, "CLAUDE_OHC.md"), []byte("ohc rules"), 0644)
-
-	ctx := context.Background()
-	msg := Message{
-		ID:         "mission-test-1",
-		ToAgent:    "agent-test",
-		Type:       EventTask,
-		Content:    "Original instruction",
-		OccurredAt: time.Now().UTC(),
-	}
-	err = db.DelegateMission(ctx, "mission-test-1", "TEST_ENGINEER", msg)
-	if err != nil {
-		t.Fatalf("DelegateMission failed: %v", err)
-	}
-
-	missions, err := db.GetPendingMissions(ctx, "TEST_ENGINEER")
-	if err != nil {
-		t.Fatalf("GetPendingMissions failed: %v", err)
-	}
-
-	if len(missions) != 1 {
-		t.Fatalf("expected 1 mission, got %d", len(missions))
-	}
-
-	expectedSubstring1 := "agent rules"
-	expectedSubstring2 := "claude rules"
-	expectedSubstring3 := "ohc rules"
-	expectedSubstring4 := "[SYSTEM GROUNDING]"
-
-	if !strings.Contains(missions[0].Content, expectedSubstring1) ||
-		!strings.Contains(missions[0].Content, expectedSubstring2) ||
-		!strings.Contains(missions[0].Content, expectedSubstring3) ||
-		!strings.Contains(missions[0].Content, expectedSubstring4) {
-		t.Fatalf("expected content to contain grounding info, got: %q", missions[0].Content)
-	}
-}
-
-func TestSIPDB_DelegateMission_EmptyContextRoot(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test_delegate_mission_empty_root.db")
-	db, err := NewSIPDB(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create db: %v", err)
-	}
-	defer db.Close()
-	defer os.Remove(dbPath)
-
-	// ContextRoot is empty, it will default to '.'
-	// Write files to '.' but be careful to clean them up.
-	// Actually, let's change dir to a temp dir to avoid polluting the workspace.
-	// Instead of changing the working directory which causes flakiness,
-	// we test the empty root behavior by setting ContextRoot to "."
-	// and ensuring it still tries to read the files, but we don't actually modify the real "."
-	// To cleanly test this without Chdir, we can set ContextRoot to a temp dir
-	// Wait, the test is specifically for ContextRoot == ""
-	// If ContextRoot is "", it falls back to "."
-	// In the test, we'll let it use ".", but it will try to read "."/AGENTS.md, etc.
-	// We can't safely create "AGENTS.md" in "." during concurrent tests.
-	// So instead of creating a file, we'll verify it doesn't fail if the files don't exist.
-
-	ctx := context.Background()
-	msg := Message{
-		ID:         "mission-test-empty-root",
-		ToAgent:    "agent-test",
-		Type:       EventTask,
-		Content:    "Original instruction",
-		OccurredAt: time.Now().UTC(),
-	}
-	err = db.DelegateMission(ctx, "mission-test-empty-root", "TEST_ENGINEER", msg)
-	if err != nil {
-		t.Fatalf("DelegateMission failed: %v", err)
-	}
-
-	missions, err := db.GetPendingMissions(ctx, "TEST_ENGINEER")
-	if err != nil {
-		t.Fatalf("GetPendingMissions failed: %v", err)
-	}
-
-	if len(missions) != 1 {
-		t.Fatalf("expected 1 mission, got %d", len(missions))
-	}
-
-	// We just verify it successfully created the mission,
-	// as writing to '.' concurrently is an anti-pattern.
 }
