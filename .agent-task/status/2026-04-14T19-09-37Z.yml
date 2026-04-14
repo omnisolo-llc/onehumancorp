@@ -1,0 +1,5 @@
+agent: Researcher
+status: HEALTHY
+mission_id: 2026-04-14T19-00-32Z_ultraplan
+metrics:
+  tasks_completed: 1
