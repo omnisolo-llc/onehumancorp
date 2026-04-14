@@ -31,16 +31,6 @@ type MemoryFile struct {
 	Content          string `yaml:"content"`
 }
 
-// Run implements the continuous background process for the worker to process memories.
-func (w *AutoDreamWorker) Run(ctx context.Context) {
-	for {
-		if err := w.ProcessMemories(ctx); err != nil {
-			slog.Error("AutoDreamWorker Run error", "error", err)
-		}
-		time.Sleep(10 * time.Second)
-	}
-}
-
 // ProcessMemories parses memory files and stores them as vectorized truth.
 func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	matches, err := filepath.Glob(".agent-task/memory/*.yml")
