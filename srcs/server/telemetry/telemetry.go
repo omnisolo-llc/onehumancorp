@@ -75,12 +75,27 @@ var (
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
+
+	// Credit cards usually have dashes or spaces, or at least shouldn't be confused with timestamps (13 digits).
+	// We'll require at least one separator to reduce false positives with timestamps.
+	creditCardRegex = regexp.MustCompile(`\b\d{4}[- ]\d{4}[- ]\d{4}[- ]\d{4}\b`)
+	openaiKeyRegex  = regexp.MustCompile(`\bsk-[a-zA-Z0-9]{48}\b`)
+	anthropicKeyRegex = regexp.MustCompile(`\bsk-ant-api03-[a-zA-Z0-9\-_]{93,95}\b`)
+	awsAccessKeyRegex = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
+	// Use lookaround-like boundaries for AWS Secret Key as it can contain / or + which are non-word chars for \b
+	awsSecretKeyRegex = regexp.MustCompile(`(^|[^a-zA-Z0-9/+])[a-zA-Z0-9/+]{40}([^a-zA-Z0-9/+]|$)`)
 )
 
 func RedactPII(input string) string {
 	s := emailRegex.ReplaceAllString(input, "[REDACTED_EMAIL]")
 	s = phoneRegex.ReplaceAllString(s, "[REDACTED_PHONE]")
 	s = ssnRegex.ReplaceAllString(s, "[REDACTED_SSN]")
+	s = creditCardRegex.ReplaceAllString(s, "[REDACTED_CREDIT_CARD]")
+	s = openaiKeyRegex.ReplaceAllString(s, "[REDACTED_OPENAI_KEY]")
+	s = anthropicKeyRegex.ReplaceAllString(s, "[REDACTED_ANTHROPIC_KEY]")
+	s = awsAccessKeyRegex.ReplaceAllString(s, "[REDACTED_AWS_ACCESS_KEY]")
+	// Secret key needs careful replacement because of captured groups
+	s = awsSecretKeyRegex.ReplaceAllString(s, "$1[REDACTED_AWS_SECRET_KEY]$2")
 	return s
 }
 
