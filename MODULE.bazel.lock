@@ -1389,15 +1389,16 @@
     "@@toolchains_buildbuddy+//:extensions.bzl%buildbuddy": {
       "general": {
         "bzlTransitiveDigest": "YThiSErJv+jiCHJzZIEyk0yegQRS/x+T/ce309eGTvA=",
-        "usagesDigest": "50ugvGIArlcFj1CPA93++Kj4bVbbZpfCLbIUeC3cFHU=",
+        "usagesDigest": "NrvCifqfe3qFiuU7q5WZcnnpQCqpfuiQk/K4IzgeieM=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "buildbuddy_toolchain": {
             "repoRuleId": "@@toolchains_buildbuddy+//:rules.bzl%_buildbuddy_toolchain",
             "attributes": {
+              "container_image": "gcr.io/flame-public/rbe-ubuntu24-04:latest",
               "llvm": false,
               "java_version": "",
-              "gcc_version": "",
+              "gcc_version": "13",
               "msvc_edition": "Community",
               "msvc_release": "2022",
               "msvc_version": "14.39.33519",
