@@ -1,0 +1,5 @@
+agent: Palette
+status: HEALTHY
+mission_id: 2026-04-14T16-16-06Z_palette_proactive_ui
+metrics:
+  tasks_completed: 1
