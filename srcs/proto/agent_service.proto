@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package ohc.agent.service;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto/agentservice;agentservicepb";
+
+// AgentRuntimeConfig is the control surface for agent defaults and
+// per-request execution settings.
+message AgentRuntimeConfig {
+  string llm_provider = 1;
+  string model = 2;
+  string llm_endpoint = 3;
+  string system_prompt = 4;
+  int32 max_tokens = 5;
+  float temperature = 6;
+  int32 max_iterations = 7;
+  int32 max_context_messages = 8;
+}
+
+// RunTaskRequest is sent from the main server to the agent to start a task.
+message RunTaskRequest {
+  // The task description / user prompt.
+  string task = 1;
+  // LLM model name (e.g. "gpt-4o", "claude-3-5-sonnet", "llama3").
+  string model = 2;
+  // LLM provider: "openai" | "anthropic" | "ollama".
+  string llm_provider = 3;
+  // Optional endpoint override (primarily for Ollama).
+  string llm_endpoint = 4;
+  // System prompt override. Empty → use built-in default.
+  string system_prompt = 5;
+  // Maximum tokens for a single LLM response.
+  int32 max_tokens = 6;
+  // LLM temperature in [0, 2].
+  float temperature = 7;
+  // Maximum number of messages retained in the context window before trimming.
+  int32 max_context_messages = 8;
+  // Preferred configuration surface; when populated these values override
+  // the process defaults and supersede the legacy fields above.
+  AgentRuntimeConfig runtime_config = 9;
+}
+
+// EventType classifies a RunTaskEvent.
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  // A partial text chunk from the assistant.
+  TEXT_CHUNK = 1;
+  // A tool has been invoked.
+  TOOL_CALL = 2;
+  // The agent has finished (final response in content).
+  TASK_COMPLETE = 3;
+  // A fatal error has occurred.
+  TASK_ERROR = 4;
+  // The agent accepted the task and initialized its runtime state.
+  RUN_STARTED = 5;
+  // A new ReAct iteration began.
+  ITERATION_STARTED = 6;
+}
+
+// RunTaskEvent is a single streamed event from the agent back to the server.
+message RunTaskEvent {
+  EventType type = 1;
+  // Present for TEXT_CHUNK and TASK_COMPLETE.
+  string content = 2;
+  // Present for TOOL_CALL.
+  string tool_name = 3;
+  string tool_args_json = 4;
+  string tool_result = 5;
+  // Present for TASK_ERROR.
+  string error = 6;
+  // Present for RUN_STARTED and ITERATION_STARTED.
+  int32 iteration = 7;
+  int32 message_count = 8;
+}
+
+// PingRequest / PingResponse for health-check.
+message PingRequest {}
+
+message PingResponse {
+  string agent_id = 1;
+  string version = 2;
+}
+
+// SubAgentRequest dispatches work to a sub-agent.
+message SubAgentRequest {
+  string task = 1;
+  string model = 2;
+  string llm_provider = 3;
+  string llm_endpoint = 4;
+  string system_prompt = 5;
+  int32 max_tokens = 6;
+  float temperature = 7;
+  // Optional remote gRPC endpoint for the sub-agent (host:port).
+  // When empty, the receiving agent executes the request in-process via goroutine.
+  string sub_agent_address = 8;
+  // Preferred configuration surface for sub-agent execution.
+  AgentRuntimeConfig runtime_config = 9;
+}
+
+// SubAgentResponse carries the sub-agent's final answer.
+message SubAgentResponse {
+  string result = 1;
+  string error = 2;
+}
+
+// AgentService is exposed by every agent process.
+// The main Go server connects as a client; agents connect to sub-agent
+// processes as clients as well.
+service AgentService {
+  // RunTask streams progress events back to the caller.
+  rpc RunTask(RunTaskRequest) returns (stream RunTaskEvent);
+  // Ping is used for health-checking and service discovery.
+  rpc Ping(PingRequest) returns (PingResponse);
+  // DispatchToSubAgent delegates work to a sub-agent and awaits its result.
+  // When sub_agent_address is empty the agent runs the work in-process via
+  // a goroutine and communicates with it over a channel.
+  rpc DispatchToSubAgent(SubAgentRequest) returns (SubAgentResponse);
+}
