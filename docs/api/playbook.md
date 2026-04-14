@@ -644,3 +644,26 @@ sequenceDiagram
     class Local,API,AutoDream,Cloud premium;
 ```
 </div>
+
+<div class="glass-panel" markdown="1">
+
+### 4.11 Hybrid Health Probe
+
+The **HybridHealthProbe** is used to check system availability across standalone and cloud modes.
+
+**Endpoint:** `GET /api/v1/health`
+Checks database availability, sync backlogs, and mesh channel connectivity.
+
+**Response (200 OK):**
+```json
+{
+  "mode": "cloud",
+  "status": "healthy",
+  "db_ping": 15000000,
+  "sync_backlog": 0,
+  "stuck_missions": 0,
+  "mesh_active": true
+}
+```
+
+</div>
