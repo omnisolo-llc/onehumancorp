@@ -927,14 +927,13 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var m mesh.TeammateMesh
-	if mode == "cloud" {
-		m = mesh.NewRedisMesh(nil) // Need an actual redis client injected here ideally, but for now matching interface
-	} else {
-		m = mesh.NewLocalMesh()
-	}
-
-	err = m.Publish(r.Context(), req.Channel, payloadBytes)
+	err = s.hub.Publish(orchestration.Message{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		FromAgent: "system",
+		ToAgent:   "system",
+		Type:      req.Channel,
+		Content:   string(payloadBytes),
+	})
 
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
@@ -1986,14 +1985,13 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var m mesh.TeammateMesh
-	if mode == "cloud" {
-		m = mesh.NewRedisMesh(nil) // Need an actual redis client injected here ideally, but for now matching interface
-	} else {
-		m = mesh.NewLocalMesh()
-	}
-
-	err = m.Publish(r.Context(), req.Channel, payloadBytes)
+	err = s.hub.Publish(orchestration.Message{
+		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+		FromAgent: "system",
+		ToAgent:   "system",
+		Type:      req.Channel,
+		Content:   string(payloadBytes),
+	})
 
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
