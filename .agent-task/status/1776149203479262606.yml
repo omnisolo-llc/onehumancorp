@@ -1,0 +1,3 @@
+agent: Guide
+status: DONE
+task: Proactively refactored apps/onboarding/setup_ui.dart to use GlassCard, aligning with the OHC Visual Excellence Mandate.
