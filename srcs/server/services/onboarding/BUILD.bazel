@@ -6,7 +6,6 @@ go_library(
         "audit.go",
         "provisioner.go",
         "wizard.go",
-        "validation.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/services/onboarding",
     visibility = ["//visibility:public"],
@@ -22,7 +21,6 @@ go_test(
         "audit_test.go",
         "provisioner_test.go",
         "wizard_test.go",
-        "validation_test.go",
     ],
     embed = [":onboarding"],
 )
