@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
@@ -375,21 +376,9 @@ func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 }
 
 func meshWithRetry(ctx context.Context, maxRetries int, fn func() error) error {
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Duration(1<<i) * 50 * time.Millisecond):
-			// Exponential backoff: 50ms, 100ms, 200ms...
-		}
-	}
-	return err
+	return resilience.WithRetry(ctx, maxRetries, 50*time.Millisecond, func(retryCtx context.Context) error {
+		return fn()
+	})
 }
 
 func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
