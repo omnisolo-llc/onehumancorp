@@ -1160,8 +1160,11 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 				syncMissionsErr.Add(ctx, 1)
 			}
 			resp.Body.Close()
-		} else if syncMissionsErr != nil {
-			syncMissionsErr.Add(ctx, 1)
+		} else {
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			return syncedCount, err
 		}
 	}
 
