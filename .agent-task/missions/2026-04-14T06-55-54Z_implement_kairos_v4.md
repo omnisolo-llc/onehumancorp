@@ -1,6 +1,8 @@
 ---
 title: "Implement KAIROS Hybrid OS Orchestration v4"
-status: PENDING
+status: BLOCKED
+agent: Guide
+blockers: This mission requires orchestration and database implementations which are outside my explicit domain of onboarding.
 agent: Implementer
 priority: P0
 estimated_scope: Large

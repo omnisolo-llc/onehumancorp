@@ -17,12 +17,17 @@ func TestProvisionEnvironment_Local(t *testing.T) {
 		filepath.Join(".ohc-local-data", "db"),
 		filepath.Join(".ohc-local-data", "blob"),
 		filepath.Join(".ohc-local-data", "config"),
+		filepath.Join(".ohc-local-data", "telemetry"),
 	}
 
 	for _, dir := range expectedDirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			t.Errorf("expected directory %s to exist", dir)
 		}
+	}
+
+	if _, err := os.Stat(filepath.Join(".ohc-local-data", "config", "default.yml")); os.IsNotExist(err) {
+		t.Errorf("expected config/default.yml to exist")
 	}
 
 	os.RemoveAll(".ohc-local-data")
@@ -38,12 +43,17 @@ func TestProvisionEnvironment_Cloud(t *testing.T) {
 		filepath.Join(".ohc-cloud-data", "db"),
 		filepath.Join(".ohc-cloud-data", "blob"),
 		filepath.Join(".ohc-cloud-data", "config"),
+		filepath.Join(".ohc-cloud-data", "telemetry"),
 	}
 
 	for _, dir := range expectedDirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			t.Errorf("expected directory %s to exist", dir)
 		}
+	}
+
+	if _, err := os.Stat(filepath.Join(".ohc-cloud-data", "config", "default.yml")); os.IsNotExist(err) {
+		t.Errorf("expected config/default.yml to exist")
 	}
 
 	os.RemoveAll(".ohc-cloud-data")

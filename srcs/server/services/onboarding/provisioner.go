@@ -32,12 +32,25 @@ func ProvisionEnvironment(ctx context.Context, isCloud bool) error {
 		filepath.Join(baseDir, "db"),
 		filepath.Join(baseDir, "blob"),
 		filepath.Join(baseDir, "config"),
+		filepath.Join(baseDir, "telemetry"),
 	}
 
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
+	}
+
+	configPath := filepath.Join(baseDir, "config", "default.yml")
+
+	mode := "standalone"
+	if isCloud {
+		mode = "cloud-native"
+	}
+	content := []byte(fmt.Sprintf("mode: %s\ntelemetry: enabled\n", mode))
+
+	if err := os.WriteFile(configPath, content, 0644); err != nil {
+		return fmt.Errorf("failed to write default config: %w", err)
 	}
 
 	return nil
@@ -54,6 +67,7 @@ func CheckEnvironment(isCloud bool) error {
 		filepath.Join(baseDir, "db"),
 		filepath.Join(baseDir, "blob"),
 		filepath.Join(baseDir, "config"),
+		filepath.Join(baseDir, "telemetry"),
 	}
 
 	for _, dir := range dirs {
