@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "billing",
+    srcs = ["forecast.go"],
+    importpath = "github.com/onehumancorp/mono/services/billing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "billing_test",
+    srcs = ["forecast_test.go"],
+    embed = [":billing"],
+)

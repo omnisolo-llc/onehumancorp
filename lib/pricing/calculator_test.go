@@ -52,3 +52,46 @@ func TestCalculateCost(t *testing.T) {
 		})
 	}
 }
+
+func TestCalculateBatchCost(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name             string
+		model            string
+		promptTokens     int
+		completionTokens int
+		expectedCost     float64
+	}{
+		{
+			name:             "Claude 3.5 Sonnet Batch",
+			model:            "claude-3-5-sonnet-20240620",
+			promptTokens:     1000,
+			completionTokens: 500,
+			expectedCost:     (1000.0 * 1.5 / 1000000.0) + (500.0 * 7.5 / 1000000.0),
+		},
+		{
+			name:             "GPT-4o Batch",
+			model:            "gpt-4o",
+			promptTokens:     1000,
+			completionTokens: 1000,
+			expectedCost:     (1000.0 * 2.5 / 1000000.0) + (1000.0 * 7.5 / 1000000.0),
+		},
+		{
+			name:             "Unknown model Batch",
+			model:            "unknown-model",
+			promptTokens:     1000,
+			completionTokens: 1000,
+			expectedCost:     0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cost := CalculateBatchCost(ctx, tt.model, tt.promptTokens, tt.completionTokens)
+			if math.Abs(cost-tt.expectedCost) > 1e-9 {
+				t.Errorf("expected %f, got %f", tt.expectedCost, cost)
+			}
+		})
+	}
+}
