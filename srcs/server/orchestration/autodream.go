@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -130,22 +129,13 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		var insertQuery string
-		orgID := auth.OrganizationIDFromContext(ctx)
-		if orgID == "" {
-			slog.Warn("AutoDream: missing organization_id context")
-            continue
-		}
-
-		metadataJSON := fmt.Sprintf("{\"source_mission_id\": \"%s\"}", task.ID)
-
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
-			memID := uuid.New().String()
-			_, err = tx.Exec(ctx, insertQuery, memID, orgID, "auto-dream-worker", content, embeddingStr, "completed_task", metadataJSON)
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			memID := fmt.Sprintf("%d", time.Now().UnixNano())
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES ($1, $2, $3, $4, $5::vector, $6, $7, CURRENT_TIMESTAMP)"
-			memID := uuid.New().String()
-			_, err = tx.Exec(ctx, insertQuery, memID, orgID, "auto-dream-worker", content, embeddingStr, "completed_task", metadataJSON)
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr, task.ID)
 		}
 
 		if err != nil {
@@ -241,27 +231,19 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 
 	for _, rec := range records {
 		var insertQuery string
-		metadataJSON := fmt.Sprintf("{\"source_mission_id\": \"%s\"}", rec.ID)
-        // We will pull orgID from context, if empty, we return or skip.
-        orgID := auth.OrganizationIDFromContext(ctx)
-        if orgID == "" {
-            slog.Error("AutoDream: missing organization_id in context")
-            return
-        }
-
 		if w.pool.IsSQLite() {
 			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, source_type, metadata, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+				INSERT INTO autodream_memories (id, content, source_mission_id)
+				VALUES (?, ?, ?)
 			`
 		} else {
 			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, source_type, metadata, created_at)
-				VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+				INSERT INTO autodream_memories (id, content, source_mission_id)
+				VALUES ($1, $2, $3)
 			`
 		}
 		memID := "ad-" + rec.ID
-		_, err := tx.Exec(ctx, insertQuery, memID, orgID, "auto-dream-worker", rec.Data, "session_compression", metadataJSON)
+		_, err := tx.Exec(ctx, insertQuery, memID, rec.Data, rec.ID)
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "error", err)
 			continue
@@ -391,21 +373,13 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 			embedPtr = &embeddingStr
 		}
 
-        orgID := auth.OrganizationIDFromContext(ctx)
-        if orgID == "" {
-            slog.Error("AutoDream: missing organization_id in context")
-            continue
-        }
-        metadataJSON := fmt.Sprintf("{\"source_mission_id\": \"%s\"}", missionID)
-
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
-			id := uuid.New().String()
-			_, err = tx.Exec(ctx, insertQuery, id, orgID, "auto-dream-worker", summary, embedPtr, "session_compression", metadataJSON)
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			_, err = tx.Exec(ctx, insertQuery, id, summary, embedPtr, missionID)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES ($1, $2, $3, $4, $5::vector, $6, $7, CURRENT_TIMESTAMP)"
-            id := uuid.New().String()
-			_, err = tx.Exec(ctx, insertQuery, id, orgID, "auto-dream-worker", summary, embedPtr, "session_compression", metadataJSON)
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+			_, err = tx.Exec(ctx, insertQuery, summary, embedPtr, missionID)
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
@@ -468,9 +442,9 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		var check int
 		var checkQuery string
 		if w.pool.IsSQLite() {
-			checkQuery = "SELECT 1 FROM consolidated_memory WHERE metadata LIKE '%' || ? || '%' LIMIT 1"
+			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = ? LIMIT 1"
 		} else {
-			checkQuery = "SELECT 1 FROM consolidated_memory WHERE metadata LIKE '%' || $1 || '%' LIMIT 1"
+			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = $1 LIMIT 1"
 		}
 		if err := w.pool.QueryRow(ctx, checkQuery, memoryID).Scan(&check); err == nil {
 			// Already exists, delete file and skip
@@ -497,21 +471,13 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		}
 
 		var insertQuery string
-        orgID := auth.OrganizationIDFromContext(ctx)
-        if orgID == "" {
-            slog.Error("AutoDream: missing organization_id in context")
-            continue
-        }
-        metadataJSON := fmt.Sprintf("{\"source_mission_id\": \"%s\"}", memoryID)
-
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
-			id := uuid.New().String()
-			_, err = w.pool.Exec(ctx, insertQuery, id, orgID, "auto-dream-worker", content, embeddingStr, "agent_memory", metadataJSON)
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, consolidated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+			id := fmt.Sprintf("%d", time.Now().UnixNano())
+			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr, memoryID)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, metadata, created_at) VALUES ($1, $2, $3, $4, $5::vector, $6, $7, CURRENT_TIMESTAMP)"
-            id := uuid.New().String()
-			_, err = w.pool.Exec(ctx, insertQuery, id, orgID, "auto-dream-worker", content, embeddingStr, "agent_memory", metadataJSON)
+			insertQuery = "INSERT INTO autodream_memories (content, embedding, source_mission_id) VALUES ($1, $2::vector, $3)"
+			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr, memoryID)
 		}
 
 		if err != nil {
@@ -519,7 +485,7 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 			continue
 		}
 
-		telemetry.RecordAutoDreamMemoryIngested(ctx, auth.OrganizationIDFromContext(ctx))
+		telemetry.RecordAutoDreamMemoryIngested(ctx, "system")
 
 		// Archive or delete processed file
 		err = os.Remove(filePath)
@@ -660,7 +626,7 @@ func (w *AutoDreamWorker) resolveConflicts(ctx context.Context) {
 		SELECT a.memory_id, a.context, b.memory_id, b.context
 		FROM swarm_truth_embeddings a
 		JOIN swarm_truth_embeddings b ON a.memory_id < b.memory_id
-		WHERE a.embedding <-> b.embedding < 0.05
+		WHERE a.embedding <=> b.embedding < 0.05
 		LIMIT 10
 	`
 
@@ -800,7 +766,7 @@ func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, lim
 	}
 
 	query := `
-		SELECT memory_id, context, embedding <-> $1::vector as distance
+		SELECT memory_id, context, embedding <=> $1::vector as distance
 		FROM swarm_truth_embeddings
 		ORDER BY distance ASC
 		LIMIT $2
@@ -1003,7 +969,7 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 
 		// Check if it already exists to prevent duplication
 		var count int
-		err = tx.QueryRow(ctx, "SELECT count(*) FROM consolidated_memory WHERE metadata LIKE '%' || $1 || '%' AND source_type = 'mission-artifact'", missionID).Scan(&count)
+		err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = $1 AND source_type = 'mission-artifact'", missionID).Scan(&count)
 		if err == nil && count > 0 {
 			tx.Rollback(ctx)
 			continue
@@ -1018,9 +984,9 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 		var args []interface{}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO consolidated_memory (id, content, embedding, metadata, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO consolidated_memory (id, content, embedding, metadata, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		}
 		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "mission-artifact"}
 

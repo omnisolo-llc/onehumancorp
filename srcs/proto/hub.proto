@@ -45,12 +45,6 @@ message OpenMeetingRequest {
   repeated string participants = 3;
 }
 
-
-message PublishMeshEventRequest {
-  string topic = 1;
-  bytes payload = 2;
-}
-
 message PublishMessageRequest {
   Message message = 1;
 }
@@ -134,8 +128,6 @@ service HubService {
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
-  rpc PublishMeshEvent(PublishMeshEventRequest) returns (PublishMessageResponse);
-
 }
 
 message WizardField {
