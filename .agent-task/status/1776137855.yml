@@ -1,0 +1,4 @@
+status: healthy
+metrics:
+  tests_passed: true
+  visual_truth_verified: true
