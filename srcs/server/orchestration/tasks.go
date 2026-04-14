@@ -52,6 +52,7 @@ type TaskManager struct {
 	taskQueue   queue.TaskQueue
 	mu          sync.Mutex // For Standalone mode SQLite locking
 	autodream   autodream.MemoryConsolidator
+	mesh        MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -159,14 +160,18 @@ func (tm *TaskManager) SetHub(hub *CentrifugeNode) {
 	tm.hub = hub
 }
 
+func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
+	tm.mesh = mt
+}
+
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
 func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, description, priority string) (*SharedTask, error) {
-	return tm.CreateTaskWithPlan(ctx, organizationID, nil, title, description, priority)
+	return tm.CreateTaskWithPlan(ctx, organizationID, "", nil, title, description, priority)
 }
 
 // CreateTaskWithPlan creates a new pending task with plan association.
-func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
 	// When creating a new task, we don't have its ID yet to check for a cycle
 	// The real risk of circular dependencies is when updating dependencies.
 	// But we can verify that the new task doesn't add a dependency on itself, which is trivially true here.
@@ -199,19 +204,19 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', 0)
+			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
 			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', 0)
+			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
 			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	}
 
-	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority).Scan(
+	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID).Scan(
 		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
 	)
 

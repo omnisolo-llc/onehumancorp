@@ -45,26 +45,17 @@ func (bm *BridgeManager) Connect(ctx context.Context, remoteURL string, remoteOr
 	header := http.Header{}
 	header.Add("X-OHC-Org-ID", bm.localOrgID)
 
-	maxRetries := 5
-	backoff := 1 * time.Second
-
 	var conn *websocket.Conn
-	var err error
 
-	for i := 0; i < maxRetries; i++ {
-		conn, _, err = dialer.DialContext(ctx, remoteURL, header)
-		if err == nil {
-			break
+	err := resilience.WithRetry(ctx, 5, 1*time.Second, func(retryCtx context.Context) error {
+		var dialErr error
+		conn, _, dialErr = dialer.DialContext(retryCtx, remoteURL, header)
+		if dialErr != nil {
+			slog.Warn("Failed to connect to bridge, retrying...", "url", remoteURL, "err", dialErr)
+			return dialErr
 		}
-		slog.Warn("Failed to connect to bridge, retrying...", "url", remoteURL, "attempt", i+1, "err", err)
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(backoff):
-			backoff *= 2
-		}
-	}
+		return nil
+	})
 
 	if err != nil {
 		return fmt.Errorf("failed to establish bridge connection after retries: %w", err)

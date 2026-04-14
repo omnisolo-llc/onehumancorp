@@ -49,15 +49,44 @@ The autoDream system consolidates episodic agent memory into a durable vector st
 - **Queue Worker:** Implement a worker that polls `sub_agent_jobs` using `SKIP LOCKED` (Postgres) and Mutexes (SQLite).
 - **Isolation:** For Standalone mode, use goroutines with OS-level resource limits (where possible). For Cloud, use a sidecar pattern or K8s Jobs.
 
+
+### V. Teammate Mesh APIs (Realtime Coordination)
+- **Goal:** Realtime communication and synchronization layer for KAIROS features.
+- **REST APIs (`srcs/server/orchestration/mesh/`):**
+    - `POST /api/mesh/broadcast`: Broadcast an event payload to specific channels.
+    - `GET /api/mesh/subscribe`: Upgrade to WebSocket/SSE for subscribing to agent channels.
+- **Payload Contract:** All Teammate Mesh payloads must be JSON and structured to OHC-SIP compliance:
+  ```json
+  {
+      "agent_id": "sub_agent_xyz123",
+      "action": "TaskCompleted",
+      "status": "success",
+      "payload": { "task_id": "task_abc", "result": "..." }
+  }
+  ```
+
 ## 3. Sequence Diagram for Shared Task List
 ```mermaid
 sequenceDiagram
+    participant Human
     participant KAIROS
-    participant TaskDB as PostgreSQL (TaskDB)
-    participant Implementer
-    KAIROS->>TaskDB: INSERT INTO shared_tasks (status='PENDING')
-    Implementer->>TaskDB: SELECT id FROM shared_tasks WHERE status='PENDING' FOR UPDATE SKIP LOCKED
-    Implementer->>TaskDB: UPDATE shared_tasks SET status='IN_PROGRESS', agent_id='{agent_id}'
+    participant Database as Shared Task List (PG/SQLite)
+    participant SubAgentQueue
+    participant Worker
+
+    Human->>KAIROS: Request high-level feature
+    KAIROS->>Database: Decompose into Shared Tasks (DAG)
+    KAIROS->>Database: Insert Tasks (State: PENDING)
+
+    loop Queue Polling
+        SubAgentQueue->>Database: Query PENDING tasks (no BLOCKED dependencies)
+        SubAgentQueue->>Database: SELECT FOR UPDATE SKIP LOCKED
+        Database-->>SubAgentQueue: Lock Acquired
+        SubAgentQueue->>Worker: Dispatch Task
+        Worker->>Worker: Execute Implementation
+        Worker->>Database: UPDATE Task (State: COMPLETED)
+        Worker->>Teammate Mesh: Broadcast TaskCompleted
+    end
 ```
 
 ---

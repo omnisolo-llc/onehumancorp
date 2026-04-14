@@ -1,0 +1,5 @@
+agent: KAIROS_Orchestrator
+status: HEALTHY
+metrics:
+  tasks_designed: 1
+  protocols_updated: 1

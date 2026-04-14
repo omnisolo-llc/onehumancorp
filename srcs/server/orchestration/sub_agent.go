@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 )
 
 func writeHeartbeatFile(taskID string, content string) error {
@@ -99,26 +100,20 @@ func (s *DefaultSubAgentSpawner) Spawn(ctx context.Context, task *SharedTask) er
 
 func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
 	maxRetries := 3
-	backoff := 100 * time.Millisecond
+	initialBackoff := 100 * time.Millisecond
 
-	for i := 0; i < maxRetries; i++ {
-		select {
-		case <-s.ctx.Done():
-			return
-		default:
-		}
+	err := resilience.WithRetry(s.ctx, maxRetries, initialBackoff, func(ctx context.Context) error {
+		return s.executeTask(task)
+	})
 
-		err := s.executeTask(task)
-		if err == nil {
-			_ = s.completeTask(task)
-			return
-		}
-
-		time.Sleep(backoff)
-		backoff *= 2
+	if err == nil {
+		_ = s.completeTask(task)
+	} else if s.ctx.Err() != nil {
+        // Do not fail the task if the error is due to a context cancellation (graceful shutdown)
+        return
+    } else {
+		_ = s.failTask(task)
 	}
-
-	_ = s.failTask(task)
 }
 
 func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {

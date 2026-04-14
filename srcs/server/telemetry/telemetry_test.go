@@ -341,6 +341,10 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordTokenUsage", func(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
 	})
+	t.Run("RecordTokensSaved", func(t *testing.T) {
+		RecordTokensSaved(ctx, "reason", "db", 100)
+	})
+
 
 	t.Run("RecordAgentApiCall", func(t *testing.T) {
 		RecordAgentApiCall(ctx, "agent-1", "developer", "get_file")

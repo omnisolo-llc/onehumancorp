@@ -1,4 +1,8 @@
 # Release Notes
+
+## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
+- Scaling (Cloud): Formalized real-time Teammate Mesh APIs and KAIROS DAG orchestration for distributed pod execution.
+- Privacy/Offline (Standalone): Ensured KAIROS orchestrator degrades gracefully into isolated SQLite single-user mode.
 ## v0.3.2 (Cloud) / v0.3.2+1 (Standalone)
 - Scaling (Cloud): Enforced Tenant Data Isolation in Blob & FS Providers (#3933) to prevent cross-tenant data leakage.
 - Privacy/Offline (Standalone): Visually integrated the new TaskListScreen into the DashboardScreen maintaining OHC-SIP aesthetic standards, and added the AutoDream Sync Daemon Walkthrough.

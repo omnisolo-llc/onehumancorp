@@ -116,6 +116,24 @@ Submit a new task to the swarm.
 **Endpoint:** `POST /api/mesh/broadcast`
 Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.
 
+**Payload:**
+```json
+{
+  "agent_id": "agent-123",
+  "action": "task_completed",
+  "status": "success",
+  "data": {
+    "message": "Hello mesh!"
+  }
+}
+```
+
+**Endpoint:** `GET /api/mesh/subscribe`
+Subscribe to Teammate Mesh events.
+
+**Query Parameters:**
+- `channel`: The channel to subscribe to (e.g., `mesh:tasks`)
+
 ### 3.6 Client Integrations
 
 Whether you are developing against the **Local SQLite SIPDB** or the **Cloud Postgres/Redis** stack, the REST API interface remains identical. Standalone desktop applications proxy requests seamlessly directly to the local backend runner.
@@ -643,4 +661,27 @@ sequenceDiagram
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Local,API,AutoDream,Cloud premium;
 ```
+</div>
+
+<div class="glass-panel" markdown="1">
+
+### 4.11 Hybrid Health Probe
+
+The **HybridHealthProbe** is used to check system availability across standalone and cloud modes.
+
+**Endpoint:** `GET /api/v1/health`
+Checks database availability, sync backlogs, and mesh channel connectivity.
+
+**Response (200 OK):**
+```json
+{
+  "mode": "cloud",
+  "status": "healthy",
+  "db_ping": 15000000,
+  "sync_backlog": 0,
+  "stuck_missions": 0,
+  "mesh_active": true
+}
+```
+
 </div>

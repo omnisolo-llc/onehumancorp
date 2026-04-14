@@ -47,6 +47,7 @@ var (
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
+	tokensSavedCounter           metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
@@ -256,7 +257,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncEscalationsCount, err = m.Int64Counter(
-		"ohc.sync.escalations.count",
+		"ohc_sync_escalations_count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
 	)
 	if err != nil {
@@ -264,7 +265,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncLatency, err = m.Float64Histogram(
-		"ohc.sync.latency_ms",
+		"ohc_sync_latency_ms",
 		metric.WithDescription("Latency of mission synchronization in milliseconds"),
 		metric.WithUnit("ms"),
 	)
@@ -273,7 +274,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SyncPayloadSize, err = m.Int64Histogram(
-		"ohc.sync.payload_size_bytes",
+		"ohc_sync_payload_size_bytes",
 		metric.WithDescription("Size of synced payloads in bytes"),
 		metric.WithUnit("By"),
 	)
@@ -330,7 +331,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	agentExecutionTracesTotal, err = m.Int64Counter(
-		"ohc.agent.execution.traces_total",
+		"ohc_agent_execution_traces_total",
 		metric.WithDescription("Total number of agent execution traces"),
 	)
 	if err != nil {
@@ -409,6 +410,14 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	tokensSavedCounter, err = m.Int64Counter(
+		"ohc_tokens_saved_by_cache_total",
+		metric.WithDescription("Estimated tokens saved by utilizing cache hits"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	AutoDreamMemoriesIngestedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_ingested_total",
 		metric.WithDescription("Total number of AutoDream memories ingested"),
@@ -426,7 +435,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
-		"ohc.sub_agent.queue_length",
+		"ohc_sub_agent_queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
 	)
 	if err != nil {
@@ -434,7 +443,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	postgresLockContentionCounter, err = m.Int64Counter(
-		"ohc.postgres_lock_contention_total",
+		"ohc_postgres_lock_contention_total",
 		metric.WithDescription("Total PostgreSQL lock contentions"),
 	)
 	if err != nil {
@@ -442,7 +451,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	llmNetworkLatencyHistogram, err = m.Float64Histogram(
-		"ohc.llm_network_latency_seconds",
+		"ohc_llm_network_latency_seconds",
 		metric.WithDescription("Network latency to external LLM providers"),
 	)
 	if err != nil {
@@ -899,6 +908,28 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
+}
+
+
+// RecordTokensSaved increments the global counter for estimated tokens saved by cache hits.
+func RecordTokensSaved(ctx context.Context, operation string, cacheType string, estimatedTokens int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":  operation,
+			"cache_type": cacheType,
+			"estimated_tokens": estimatedTokens,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "tokens_saved", string(payloadBytes))
+	}
+	if tokensSavedCounter == nil {
+		return
+	}
+	tokensSavedCounter.Add(ctx, estimatedTokens, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("cache_type", cacheType),
+	))
 }
 
 // RecordCacheHit increments the global counter for LLM cache hits.
