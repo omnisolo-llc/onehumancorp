@@ -1,0 +1,4 @@
+status: healthy
+metrics:
+  missions_archived: 15
+message: "Mission backlog sanitized and stuck missions successfully archived."
