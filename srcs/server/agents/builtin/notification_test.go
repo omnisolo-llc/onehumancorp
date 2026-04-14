@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -19,63 +20,83 @@ func TestBuildTaskNotification(t *testing.T) {
 		3*time.Second,
 	)
 
-	if !strings.Contains(notif, "<task-notification>") {
-		t.Error("missing task-notification tag")
+	// Should be valid JSON (not XML)
+	var msg TaskNotification
+	if err := json.Unmarshal([]byte(notif), &msg); err != nil {
+		t.Fatalf("BuildTaskNotification should return valid JSON: %v — got %q", err, notif)
 	}
-	if !strings.Contains(notif, "<task-id>task-abc</task-id>") {
-		t.Errorf("missing task-id: %q", notif)
+
+	if msg.TaskID != "task-abc" {
+		t.Errorf("TaskID: got %q, want %q", msg.TaskID, "task-abc")
 	}
-	if !strings.Contains(notif, "<tool_use_id>tool-use-123</tool_use_id>") {
-		t.Errorf("missing tool_use_id: %q", notif)
+	if msg.ToolUseID != "tool-use-123" {
+		t.Errorf("ToolUseID: got %q, want %q", msg.ToolUseID, "tool-use-123")
 	}
-	if !strings.Contains(notif, "<status>completed</status>") {
-		t.Errorf("missing status: %q", notif)
+	if msg.OutputFile != "/tmp/output.txt" {
+		t.Errorf("OutputFile: got %q", msg.OutputFile)
 	}
-	if !strings.Contains(notif, "The answer is 42") {
-		t.Errorf("missing result: %q", notif)
+	if msg.Status != "completed" {
+		t.Errorf("Status: got %q", msg.Status)
 	}
-	if !strings.Contains(notif, "<total_tokens>1500</total_tokens>") {
-		t.Errorf("missing total_tokens: %q", notif)
+	if msg.Result != "The answer is 42" {
+		t.Errorf("Result: got %q", msg.Result)
 	}
-	if !strings.Contains(notif, "<tool_uses>7</tool_uses>") {
-		t.Errorf("missing tool_uses: %q", notif)
+	if msg.TokenCount != 1500 {
+		t.Errorf("TokenCount: got %d, want 1500", msg.TokenCount)
 	}
-	if !strings.Contains(notif, "<duration_ms>3000</duration_ms>") {
-		t.Errorf("missing duration_ms: %q", notif)
+	if msg.ToolUses != 7 {
+		t.Errorf("ToolUses: got %d, want 7", msg.ToolUses)
+	}
+	if msg.DurationMs != 3000 {
+		t.Errorf("DurationMs: got %d, want 3000", msg.DurationMs)
+	}
+
+	// Must NOT contain XML tags
+	if strings.Contains(notif, "<task-notification>") || strings.Contains(notif, "<task-id>") {
+		t.Errorf("notification should NOT contain XML tags: %q", notif)
 	}
 }
 
-func TestBuildTaskNotificationNoToolUseID(t *testing.T) {
-	notif := BuildTaskNotification("task-x", "", "", "failed", "Error occurred", "", 0, 0, 0)
-	if strings.Contains(notif, "<tool_use_id>") {
-		t.Error("should not emit empty tool_use_id")
+func TestBuildTaskNotificationMsg(t *testing.T) {
+	msg := BuildTaskNotificationMsg("t1", "u1", "", "failed", "err", "", 0, 0, 0)
+	if msg.TaskID != "t1" {
+		t.Errorf("TaskID: %q", msg.TaskID)
 	}
-	if !strings.Contains(notif, "<status>failed</status>") {
-		t.Errorf("expected failed status: %q", notif)
+	if msg.Status != "failed" {
+		t.Errorf("Status: %q", msg.Status)
+	}
+	if msg.OutputFile != "" {
+		t.Errorf("OutputFile should be empty: %q", msg.OutputFile)
 	}
 }
 
-func TestBuildTaskNotificationXMLEscape(t *testing.T) {
+func TestBuildTaskNotificationXMLFree(t *testing.T) {
 	notif := BuildTaskNotification(
 		"task-1", "", "", "completed",
-		"Result: x < y && z > 0", "value=\"42\"", 0, 0, 0,
+		"Result: x < y && z > 0", `value="42"`, 0, 0, 0,
 	)
-	if strings.Contains(notif, "<y") {
-		t.Error("unescaped < in notification")
+	// No XML escaping in JSON output
+	var msg TaskNotification
+	if err := json.Unmarshal([]byte(notif), &msg); err != nil {
+		t.Fatalf("must be valid JSON: %v", err)
 	}
-	if strings.Contains(notif, "&&") {
-		t.Error("unescaped & in notification")
+	if !strings.Contains(msg.Summary, "x < y && z > 0") {
+		t.Errorf("Special chars should be unescaped in struct: %q", msg.Summary)
 	}
 }
 
 func TestBuildTaskNotificationTruncation(t *testing.T) {
 	longResult := strings.Repeat("x", 3000)
 	notif := BuildTaskNotification("task-1", "", "", "completed", "ok", longResult, 0, 0, 0)
-	if len(notif) > 10000 {
-		t.Errorf("notification too long: %d", len(notif))
+	var msg TaskNotification
+	if err := json.Unmarshal([]byte(notif), &msg); err != nil {
+		t.Fatalf("must be valid JSON: %v", err)
 	}
-	if !strings.Contains(notif, "…") {
-		t.Errorf("expected truncation ellipsis in long result")
+	if len(msg.Result) > 2100 { // 2000 + ellipsis
+		t.Errorf("Result should be truncated, len=%d", len(msg.Result))
+	}
+	if !strings.HasSuffix(msg.Result, "…") {
+		t.Errorf("Expected truncation ellipsis in long result: %q", msg.Result[len(msg.Result)-10:])
 	}
 }
 

@@ -4,12 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 )
 
+// defaultHeartbeatTimeout is the maximum time the parent waits for the sub-agent
+// to finish before forcefully marking it as killed.
+// Override via OHC_SUBAGENT_HEARTBEAT_TIMEOUT (e.g. "10m").
+const defaultHeartbeatTimeout = 30 * time.Minute
+
 // agentRegistry is a process-level registry for spawned sub-agents.
-// It maps taskID → *SubagentState for progress polling and kill operations.
+// It maps taskID → *SubagentState for progress querying and kill operations.
 var agentRegistry = &SubagentRegistry{tasks: make(map[string]*SubagentState)}
 
 // SubagentState tracks a spawned sub-agent.
@@ -73,15 +80,32 @@ func (r *SubagentRegistry) All() []*SubagentState {
 	return out
 }
 
+// heartbeatTimeout returns the configured heartbeat timeout.
+func heartbeatTimeout() time.Duration {
+	if s := os.Getenv("OHC_SUBAGENT_HEARTBEAT_TIMEOUT"); s != "" {
+		if seconds, err := strconv.Atoi(s); err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
+		}
+		if d, err := time.ParseDuration(s); err == nil && d > 0 {
+			return d
+		}
+	}
+	return defaultHeartbeatTimeout
+}
+
 // AgentTool spawns a background sub-agent task and returns immediately.
 // Mirrors CC-Source's AgentTool which spawns a LocalAgentTask.
 // The spawned task runs using the builtin SpawnTask path.
+//
+// The parent agent is notified via the SubagentBus when the child completes.
+// If no completion signal is received within the heartbeat timeout, the task
+// is marked as killed (no polling required).
 var AgentTool = Tool{
 	Name: "Agent",
 	Description: "Spawn a background agent to perform a task concurrently. " +
 		"Returns immediately with a task ID. The agent runs asynchronously " +
-		"and you will be notified via a <task-notification> when it completes. " +
-		"Use this to delegate work or run tasks in parallel.",
+		"and you will receive a SubagentLifecycleEvent via the SubagentBus " +
+		"when it completes. Use this to delegate work or run tasks in parallel.",
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {
@@ -102,9 +126,9 @@ var AgentTool = Tool{
 	}`),
 	Execute: func(ctx context.Context, args json.RawMessage) (string, error) {
 		var input struct {
-			Description   string `json:"description"`
-			Prompt        string `json:"prompt"`
-			SubagentType  string `json:"subagent_type"`
+			Description  string `json:"description"`
+			Prompt       string `json:"prompt"`
+			SubagentType string `json:"subagent_type"`
 		}
 		if err := json.Unmarshal(args, &input); err != nil {
 			return "", fmt.Errorf("Agent: invalid args: %w", err)
@@ -132,33 +156,58 @@ var AgentTool = Tool{
 		}
 		agentRegistry.Register(entry)
 
-		// Watch for completion in background and update registry.
-		go func() {
-			for {
-				time.Sleep(200 * time.Millisecond)
-				st := taskState.Status()
-				if !st.IsTerminal() {
-					continue
-				}
-				entry.Status = string(st)
-				entry.EndedAt = time.Now()
-				entry.Result = taskState.Result()
-				entry.Error = taskState.Err()
-				p := taskState.Progress()
-				entry.TokenCount = p.TokenCount
-				entry.ToolUses = int64(p.ToolUseCount)
-				agentRegistry.Register(entry)
+		// Publish a "spawned" lifecycle event on the bus.
+		globalSubagentBus.Publish(SubagentLifecycleEvent{
+			EventType: SubagentEventSpawned,
+			TaskID:    taskState.ID,
+		})
 
-				// Build and log a task-notification for observability.
-				summary := fmt.Sprintf("Sub-agent %q finished with status %s", input.Description, entry.Status)
-				_ = BuildTaskNotification(
-					entry.TaskID, entry.ToolUseID, entry.OutputFile,
-					entry.Status, summary, entry.Result,
-					entry.TokenCount, entry.ToolUses,
-					entry.EndedAt.Sub(entry.StartedAt),
-				)
-				return
+		// Watch for completion using Done() channel + heartbeat timeout.
+		// This avoids polling — the goroutine blocks until the task signals
+		// completion or the heartbeat deadline expires.
+		timeout := heartbeatTimeout()
+		go func() {
+			select {
+			case <-taskState.Done():
+				// Task entered a terminal state normally.
+			case <-time.After(timeout):
+				// Heartbeat timeout — force-kill the task.
+				taskState.Kill()
 			}
+
+			st := taskState.Status()
+			entry.Status = string(st)
+			entry.EndedAt = time.Now()
+			entry.Result = taskState.Result()
+			entry.Error = taskState.Err()
+			p := taskState.Progress()
+			entry.TokenCount = p.TokenCount
+			entry.ToolUses = int64(p.ToolUseCount)
+			agentRegistry.Register(entry)
+
+			// Build and publish the typed TaskNotification.
+			summary := fmt.Sprintf("Sub-agent %q finished with status %s", input.Description, entry.Status)
+			notif := BuildTaskNotificationMsg(
+				entry.TaskID, entry.ToolUseID, entry.OutputFile,
+				entry.Status, summary, entry.Result,
+				entry.TokenCount, entry.ToolUses,
+				entry.EndedAt.Sub(entry.StartedAt),
+			)
+
+			// Determine event type from final status.
+			evtType := SubagentEventCompleted
+			switch entry.Status {
+			case "failed":
+				evtType = SubagentEventFailed
+			case "killed":
+				evtType = SubagentEventKilled
+			}
+
+			globalSubagentBus.Publish(SubagentLifecycleEvent{
+				EventType:    evtType,
+				TaskID:       entry.TaskID,
+				Notification: notif,
+			})
 		}()
 
 		out := map[string]interface{}{
@@ -199,6 +248,10 @@ var TaskStopTool = Tool{
 			return "", fmt.Errorf("TaskStop: task_id is required")
 		}
 		if agentRegistry.Kill(input.TaskID) {
+			globalSubagentBus.Publish(SubagentLifecycleEvent{
+				EventType: SubagentEventKilled,
+				TaskID:    input.TaskID,
+			})
 			return fmt.Sprintf("Task %s stopped.", input.TaskID), nil
 		}
 		return fmt.Sprintf("Task %s not found or already terminal.", input.TaskID), nil
@@ -242,3 +295,4 @@ var TaskStatusTool = Tool{
 		return string(b), nil
 	},
 }
+

@@ -397,3 +397,97 @@ func TestSpawnTask_UniqueIDs(t *testing.T) {
 		ids[s.ID] = true
 	}
 }
+
+// ─── Done() channel tests ─────────────────────────────────────────────────────
+
+// TestTaskDoneChannel verifies that Done() is closed when the task completes.
+func TestTaskDoneChannel(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	llm := &fakeLLM{turns: []local.AssistantMessage{
+		{Text: "Done.", StopReason: "end_turn"},
+	}}
+
+	state, err := local.SpawnTask(ctx, "done test", "say done", tmpDir, local.AgentConfig{LLM: llm})
+	if err != nil {
+		t.Fatalf("SpawnTask: %v", err)
+	}
+
+	// Wait on Done() channel instead of polling.
+	select {
+	case <-state.Done():
+		// successful: channel closed
+	case <-time.After(5 * time.Second):
+		t.Fatal("Done() not closed within timeout")
+	}
+
+	if !state.Status().IsTerminal() {
+		t.Errorf("status should be terminal after Done(): %s", state.Status())
+	}
+}
+
+// TestTaskDoneChannelOnKill verifies Done() is closed when the task is killed.
+func TestTaskDoneChannelOnKill(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	state, err := local.SpawnTask(ctx, "kill test", "block", tmpDir, local.AgentConfig{LLM: &blockingLLM{}})
+	if err != nil {
+		t.Fatalf("SpawnTask: %v", err)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+	state.Kill()
+
+	select {
+	case <-state.Done():
+		// correct
+	case <-time.After(3 * time.Second):
+		t.Fatal("Done() not closed after Kill()")
+	}
+
+	if state.Status() != local.TaskStatusKilled {
+		t.Errorf("expected killed, got %s", state.Status())
+	}
+}
+
+// TestTaskDoneChannelMultipleWaiters verifies multiple goroutines can wait on Done().
+func TestTaskDoneChannelMultipleWaiters(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	llm := &fakeLLM{turns: []local.AssistantMessage{
+		{Text: "Done.", StopReason: "end_turn"},
+	}}
+
+	state, err := local.SpawnTask(ctx, "multi-wait", "say done", tmpDir, local.AgentConfig{LLM: llm})
+	if err != nil {
+		t.Fatalf("SpawnTask: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	const waiters = 5
+	results := make([]bool, waiters)
+
+	for i := range waiters {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			select {
+			case <-state.Done():
+				results[idx] = true
+			case <-time.After(5 * time.Second):
+				results[idx] = false
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i, ok := range results {
+		if !ok {
+			t.Errorf("waiter %d did not receive Done() signal", i)
+		}
+	}
+}
