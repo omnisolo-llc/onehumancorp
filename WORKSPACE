@@ -5,6 +5,13 @@ workspace(name = "mono")
 load("//:repositories.bzl", "go_repositories")
 
 go_repository(
+    name = "com_github_aws_aws_sdk_go",
+    importpath = "github.com/aws/aws-sdk-go",
+    sum = "h1:JRmEUbU52aJQZ2AjX4q4Wu7t4uZjOu71uyNmaWlUkJQ=",
+    version = "v1.55.8",
+)
+
+go_repository(
     name = "com_github_bsm_ginkgo_v2",
     importpath = "github.com/bsm/ginkgo/v2",
     sum = "h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=",
@@ -58,6 +65,13 @@ go_repository(
     importpath = "github.com/jackc/puddle/v2",
     sum = "h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo=",
     version = "v2.2.2",
+)
+
+go_repository(
+    name = "com_github_jmespath_go_jmespath",
+    importpath = "github.com/jmespath/go-jmespath",
+    sum = "h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=",
+    version = "v0.4.0",
 )
 
 go_repository(
