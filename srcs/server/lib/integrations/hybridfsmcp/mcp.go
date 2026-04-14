@@ -15,7 +15,7 @@ type Tool struct {
 }
 
 type HybridFSMCP struct {
-	provider FileSystemProvider
+	provider  FileSystemProvider
 	escalator Escalator
 }
 
@@ -85,8 +85,7 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 			return nil, err
 		}
 		return map[string]interface{}{"status": "success", "entries": entries}, nil
-	case "rag_query":
-
+		case "rag_query":
 		query, ok := arguments["query"].(string)
 		if !ok {
 			return nil, errors.New("missing or invalid 'query' argument")
@@ -94,7 +93,6 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 
 		if m.escalator != nil && m.escalator.ShouldEscalate(ctx, query) {
 			telemetry.RecordRAGEscalation(ctx)
-
 			// Simulate Cloud pgvector swarm execution
 			return map[string]interface{}{"status": "success", "mode": "cloud_escalated", "result": "Cloud aggregated results for: " + query}, nil
 		}
