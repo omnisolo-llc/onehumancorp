@@ -9,6 +9,9 @@ go_library(
         "redis_queue.go",
         "sqlite_queue.go",
         "postgres_queue.go",
+        "redis_job_queue.go",
+        "inmem_job_queue.go",
+        "worker_pool.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/queue",
     visibility = ["//visibility:public"],
@@ -24,7 +27,7 @@ go_library(
 
 go_test(
     name = "queue_test",
-    srcs = ["queue_test.go", "worker_test.go"],
+    srcs = ["queue_test.go", "worker_test.go", "job_queue_test.go"],
     embed = [":queue"],
     deps = [
         "//srcs/server/db",
