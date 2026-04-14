@@ -23,6 +23,7 @@ go_library(
     deps = [
         "//srcs/server/api",
         "//srcs/server/api/mesh",
+        "//services/growth/api",
         "//srcs/server/agents",
         "//srcs/server/auth",
         "//srcs/server/billing",
@@ -61,6 +62,7 @@ go_test(
     deps = [
         "//srcs/server/api",
         "//srcs/server/api/mesh",
+        "//services/growth/api",
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/db",
