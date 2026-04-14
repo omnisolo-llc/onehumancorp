@@ -1,0 +1,1 @@
+ALTER TABLE usage_events ADD COLUMN cached_tokens BIGINT NOT NULL DEFAULT 0;

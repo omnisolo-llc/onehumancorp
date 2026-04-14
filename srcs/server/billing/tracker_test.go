@@ -8,7 +8,7 @@ import (
 
 func TestTracker_Track(t *testing.T) {
 	catalog := map[string]Price{
-		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 2.0},
 	}
 	tracker := NewTracker(catalog)
 
@@ -26,10 +26,11 @@ func TestTracker_Track(t *testing.T) {
 				Model:            "test-model",
 				PromptTokens:     1000000,
 				CompletionTokens: 500000,
+				CachedTokens:     1000000,
 				OccurredAt:       time.Now(),
 			},
 			wantError: false,
-			wantCost:  10.0 + 10.0, // 10.0 for 1M input + (500k/1M)*20.0 = 10.0 for output
+			wantCost:  10.0 + 10.0 + 2.0, // 10.0 for 1M input + (500k/1M)*20.0 = 10.0 for output + 2.0 for 1M cached
 		},
 		{
 			name: "unknown model",
@@ -68,7 +69,7 @@ func TestTracker_Track(t *testing.T) {
 
 func TestTracker_Summary(t *testing.T) {
 	catalog := map[string]Price{
-		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 2.0},
 	}
 	tracker := NewTracker(catalog)
 
@@ -152,7 +153,7 @@ func TestTracker_Summary(t *testing.T) {
 
 func TestTracker_Concurrent(t *testing.T) {
 	catalog := map[string]Price{
-		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 2.0},
 	}
 	tracker := NewTracker(catalog)
 
@@ -208,7 +209,7 @@ func TestGetShardIndex(t *testing.T) {
 
 func TestTracker_Summary_DifferentOrgInSameShard(t *testing.T) {
 	catalog := map[string]Price{
-		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0},
+		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 2.0},
 	}
 	tracker := NewTracker(catalog)
 
