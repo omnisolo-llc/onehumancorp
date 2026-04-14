@@ -27,6 +27,10 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 )
 
+func hasReadPermissionBits(mode os.FileMode) bool {
+	return mode.Perm()&0o444 != 0
+}
+
 // Version is injected at link time via -ldflags "-X main.Version=x.y.z".
 var Version = "dev"
 
@@ -201,6 +205,17 @@ func performScan(target string) (ScanResult, error) {
 					File:     path,
 					Message:  fmt.Sprintf("skipped (unreadable): %v", walkErr),
 				})
+				return nil
+			}
+			if !hasReadPermissionBits(fi.Mode()) {
+				result.Findings = append(result.Findings, ScanFinding{
+					Severity: "INFO",
+					File:     path,
+					Message:  "skipped (unreadable permissions)",
+				})
+				if fi.IsDir() {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 			if fi.IsDir() {

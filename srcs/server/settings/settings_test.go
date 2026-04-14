@@ -100,23 +100,29 @@ func TestStore_FromFileErrors(t *testing.T) {
 }
 
 func TestStore_SaveErrors(t *testing.T) {
-	// Cannot create dir
-	store := &Store{path: "/root/unauthorized/file.json"}
+	// Cannot create dir because a path component is already a file.
+	dir := t.TempDir()
+	parentFile := filepath.Join(dir, "parent")
+	if err := os.WriteFile(parentFile, []byte("not a directory"), 0o600); err != nil {
+		t.Fatalf("failed to create parent file: %v", err)
+	}
+	store := &Store{path: filepath.Join(parentFile, "file.json")}
 	err := store.Save()
 	if err == nil {
 		t.Fatal("expected error creating dir")
 	}
 
-	// Cannot write file
+	// Cannot write file because the destination path is an existing directory.
 	d := t.TempDir()
-	store2 := &Store{path: filepath.Join(d, "file.json")}
-	// Make dir read-only so we can't create file
-	os.Chmod(d, 0555)
+	targetDir := filepath.Join(d, "file.json")
+	if err := os.Mkdir(targetDir, 0o755); err != nil {
+		t.Fatalf("failed to create target directory: %v", err)
+	}
+	store2 := &Store{path: targetDir}
 	err = store2.Save()
 	if err == nil {
 		t.Fatal("expected error writing file")
 	}
-	os.Chmod(d, 0755) // restore so it can be cleaned up
 }
 
 func TestStore_SetExtraEmptyExtras(t *testing.T) {

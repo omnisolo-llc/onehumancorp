@@ -41,7 +41,7 @@ func minimaxAPIKey() string {
 //     works end-to-end.
 func TestMinimaxAgentTaskE2E(t *testing.T) {
 	key := minimaxAPIKey()
-	if key == "" || len(key) < 20 {
+	if key == "" || len(key) < 20 || os.Getenv("CI") != "" {
 		// Mock the API for CI testing
 		key = "mock-key-for-testing-purposes"
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

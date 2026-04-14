@@ -244,6 +244,10 @@ func TestIntegrationsByCategoryUnknown(t *testing.T) {
 // ── Connect / Disconnect ──────────────────────────────────────────────────────
 
 func TestConnectUpdatesStatus(t *testing.T) {
+	oldLookupIP := LookupIPFunc
+	LookupIPFunc = mockLookupIP
+	defer func() { LookupIPFunc = oldLookupIP }()
+
 	r := NewRegistry()
 
 	updated, err := r.Connect("slack", "https://hooks.slack.com/services/test")
@@ -1455,6 +1459,10 @@ func TestSendTelegramMessage_DoError(t *testing.T) {
 	TelegramAPIBase = "http://example.com"
 	defer func() { TelegramAPIBase = originalBase }()
 
+	originalLookupIP := LookupIPFunc
+	LookupIPFunc = mockLookupIP
+	defer func() { LookupIPFunc = originalLookupIP }()
+
 	originalClient := safeClient
 	safeClient = &http.Client{Transport: &errorTripper{}}
 	defer func() { safeClient = originalClient }()
@@ -1469,6 +1477,10 @@ func TestSendTelegramMessage_DoError(t *testing.T) {
 }
 
 func TestSendDiscordWebhook_DoError(t *testing.T) {
+	originalLookupIP := LookupIPFunc
+	LookupIPFunc = mockLookupIP
+	defer func() { LookupIPFunc = originalLookupIP }()
+
 	originalClient := safeClient
 	safeClient = &http.Client{Transport: &errorTripper{}}
 	defer func() { safeClient = originalClient }()

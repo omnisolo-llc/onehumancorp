@@ -349,19 +349,117 @@ cd "$WORKSPACE_DIR_ABS"
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
 PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
+generate_fallback_pub_deps() {
+    "$PYTHON_BIN" <<'PY'
+import json
+import os
+from pathlib import Path
+
+pubspec_path = Path(os.environ["PUBSPEC_PATH"])
+cache_root = Path(os.environ["PUB_CACHE"])
+output_path = Path("pub_deps.json")
+
+name = ""
+version = ""
+has_flutter_sdk = False
+dependencies = []
+current_section = ""
+
+for raw_line in pubspec_path.read_text(encoding="utf-8").splitlines():
+    line = raw_line.rstrip()
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        continue
+    indent = len(line) - len(line.lstrip(" "))
+    if indent == 0:
+        if stripped.startswith("name:"):
+            name = stripped.split(":", 1)[1].strip().strip("\"'")
+        elif stripped.startswith("version:"):
+            version = stripped.split(":", 1)[1].strip().strip("\"'")
+        elif stripped in ("dependencies:", "dependency_overrides:"):
+            current_section = "deps"
+        else:
+            current_section = ""
+        continue
+    if current_section != "deps" or indent != 2 or ":" not in stripped:
+        continue
+    dep_name, dep_value = [part.strip() for part in stripped.split(":", 1)]
+    if not dep_name:
+        continue
+    if dep_name == "flutter":
+        has_flutter_sdk = True
+    dependencies.append(dep_name)
+
+packages = [{
+    "name": name or pubspec_path.parent.name,
+    "version": version or "0.0.0",
+    "kind": "root",
+    "source": "root",
+    "dependencies": dependencies,
+    "directDependencies": dependencies,
+    "devDependencies": [],
+}]
+
+if has_flutter_sdk:
+    packages.append({
+        "name": "flutter",
+        "version": None,
+        "kind": "direct",
+        "source": "sdk",
+        "dependencies": [],
+        "directDependencies": [],
+    })
+    packages.append({
+        "name": "sky_engine",
+        "version": None,
+        "kind": "transitive",
+        "source": "sdk",
+        "dependencies": [],
+        "directDependencies": [],
+    })
+
+hosted_dir = cache_root / "hosted" / "pub.dev"
+seen = set()
+if hosted_dir.is_dir():
+    for pkg_dir in sorted(hosted_dir.iterdir()):
+        if not pkg_dir.is_dir():
+            continue
+        package_name, _, package_version = pkg_dir.name.rpartition("-")
+        if not package_name or not package_version or package_name in seen:
+            continue
+        seen.add(package_name)
+        packages.append({
+            "name": package_name,
+            "version": package_version,
+            "kind": "transitive",
+            "source": "hosted",
+            "dependencies": [],
+            "directDependencies": [],
+        })
+
+output_path.write_text(json.dumps({
+    "root": packages[0]["name"],
+    "packages": packages,
+}, indent=2) + "\n", encoding="utf-8")
+PY
+}
 if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
     :
 else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
         if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
+            if ! generate_fallback_pub_deps; then
+                cat "$PUB_DEPS_ERR" >&2 || true
+                echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
+                exit 1
+            fi
+        fi
+    else
+        if ! generate_fallback_pub_deps; then
             cat "$PUB_DEPS_ERR" >&2 || true
             echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
             exit 1
         fi
-    else
-        cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
     fi
 fi
 

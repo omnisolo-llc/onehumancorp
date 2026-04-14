@@ -467,8 +467,11 @@ TEST(WriteToolTest, ValidatesArgumentsAndFilesystemFailures) {
       {{"file_path", open_dir.string()}, {"content", "payload"}});
   EXPECT_FALSE(open_failure.ok());
 
+  const auto write_failure_dir = dir / "write_failure_dir";
+  std::filesystem::create_directories(write_failure_dir, ec);
+  ASSERT_FALSE(ec) << ec.message();
   auto write_failure = tool.execute(
-      {{"file_path", "/dev/full"}, {"content", "payload"}});
+      {{"file_path", write_failure_dir.string()}, {"content", "payload"}});
   EXPECT_FALSE(write_failure.ok());
 
   std::filesystem::remove_all(dir, ec);
