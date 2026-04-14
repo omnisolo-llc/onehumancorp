@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "mesh",
     srcs = [
+        "http_handler.go",
         "local_mesh.go",
         "mesh.go",
         "redis_mesh.go",
@@ -16,7 +17,10 @@ go_library(
 
 go_test(
     name = "mesh_test",
-    srcs = ["mesh_test.go"],
+    srcs = [
+        "http_handler_test.go",
+        "mesh_test.go",
+    ],
     embed = [":mesh"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
