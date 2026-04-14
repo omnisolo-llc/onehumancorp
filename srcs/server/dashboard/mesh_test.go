@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"net/url"
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
@@ -177,6 +178,107 @@ func TestHandleMeshMailbox(t *testing.T) {
 		}
 		if len(resp.Messages) != 0 {
 			t.Errorf("expected empty messages, got %d", len(resp.Messages))
+		}
+	})
+}
+
+func TestHandleMeshV2Broadcast(t *testing.T) {
+	org := domain.Organization{ID: "org-mesh"}
+	hub := orchestration.NewHub("test-mesh-db", "memory://")
+	srv := &Server{
+		org: org,
+		hub: hub,
+	}
+
+	cn, _ := orchestration.NewCentrifugeNode()
+	hub.SetCentrifugeNode(cn)
+
+	hub.RegisterAgent(orchestration.Agent{
+		ID:             "system",
+		Name:           "system",
+		Role:           "system",
+		OrganizationID: "org-mesh",
+	})
+
+	t.Run("RequiresmTLS", func(t *testing.T) {
+		req := createMockTLSRequest(http.MethodPost, "/api/mesh/v2/broadcast", nil, false)
+		w := httptest.NewRecorder()
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected status 403 Forbidden, got %v", w.Code)
+		}
+	})
+
+	t.Run("ValidBroadcastMeshTasks", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"channel": "mesh:tasks",
+			"data": map[string]interface{}{
+				"agent_id": "test-agent",
+				"action":   "test-action",
+				"status":   "test-status",
+			},
+		}
+		body, _ := json.Marshal(payload)
+
+		req := createMockTLSRequest(http.MethodPost, "/api/mesh/v2/broadcast", body, true)
+
+        req.TLS.PeerCertificates = []*x509.Certificate{
+            {
+                URIs: []*url.URL{
+                    {Scheme: "spiffe"},
+                },
+            },
+        }
+
+		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
+			Roles: []string{"system"},
+			OrganizationID: "org-mesh",
+		})
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200 OK, got %v", w.Code)
+		}
+	})
+
+	t.Run("ValidBroadcastSwarmEvents", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"channel": "swarm-events",
+			"data": map[string]interface{}{
+				"event": "status_update",
+				"status": "IN_PROGRESS",
+			},
+		}
+		body, _ := json.Marshal(payload)
+
+		req := createMockTLSRequest(http.MethodPost, "/api/mesh/v2/broadcast", body, true)
+
+        req.TLS.PeerCertificates = []*x509.Certificate{
+            {
+                URIs: []*url.URL{
+                    {Scheme: "spiffe"},
+                },
+            },
+        }
+
+		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
+			Roles: []string{"system"},
+			OrganizationID: "org-mesh",
+		})
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200 OK, got %v", w.Code)
 		}
 	})
 }
