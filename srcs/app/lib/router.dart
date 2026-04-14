@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
@@ -24,7 +25,6 @@ import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -132,11 +132,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
-                    GoRoute(
+          GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
           ),
-GoRoute(
+          GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),

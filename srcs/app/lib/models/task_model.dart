@@ -19,7 +19,10 @@ class Task {
       title: json['title'] ?? '',
       status: json['status'] ?? 'PENDING',
       assignedAgent: json['assignedAgent'] ?? 'Unassigned',
-      dependencies: List<String>.from(json['dependencies'] ?? []),
+      dependencies: (json['dependencies'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }
