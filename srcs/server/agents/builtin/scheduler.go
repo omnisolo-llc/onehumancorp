@@ -47,10 +47,11 @@ func ScheduleSubagents(ctx context.Context, total, workers int, task SubagentTas
 		go workerFn()
 	}
 
+dispatch:
 	for i := 0; i < total; i++ {
 		select {
 		case <-ctx.Done():
-			break
+			break dispatch
 		case jobs <- i:
 		}
 	}

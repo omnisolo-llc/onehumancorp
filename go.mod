@@ -13,6 +13,8 @@ require (
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/redis/rueidis v1.0.68
 	github.com/slack-go/slack v0.22.0
+	github.com/spf13/afero v1.14.0
+	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.53.0
@@ -24,8 +26,6 @@ require (
 	google.golang.org/grpc v1.79.3
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.6.2-0.20260327093101-b71c26202050
 	google.golang.org/protobuf v1.36.11
-	github.com/spf13/afero v1.14.0
-	github.com/spf13/viper v1.20.1
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.48.0
 )
