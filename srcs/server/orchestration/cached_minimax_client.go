@@ -121,6 +121,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 			if err == nil {
 				slog.Debug("CachedMinimaxClient: found reason response in Redis", "hash", promptHash)
 				telemetry.RecordCacheHit(ctx, "reason", "redis")
+				telemetry.RecordTokensSaved(ctx, "reason", "redis", int64(len(prompt)/4))
 				return string(decompressed), nil
 			}
 		}
@@ -139,6 +140,7 @@ func (c *CachedMinimaxClient) Reason(ctx context.Context, prompt string) (string
 			if err == nil {
 				slog.Debug("CachedMinimaxClient: found reason response in DB", "hash", promptHash)
 				telemetry.RecordCacheHit(ctx, "reason", "db")
+				telemetry.RecordTokensSaved(ctx, "reason", "db", int64(len(prompt)/4))
 
 				// Optional: populate Redis if it was missing there
 				if c.redis != nil {
@@ -208,6 +210,7 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 				if err := json.Unmarshal(decompressed, &embedding); err == nil {
 					slog.Debug("CachedMinimaxClient: found embedding in Redis", "hash", contentHash)
 					telemetry.RecordCacheHit(ctx, "embedding", "redis")
+					telemetry.RecordTokensSaved(ctx, "embedding", "redis", int64(len(text)/4))
 					return embedding, nil
 				}
 			}
@@ -229,6 +232,7 @@ func (c *CachedMinimaxClient) GenerateEmbedding(ctx context.Context, text string
 				if err := json.Unmarshal(decompressed, &embedding); err == nil {
 					slog.Debug("CachedMinimaxClient: found embedding in DB", "hash", contentHash)
 					telemetry.RecordCacheHit(ctx, "embedding", "db")
+					telemetry.RecordTokensSaved(ctx, "embedding", "db", int64(len(text)/4))
 
 					// Optional: populate Redis if it was missing there
 					if c.redis != nil {
