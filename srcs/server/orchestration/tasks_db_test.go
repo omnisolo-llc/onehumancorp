@@ -66,12 +66,12 @@ func TestClaimTask_SQLite(t *testing.T) {
 
     // Dependency added directly above in JSON format
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING', '[]')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING', '[\"task-2\"]')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO task_dependencies_dag (task_id, depends_on_task_id) VALUES ('task-3', 'task-2')")
+    // Dependency added directly above in JSON format
     if err != nil {
         t.Fatalf("failed to insert dep: %v", err)
     }
