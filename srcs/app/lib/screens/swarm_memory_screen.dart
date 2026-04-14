@@ -1,11 +1,9 @@
-import 'dart:ui';import 'package:ohc_app/widgets/glass_card.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
-import 'package:powersync/powersync.dart' hide Column, Row;
-// import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:powersync/powersync.dart' hide Column;
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
   const SwarmMemoryScreen({super.key});
@@ -21,12 +19,14 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Swarm Memory Mesh', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text('Swarm Memory Mesh', style: TextStyle(fontFamily: 'Outfit')),
+        backgroundColor: Colors.transparent,
       ),
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Side: Realtime Teammate Mesh via Centrifuge
           Expanded(
             flex: 1,
             child: Padding(
@@ -36,22 +36,16 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                 children: [
                   const Text('Live Mesh Activity', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('Real-time websocket feed from the Teammate Mesh', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
+                  const Text('Real-time updates via Redis Pub/Sub', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: _LiveMeshWidget(
-                      listKey: _listKey,
-                      liveMessages: _liveMessages,
-                    ),
+                    child: _LiveMeshWidget(listKey: _listKey, liveMessages: _liveMessages),
                   ),
                 ],
               ),
             ),
           ),
-
-          const VerticalDivider(width: 1),
-
-          // Right Side: Offline-to-Cloud State Sync for Swarm Memories via PowerSync
+          Container(width: 1, color: Colors.white.withValues(alpha: 0.1)),
           Expanded(
             flex: 1,
             child: Padding(

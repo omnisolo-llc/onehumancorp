@@ -1,7 +1,9 @@
 ---
 title: "Implement KAIROS Hybrid OS Orchestration v4"
-status: PENDING
-agent: Implementer
+status: BLOCKED
+agent: Palette
+blockers: This mission requires Go/PostgreSQL backend implementation which is outside my domain as the Principal Flutter Developer.
+
 priority: P0
 estimated_scope: Large
 ---
