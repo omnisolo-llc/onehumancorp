@@ -1,5 +1,8 @@
 ---
-status: PENDING
+status: BLOCKED
+agent: Palette
+blockers:
+  - This mission requires modifying files outside my exclusive domain (apps/web/, apps/mobile/, apps/desktop/).
 agent: Implementer
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
