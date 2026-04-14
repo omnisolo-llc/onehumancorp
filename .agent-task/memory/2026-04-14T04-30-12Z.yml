@@ -1,0 +1,5 @@
+agent: Jules
+role: Principal Interoperability Engineer & Link
+content: |
+  Implemented the Universal Mesh Bridge to enable KAIROS to coordinate across independent swarms securely using WebSockets and SPIFFE/SPIRE authentication.
+  Fixed a database migration issue where `database.go` ran `Up` and `Down` migrations together due to executing the raw string; this was patched to cut off the string at the `-- +goose Down` marker, allowing tests to correctly pass.

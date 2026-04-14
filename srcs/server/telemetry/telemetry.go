@@ -536,6 +536,8 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	initBridgeMetrics()
+
 	if len(errs) > 0 {
 		return errs[0]
 	}
@@ -1293,4 +1295,37 @@ func envBoolDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return val == "true"
+}
+
+var (
+	MeshBridgeMessageSentTotal     metric.Int64Counter
+	MeshBridgeMessageReceivedTotal metric.Int64Counter
+	MeshBridgeStatusGauge          metric.Int64UpDownCounter
+)
+
+func initBridgeMetrics() {
+	if meter == nil {
+		return
+	}
+	MeshBridgeMessageSentTotal, _ = meter.Int64Counter("ohc_mesh_bridge_messages_sent_total")
+	MeshBridgeMessageReceivedTotal, _ = meter.Int64Counter("ohc_mesh_bridge_messages_received_total")
+	MeshBridgeStatusGauge, _ = meter.Int64UpDownCounter("ohc_mesh_bridge_status_gauge")
+}
+
+func RecordMeshBridgeMessageSent(ctx context.Context, orgID string) {
+	if MeshBridgeMessageSentTotal != nil {
+		MeshBridgeMessageSentTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("organization_id", orgID)))
+	}
+}
+
+func RecordMeshBridgeMessageReceived(ctx context.Context, orgID string) {
+	if MeshBridgeMessageReceivedTotal != nil {
+		MeshBridgeMessageReceivedTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("organization_id", orgID)))
+	}
+}
+
+func RecordMeshBridgeStatus(ctx context.Context, orgID string, delta int64) {
+	if MeshBridgeStatusGauge != nil {
+		MeshBridgeStatusGauge.Add(ctx, delta, metric.WithAttributes(attribute.String("organization_id", orgID)))
+	}
 }

@@ -242,6 +242,9 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 		}
 
 		sqlStr := string(sqlBytes)
+		if idx := strings.Index(sqlStr, "-- +goose Down"); idx != -1 {
+			sqlStr = sqlStr[:idx]
+		}
 
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
