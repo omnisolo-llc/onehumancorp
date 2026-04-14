@@ -17,7 +17,9 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+		"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
@@ -600,7 +602,24 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
-	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
+	var broker orchmesh.MeshBroker
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		broker = orchmesh.NewLocalMeshBroker()
+	} else {
+		opts, err := rueidis.ParseURL(os.Getenv("REDIS_URL"))
+		if err != nil {
+			broker = orchmesh.NewLocalMeshBroker()
+		} else {
+			rClient, err := rueidis.NewClient(opts)
+			if err != nil {
+				broker = orchmesh.NewLocalMeshBroker()
+			} else {
+				broker = orchmesh.NewRedisMeshBroker(rClient)
+			}
+		}
+	}
+	handler := orchmesh.NewBroadcastHandler(broker)
+	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", handler.ServeHTTP)))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
