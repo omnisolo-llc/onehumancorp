@@ -6,6 +6,6 @@ ALTER TABLE autodream_memories ADD COLUMN last_sync_at TIMESTAMP NULL;
 
 -- +goose Down
 -- +goose StatementBegin
-ALTER TABLE autodream_memories DROP COLUMN IF EXISTS sync_status;
-ALTER TABLE autodream_memories DROP COLUMN IF EXISTS last_sync_at;
+ALTER TABLE autodream_memories DROP COLUMN sync_status;
+ALTER TABLE autodream_memories DROP COLUMN last_sync_at;
 -- +goose StatementEnd
