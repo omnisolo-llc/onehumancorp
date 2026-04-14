@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/hybridcrdtmcp"
 	"github.com/onehumancorp/mono/lib/integrations/hybridfsmcp"
 	"go.opentelemetry.io/otel"
 )
@@ -394,6 +395,33 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			"result":           res,
 			"HybridEscalation": true,
 		}, nil
+	// ── Hybrid CRDT Sync tool ───────────────────────────────────────────────
+	case "hybridcrdt-mcp":
+		if s.hub.SIPDB() == nil {
+			return nil, errors.New("database provider not configured")
+		}
+
+		inspector := hybridcrdtmcp.NewCRDTTool(s.hub.SIPDB().GetDB())
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid hybridcrdt-mcp parameters: %w", err)
+		}
+
+		claims := &auth.Claims{
+			OrganizationID: s.org.ID,
+		}
+		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+
+		res, err := inspector.CallTool(ctx, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
 	// ── Hybrid File System tool ───────────────────────────────────────────────
 	case "hybridfs-mcp":
 		// NOTE: In a real execution environment, we should check if we are in local or cloud mode

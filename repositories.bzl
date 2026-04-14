@@ -98,6 +98,12 @@ def go_repositories():
         version = "v0.0.0-20240411145413-00de7ca16731",
     )
     go_repository(
+        name = "com_github_frankban_quicktest",
+        importpath = "github.com/frankban/quicktest",
+        sum = "h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=",
+        version = "v1.14.6",
+    )
+    go_repository(
         name = "com_github_fzambia_eagle",
         importpath = "github.com/FZambia/eagle",
         sum = "h1:1kQaZpJvbkvAXFRE/9K2ucBMuVqo+E29EMLYB74hIis=",
@@ -162,6 +168,12 @@ def go_repositories():
         importpath = "github.com/google/go-cmp",
         sum = "h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=",
         version = "v0.7.0",
+    )
+    go_repository(
+        name = "com_github_google_jsonschema_go",
+        importpath = "github.com/google/jsonschema-go",
+        sum = "h1:tmrUohrwoLZZS/P3x7ex0WAVknEkBZM46iALbcqoRA8=",
+        version = "v0.4.2",
     )
     go_repository(
         name = "com_github_google_pprof",
@@ -246,6 +258,12 @@ def go_repositories():
         importpath = "github.com/mailru/easyjson",
         sum = "h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=",
         version = "v0.7.7",
+    )
+    go_repository(
+        name = "com_github_mark3labs_mcp_go",
+        importpath = "github.com/mark3labs/mcp-go",
+        sum = "h1:A9sJJ20mscl/ssLYHjodfaoBmq6uuhMG7pAPNYaQymQ=",
+        version = "v0.47.1",
     )
     go_repository(
         name = "com_github_mattn_go_isatty",
@@ -410,6 +428,12 @@ def go_repositories():
         version = "v1.4.0",
     )
     go_repository(
+        name = "com_github_spf13_cast",
+        importpath = "github.com/spf13/cast",
+        sum = "h1:cuNEagBQEHWN1FnbGEjCXL2szYEXqfJPbP2HNUaca9Y=",
+        version = "v1.7.1",
+    )
+    go_repository(
         name = "com_github_spiffe_go_spiffe_v2",
         importpath = "github.com/spiffe/go-spiffe/v2",
         sum = "h1:l+DolpxNWYgruGQVV0xsfeya3CsC7m8iBzDnMpsbLuo=",
@@ -444,6 +468,12 @@ def go_repositories():
         importpath = "github.com/xhit/go-str2duration/v2",
         sum = "h1:lxklc02Drh6ynqX+DdPyp5pCKLUQpRT8bp8Ydu2Bstc=",
         version = "v2.1.0",
+    )
+    go_repository(
+        name = "com_github_yosida95_uritemplate_v3",
+        importpath = "github.com/yosida95/uritemplate/v3",
+        sum = "h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=",
+        version = "v3.0.2",
     )
     go_repository(
         name = "com_google_cloud_go_compute_metadata",

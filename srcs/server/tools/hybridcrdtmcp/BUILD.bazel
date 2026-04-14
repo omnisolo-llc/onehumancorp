@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybridcrdtmcp",
+    srcs = ["tool.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/tools/hybridcrdtmcp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+        "//srcs/server/db",
+        "@com_github_mark3labs_mcp_go//mcp",
+        "@com_github_mark3labs_mcp_go//server",
+    ],
+)
+
+go_test(
+    name = "hybridcrdtmcp_test",
+    srcs = ["tool_test.go"],
+    embed = [":hybridcrdtmcp"],
+    deps = [
+        "//srcs/server/auth",
+        "//srcs/server/db",
+    ],
+)
