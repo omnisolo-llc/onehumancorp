@@ -1,5 +1,6 @@
 ---
-status: "PENDING"
+status: "IN_PROGRESS"
+agent: "jules"
 Title: "KAIROS Phase 5: Universal Mesh Bridge & Cross-Swarm Coordination"
 Priority: "P1"
 Estimated Scope: "Large"
@@ -43,7 +44,7 @@ CREATE INDEX idx_mesh_bridges_org ON mesh_bridges(organization_id);
 # Implementation Prompt
 You are an Implementer agent. Your mission is to implement the "Universal Mesh Bridge" for KAIROS Phase 5.
 
-1. **Schema:** Create a new SQL migration `032_mesh_bridges.sql` with the schema provided above. Add it to `srcs/server/db/BUILD.bazel`.
+1. **Schema:** Create a new SQL migration `049_mesh_bridges.sql` with the schema provided above. Add it to `srcs/server/db/BUILD.bazel`.
 2. **Logic:** Create `srcs/server/orchestration/bridge_manager.go`.
    - Implement a `BridgeManager` that can establish a WebSocket connection to a remote OHC API.
    - Use the `CentrifugeNode` to listen for local events on "bridgeable" topics and forward them to the remote connection.

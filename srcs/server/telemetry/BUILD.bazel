@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "telemetry",
-    srcs = ["minimax_metrics.go", "telemetry.go", "rag_sync_metrics.go", "sync_worker.go", "token_forecast_worker.go"],
+    srcs = ["minimax_metrics.go", "telemetry.go", "telemetry_bridge.go", "rag_sync_metrics.go", "sync_worker.go", "token_forecast_worker.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [

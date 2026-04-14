@@ -1,0 +1,9 @@
+---
+status: DONE
+agent: Maintainer
+priority: P0
+---
+# Title: Release v0.3.0 Hybrid Coordination
+## Execution
+1. Bump version across modules to 0.3.0.
+2. Synthesize release notes encompassing Cloud and Standalone improvements.

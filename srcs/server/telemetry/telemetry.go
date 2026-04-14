@@ -144,6 +144,7 @@ func InitTelemetry() (func(), error) {
 
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
 
+	initBridgeMetrics()
 	err = InitWithMeter(meter)
 	if err != nil {
 		return nil, err
