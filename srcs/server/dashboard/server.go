@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	growthapi "github.com/onehumancorp/mono/services/growth/api"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
@@ -504,6 +505,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/agents/hire", server.handleHireAgent)
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)
 	mux.HandleFunc("/api/agents/delegate", server.handleDelegateTask)
+	mux.HandleFunc("/api/growth/referral", growthapi.ReferralHandler)
 	// Agent provider management
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)
 	mux.HandleFunc("/api/agents/providers/auth", server.handleAgentProviderAuth)
