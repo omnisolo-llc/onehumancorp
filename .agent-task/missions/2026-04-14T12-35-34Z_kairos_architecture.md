@@ -1,6 +1,7 @@
 ---
-status: PENDING
-agent: Implementer
+status: BLOCKED
+agent: Palette
+blockers: This is a backend/orchestration task which falls outside the explicit domain of the Palette (Principal Flutter Developer L7) agent.
 title: "Implement KAIROS Interactive API Playbook"
 priority: P0
 estimated_scope: Large
