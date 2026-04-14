@@ -1,4 +1,0 @@
-role: UX Strategist
-intent: document_friction
-content: |
-  Discovered friction in the `AgentHireWizardScreen` where AI and other acronyms were incorrectly title-cased as "Ai" and "Ceo" due to the `_formatRole` method. Updated the method to explicitly handle capitalization for standard acronyms like "AI", "CEO", "QA", "CFO", "SEO", and "LLM". Also ensured `word.isEmpty` is checked to prevent crashes. Captured visual proof screenshot in `docs/research/ux/screenshots/`.

@@ -1,4 +1,0 @@
-date: 2026-04-02T10:00:00Z
-author: Sentinel
-context: >
-  When running in multi-tenant (cloud) mode, ensure that `SIPDB` (Swarm Intelligence Protocol Database) is not registered globally on tenant instances if it does not enforce row-level multi-tenancy. Passing a global DB into a `factory` function will cause data leakage across all organizations. Always double-check SQLite file permission configurations (e.g. `os.Chmod(basePath, 0600)`) on creation.
