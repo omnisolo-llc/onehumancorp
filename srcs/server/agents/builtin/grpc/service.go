@@ -18,7 +18,6 @@ import (
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -360,10 +359,14 @@ func (s *AgentServiceServer) dispatchInProcess(ctx context.Context, req *agentse
 }
 
 // dispatchRemote forwards the sub-agent request to a remote gRPC endpoint.
+// It uses the same client credentials (TLS + token) as the process-level config.
 func (s *AgentServiceServer) dispatchRemote(ctx context.Context, req *agentservicepb.SubAgentRequest) (*agentservicepb.SubAgentResponse, error) {
-	conn, err := grpc.NewClient(req.SubAgentAddress,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	clientOpts := ClientOptionsFromEnv()
+	dialOpts, err := buildDialOptions(clientOpts)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "build dial options: %v", err)
+	}
+	conn, err := grpc.NewClient(req.SubAgentAddress, dialOpts...)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "connect to sub-agent at %s: %v", req.SubAgentAddress, err)
 	}

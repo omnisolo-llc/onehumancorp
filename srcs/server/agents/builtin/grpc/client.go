@@ -57,22 +57,15 @@ return DefaultAddress
 // NewClient dials the agent at address using opts for credentials.
 // Call Close when done.
 func NewClient(address string, opts ClientOptions) (*Client, error) {
-timeout := opts.DialTimeout
-if timeout == 0 {
-timeout = defaultDialTimeout
-}
-
 dialOpts, err := buildDialOptions(opts)
 if err != nil {
 return nil, err
 }
 
-ctx, cancel := context.WithTimeout(context.Background(), timeout)
-defer cancel()
-
-conn, err := grpc.DialContext(ctx, address, append(dialOpts, grpc.WithBlock())...) //nolint:staticcheck
+// grpc.NewClient is non-blocking by default (connection established on first RPC).
+conn, err := grpc.NewClient(address, dialOpts...)
 if err != nil {
-return nil, fmt.Errorf("agentgrpc: dial %s: %w", address, err)
+return nil, fmt.Errorf("agentgrpc: create client for %s: %w", address, err)
 }
 
 return &Client{

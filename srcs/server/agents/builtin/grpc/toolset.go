@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -158,6 +159,9 @@ func mcpTransport(cfg *agentservicepb.MCPServerConfig) (mcpmcp.Transport, error)
 		if len(cfg.Command) == 0 {
 			return nil, fmt.Errorf("STDIO transport requires at least one command element")
 		}
+		if err := validateMCPCommand(cfg.Command[0]); err != nil {
+			return nil, err
+		}
 		cmd := exec.Command(cfg.Command[0], cfg.Command[1:]...) //nolint:gosec
 		for k, v := range cfg.Env {
 			cmd.Env = append(cmd.Env, k+"="+v)
@@ -173,6 +177,66 @@ func mcpTransport(cfg *agentservicepb.MCPServerConfig) (mcpmcp.Transport, error)
 	default:
 		return nil, fmt.Errorf("unsupported MCP transport type %v", cfg.Transport)
 	}
+}
+
+// allowedMCPCommands is the explicit list of permitted STDIO MCP executables.
+// Add to this list as trusted MCP server binaries are deployed.
+// The OHC_MCP_ALLOWED_COMMANDS env var (colon-separated) extends this list.
+var allowedMCPCommands = map[string]struct{}{
+	"npx":          {},
+	"node":         {},
+	"python":       {},
+	"python3":      {},
+	"uvx":          {},
+	"mcp-server":   {},
+	"mcp-github":   {},
+	"mcp-fs":       {},
+	"mcp-shell":    {},
+}
+
+func init() {
+	// Allow operators to extend the allowlist via environment variable.
+	if extra := os.Getenv("OHC_MCP_ALLOWED_COMMANDS"); extra != "" {
+		for _, cmd := range strings.Split(extra, ":") {
+			if cmd != "" {
+				allowedMCPCommands[cmd] = struct{}{}
+			}
+		}
+	}
+}
+
+// validateMCPCommand checks that the MCP executable is in the allowlist.
+// It rejects absolute paths outside /usr/local/bin and /usr/bin to prevent
+// arbitrary file execution while still supporting common deployment paths.
+func validateMCPCommand(executable string) error {
+	// Reject shell meta-characters entirely.
+	for _, r := range executable {
+		if r == ';' || r == '|' || r == '&' || r == '$' || r == '`' || r == '\n' || r == '\r' {
+			return fmt.Errorf("MCP command %q contains forbidden characters", executable)
+		}
+	}
+
+	// Extract the base name for allowlist check.
+	base := executable
+	if idx := strings.LastIndexByte(executable, '/'); idx >= 0 {
+		base = executable[idx+1:]
+		// If an absolute path is given, restrict to well-known directories.
+		allowed := false
+		for _, dir := range []string{"/usr/bin/", "/usr/local/bin/", "/opt/mcp/"} {
+			if strings.HasPrefix(executable, dir) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return fmt.Errorf("MCP command absolute path %q is outside permitted directories", executable)
+		}
+	}
+
+	if _, ok := allowedMCPCommands[base]; !ok {
+		return fmt.Errorf("MCP command %q is not in the allowed command list; add it to OHC_MCP_ALLOWED_COMMANDS", base)
+	}
+	return nil
 }
 
 // builtinToolNames returns a sorted list of registered built-in tool names.

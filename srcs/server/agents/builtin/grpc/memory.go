@@ -112,9 +112,13 @@ func (s *MemoryStore) RecentSuccesses(n int) []string {
 	if limit > len(entries) {
 		limit = len(entries)
 	}
-	// entries from Glob are lexicographically sorted; reverse to get newest first.
-	for i, j := 0, limit-1; i < j; i, j = i+1, j-1 {
+	// entries from Glob are lexicographically sorted ascending; reverse the whole
+	// slice then take the first limit entries so we read newest files first.
+	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
 		entries[i], entries[j] = entries[j], entries[i]
+	}
+	if limit < len(entries) {
+		entries = entries[:limit]
 	}
 
 	var results []string
