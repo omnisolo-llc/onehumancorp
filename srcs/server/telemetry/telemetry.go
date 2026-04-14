@@ -67,6 +67,7 @@ var (
 	SyncCompletedCount     metric.Int64Counter
 	SyncFailedCount        metric.Int64Counter
 	SyncEscalationsCount   metric.Int64Counter
+	RagEscalationCount     metric.Int64Counter
 	SyncLatency            metric.Float64Histogram
 	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
@@ -257,6 +258,14 @@ func InitWithMeter(m mockableMeter) error {
 	)
 	if err != nil {
 		errs = append(errs, err)
+	}
+
+	RagEscalationCount, err = m.Int64Counter(
+		"rag_escalation_count",
+		metric.WithDescription("Number of RAG escalations from local to cloud"),
+	)
+	if err != nil {
+		return err
 	}
 
 	SyncEscalationsCount, err = m.Int64Counter(
@@ -1469,5 +1478,12 @@ func RecordSyncConflictResolved(ctx context.Context) {
 func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 	if OmniContextBytesRouted != nil {
 		OmniContextBytesRouted.Add(ctx, bytes)
+	}
+}
+
+// RecordRagEscalation increments the RAG escalation counter.
+func RecordRagEscalation(ctx context.Context) {
+	if RagEscalationCount != nil {
+		RagEscalationCount.Add(ctx, 1)
 	}
 }
