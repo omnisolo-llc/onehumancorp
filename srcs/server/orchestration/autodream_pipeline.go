@@ -65,102 +65,57 @@ func (p *AutoDreamPipeline) Stop() {
 func (p *AutoDreamPipeline) process(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
 
-	// Limit to process batches and prevent unbound queue growth
-	limit := 500
-
-	// 1. Fetch recently completed shared_tasks
-	var query string
-	var args []interface{}
-
-	if p.db.IsSQLite() {
-		// SQLite degradation mode
-		query = `
-			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks_v4
-			WHERE status = 'COMPLETED'
-			ORDER BY updated_at DESC LIMIT ?
-		`
-		args = append(args, limit)
-	} else {
-		// Postgres mode using SKIP LOCKED for concurrent worker safety
-		query = `
-			SELECT id, organization_id, agent_id, payload
-			FROM shared_tasks_v4
-			WHERE status = 'COMPLETED'
-			ORDER BY updated_at DESC LIMIT $1 FOR UPDATE SKIP LOCKED
-		`
-		args = append(args, limit)
-	}
-
-	rows, err := p.db.Query(ctx, query, args...)
+	files, err := os.ReadDir(".agent-task/memory/")
 	if err != nil {
-		slog.Error("AutoDreamPipeline: failed to query shared_tasks", "error", err)
+		slog.Error("AutoDreamPipeline: failed to read memory directory", "error", err)
 		return
 	}
-	defer rows.Close()
 
-	type taskMem struct {
-		id      string
-		orgID   string
-		agentID string
-		payload string
-	}
-
-	var memories []taskMem
-	for rows.Next() {
-		var m taskMem
-		if err := rows.Scan(&m.id, &m.orgID, &m.agentID, &m.payload); err == nil {
-			memories = append(memories, m)
+	for _, file := range files {
+		if file.IsDir() {
+			continue
 		}
-	}
-	rows.Close()
 
-	if len(memories) == 0 {
-		return // nothing to process
-	}
+		path := ".agent-task/memory/" + file.Name()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
 
-	for _, m := range memories {
 		embeddingStr := "[0.0, 0.0, 0.0]"
-
 		if p.client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, err := p.client.GenerateEmbedding(ctxTimeout, m.payload)
+			resp, err := p.client.GenerateEmbedding(ctxTimeout, string(data))
 			cancel()
 			if err == nil && len(resp) > 0 {
 				if bytes, err := json.Marshal(resp); err == nil {
 					embeddingStr = string(bytes)
 				}
-			} else if err != nil {
-				slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
 			}
 		}
 
-		// 2. Load into autodream_memories
 		var insertQuery string
-		var insertArgs []interface{}
-
 		if p.db.IsSQLite() {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES (?, ?, ?, ?, ?, 'shared_task', CURRENT_TIMESTAMP)
+				INSERT INTO autodream_memories_master_master (id, content, embedding)
+				VALUES (?, ?, ?)
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
 		} else {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES ($1, $2, $3, $4, $5::vector, 'shared_task', NOW())
+				INSERT INTO autodream_memories_master_master (id, content, embedding)
+				VALUES ($1, $2, $3::vector)
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
-			insertArgs = []interface{}{m.id, m.orgID, m.agentID, m.payload, embeddingStr}
 		}
 
-		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
-			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", m.id, "error", err)
+		if _, err := p.db.Exec(ctx, insertQuery, file.Name(), string(data), embeddingStr); err != nil {
+			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", file.Name(), "error", err)
 		} else {
-			slog.Debug("AutoDreamPipeline: consolidated memory", "id", m.id)
+			slog.Debug("AutoDreamPipeline: consolidated memory", "id", file.Name())
+			os.Remove(path) // Delete file after processing to prevent infinite loop
 		}
 	}
 
-	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(memories))
+	slog.Info("AutoDreamPipeline: completed sweep")
 }
