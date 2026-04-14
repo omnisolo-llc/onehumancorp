@@ -181,3 +181,99 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
     return tx.Commit(ctx)
 }
+
+func (to *SharedTaskOrchestrator) ClaimDecompositionTask(ctx context.Context, agentID string) (*SharedTaskDecomposition, error) {
+    claims := auth.ClaimsFromContext(ctx)
+    if claims == nil {
+        return nil, errors.New("unauthorized: missing claims")
+    }
+
+    if to.dbProvider.IsSQLite() {
+        return to.claimTaskDecompSQLite(ctx, claims.OrganizationID, agentID)
+    }
+    return to.claimTaskDecompPostgres(ctx, claims.OrganizationID, agentID)
+}
+
+func (to *SharedTaskOrchestrator) claimTaskDecompSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDecomposition, error) {
+    to.mu.Lock()
+    defer to.mu.Unlock()
+
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer tx.Rollback(ctx)
+
+    query := `
+        SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+        FROM shared_tasks_decomposition
+        WHERE status = 'PENDING' AND organization_id = $1
+        LIMIT 1
+    `
+    row := tx.QueryRow(ctx, query, orgID)
+
+    var task SharedTaskDecomposition
+    if err := row.Scan(
+        &task.ID, &task.OrganizationID, &task.Title, &task.Description,
+        &task.Status, &task.AssignedAgentID, &task.Priority, &task.Payload,
+        &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+    ); err != nil {
+        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            return nil, nil
+        }
+        return nil, fmt.Errorf("failed to query pending task: %w", err)
+    }
+
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+        return nil, fmt.Errorf("failed to update task status: %w", err)
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
+    }
+
+    task.Status = "IN_PROGRESS"
+    task.AssignedAgentID = &agentID
+    return &task, nil
+}
+
+func (to *SharedTaskOrchestrator) claimTaskDecompPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDecomposition, error) {
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer tx.Rollback(ctx)
+
+    query := `
+        SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+        FROM shared_tasks_decomposition
+        WHERE status = 'PENDING' AND organization_id = $1
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+    `
+    row := tx.QueryRow(ctx, query, orgID)
+
+    var task SharedTaskDecomposition
+    if err := row.Scan(
+        &task.ID, &task.OrganizationID, &task.Title, &task.Description,
+        &task.Status, &task.AssignedAgentID, &task.Priority, &task.Payload,
+        &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+    ); err != nil {
+        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            return nil, nil
+        }
+        return nil, fmt.Errorf("failed to query pending task: %w", err)
+    }
+
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+        return nil, fmt.Errorf("failed to update task status: %w", err)
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
+    }
+
+    task.Status = "IN_PROGRESS"
+    task.AssignedAgentID = &agentID
+    return &task, nil
+}
