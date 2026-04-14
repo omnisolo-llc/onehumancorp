@@ -21,6 +21,9 @@ type SharedTaskDB struct {
     AssignedAgentID *string
     CreatedAt       string
     UpdatedAt       string
+    UltraPlanPhase  *string
+    DeliberationLog *string
+    Depth           int
 }
 
 type SharedTaskOrchestrator struct {
@@ -66,9 +69,9 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
     defer tx.Rollback(ctx)
 
     query := `
-        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
+        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at, st.ultraplan_phase, st.deliberation_log, st.depth
         FROM shared_tasks_master st
-        WHERE st.status = 'PENDING' AND st.organization_id = $1
+        WHERE st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = 'APPROVED') AND st.organization_id = $1
         AND NOT EXISTS (
             SELECT 1 FROM task_dependencies_dag td
             JOIN shared_tasks_master d ON d.id = td.depends_on_task_id
@@ -80,8 +83,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
     var task SharedTaskDB
     if err := row.Scan(
-        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-        &task.Description, &task.Status, &task.AssignedAgentID, &task.CreatedAt, &task.UpdatedAt,
+        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &task.CreatedAt, &task.UpdatedAt, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth,
     ); err != nil {
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
             return nil, nil
@@ -114,9 +116,9 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
     defer tx.Rollback(ctx)
 
     query := `
-        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
+        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at, st.ultraplan_phase, st.deliberation_log, st.depth
         FROM shared_tasks_master st
-        WHERE st.status = 'PENDING' AND st.organization_id = $1
+        WHERE st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = 'APPROVED') AND st.organization_id = $1
         AND NOT EXISTS (
             SELECT 1 FROM task_dependencies_dag td
             JOIN shared_tasks_master d ON d.id = td.depends_on_task_id
@@ -129,8 +131,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
 
     var task SharedTaskDB
     if err := row.Scan(
-        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-        &task.Description, &task.Status, &task.AssignedAgentID, &task.CreatedAt, &task.UpdatedAt,
+        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID, &task.CreatedAt, &task.UpdatedAt, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth,
     ); err != nil {
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
             return nil, nil

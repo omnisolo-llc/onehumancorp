@@ -2,6 +2,8 @@ package orchestration
 
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/auth"
+
 	"google.golang.org/protobuf/proto"
 
 
@@ -1861,6 +1863,14 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
+	mux.HandleFunc("/api/orchestration/tasks/decompose", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleDecomposeTask(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleCreateTask(w, r, tm)
@@ -2004,3 +2014,51 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 
 
+
+func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var req struct {
+		ParentTaskID string `json:"parent_task_id"`
+		SubTasks     []struct {
+			Title       string   `json:"title"`
+			Description string   `json:"description"`
+			Priority    string   `json:"priority"`
+			Dependencies []string `json:"dependencies"`
+		} `json:"sub_tasks"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var createdTasks []*SharedTask
+	for _, st := range req.SubTasks {
+		// All sub-tasks depend on the parent implicitly in the sense they belong to it,
+		// but we allow explicit DAG dependencies between sub-tasks.
+		task, err := tm.CreateTaskWithPlan(r.Context(), claims.OrganizationID, st.Dependencies, st.Title, st.Description, st.Priority)
+		if err == nil && task != nil {
+			// Update parent_plan_id to link it
+			_, _ = tm.db.Exec(r.Context(), "UPDATE shared_tasks SET parent_plan_id = $1 WHERE id = $2", req.ParentTaskID, task.ID)
+			if tm.db.IsSQLite() {
+				_, _ = tm.db.Exec(r.Context(), "UPDATE shared_tasks_master SET parent_plan_id = $1 WHERE id = $2", req.ParentTaskID, task.ID)
+			} else {
+				_, _ = tm.db.Exec(r.Context(), "UPDATE shared_tasks_master SET parent_plan_id = $1 WHERE id = $2", req.ParentTaskID, task.ID)
+			}
+			task.ParentPlanID = req.ParentTaskID
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		createdTasks = append(createdTasks, task)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(createdTasks)
+}

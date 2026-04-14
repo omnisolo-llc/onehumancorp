@@ -32,8 +32,11 @@ type SharedTask struct {
 	Description     string     `json:"description,omitempty"`
 	AssignedAgentID string     `json:"assigned_agent_id,omitempty"`
 	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
-	Priority        string     `json:"priority"`
+		Priority        string     `json:"priority"`
 	Payload         string     `json:"payload"`
+	UltraPlanPhase  *string    `json:"ultraplan_phase,omitempty"`
+	DeliberationLog *string    `json:"deliberation_log,omitempty"`
+	Depth           int        `json:"depth"`
 	LockedUntil     *time.Time `json:"locked_until,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
@@ -173,6 +176,10 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	}
 	payloadBytes, _ := json.Marshal(payloadMap)
 	payload := string(payloadBytes)
+
+	if err := tm.CheckCircularDependency(ctx, id, dependencies); err != nil {
+		return nil, err
+	}
 
 	if priority == "" {
 		priority = "P2"
@@ -329,12 +336,12 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	// Fetch updated task data
 	readQuery := `
-		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at, ultraplan_phase, deliberation_log, depth
 		FROM shared_tasks
 		WHERE id = $1
 	`
 	errQuery = tx.QueryRow(ctx, readQuery, fetchedTaskID).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth,
 	)
 
 	if errQuery != nil {
@@ -511,9 +518,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 
 	if tm.db.IsSQLite() {
 		query = `
-			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at, st.ultraplan_phase, st.deliberation_log, st.depth
 			FROM shared_tasks st
-			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
@@ -522,9 +529,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		}
 	} else {
 		query = `
-			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at, st.ultraplan_phase, st.deliberation_log, st.depth
 			FROM shared_tasks st
-			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
@@ -543,7 +550,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	for rows.Next() {
 		task := &SharedTask{}
 		if err := rows.Scan(
-			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+			&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
@@ -588,7 +595,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		selectQuery := `
 			SELECT st.id
 			FROM shared_tasks st
-			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
@@ -625,13 +632,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at, ultraplan_phase, deliberation_log, depth
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth,
 			)
 
 			if errQuery != nil {
@@ -655,7 +662,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		selectQuery := `
 				SELECT st.id
 				FROM shared_tasks st
-				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
@@ -689,13 +696,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at, ultraplan_phase, deliberation_log, depth
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth,
 			)
 
 			if errQuery != nil {
@@ -791,4 +798,66 @@ func generateID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b[0:4]) + "-" + hex.EncodeToString(b[4:6]) + "-" + hex.EncodeToString(b[6:8]) + "-" + hex.EncodeToString(b[8:10]) + "-" + hex.EncodeToString(b[10:])
+}
+
+
+// CheckCircularDependency checks if adding the given dependencies to taskID would create a cycle
+func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID string, dependencies []string) error {
+	if len(dependencies) == 0 {
+		return nil
+	}
+
+	// Fast check: a task cannot depend on itself
+	for _, dep := range dependencies {
+		if dep == taskID {
+			return fmt.Errorf("circular dependency detected: task %s depends on itself", taskID)
+		}
+	}
+
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		// SQLite recursive CTE
+		query := `
+			WITH RECURSIVE
+			  under_task(id) AS (
+				SELECT depends_on_task_id FROM task_dependencies WHERE task_id = ?
+				UNION ALL
+				SELECT td.depends_on_task_id FROM task_dependencies td
+				JOIN under_task u ON td.task_id = u.id
+			  )
+			SELECT 1 FROM under_task WHERE id = ? LIMIT 1;
+		`
+		for _, dep := range dependencies {
+			var dummy int
+			err := tm.db.QueryRow(ctx, query, dep, taskID).Scan(&dummy)
+			if err == nil {
+				return fmt.Errorf("circular dependency detected involving task %s", taskID)
+			}
+		}
+	} else {
+		// Postgres recursive CTE
+		query := `
+			WITH RECURSIVE
+			  under_task(id) AS (
+				SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1
+				UNION ALL
+				SELECT td.depends_on_task_id FROM task_dependencies td
+				JOIN under_task u ON td.task_id = u.id
+			  )
+			SELECT 1 FROM under_task WHERE id = $2 LIMIT 1;
+		`
+		for _, dep := range dependencies {
+			var dummy int
+			err := tm.db.QueryRow(ctx, query, dep, taskID).Scan(&dummy)
+			if err == nil {
+				return fmt.Errorf("circular dependency detected involving task %s", taskID)
+			}
+		}
+	}
+
+	return nil
 }
