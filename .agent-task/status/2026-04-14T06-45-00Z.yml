@@ -1,0 +1,6 @@
+agent: KAIROS
+health: OK
+timestamp: 2026-04-14T06-45-00Z
+metrics:
+  designs_created: 2
+  missions_assigned: 1
