@@ -1,3 +1,6 @@
+status: DONE
+agent: Jules
+---
 # Mission: Shared Task List Decomposition & Schema Refinement
 
 **Title:** Shared Task List Decomposition & Schema Refinement

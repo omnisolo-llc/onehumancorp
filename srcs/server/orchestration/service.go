@@ -1861,6 +1861,14 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
+	mux.HandleFunc("/api/orchestration/tasks/decompose", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleDecomposeTask(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleCreateTask(w, r, tm)
@@ -2004,3 +2012,46 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 
 
+
+func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var req struct {
+		OrganizationID string `json:"organization_id"`
+		TaskID         string `json:"task_id"`
+		SubTasks       []struct {
+			Title        string   `json:"title"`
+			Description  string   `json:"description"`
+			Priority     string   `json:"priority"`
+			Dependencies []string `json:"dependencies"`
+		} `json:"sub_tasks"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var createdTasks []*SharedTask
+	for _, st := range req.SubTasks {
+		// Sub-tasks do not depend on the parent task. The parent task should ideally depend on them, but
+		// for now we just create the sub-tasks with their own explicitly provided dependencies.
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, st.Dependencies, st.Title, st.Description, st.Priority)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
+			return
+		}
+		// Set parent_plan_id and inherit parent's depth + 1
+		if tx, err := tm.db.Begin(r.Context()); err == nil {
+			_, _ = tx.Exec(r.Context(), `
+				UPDATE shared_tasks
+				SET parent_plan_id = $1,
+				    depth = (SELECT depth FROM shared_tasks WHERE id = $1) + 1
+				WHERE id = $2
+			`, req.TaskID, t.ID)
+			_ = tx.Commit(r.Context())
+		}
+		createdTasks = append(createdTasks, t)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(createdTasks)
+}
