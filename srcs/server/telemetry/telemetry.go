@@ -47,6 +47,7 @@ var (
 	taskFailedCounter metric.Int64Counter
 	cacheHitsCounter           metric.Int64Counter
 	cacheMissesCounter         metric.Int64Counter
+	tokensSavedCounter           metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter    metric.Int64Counter
@@ -401,6 +402,14 @@ func InitWithMeter(m mockableMeter) error {
 	cacheMissesCounter, err = m.Int64Counter(
 		"ohc_cache_misses_total",
 		metric.WithDescription("Total cache misses for LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	tokensSavedCounter, err = m.Int64Counter(
+		"ohc_tokens_saved_by_cache_total",
+		metric.WithDescription("Estimated tokens saved by utilizing cache hits"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -896,6 +905,28 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
+}
+
+
+// RecordTokensSaved increments the global counter for estimated tokens saved by cache hits.
+func RecordTokensSaved(ctx context.Context, operation string, cacheType string, estimatedTokens int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":  operation,
+			"cache_type": cacheType,
+			"estimated_tokens": estimatedTokens,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "tokens_saved", string(payloadBytes))
+	}
+	if tokensSavedCounter == nil {
+		return
+	}
+	tokensSavedCounter.Add(ctx, estimatedTokens, metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("cache_type", cacheType),
+	))
 }
 
 // RecordCacheHit increments the global counter for LLM cache hits.
