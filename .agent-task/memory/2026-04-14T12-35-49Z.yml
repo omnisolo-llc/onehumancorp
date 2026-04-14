@@ -1,0 +1,6 @@
+type: architecture_finding
+topic: kairos_orchestration
+details: >
+  Determined that KAIROS requires a tri-state approach to orchestration depending on deployment mode.
+  Cloud-Native leverages PostgreSQL (FOR UPDATE SKIP LOCKED) and Redis Pub/Sub.
+  Standalone uses SQLite mutexes and in-memory Go Channels.
