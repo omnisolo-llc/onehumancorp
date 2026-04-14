@@ -465,36 +465,3 @@ func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
     }
 }
-
-func (s *Server) handleViralCoefficientMetrics(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	s.mu.RLock()
-	refs := append([]Referral(nil), s.referrals...)
-	s.mu.RUnlock()
-
-	var totalConversions int
-	inviters := make(map[string]bool)
-
-	for _, ref := range refs {
-		totalConversions += ref.Conversions
-		inviters[ref.UserID] = true
-	}
-
-	uniqueInviters := len(inviters)
-	kFactor := 0.0
-	if uniqueInviters > 0 {
-		kFactor = float64(totalConversions) / float64(uniqueInviters)
-	}
-
-	type ViralCoefficientMetricsResponse struct {
-		ViralCoefficient float64 `json:"viral_coefficient"`
-		OrganizationID   string  `json:"organization_id"`
-	}
-
-	res := ViralCoefficientMetricsResponse{ViralCoefficient: kFactor, OrganizationID: "default"}
-	writeJSON(w, res)
-}
