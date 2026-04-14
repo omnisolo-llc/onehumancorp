@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tasks",
+    srcs = [
+        "queue.go",
+        "router.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/api/tasks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)
+
+go_test(
+    name = "tasks_test",
+    srcs = ["queue_test.go"],
+    embed = [":tasks"],
+    deps = [
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite"
+    ],
+)

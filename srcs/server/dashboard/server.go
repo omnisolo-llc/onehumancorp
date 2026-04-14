@@ -23,6 +23,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/api/tasks"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
 	"github.com/onehumancorp/mono/srcs/server/utils")
@@ -494,6 +495,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux := http.NewServeMux()
 	if server.serveUI {
 		mux.HandleFunc("/", server.handleApp)
+	}
+	if hub.SIPDB() != nil && hub.SIPDB().Provider() != nil {
+		tasks.NewRouter(hub.SIPDB().Provider()).Register(mux)
 	}
 	mux.HandleFunc("/api/dashboard", server.handleDashboard)
 	mux.HandleFunc("/api/org", server.handleOrg)

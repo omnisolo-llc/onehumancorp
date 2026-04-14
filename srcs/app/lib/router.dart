@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/login_screen.dart';
+import 'package:apps_desktop/ui/shared_task_list.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
@@ -26,10 +27,11 @@ import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/services/api_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -53,7 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/orchestration/tasks',
-            builder: (context, state) => const TaskListScreen(),
+            builder: (context, state) => const _TasksLoader(),
           ),
           GoRoute(
             path: '/business_setup',
@@ -279,5 +281,37 @@ class _NavItem extends StatelessWidget {
       selected: selected,
       onTap: () => context.go(path),
     );
+  }
+}
+
+class _TasksLoader extends ConsumerStatefulWidget {
+  const _TasksLoader({super.key});
+  @override
+  ConsumerState<_TasksLoader> createState() => _TasksLoaderState();
+}
+class _TasksLoaderState extends ConsumerState<_TasksLoader> {
+  bool _loading = true;
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+  Future<void> _loadTasks() async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      if (api != null) {
+        final rawTasks = await api.listSharedTasks();
+        ref.read(sharedTasksProvider.notifier).state = rawTasks;
+      }
+    } catch (e) {
+      debugPrint('Failed to load tasks: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Scaffold(backgroundColor: Colors.transparent, body: Center(child: CircularProgressIndicator()));
+    return const SharedTaskListWidget();
   }
 }

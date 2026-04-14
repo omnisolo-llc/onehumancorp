@@ -54,6 +54,7 @@ go_library(
         "migrations/046_autodream_pgvector.sql",
         "migrations/047_competitor_metrics.sql",
 
+        "migrations/048_shared_tasks_schema.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

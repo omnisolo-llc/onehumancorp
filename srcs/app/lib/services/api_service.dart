@@ -496,7 +496,7 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> listSharedTasks() async {
     final res = await _client.get(
-      Uri.parse('$baseUrl/api/shared-tasks'),
+      Uri.parse('$baseUrl/api/tasks/list'),
       headers: _headers,
     );
     _checkStatus(res);
