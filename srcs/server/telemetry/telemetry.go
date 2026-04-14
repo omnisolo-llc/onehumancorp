@@ -62,6 +62,7 @@ var (
 	SyncPayloadSize metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize metric.Int64Histogram
+	agentExecutionTracesTotal metric.Int64Counter
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
@@ -260,6 +261,14 @@ func InitWithMeter(m mockableMeter) error {
 	syncDaemonBatchSize, err = m.Int64Histogram(
 		"sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentExecutionTracesTotal, err = m.Int64Counter(
+		"ohc_agent_execution_traces_total",
+		metric.WithDescription("Total number of agent execution traces"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1068,6 +1077,9 @@ func RecordSyncPayloadSize(ctx context.Context, size int64) {
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
 func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+	if BufferMetricFunc != nil {
+		BufferMetricFunc(ctx, "ohc_sync_daemon_batch_size", fmt.Sprintf("%d", size))
+	}
 	if syncDaemonBatchSize == nil {
 		return
 	}
@@ -1293,4 +1305,23 @@ func envBoolDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return val == "true"
+}
+
+
+// RecordAgentExecutionTrace records an agent execution trace.
+func RecordAgentExecutionTrace(ctx context.Context, agentID string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id": agentID,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_agent_execution_traces_total", string(payloadBytes))
+	}
+	if agentExecutionTracesTotal == nil {
+		return
+	}
+	agentExecutionTracesTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+	))
 }

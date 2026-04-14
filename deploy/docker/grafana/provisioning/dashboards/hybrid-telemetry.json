@@ -1105,6 +1105,44 @@
       "title": "Deliberation Phase Duration",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "id": 1000,
+      "title": "Sync Daemon Batch Size",
+      "type": "timeseries",
+      "datasource": "${datasource}",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 116
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ohc_sync_daemon_batch_size_bucket[5m])))",
+          "legendFormat": "95th Percentile Batch Size",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 1001,
+      "title": "Agent Execution Traces",
+      "type": "timeseries",
+      "datasource": "${datasource}",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 116
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_execution_traces_total[5m])) by (agent_id)",
+          "legendFormat": "{{agent_id}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",

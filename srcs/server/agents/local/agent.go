@@ -1,6 +1,7 @@
 package local
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"context"
 	"fmt"
 	"log/slog"
@@ -86,6 +87,8 @@ func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
 // Run drives the agentic loop until the task completes, fails, or is killed.
 // It is designed to be called in its own goroutine.
 func (a *Agent) Run(ctx context.Context) {
+	// Record agent execution trace
+	telemetry.RecordAgentExecutionTrace(ctx, a.state.ID)
 	ts := a.state
 	ts.setStatus(TaskStatusRunning)
 
