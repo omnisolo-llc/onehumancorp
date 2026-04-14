@@ -1,4 +1,3 @@
-
 package telemetry
 
 import (
@@ -21,60 +20,64 @@ import (
 )
 
 var (
+	IdentityVerificationSuccessTotal metric.Int64Counter
+	IdentityVerificationFailureTotal metric.Int64Counter
+	SyncConflictsResolvedTotal       metric.Int64Counter
+	OmniContextBytesRouted           metric.Int64Counter
 
-	SubAgentExecutionDuration        metric.Float64Histogram
-	SubAgentFailuresTotal            metric.Int64Counter
-	meter            metric.Meter
-	requestCounter   metric.Int64Counter
-	latencyHistogram metric.Float64Histogram
-	MeshLatencyRecorder metric.Float64Histogram
+	SubAgentExecutionDuration  metric.Float64Histogram
+	SubAgentFailuresTotal      metric.Int64Counter
+	meter                      metric.Meter
+	requestCounter             metric.Int64Counter
+	latencyHistogram           metric.Float64Histogram
+	MeshLatencyRecorder        metric.Float64Histogram
 	SIPSyncLatencyRecorder     metric.Float64Histogram
 	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
-	tokenUsageCounter          metric.Int64Counter
-	tokenBurnRateGauge         metric.Float64Gauge
-	usdBurnRateGauge           metric.Float64Gauge
-	agentApiCallsCounter       metric.Int64Counter
-	agentExecutionTracesTotal metric.Int64Counter
-	agentApiErrorsCounter      metric.Int64Counter
-	humanInteractionsCounter   metric.Int64Counter
-	meetingEventsCounter       metric.Int64Counter
-	swarmTasksCompletedCounter metric.Int64Counter
-	swarmTaskTransitionsCounter metric.Int64Counter
-	swarmTaskQueueLengthGauge   metric.Int64UpDownCounter
-	swarmTaskProcessingLatency  metric.Float64Histogram
-	taskEnqueuedCounter metric.Int64Counter
-	taskFailedCounter metric.Int64Counter
-	cacheHitsCounter           metric.Int64Counter
-	cacheMissesCounter         metric.Int64Counter
-	tokensSavedCounter           metric.Int64Counter
-	AutoDreamMemoriesIngestedCounter metric.Int64Counter
+	tokenUsageCounter                  metric.Int64Counter
+	tokenBurnRateGauge                 metric.Float64Gauge
+	usdBurnRateGauge                   metric.Float64Gauge
+	agentApiCallsCounter               metric.Int64Counter
+	agentExecutionTracesTotal          metric.Int64Counter
+	agentApiErrorsCounter              metric.Int64Counter
+	humanInteractionsCounter           metric.Int64Counter
+	meetingEventsCounter               metric.Int64Counter
+	swarmTasksCompletedCounter         metric.Int64Counter
+	swarmTaskTransitionsCounter        metric.Int64Counter
+	swarmTaskQueueLengthGauge          metric.Int64UpDownCounter
+	swarmTaskProcessingLatency         metric.Float64Histogram
+	taskEnqueuedCounter                metric.Int64Counter
+	taskFailedCounter                  metric.Int64Counter
+	cacheHitsCounter                   metric.Int64Counter
+	cacheMissesCounter                 metric.Int64Counter
+	tokensSavedCounter                 metric.Int64Counter
+	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	TeammateMeshBroadcastsCounter    metric.Int64Counter
-	TeammateMeshDirectMessagesCounter metric.Int64Counter
-	TaskQueueLengthGauge       metric.Int64UpDownCounter
-	subAgentQueueLengthGauge   metric.Int64UpDownCounter
-	postgresLockContentionCounter       metric.Int64Counter
-	llmNetworkLatencyHistogram          metric.Float64Histogram
-	ToolAutoCorrectionTotal    metric.Int64Counter
-	DeliberationPhaseDuration  metric.Float64Histogram
-	TaskProcessingLatency      metric.Float64Histogram
-	AgentTransitionLatency     metric.Float64Histogram
+	TeammateMeshBroadcastsCounter      metric.Int64Counter
+	TeammateMeshDirectMessagesCounter  metric.Int64Counter
+	TaskQueueLengthGauge               metric.Int64UpDownCounter
+	subAgentQueueLengthGauge           metric.Int64UpDownCounter
+	postgresLockContentionCounter      metric.Int64Counter
+	llmNetworkLatencyHistogram         metric.Float64Histogram
+	ToolAutoCorrectionTotal            metric.Int64Counter
+	DeliberationPhaseDuration          metric.Float64Histogram
+	TaskProcessingLatency              metric.Float64Histogram
+	AgentTransitionLatency             metric.Float64Histogram
 
-	SyncCompletedCount metric.Int64Counter
-	SyncFailedCount    metric.Int64Counter
-	SyncEscalationsCount metric.Int64Counter
-	SyncLatency metric.Float64Histogram
-	SyncPayloadSize metric.Int64Histogram
+	SyncCompletedCount     metric.Int64Counter
+	SyncFailedCount        metric.Int64Counter
+	SyncEscalationsCount   metric.Int64Counter
+	SyncLatency            metric.Float64Histogram
+	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
-	syncDaemonBatchSize metric.Int64Histogram
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter metric.Int64Counter
 	sqliteRetryExhaustedCounter metric.Int64Counter
 
-	autoDreamSyncDuration       metric.Float64Histogram
-	autoDreamQueryDuration      metric.Float64Histogram
-	meshBroadcastTotal          metric.Int64Counter
+	autoDreamSyncDuration  metric.Float64Histogram
+	autoDreamQueryDuration metric.Float64Histogram
+	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -82,8 +85,8 @@ var (
 
 	// Credit cards usually have dashes or spaces, or at least shouldn't be confused with timestamps (13 digits).
 	// We'll require at least one separator to reduce false positives with timestamps.
-	creditCardRegex = regexp.MustCompile(`\b\d{4}[- ]\d{4}[- ]\d{4}[- ]\d{4}\b`)
-	openaiKeyRegex  = regexp.MustCompile(`\bsk-[a-zA-Z0-9]{48}\b`)
+	creditCardRegex   = regexp.MustCompile(`\b\d{4}[- ]\d{4}[- ]\d{4}[- ]\d{4}\b`)
+	openaiKeyRegex    = regexp.MustCompile(`\bsk-[a-zA-Z0-9]{48}\b`)
 	anthropicKeyRegex = regexp.MustCompile(`\bsk-ant-api03-[a-zA-Z0-9\-_]{93,95}\b`)
 	awsAccessKeyRegex = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
 	// Use lookaround-like boundaries for AWS Secret Key as it can contain / or + which are non-word chars for \b
@@ -457,7 +460,6 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
-
 
 	ToolAutoCorrectionTotal, err = m.Int64Counter(
 		"ohc_tool_autocorrection_total",
@@ -910,13 +912,12 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 	}
 }
 
-
 // RecordTokensSaved increments the global counter for estimated tokens saved by cache hits.
 func RecordTokensSaved(ctx context.Context, operation string, cacheType string, estimatedTokens int64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"operation":  operation,
-			"cache_type": cacheType,
+			"operation":        operation,
+			"cache_type":       cacheType,
 			"estimated_tokens": estimatedTokens,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1060,7 +1061,6 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 	))
 }
 
-
 // RecordPostgresLockContention increments the counter for PostgreSQL lock contentions.
 func RecordPostgresLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
@@ -1097,6 +1097,7 @@ func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64)
 		attribute.String("model", model),
 	))
 }
+
 // RecordTaskQueueLength modifies the queue length gauge.
 func RecordTaskQueueLength(ctx context.Context, amount int64) {
 	if BufferMetricFunc != nil {
@@ -1441,5 +1442,32 @@ func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
 func RecordSubAgentFailure(ctx context.Context) {
 	if SubAgentFailuresTotal != nil {
 		SubAgentFailuresTotal.Add(ctx, 1)
+	}
+}
+
+// RecordIdentityVerification increments either success or failure counter based on the success flag.
+func RecordIdentityVerification(ctx context.Context, success bool) {
+	if success {
+		if IdentityVerificationSuccessTotal != nil {
+			IdentityVerificationSuccessTotal.Add(ctx, 1)
+		}
+	} else {
+		if IdentityVerificationFailureTotal != nil {
+			IdentityVerificationFailureTotal.Add(ctx, 1)
+		}
+	}
+}
+
+// RecordSyncConflictResolved increments the sync conflicts resolved counter.
+func RecordSyncConflictResolved(ctx context.Context) {
+	if SyncConflictsResolvedTotal != nil {
+		SyncConflictsResolvedTotal.Add(ctx, 1)
+	}
+}
+
+// RecordOmniContextBytes increments the OmniContext bytes routed counter.
+func RecordOmniContextBytes(ctx context.Context, bytes int64) {
+	if OmniContextBytesRouted != nil {
+		OmniContextBytesRouted.Add(ctx, bytes)
 	}
 }
