@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2] - 2026-04-14
+### Added
+- Proactive Task List Dashboard Integration using Glassmorphism aesthetic tokens.
+- Scribe AutoDream Sync Daemon Walkthrough interactive guide.
+
+### Fixed
+- Sentinel [Hybrid Security Fix] Tenant Data Isolation in Blob & FS Providers (#3933).
+
 ## [0.3.1] - 2026-04-14
 ### Added
 - Hybrid MCP RAG Protocol (Phases 1-3) implementation for scalable knowledge retrieval (Cloud).
