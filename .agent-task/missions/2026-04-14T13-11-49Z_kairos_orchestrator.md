@@ -2,8 +2,7 @@
 title: "KAIROS Orchestrator Feature Set"
 priority: P0
 estimated_scope: Large
-status: BLOCKED
-blockers: "Requires modifying files outside of designated domain (apps/growth/, services/growth/, lib/analytics/)."
+status: PENDING
 ---
 
 # Title: KAIROS Orchestrator Feature Set
