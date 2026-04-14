@@ -11,6 +11,7 @@ import (
 var (
 	meter          = otel.Meter("github.com/onehumancorp/mono/ohc")
 	costCounter    metric.Float64Counter
+	savingsCounter metric.Float64Counter
 )
 
 func init() {
@@ -18,6 +19,10 @@ func init() {
 	costCounter, err = meter.Float64Counter("llm.cost.usd", metric.WithDescription("Accumulated LLM cost in USD"))
 	if err != nil {
 		// Log the error but do not panic to avoid crashing the whole system
+		_ = err
+	}
+	savingsCounter, err = meter.Float64Counter("llm.savings.usd", metric.WithDescription("Accumulated LLM savings in USD"))
+	if err != nil {
 		_ = err
 	}
 }
@@ -32,6 +37,8 @@ type PricingRates struct {
 var ModelPricing = map[string]PricingRates{
 	"claude-3-5-sonnet-20240620": {Input: 3.0, Output: 15.0, Cached: 0.30}, // Example rates
 	"gpt-4o":                     {Input: 5.0, Output: 15.0, Cached: 2.50},
+	"claude-3-haiku-20240307":    {Input: 0.25, Output: 1.25, Cached: 0.025},
+	"claude-3-opus-20240229":     {Input: 15.0, Output: 75.0, Cached: 1.50},
 	"gpt-4o-mini":                {Input: 0.15, Output: 0.60, Cached: 0.075},
 }
 
@@ -54,4 +61,23 @@ func CalculateCost(ctx context.Context, model string, promptTokens, completionTo
 	}
 
 	return totalCost
+}
+
+// CalculateSavings computes how much money (in USD) was saved by using cached tokens
+// instead of regular input tokens.
+func CalculateSavings(ctx context.Context, model string, cachedTokens int) float64 {
+	rates, ok := ModelPricing[strings.ToLower(model)]
+	if !ok || cachedTokens <= 0 {
+		return 0.0
+	}
+
+	regularCost := float64(cachedTokens) * (rates.Input / 1000000.0)
+	cachedCost := float64(cachedTokens) * (rates.Cached / 1000000.0)
+	savings := regularCost - cachedCost
+
+	if savingsCounter != nil && savings > 0 {
+		savingsCounter.Add(ctx, savings)
+	}
+
+	return savings
 }
