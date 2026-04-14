@@ -36,7 +36,24 @@ show_menu() {
     echo ""
 }
 
+
+check_sqlite() {
+    echo -e "${DIM}[Verifying SQLite for Standalone Mode...]${RESET}"
+    if ! command -v sqlite3 &> /dev/null; then
+        echo -e "${BOLD}${RED}Error: sqlite3 could not be found. Please install it.${RESET}"
+        return 1
+    fi
+    mkdir -p .sipdb
+    if ! touch .sipdb/dummy.db; then
+        echo -e "${BOLD}${RED}Error: Cannot write to .sipdb directory. Check permissions.${RESET}"
+        return 1
+    fi
+    rm -f .sipdb/dummy.db
+    echo -e "${BOLD}${GREEN}✔ SQLite is installed and .sipdb is writable.${RESET}"
+}
+
 run_setup() {
+    check_sqlite
     echo -e "${DIM}[Executing deploy/scripts/ohc-setup.sh...]${RESET}"
     if bash deploy/scripts/ohc-setup.sh; then
         echo -e "${GREEN}Setup completed successfully.${RESET}\n"

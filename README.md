@@ -142,6 +142,10 @@ flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
 bazelisk run //srcs/server:ohc
 ```
 
+
+### Standalone Mode Requirements
+For Standalone Desktop Mode, OHC seamlessly falls back to a local SQLite database (`.sipdb/`). The CLI wizard ensures `sqlite3` is installed and the directory is writable.
+
 ## Configuration
 
 | Variable | Description |
