@@ -78,4 +78,4 @@ Chart.lock
 
 # Rust build artifacts
 /target/
-/.agent-task
+# /.agent-task
