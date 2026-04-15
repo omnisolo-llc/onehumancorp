@@ -85,7 +85,7 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 			return nil, err
 		}
 		return map[string]interface{}{"status": "success", "entries": entries}, nil
-		case "rag_query":
+	case "rag_query":
 		query, ok := arguments["query"].(string)
 		if !ok {
 			return nil, errors.New("missing or invalid 'query' argument")
