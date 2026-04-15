@@ -7,9 +7,21 @@ import (
 
 // RunDayOneSetup orchestrates the Day One setup process for OHC.
 func RunDayOneSetup(ctx context.Context, isCloud bool) (string, error) {
+	// 0. Pre-run audit
+	diagRes := RunDiagnostics(isCloud)
+	if !diagRes.Passed {
+		// Log or handle initial diagnostics failure if needed, but we proceed to provision
+	}
+
 	// 1. Provision environment
 	if err := ProvisionEnvironment(ctx, isCloud); err != nil {
 		return "", fmt.Errorf("provisioning failed: %w", err)
+	}
+
+	// Post-provision audit
+	diagRes = RunDiagnostics(isCloud)
+	if !diagRes.Passed {
+		return "", fmt.Errorf("post-provisioning diagnostics failed: %v", diagRes.Details)
 	}
 
 	// 2. Interactive setup
