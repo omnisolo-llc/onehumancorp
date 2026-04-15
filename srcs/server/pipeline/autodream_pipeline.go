@@ -269,6 +269,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 			summary = resp.Text
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
+			telemetry.RecordAutoDreamCompressionError(ctx, s.AgentID, "llm_summarization_failed")
 		}
 
 		var embeddingStr string
@@ -276,7 +277,9 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			embedding, embedErr := p.minimaxClient.GenerateEmbedding(ctxTimeout, summary)
 			cancel()
-			if embedErr == nil && len(embedding) > 0 {
+			if embedErr != nil {
+				telemetry.RecordAutoDreamCompressionError(ctx, s.AgentID, "embedding_failed")
+			} else if len(embedding) > 0 {
 				str := fmt.Sprintf("%v", embedding)
 				str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
 				embeddingStr = "[" + str + "]"
@@ -313,6 +316,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 
 			if err != nil {
 				slog.Error("AutoDreamPipeline: failed to insert consolidated memory", "error", err)
+				telemetry.RecordAutoDreamCompressionError(ctx, s.AgentID, "db_insert_failed")
 				return err
 			}
 
@@ -392,6 +396,7 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 			summary = resp.Text
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
+			telemetry.RecordAutoDreamIngestionError(ctx, "system", "llm_summarization_failed")
 		}
 
 		var embeddingStr string
@@ -399,7 +404,9 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			embedding, embedErr := p.minimaxClient.GenerateEmbedding(ctxTimeout, summary)
 			cancel()
-			if embedErr == nil && len(embedding) > 0 {
+			if embedErr != nil {
+				telemetry.RecordAutoDreamIngestionError(ctx, "system", "embedding_failed")
+			} else if len(embedding) > 0 {
 				str := fmt.Sprintf("%v", embedding)
 				str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
 				embeddingStr = "[" + str + "]"
@@ -428,6 +435,7 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 
 		if err != nil {
 			slog.Error("AutoDreamPipeline: failed to insert consolidated file memory", "error", err)
+			telemetry.RecordAutoDreamIngestionError(ctx, "system", "db_insert_failed")
 			// rename back to retry later
 			os.Rename(processingPath, filePath)
 			continue
