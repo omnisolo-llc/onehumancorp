@@ -685,3 +685,36 @@ Checks database availability, sync backlogs, and mesh channel connectivity.
 ```
 
 </div>
+
+<div class="glass-panel" markdown="1">
+
+### 4.4 KAIROS Shared Task List API
+
+**Endpoint:** `GET /api/v1/orchestration/tasks`
+Retrieves a list of all active orchestration tasks in the queue. Supports pagination.
+
+**Example Request:**
+```bash
+curl -X GET https://api.ohc.local/v1/orchestration/tasks \
+  -H "Authorization: Bearer <JWT_OR_SVID>" \
+  -H "X-OHC-Tenant-ID: org_acme_123"
+```
+
+</div>
+
+<div class="glass-panel" markdown="1">
+
+### 4.5 Teammate Mesh Broadcast API
+
+**Endpoint:** `POST /api/mesh/broadcast`
+Broadcast a realtime event to sub-agents subscribed to a specific mesh topic.
+
+**Example Request:**
+```bash
+curl -X POST https://api.ohc.local/mesh/broadcast \
+  -H "Authorization: Bearer <JWT_OR_SVID>" \
+  -H "X-OHC-Tenant-ID: org_acme_123" \
+  -d '{"topic": "docs", "payload": "task completed"}'
+```
+
+</div>

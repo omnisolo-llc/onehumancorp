@@ -17,3 +17,5 @@ toc:
     path: /docs/public/index.md
   - title: Archive
     path: /docs/archive/index.md
+  - title: Help Portal
+    path: /docs/help_portal_interactive.md

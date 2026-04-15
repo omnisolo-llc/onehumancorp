@@ -100,40 +100,47 @@ sequenceDiagram
 
 ## 5. Advanced KAIROS Orchestration
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
-- **[Distributed State Machine](../features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
-- **[Sub-Agent Queue](../features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
-- **[AutoDream Pipeline](../features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
+- **[Distributed State Machine](features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
+- **[Sub-Agent Queue](features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
+- **[AutoDream Pipeline](features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ## 6. Deep Dive Walkthroughs
-- **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
-- **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
-- **[KAIROS Orchestration: Visual Walkthrough](kairos_orchestration.md)**
-- **[Interactive CLI Guide for AutoDream](autodream_cli_guide.md)**
-- **[KAIROS Orchestration CLI Walkthrough](kairos_cli.md)**
-- **[Elastic Swarm Bursting: Visual Walkthrough](elastic_swarm_bursting.md)**
-- **[Hybrid Troubleshooting Guide](hybrid_troubleshooting.md)**
-- **[Remote API Endpoints Configuration Walkthrough](thin_client_api_configuration.md)**
-- **[KAIROS UltraPlan Deliberation Architecture: Visual Walkthrough](ultraplan_deliberation.md)**
-- **[Full-Spectrum Hybrid Observability Dashboard Walkthrough](hybrid_observability_dashboard.md)**
-- **[KAIROS Interactive API Playbook Walkthrough](kairos_interactive_api_playbook.md)**: Interactive guide to KAIROS API endpoints.
-- **[Hybrid Health Probe Walkthrough](hybrid_health_probe.md)**: Visual guide to the system health checks across standalone and cloud modes.
-- **[Swarm Intelligence Protocol Walkthrough](swarm_intelligence_protocol.md)**: Visual guide to OHC-SIP shared memory and telemetry.
-- **[Hybrid CRDT State Synchronization Walkthrough](hybrid_crdt_sync_mcp.md)**: Visual guide to the CRDT MCP offline sync strategy.
-- **[Hybrid Swarm-Aware Telemetry Mesh Walkthrough](hybrid_swarm_telemetry_mesh.md)**: Visual guide to the mTLS telemetry buffering and sync.
-- **[Hybrid FS MCP Architecture Walkthrough](hybrid_fs_mcp_architecture.md)**: Visual guide to the Machine Context Protocol state sync.
-- **[AutoDream Sync Daemon Walkthrough](autodream_sync.md)**: Visual guide to the Hybrid AutoDream Synchronization.
-- **[Distributed State Machine Walkthrough](distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
-- **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
-- **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
-- **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
-- **[AutoDream Pipeline Walkthrough](autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
-- **[Omni-Context Sub-Agent Routing Walkthrough](omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
-- **[Virtual Meeting Room Walkthrough](virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
-- **[Hybrid Swarm-Aware MCP Telemetry Mesh Walkthrough](hybrid_telemetry_mesh.md)**: Visual guide to full-spectrum hybrid observability.
+- **[OHC Walkthrough: Custom Agent Creation](walkthroughs/custom_agent_creation_walkthrough.md)**
+- **[KAIROS Shared Task List: Visual Walkthrough](walkthroughs/shared_task_list_visual.md)**
+- **[KAIROS Orchestration: Visual Walkthrough](walkthroughs/kairos_orchestration.md)**
+- **[Interactive CLI Guide for AutoDream](walkthroughs/autodream_cli_guide.md)**
+- **[KAIROS Orchestration CLI Walkthrough](walkthroughs/kairos_cli.md)**
+- **[Elastic Swarm Bursting: Visual Walkthrough](walkthroughs/elastic_swarm_bursting.md)**
+- **[Hybrid Troubleshooting Guide](walkthroughs/hybrid_troubleshooting.md)**
+- **[Remote API Endpoints Configuration Walkthrough](walkthroughs/thin_client_api_configuration.md)**
+- **[KAIROS UltraPlan Deliberation Architecture: Visual Walkthrough](walkthroughs/ultraplan_deliberation.md)**
+- **[Full-Spectrum Hybrid Observability Dashboard Walkthrough](walkthroughs/hybrid_observability_dashboard.md)**
+- **[KAIROS Interactive API Playbook Walkthrough](walkthroughs/kairos_interactive_api_playbook.md)**: Interactive guide to KAIROS API endpoints.
+- **[Hybrid Health Probe Walkthrough](walkthroughs/hybrid_health_probe.md)**: Visual guide to the system health checks across standalone and cloud modes.
+- **[Swarm Intelligence Protocol Walkthrough](walkthroughs/swarm_intelligence_protocol.md)**: Visual guide to OHC-SIP shared memory and telemetry.
+- **[Hybrid CRDT State Synchronization Walkthrough](walkthroughs/hybrid_crdt_sync_mcp.md)**: Visual guide to the CRDT MCP offline sync strategy.
+- **[Hybrid Swarm-Aware Telemetry Mesh Walkthrough](walkthroughs/hybrid_swarm_telemetry_mesh.md)**: Visual guide to the mTLS telemetry buffering and sync.
+- **[Hybrid FS MCP Architecture Walkthrough](walkthroughs/hybrid_fs_mcp_architecture.md)**: Visual guide to the Machine Context Protocol state sync.
+- **[AutoDream Sync Daemon Walkthrough](walkthroughs/autodream_sync.md)**: Visual guide to the Hybrid AutoDream Synchronization.
+- **[Distributed State Machine Walkthrough](walkthroughs/distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
+- **[Hybrid MCP RAG Protocol Walkthrough](walkthroughs/hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
+- **[KAIROS Sub-Agent Orchestration Walkthrough](walkthroughs/sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
+- **[Teammate Mesh Walkthrough](walkthroughs/teammate_mesh_visual.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
+- **[AutoDream Pipeline Walkthrough](walkthroughs/autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
+- **[Omni-Context Sub-Agent Routing Walkthrough](walkthroughs/omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
+- **[Virtual Meeting Room Walkthrough](walkthroughs/virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
+- **[Hybrid Swarm-Aware MCP Telemetry Mesh Walkthrough](walkthroughs/hybrid_telemetry_mesh.md)**: Visual guide to full-spectrum hybrid observability.
 
-- **[Thin Client Integration Walkthrough](thin_client_integration.md)**: Visual guide to the UI-only Thin Client connection.
-- **[SPIFFE Identity Onboarding Walkthrough](spiffe_identity_onboarding.md)**: Visual guide to the zero-trust secure agent identity protocol.
+- **[Thin Client Integration Walkthrough](walkthroughs/thin_client_integration.md)**: Visual guide to the UI-only Thin Client connection.
+- **[SPIFFE Identity Onboarding Walkthrough](walkthroughs/spiffe_identity_onboarding.md)**: Visual guide to the zero-trust secure agent identity protocol.
 
-*For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
+*For more advanced topics, API references, and payload examples, see the [API Playbook](api/playbook.md).*
+
+
+## 7. API References and Visual Guides
+
+* [API Playbook](api/playbook.md): Detailed API contracts for KAIROS Orchestration.
+* [Shared Task List Visual Walkthrough](walkthroughs/shared_task_list_visual.md): Interactive diagram detailing the orchestration DAG.
+* [Teammate Mesh Visual Walkthrough](walkthroughs/teammate_mesh_visual.md): Interactive breakdown of the Pub/Sub sub-agent communication layer.
 
 </div>
