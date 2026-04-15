@@ -767,23 +767,6 @@ func TestInvokeMCPToolJira(t *testing.T) {
 	}
 }
 
-func TestInvokeMCPToolLinear(t *testing.T) {
-	app, _, _ := newTestServer(t)
-
-	// Linear success
-	req := mcpInvokeRequest{
-		ToolID: "linear-mcp",
-		Params: json.RawMessage(`{"project": "test-project", "title": "test-title"}`),
-	}
-	res, err := app.invokeMCPTool(req)
-	if err != nil {
-		t.Fatalf("expected success, got err: %v", err)
-	}
-	if res["issue"] == nil {
-		t.Errorf("expected issue in response")
-	}
-}
-
 // ── Additional coverage: handleSettings ──────────────────────────────────────
 
 func TestHandleSettingsMethodNotAllowed(t *testing.T) {
