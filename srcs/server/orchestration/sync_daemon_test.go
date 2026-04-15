@@ -135,3 +135,65 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	// No panic implies successful shutdown via stop channel
 }
+
+func TestHybridMCPRAGDaemon_ProcessSync_Bursting(t *testing.T) {
+	defer ClearSemaphore()
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT,
+			payload TEXT,
+			synced_to_cloud BOOLEAN DEFAULT false
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create agent_missions table: %v", err)
+	}
+
+	_, err = sqlDB.Exec(`
+		INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+		VALUES
+			('m-burst', 'BURSTING', '{"task":"test-burst-mission"}', false)
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payloads []SyncDaemonPayload
+		if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+			t.Errorf("failed to decode payload: %v", err)
+		return }
+		if len(payloads) != 1 {
+			t.Errorf("expected 1 payload, got %d", len(payloads))
+		return }
+		if payloads[0].ID != "m-burst" {
+			t.Errorf("expected payload ID 'm-burst', got '%s'", payloads[0].ID)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	daemon := NewHybridMCPRAGDaemon(dbWrapper, 1*time.Minute, ts.URL)
+	processed := daemon.ProcessSync(context.Background())
+	if !processed {
+		t.Fatalf("expected ProcessSync to return true")
+	}
+
+	var synced bool
+	err = sqlDB.QueryRow("SELECT synced_to_cloud FROM agent_missions WHERE id = 'm-burst'").Scan(&synced)
+	if err != nil {
+		t.Fatalf("failed to query sync status: %v", err)
+	}
+	if !synced {
+		t.Errorf("expected mission to be synced")
+	}
+}

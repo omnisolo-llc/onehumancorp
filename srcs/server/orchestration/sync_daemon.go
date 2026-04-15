@@ -87,9 +87,9 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 	defer tx.Rollback(ctx)
 
-		query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'PENDING' LIMIT 500"
+		query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status IN ('PENDING', 'BURSTING') LIMIT 500"
 	if d.dbWrapper.IsSQLite() {
-		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'PENDING' LIMIT 500"
+		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status IN ('PENDING', 'BURSTING') LIMIT 500"
 	}
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
