@@ -1,2 +1,0 @@
-type: "ARCHITECTURAL_DECISION"
-content: "Decomposed the High-Level OS features into Phase 1 (Shared Task List), Phase 2 (Teammate Mesh), and Phase 3 (autoDream). Identified missing Teammate Mesh integration in task state machine."
