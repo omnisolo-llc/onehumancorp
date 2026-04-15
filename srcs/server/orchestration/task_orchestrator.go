@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/checkpointer"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -59,6 +60,7 @@ type DefaultTaskOrchestrator struct {
 	workerWg     sync.WaitGroup
 	taskQueue    queue.TaskQueue
 	subWorker    *SubAgentWorker
+	checkpointer checkpointer.CheckpointSaver
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh MeshTransport) TaskOrchestrator {
@@ -85,6 +87,7 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 		workerCancel: cancel,
 		taskQueue:    tq,
 		subWorker:    subWorker,
+		checkpointer: checkpointer.NewPGSaver(provider),
 	}
 	to.StartBackgroundWorker()
 	subWorker.Start(ctx)
