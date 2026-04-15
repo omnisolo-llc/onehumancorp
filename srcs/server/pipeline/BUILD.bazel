@@ -3,8 +3,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "pipeline",
     srcs = [
-        "pipeline.go",
         "autodream_pipeline.go",
+        "pipeline.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/pipeline",
     visibility = ["//visibility:public"],
@@ -20,14 +20,13 @@ go_library(
 go_test(
     name = "pipeline_test",
     srcs = [
-        "pipeline_test.go",
         "autodream_pipeline_test.go",
+        "pipeline_test.go",
     ],
     embed = [":pipeline"],
     deps = [
         "//srcs/server/agents/local",
         "//srcs/server/db",
         "//srcs/server/orchestration",
-        "//srcs/server/telemetry",
     ],
 )
