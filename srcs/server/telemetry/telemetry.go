@@ -263,6 +263,22 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	AutoDreamIngestionErrorCounter, err = m.Int64Counter(
+		"ohc_autodream_ingestion_error_total",
+		metric.WithDescription("Total number of ingestion errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamCompressionErrorCounter, err = m.Int64Counter(
+		"ohc_autodream_compression_error_total",
+		metric.WithDescription("Total number of compression errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
@@ -314,7 +330,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
-		"sync_daemon_batch_size",
+		"ohc_sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
 	)
 	if err != nil {
@@ -1432,7 +1448,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
