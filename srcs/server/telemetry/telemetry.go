@@ -73,8 +73,9 @@ var (
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize    metric.Int64Histogram
 
-	sqliteLockContentionCounter metric.Int64Counter
-	sqliteRetryExhaustedCounter metric.Int64Counter
+	sqliteLockContentionCounter   metric.Int64Counter
+	sqliteRetryExhaustedCounter   metric.Int64Counter
+	postgresRetryExhaustedCounter metric.Int64Counter
 
 	autoDreamSyncDuration  metric.Float64Histogram
 	autoDreamQueryDuration metric.Float64Histogram
@@ -560,6 +561,14 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	postgresRetryExhaustedCounter, err = m.Int64Counter(
+		"ohc_postgres_retry_exhausted_total",
+		metric.WithDescription("Total times a PostgreSQL transaction failed after exhausting retries."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	autoDreamSyncDuration, err = m.Float64Histogram(
 		"ohc_autodream_sync_duration_seconds",
 		metric.WithDescription("Latency of AutoDream sync operations in seconds"),
@@ -1012,6 +1021,24 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 		return
 	}
 	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordPostgresRetryExhausted increments the global counter for PostgreSQL transaction failed after exhausting retries.
+func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "postgres_retry_exhausted", string(payloadBytes))
+	}
+	if postgresRetryExhaustedCounter == nil {
+		return
+	}
+	postgresRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
 }

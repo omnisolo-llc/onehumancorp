@@ -324,6 +324,7 @@ func TestRecordSQLiteLockMetrics(t *testing.T) {
 	ctx := context.Background()
 	RecordSQLiteLockContention(ctx, "test_op")
 	RecordSQLiteRetryExhausted(ctx, "test_op")
+	RecordPostgresRetryExhausted(ctx, "test_op")
 }
 
 func TestRecordFunctions(t *testing.T) {
