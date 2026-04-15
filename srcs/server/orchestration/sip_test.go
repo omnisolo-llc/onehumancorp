@@ -246,7 +246,6 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
 	// 4. Bursting and new (should not be deleted)
 	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('4', 'BURSTING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
 	if err != nil {
