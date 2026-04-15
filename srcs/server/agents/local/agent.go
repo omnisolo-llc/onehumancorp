@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 const (
@@ -52,11 +50,6 @@ type AgentConfig struct {
 
 	// MaxTokensPerTurn is the max_tokens per API call.  Defaults to 8192.
 	MaxTokensPerTurn int
-
-	// DBProvider is the database provider used to persist task output.
-	// When set, streamed output is written to the agent_task_outputs table instead
-	// of the local filesystem, making the agent stateless with respect to disk.
-	DBProvider db.Provider
 }
 
 // Agent is a single agentic session that drives the LLM-tool loop for one task.
@@ -104,10 +97,10 @@ func (a *Agent) Run(ctx context.Context) {
 	ts := a.state
 	ts.setStatus(TaskStatusRunning)
 
-	// Initialise the output writer (database-backed when DBProvider is set).
-	out, err := newTaskOutput(ts.ID, a.cfg.DBProvider)
+	// Open the output file.
+	out, err := newTaskOutput(ts.OutputFile)
 	if err != nil {
-		slog.Error("local agent: failed to initialise output", "task", ts.ID, "err", err)
+		slog.Error("local agent: failed to open output file", "task", ts.ID, "err", err)
 		ts.err.Store(err.Error())
 		ts.setStatus(TaskStatusFailed)
 		return

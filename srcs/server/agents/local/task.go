@@ -116,10 +116,7 @@ type TaskState struct {
 	Prompt      string
 	WorkDir     string // working directory for bash/file tools
 	ToolUseID   string // optional tool_use id from the caller
-	// OutputFile is the logical key identifying where the task output is stored.
-	// For DB-backed runs it is "db://<taskID>"; for legacy file-backed runs it
-	// is the absolute path on disk.
-	OutputFile string
+	OutputFile  string // absolute path to the task output file
 
 	status  atomic.Value // stores TaskStatus
 	err     atomic.Value // stores error (string)
@@ -141,13 +138,13 @@ type TaskState struct {
 	notifiedOnce sync.Once
 }
 
-func newTaskState(id, description, prompt, workDir, outputKey, toolUseID string, cancel func()) *TaskState {
+func newTaskState(id, description, prompt, workDir, outputFile, toolUseID string, cancel func()) *TaskState {
 	ts := &TaskState{
 		ID:          id,
 		Description: description,
 		Prompt:      prompt,
 		WorkDir:     workDir,
-		OutputFile:  outputKey,
+		OutputFile:  outputFile,
 		ToolUseID:   toolUseID,
 		cancel:      cancel,
 		startAt:     time.Now(),

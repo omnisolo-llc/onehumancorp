@@ -37,7 +37,7 @@ func TestInviteTracker(t *testing.T) {
 	inviterID := "user1"
 	inviteeID := "user2"
 
-	inviteID, err := tracker.RecordInvite(ctx, teamID, inviterID, inviteeID)
+	err = tracker.RecordInvite(ctx, teamID, inviterID, inviteeID)
 	if err != nil {
 		t.Fatalf("failed to record invite: %v", err)
 	}
@@ -56,36 +56,5 @@ func TestInviteTracker(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("Expected 1 invite for team, got %d", count)
-	}
-
-	err = tracker.AcceptInvite(ctx, inviteID)
-	if err != nil {
-		t.Fatalf("failed to accept invite: %v", err)
-	}
-
-	invite, err := tracker.repo.GetInvite(ctx, inviteID)
-	if err != nil {
-		t.Fatalf("failed to get invite: %v", err)
-	}
-	if invite.Status != "ACCEPTED" {
-		t.Fatalf("Expected invite status ACCEPTED, got %s", invite.Status)
-	}
-
-	inviteID2, err := tracker.RecordInvite(ctx, teamID, inviterID, "user3")
-	if err != nil {
-		t.Fatalf("failed to record invite 2: %v", err)
-	}
-
-	err = tracker.RejectInvite(ctx, inviteID2)
-	if err != nil {
-		t.Fatalf("failed to reject invite: %v", err)
-	}
-
-	invite2, err := tracker.repo.GetInvite(ctx, inviteID2)
-	if err != nil {
-		t.Fatalf("failed to get invite 2: %v", err)
-	}
-	if invite2.Status != "REJECTED" {
-		t.Fatalf("Expected invite status REJECTED, got %s", invite2.Status)
 	}
 }

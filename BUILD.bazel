@@ -69,30 +69,21 @@ sh_binary(
 
 filegroup(
     name = "docs_srcs",
-    srcs = ["//docs:docs_srcs", "mkdocs.yml"],
+    srcs = glob(["docs/**"]) + ["mkdocs.yml"],
     visibility = ["//visibility:public"],
 )
 
-# Hermetic docs build via rules_python + pip-locked deps.
-# Usage: bazel run //:docs_build
-genrule(
+sh_binary(
     name = "docs_build",
-    srcs = [":docs_srcs"],
-    outs = ["docs_build_stamp"],
-    cmd = """
-$(execpath //docs:mkdocs_bin) build --strict
-touch $@
-""",
-    tools = ["//docs:mkdocs_bin"],
-    local = True,
+    srcs = ["docs/mkdocs_via_bazel.sh"],
+    args = ["build"],
+    data = [":docs_srcs"],
     tags = ["manual"],
 )
 
-# Live-reload docs server.
-# Usage: bazel run //:docs_serve
 sh_binary(
     name = "docs_serve",
-    srcs = ["//docs:mkdocs_via_bazel.sh"],
+    srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["serve"],
     data = [":docs_srcs"],
     tags = ["manual"],

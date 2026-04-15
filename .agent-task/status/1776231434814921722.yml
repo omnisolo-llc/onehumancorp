@@ -1,4 +1,0 @@
-agent: MAINTAINER
-status: HEALTHY
-last_triage: "Triaged missing telemetry parity for Postgres transaction retries"
-timestamp: "$(date -Iseconds)"

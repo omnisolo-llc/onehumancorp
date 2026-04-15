@@ -10,25 +10,6 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "protobuf", version = "34.1")
 bazel_dep(name = "rules_python", version = "1.9.0")
-
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-
-python.toolchain(
-    python_version = "3.12",
-    is_default = True,
-)
-
-use_repo(python, "python_3_12")
-
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-
-pip.parse(
-    hub_name = "docs_pip",
-    python_version = "3.12",
-    requirements_lock = "//docs:requirements.lock",
-)
-
-use_repo(pip, "docs_pip")
 bazel_dep(name = "rules_shell", version = "0.7.1")
 bazel_dep(name = "rules_android", version = "0.7.1")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
@@ -155,7 +136,7 @@ go_deps.gazelle_override(
     ],
     path = "github.com/centrifugal/protocol",
 )
-use_repo(go_deps, "com_github_centrifugal_centrifuge", "com_github_google_uuid", "com_github_gorilla_websocket", "com_github_jackc_pgx_v5", "com_github_minio_minio_go_v7", "com_github_modelcontextprotocol_go_sdk", "com_github_nats_io_nats_go", "com_github_prometheus_client_golang", "com_github_redis_go_redis_v9", "com_github_redis_rueidis", "com_github_slack_go_slack", "com_github_spf13_afero", "com_github_spf13_viper", "com_github_stretchr_testify", "in_gopkg_yaml_v3", "io_opentelemetry_go_otel", "io_opentelemetry_go_otel_exporters_prometheus", "io_opentelemetry_go_otel_metric", "io_opentelemetry_go_otel_sdk_metric", "org_golang_google_adk", "org_golang_google_genai", "org_golang_google_grpc", "org_golang_google_grpc_cmd_protoc_gen_go_grpc", "org_golang_google_protobuf", "org_golang_x_crypto", "org_modernc_sqlite")
+use_repo(go_deps, "com_github_centrifugal_centrifuge", "com_github_fsnotify_fsnotify", "com_github_google_uuid", "com_github_gorilla_websocket", "com_github_jackc_pgx_v5", "com_github_minio_minio_go_v7", "com_github_modelcontextprotocol_go_sdk", "com_github_nats_io_nats_go", "com_github_prometheus_client_golang", "com_github_redis_go_redis_v9", "com_github_redis_rueidis", "com_github_spf13_afero", "com_github_spf13_cast", "com_github_spf13_viper", "com_github_stretchr_testify", "in_gopkg_yaml_v3", "io_opentelemetry_go_otel", "io_opentelemetry_go_otel_exporters_prometheus", "io_opentelemetry_go_otel_metric", "io_opentelemetry_go_otel_sdk_metric", "org_golang_google_grpc", "org_golang_google_grpc_cmd_protoc_gen_go_grpc", "org_golang_google_protobuf", "org_golang_x_crypto", "org_modernc_sqlite")
 
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(

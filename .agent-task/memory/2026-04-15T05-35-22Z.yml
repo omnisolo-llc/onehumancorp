@@ -1,0 +1,6 @@
+event: missing_buffermetricfunc_identified
+files_identified:
+  - srcs/server/telemetry/telemetry_bridge.go
+  - srcs/server/telemetry/minimax_metrics.go
+  - srcs/server/telemetry/rag_sync_metrics.go
+resolution: mission_created

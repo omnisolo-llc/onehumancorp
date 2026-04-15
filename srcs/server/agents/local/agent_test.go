@@ -376,9 +376,9 @@ func TestTaskOutputFile_Created(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// The output key should be the db:// URI derived from the task ID.
-	if state.OutputFile != "db://"+state.ID {
-		t.Errorf("unexpected OutputFile: got %q, want db://%s", state.OutputFile, state.ID)
+	// The output file should exist.
+	if _, err := os.Stat(state.OutputFile); os.IsNotExist(err) {
+		t.Errorf("output file %s was not created", state.OutputFile)
 	}
 }
 
