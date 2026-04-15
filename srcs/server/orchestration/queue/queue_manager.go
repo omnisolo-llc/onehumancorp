@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -120,6 +121,7 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		}
 
 		json.Unmarshal([]byte(payloadStr), &j.Payload)
+		telemetry.RecordSubAgentQueueDelay(ctx, time.Since(j.CreatedAt).Seconds())
 		return &j, nil
 	} else {
 		// Postgres mode
@@ -159,6 +161,7 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		j.UpdatedAt = updatedAt
 
 		json.Unmarshal([]byte(payloadStr), &j.Payload)
+		telemetry.RecordSubAgentQueueDelay(ctx, time.Since(j.CreatedAt).Seconds())
 		return &j, nil
 	}
 }

@@ -80,6 +80,8 @@ var (
 	autoDreamSyncDuration  metric.Float64Histogram
 	autoDreamQueryDuration metric.Float64Histogram
 	meshBroadcastTotal     metric.Int64Counter
+	SubAgentQueueDelayHistogram metric.Float64Histogram
+	TaskClaimContentionTotal    metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -222,6 +224,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_mesh_latency",
 		metric.WithDescription("Latency of Teammate Mesh RPC operations"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
+		"sub_agent_queue_delay",
+		metric.WithDescription("Measures time from job enqueue to dequeue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskClaimContentionTotal, err = m.Int64Counter(
+		"task_claim_contention_total",
+		metric.WithDescription("Tracks the number of failed task claim attempts or retries due to lock contention"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1512,5 +1530,21 @@ func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 func RecordRagEscalation(ctx context.Context) {
 	if RagEscalationCount != nil {
 		RagEscalationCount.Add(ctx, 1)
+	}
+}
+
+// RecordSubAgentQueueDelay records the duration a sub-agent spends in the queue.
+func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
+	if SubAgentQueueDelayHistogram != nil {
+		SubAgentQueueDelayHistogram.Record(ctx, delay)
+	}
+}
+
+// RecordTaskClaimContention increments the task claim contention counter.
+func RecordTaskClaimContention(ctx context.Context, mode string) {
+	if TaskClaimContentionTotal != nil {
+		TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
 	}
 }

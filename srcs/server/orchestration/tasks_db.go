@@ -11,6 +11,7 @@ import (
     "github.com/onehumancorp/mono/srcs/server/auth"
     "github.com/onehumancorp/mono/srcs/server/db"
     "github.com/onehumancorp/mono/srcs/server/memory/autodream"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type SharedTaskDB struct {
@@ -90,6 +91,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
         &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
     ); err != nil {
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            telemetry.RecordTaskClaimContention(ctx, "sqlite")
             return nil, nil
         }
         return nil, fmt.Errorf("failed to query pending task: %w", err)
@@ -139,6 +141,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
         &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
     ); err != nil {
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            telemetry.RecordTaskClaimContention(ctx, "postgres")
             return nil, nil
         }
         return nil, fmt.Errorf("failed to query pending task: %w", err)
