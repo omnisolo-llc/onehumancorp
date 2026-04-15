@@ -145,10 +145,7 @@ func TestHybridMCPRAGDaemon_ProcessSync_Bursting(t *testing.T) {
 	defer sqlDB_burst.Close()
 	dbWrapper := &db.DB{Provider: db.NewSqliteProvider(sqlDB_burst)}
 	defer dbWrapper.Close()
-	if err != nil {
-		t.Fatalf("failed to create db: %v", err)
-	}
-	defer dbWrapper.Close()
+
 
 	ctx := context.Background()
 	_, err = dbWrapper.Exec(ctx, `
