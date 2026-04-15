@@ -63,6 +63,8 @@ go_library(
         "migrations/056_langgraph_checkpoints.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
         "migrations/20260415123000_autodream_memories_schema.sql",
+        "migrations/20260415124000_shared_tasks_master.sql",
+        "migrations/20260415124100_autodream_memories_master.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
