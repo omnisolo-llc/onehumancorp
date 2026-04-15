@@ -110,3 +110,14 @@ func (rt *ReferralTracker) GetChannelStats() map[string]int {
 	}
 	return stats
 }
+
+func CalculateReferralTier(referrals int) string {
+	if referrals >= 50 {
+		return "Platinum"
+	} else if referrals >= 20 {
+		return "Gold"
+	} else if referrals >= 5 {
+		return "Silver"
+	}
+	return "Bronze"
+}
