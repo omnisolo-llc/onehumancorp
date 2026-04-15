@@ -1,6 +1,10 @@
 package mesh
 
 import (
+	"net/http"
+	"io"
+	"encoding/json"
+
 	"context"
 	"errors"
 	"sync"
@@ -127,4 +131,99 @@ func (s *MemoryMeshService) Subscribe(ctx context.Context) (<-chan string, error
 	}()
 
 	return out, nil
+}
+
+
+
+
+
+type MeshHandler struct {
+	Service TeammateMeshService
+}
+
+type BroadcastRequest struct {
+	AgentID   string                 `json:"agent_id"`
+	TaskID    string                 `json:"task_id"`
+	EventType string                 `json:"event_type"`
+	Data      map[string]interface{} `json:"data"`
+}
+
+func (h *MeshHandler) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	var req BroadcastRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	intentBytes, _ := json.Marshal(req)
+	err = h.Service.BroadcastIntent(r.Context(), string(intentBytes))
+	if err != nil {
+        if err.Error() == "unauthorized: missing claims" {
+            http.Error(w, err.Error(), http.StatusUnauthorized)
+            return
+        }
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *MeshHandler) HandleStream(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+    flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+    w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+    ctx := r.Context()
+    ch, err := h.Service.Subscribe(ctx)
+    if err != nil {
+        if err.Error() == "unauthorized: missing claims" {
+            http.Error(w, err.Error(), http.StatusUnauthorized)
+            return
+        }
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+    for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				return
+			}
+			_, _ = w.Write([]byte("data: " + msg + "\n\n"))
+			flusher.Flush()
+		}
+	}
+}
+
+func RegisterRoutes(mux *http.ServeMux, service TeammateMeshService) {
+    handler := &MeshHandler{Service: service}
+    mux.HandleFunc("/api/mesh/broadcast", handler.HandleBroadcast)
+    mux.HandleFunc("/api/mesh/stream", handler.HandleStream)
 }

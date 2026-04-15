@@ -27,13 +27,13 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 		}
 		defer tx.Rollback(ctx)
 
-		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' LIMIT 1`
+		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_master WHERE status = 'PENDING' LIMIT 1`
 		err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, agentID, task.ID)
+		_, err = tx.Exec(ctx, `UPDATE shared_tasks_master SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, agentID, task.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -48,10 +48,10 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 
 	} else {
 		query = `
-		UPDATE shared_tasks_decomposition
+		UPDATE shared_tasks_master
 		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = (
-			SELECT id FROM shared_tasks_decomposition
+			SELECT id FROM shared_tasks_master
 			WHERE status = 'PENDING'
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
@@ -109,7 +109,7 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 }
 
 func TransitionTask(ctx context.Context, database db.Provider, taskID, status string) error {
-	_, err := database.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, status, taskID)
+	_, err := database.Exec(ctx, `UPDATE shared_tasks_master SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, status, taskID)
 	return err
 }
 
@@ -131,14 +131,14 @@ func CreateTask(ctx context.Context, database db.Provider, task *SharedTaskDecom
     }
 
 	if database.IsSQLite() {
-		query := `INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+		query := `INSERT INTO shared_tasks_master (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 		err := database.QueryRow(ctx, query, task.ID, task.OrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID, task.Priority, payloadStr, task.ParentPlanID, depStr, task.LockedUntil).Scan(&id)
 		if err != nil {
 			return err
 		}
 	} else {
 		query := `
-		INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until)
+		INSERT INTO shared_tasks_master (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
 	    `

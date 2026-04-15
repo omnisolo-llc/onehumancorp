@@ -2,21 +2,27 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "autodream",
-    srcs = ["repository.go"],
+    srcs = [
+        "consolidator.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/autodream",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "@org_modernc_sqlite//:sqlite",
+        "//srcs/server/orchestration",
+        "@com_github_google_uuid//:uuid",
     ],
 )
 
 go_test(
     name = "autodream_test",
-    srcs = ["repository_test.go"],
+    srcs = [
+        "consolidator_test.go",
+    ],
     embed = [":autodream"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/orchestration",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
