@@ -1,8 +1,0 @@
-type: status
-metadata:
-  role: Guide
-  timestamp: 1776231062576523902
-health: ok
-observations:
-  - Verified and rewritten ohc-cloud-start.sh, ohc-quick-start.sh, ohc-setup.sh
-  - Created Day One setup audit
