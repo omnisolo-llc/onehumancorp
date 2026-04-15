@@ -105,6 +105,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[AutoDream Pipeline](../features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ## 6. Deep Dive Walkthroughs
+- **[Hybrid Agentic OS API Walkthrough](hybrid_agentic_os_api_walkthrough.md)**: Visual guide to the Hybrid Agentic OS API routing.
 - **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
 - **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
 - **[KAIROS Orchestration: Visual Walkthrough](kairos_orchestration.md)**
