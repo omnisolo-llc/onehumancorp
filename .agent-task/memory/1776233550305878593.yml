@@ -1,8 +1,0 @@
-topic: "KAIROS Sub-Agent Queue and AutoDream Hooks"
-timestamp: "2026-04-15T06:13:44Z"
-insights:
-  - "The Master Design dictates a Sub-Agent Queue to continuously monitor the Shared Task List DAG."
-  - "We need to explicitly inject the AutoDream consolidator and Mesh transport into SharedTaskOrchestrator to fulfill memory consolidation."
-context: "Prepared mission for Implementer to finish orchestration."
-event: "mission_created"
-resolution: "mission_created"
