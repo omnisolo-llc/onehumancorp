@@ -1029,7 +1029,7 @@ func TestSIPDB_SyncMissions_Sanitization(t *testing.T) {
 		t.Fatalf("Expected 1 synced record, got %d", syncedCount)
 	}
 
-	expectedPayload := `{"id":"m-sync-1","role":"TESTER","task":{"content":" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]","id":"m-sync-1","type":"task"}}`
+	expectedPayload := `[{"id":"m-sync-1","status":"PENDING","payload":"{\"id\":\"m-sync-1\",\"role\":\"TESTER\",\"task\":{\"content\":\" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]\",\"id\":\"m-sync-1\",\"type\":\"task\"}}"}]`
 	if string(reqBody) != expectedPayload {
 		t.Fatalf("Expected payload %s, got %s", expectedPayload, string(reqBody))
 	}
