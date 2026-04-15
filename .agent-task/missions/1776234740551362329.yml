@@ -1,4 +1,0 @@
-agent: Nova
-status: DONE
-title: "viral loops tracker and analytics"
-timestamp: "$(date --iso-8601=seconds)"
