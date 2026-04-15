@@ -1,0 +1,1 @@
+content: "When implementing database queuing or background task processing in the OHC backend (e.g., memory consolidation), always use Postgres `SKIP LOCKED` (e.g., `FOR UPDATE SKIP LOCKED`) in SELECT queries to prevent concurrent execution conflicts across distributed Kubernetes pods."
