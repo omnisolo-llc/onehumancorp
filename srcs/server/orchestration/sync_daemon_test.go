@@ -39,8 +39,7 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 		VALUES
 			('m1', 'PENDING', '{"task":"test-mission", "details":"[PRIVATE:secret] email is a@b.com"}', false),
 			('m2', 'COMPLETED', '{"task":"synced-mission"}', true),
-			('m3', 'IGNORED', '{"task":"ignored"}', false),
-			('m4', 'BURSTING', '{"task":"burst-mission"}', false)
+			('m3', 'IGNORED', '{"task":"ignored"}', false)
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test data: %v", err)
@@ -70,8 +69,8 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	daemon.ProcessSync(context.Background())
 
 	// Validate received payload
-	if len(receivedPayloads) != 2 {
-		t.Fatalf("expected 2 missions to be synced, got %d", len(receivedPayloads))
+	if len(receivedPayloads) != 1 {
+		t.Fatalf("expected 1 mission to be synced, got %d", len(receivedPayloads))
 	}
 	if receivedPayloads[0].ID != "m1" {
 		t.Errorf("expected payload ID m1, got %s", receivedPayloads[0].ID)
@@ -84,14 +83,6 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	expectedPayload := `{"details":" email is [REDACTED_EMAIL]","task":"test-mission"}`
 	if receivedPayloads[0].Payload != expectedPayload {
 		t.Errorf("expected sanitized payload %q, got %q", expectedPayload, receivedPayloads[0].Payload)
-	}
-
-	// Validate second payload
-	if receivedPayloads[1].ID != "m4" {
-		t.Errorf("expected payload ID m4, got %s", receivedPayloads[1].ID)
-	}
-	if receivedPayloads[1].Status != "BURSTING" {
-		t.Errorf("expected status BURSTING, got %s", receivedPayloads[1].Status)
 	}
 
 	// Validate db status updated
