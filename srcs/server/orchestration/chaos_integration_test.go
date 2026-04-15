@@ -117,6 +117,20 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
+		// Insert a BURSTING mission that is old
+		_, err = dbInstance.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ('burst-pg', 'BURSTING', '{}', datetime('now', '-2 days'), 'system')")
+		if err != nil {
+			t.Fatalf("Failed to insert bursting mission: %v", err)
+		}
+
+
+
+		// Insert a BURSTING mission that is old
+		_, err = dbInstance.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ('burst-sqlite', 'BURSTING', '{}', datetime('now', '-2 days'), 'system')")
+		if err != nil {
+			t.Fatalf("Failed to insert bursting mission: %v", err)
+		}
+
 		var wg sync.WaitGroup
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
@@ -127,6 +141,15 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 			}(i)
 		}
 		wg.Wait()
+
+		var count int
+		err = dbInstance.db.QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE id = 'burst-sqlite'").Scan(&count)
+		if err != nil {
+			t.Fatalf("Query failed: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("BURSTING mission should have been pruned")
+		}
 		t.Log("SQLite Parity PruneStaleMissions completed without panic")
 	})
 
@@ -155,6 +178,15 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 			}(i)
 		}
 		wg.Wait()
+
+		var count int
+		err = dbInstance.db.QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE id = 'burst-pg'").Scan(&count)
+		if err != nil {
+			t.Fatalf("Query failed: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("BURSTING mission should have been pruned")
+		}
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
 	})
 }

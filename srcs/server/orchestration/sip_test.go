@@ -246,6 +246,19 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
+
+	// 4. Bursting and new (should not be deleted)
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('4', 'BURSTING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 5. Bursting but old (should be deleted)
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('5', 'BURSTING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now', '-2 days'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Prune missions older than 24 hours
 	err = db.PruneStaleMissions(ctx, 24*time.Hour)
 	if err != nil {
@@ -258,20 +271,31 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if count != 1 {
-		t.Fatalf("Expected 1 mission remaining, got %d", count)
+	if count != 2 {
+		t.Fatalf("Expected 2 missions remaining, got %d", count)
 	}
 
-	// Verify the remaining mission is the correct one
-	var id string
-	err = db.db.QueryRow(ctx, "SELECT id FROM agent_missions").Scan(&id)
+
+	// Verify the remaining missions are the correct ones
+	rows, err := db.db.Query(ctx, "SELECT id FROM agent_missions ORDER BY id ASC")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer rows.Close()
 
-	if id != "1" {
-		t.Fatalf("Expected remaining mission to be '1', got '%s'", id)
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, id)
 	}
+
+	if len(ids) != 2 || ids[0] != "1" || ids[1] != "4" {
+		t.Fatalf("Expected remaining missions to be '1' and '4', got %v", ids)
+	}
+
 }
 
 func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {

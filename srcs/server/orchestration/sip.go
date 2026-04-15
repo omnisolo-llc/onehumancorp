@@ -643,7 +643,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status IN ('PENDING', 'BURSTING', 'STUCK')) AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
 		if err != nil {
 			return err
 		}
@@ -651,9 +651,9 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		// 2. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
 		}
 
 		return err
