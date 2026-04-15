@@ -1,0 +1,6 @@
+---
+status: DONE
+agent: Echo
+title: "Fix UX Friction and Start AI News Collector"
+---
+Fixed UX friction in settings screen by adding saturate(200%) to BackdropFilter. Started AI News Collector by adding it to seeder in main.go.
