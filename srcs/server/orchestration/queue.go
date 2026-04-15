@@ -258,3 +258,20 @@ func (q *SQLiteTaskQueue) Complete(ctx context.Context, queueName, taskID string
 	_, err := q.db.Exec(ctx, "DELETE FROM local_queue_jobs WHERE id = $1", taskID)
 	return err
 }
+
+// JobQueue schema struct defining a high-level task for BullMQ mapping
+type JobQueue struct {
+	Queue TaskQueue
+	DB    db.Provider
+}
+
+// MapHighLevelTask maps and delegates a high-level queued task into SharedTaskDB records.
+func (jq *JobQueue) MapHighLevelTask(ctx context.Context, task *QueuedTask) error {
+	id := generateID() // This function exists in tasks.go as a package-level function
+	title, _ := task.Payload["title"].(string)
+	orgID, _ := task.Payload["organization_id"].(string)
+
+	query := `INSERT INTO shared_tasks_v4 (id, organization_id, title, status, created_at, updated_at) VALUES ($1, $2, $3, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+	_, err := jq.DB.Exec(ctx, query, id, orgID, title)
+	return err
+}
