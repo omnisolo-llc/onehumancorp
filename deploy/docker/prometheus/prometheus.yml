@@ -8,3 +8,6 @@ scrape_configs:
   - job_name: 'ohc-core'
     static_configs:
       - targets: ['ohc-core:18789']
+  - job_name: 'pushgateway'
+    static_configs:
+      - targets: ['pushgateway:9091']
