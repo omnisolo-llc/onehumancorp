@@ -132,6 +132,9 @@ func withSipRetry(ctx context.Context, op func() error) error {
 	if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
 		telemetry.RecordSQLiteRetryExhausted(ctx, "exec/query")
 	}
+	if err != nil && (strings.Contains(err.Error(), "deadlock detected") || strings.Contains(err.Error(), "could not serialize access")) {
+		telemetry.RecordPostgresRetryExhausted(ctx, "exec/query")
+	}
 	return err
 }
 
