@@ -94,6 +94,9 @@ go_test(
         "telemetry_minimax_client_test.go",
         "shared_tasks_test.go",
         "tasks_test.go",
+        "mesh_chaos_test.go",
+        "lock_chaos_test.go",
+        "chaos_thin_client_test.go",
     ],
     embed = [":orchestration"],
     deps = [
