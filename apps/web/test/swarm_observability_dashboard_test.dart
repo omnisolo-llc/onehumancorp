@@ -22,7 +22,8 @@ void main() {
       ),
     );
     mockClient.addMessage('Agent Event 1');
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100)); // allow animation to step
     expect(find.text('Agent Event 1'), findsOneWidget);
     mockClient.close();
   });
