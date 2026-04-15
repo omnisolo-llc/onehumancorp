@@ -937,7 +937,17 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.hub.Publish(orchestration.Message{
+	var broker orchmesh.MeshBroker
+	if mode == "cloud" && s.MeshBroker != nil {
+		broker = s.MeshBroker
+	} else {
+		broker = s.MeshBroker // Already initialized to LocalMeshBroker
+	}
+
+	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
+
+	// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated
+	_ = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   "system",
