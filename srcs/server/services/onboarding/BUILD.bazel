@@ -4,6 +4,7 @@ go_library(
     name = "onboarding",
     srcs = [
         "audit.go",
+        "dayone.go",
         "cli.go",
         "diagnostics.go",
         "provisioner.go",
@@ -23,6 +24,7 @@ go_test(
     name = "onboarding_test",
     srcs = [
         "audit_test.go",
+        "dayone_test.go",
         "cli_test.go",
         "diagnostics_test.go",
         "provisioner_test.go",
