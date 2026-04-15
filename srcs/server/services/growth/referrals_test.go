@@ -56,3 +56,26 @@ func TestReferralTrackerWithChannel(t *testing.T) {
 		t.Fatalf("Expected 1 referral from twitter, got %d", stats["twitter"])
 	}
 }
+
+func TestCalculateReferralTier(t *testing.T) {
+	tests := []struct {
+		referrals int
+		expected  string
+	}{
+		{0, "Bronze"},
+		{4, "Bronze"},
+		{5, "Silver"},
+		{19, "Silver"},
+		{20, "Gold"},
+		{49, "Gold"},
+		{50, "Platinum"},
+		{100, "Platinum"},
+	}
+
+	for _, tt := range tests {
+		got := CalculateReferralTier(tt.referrals)
+		if got != tt.expected {
+			t.Errorf("CalculateReferralTier(%d): expected %s, got %s", tt.referrals, tt.expected, got)
+		}
+	}
+}
