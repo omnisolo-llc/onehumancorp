@@ -1,7 +1,6 @@
 package mesh
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -36,6 +35,7 @@ func HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	isCloud := os.Getenv("OHC_STANDALONE") != "true"
 
+	var broker MeshBroker
 	if isCloud {
 		// Redis Pub/Sub broadcast
 		client, err := rueidis.NewClient(rueidis.ClientOption{
@@ -43,12 +43,15 @@ func HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		})
 		if err == nil {
 			defer client.Close()
-			cmd := client.B().Publish().Channel(channel).Message(string(payloadBytes)).Build()
-			client.Do(context.Background(), cmd)
+			broker = NewRedisMeshBroker(client)
 		}
 	} else {
-		// Local broker fallback (dummy implementation for standalone without redis)
-		// In a real scenario, this would use the LocalMeshBroker's channel system
+		// Local broker fallback
+		broker = NewLocalMeshBroker()
+	}
+
+	if broker != nil {
+		_ = broker.Broadcast(r.Context(), channel, payloadBytes)
 	}
 
 	w.WriteHeader(http.StatusOK)
