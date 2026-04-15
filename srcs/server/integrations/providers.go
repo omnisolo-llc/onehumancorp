@@ -256,4 +256,3 @@ func (s *GitHubIssuesIntegration) Metadata() *pb.IntegrationMetadata {
 		Tags:        []string{"developer", "issues", "integrated"}}.Build()
 }
 func (s *GitHubIssuesIntegration) WizardSteps() []*pb.WizardStep { return nil }
-

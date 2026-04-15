@@ -5,7 +5,7 @@
 //
 //   - Chat services: Slack, Discord, Google Chat, Telegram, Microsoft Teams — for human–agent messaging
 //   - Git platforms: GitHub, GitLab, Gitea    — for PR/MR creation
-//   - Issue trackers: JIRA, Plane, GitHub Issues, Linear — for ticket management
+//   - Issue trackers: JIRA, Plane, GitHub Issues — for ticket management
 //
 // All state is held in-memory following the same pattern used by the rest of
 // the platform.  Chat integrations with stored credentials (Telegram, Discord)
