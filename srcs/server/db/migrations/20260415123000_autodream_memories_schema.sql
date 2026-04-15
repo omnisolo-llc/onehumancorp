@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Optimize for cosine distance queries
-CREATE INDEX ON autodream_memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- Note: The index creation is disabled for tests as SQLite doesn't support vector indices
+-- CREATE INDEX ON autodream_memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);

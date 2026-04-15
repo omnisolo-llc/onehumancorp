@@ -2,7 +2,6 @@ package orchestration
 
 import (
     "context"
-    "encoding/json"
     "errors"
     "fmt"
     "sync"
@@ -10,7 +9,6 @@ import (
     "github.com/google/uuid"
     "github.com/onehumancorp/mono/srcs/server/auth"
     "github.com/onehumancorp/mono/srcs/server/db"
-    "github.com/onehumancorp/mono/srcs/server/memory/autodream"
 )
 
 type SharedTaskDB struct {
@@ -28,15 +26,11 @@ type SharedTaskDB struct {
 type SharedTaskOrchestrator struct {
     dbProvider db.Provider
     mu         sync.Mutex
-    mesh       MeshTransport
-    autodream  autodream.MemoryConsolidator
 }
 
-func NewSharedTaskOrchestrator(dbProvider db.Provider, mesh MeshTransport, ad autodream.MemoryConsolidator) *SharedTaskOrchestrator {
+func NewSharedTaskOrchestrator(dbProvider db.Provider) *SharedTaskOrchestrator {
     return &SharedTaskOrchestrator{
         dbProvider: dbProvider,
-        mesh:       mesh,
-        autodream:  ad,
     }
 }
 
@@ -185,40 +179,5 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         return err
     }
 
-    if err := tx.Commit(ctx); err != nil {
-        return err
-    }
-
-    if toState == "COMPLETED" {
-        if to.autodream != nil {
-            go func() {
-                var payloadText, deliberationLog string
-                err := to.dbProvider.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks_v4 WHERE id = $1", taskID).Scan(&payloadText, &deliberationLog)
-                if err != nil {
-                    // Log error here in a real scenario
-                    return
-                }
-
-                logs := []string{"Task " + taskID + " completed successfully.", "Payload: " + payloadText, "Deliberation Log: " + deliberationLog}
-                _ = to.autodream.Consolidate(context.Background(), taskID, logs)
-            }()
-        }
-
-        if to.mesh != nil {
-            go func() {
-                payload := map[string]interface{}{
-                    "task_id":  taskID,
-                    "action":   "COMPLETE",
-                    "agent_id": agentID,
-                    "status":   "COMPLETED",
-                }
-                payloadBytes, err := json.Marshal(payload)
-                if err == nil {
-                    _ = to.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-                }
-            }()
-        }
-    }
-
-    return nil
+    return tx.Commit(ctx)
 }
