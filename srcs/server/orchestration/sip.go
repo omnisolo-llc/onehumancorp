@@ -1071,26 +1071,28 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	var missions []struct {
 		id      string
+		status  string
 		payload string
 	}
 
 	err := withSipRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
+		rows, err := s.db.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, payload string
-			if err := rows.Scan(&id, &payload); err != nil {
+			var id, status, payload string
+			if err := rows.Scan(&id, &status, &payload); err != nil {
 				return err
 			}
 			missions = append(missions, struct {
 				id      string
+				status  string
 				payload string
-			}{id, payload})
+			}{id, status, payload})
 		}
 		return nil
 	})
@@ -1117,8 +1119,9 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 
 		if payloadData, ok := rawData.(map[string]interface{}); ok {
-			// Add ID to payload for synchronization endpoint
+			// Add ID and Status to payload for synchronization endpoint
 			payloadData["id"] = m.id
+			payloadData["status"] = m.status
 		}
 
 		// Unconditionally apply unified sanitization
