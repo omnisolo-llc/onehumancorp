@@ -296,7 +296,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
-		"sync_daemon_batch_size",
+		"ohc_sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
 	)
 	if err != nil {
@@ -1374,7 +1374,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
