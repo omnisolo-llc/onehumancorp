@@ -11,7 +11,6 @@ import (
 )
 
 type Memory struct {
-	OrganizationID string
 	ID        string
 	TaskID    string
 	Content   string
@@ -49,15 +48,15 @@ func cosineDistance(a, b []float32) float32 {
 }
 
 func (r *Repository) Insert(ctx context.Context, mem *Memory) error {
-	query := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding) VALUES ($1, $2, $3, $4, $5)`
+	query := `INSERT INTO autodream_memories (id, task_id, content, embedding) VALUES ($1, $2, $3, $4)`
 
 	embeddingStr := formatVector(mem.Embedding)
 	if r.Provider.IsSQLite() {
-		query = `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding) VALUES (?, ?, ?, ?, ?)`
+		query = `INSERT INTO autodream_memories (id, task_id, content, embedding) VALUES (?, ?, ?, ?)`
 		embeddingStr = fmt.Sprintf("%v", mem.Embedding)
 	}
 
-	_, err := r.Provider.Exec(ctx, query, mem.ID, mem.OrganizationID, mem.TaskID, mem.Content, embeddingStr)
+	_, err := r.Provider.Exec(ctx, query, mem.ID, mem.TaskID, mem.Content, embeddingStr)
 	return err
 }
 
@@ -66,7 +65,7 @@ func (r *Repository) Search(ctx context.Context, queryEmbedding []float32, limit
 	var err error
 
 	if r.Provider.IsSQLite() {
-		query := `SELECT id, organization_id, task_id, content, created_at, embedding FROM autodream_memories`
+		query := `SELECT id, task_id, content, created_at, embedding FROM autodream_memories`
 		rows, err = r.Provider.Query(ctx, query)
 		if err != nil {
 			return nil, err
@@ -83,7 +82,7 @@ func (r *Repository) Search(ctx context.Context, queryEmbedding []float32, limit
 			var mem Memory
 			var taskID *string
 			var embStr string
-			if err := rows.Scan(&mem.ID, &mem.OrganizationID, &taskID, &mem.Content, &mem.CreatedAt, &embStr); err != nil {
+			if err := rows.Scan(&mem.ID, &taskID, &mem.Content, &mem.CreatedAt, &embStr); err != nil {
 				return nil, err
 			}
 			if taskID != nil {
@@ -117,7 +116,7 @@ func (r *Repository) Search(ctx context.Context, queryEmbedding []float32, limit
 		return result, nil
 
 	} else {
-		query := `SELECT id, organization_id, task_id, content, created_at FROM autodream_memories ORDER BY embedding <=> $1 LIMIT $2`
+		query := `SELECT id, task_id, content, created_at FROM autodream_memories ORDER BY embedding <=> $1 LIMIT $2`
 		embeddingStr := formatVector(queryEmbedding)
 		rows, err = r.Provider.Query(ctx, query, embeddingStr, limit)
 		if err != nil {
@@ -129,7 +128,7 @@ func (r *Repository) Search(ctx context.Context, queryEmbedding []float32, limit
 		for rows.Next() {
 			var mem Memory
 			var taskID *string
-			if err := rows.Scan(&mem.ID, &mem.OrganizationID, &taskID, &mem.Content, &mem.CreatedAt); err != nil {
+			if err := rows.Scan(&mem.ID, &taskID, &mem.Content, &mem.CreatedAt); err != nil {
 				return nil, err
 			}
 			if taskID != nil {

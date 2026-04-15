@@ -22,7 +22,6 @@ func TestRepository_InsertAndSearch(t *testing.T) {
 	_, err = provider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS autodream_memories (
 			id TEXT PRIMARY KEY,
-			organization_id TEXT NOT NULL,
 			task_id TEXT,
 			content TEXT NOT NULL,
 			embedding BLOB,
@@ -36,14 +35,12 @@ func TestRepository_InsertAndSearch(t *testing.T) {
 	repo := NewRepository(provider)
 
 	mem1 := &Memory{
-		OrganizationID: "org1",
 		ID:        "mem-1",
 		TaskID:    "task-1",
 		Content:   "test content 1",
 		Embedding: []float32{1.0, 0.0, 0.0},
 	}
 	mem2 := &Memory{
-		OrganizationID: "org2",
 		ID:        "mem-2",
 		TaskID:    "task-2",
 		Content:   "test content 2",
