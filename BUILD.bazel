@@ -69,10 +69,7 @@ sh_binary(
 
 filegroup(
     name = "docs_srcs",
-    srcs = glob(
-        ["docs/**"],
-        exclude = ["docs/requirements.lock"],
-    ) + ["mkdocs.yml"],
+    srcs = ["//docs:docs_srcs", "mkdocs.yml"],
     visibility = ["//visibility:public"],
 )
 
@@ -95,7 +92,7 @@ touch $@
 # Usage: bazel run //:docs_serve
 sh_binary(
     name = "docs_serve",
-    srcs = ["docs/mkdocs_via_bazel.sh"],
+    srcs = ["//docs:mkdocs_via_bazel.sh"],
     args = ["serve"],
     data = [":docs_srcs"],
     tags = ["manual"],

@@ -4,7 +4,22 @@ load("@docs_pip//:requirements.bzl", "requirement")
 exports_files([
     "requirements.txt",
     "requirements.lock",
+    "mkdocs_via_bazel.sh",
 ])
+
+# All markdown and asset sources for the documentation site.
+filegroup(
+    name = "docs_srcs",
+    srcs = glob(
+        ["**"],
+        exclude = [
+            "requirements.lock",
+            "BUILD.bazel",
+            "mkdocs_main.py",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
 
 # Hermetic mkdocs binary backed by pip-locked dependencies.
 py_binary(
