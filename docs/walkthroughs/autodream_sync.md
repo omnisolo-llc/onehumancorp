@@ -23,6 +23,9 @@ sequenceDiagram
     API->>Postgres: 5. Upsert to Global autodream_memories
     API-->>Sync: 6. Acknowledge Success
     Sync->>SQLite: 7. Update sync_status='synced'
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Worker,SQLite,Sync,API,Postgres premium;
 ```
 
 ## 2. API Endpoints for Sync

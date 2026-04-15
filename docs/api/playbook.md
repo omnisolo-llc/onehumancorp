@@ -383,6 +383,8 @@ stateDiagram-v2
 </div>
 
 
+<div class="glass-panel" markdown="1">
+
 ### 4.6 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
@@ -594,6 +596,8 @@ All CRDT tools accept their arguments as a raw JSON object (`json.RawMessage`) t
 ```
 </div>
 
+<div class="glass-panel" markdown="1">
+
 ## 5. Visualizing the Flow
 ```mermaid
 graph TD
@@ -607,6 +611,7 @@ graph TD
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
     class Client,API,Auth,Hub,401,K8s,Agents premium;
 ```
+</div>
 
 
 
@@ -684,4 +689,33 @@ Checks database availability, sync backlogs, and mesh channel connectivity.
 }
 ```
 
+</div>
+
+<div class="glass-panel" markdown="1">
+
+### 4.12 Interactive Shared Task List API
+
+The core orchestrator assigns decomposed operations securely to agents via this endpoint.
+
+**Endpoint:** `POST /api/v1/orchestration/shared_tasks/claim`
+Claims a `PENDING` sub-task from the `shared_tasks_decomposition` table. Uses `FOR UPDATE SKIP LOCKED`.
+
+**Payload:**
+```json
+{
+  "agent_id": "scribe_worker_001",
+  "requested_role": "documentation_specialist"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "task_id": "task_uuid_8a9b",
+  "status": "IN_PROGRESS",
+  "payload": {
+    "instruction": "Document the new Interactive Shared Task API endpoints."
+  }
+}
+```
 </div>
