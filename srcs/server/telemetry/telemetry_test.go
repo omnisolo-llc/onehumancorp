@@ -658,3 +658,69 @@ func TestOmniContextBytesRoutedMetric(t *testing.T) {
 	// Should not panic when nil
 	RecordOmniContextBytes(context.Background(), 1024)
 }
+
+func TestRecordAutoDreamIngestionError(t *testing.T) {
+	ctx := context.Background()
+	mockMeter := &mockMeter{}
+
+	// Ensure counter is initialized
+	err := InitWithMeter(mockMeter)
+	if err != nil {
+		t.Fatalf("InitWithMeter failed: %v", err)
+	}
+
+	agentID := "agent-test-123"
+	errorType := "db_timeout"
+
+	// Mock BufferMetricFunc tracking
+	var bufferCalled bool
+	var bufferName string
+	BufferMetricFunc = func(ctx context.Context, name, payload string) error {
+		bufferCalled = true
+		bufferName = name
+		return nil
+	}
+	defer func() { BufferMetricFunc = nil }()
+
+	RecordAutoDreamIngestionError(ctx, agentID, errorType)
+
+	if !bufferCalled {
+		t.Error("Expected BufferMetricFunc to be called")
+	}
+	if bufferName != "ohc_autodream_ingestion_error_total" {
+		t.Errorf("Expected buffer name ohc_autodream_ingestion_error_total, got %s", bufferName)
+	}
+}
+
+func TestRecordAutoDreamCompressionError(t *testing.T) {
+	ctx := context.Background()
+	mockMeter := &mockMeter{}
+
+	// Ensure counter is initialized
+	err := InitWithMeter(mockMeter)
+	if err != nil {
+		t.Fatalf("InitWithMeter failed: %v", err)
+	}
+
+	agentID := "agent-test-456"
+	errorType := "llm_context_limit"
+
+	// Mock BufferMetricFunc tracking
+	var bufferCalled bool
+	var bufferName string
+	BufferMetricFunc = func(ctx context.Context, name, payload string) error {
+		bufferCalled = true
+		bufferName = name
+		return nil
+	}
+	defer func() { BufferMetricFunc = nil }()
+
+	RecordAutoDreamCompressionError(ctx, agentID, errorType)
+
+	if !bufferCalled {
+		t.Error("Expected BufferMetricFunc to be called")
+	}
+	if bufferName != "ohc_autodream_compression_error_total" {
+		t.Errorf("Expected buffer name ohc_autodream_compression_error_total, got %s", bufferName)
+	}
+}

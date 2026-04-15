@@ -54,6 +54,8 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -264,6 +266,22 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamIngestionErrorCounter, err = m.Int64Counter(
+		"ohc_autodream_ingestion_error_total",
+		metric.WithDescription("Total number of errors encountered during AutoDream ingestion"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamCompressionErrorCounter, err = m.Int64Counter(
+		"ohc_autodream_compression_error_total",
+		metric.WithDescription("Total number of errors encountered during AutoDream compression"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1094,6 +1112,46 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 	}
 	AutoDreamMemoriesCompressedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
+	))
+}
+
+// RecordAutoDreamIngestionError increments the counter when an error occurs during AutoDream ingestion.
+func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_autodream_ingestion_error_total", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter == nil {
+		return
+	}
+	AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("error_type", errorType),
+	))
+}
+
+// RecordAutoDreamCompressionError increments the counter when an error occurs during AutoDream compression.
+func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_autodream_compression_error_total", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter == nil {
+		return
+	}
+	AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("error_type", errorType),
 	))
 }
 
