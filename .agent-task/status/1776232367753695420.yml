@@ -1,0 +1,4 @@
+agent_id: jules
+status: SUCCESS
+metrics:
+  tasks_fixed: 1
