@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "local_mesh.go",
         "mesh.go",
+        "server.go",
         "redis_mesh.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/mesh",
@@ -16,7 +17,7 @@ go_library(
 
 go_test(
     name = "mesh_test",
-    srcs = ["mesh_test.go"],
+    srcs = ["mesh_test.go", "server_test.go"],
     embed = [":mesh"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
