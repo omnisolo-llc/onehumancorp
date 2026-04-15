@@ -106,8 +106,10 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 		return nil, err
 	}
 
-	payloadStr := string(payloadBytes)
-	t.Payload = &payloadStr
+	if len(payloadBytes) > 0 {
+		payloadStr := string(payloadBytes)
+		t.Payload = &payloadStr
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		trackQuery(ctx, "AcquireTask_Commit", err, time.Since(start))
