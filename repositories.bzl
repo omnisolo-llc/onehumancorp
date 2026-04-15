@@ -638,6 +638,18 @@ def go_repositories():
         version = "v4.32.0",
     )
     go_repository(
+        name = "org_modernc_ebnf",
+        importpath = "modernc.org/ebnf",
+        sum = "h1:ilLq2kO1xGezeg75RyKffLsCLdamQHEmjv0CVq1QEQU=",
+        version = "v1.1.0",
+    )
+    go_repository(
+        name = "org_modernc_ebnfutil",
+        importpath = "modernc.org/ebnfutil",
+        sum = "h1:8AZ7iHDSIV6lrlgtexrIgmsey6wuSnB8s642ASDaTkc=",
+        version = "v1.1.0",
+    )
+    go_repository(
         name = "org_modernc_fileutil",
         importpath = "modernc.org/fileutil",
         sum = "h1:j6ZzNTftVS054gi281TyLjHPp6CPHr2KCxEXjEbD6SM=",

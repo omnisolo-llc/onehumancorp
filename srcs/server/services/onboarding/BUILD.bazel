@@ -2,10 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "onboarding",
-    srcs = [
-        "audit.go",
-        "provisioner.go",
-    ],
+    srcs = ["provisioner.go", "audit.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/services/onboarding",
     visibility = ["//visibility:public"],
     deps = [
@@ -16,9 +13,6 @@ go_library(
 
 go_test(
     name = "onboarding_test",
-    srcs = [
-        "audit_test.go",
-        "provisioner_test.go",
-    ],
+    srcs = ["provisioner_test.go", "audit_test.go"],
     embed = [":onboarding"],
 )
