@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"strings"
 )
@@ -84,4 +85,26 @@ func TruncateByWordCount(data string, maxWords int) string {
 		return data
 	}
 	return strings.Join(words[:maxWords], " ")
+}
+
+// MinifyJSONPrompt attempts to minify a JSON string.
+// If the input is valid JSON, it returns the compact version.
+// Otherwise, it returns the original string.
+func MinifyJSONPrompt(data string) string {
+	var js map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &js); err == nil {
+		var buf bytes.Buffer
+		if err := json.Compact(&buf, []byte(data)); err == nil {
+			return buf.String()
+		}
+	}
+	// Also try slice of interface
+	var jsArr []interface{}
+	if err := json.Unmarshal([]byte(data), &jsArr); err == nil {
+		var buf bytes.Buffer
+		if err := json.Compact(&buf, []byte(data)); err == nil {
+			return buf.String()
+		}
+	}
+	return data
 }
