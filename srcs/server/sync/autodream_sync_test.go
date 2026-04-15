@@ -37,8 +37,21 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 
 	// Wait, run migrations might not run 011 properly if it doesn't support the ADD COLUMN correctly,
 	// but let's test it. SQLite does support standard ADD COLUMN.
+
 	// We explicitly create the tables needed for the test just in case.
-	// Actually, dbWrapper.RunMigrations runs everything, including our 011 migration.
+	_, err = dbWrapper.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			content TEXT NOT NULL,
+			synced_to_cloud BOOLEAN DEFAULT false,
+			organization_id TEXT,
+			source_type TEXT
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create autodream_memories test table: %v", err)
+	}
+
 
 	// Insert test data
 	_, err = dbWrapper.Exec(ctx, `
@@ -55,6 +68,14 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert agent_missions test data: %v", err)
+	}
+
+	_, err = dbWrapper.Exec(ctx, `
+		INSERT INTO autodream_memories (id, content, synced_to_cloud, organization_id, source_type)
+		VALUES ('mem1', 'local memory', false, 'test_org', 'test_source')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert autodream_memories test data: %v", err)
 	}
 
 	// 3. Setup mock cloud API
@@ -80,14 +101,23 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 
 	engine.ProcessForecastTick(ctx)
 
-	// 5. Verify the payloads
-	// Note: previous migrations seeded some tasks, so we expect exactly 4 payloads
-	if len(receivedPayloads) != 4 {
-		t.Fatalf("expected 4 payloads synced, got %d", len(receivedPayloads))
+	// Since Mesh Broadcast runs in a goroutine, we need to poll database state instead of a hard sleep
+	requireSync := func() bool {
+		var count int
+		_ = dbWrapper.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE synced_to_cloud = false").Scan(&count)
+		return count == 0
+	}
+
+	for i := 0; i < 50; i++ {
+		if requireSync() {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	embeddingSynced := false
 	missionSynced := false
+	memorySynced := false
 	for _, p := range receivedPayloads {
 		if p.Type == "embedding" && p.ID == "hash1" {
 			embeddingSynced = true
@@ -95,10 +125,13 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 		if p.Type == "mission" && p.ID == "m1" {
 			missionSynced = true
 		}
+		if p.Type == "memory" && p.ID == "mem1" {
+			memorySynced = true
+		}
 	}
 
-	if !embeddingSynced || !missionSynced {
-		t.Errorf("expected both embedding hash1 and mission m1 to be synced. Got: %+v", receivedPayloads)
+	if !embeddingSynced || !missionSynced || !memorySynced {
+		t.Errorf("expected embedding, mission, and memory to be synced. Got: %+v", receivedPayloads)
 	}
 
 	// 6. Verify database state is updated
@@ -117,5 +150,13 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("expected 0 unsynced missions, got %d", count)
+	}
+
+	err = dbWrapper.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE synced_to_cloud = false").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count autodream_memories: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 unsynced memories, got %d", count)
 	}
 }

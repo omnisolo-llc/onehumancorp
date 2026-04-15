@@ -80,7 +80,132 @@ func (e *AutoDreamSyncEngine) ProcessForecastTick(ctx context.Context) {
 
 	// 3. Sync Agent Missions
 	e.syncAgentMissions(ctx)
+
+	// 4. Sync Autodream Memories
+	e.syncAutodreamMemories(ctx)
 }
+
+func (e *AutoDreamSyncEngine) syncAutodreamMemories(ctx context.Context) {
+	rows, err := e.dbWrapper.Query(ctx, "SELECT id, content FROM autodream_memories WHERE synced_to_cloud = false LIMIT 50")
+	if err != nil {
+		slog.Error("sync: failed to query autodream_memories", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	var payloads []AutoDreamPayload
+	var ids []string
+
+	for rows.Next() {
+		var id, content string
+		if err := rows.Scan(&id, &content); err != nil {
+			slog.Error("sync: failed to scan autodream_memories", "error", err)
+			continue
+		}
+
+		payloads = append(payloads, AutoDreamPayload{
+			Type:     "memory",
+			ID:       id,
+			Data:     content,
+			Metadata: "consolidated",
+		})
+		ids = append(ids, id)
+	}
+
+	if len(payloads) == 0 {
+		return
+	}
+
+	// Mesh broadcast executed asynchronously in a go func() with context.Background()
+	// to prevent parent HTTP/RPC context cancellation from interrupting the sync.
+	go func(payloads []AutoDreamPayload, ids []string) {
+		bgCtx := context.Background()
+
+		// Request a temporary SVID from the SPIRE workload API
+		svidToken := os.Getenv("SPIFFE_IDENTITY_TOKEN")
+		if svidToken == "" {
+			slog.Debug("sync: No SPIFFE token found, will attempt without or mock")
+		}
+
+		meshURL := e.cloudAPIURL + "/api/mesh/broadcast"
+		if e.cloudAPIURL == "" {
+			// for test mocking logic since cloudAPIURL could be just a mock base
+			meshURL = ""
+		}
+
+        if meshURL != "" {
+            jsonData, err := json.Marshal(payloads)
+            if err != nil {
+                slog.Error("sync: failed to marshal mesh payloads", "error", err)
+                return
+            }
+
+            client := &http.Client{Timeout: 10 * time.Second}
+            var resp *http.Response
+
+            // robust exponential backoff retry mechanism
+            retries := 3
+            success := false
+            for i := 0; i < retries; i++ {
+                if i > 0 {
+                    time.Sleep(time.Duration(1<<i) * time.Second)
+                }
+
+                req, err := http.NewRequestWithContext(bgCtx, http.MethodPost, meshURL, bytes.NewBuffer(jsonData))
+                if err != nil {
+                    continue
+                }
+                req.Header.Set("Content-Type", "application/json")
+                if svidToken != "" {
+                    req.Header.Set("Authorization", "Bearer "+svidToken)
+                }
+
+                resp, err = client.Do(req)
+                if err == nil && resp.StatusCode < 300 {
+                    if resp != nil {
+                        resp.Body.Close()
+                    }
+                    success = true
+                    break
+                }
+                if resp != nil {
+                    resp.Body.Close()
+                }
+            }
+
+            if !success {
+                if telemetry.SyncFailedCount != nil {
+                    telemetry.SyncFailedCount.Add(bgCtx, int64(len(payloads)))
+                }
+                slog.Error("sync: mesh broadcast failed after retries")
+                return
+            }
+        }
+
+		// Mark as synced efficiently
+		args := make([]interface{}, len(ids))
+		placeholders := ""
+		for i, id := range ids {
+			args[i] = id
+			if i > 0 {
+				placeholders += ", "
+			}
+			placeholders += fmt.Sprintf("$%d", i+1)
+		}
+
+		query := fmt.Sprintf("UPDATE autodream_memories SET synced_to_cloud = true WHERE id IN (%s)", placeholders)
+		_, err := e.dbWrapper.Exec(bgCtx, query, args...)
+		if err != nil {
+			slog.Error("sync: failed to update autodream_memories status", "error", err)
+		}
+
+		if telemetry.SyncCompletedCount != nil {
+			telemetry.SyncCompletedCount.Add(bgCtx, int64(len(payloads)))
+		}
+		slog.Debug("sync: successfully synced autodream_memories", "count", len(payloads))
+	}(payloads, ids)
+}
+
 
 // synthesizeMemory consolidates recent memories by invoking AutoDreamWorker.
 func (e *AutoDreamSyncEngine) synthesizeMemory(ctx context.Context) {
