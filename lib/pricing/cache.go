@@ -3,6 +3,7 @@ package pricing
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"sync"
 	"time"
 )
@@ -81,6 +82,101 @@ func (c *LocalEmbeddingCache) Clear() {
 
 // Prune removes all expired entries from the cache to free up memory.
 func (c *LocalEmbeddingCache) Prune() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	prunedCount := 0
+
+	for key, entry := range c.entries {
+		if now.After(entry.ExpiresAt) {
+			delete(c.entries, key)
+			prunedCount++
+		}
+	}
+
+	return prunedCount
+}
+
+// CompressedEmbeddingCache implements a cost-saving local cache that compresses responses
+// to reduce memory bloat when caching large strings.
+type CompressedEmbeddingCache struct {
+	entries map[string]CacheEntry
+	mu      sync.RWMutex
+	ttl     time.Duration
+}
+
+// NewCompressedEmbeddingCache initializes a new compressed local cache with a given TTL.
+func NewCompressedEmbeddingCache(ttl time.Duration) *CompressedEmbeddingCache {
+	return &CompressedEmbeddingCache{
+		entries: make(map[string]CacheEntry),
+		ttl:     ttl,
+	}
+}
+
+// hashPrompt generates a stable hash for a prompt string.
+func (c *CompressedEmbeddingCache) hashPrompt(prompt string) string {
+	h := sha256.New()
+	h.Write([]byte(prompt))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// Get retrieves a response from the cache if it exists and hasn't expired.
+func (c *CompressedEmbeddingCache) Get(prompt string) (string, bool) {
+	key := c.hashPrompt(prompt)
+
+	c.mu.RLock()
+	entry, exists := c.entries[key]
+	c.mu.RUnlock()
+
+	if !exists {
+		return "", false
+	}
+
+	if time.Now().After(entry.ExpiresAt) {
+		// Clean up expired entry, let Prune handle deletion
+		return "", false
+	}
+
+	decompressed, err := DecompressLossless(entry.Response)
+	if err != nil {
+		log.Printf("Failed to decompress cached response: %v", err)
+		return "", false
+	}
+
+	return decompressed, true
+}
+
+// Set stores a prompt-response pair in the cache, compressing it first.
+func (c *CompressedEmbeddingCache) Set(prompt, response string) {
+	key := c.hashPrompt(prompt)
+	now := time.Now()
+
+	compressed, err := CompressLossless(response)
+	if err != nil {
+		log.Printf("Failed to compress cache response: %v", err)
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.entries[key] = CacheEntry{
+		Response:  compressed,
+		CreatedAt: now,
+		ExpiresAt: now.Add(c.ttl),
+	}
+}
+
+// Clear removes all entries from the cache.
+func (c *CompressedEmbeddingCache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries = make(map[string]CacheEntry)
+}
+
+// Prune removes all expired entries from the cache to free up memory.
+func (c *CompressedEmbeddingCache) Prune() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
