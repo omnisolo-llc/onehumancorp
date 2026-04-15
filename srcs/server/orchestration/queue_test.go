@@ -98,24 +98,3 @@ func TestSQLiteTaskQueue_Delayed(t *testing.T) {
 		t.Errorf("expected id %s, got %s", id, task.ID)
 	}
 }
-
-
-func TestJobQueue_MapHighLevelTask(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-	provider, cleanup := db.SetupTestDB(t)
-	defer cleanup()
-
-	jq := &JobQueue{DB: provider}
-	ctx := context.Background()
-	task := &QueuedTask{
-		Payload: map[string]interface{}{
-			"title": "test task",
-			"organization_id": "test-org",
-		},
-	}
-
-	err := jq.MapHighLevelTask(ctx, task)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-}

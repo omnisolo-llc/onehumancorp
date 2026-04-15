@@ -31,7 +31,7 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	ctx := context.Background()
 
 	// In test, creating table
-	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories_master (
+	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS ohc_memory_embeddings (
 		id VARCHAR PRIMARY KEY,
 		tenant_id VARCHAR NOT NULL,
 		memory_type TEXT NOT NULL,

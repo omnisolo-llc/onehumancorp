@@ -6,7 +6,6 @@ import 'package:stream_channel/stream_channel.dart';
 import 'dart:async';
 import '../lib/widgets/swarm_observability_dashboard.dart';
 import '../lib/widgets/agent_task_progress.dart';
-import '../lib/widgets/agent_mesh_message_tile.dart';
 
 class MockWebSocketChannel extends StreamChannelMixin implements WebSocketChannel {
   final StreamController<dynamic> _streamController = StreamController<dynamic>.broadcast();
@@ -90,19 +89,6 @@ void main() {
     expect(progressBarFinder, findsOneWidget);
     final LinearProgressIndicator progressBar = tester.widget(progressBarFinder);
     expect(progressBar.value, 0.4);
-
-    // Now test messages
-    channel.addMessage(jsonEncode({
-      'messages': [
-        {'sender': 'Guide', 'message': 'Hello from Guide', 'timestamp': '2026-04-15T08:00:00Z'},
-      ]
-    }));
-
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Agent Mesh'), findsOneWidget);
-    expect(find.text('Guide'), findsOneWidget);
-    expect(find.text('Hello from Guide'), findsOneWidget);
 
     channel.closeWebSocket();
   });

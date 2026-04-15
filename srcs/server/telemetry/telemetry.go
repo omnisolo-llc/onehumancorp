@@ -54,8 +54,6 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -263,22 +261,6 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
-	AutoDreamIngestionErrorCounter, err = m.Int64Counter(
-		"ohc_autodream_ingestion_error_total",
-		metric.WithDescription("Total number of ingestion errors"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	AutoDreamCompressionErrorCounter, err = m.Int64Counter(
-		"ohc_autodream_compression_error_total",
-		metric.WithDescription("Total number of compression errors"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 	AutoDreamMemoriesCompressedCounter, err = m.Int64Counter(
 		"ohc_autodream_memories_compressed_total",
 		metric.WithDescription("Total number of agent sessions compressed into AutoDream memories"),
@@ -314,7 +296,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
-		"ohc_sync_daemon_batch_size",
+		"sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
 	)
 	if err != nil {
@@ -1531,42 +1513,4 @@ func RecordRagEscalation(ctx context.Context) {
 	if RagEscalationCount != nil {
 		RagEscalationCount.Add(ctx, 1)
 	}
-}
-
-// RecordAutoDreamIngestionError records an ingestion error.
-func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
-}
-
-// RecordAutoDreamCompressionError records a compression error.
-func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
 }

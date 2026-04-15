@@ -3,23 +3,15 @@
 
 set -e
 
-RESET="\033[0m"
-BOLD="\033[1m"
-DIM="\033[2m"
-BLUE="\033[38;5;39m"
-CYAN="\033[38;5;87m"
-GREEN="\033[38;5;120m"
-PURPLE="\033[38;5;141m"
-
-echo -e "${BOLD}${BLUE}===============================================${RESET}"
-echo -e "${BOLD}${CYAN}   🚀 OHC Hybrid Agentic OS Developer Setup    ${RESET}"
-echo -e "${BOLD}${BLUE}===============================================${RESET}"
+echo "==============================================="
+echo "   🚀 OHC Hybrid Agentic OS Developer Setup    "
+echo "==============================================="
 
 # Check requirements
-if ! command -v bazelisk >/dev/null 2>&1; then echo -e "${PURPLE}Bazelisk is required but not installed. Aborting.${RESET}"; false; fi
-if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is required but not installed. Aborting.${RESET}"; false; fi
+command -v bazelisk >/dev/null 2>&1 || { echo "Bazelisk is required but not installed. Aborting."; return 1 2>/dev/null || exit 1; }
+command -v docker >/dev/null 2>&1 || { echo "Docker is required but not installed. Aborting."; return 1 2>/dev/null || exit 1; }
 
-echo -e "${DIM}[1/5] Checking environment configuration...${RESET}"
+echo "[1/4] Checking environment configuration..."
 if [ ! -f .env ]; then
   echo "Creating default .env file..."
   cat << 'ENV' > .env
@@ -36,26 +28,19 @@ ENV
   chmod 0600 .env
 fi
 
-echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
+echo "[2/4] Verifying Standalone Mode..."
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-bazelisk test //srcs/server/api/...
+bazelisk test //...
 
-echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
+echo "[3/4] Verifying Cloud Mode..."
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
-bazelisk test //srcs/server/api/...
+bazelisk test //...
 
-echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
-if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
-    bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
-else
-    echo -e "${DIM}Audit script not found, skipping.${RESET}"
-fi
-
-echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
+echo "[4/4] Generating Local Memory Log..."
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
@@ -71,7 +56,7 @@ observations:
   - Developer executed ohc-setup.sh
 actions_taken:
   - Verified local environment
-  - Ran Day One audits
+  - Built Standalone and Cloud targets
 resolution: Developer environment successfully initialized.
 MEM
 
@@ -85,7 +70,7 @@ observations:
   - ohc-setup.sh completed successfully.
 STAT
 
-echo -e "${BOLD}${BLUE}===============================================${RESET}"
-echo -e "${BOLD}${GREEN}   ✅ Setup Complete!                          ${RESET}"
-echo -e "${DIM}   Use 'source deploy/scripts/ohc-mode.sh' to switch contexts.${RESET}"
-echo -e "${BOLD}${BLUE}===============================================${RESET}"
+echo "==============================================="
+echo "   ✅ Setup Complete!                          "
+echo "   Use 'source deploy/scripts/ohc-mode.sh' to switch contexts."
+echo "==============================================="

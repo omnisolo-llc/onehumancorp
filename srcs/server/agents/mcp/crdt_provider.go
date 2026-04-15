@@ -3,49 +3,41 @@ package mcp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
-// MCPTool defines a common interface for MCP tools.
-type MCPTool interface {
-	Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error)
-}
+// CRDTProvider implements tools for Hybrid CRDT Synchronization.
+type CRDTProvider struct{}
 
-// CRDTProvider groups CRDT related tools.
-type CRDTProvider struct {
-	PushTool *CRDTPushTool
-	PullTool *CRDTPullTool
-}
-
-// NewCRDTProvider creates a new CRDTProvider with its tools initialized.
 func NewCRDTProvider() *CRDTProvider {
-	return &CRDTProvider{
-		PushTool: &CRDTPushTool{},
-		PullTool: &CRDTPullTool{},
-	}
+	return &CRDTProvider{}
 }
 
-type CRDTPushTool struct{}
+// CRDTPushTool pushes local state changes to the remote sync endpoint.
+func (p *CRDTProvider) CRDTPushTool(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
+	redactedPayload := telemetry.RedactInterfacePII(payload)
 
-func (t *CRDTPushTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	redactedData := telemetry.RedactInterfacePII(payload)
-	resultBytes, err := json.Marshal(redactedData)
+	payloadBytes, err := json.Marshal(redactedPayload)
 	if err != nil {
-		return nil, errors.New("failed to marshal redacted payload")
+		return nil, err
 	}
-	return FormatExecutionResult("crdt_push", "success", resultBytes, true), nil
+
+	return FormatExecutionResult("crdt_push", "success", payloadBytes, true), nil
 }
 
-type CRDTPullTool struct{}
-
-func (t *CRDTPullTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	// Mock fetching remote state
-	mockData := map[string]interface{}{"crdt_state": "latest_mocked_state"}
-	resultBytes, err := json.Marshal(mockData)
-	if err != nil {
-		return nil, errors.New("failed to marshal mock data")
+// CRDTPullTool fetches the latest remote state and resolves it locally using CRDT logic.
+func (p *CRDTProvider) CRDTPullTool(ctx context.Context) (*ExecutionResult, error) {
+	// Mock remote state
+	mockData := map[string]interface{}{
+		"remote_revision": 1,
+		"status":          "synced",
 	}
-	return FormatExecutionResult("crdt_pull", "success", resultBytes, true), nil
+
+	payloadBytes, err := json.Marshal(mockData)
+	if err != nil {
+		return nil, err
+	}
+
+	return FormatExecutionResult("crdt_pull", "success", payloadBytes, true), nil
 }

@@ -1,7 +1,0 @@
-timestamp: "2026-04-15T14:49:52Z"
-domain: "RESEARCHER"
-context: "KAIROS Hybrid Agentic OS Master Blueprint"
-insights:
-  - "The Shared Task List requires a robust distributed state machine using PostgreSQL FOR UPDATE SKIP LOCKED for cloud mode."
-  - "Realtime Teammate Mesh APIs are essential for agent coordination, leveraging Redis Pub/Sub for cloud and memory for standalone."
-  - "AutoDream memory consolidation is critical for long-term swarm intelligence, requiring pgvector for embeddings."

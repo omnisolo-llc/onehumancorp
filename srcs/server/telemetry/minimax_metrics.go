@@ -1,8 +1,9 @@
 package telemetry
 
 import (
-	"context"
 	"encoding/json"
+
+	"context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -55,11 +56,9 @@ func RecordMinimaxCall(ctx context.Context, operation string, durationSeconds fl
 			"operation":        operation,
 			"duration_seconds": durationSeconds,
 		}
-		redactedMap := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedMap)
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "minimax_call", string(payloadBytes))
 	}
-
 	attrs := metric.WithAttributes(attribute.String("operation", operation))
 
 	if minimaxCallsCounter != nil {

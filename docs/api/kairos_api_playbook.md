@@ -43,21 +43,6 @@ graph TD
         }
         ```
 
-*   **Publish to Room**
-    *   **Endpoint:** `POST /api/v1/mesh/rooms/{room_id}/messages`
-    *   **Description:** Broadcasts an intent to the designated room. Centrifuge downstream WebSocket propagation handles bursts of up to 10k messages/sec.
-    *   **Payload Example:**
-        ```json
-        {
-          "agent_id": "agent_pm_001",
-          "action": "ultraplan_deliberation",
-          "status": "active",
-          "payload": {
-             "content": "I propose we use pgvector instead of Pinecone for AutoDream."
-          }
-        }
-        ```
-
 ## 2. Shared Task List
 
 The Shared Task List manages the distributed state machine, preventing race conditions when sub-agents claim tasks.
@@ -71,28 +56,6 @@ The Shared Task List manages the distributed state machine, preventing race cond
         {
           "parent_task_id": "T-123",
           "action": "summarize"
-        }
-        ```
-
-*   **Claim a Task**
-    *   **Endpoint:** `POST /api/v1/tasks/claim`
-    *   **Description:** Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS uses `FOR UPDATE SKIP LOCKED` (Cloud) or explicit transaction locking (Standalone).
-    *   **Payload Example:**
-        ```json
-        {
-          "agent_id": "agent_swe_007",
-          "role": "swe"
-        }
-        ```
-
-*   **Complete a Task**
-    *   **Endpoint:** `POST /api/v1/tasks/{task_id}/complete`
-    *   **Description:** Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
-    *   **Payload Example:**
-        ```json
-        {
-          "agent_id": "agent_swe_007",
-          "outcome_summary": "Successfully merged PR #124."
         }
         ```
 
@@ -173,28 +136,5 @@ graph TD
 ## 5. AutoDream Pipeline
 
 The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
-
-### Endpoints
-
-*   **Trigger Manual AutoDream Sync**
-    *   **Endpoint:** `POST /api/v1/autodream/sync`
-    *   **Description:** Forces the background worker to scan any `*.yml` files in `OHC_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
-    *   **Payload Example:**
-        ```json
-        {
-          "force_reindex": false
-        }
-        ```
-
-*   **Query Consolidated Memories**
-    *   **Endpoint:** `POST /api/v1/autodream/query`
-    *   **Description:** Executes an exact Nearest Neighbor search (`ORDER BY embedding <-> $1` in PostgreSQL) against the long-term swarm memory.
-    *   **Payload Example:**
-        ```json
-        {
-          "query_text": "How does the Teammate Mesh handle fallback in Standalone mode?",
-          "limit": 5
-        }
-        ```
 
 </div>

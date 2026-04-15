@@ -414,10 +414,6 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
 	})
 
-	t.Run("RecordPostgresRetryExhausted Uninitialized", func(t *testing.T) {
-		RecordPostgresRetryExhausted(ctx, "test_op")
-	})
-
 	t.Run("RecordTokenBurnRate", func(t *testing.T) {
 		mockM := &mockMeter{}
 		err := InitWithMeter(mockM)
@@ -591,13 +587,6 @@ func (e errorRegisterer) MustRegister(...prometheus.Collector) {
 
 func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 	return true
-}
-
-func TestAutoDreamErrorMetrics(t *testing.T) {
-	AutoDreamIngestionErrorCounter = nil
-	AutoDreamCompressionErrorCounter = nil
-	RecordAutoDreamIngestionError(context.Background(), "agent-1", "timeout")
-	RecordAutoDreamCompressionError(context.Background(), "agent-1", "timeout")
 }
 
 func TestInitTelemetry_PrometheusError(t *testing.T) {

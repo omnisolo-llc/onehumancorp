@@ -3,7 +3,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "queue",
     srcs = [
-        "queue_manager_loop.go",
         "queue.go",
         "queue_manager.go",
         "worker.go",
@@ -28,12 +27,7 @@ go_library(
 
 go_test(
     name = "queue_test",
-    srcs = [
-        "queue_manager_loop_test.go",
-        "queue_test.go",
-        "worker_test.go",
-        "job_queue_test.go",
-    ],
+    srcs = ["queue_test.go", "worker_test.go", "job_queue_test.go"],
     embed = [":queue"],
     deps = [
         "//srcs/server/db",

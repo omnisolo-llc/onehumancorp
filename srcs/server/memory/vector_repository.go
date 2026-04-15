@@ -34,7 +34,7 @@ func (r *VectorRepository) Upsert(ctx context.Context, record *EmbeddingRecord) 
 	}
 
 	query := `
-		INSERT INTO autodream_memories_master (id, tenant_id, memory_type, content, embedding, created_at, source_task_id)
+		INSERT INTO ohc_memory_embeddings (id, tenant_id, memory_type, content, embedding, created_at, source_task_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	// Use INSERT ... ON CONFLICT if UPSERT logic is required. Keeping it simple as per instructions.
