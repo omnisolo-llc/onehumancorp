@@ -41,6 +41,7 @@ go_library(
         "//srcs/server/orchestration/mesh",
         "//srcs/server/scheduler",
         "//srcs/server/auth",
+        "//srcs/server/checkpointer",
         "//srcs/server/settings",
         "//srcs/server/storage",
         "//srcs/server/telemetry",
@@ -98,6 +99,7 @@ go_test(
     embed = [":orchestration"],
     deps = [
         "//srcs/server/auth",
+        "//srcs/server/checkpointer",
         "//srcs/server/utils",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_gorilla_websocket//:websocket",
