@@ -78,7 +78,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
     to := NewSharedTaskOrchestrator(dbProvider)
 
-    task, err := to.ClaimTask(ctxWithClaims, "agent-1")
+    task, err := to.ClaimTask(ctxWithClaims, "spiffe://onehumancorp.io/agent/1")
     if err != nil {
         t.Fatalf("ClaimTask failed: %v", err)
     }
@@ -104,7 +104,7 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("expected nil task for task-3, got %v", task3)
     }
 
-    err = to.TransitionTask(ctxWithClaims, "task-2", "agent-1", "IN_PROGRESS", "COMPLETED", "Starting work")
+    err = to.TransitionTask(ctxWithClaims, "task-2", "spiffe://onehumancorp.io/agent/1", "IN_PROGRESS", "COMPLETED", "Starting work")
     if err != nil {
         t.Fatalf("TransitionTask failed: %v", err)
     }
