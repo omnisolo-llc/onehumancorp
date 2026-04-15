@@ -537,6 +537,20 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		}()
 	}
 
+	// Broadcast mesh events
+	if tm.mesh != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  taskID,
+				"action":   "COMPLETE",
+				"agent_id": agentID,
+				"status":   "COMPLETED",
+			}
+			payloadBytes, _ := json.Marshal(payload)
+			_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+		}()
+	}
+
 	return nil
 }
 
