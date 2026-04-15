@@ -24,6 +24,7 @@ go_library(
         "tasks.go",
         "mesh.go",
         "shared_tasks.go",
+        "models.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
