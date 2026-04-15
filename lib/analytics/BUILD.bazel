@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "analytics",
+    srcs = ["viral_analytics.go"],
+    importpath = "github.com/onehumancorp/mono/lib/analytics",
+    visibility = ["//visibility:public"],
+    deps = ["//srcs/server/db"],
+)
+
+go_test(
+    name = "analytics_test",
+    srcs = ["viral_analytics_test.go"],
+    embed = [":analytics"],
+)

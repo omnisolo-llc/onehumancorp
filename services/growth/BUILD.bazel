@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth",
+    srcs = ["viral_loop.go"],
+    importpath = "github.com/onehumancorp/mono/services/growth",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//lib/analytics",
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = ["viral_loop_test.go"],
+    embed = [":growth"],
+)
