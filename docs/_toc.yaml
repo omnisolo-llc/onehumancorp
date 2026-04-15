@@ -1,6 +1,8 @@
 toc:
   - title: Home
     path: /docs/index.md
+  - title: Roadmap
+    path: /docs/roadmap.md
   - title: Architecture
     path: /docs/architecture/index.md
   - title: Developer
