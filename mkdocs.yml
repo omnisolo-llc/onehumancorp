@@ -6,12 +6,27 @@ repo_name: onehumancorp/mono
 repo_url: https://github.com/onehumancorp/mono
 exclude_docs: |
     /README.md
+    /_book.yaml
+    /_project.yaml
+    /_toc.yaml
+    /requirements.txt
+    /requirements.lock
+    /mkdocs_via_bazel.sh
+    /mkdocs_runner.py
 theme:
   name: material
   features:
     - navigation.sections
     - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.suggest
     - content.code.copy
+  palette:
+    - scheme: slate
+      primary: black
+      accent: indigo
+
 markdown_extensions:
   - admonition
   - tables
@@ -22,21 +37,77 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+
 validation:
     nav:
         omitted_files: ignore
+
 nav:
   - Home: index.md
   - Architecture:
       - architecture/index.md
+      - System Design: architecture/system-design.md
+      - Shared Context: architecture/shared-context.md
+      - Roadmap: architecture/roadmap.md
+      - Hybrid Architecture:
+          - CRDT Sync Blueprint: architecture/hybrid_crdt_sync_blueprint.md
+          - Oracle Hybrid RAG: architecture/oracle_hybrid_rag_master_plan.md
+          - RAG Synthesis: architecture/rag_synthesis.md
+          - OHC Competitive Analysis: architecture/ohc_hybrid_competitive_analysis.md
+      - KAIROS Design Docs:
+          - architecture/kairos/master_design_doc.md
+          - architecture/kairos/shared_task_list_design.md
   - Developer:
       - developer/index.md
+      - Setup Guide: developer/setup.md
+      - Developer Guide: developer/developer-guide.md
+      - Hybrid MCP Playbook: developer/hybrid-mcp-playbook.md
+      - Hybrid Development: developer/hybrid_development.md
+      - UI Testing Guidelines: developer/ui_testing_guidelines.md
+      - Interactive Tutorial: developer/INTERACTIVE_TUTORIAL.md
   - API:
       - api/index.md
+      - API Playbook: api/playbook.md
+      - KAIROS API Playbook: api/kairos_api_playbook.md
+      - Orchestration API: api/kairos_orchestration_api.md
   - Features:
       - features/index.md
+      - Hybrid Architecture: features/hybrid-architecture.md
+      - Automated SDLC:
+          - Design Doc: features/automated-sdlc/design-doc.md
+          - Test Plan: features/automated-sdlc/test-plan.md
+          - CUJ: features/automated-sdlc/cuj.md
+      - Extensibility Framework:
+          - Design Doc: features/extensibility-framework/design-doc.md
+          - Test Plan: features/extensibility-framework/test-plan.md
+      - Marketplace:
+          - Design Doc: features/marketplace/design-doc.md
+          - User Guide: features/marketplace/user-guide.md
+      - Semantic Version:
+          - Design Doc: features/semver/design-doc.md
+          - Test Plan: features/semver/test-plan.md
+      - Release Notes:
+          - Design Doc: features/release-notes/design-doc.md
+          - Test Plan: features/release-notes/test-plan.md
   - Walkthroughs:
       - walkthroughs/index.md
+      - Agent Lifecycle: walkthroughs/agent_lifecycle.md
+      - AutoDream Pipeline: walkthroughs/autodream_pipeline.md
+      - AutoDream Sync: walkthroughs/autodream_sync.md
+      - AutoDream CLI Guide: walkthroughs/autodream_cli_guide.md
+      - Custom Agent Creation: walkthroughs/custom_agent_creation_walkthrough.md
+      - Distributed State Machine: walkthroughs/distributed_state_machine.md
+      - Elastic Swarm Bursting: walkthroughs/elastic_swarm_bursting.md
+      - Hybrid CRDT Sync MCP: walkthroughs/hybrid_crdt_sync_mcp.md
+      - Hybrid FS MCP Architecture: walkthroughs/hybrid_fs_mcp_architecture.md
+  - App:
+      - User Guide: user_guide.md
   - Operations:
       - operations/index.md
       - Task Tracking: operations/task-tracking.md
@@ -48,4 +119,6 @@ nav:
       - Release Notes: public/release_notes.md
   - Archive:
       - archive/index.md
+      - execution-plan.md: archive/execution-plan.md
+      - growth-strategy-audit.md: archive/growth-strategy-audit.md
       - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md

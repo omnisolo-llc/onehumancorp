@@ -1,6 +1,7 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -73,19 +74,29 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-sh_binary(
+py_binary(
     name = "docs_build",
-    srcs = ["docs/mkdocs_via_bazel.sh"],
+    srcs = ["docs/mkdocs_runner.py"],
     args = ["build"],
     data = [":docs_srcs"],
+    deps = [
+        "@docs_deps//mkdocs",
+        "@docs_deps//mkdocs_material",
+        "@docs_deps//pymdown_extensions",
+    ],
     tags = ["manual"],
 )
 
-sh_binary(
+py_binary(
     name = "docs_serve",
-    srcs = ["docs/mkdocs_via_bazel.sh"],
+    srcs = ["docs/mkdocs_runner.py"],
     args = ["serve"],
     data = [":docs_srcs"],
+    deps = [
+        "@docs_deps//mkdocs",
+        "@docs_deps//mkdocs_material",
+        "@docs_deps//pymdown_extensions",
+    ],
     tags = ["manual"],
 )
 

@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "onboarding_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/cmd/onboarding",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//services/onboarding",
+    ],
+)
+
+go_binary(
+    name = "onboarding",
+    embed = [":onboarding_lib"],
+    visibility = ["//visibility:public"],
+)
