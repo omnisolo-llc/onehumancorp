@@ -1,5 +1,8 @@
 # Release Notes
 
+## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
+- Scaling (Cloud): Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.
+- Privacy/Offline (Standalone): Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OHC Hybrid Architecture protocols.
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
 - Scaling (Cloud): Formalized real-time Teammate Mesh APIs and KAIROS DAG orchestration for distributed pod execution.
 - Privacy/Offline (Standalone): Ensured KAIROS orchestrator degrades gracefully into isolated SQLite single-user mode.

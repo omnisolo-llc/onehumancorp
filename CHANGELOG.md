@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
+### Cloud Scaling Improvements
+- Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.
+
+### Privacy/Offline Improvements
+- Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OHC Hybrid Architecture protocols.
+
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
