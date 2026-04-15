@@ -17,6 +17,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
+	orchestrationmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	growthapi "github.com/onehumancorp/mono/services/growth/api"
 	"github.com/onehumancorp/mono/srcs/server/billing"
@@ -1965,6 +1966,16 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
 		return
 	}
+
+	// We create a temporary LocalMeshBroker here for now as requested.
+	// In reality this should be passed in via dependencies.
+	import_mesh := true
+	_ = import_mesh
+
+	broker := orchestrationmesh.NewLocalMeshBroker()
+	handler := orchestrationmesh.NewHTTPHandler(broker)
+	handler.ServeHTTP(w, r)
+	return
 
 	var req struct {
 		Channel string                 `json:"channel"`

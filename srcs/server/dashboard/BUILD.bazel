@@ -21,6 +21,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/dashboard",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/orchestration/mesh",
         "//srcs/server/api",
         "//srcs/server/api/mesh",
         "//services/growth/api",
@@ -61,6 +62,7 @@ go_test(
     ],
     embed = [":dashboard"],
     deps = [
+        "//srcs/server/orchestration/mesh",
         "//srcs/server/api",
         "//srcs/server/api/mesh",
         "//services/growth/api",

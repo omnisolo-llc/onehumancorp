@@ -63,6 +63,9 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
+        "tasks_store_test.go",
+        "tasks_db.go",
+        "tasks_store.go",
         "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
