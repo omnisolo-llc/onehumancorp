@@ -2,7 +2,10 @@ package telemetry
 
 import (
 	"context"
+	"os"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -59,4 +62,12 @@ func RecordBridgeStatus(ctx context.Context, active int64) {
 	if bridgeStatusGauge != nil {
 		bridgeStatusGauge.Add(ctx, active)
 	}
+}
+
+func PushMetrics(ctx context.Context, jobName string) error {
+	url := os.Getenv("PROMETHEUS_PUSHGATEWAY_URL")
+	if url == "" {
+		return nil
+	}
+	return push.New(url, jobName).Gatherer(prometheus.DefaultGatherer).Push()
 }

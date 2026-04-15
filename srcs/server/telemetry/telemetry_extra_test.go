@@ -9,6 +9,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func TestPushMetrics(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("PROMETHEUS_PUSHGATEWAY_URL", "")
+	err := PushMetrics(ctx, "test_job")
+	if err != nil {
+		t.Fatalf("expected nil error when url is empty, got %v", err)
+	}
+}
+
 func TestRecordOtherMetrics(t *testing.T) {
 	origReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = origReg }()
