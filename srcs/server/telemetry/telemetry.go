@@ -81,6 +81,10 @@ var (
 
 	autoDreamSyncDuration  metric.Float64Histogram
 	autoDreamQueryDuration metric.Float64Histogram
+
+	ohcBashSandboxViolationsTotal metric.Int64Counter
+	ohcBashExecutionDurationSeconds metric.Float64Histogram
+
 	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -457,6 +461,21 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+
+	ohcBashSandboxViolationsTotal, err = m.Int64Counter("ohc_bash_sandbox_violations_total",
+		metric.WithDescription("Total number of bash sandbox violations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ohcBashExecutionDurationSeconds, err = m.Float64Histogram("ohc_bash_execution_duration_seconds",
+		metric.WithDescription("Duration of bash command executions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	TaskQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_task_queue_length",
 		metric.WithDescription("Current length of the shared task queue"),
@@ -464,6 +483,8 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+
 
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_sub_agent_queue_length",
@@ -1569,4 +1590,19 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
             attribute.String("error_type", errorType),
         ))
     }
+}
+
+
+// RecordBashSandboxViolation increments the counter for bash sandbox violations.
+func RecordBashSandboxViolation(ctx context.Context) {
+	if ohcBashSandboxViolationsTotal != nil {
+		ohcBashSandboxViolationsTotal.Add(ctx, 1)
+	}
+}
+
+// RecordBashExecutionDuration records the duration of a bash command execution.
+func RecordBashExecutionDuration(ctx context.Context, duration float64) {
+	if ohcBashExecutionDurationSeconds != nil {
+		ohcBashExecutionDurationSeconds.Record(ctx, duration)
+	}
 }

@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "bash_sandbox",
+    srcs = [
+        "bash_sandbox/sandbox.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/harness/bash_sandbox",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry:telemetry",
+    ],
+)
+
+go_test(
+    name = "bash_sandbox_test",
+    srcs = [
+        "bash_sandbox/sandbox_test.go",
+    ],
+    embed = [":bash_sandbox"],
+)
