@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "webhooks",
+    srcs = ["signature.go"],
+    importpath = "github.com/onehumancorp/mono/services/webhooks",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "webhooks_test",
+    srcs = ["signature_test.go"],
+    embed = [":webhooks"],
+)
