@@ -37,7 +37,6 @@ nav:
       - features/index.md
   - Walkthroughs:
       - walkthroughs/index.md
-      - Hybrid API: walkthroughs/hybrid_agentic_os_api_walkthrough.md
   - Operations:
       - operations/index.md
       - Task Tracking: operations/task-tracking.md
