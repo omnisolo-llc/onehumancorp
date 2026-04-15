@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Fixed `TestTaskManager_CompleteTask` double-completion database lock logic to ensure safe multi-tenant concurrent task completion.
+- Prevented potential data races when concurrent agents attempt to complete identical tasks.
+
+### Privacy/Offline Improvements
+- Maintained stability in standalone single-user mode by enforcing proper task completion validation.
+
 ## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.

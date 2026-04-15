@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
+- Scaling (Cloud): Fixed `TestTaskManager_CompleteTask` double-completion logic to ensure safe multi-tenant task processing.
+- Privacy/Offline (Standalone): Enforced task completion integrity for isolated SQLite single-user mode.
+
 ## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
 - Scaling (Cloud): Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.
 - Privacy/Offline (Standalone): Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OHC Hybrid Architecture protocols.

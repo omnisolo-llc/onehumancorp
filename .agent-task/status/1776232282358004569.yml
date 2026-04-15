@@ -1,0 +1,3 @@
+status: "DONE"
+tests_green: true
+notes: "Fixed double-completion error in CompleteTaskWithResult and released 0.3.8"
