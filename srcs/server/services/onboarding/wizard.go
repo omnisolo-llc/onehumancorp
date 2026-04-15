@@ -34,9 +34,9 @@ func (w *InteractiveWizard) GenerateWizardUI(isCloud bool) string {
     }
 
     var sb strings.Builder
-    sb.WriteString("<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px;\">\n")
-    sb.WriteString(fmt.Sprintf("  <h2>OHC Interactive Setup (%s)</h2>\n", mode))
-    sb.WriteString("  <p>Please review your configuration options.</p>\n")
+    sb.WriteString("<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\">\n")
+    sb.WriteString(fmt.Sprintf("  <h2 style=\"margin-top: 0; color: #ffffff; font-weight: 600; font-size: 24px;\">OHC Interactive Setup (%s)</h2>\n", mode))
+    sb.WriteString("  <p style=\"color: rgba(255, 255, 255, 0.7); font-size: 16px; line-height: 1.5; margin-bottom: 0;\">Please review your configuration options.</p>\n")
     sb.WriteString("</div>")
 
     return sb.String()
