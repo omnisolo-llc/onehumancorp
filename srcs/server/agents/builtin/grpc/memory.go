@@ -4,7 +4,7 @@ package agentgrpc
 //
 // Memory entries are stored in-process (with optional Redis/Valkey sharing
 // across agents in the same cluster).  The former filesystem approach
-// (.agent-task/memory/*.json) has been removed; all state lives in the
+// (.ohc/runtime/memory/*.json) has been removed; all state lives in the
 // database or the message bus.
 //
 // The design:

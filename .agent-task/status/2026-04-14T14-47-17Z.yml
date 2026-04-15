@@ -1,5 +1,0 @@
-agent: Palette
-status: HEALTHY
-metrics:
-  tasks_completed: 1
-  uptime: 300

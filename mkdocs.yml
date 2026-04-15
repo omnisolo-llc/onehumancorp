@@ -1,0 +1,51 @@
+site_name: One Human Corp Docs
+site_description: Markdown-first product, architecture, and operations documentation for the OHC monorepo.
+docs_dir: docs
+site_dir: site
+repo_name: onehumancorp/mono
+repo_url: https://github.com/onehumancorp/mono
+exclude_docs: |
+    /README.md
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+validation:
+    nav:
+        omitted_files: ignore
+nav:
+  - Home: index.md
+  - Architecture:
+      - architecture/index.md
+  - Developer:
+      - developer/index.md
+  - API:
+      - api/index.md
+  - Features:
+      - features/index.md
+  - Walkthroughs:
+      - walkthroughs/index.md
+  - Operations:
+      - operations/index.md
+      - Task Tracking: operations/task-tracking.md
+      - Issue Migration Seed: operations/github-issues-migration.md
+      - Docs Audit: reports/docs-site-audit.md
+  - Releases:
+      - public/index.md
+      - Changelog: public/CHANGELOG.md
+      - Release Notes: public/release_notes.md
+  - Archive:
+      - archive/index.md
+      - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md

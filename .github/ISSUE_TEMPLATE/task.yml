@@ -1,0 +1,55 @@
+name: Task
+description: Track implementation work in GitHub issues instead of local task files.
+title: "[Task]: "
+labels:
+  - task
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: State the concrete unit of work.
+      placeholder: Implement dynamic tool discovery in the MCP gateway
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - backend
+        - frontend
+        - docs
+        - infra
+        - research
+    validations:
+      required: true
+  - type: input
+    id: design_doc
+    attributes:
+      label: Design doc
+      description: Link the supporting design document when one exists.
+      placeholder: docs/features/.../design-doc.md
+  - type: input
+    id: cuj
+    attributes:
+      label: CUJ
+      description: Link the supporting CUJ when one exists.
+      placeholder: docs/features/.../cuj.md
+  - type: input
+    id: test_plan
+    attributes:
+      label: Test plan
+      description: Link the supporting test plan when one exists.
+      placeholder: docs/features/.../test-plan.md
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: List the expected completion conditions.
+      placeholder: |
+        - Backend handler validates all tool binding requests
+        - Unit tests cover the success and failure paths
+        - Docs are updated
+    validations:
+      required: true

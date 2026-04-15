@@ -64,6 +64,7 @@ const profiles = [
 ];
 
 const browser = await chromium.launch({ headless: true });
+const screenName = "landing-page";
 
 try {
   for (const profile of profiles) {
@@ -75,17 +76,17 @@ try {
       () =>
         Boolean(
           document.querySelector("flutter-view") ||
-            document.querySelector("flt-glass-pane") ||
-            document.querySelector("canvas"),
+          document.querySelector("flt-glass-pane") ||
+          document.querySelector("canvas"),
         ),
       { timeout: 60000 },
     );
     await page.waitForTimeout(1500);
 
-    const targetDir = path.join(outputRoot, profile.name);
+    const targetDir = path.join(outputRoot, screenName);
     await mkdir(targetDir, { recursive: true });
     await page.screenshot({
-      path: path.join(targetDir, "login.png"),
+      path: path.join(targetDir, `${profile.name}.png`),
       fullPage: true,
     });
 

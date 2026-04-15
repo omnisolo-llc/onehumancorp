@@ -9,16 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -44,15 +44,15 @@ type SharedTask struct {
 
 // TaskManager manages the shared tasks list
 type TaskManager struct {
-	db          db.Provider
-	redisClient rueidis.Client
-	hub         *CentrifugeNode // For Teammate Mesh broadcast
-	stopChan    chan struct{}
+	db           db.Provider
+	redisClient  rueidis.Client
+	hub          *CentrifugeNode // For Teammate Mesh broadcast
+	stopChan     chan struct{}
 	stateMachine *statemachine.StateMachine
-	taskQueue   queue.TaskQueue
-	mu          sync.Mutex // For Standalone mode SQLite locking
-	autodream   autodream.MemoryConsolidator
-	mesh        MeshTransport
+	taskQueue    queue.TaskQueue
+	mu           sync.Mutex // For Standalone mode SQLite locking
+	autodream    autodream.MemoryConsolidator
+	mesh         MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -205,13 +205,13 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	if tm.db.IsSQLite() {
 		query = `
 			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
 			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	} else {
 		query = `
 			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '{}', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
 			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	}
@@ -454,6 +454,11 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 // CompleteTask marks a task as completed.
 func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string) error {
+	return tm.CompleteTaskWithResult(ctx, taskID, agentID, "")
+}
+
+// CompleteTaskWithResult marks a task as completed and persists the completion result.
+func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agentID, result string) error {
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return errors.New("unauthorized: missing claims")
@@ -477,7 +482,13 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
-	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -485,11 +496,26 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
+	if err := tm.persistSharedTaskCompletion(ctx, tx, taskID, result); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit completed task: %w", err)
+	}
+	if broadcast != nil {
+		broadcast()
+	}
+
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
 	if tm.autodream != nil {
 		go func() {
-			logs := []string{"Task " + taskID + " completed successfully."}
+			logLine := strings.TrimSpace(result)
+			if logLine == "" {
+				logLine = "Task " + taskID + " completed successfully."
+			}
+			logs := []string{logLine}
 			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
 		}()
 	}
@@ -508,6 +534,71 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 	}
 
 	return nil
+}
+
+func (tm *TaskManager) persistSharedTaskCompletion(ctx context.Context, tx db.Tx, taskID, result string) error {
+	var payloadText string
+	var deliberationLog string
+	err := tx.QueryRow(ctx, "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks WHERE id = $1", taskID).Scan(&payloadText, &deliberationLog)
+	if err != nil {
+		return fmt.Errorf("failed to load task payload: %w", err)
+	}
+
+	payloadBytes, err := mergeTaskResultPayload(payloadText, result)
+	if err != nil {
+		return fmt.Errorf("failed to encode task payload: %w", err)
+	}
+
+	updatedLog, err := appendDeliberationResult(deliberationLog, result)
+	if err != nil {
+		return fmt.Errorf("failed to encode deliberation log: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE shared_tasks
+		SET payload = $2, deliberation_log = $3, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`, taskID, string(payloadBytes), updatedLog)
+	if err != nil {
+		return fmt.Errorf("failed to persist task result: %w", err)
+	}
+
+	return nil
+}
+
+func mergeTaskResultPayload(payloadText, result string) ([]byte, error) {
+	payloadMap := map[string]interface{}{}
+	if strings.TrimSpace(payloadText) != "" {
+		if err := json.Unmarshal([]byte(payloadText), &payloadMap); err != nil {
+			return nil, err
+		}
+	}
+	if strings.TrimSpace(result) != "" {
+		payloadMap["result"] = result
+		payloadMap["completed_at"] = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+	return json.Marshal(payloadMap)
+}
+
+func appendDeliberationResult(deliberationLog, result string) (string, error) {
+	trimmed := strings.TrimSpace(result)
+	if trimmed == "" {
+		return deliberationLog, nil
+	}
+
+	entries := []string{}
+	trimmedLog := strings.TrimSpace(deliberationLog)
+	if trimmedLog != "" && trimmedLog != "{}" && trimmedLog != "null" {
+		if err := json.Unmarshal([]byte(deliberationLog), &entries); err != nil {
+			return "", err
+		}
+	}
+	entries = append(entries, trimmed)
+	updated, err := json.Marshal(entries)
+	if err != nil {
+		return "", err
+	}
+	return string(updated), nil
 }
 
 // PeekTasks returns up to `limit` PENDING tasks without claiming them. Used for read-only dashboards.
@@ -780,7 +871,6 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	return claimedTasks, nil
 }
-
 
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {

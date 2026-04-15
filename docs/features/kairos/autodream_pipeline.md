@@ -6,7 +6,7 @@ The AutoDream Data Pipeline is the long-term memory consolidation engine of the 
 
 ## 1. The Need for AutoDream
 
-During task execution, agents generate significant amounts of context (`agent_session_data` and `.agent-task/memory/*.yml` files). To prevent context window overflow and enable long-term reasoning, AutoDream sweeps this data, prunes redundancies, and injects the consolidated "truth" into a durable vector database.
+During task execution, agents generate significant amounts of context (`agent_session_data` and optional runtime memory `*.yml` files under `OHC_MEMORY_DIR`). To prevent context window overflow and enable long-term reasoning, AutoDream sweeps this data, prunes redundancies, and injects the consolidated "truth" into a durable vector database.
 
 ## 2. Architecture and Storage
 

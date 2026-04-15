@@ -1,29 +1,51 @@
 package orchestration
 
 import (
-
 	"bytes"
-	"database/sql"
-	"github.com/onehumancorp/mono/srcs/server/db"
-	_ "modernc.org/sqlite"
-	"path/filepath"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	_ "modernc.org/sqlite"
 )
+
+func waitForRecentEvent(t *testing.T, hub *Hub, eventType, eventID string) map[string]interface{} {
+	t.Helper()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		for _, event := range hub.RecentEvents(maxInMemoryHubEvents) {
+			var payload map[string]interface{}
+			if err := json.Unmarshal(event.Payload, &payload); err != nil {
+				continue
+			}
+			if payload["type"] != eventType {
+				continue
+			}
+			if eventID != "" && payload["event_id"] != eventID {
+				continue
+			}
+			return payload
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Fatalf("timed out waiting for recent event type=%q eventID=%q", eventType, eventID)
+	return nil
+}
 
 func TestPublishRoutesMessagesAndMeetingTranscript(t *testing.T) {
 	hub := NewHub()
@@ -1008,10 +1030,6 @@ func TestHub_TokenEfficientContextSummarization(t *testing.T) {
 	validPayload := []byte(`{"context": "some data to summarize"}`)
 	invalidPayload := []byte(`{"context": "some data", "unknown_field": "bad data"}`)
 
-	defer func() {
-		os.Remove("events.jsonl")
-	}()
-
 	tests := []struct {
 		name        string
 		eventID     string
@@ -1120,27 +1138,13 @@ func TestHub_TokenEfficientContextSummarization_SuccessFlow(t *testing.T) {
 	eventID := "event-123"
 	payload := []byte(`{"context": "some data to summarize"}`)
 
-	defer os.Remove("events.jsonl")
-
 	// 3. Execute the function
 	err := hub.TokenEfficientContextSummarization(eventID, agentID, payload)
 	if err != nil {
 		t.Fatalf("expected success, got error: %v", err)
 	}
 
-	// Wait briefly for the background worker to write to the file
-	time.Sleep(100 * time.Millisecond)
-
-	// 4. Verify log entry was written
-	b, err := os.ReadFile("events.jsonl")
-	if err != nil {
-		t.Fatalf("failed to read events.jsonl: %v", err)
-	}
-
-	var logEntry map[string]interface{}
-	if err := json.Unmarshal(b, &logEntry); err != nil {
-		t.Fatalf("failed to unmarshal events.jsonl: %v", err)
-	}
+	logEntry := waitForRecentEvent(t, hub, "TokenEfficientContextSummarization", eventID)
 
 	if logEntry["event_id"] != eventID {
 		t.Errorf("expected event_id %q, got %q", eventID, logEntry["event_id"])
@@ -1168,10 +1172,6 @@ func TestHub_ToolParameterAutoCorrection(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 	agentID := "test-agent"
-
-	defer func() {
-		os.Remove("events.jsonl")
-	}()
 
 	tests := []struct {
 		name        string
@@ -1255,41 +1255,13 @@ func TestHub_ToolParameterAutoCorrection_SuccessFlow(t *testing.T) {
 	eventID := "event-123"
 	payload := []byte(`{"value": "123", "name": "test"}`)
 
-	defer os.Remove("events.jsonl")
-
 	// 3. Execute the function
 	err := hub.ToolParameterAutoCorrection(eventID, agentID, payload)
 	if err != nil {
 		t.Fatalf("expected success, got error: %v", err)
 	}
 
-	// Wait briefly for the background worker to write to the file
-	time.Sleep(100 * time.Millisecond)
-
-	// 4. Verify log entry was written
-	b, err := os.ReadFile("events.jsonl")
-	if err != nil {
-		t.Fatalf("failed to read events.jsonl: %v", err)
-	}
-
-	// Read lines to get the specific event
-	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	var logEntry map[string]interface{}
-	var found bool
-	for i := len(lines) - 1; i >= 0; i-- {
-		var entry map[string]interface{}
-		if err := json.Unmarshal([]byte(lines[i]), &entry); err == nil {
-			if entry["type"] == "ToolParameterAutoCorrection" && entry["event_id"] == eventID {
-				logEntry = entry
-				found = true
-				break
-			}
-		}
-	}
-
-	if !found {
-		t.Fatalf("could not find ToolParameterAutoCorrection event in events.jsonl")
-	}
+	logEntry := waitForRecentEvent(t, hub, "ToolParameterAutoCorrection", eventID)
 
 	if logEntry["event_id"] != eventID {
 		t.Errorf("expected event_id %q, got %q", eventID, logEntry["event_id"])
@@ -1346,13 +1318,6 @@ func TestEventLogWorker_Coverage(t *testing.T) {
 	hub := NewHub()
 	defer hub.Close()
 
-	// Create temp file for events
-	tmpFile, err := os.CreateTemp("", "events-*.jsonl")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmpFile.Name())
-
 	// Wait a bit to let it start processing
 	time.Sleep(100 * time.Millisecond)
 
@@ -1362,8 +1327,9 @@ func TestEventLogWorker_Coverage(t *testing.T) {
 	// Give it time to flush
 	time.Sleep(100 * time.Millisecond)
 
-	// Force close to stop loop
-	close(hub.eventLogChan)
+	if len(hub.RecentEvents(1)) == 0 {
+		t.Fatal("expected recent events to contain the logged message")
+	}
 }
 
 // A quick test for the missing []interface{} branch inside service.go redactInterfacePII
@@ -1405,7 +1371,7 @@ func TestHub_AppendEventWorker_ContextCancel(t *testing.T) {
 	defer hub.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go hub.eventLogWorker(ctx, filepath.Join(t.TempDir(), "dummy_events.jsonl"))
+	go hub.eventLogWorker(ctx)
 
 	// Let it start then cancel
 	time.Sleep(10 * time.Millisecond)
@@ -1418,7 +1384,7 @@ func TestHub_AppendEventWorker_CloseChan(t *testing.T) {
 	defer hub.Close()
 	ctx := context.Background()
 
-	go hub.eventLogWorker(ctx, filepath.Join(t.TempDir(), "dummy_events2.jsonl"))
+	go hub.eventLogWorker(ctx)
 
 	// Let it start then close channel
 	time.Sleep(10 * time.Millisecond)

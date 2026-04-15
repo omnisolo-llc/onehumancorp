@@ -12,7 +12,7 @@ sequenceDiagram
     participant VectorDB as PgVector
 
     Worker->>Mesh: 1. Broadcast Event
-    Worker->>Worker: 2. Write to .agent-task/memory
+    Worker->>Worker: 2. Write to OHC_MEMORY_DIR
     AutoDream->>Worker: 3. Read Memory
     AutoDream->>VectorDB: 4. Upsert Context
 ```
