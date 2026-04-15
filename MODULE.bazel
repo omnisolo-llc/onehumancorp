@@ -10,25 +10,6 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "protobuf", version = "34.1")
 bazel_dep(name = "rules_python", version = "1.9.0")
-
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-
-python.toolchain(
-    python_version = "3.12",
-    is_default = True,
-)
-
-use_repo(python, "python_3_12")
-
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-
-pip.parse(
-    hub_name = "docs_pip",
-    python_version = "3.12",
-    requirements_lock = "//docs:requirements.lock",
-)
-
-use_repo(pip, "docs_pip")
 bazel_dep(name = "rules_shell", version = "0.7.1")
 bazel_dep(name = "rules_android", version = "0.7.1")
 bazel_dep(name = "rules_pkg", version = "1.2.0")

@@ -1,3 +1,0 @@
-status: HEALTHY
-agent: Oracle
-last_active: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
