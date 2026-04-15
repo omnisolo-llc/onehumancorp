@@ -339,12 +339,12 @@ func TestEventLogWorker_Errors(t *testing.T) {
 	hub := &Hub{
 		eventLogChan: make(chan interface{}, 10),
 	}
-
-	// Open file error branch
-	hub.eventLogWorker(context.Background(), "/root/forbidden_path_test.jsonl")
-	// If it doesn't panic, it passed
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go hub.eventLogWorker(ctx)
 
 	hub2 := NewHub()
+	defer hub2.Close()
 	// Marshal failure branch (func cannot be marshaled in JSON)
 	hub2.LogEvent(func() {})
 

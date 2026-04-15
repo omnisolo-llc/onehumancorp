@@ -1,6 +1,0 @@
-status: HEALTHY
-agent: Palette
-last_run: 2026-04-14T20-33-20Z
-metrics:
-  memory_usage: 128MB
-  tests_passed: 1

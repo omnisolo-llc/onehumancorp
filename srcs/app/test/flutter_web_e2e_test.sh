@@ -17,38 +17,56 @@ set -euo pipefail
 WORKSPACE="${TEST_WORKSPACE:-mono}"
 RUNFILES="${TEST_SRCDIR:-$PWD}"
 TMPDIR="${TEST_TMPDIR:-/tmp/flutter_web_e2e_$$}"
+script_real_dir="$(cd -- "$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")" && pwd)"
+WORKSPACE_ROOT="${BUILD_WORKSPACE_DIRECTORY:-$(cd -- "${script_real_dir}/../../.." && pwd)}"
 
 export HOME="${TMPDIR}/home"
 export XDG_CONFIG_HOME="${TMPDIR}/xdg-config"
 export XDG_CACHE_HOME="${TMPDIR}/xdg-cache"
 mkdir -p "${HOME}" "${XDG_CONFIG_HOME}" "${XDG_CACHE_HOME}"
 
+is_complete_web_bundle() {
+  local candidate="$1"
+
+  [[ -d "$candidate" ]] || return 1
+  [[ -f "$candidate/assets/FontManifest.json" ]] || return 1
+  [[ -f "$candidate/assets/fonts/MaterialIcons-Regular.otf" ]] || return 1
+  grep -q 'MaterialIcons' "$candidate/assets/FontManifest.json"
+}
+
 # ── Locate web build artifacts ─────────────────────────────────────────────
 # Depending on rule naming, Bazel may emit either:
 #   srcs/app/app.web_build_artifacts/
 #   srcs/app/app_web_build_artifacts/
 WEB_ARTIFACTS=""
+WORKSPACE_WEB_BUNDLE="${WORKSPACE_ROOT}/srcs/app/build/web"
+if is_complete_web_bundle "${WORKSPACE_WEB_BUNDLE}"; then
+  WEB_ARTIFACTS="${WORKSPACE_WEB_BUNDLE}"
+fi
+
 WEB_ARTIFACTS_RELS=(
   "srcs/app/app.web_build_artifacts"
   "srcs/app/app_web_build_artifacts"
   "srcs/app/app_web.web_build_artifacts"
 )
 
-for rel in "${WEB_ARTIFACTS_RELS[@]}"; do
-  for candidate in \
-      "${RUNFILES}/${WORKSPACE}/${rel}" \
-      "${RUNFILES}/_main/${rel}" \
-      "${RUNFILES}/__main__/${rel}"; do
-    if [ -d "$candidate" ]; then
-      WEB_ARTIFACTS="$candidate"
-      break 2
-    fi
+if [ -z "$WEB_ARTIFACTS" ]; then
+  for rel in "${WEB_ARTIFACTS_RELS[@]}"; do
+    for candidate in \
+        "${RUNFILES}/${WORKSPACE}/${rel}" \
+        "${RUNFILES}/_main/${rel}" \
+        "${RUNFILES}/__main__/${rel}"; do
+      if is_complete_web_bundle "$candidate"; then
+        WEB_ARTIFACTS="$candidate"
+        break 2
+      fi
+    done
   done
-done
+fi
 
 if [ -z "$WEB_ARTIFACTS" ] || [ ! -d "$WEB_ARTIFACTS" ]; then
-  echo "ERROR: Flutter web build artifacts not found in expected runfiles paths" >&2
-  echo "       Make sure //srcs/app:app_web is built before running this test." >&2
+  echo "ERROR: complete Flutter web build artifacts were not found" >&2
+  echo "       Build //srcs/app:app so ${WORKSPACE_WEB_BUNDLE} contains the full bundle." >&2
   exit 1
 fi
 
@@ -217,11 +235,9 @@ export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
 mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
 
 # In sandboxed environments, --with-deps may fail due lack of root privileges.
-if ! "${PLAYWRIGHT_CMD[@]}" install chromium --with-deps 2>/dev/null; then
-  if ! "${PLAYWRIGHT_CMD[@]}" install chromium 2>/dev/null; then
-    # Fall back – if install still fails, try with any preinstalled browser.
-    echo "WARNING: Could not install browser; trying with system browser..." >&2
-  fi
+if ! "${PLAYWRIGHT_CMD[@]}" install chromium 2>/dev/null; then
+  # Fall back – if install still fails, try with any preinstalled browser.
+  echo "WARNING: Could not install browser; trying with system browser..." >&2
 fi
 
 # ── Run tests ─────────────────────────────────────────────────────────────

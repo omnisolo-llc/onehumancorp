@@ -79,7 +79,7 @@ The Flutter desktop shell acts as the supervisor for the embedded Go backend.
 
 ### 4.2 SQLite/PostgreSQL Parity
 To guarantee parity, the Go backend uses a unified `DataStore` interface.
-- Local: SQLite `file:///.agent-task/swarm.db`.
+- Local: SQLite `file:///.ohc/runtime/swarm.db`.
 - Cloud: PostgreSQL DSN.
 The underlying schema must remain 100% compatible. Complex JSONB queries in Postgres are translated to SQLite JSON functions.
 

@@ -13,7 +13,7 @@ During standard operation, the OHC Swarm generates vast amounts of ephemeral con
 ```mermaid
 graph TD
     Agent[Worker Agent] -->|Produces| SessionData(agent_session_data)
-    Agent -->|Produces| MemoryFiles(.agent-task/memory/*.yml)
+    Agent -->|Produces| MemoryFiles(OHC_MEMORY_DIR/*.yml)
 
     SessionData -->|Periodic Sweeps| AutoDreamWorker
     MemoryFiles -->|Periodic Sweeps| AutoDreamWorker

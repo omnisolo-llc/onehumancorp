@@ -32,16 +32,15 @@ func TestRunDiagnostics(t *testing.T) {
 	if res.Passed {
 		t.Errorf("expected diagnostics to fail when paths are missing")
 	}
-	if len(res.Details) != 4 {
-		t.Errorf("expected 4 details, got %d", len(res.Details))
+	if len(res.Details) != 3 {
+		t.Errorf("expected 3 details, got %d", len(res.Details))
 	}
 
 	// Create required paths
 	requiredPaths := []string{
-		".agent-task",
-		filepath.Join(".agent-task", "memory"),
-		filepath.Join(".agent-task", "status"),
-		filepath.Join(".agent-task", "missions"),
+		filepath.Join(".ohc", "runtime"),
+		filepath.Join(".ohc", "runtime", "memory"),
+		filepath.Join(".ohc", "runtime", "status"),
 	}
 
 	for _, p := range requiredPaths {
@@ -55,7 +54,7 @@ func TestRunDiagnostics(t *testing.T) {
 	if !res.Passed {
 		t.Errorf("expected diagnostics to pass when all paths exist")
 	}
-	if len(res.Details) != 4 {
-		t.Errorf("expected 4 details, got %d", len(res.Details))
+	if len(res.Details) != 3 {
+		t.Errorf("expected 3 details, got %d", len(res.Details))
 	}
 }

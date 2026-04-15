@@ -55,18 +55,8 @@ func TestSentry_Chaos_NetworkPartition(t *testing.T) {
 // TestSentry_TeamMesh_Corruption verifies that the Team Mesh degrades safely when
 // critical mailbox paths are corrupted, mimicking ML-Resilience.
 func TestSentry_TeamMesh_Corruption(t *testing.T) {
-	// For this test, we must mock the `memoryDir` safely without using os.Chdir so we don't break
-	// other parallel tests. However, the application code hardcodes ".agent-task/memory".
-	// The safest approach in Go for a hardcoded directory that requires testing is to actually create it
-	// relative to the process cwd, but since this might run concurrently with other tests, we will
-	// use a mock db dependency if possible.
-
-	// Actually, wait, `chaos_mesh_test.go` uses `os.Chdir`. But the reviewer said `os.Chdir` is a very dangerous anti-pattern.
-	// Since I MUST NOT use `os.Chdir`, and the `autodream.go` hardcodes `memoryDir := ".agent-task/memory"`,
-	// we will create `.agent-task/memory` in the actual working directory temporarily with a unique test file,
-	// test it, and then clean it up.
-
-	memoryDir := ".agent-task/memory"
+	memoryDir := filepath.Join(t.TempDir(), "memory")
+	t.Setenv("OHC_MEMORY_DIR", memoryDir)
 	err := os.MkdirAll(memoryDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create memory dir: %v", err)

@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/redis/rueidis"
-	"github.com/onehumancorp/mono/srcs/server/sync"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,6 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/redis/rueidis"
 
 	"google.golang.org/grpc"
 
@@ -262,10 +263,14 @@ func run(now time.Time, listen listenFunc) error {
 	} else {
 		var dbPath string
 		if os.Getenv("OHC_STANDALONE") == "true" {
-			if err := os.MkdirAll(".agent-task", 0700); err != nil {
-				slog.Warn("failed to create .agent-task directory", "error", err)
+			runtimeDir := os.Getenv("OHC_RUNTIME_DIR")
+			if runtimeDir == "" {
+				runtimeDir = filepath.Join(".ohc", "runtime")
 			}
-			dbPath = filepath.Join(".agent-task", "swarm.db")
+			if err := os.MkdirAll(runtimeDir, 0700); err != nil {
+				slog.Warn("failed to create standalone runtime directory", "error", err)
+			}
+			dbPath = filepath.Join(runtimeDir, "swarm.db")
 		} else {
 			openclawDir := filepath.Join(os.Getenv("HOME"), ".openclaw")
 			if err := os.MkdirAll(openclawDir, 0700); err != nil {

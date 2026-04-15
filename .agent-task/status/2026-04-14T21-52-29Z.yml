@@ -1,7 +1,0 @@
-timestamp: "2026-04-14T21-52-29Z"
-agent: Palette
-status: HEALTHY
-metrics:
-  cpu: 5
-  memory: 120
-  active_sub_agents: 0

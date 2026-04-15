@@ -64,7 +64,7 @@ The Teammate Mesh layer provides real-time IPC (Inter-Process Communication) acr
 Background workers consolidate temporary YAML memories into long-term vector embeddings.
 
 ### Architecture
-- Extracts context from `.agent-task/memory/*.yml`.
+- Extracts context from `agent_session_data` and optional runtime memory files in `OHC_MEMORY_DIR`.
 - Generates LLM embeddings.
 - Stores in `consolidated_memory_kairos` table utilizing `pgvector` for exact semantic search.
 

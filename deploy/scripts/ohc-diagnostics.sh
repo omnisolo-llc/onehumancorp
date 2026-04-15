@@ -39,21 +39,24 @@ done
 
 # Verify memory directory
 echo -e "\n${DIM}[Verifying Agent Memory Storage]${RESET}"
-if [ -d ".agent-task" ]; then
-    echo -e "  ${GREEN}✓ .agent-task directory exists${RESET}"
+RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
+MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
+STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
+if [ -d "${RUNTIME_DIR}" ]; then
+    echo -e "  ${GREEN}✓ ${RUNTIME_DIR} exists${RESET}"
 else
-    echo -e "  ${PURPLE}✗ .agent-task directory missing${RESET}"
+    echo -e "  ${PURPLE}✗ ${RUNTIME_DIR} missing${RESET}"
     read -p "Create it now? (y/n) " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        mkdir -p .agent-task/memory .agent-task/status .agent-task/missions
+        mkdir -p "${MEMORY_DIR}" "${STATUS_DIR}"
         echo -e "  ${GREEN}✓ Directory created.${RESET}"
     fi
 fi
 
 # Verify Standalone DB
 echo -e "\n${DIM}[Verifying Standalone Database]${RESET}"
-DB_FILE="$HOME/.ohc-local-data/standalone.db"
+DB_FILE="${RUNTIME_DIR}/swarm.db"
 if [ -f "$DB_FILE" ]; then
     echo -e "  ${GREEN}✓ Local SQLite database exists${RESET}"
 else

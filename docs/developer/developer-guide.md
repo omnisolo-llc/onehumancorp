@@ -34,7 +34,7 @@ cd mono
 
 ### 2. Configure Environment
 
-We provide a specialized setup script that automatically checks prerequisites, writes a default `.env` file, and validates both **Cloud** and **Standalone** build targets before appending to the local memory log (`.agent-task/memory/`).
+We provide a specialized setup script that automatically checks prerequisites, writes a default `.env` file, and validates both **Cloud** and **Standalone** build targets before appending to the local runtime memory log (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory/`).
 
 ```bash
 ./deploy/scripts/ohc-setup.sh

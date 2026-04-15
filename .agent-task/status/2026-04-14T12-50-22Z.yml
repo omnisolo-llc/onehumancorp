@@ -1,5 +1,0 @@
-agent: Miser
-status: HEALTHY
-metrics:
-  files_modified: 5
-  tests_passed: 1

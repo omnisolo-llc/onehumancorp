@@ -20,12 +20,12 @@ import (
 // to the database and this worker consumes them from there.
 type MissionIngestionWorker struct {
 	pool db.Provider
-	}
+}
 
 func NewMissionIngestionWorker(pool db.Provider) *MissionIngestionWorker {
 	return &MissionIngestionWorker{
 		pool: pool,
-			}
+	}
 }
 
 // Start begins a background loop polling for new mission artifacts.
@@ -45,13 +45,13 @@ func (w *MissionIngestionWorker) Start(ctx context.Context) {
 }
 
 // IngestMissions scans the directory specified by OHC_MISSIONS_DIR for
-// markdown/YAML mission artifacts and vectorizes them.  When OHC_MISSIONS_DIR
-// is empty it defaults to ".agent-task/missions" relative to the working
-// directory.
+// markdown/YAML mission artifacts and vectorizes them. GitHub issues are the
+// default task source of truth, so file ingestion only runs when the env var is
+// explicitly set for migration or import workflows.
 func (w *MissionIngestionWorker) IngestMissions(ctx context.Context) {
 	missionsDir := os.Getenv("OHC_MISSIONS_DIR")
 	if missionsDir == "" {
-		missionsDir = ".agent-task/missions"
+		return
 	}
 	files, err := os.ReadDir(missionsDir)
 	if err != nil {

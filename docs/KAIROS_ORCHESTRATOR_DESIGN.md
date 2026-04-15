@@ -87,7 +87,7 @@ Agents interact with the Mesh using standard HTTP POSTs and updated gRPC contrac
 Agents lack long-term coherence. AutoDream runs passively to translate ephemeral thoughts into durable truth, preventing context window overflows.
 
 ### 4.1 Data Pipeline Architecture
-*   **Data Sources**: Ephemeral context streams into `agent_session_data` and `.agent-task/memory/{timestamp}.yml`.
+*   **Data Sources**: Ephemeral context streams into `agent_session_data` and optional runtime memory files under `OHC_MEMORY_DIR`.
 *   **Background Consolidation**: The `AutoDreamPipeline` orchestrator worker consumes these sources, chunking and compressing the context via a Minimax/LLM summarization call (using `srcs/server/agents/local/llm.go`).
 *   **Vector Storage Schema (pgvector)**:
     ```sql

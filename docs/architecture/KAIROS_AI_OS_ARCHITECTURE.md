@@ -38,7 +38,7 @@ Realtime communication via Centrifuge node integration in `srcs/server/orchestra
 - **Standalone Mode:** In-memory Go channel broadcast.
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
-Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
+Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
 
 ## 4. Phase 4: Sub-Agent Orchestration Queue
 Background worker system with Redis or SQLite implementations for spawning isolated sub-agents.

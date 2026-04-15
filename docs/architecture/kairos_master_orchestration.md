@@ -42,7 +42,7 @@ Teammate Mesh ensures agents communicate seamlessly across hybrid deployments.
 - **Standalone:** Uses local Go memory channels.
 
 ## 3. AutoDream Data Pipelines
-AutoDream sweeps ephemeral `.agent-task/memory/` and embeds it into `pgvector` enabled tables for long term queryability.
+AutoDream sweeps ephemeral runtime memory from `OHC_MEMORY_DIR` and embeds it into `pgvector` enabled tables for long term queryability.
 
 ## 4. Sub-Agent Orchestration Queue
 Manages asynchronous task routing, job retries, and exponential backoff.

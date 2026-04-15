@@ -16,19 +16,20 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
-	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
-	growthapi "github.com/onehumancorp/mono/services/growth/api"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"github.com/onehumancorp/mono/srcs/server/services/growth"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -36,9 +37,9 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
-	mu  sync.RWMutex
+	mu         sync.RWMutex
 	MeshBroker orchmesh.MeshBroker
-	org domain.Organization
+	org        domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub
@@ -65,8 +66,8 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	onboardingFunnels []OnboardingFunnel
-	waitlist          []WaitlistEntry
+	onboardingFunnels     []OnboardingFunnel
+	waitlist              []WaitlistEntry
 }
 
 // RateLimitState functionality.
@@ -463,8 +464,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		waitlist:          []WaitlistEntry{},
-		onboardingFunnels: []OnboardingFunnel{},
+		waitlist:              []WaitlistEntry{},
+		onboardingFunnels:     []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -508,7 +509,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/agents/hire", server.handleHireAgent)
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)
 	mux.HandleFunc("/api/agents/delegate", server.handleDelegateTask)
-	mux.HandleFunc("/api/growth/referral", growthapi.ReferralHandler)
+	mux.HandleFunc("/api/growth/referral", growth.ReferralHandler)
 	// Agent provider management
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)
 	mux.HandleFunc("/api/agents/providers/auth", server.handleAgentProviderAuth)
@@ -924,7 +925,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -996,7 +996,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),

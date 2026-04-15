@@ -6,7 +6,7 @@ Welcome to the SPIFFE Identity Onboarding walkthrough. This guide demonstrates h
 
 ## 1. Zero-Trust Architecture
 
-Every agent in the Swarm receives a cryptographic identity. This ensures that a delegating agent (e.g., Engineering Director) can explicitly verify the identity of a worker agent (e.g., QA Tester) before sharing sensitive `.agent-task/memory` contexts.
+Every agent in the Swarm receives a cryptographic identity. This ensures that a delegating agent (e.g., Engineering Director) can explicitly verify the identity of a worker agent (e.g., QA Tester) before sharing sensitive runtime memory contexts from `OHC_MEMORY_DIR`.
 
 ```mermaid
 sequenceDiagram

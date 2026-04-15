@@ -1,0 +1,5 @@
+project_name: One Human Corp
+project_description: Markdown-first repository documentation for the OHC monorepo.
+docs_root: /docs
+primary_task_tracker: github-issues
+site_generator: mkdocs

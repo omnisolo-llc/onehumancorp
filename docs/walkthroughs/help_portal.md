@@ -84,9 +84,9 @@ sequenceDiagram
 
     Worker->>Mesh: 1. Broadcast "Task Started" (mesh:tasks)
     Worker->>Mesh: 2. Share Findings (mesh:coordination)
-    Worker->>Worker: 3. Complete Task & write to .agent-task/memory
+    Worker->>Worker: 3. Complete Task & write to OHC_MEMORY_DIR
     Worker->>Mesh: 4. Broadcast "Task Completed" (mesh:tasks)
-    AutoDream->>Worker: 5. Wake up & Read .agent-task/memory/*.yml
+    AutoDream->>Worker: 5. Wake up & Read OHC_MEMORY_DIR/*.yml
     AutoDream->>Embed: 6. Request Context Compression (Tokens -> Vector)
     Embed-->>AutoDream: 7. Return 1536-dim Vector
     AutoDream->>DB: 8. Upsert to agent_memories (pgvector)

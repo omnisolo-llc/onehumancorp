@@ -3,6 +3,7 @@ package onboarding
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // DiagnosticsResult holds the results of the environment health check.
@@ -17,12 +18,23 @@ func RunDiagnostics() DiagnosticsResult {
 		Passed:  true,
 		Details: make([]string, 0),
 	}
+	runtimeDir := os.Getenv("OHC_RUNTIME_DIR")
+	if runtimeDir == "" {
+		runtimeDir = filepath.Join(".ohc", "runtime")
+	}
+	memoryDir := os.Getenv("OHC_MEMORY_DIR")
+	if memoryDir == "" {
+		memoryDir = filepath.Join(runtimeDir, "memory")
+	}
+	statusDir := os.Getenv("OHC_STATUS_DIR")
+	if statusDir == "" {
+		statusDir = filepath.Join(runtimeDir, "status")
+	}
 
 	requiredPaths := []string{
-		".agent-task",
-		".agent-task/memory",
-		".agent-task/status",
-		".agent-task/missions",
+		runtimeDir,
+		memoryDir,
+		statusDir,
 	}
 
 	for _, path := range requiredPaths {

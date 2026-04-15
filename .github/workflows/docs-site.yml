@@ -1,0 +1,59 @@
+name: docs-site
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - .github/workflows/docs-site.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: docs-site
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.18.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ runner.os }}-bazel-docs-${{ hashFiles('**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'WORKSPACE', 'MODULE.bazel', '.bazelrc', 'docs/**', 'mkdocs.yml') }}
+          repository-cache: true
+
+      - name: Build docs site
+        run: bazelisk run //:docs_build
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

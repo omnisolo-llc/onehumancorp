@@ -38,8 +38,9 @@ const (
 	// the JSON-serialised conversation exceeds this size (bytes).
 	contextCompressThreshold = 32 * 1024 // 32 KiB
 
-	// taskOutputDir mirrors the Claude Code pattern: one file per task.
-	taskOutputDir = ".agent-task/output"
+	// taskOutputDir documents the legacy on-disk default for task output.
+	// The active implementation uses OHC_TASK_OUTPUT_DIR or an in-memory buffer.
+	taskOutputDir = ".ohc/runtime/output"
 
 	// selfReflectionPrefix is prepended to LLM retry prompts.
 	selfReflectionPrefix = "The previous attempt failed. Please reflect on what went wrong and try a different approach.\n\n"
@@ -186,8 +187,8 @@ func packMessages(msgs []agentMessage) (string, error) {
 
 // ── task output writer ────────────────────────────────────────────────────────
 
-// TaskOutputWriter collects task output in memory.  It replaces the former
-// filesystem-based approach (.agent-task/output/<taskID>.log) so that the
+// TaskOutputWriter collects task output in memory. It replaces the former
+// filesystem-based approach (.ohc/runtime/output/<taskID>.log) so that the
 // agent works correctly inside a Bazel sandbox and in any production
 // environment without local filesystem access.
 //

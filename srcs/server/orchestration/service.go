@@ -3,7 +3,6 @@ package orchestration
 import (
 	"google.golang.org/protobuf/proto"
 
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -263,6 +262,7 @@ type Hub struct {
 	GetTokenUsage  func(ctx context.Context) map[string]int64
 	autoCorTrack   map[string]struct{}
 	eventLogChan   chan interface{}
+	recentEvents   []HubEvent
 	repo           HubRepository
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
@@ -334,7 +334,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 
 	// Create a dummy/empty taskManager. Real deployment will set a DB provider.
 	// TaskManager doesn't export a default without a DB, but we can set one when needed.
-	go h.eventLogWorker(h.ctx, "events.jsonl")
+	go h.eventLogWorker(h.ctx)
 	go h.tokenBurnRateWorker(h.ctx)
 	return h
 }
@@ -393,59 +393,6 @@ func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]i
 	for orgID := range history {
 		if !activeOrgs[orgID] {
 			delete(history, orgID)
-		}
-	}
-}
-
-// eventLogWorker processes event logs and writes them sequentially to the specified file.
-func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		slog.Error("failed to open event log file", "filename", filename, "error", err)
-		return
-	}
-	defer f.Close()
-
-	// ⚡ BOLT: [Unbuffered synchronous disk writes to the events.jsonl sidecar logs] - Randomized Selection from Top 5
-	bw := bufio.NewWriter(f)
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			bw.Flush()
-			return
-		case logEntry, ok := <-h.eventLogChan:
-			if !ok {
-				bw.Flush()
-				return
-			}
-			b, err := json.Marshal(logEntry)
-			if err != nil {
-				slog.Error("failed to marshal event log", "error", err)
-				continue
-			}
-
-			var m map[string]interface{}
-			if err := json.Unmarshal(b, &m); err == nil {
-				telemetry.RedactInterfacePII(m)
-				b, _ = json.Marshal(m)
-			}
-
-			if _, err := bw.Write(append(b, '\n')); err != nil {
-				slog.Error("failed to write to event log file", "filename", filename, "error", err)
-			}
-
-			// If we've drained the channel, flush immediately to avoid latency
-			if len(h.eventLogChan) == 0 {
-				bw.Flush()
-			}
-
-		case <-ticker.C:
-			if err := bw.Flush(); err != nil {
-				slog.Error("failed to flush event log buffer", "error", err)
-			}
 		}
 	}
 }
@@ -1978,6 +1925,7 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	var req struct {
 		Status  string `json:"status"`
 		AgentID string `json:"agent_id"`
+		Result  string `json:"result"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -1989,7 +1937,7 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	case "REVIEW":
 		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
 	case "COMPLETED":
-		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
+		err = tm.CompleteTaskWithResult(r.Context(), taskID, req.AgentID, req.Result)
 	default:
 		http.Error(w, "invalid status transition", http.StatusBadRequest)
 		return

@@ -20,38 +20,33 @@ Or use the VS Code task `App: Capture Flutter screenshots`.
 
 Generated images are written to:
 
-- `docs/app/web/`
-- `docs/app/macos/`
-- `docs/app/ios/`
-- `docs/app/windows/`
-- `docs/app/android/`
-- `docs/app/linux/`
+- `docs/public/assets/screenshots/app/landing-page/`
 
 ## 3. Screenshot Gallery
 
 ### Web
 
-![OHC Flutter app on web](./app/web/login.png)
+![OHC Flutter app on web](./public/assets/screenshots/app/landing-page/web.png)
 
 ### macOS
 
-![OHC Flutter app with macOS profile](./app/macos/login.png)
+![OHC Flutter app with macOS profile](./public/assets/screenshots/app/landing-page/macos.png)
 
 ### Windows
 
-![OHC Flutter app with Windows profile](./app/windows/login.png)
+![OHC Flutter app with Windows profile](./public/assets/screenshots/app/landing-page/windows.png)
 
 ### Android
 
-![OHC Flutter app with Android profile](./app/android/login.png)
+![OHC Flutter app with Android profile](./public/assets/screenshots/app/landing-page/android.png)
 
 ### iOS
 
-![OHC Flutter app with iOS profile](./app/ios/login.png)
+![OHC Flutter app with iOS profile](./public/assets/screenshots/app/landing-page/ios.png)
 
 ### Linux
 
-![OHC Flutter app with Linux profile](./app/linux/login.png)
+![OHC Flutter app with Linux profile](./public/assets/screenshots/app/landing-page/linux.png)
 
 </div>
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">

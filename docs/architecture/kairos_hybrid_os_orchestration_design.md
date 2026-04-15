@@ -73,7 +73,7 @@ The Teammate Mesh ensures agents coordinate without delays, degrading gracefully
 ## Phase 3: autoDream Vector Memory Consolidation
 The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
 
-Background workers consolidate `.agent-task/memory/*.yml` files to embeddings stored in PostgreSQL with `pgvector`, into the `autodream_memories` table, granting the swarm exact semantic search capabilities.
+Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with `pgvector`, into the `autodream_memories` table, granting the swarm exact semantic search capabilities.
 
 ```sql
 CREATE TABLE IF NOT EXISTS autodream_memories (

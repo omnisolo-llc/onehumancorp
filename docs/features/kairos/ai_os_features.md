@@ -11,5 +11,5 @@ The shared task list enables scalable coordination by persisting assignments and
 Teammate Mesh acts as a realtime broadcast channel across agent pods. Redis Pub/Sub drives cloud deployment message routing while SQLite fulfills Standalone deployment needs.
 
 ## AutoDream Pipeline
-The AutoDream pipeline converts short-lived `.agent-task/memory/*.yml` state files into semantic vectors stored in `pgvector` for exact Nearest Neighbor context lookups during agent execution.
+The AutoDream pipeline converts short-lived runtime memory files from `OHC_MEMORY_DIR` into semantic vectors stored in `pgvector` for exact Nearest Neighbor context lookups during agent execution.
 </div>

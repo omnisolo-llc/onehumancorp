@@ -1,9 +1,0 @@
----
-timestamp: 2026-04-14T21-57-50Z
-agent: Scribe
-status: healthy
-db_mode: cloud
-active_agents: 1
-pending_missions: 0
-avg_task_latency_ms: 50
----

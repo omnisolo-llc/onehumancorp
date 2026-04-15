@@ -63,13 +63,13 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	wg.Wait()
 	t.Log("Successfully verified standalone database operations without deadlock")
 
-	// 3. Chaos Engineering: Break .agent-task/mailbox/ and .agent-lock/
-	// In the real system, some fallback offline queues write to .agent-task/mailbox or status files.
+	// 3. Chaos Engineering: Break the standalone runtime mailbox and .agent-lock/
+	// In the real system, some fallback offline queues write to runtime mailbox or status files.
 	// We simulate ML-Resilience behavior by corrupting these directories.
 	chaosCtx, chaosCancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer chaosCancel()
 
-	mailboxDir := filepath.Join(tmpDir, ".agent-task", "mailbox")
+	mailboxDir := filepath.Join(tmpDir, ".ohc", "runtime", "mailbox")
 	lockDir := filepath.Join(tmpDir, ".agent-lock")
 
 	err = os.MkdirAll(mailboxDir, 0755)
@@ -90,11 +90,11 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 	}()
 
 	// Phase 2 (Implementation): Actually test the system's resilience by having the AutoDreamWorker
-	// run its memory ingestion pipeline while the .agent-task/memory directory is corrupted.
+	// run its memory ingestion pipeline while the runtime memory directory is corrupted.
 	// ML-Resilience mandates that the worker gracefully logs the error without panicking.
 
-	// Create temporary corrupted file in actual .agent-task/memory without os.Chdir
-	memoryDir := ".agent-task/memory"
+	memoryDir := filepath.Join(tmpDir, ".ohc", "runtime", "memory")
+	t.Setenv("OHC_MEMORY_DIR", memoryDir)
 	os.MkdirAll(memoryDir, 0755)
 	dummyMemory := filepath.Join(memoryDir, "chaos_mesh_test_memory.yml")
 	os.WriteFile(dummyMemory, []byte("content: chaos"), 0644)
@@ -123,7 +123,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 
 	// If it doesn't panic, ML-Resilience passes.
 	chaosWg.Wait()
-	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handles corrupted .agent-task/memory without panic")
+	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handles corrupted runtime memory without panic")
 }
 
 // TestSIPDB_CUJ_StressVerification automates CUJ stress-testing for high-concurrency Cloud pods

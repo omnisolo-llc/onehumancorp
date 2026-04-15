@@ -4,7 +4,17 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 runfiles_base="${RUNFILES_DIR:-${BASH_SOURCE[0]}.runfiles}"
-workspace_root="${BUILD_WORKSPACE_DIRECTORY:-$(cd -- "${script_dir}/../../.." && pwd)}"
+script_real_dir="$(cd -- "$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")" && pwd)"
+workspace_root="${BUILD_WORKSPACE_DIRECTORY:-$(cd -- "${script_real_dir}/../../.." && pwd)}"
+
+is_complete_web_bundle() {
+  local candidate="${1}"
+
+  [[ -d "${candidate}" ]] || return 1
+  [[ -f "${candidate}/assets/FontManifest.json" ]] || return 1
+  [[ -f "${candidate}/assets/fonts/MaterialIcons-Regular.otf" ]] || return 1
+  grep -q 'MaterialIcons' "${candidate}/assets/FontManifest.json"
+}
 
 resolve_capture_script() {
   local candidate
@@ -28,7 +38,7 @@ if [[ -z "${capture_script}" ]]; then
   echo "ERROR: could not locate capture_screenshots.mjs." >&2
   exit 1
 fi
-output_root="${workspace_root}/docs/app"
+output_root="${workspace_root}/docs/public/assets/screenshots/app"
 work_tmp="$(mktemp -d "${TMPDIR:-/tmp}/flutter-app-shots.XXXXXX")"
 
 export HOME="${work_tmp}/home"
@@ -69,18 +79,44 @@ runfiles_root="$(find_runfiles_root || true)"
 web_artifacts=""
 playwright_package_dir=""
 
-if [[ -n "${runfiles_root}" ]]; then
+workspace_web_bundle="${workspace_root}/srcs/app/build/web"
+if is_complete_web_bundle "${workspace_web_bundle}"; then
+  web_artifacts="${workspace_web_bundle}"
+fi
+
+if [[ -z "${web_artifacts}" && -n "${runfiles_root}" ]]; then
   web_artifacts="$(find_first_dir \
     "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app_web.web_build_artifacts" \
+    "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app_web_build_artifacts" \
+    "${runfiles_root}/${TEST_WORKSPACE:-mono}/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/_main/srcs/app/app_web.web_build_artifacts" \
+    "${runfiles_root}/_main/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/_main/srcs/app/app_web_build_artifacts" \
     "${runfiles_root}/__main__/srcs/app/app_web.web_build_artifacts" \
+    "${runfiles_root}/__main__/srcs/app/app.web_build_artifacts" \
     "${runfiles_root}/__main__/srcs/app/app_web_build_artifacts" || true)"
   playwright_package_dir="$(find_first_dir \
     "${runfiles_root}/${TEST_WORKSPACE:-mono}/node_modules/@playwright/test" \
     "${runfiles_root}/_main/node_modules/@playwright/test" \
     "${runfiles_root}/__main__/node_modules/@playwright/test" || true)"
+fi
+
+if [[ -z "${web_artifacts}" ]]; then
+  web_artifacts="$(find_first_dir \
+    "${workspace_root}/bazel-bin/srcs/app/app.web_build_artifacts" \
+    "${workspace_root}/bazel-bin/srcs/app/app_web.web_build_artifacts" || true)"
+fi
+
+if [[ -n "${web_artifacts}" ]] && ! is_complete_web_bundle "${web_artifacts}"; then
+  web_artifacts=""
+fi
+
+if [[ -z "${playwright_package_dir}" ]]; then
+  playwright_package_dir="$(find_first_dir \
+    "${workspace_root}/node_modules/@playwright/test" \
+    "${workspace_root}/bazel-bin/srcs/app/capture_screenshots.runfiles/${TEST_WORKSPACE:-mono}/node_modules/@playwright/test" \
+    "${workspace_root}/bazel-bin/srcs/app/capture_screenshots.runfiles/_main/node_modules/@playwright/test" || true)"
 fi
 
 if [[ -z "${web_artifacts}" ]]; then
@@ -124,10 +160,8 @@ fi
 node_modules_dir="$(dirname -- "$(dirname -- "${playwright_package_dir}")")"
 export NODE_PATH="${node_modules_dir}${NODE_PATH:+:${NODE_PATH}}"
 
-if ! "${node_bin}" "${cli_js}" install chromium --with-deps 2>/dev/null; then
-  if ! "${node_bin}" "${cli_js}" install chromium 2>/dev/null; then
-    echo "WARNING: could not install a fresh Chromium build; using any available browser." >&2
-  fi
+if ! "${node_bin}" "${cli_js}" install chromium 2>/dev/null; then
+  echo "WARNING: could not install a fresh Chromium build; using any available browser." >&2
 fi
 
 port="$(python3 -c 'import socket; s = socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')"
@@ -135,12 +169,7 @@ export PLAYWRIGHT_BASE_URL="http://127.0.0.1:${port}"
 export APP_SCREENSHOT_OUTPUT_DIR="${output_root}"
 
 mkdir -p \
-  "${output_root}/web" \
-  "${output_root}/macos" \
-  "${output_root}/ios" \
-  "${output_root}/windows" \
-  "${output_root}/android" \
-  "${output_root}/linux"
+  "${output_root}/landing-page"
 
 python3 -m http.server "${port}" --directory "${web_artifacts}" >/dev/null 2>&1 &
 server_pid=$!

@@ -23,7 +23,7 @@ To completely configure your environment, simply execute the `ohc-setup` script.
 1. Checks for required dependencies (`bazelisk`, `docker`).
 2. Generates a `.env` template if one does not exist.
 3. Performs a dry-run build for both `Standalone` and `Cloud` targets to ensure your environment is fully operational.
-4. Generates an intelligence log in `.agent-task/memory/` confirming successful provisioning.
+4. Generates an intelligence log in `.ohc/runtime/memory/` (or the configured `OHC_MEMORY_DIR`) confirming successful provisioning.
 
 ## Mode Switching CLI
 Once the initial setup is complete, you will frequently need to compile or run the server under different modes. We provide the `ohc-mode.sh` script to configure your current terminal session cleanly.

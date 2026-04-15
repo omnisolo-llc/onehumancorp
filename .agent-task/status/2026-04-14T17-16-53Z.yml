@@ -1,5 +1,0 @@
-agent_name: Link
-status: HEALTHY
-execution_metrics:
-  tasks_completed: 1
-  uptime: "1h"

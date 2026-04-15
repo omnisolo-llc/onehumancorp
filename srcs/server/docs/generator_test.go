@@ -13,16 +13,6 @@ func TestPremiumDocBuilder(t *testing.T) {
 
 	rendered := b.Render()
 
-	// Check if it contains the required CSS
-	if !strings.Contains(rendered, premiumCardCSS) {
-		t.Errorf("Rendered document does not contain premium card CSS")
-	}
-
-	if !strings.Contains(rendered, premiumHeaderCSS) {
-		t.Errorf("Rendered document does not contain premium header CSS")
-	}
-
-	// Check if content is present
 	if !strings.Contains(rendered, "Test Title") {
 		t.Errorf("Rendered document does not contain title")
 	}
@@ -35,7 +25,9 @@ func TestPremiumDocBuilder(t *testing.T) {
 	if !strings.Contains(rendered, "This is a test section.") {
 		t.Errorf("Rendered document does not contain section content")
 	}
-	// Note: The diagram code is escaped now
+	if !strings.Contains(rendered, "```mermaid") {
+		t.Errorf("Rendered document does not contain mermaid fence")
+	}
 	if !strings.Contains(rendered, "graph TD;\n    A--&gt;B;") {
 		t.Errorf("Rendered document does not contain diagram code")
 	}
@@ -74,10 +66,10 @@ func TestXSSPrevention(t *testing.T) {
 
 	rendered := b.Render()
 
-	// Test that <script> is correctly escaped to &lt;script&gt; and onerror= is not rendered as literal
-	// Because of html.EscapeString, <script> becomes &lt;script&gt;
-	// We want to verify there are no literal unescaped tags.
 	if strings.Contains(rendered, "<script>") {
 		t.Errorf("Rendered document is vulnerable to XSS: %s", rendered)
+	}
+	if strings.Contains(rendered, "<div") {
+		t.Errorf("Rendered document should be markdown-only: %s", rendered)
 	}
 }

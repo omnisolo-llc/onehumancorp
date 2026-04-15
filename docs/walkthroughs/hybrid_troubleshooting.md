@@ -11,7 +11,7 @@ Use the following diagnostic flow to resolve state mismatch issues between the C
 ```mermaid
 graph TD
     A[Agent Reports Task Failure] --> B{Is OHC_STANDALONE set?}
-    B -- Yes (SQLite) --> C[Check Local .agent-task/status]
+    B -- Yes (SQLite) --> C[Check Local .ohc/runtime/status]
     B -- No (Postgres) --> D[Check Kubernetes Pod Logs]
     C --> E[Verify SQLite locks: FOR UPDATE SKIP LOCKED emulation]
     D --> F[Verify Redis Teammate Mesh connectivity]
@@ -22,7 +22,7 @@ graph TD
 
 ## 2. Common Scenarios
 
-- **Database Lock Contention (SQLite)**: Ensure multiple background processes are not writing to `.agent-task` directories simultaneously without respecting the file lock protocol.
+- **Database Lock Contention (SQLite)**: Ensure multiple background processes are not writing to `.ohc/runtime` directories simultaneously without respecting the file lock protocol.
 - **Redis Pub/Sub Disconnects (Cloud)**: Check network stability and SPIFFE token expiration if the Teammate Mesh events are failing to broadcast.
 
 *For additional architectural context, refer to the [System Design Document](../system-design.md).*

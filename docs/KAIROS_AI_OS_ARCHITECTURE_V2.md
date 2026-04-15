@@ -81,7 +81,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant WorkerAgent
-    participant LocalMemory as .agent-task/memory/*.yml
+    participant LocalMemory as OHC_MEMORY_DIR/*.yml
     participant AutoDreamDaemon
     participant PgVector
 

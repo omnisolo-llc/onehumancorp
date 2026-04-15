@@ -1,6 +1,0 @@
-agent: "Principal Product Architect & KAIROS Orchestrator (L7)"
-context: "Defined the master architecture for the Hybrid Agentic OS, specifically the KAIROS Triad (Shared Task List, Teammate Mesh, AutoDream). Formulating tasks for the Implementer agents."
-knowledge_added:
-  - "Distributed State Machine tracks Teammate Mesh coordination states via state_machine_transitions table."
-  - "Sub-Agent Queue routes delegated tasks with horizontal scalability in cloud mode (Redis) and mutexed tables in standalone mode (SQLite sub_agent_jobs table)."
-  - "AutoDream Data Pipeline asynchronously embeds session data into pgvector (autodream_memories table) or SQLite JSON blobs, preventing context overflow."

@@ -67,6 +67,28 @@ sh_binary(
     tags = ["manual"],
 )
 
+filegroup(
+    name = "docs_srcs",
+    srcs = glob(["docs/**"]) + ["mkdocs.yml"],
+    visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "docs_build",
+    srcs = ["docs/mkdocs_via_bazel.sh"],
+    args = ["build"],
+    data = [":docs_srcs"],
+    tags = ["manual"],
+)
+
+sh_binary(
+    name = "docs_serve",
+    srcs = ["docs/mkdocs_via_bazel.sh"],
+    args = ["serve"],
+    data = [":docs_srcs"],
+    tags = ["manual"],
+)
+
 # Unified Development target (Backend + Flutter Web)
 # This is a pure-Bazel orchestrator that launches both components concurrently.
 genrule(

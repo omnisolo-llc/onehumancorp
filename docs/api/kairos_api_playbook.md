@@ -135,6 +135,6 @@ graph TD
 
 ## 5. AutoDream Pipeline
 
-The AutoDream Pipeline consolidates ephemeral agent memories (`.agent-task/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
+The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
 
 </div>

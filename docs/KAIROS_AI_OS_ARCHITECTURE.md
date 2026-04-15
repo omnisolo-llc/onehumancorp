@@ -82,7 +82,7 @@ Realtime communication between agents is critical for the "Zero Friction" swarm 
 The long-term memory system. Agents document their findings locally, and the autoDream background pipeline asynchronously vectorizes these findings into a durable pgvector store.
 
 ### Data Pipeline Architecture
-1. **Source**: Local \`.agent-task/memory/\` YAML files.
+1. **Source**: Local runtime memory YAML files from `OHC_MEMORY_DIR`.
 2. **Ingestion Agent**: Reads files, generates chunked text.
 3. **Embedding Generation**: Calls LLM provider (e.g., Anthropic/OpenAI/Minimax) to produce vectors.
 4. **Storage (pgvector)**:

@@ -2,8 +2,8 @@ package docs
 
 import (
 	"fmt"
-	"log/slog"
 	"html"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -12,22 +12,17 @@ import (
 )
 
 var (
-	meter          = otel.Meter("github.com/onehumancorp/ohc/srcs/server/docs")
-	docsGenerated  metric.Int64Counter
+	meter         = otel.Meter("github.com/onehumancorp/mono/srcs/server/docs")
+	docsGenerated metric.Int64Counter
 )
 
 func init() {
 	var err error
-	docsGenerated, err = meter.Int64Counter("docs_generated_total", metric.WithDescription("Total number of premium design docs generated"))
+	docsGenerated, err = meter.Int64Counter("docs_generated_total", metric.WithDescription("Total number of generated markdown docs"))
 	if err != nil {
 		slog.Error("failed to initialize metrics", "err", err)
 	}
 }
-
-const (
-	premiumCardCSS = `backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px; font-family: 'Outfit', 'Inter', sans-serif; color: #e0e0e0;`
-	premiumHeaderCSS = `font-family: 'Outfit', sans-serif; font-weight: 700; background: linear-gradient(90deg, #ffffff, #a0a0a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;`
-)
 
 type PremiumDocBuilder struct {
 	title    string
@@ -53,33 +48,23 @@ func (b *PremiumDocBuilder) AddSection(title, content string) {
 	safeTitle := html.EscapeString(title)
 	safeContent := html.EscapeString(content)
 
-	section := fmt.Sprintf(`<div style="%s">
-<h2 style="%s">%s</h2>
-%s
-</div><br>`, premiumCardCSS, premiumHeaderCSS, safeTitle, safeContent)
+	section := fmt.Sprintf("## %s\n\n%s\n", safeTitle, safeContent)
 	b.sections = append(b.sections, section)
 }
 
 func (b *PremiumDocBuilder) AddDiagram(mermaidCode string) {
 	safeDiagram := html.EscapeString(mermaidCode)
-	diagram := fmt.Sprintf(`<div style="%s">
-<h2 style="%s">Architecture / Data Flow</h2>
-<pre class="mermaid">
-%s
-</pre>
-</div><br>`, premiumCardCSS, premiumHeaderCSS, safeDiagram)
+	diagram := fmt.Sprintf("## Architecture / Data Flow\n\n```mermaid\n%s\n```\n", safeDiagram)
 	b.sections = append(b.sections, diagram)
 }
 
 func (b *PremiumDocBuilder) Render() string {
 	var sb strings.Builder
 
-	// Header
-	sb.WriteString(fmt.Sprintf(`<div style="%s">
-<h1 style="%s">%s</h1>
-<p><strong>Author:</strong> %s | <strong>Date:</strong> %s | <strong>Status:</strong> %s</p>
-</div><br>
-`, premiumCardCSS, premiumHeaderCSS, html.EscapeString(b.title), html.EscapeString(b.agentID), html.EscapeString(b.date), html.EscapeString(b.status)))
+	sb.WriteString(fmt.Sprintf("# %s\n\n", html.EscapeString(b.title)))
+	sb.WriteString(fmt.Sprintf("- Author: %s\n", html.EscapeString(b.agentID)))
+	sb.WriteString(fmt.Sprintf("- Date: %s\n", html.EscapeString(b.date)))
+	sb.WriteString(fmt.Sprintf("- Status: %s\n\n", html.EscapeString(b.status)))
 
 	for _, section := range b.sections {
 		sb.WriteString(section)

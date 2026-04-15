@@ -2,7 +2,11 @@ package orchestration
 
 import (
 	"context"
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,9 +16,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
-	"crypto/rand"
-	"encoding/hex"
 )
 
 // TaskOrchestrator abstracts the state machine and dependency tracking for the Teammate Mesh
@@ -160,7 +163,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 
 	// Spawn sub-agent by enqueuing to sub_agent_queue
 	jobPayload := map[string]interface{}{
-		"task_id": taskID,
+		"task_id":         taskID,
 		"organization_id": orgID,
 	}
 	payloadBytes, _ := json.Marshal(jobPayload)
@@ -406,9 +409,23 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 	}
 	defer tx.Rollback(ctx)
 
+	var taskPayload string
+	err = tx.QueryRow(ctx, "SELECT COALESCE(payload, '{}') FROM swarm_tasks WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS'", taskID, agentID).Scan(&taskPayload)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
+			return fmt.Errorf("task not found or not assigned to agent")
+		}
+		return fmt.Errorf("failed to load task for completion: %w", err)
+	}
+
+	updatedPayload, err := mergeTaskResultPayload(taskPayload, result)
+	if err != nil {
+		return fmt.Errorf("failed to encode swarm task result: %w", err)
+	}
+
 	// Update status to COMPLETED
 	var returnedID string
-	err = tx.QueryRow(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS' RETURNING id", taskID, agentID).Scan(&returnedID)
+	err = tx.QueryRow(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', payload = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS' RETURNING id", taskID, agentID, string(updatedPayload)).Scan(&returnedID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
 			return fmt.Errorf("task not found or not assigned to agent")
@@ -466,10 +483,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 
 	// Metrics
 	telemetry.RecordSwarmTaskCompleted(ctx, taskID)
-
-	// Fetch task payload for AutoDream
-	var taskPayload string
-	_ = to.db.QueryRow(ctx, "SELECT payload FROM swarm_tasks WHERE id = $1", taskID).Scan(&taskPayload)
+	taskPayload = string(updatedPayload)
 
 	// Broadcast
 	if to.mesh != nil {

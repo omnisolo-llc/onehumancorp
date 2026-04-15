@@ -1,24 +1,41 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+# OHC Hybrid Agentic OS Changelog
 
-# OHC Swarm OS: Changelog
+## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 
-## [v1.1.0] - The "Orchestration & Intelligence" Update
+### Cloud Scaling Improvements
 
-Welcome to the newest release of the OHC Swarm OS! This update dramatically enhances our autonomous orchestration capabilities and system integrations. Every new feature is engineered with **K8s Native & Bazel-First** excellence and designed with **Aesthetic Excellence** to bring zero friction and maximum visual delight to your Swarm Management experience.
+- Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
 
-### 🚀 Highlights
-- **Orchestration Service & Centrifuge Hub (PR #712):** We introduced a massive orchestration upgrade to handle massive agent interactions, pipeline routing, and telemetry out of the box.
-- **Agent Integration Framework:** The Swarm can now seamlessly interoperate with specialized frameworks! We added adapters for *OpenClaw*, *CrewAI*, *AutoGen*, and *Semantic Kernel*.
-- **Omni-Context Sub-agent Routing:** Sub-agents now inherently possess full codebase context natively upon task initialization. Project-level grounding (like `AGENTS.md` and `CLAUDE.md`) is injected directly into Swarm Database missions. No more fumbling for context!
-- **Zero Trust Security:** Comprehensive JWT, OIDC, and SPIFFE/SPIRE-based mTLS authentication implemented at the core level to keep the Swarm strictly fail-closed and secure.
+### Privacy and Offline Improvements
 
-### 🛠️ Improvements & Optimizations
-- **Cost Optimization:** Scaled down baseline K8s CPU/Memory requests by 20% and transitioned basic seeder agents from GPT-4o to GPT-4o-mini, unlocking >15% immediate cost savings with zero quality drop.
-- **Circuit Breakers:** Introduced per-instance circuit breakers in internal Minimax HTTP clients to gracefully handle cascading API failures.
-- **Resilient CI/CD:** Addressed flaky builds and `rules_flutter` workspace resolution issues by strategically removing outdated `codeload` dependencies from `MODULE.bazel`.
+- Enabled offline-compatible storage compression reducing local disk footprint for standalone environments.
 
-### ⚡ Infrastructure
-- Telemetry modules are fully fleshed out with OpenTelemetry metrics for deep observability.
-- Checkpointer logic improved with resilient state upserts.
+## v0.3.5 (Cloud) / v0.3.5+1 (Standalone)
 
-</div>
+### Cloud Scaling Improvements
+
+- Enhanced Teammate Mesh APIs and AutoDream worker logic for more scalable Kubernetes pod communications.
+
+### Privacy and Offline Improvements
+
+- Continued stabilization of the offline KAIROS state machine functionality via SQLite fallbacks.
+
+## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
+
+### Cloud Scaling Improvements
+
+- Enhanced cloud multi-tenant architecture and hybrid teammate mesh APIs for improved coordination across Kubernetes pods.
+
+### Privacy and Offline Improvements
+
+- Implemented a fully offline-capable KAIROS state machine via SQLite with safe fallbacks.
+
+## v0.3.3 (Cloud) / v0.3.3+1 (Standalone)
+
+### Cloud Scaling Improvements
+
+- Enhanced cloud multi-tenant architecture with robust onboarding tests and removed obsolete test files for cleaner CI/CD execution.
+
+### Privacy and Offline Improvements
+
+- Improved standalone offline test parity by ensuring onboarding integration tests run smoothly in isolated local environments without heavy cloud dependencies.

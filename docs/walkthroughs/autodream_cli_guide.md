@@ -27,7 +27,7 @@ ohc-cli autodream status --watch
 ```mermaid
 graph TD
     CLI[ohc-cli autodream start] -->|Triggers| Daemon(AutoDream Daemon)
-    Daemon -->|Scans| TaskFiles(.agent-task/memory/*.yml)
+    Daemon -->|Scans| TaskFiles(OHC_MEMORY_DIR/*.yml)
     Daemon -->|Scans| SessionData(agent_session_data)
 
     subgraph Processing Pipeline
