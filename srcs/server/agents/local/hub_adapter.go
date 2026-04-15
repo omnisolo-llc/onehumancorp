@@ -79,6 +79,11 @@ func StartDefaultRunner(hub *orchestration.Hub, cfg AgentConfig) (*Runner, error
 		}
 	}
 
+	// Persist task output to the database when a DB is available.
+	if cfg.DBProvider == nil && hub.DB() != nil {
+		cfg.DBProvider = hub.DB()
+	}
+
 	adapter := NewOrchestrationHubAdapter(hub)
 	runner := NewRunner(adapter, "", "", "", cfg)
 	return runner, nil

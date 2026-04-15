@@ -11,6 +11,8 @@ theme:
   features:
     - navigation.sections
     - navigation.indexes
+    - navigation.top
+    - search.highlight
     - content.code.copy
 markdown_extensions:
   - admonition
@@ -27,25 +29,83 @@ validation:
         omitted_files: ignore
 nav:
   - Home: index.md
+  - Roadmap: roadmap.md
   - Architecture:
-      - architecture/index.md
+      - Overview: architecture/index.md
+      - System Design: architecture/system-design.md
+      - Shared Context: architecture/shared-context.md
+      - Hybrid MCP Playbook: architecture/hybrid-mcp-playbook.md
+      - CRDT Sync Blueprint: architecture/crdt-sync-blueprint.md
+      - Server Roadmap: architecture/server-roadmap.md
+      - Kairos:
+          - Master Design: architecture/kairos/master-design-doc.md
+          - Orchestration Design: architecture/kairos/orchestration-design.md
+          - Orchestration Phase 4: architecture/kairos/orchestration-phase4.md
+          - Shared Task List: architecture/kairos/shared-task-list-design.md
+          - Task Decomposition: architecture/kairos/kairos-task-decomposition-design.md
+          - Sub-Agent Queue: architecture/kairos/kairos-sub-agent-queue.md
+          - Teammate Mesh API: architecture/kairos/kairos-teammate-mesh-api.md
+          - AutoDream Pipeline: architecture/kairos/kairos-autodream-pipeline.md
+          - Implementation Guide: architecture/kairos/kairos-implementation-guide.md
+          - Master Orchestration: architecture/kairos/kairos-master-orchestration.md
   - Developer:
-      - developer/index.md
+      - Overview: developer/index.md
+      - Setup: developer/setup.md
+      - Developer Guide: developer/developer-guide.md
+      - User Guide: developer/user-guide.md
+      - Interactive Tutorial: developer/interactive-tutorial.md
+      - Hybrid Development: developer/hybrid-development.md
+      - UI Testing Guidelines: developer/ui-testing-guidelines.md
   - API:
-      - api/index.md
+      - Overview: api/index.md
+      - API Playbook: api/playbook.md
+      - Kairos API Playbook: api/kairos-api-playbook.md
+      - Kairos Orchestration API: api/kairos-orchestration-api.md
   - Features:
-      - features/index.md
+      - Overview: features/index.md
+      - UI Roadmap: features/ui-roadmap.md
   - Walkthroughs:
-      - walkthroughs/index.md
+      - Overview: walkthroughs/index.md
+      - Help Portal: walkthroughs/help-portal.md
+      - Custom Agent Creation: walkthroughs/custom-agent-creation-walkthrough.md
+      - Kairos CLI: walkthroughs/kairos-cli.md
+      - Kairos Orchestration: walkthroughs/kairos-orchestration.md
+      - Sub-Agent Orchestration: walkthroughs/sub-agent-orchestration.md
+      - Shared Task List: walkthroughs/shared-task-list-visual-walkthrough.md
+      - Teammate Mesh: walkthroughs/teammate-mesh.md
+      - UltraPlan Deliberation: walkthroughs/ultraplan-deliberation.md
+      - AutoDream CLI Guide: walkthroughs/autodream-cli-guide.md
+      - AutoDream Pipeline: walkthroughs/autodream-pipeline.md
+      - AutoDream Sync: walkthroughs/autodream-sync.md
+      - Distributed State Machine: walkthroughs/distributed-state-machine.md
+      - Elastic Swarm Bursting: walkthroughs/elastic-swarm-bursting.md
+      - Hybrid CRDT Sync MCP: walkthroughs/hybrid-crdt-sync-mcp.md
+      - Hybrid FS MCP Architecture: walkthroughs/hybrid-fs-mcp-architecture.md
+      - Hybrid Health Probe: walkthroughs/hybrid-health-probe.md
+      - Hybrid MCP RAG: walkthroughs/hybrid-mcp-rag.md
+      - Hybrid Observability Dashboard: walkthroughs/hybrid-observability-dashboard.md
+      - Hybrid Swarm Telemetry Mesh: walkthroughs/hybrid-swarm-telemetry-mesh.md
+      - Hybrid Telemetry Mesh: walkthroughs/hybrid-telemetry-mesh.md
+      - Hybrid Troubleshooting: walkthroughs/hybrid-troubleshooting.md
+      - Kairos Interactive API Playbook: walkthroughs/kairos-interactive-api-playbook.md
+      - Omni Context Routing: walkthroughs/omni-context-routing.md
+      - SPIFFE Identity Onboarding: walkthroughs/spiffe-identity-onboarding.md
+      - Swarm Intelligence Protocol: walkthroughs/swarm-intelligence-protocol.md
+      - Thin Client API Configuration: walkthroughs/thin-client-api-configuration.md
+      - Thin Client Integration: walkthroughs/thin-client-integration.md
+      - Virtual Meeting Room: walkthroughs/virtual-meeting-room.md
   - Operations:
-      - operations/index.md
+      - Overview: operations/index.md
       - Task Tracking: operations/task-tracking.md
-      - Issue Migration Seed: operations/github-issues-migration.md
-      - Docs Audit: reports/docs-site-audit.md
+      - GitHub Issues Migration: operations/github-issues-migration.md
   - Releases:
-      - public/index.md
-      - Changelog: public/CHANGELOG.md
-      - Release Notes: public/release_notes.md
+      - Overview: public/index.md
+      - Changelog: public/changelog.md
+      - Release Notes: public/release-notes.md
+      - AutoDream: public/autodream.md
+      - Teammate Mesh: public/teammate-mesh.md
+      - Vitality Dashboard: public/vitality-dashboard.md
+      - OHC SIP Capabilities: public/ohc-sip-capabilities.md
+      - Visual Walkthrough: public/visual-walkthrough.md
   - Archive:
-      - archive/index.md
-      - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md
+      - Overview: archive/index.md
