@@ -479,6 +479,10 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		return fmt.Errorf("failed to verify task ownership: %w", err)
 	}
 
+	if currentStatus == "COMPLETED" {
+		return errors.New("task is already completed")
+	}
+
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
