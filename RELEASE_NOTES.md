@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
+- Scaling (Cloud): Automated release version tracking for CI/CD pipelines.
+- Privacy/Offline (Standalone): Consolidated standalone release procedures.
+
+
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
 - Scaling (Cloud): Formalized real-time Teammate Mesh APIs and KAIROS DAG orchestration for distributed pod execution.
 - Privacy/Offline (Standalone): Ensured KAIROS orchestrator degrades gracefully into isolated SQLite single-user mode.

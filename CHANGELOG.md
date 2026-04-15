@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
+### Cloud Scaling Improvements
+- Automated release version tracking for CI/CD pipelines.
+
+### Privacy/Offline Improvements
+- Consolidated standalone release procedures.
+
+
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.
