@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "chaos",
     srcs = ["chaos.go"],
-    importpath = "github.com/onehumancorp/mono/lib/resilience/chaos",
+    importpath = "onehumancorp.com/lib/resilience/chaos",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus",

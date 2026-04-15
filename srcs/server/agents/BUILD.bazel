@@ -13,11 +13,11 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/telemetry",
         "//srcs/server/agents/builtin",
         "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
-        "//srcs/server/telemetry",
     ],
 )
 

@@ -2,20 +2,13 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "utils",
-    srcs = [
-        "fs.go",
-        "gzip_middleware.go",
-        "json_minify.go",
-    ],
+    srcs = ["json_minify.go", "gzip_middleware.go", "fs.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/utils",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "utils_test",
-    srcs = [
-        "gzip_middleware_test.go",
-        "json_minify_test.go",
-    ],
+    srcs = ["json_minify_test.go", "gzip_middleware_test.go"],
     embed = [":utils"],
 )

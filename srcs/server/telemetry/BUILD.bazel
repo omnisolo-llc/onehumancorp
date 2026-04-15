@@ -14,8 +14,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
-        "@com_github_prometheus_client_golang//prometheus/promhttp",
         "@com_github_prometheus_client_golang//prometheus/push",
+        "@com_github_prometheus_client_golang//prometheus/promhttp",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_exporters_prometheus//:prometheus",
@@ -37,6 +37,7 @@ go_test(
     embed = [":telemetry"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/push",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@io_opentelemetry_go_otel_metric//noop",
     ],
