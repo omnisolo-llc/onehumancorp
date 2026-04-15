@@ -7,13 +7,13 @@ import (
 )
 
 var (
-	RAGRecordsSyncedTotal metric.Int64Counter
-	RAGSyncErrorsTotal    metric.Int64Counter
+	ragRecordsSyncedTotal metric.Int64Counter
+	ragSyncErrorsTotal    metric.Int64Counter
 )
 
 func initRAGSyncMetrics(m mockableMeter) error {
 	var err error
-	RAGRecordsSyncedTotal, err = m.Int64Counter(
+	ragRecordsSyncedTotal, err = m.Int64Counter(
 		"rag_records_synced_total",
 		metric.WithDescription("Total number of RAG records successfully synced"),
 	)
@@ -21,7 +21,7 @@ func initRAGSyncMetrics(m mockableMeter) error {
 		return err
 	}
 
-	RAGSyncErrorsTotal, err = m.Int64Counter(
+	ragSyncErrorsTotal, err = m.Int64Counter(
 		"rag_sync_errors_total",
 		metric.WithDescription("Total number of RAG sync errors"),
 	)
@@ -35,8 +35,8 @@ func RecordRAGRecordsSynced(ctx context.Context, count int64) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "rag_records_synced", string(payloadBytes))
 	}
-	if RAGRecordsSyncedTotal != nil {
-		RAGRecordsSyncedTotal.Add(ctx, count)
+	if ragRecordsSyncedTotal != nil {
+		ragRecordsSyncedTotal.Add(ctx, count)
 	}
 }
 
@@ -47,7 +47,7 @@ func RecordRAGSyncError(ctx context.Context, errStr string) {
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "rag_sync_error", string(payloadBytes))
 	}
-	if RAGSyncErrorsTotal != nil {
-		RAGSyncErrorsTotal.Add(ctx, 1)
+	if ragSyncErrorsTotal != nil {
+		ragSyncErrorsTotal.Add(ctx, 1)
 	}
 }
