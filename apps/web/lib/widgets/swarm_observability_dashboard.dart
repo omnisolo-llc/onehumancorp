@@ -1,0 +1,93 @@
+import 'dart:convert';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'agent_task_progress.dart';
+
+class SwarmObservabilityDashboard extends StatefulWidget {
+  final WebSocketChannel channel;
+
+  const SwarmObservabilityDashboard({
+    Key? key,
+    required this.channel,
+  }) : super(key: key);
+
+  @override
+  State<SwarmObservabilityDashboard> createState() => _SwarmObservabilityDashboardState();
+}
+
+class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboard> {
+  List<dynamic> _tasks = [];
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = widget.channel.stream.listen((message) {
+      if (message is String) {
+        final data = jsonDecode(message);
+        if (data['tasks'] != null) {
+          setState(() {
+            _tasks = data['tasks'];
+          });
+        }
+      }
+    });
+  }
+
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        child: Container(
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(
+            color: const Color.fromRGBO(255, 255, 255, 0.03),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Swarm Observability',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = _tasks[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: AgentTaskProgressWidget(
+                        taskName: task['name'] ?? 'Unknown Task',
+                        progress: (task['progress'] ?? 0.0).toDouble(),
+                        isWorking: task['isWorking'] ?? false,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
