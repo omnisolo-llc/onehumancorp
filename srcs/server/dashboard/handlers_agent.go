@@ -237,23 +237,94 @@ func (s *Server) handleIdentities(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, identities)
 }
 
-// Handles retrieving skills.
-// Accepts parameters: w, _.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
+// handleSkills returns the user-visible skill catalog (installed/enabled state included).
 func (s *Server) handleSkills(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RLock()
-	list := append([]SkillPack(nil), s.skills...)
+	list := make([]*UserSkill, 0, len(s.userSkills))
+	for _, sk := range s.userSkills {
+		cp := *sk
+		list = append(list, &cp)
+	}
 	s.mu.RUnlock()
 	writeJSON(w, list)
 }
 
-// Handles importing a skill.
-// Accepts parameters: w, r.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
+// handleSkillInstall marks a skill as installed.
+func (s *Server) handleSkillInstall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	name := r.PathValue("name")
+	s.mu.Lock()
+	sk, ok := s.userSkills[name]
+	if !ok {
+		s.mu.Unlock()
+		http.Error(w, "skill not found", http.StatusNotFound)
+		return
+	}
+	sk.Installed = true
+	s.mu.Unlock()
+	writeJSON(w, map[string]interface{}{"name": name, "installed": true})
+}
+
+// handleSkillUninstall marks a skill as uninstalled and disables it.
+func (s *Server) handleSkillUninstall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	name := r.PathValue("name")
+	s.mu.Lock()
+	sk, ok := s.userSkills[name]
+	if !ok {
+		s.mu.Unlock()
+		http.Error(w, "skill not found", http.StatusNotFound)
+		return
+	}
+	sk.Installed = false
+	sk.Enabled = false
+	s.mu.Unlock()
+	writeJSON(w, map[string]interface{}{"name": name, "installed": false, "enabled": false})
+}
+
+// handleSkillUpdate handles PATCH /api/skills/{name} to enable or disable a skill.
+func (s *Server) handleSkillUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	name := r.PathValue("name")
+	var body struct {
+		Enabled *bool `json:"enabled"`
+	}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
+	if err := dec.Decode(&body); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+	if body.Enabled == nil {
+		http.Error(w, "enabled field is required", http.StatusBadRequest)
+		return
+	}
+	s.mu.Lock()
+	sk, ok := s.userSkills[name]
+	if !ok {
+		s.mu.Unlock()
+		http.Error(w, "skill not found", http.StatusNotFound)
+		return
+	}
+	if *body.Enabled && !sk.Installed {
+		s.mu.Unlock()
+		http.Error(w, "skill must be installed before enabling", http.StatusBadRequest)
+		return
+	}
+	sk.Enabled = *body.Enabled
+	s.mu.Unlock()
+	writeJSON(w, map[string]interface{}{"name": name, "enabled": *body.Enabled})
+}
+
+// handleSkillImport handles importing a SkillPack (legacy endpoint, separate from UserSkill catalog).
 func (s *Server) handleSkillImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

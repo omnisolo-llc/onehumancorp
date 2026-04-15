@@ -1315,19 +1315,19 @@ func TestHandleSkillsReturnsBuiltinPacks(t *testing.T) {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 
-	var skills []SkillPack
+	var skills []*UserSkill
 	if err := json.NewDecoder(resp.Body).Decode(&skills); err != nil {
 		t.Fatalf("decode skills: %v", err)
 	}
 	if len(skills) == 0 {
-		t.Fatalf("expected built-in skill packs")
+		t.Fatalf("expected built-in skills in catalog")
 	}
-	ids := map[string]bool{}
+	names := map[string]bool{}
 	for _, s := range skills {
-		ids[s.ID] = true
+		names[s.Name] = true
 	}
-	if !ids["builtin-core-ai"] {
-		t.Fatalf("expected builtin-core-ai skill pack")
+	if !names["caveman"] {
+		t.Fatalf("expected caveman skill in catalog")
 	}
 }
 
@@ -1370,6 +1370,85 @@ func TestHandleSkillImportRejectsMissingFields(t *testing.T) {
 	app.handleSkillImport(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for missing domain, got %d", rec.Code)
+	}
+}
+
+func TestHandleSkillInstallAndEnable(t *testing.T) {
+	_, server, token := newTestServer(t)
+	client := authedClient(token)
+	defer server.Close()
+
+	// Install the community skill (andrej-karpathy-skills is not installed by default).
+	resp, err := client.Post(server.URL+"/api/skills/andrej-karpathy-skills/install", "application/json", nil)
+	if err != nil {
+		t.Fatalf("POST install: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from install, got %d", resp.StatusCode)
+	}
+
+	// Enable it.
+	req, _ := http.NewRequest(http.MethodPatch, server.URL+"/api/skills/andrej-karpathy-skills",
+		strings.NewReader(`{"enabled":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp2, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH enable: %v", err)
+	}
+	resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from enable, got %d", resp2.StatusCode)
+	}
+
+	// Verify state via GET /api/skills.
+	resp3, err := client.Get(server.URL + "/api/skills")
+	if err != nil {
+		t.Fatalf("GET skills: %v", err)
+	}
+	defer resp3.Body.Close()
+	var skills []*UserSkill
+	if err := json.NewDecoder(resp3.Body).Decode(&skills); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	for _, s := range skills {
+		if s.Name == "andrej-karpathy-skills" {
+			if !s.Installed {
+				t.Errorf("expected installed=true")
+			}
+			if !s.Enabled {
+				t.Errorf("expected enabled=true")
+			}
+			return
+		}
+	}
+	t.Fatalf("andrej-karpathy-skills not found in skills list")
+}
+
+func TestHandleSkillInstallNotFound(t *testing.T) {
+	app, _, _ := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/skills/nonexistent-skill/install", nil)
+	rec := httptest.NewRecorder()
+	// Manually set PathValue since httptest doesn't route.
+	req.SetPathValue("name", "nonexistent-skill")
+	app.handleSkillInstall(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestHandleSkillUpdateEnableRequiresInstall(t *testing.T) {
+	app, _, _ := newTestServer(t)
+
+	// andrej-karpathy-skills is not installed by default; enabling should fail.
+	req := httptest.NewRequest(http.MethodPatch, "/api/skills/andrej-karpathy-skills",
+		strings.NewReader(`{"enabled":true}`))
+	req.SetPathValue("name", "andrej-karpathy-skills")
+	rec := httptest.NewRecorder()
+	app.handleSkillUpdate(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
 

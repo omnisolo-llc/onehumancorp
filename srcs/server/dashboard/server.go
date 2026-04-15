@@ -34,6 +34,17 @@ import (
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+// UserSkill represents an installable/enableable skill visible to the user.
+// It matches the Skill model expected by the Flutter client.
+type UserSkill struct {
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+	Category    string `json:"category"` // builtin | official | community
+	Installed   bool   `json:"installed"`
+	Enabled     bool   `json:"enabled"`
+}
+
 type Server struct {
 	mu  sync.RWMutex
 	org domain.Organization
@@ -44,6 +55,7 @@ type Server struct {
 	approvals             []ApprovalRequest
 	handoffs              []HandoffPackage
 	skills                []SkillPack
+	userSkills            map[string]*UserSkill
 	snapshots             []OrgSnapshot
 	integReg              *integrations.Registry
 	trustAgreements       []TrustAgreement
@@ -443,6 +455,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		approvals:             []ApprovalRequest{},
 		handoffs:              []HandoffPackage{},
 		skills:                defaultSkillPacks(),
+		userSkills:            defaultUserSkills(),
 		snapshots:             []OrgSnapshot{},
 		integReg:              integrations.NewRegistry(),
 		trustAgreements:       []TrustAgreement{},
@@ -529,6 +542,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Phase 2 – Extensible Skill Import Framework
 	mux.HandleFunc("/api/skills", server.handleSkills)
 	mux.HandleFunc("/api/skills/import", server.handleSkillImport)
+	mux.HandleFunc("/api/skills/{name}/install", server.handleSkillInstall)
+	mux.HandleFunc("/api/skills/{name}/uninstall", server.handleSkillUninstall)
+	mux.HandleFunc("/api/skills/{name}", server.handleSkillUpdate)
 	// Phase 4 – Org Snapshot & Recovery
 	mux.HandleFunc("/api/snapshots", server.handleSnapshots)
 	mux.HandleFunc("/api/snapshots/create", server.handleSnapshotCreate)
@@ -1480,6 +1496,36 @@ func defaultSkillPacks() []SkillPack {
 				{Role: "BOOKKEEPER", BasePrompt: "Maintain double-entry books with 100% accuracy. Reconcile all accounts daily."},
 			},
 			ImportedAt: now,
+		},
+	}
+}
+
+// defaultUserSkills returns the catalog of user-selectable skills.
+// Built-in skills (e.g. caveman) are pre-installed; community skills are
+// uninstalled by default and must be explicitly installed by the user.
+func defaultUserSkills() map[string]*UserSkill {
+	return map[string]*UserSkill{
+		"caveman": {
+			Name: "caveman",
+			Version: "1.0.0",
+			Description: "Token compression for agent-to-agent communication. " +
+				"Drops articles, filler, and hedging from sub-agent prompts, " +
+				"saving ~75% of output tokens while preserving technical accuracy. " +
+				"Inspired by https://github.com/JuliusBrussee/caveman.",
+			Category:  "builtin",
+			Installed: true,
+			Enabled:   false,
+		},
+		"andrej-karpathy-skills": {
+			Name: "andrej-karpathy-skills",
+			Version: "1.0.0",
+			Description: "Andrej Karpathy's prompting patterns: think step by step, " +
+				"few-shot examples, chain-of-thought reasoning, and self-consistency. " +
+				"Adds structured reasoning instructions to every agent prompt. " +
+				"Source: https://github.com/forrestchang/andrej-karpathy-skills.",
+			Category:  "community",
+			Installed: false,
+			Enabled:   false,
 		},
 	}
 }

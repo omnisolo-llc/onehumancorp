@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
+import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/services/api_service.dart';
 
 class AgentHireWizardScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,13 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   List<String> _roles = [];
   List<AgentProvider> _providers = [];
 
+  // Capabilities step state.
+  List<Skill> _availableSkills = [];
+  final Set<String> _selectedSkills = {};
+  final List<Map<String, dynamic>> _mcpServers = [];
+  final _mcpCommandController = TextEditingController();
+  final _mcpNameController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +42,13 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
       final api = ref.read(apiServiceProvider);
       if (api == null) return;
 
-      final providers = await api.listAgentProviders();
+      final results = await Future.wait([
+        api.listAgentProviders(),
+        api.listSkills(),
+      ]);
+
+      final providers = results[0] as List<AgentProvider>;
+      final skills = results[1] as List<Skill>;
       final rolesSet = <String>{};
       for (final p in providers) {
         rolesSet.addAll(p.supportedRoles);
@@ -47,6 +61,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           if (_providers.isNotEmpty) {
             _selectedProvider = _providers.first.type;
           }
+          _availableSkills = skills.where((s) => s.installed).toList();
           _isLoading = false;
         });
       }
@@ -66,6 +81,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _mcpCommandController.dispose();
+    _mcpNameController.dispose();
     super.dispose();
   }
 
@@ -140,7 +157,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
-          if (_step < 3) {
+          if (_step < 4) {
             setState(() => _step++);
           } else {
             _handleDeploy();
@@ -156,7 +173,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             padding: const EdgeInsets.only(top: 24),
             child: Row(
               children: [
-                if (_step < 3)
+                if (_step < 4)
                   Semantics(
                     label: 'Proceed to next step',
                     child: Tooltip(
@@ -318,13 +335,129 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             ),
           ),
           Step(
-            title: const Text('Confirm'),
+            title: const Text('Capabilities'),
             isActive: _step >= 3,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 4 — Confirm Deployment',
+                  'Step 4 — Skills & MCP Servers',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Select which skills to enable for this agent and add any MCP servers.',
+                ),
+                const SizedBox(height: 24),
+                if (_availableSkills.isEmpty)
+                  const Text(
+                    'No installed skills found. Install skills from the Skills screen first.',
+                    style: TextStyle(color: Colors.orange),
+                  )
+                else ...[
+                  Text(
+                    'Skills',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _availableSkills.map((skill) {
+                      final selected = _selectedSkills.contains(skill.name);
+                      return FilterChip(
+                        label: Text(skill.name),
+                        tooltip: skill.description,
+                        selected: selected,
+                        onSelected: (val) {
+                          setState(() {
+                            if (val) {
+                              _selectedSkills.add(skill.name);
+                            } else {
+                              _selectedSkills.remove(skill.name);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                Text(
+                  'MCP Servers',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                if (_mcpServers.isNotEmpty)
+                  ..._mcpServers.map(
+                    (srv) => ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.power_plug_outlined, size: 18),
+                      title: Text(srv['name'] as String? ?? ''),
+                      subtitle: Text(srv['command'] as String? ?? ''),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        tooltip: 'Remove MCP server',
+                        onPressed: () {
+                          setState(() => _mcpServers.remove(srv));
+                        },
+                      ),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _mcpNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Server name',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: _mcpCommandController,
+                        decoration: const InputDecoration(
+                          labelText: 'Command (e.g. npx @modelcontextprotocol/server-github)',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Add MCP server',
+                      child: IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: () {
+                          final name = _mcpNameController.text.trim();
+                          final cmd = _mcpCommandController.text.trim();
+                          if (name.isEmpty || cmd.isEmpty) return;
+                          setState(() {
+                            _mcpServers.add({'name': name, 'command': cmd});
+                            _mcpNameController.clear();
+                            _mcpCommandController.clear();
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Confirm'),
+            isActive: _step >= 4,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Step 5 — Confirm Deployment',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -392,6 +525,20 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     ),
                   ),
                 ),
+                if (_selectedSkills.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Skills: ${_selectedSkills.join(', ')}',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13),
+                  ),
+                ],
+                if (_mcpServers.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'MCP servers: ${_mcpServers.map((s) => s['name']).join(', ')}',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Text(
                   'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
