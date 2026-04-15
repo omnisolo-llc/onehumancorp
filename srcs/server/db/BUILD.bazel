@@ -60,6 +60,7 @@ go_library(
         "migrations/054_shared_tasks_decomposition.sql",
         "migrations/055_hub_events.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
+        "migrations/20260415120000_distributed_locks.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",

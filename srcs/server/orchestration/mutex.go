@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -35,19 +36,12 @@ func NewMutexProvider(ctx context.Context, provider db.Provider, redisClient rue
 		return &RedisMutexProvider{client: redisClient}, nil
 	}
 
-	// For SQLite/DB, ensure the table exists when the provider is created
-	query := `
-		CREATE TABLE IF NOT EXISTS distributed_locks (
-			lock_key TEXT PRIMARY KEY,
-			owner_id TEXT NOT NULL,
-			expires_at DATETIME NOT NULL
-		);
-	`
-	if _, err := provider.Exec(ctx, query); err != nil {
-		return nil, fmt.Errorf("failed to initialize distributed_locks table: %w", err)
-	}
+	// The distributed_locks table is now managed by schema migrations (see db/migrations/20260415120000_distributed_locks.sql)
 
-	return &SQLiteMutexProvider{db: provider}, nil
+	if provider.IsSQLite() {
+		return &SQLiteMutexProvider{db: provider}, nil
+	}
+	return &PostgresMutexProvider{db: provider}, nil
 }
 
 // RedisMutexProvider uses Redis for distributed locking.
@@ -159,6 +153,78 @@ func (m *SQLiteMutex) Unlock(ctx context.Context) error {
 
 	rowsAffected := res
 	if rowsAffected == 0 {
+		return ErrLockNotOwned
+	}
+	return nil
+}
+
+// PostgresMutexProvider uses a PostgreSQL database table with unique constraints for distributed locking.
+type PostgresMutexProvider struct {
+	db db.Provider
+}
+
+func (p *PostgresMutexProvider) NewMutex(key string) Mutex {
+	return &PostgresMutex{
+		provider: p,
+		key:      key,
+		ownerID:  generateID(),
+	}
+}
+
+type PostgresMutex struct {
+	provider *PostgresMutexProvider
+	key      string
+	ownerID  string
+}
+
+func (m *PostgresMutex) Lock(ctx context.Context, ttl time.Duration) error {
+	tx, err := m.provider.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Clean up expired locks first to free up keys (could also be done via background job)
+	nowStr := time.Now().Format(time.RFC3339Nano)
+	_, _ = tx.Exec(ctx, "DELETE FROM distributed_locks WHERE lock_key = $1 AND expires_at < $2", m.key, nowStr)
+
+	expiresAt := time.Now().Add(ttl).Format(time.RFC3339Nano)
+
+	// In Postgres, we can try to insert, and if it fails due to UNIQUE constraint, it means the lock is held.
+	// But to avoid deadlocks and ensure proper queueing if needed (or fail fast), we use a simple INSERT
+	// handling the unique violation, or an UPSERT. Since Mutex is non-blocking (try-lock behavior in RedisMutex),
+	// we just INSERT and return ErrLockAcquisitionFailed on conflict.
+
+	query := `
+		INSERT INTO distributed_locks (lock_key, owner_id, expires_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (lock_key) DO NOTHING
+		RETURNING lock_key
+	`
+	var insertedKey string
+	err = tx.QueryRow(ctx, query, m.key, m.ownerID, expiresAt).Scan(&insertedKey)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows in result set") {
+			return ErrLockAcquisitionFailed
+		}
+		return fmt.Errorf("database insert error: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
+	return nil
+}
+
+func (m *PostgresMutex) Unlock(ctx context.Context) error {
+	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2`
+	res, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)
+	if err != nil {
+		return err
+	}
+
+	if res == 0 {
 		return ErrLockNotOwned
 	}
 	return nil
