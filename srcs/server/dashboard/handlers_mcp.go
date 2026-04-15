@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"context"
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
@@ -145,7 +144,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.RUnlock()
 
-	result, err := s.invokeMCPTool(req)
+	result, err := s.invokeMCPTool(r.Context(), req)
 
 	s.mu.Lock()
 	if err != nil {
@@ -236,7 +235,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, result)
 }
 
-func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
+func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[string]any, error) {
 	// Emit structured trace for MCP tool invocation
 	if telemetry.Verbosity >= 2 {
 		slog.Info("agent execution trace",
@@ -381,11 +380,8 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		// In a real execution environment, the HTTP middleware sets context values for auth.
 		// However, for MCP tool invocation inside the server loop, we recreate claims if known.
 		// For simplicity we create a dummy claim just for testing out the cloud mode scoping.
-		claims := &auth.Claims{
-			OrganizationID: s.org.ID,
-		}
 
-		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+
 		res, err := inspector.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
@@ -407,10 +403,7 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			return nil, fmt.Errorf("invalid hybridcrdt-mcp parameters: %w", err)
 		}
 
-		claims := &auth.Claims{
-			OrganizationID: s.org.ID,
-		}
-		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+
 
 		res, err := inspector.CallTool(ctx, req.Action, params)
 		if err != nil {
@@ -442,10 +435,7 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 			return nil, fmt.Errorf("invalid hybridfs-mcp parameters: %w", err)
 		}
 
-		claims := &auth.Claims{
-			OrganizationID: s.org.ID,
-		}
-		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
+
 
 		res, err := inspector.CallTool(ctx, req.Action, params)
 		if err != nil {

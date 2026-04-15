@@ -104,7 +104,11 @@ func (t *CRDTTool) handlePull(ctx context.Context, request mcp.CallToolRequest) 
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}}}, nil
 	}
 
-	entityID, ok := request.Params.Arguments.(map[string]interface{})["entity_id"].(string)
+	args, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid arguments format"}}}, nil
+	}
+	entityID, ok := args["entity_id"].(string)
 	if !ok {
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid entity_id"}}}, nil
 	}
@@ -131,12 +135,16 @@ func (t *CRDTTool) handlePush(ctx context.Context, request mcp.CallToolRequest) 
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}}}, nil
 	}
 
-	entityID, ok := request.Params.Arguments.(map[string]interface{})["entity_id"].(string)
+	args, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid arguments format"}}}, nil
+	}
+	entityID, ok := args["entity_id"].(string)
 	if !ok {
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid entity_id"}}}, nil
 	}
 
-	vectorStr, ok := request.Params.Arguments.(map[string]interface{})["crdt_vector"].(string)
+	vectorStr, ok := args["crdt_vector"].(string)
 	if !ok {
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid crdt_vector"}}}, nil
 	}
@@ -161,12 +169,16 @@ func (t *CRDTTool) handlePush(ctx context.Context, request mcp.CallToolRequest) 
 }
 
 func (t *CRDTTool) handleMerge(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	vectorAStr, ok := request.Params.Arguments.(map[string]interface{})["vector_a"].(string)
+	args, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid arguments format"}}}, nil
+	}
+	vectorAStr, ok := args["vector_a"].(string)
 	if !ok {
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid vector_a"}}}, nil
 	}
 
-	vectorBStr, ok := request.Params.Arguments.(map[string]interface{})["vector_b"].(string)
+	vectorBStr, ok := args["vector_b"].(string)
 	if !ok {
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "invalid vector_b"}}}, nil
 	}
