@@ -1,30 +1,31 @@
-package db
+package dbtest
 
 import (
 	"context"
 	"database/sql"
 	"testing"
 
+	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "modernc.org/sqlite"
 )
 
 // NewTestProvider creates a new in-memory SQLite database provider for testing.
-func NewTestProvider(t *testing.T) Provider {
+func NewTestProvider(t *testing.T) db.Provider {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
+	sqliteDB, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}
 
 	// Ensure the db is alive
-	if err := db.PingContext(context.Background()); err != nil {
+	if err := sqliteDB.PingContext(context.Background()); err != nil {
 		t.Fatalf("failed to ping test sqlite db: %v", err)
 	}
 
 	// Important: register db cleanup
 	t.Cleanup(func() {
-		db.Close()
+		sqliteDB.Close()
 	})
 
-	return NewSqliteProvider(db)
+	return db.NewSqliteProvider(sqliteDB)
 }

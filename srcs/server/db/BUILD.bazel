@@ -60,6 +60,7 @@ go_library(
         "migrations/054_shared_tasks_decomposition.sql",
         "migrations/055_hub_events.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
+        "migrations/20260415100000_swarm_tasks.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
@@ -79,7 +80,6 @@ go_test(
     name = "db_test",
     srcs = [
         "provider_test.go",
-        "test_provider_test.go",
     ],
     embed = [":db"],
     deps = ["@org_modernc_sqlite//:sqlite"],
