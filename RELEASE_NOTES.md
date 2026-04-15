@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
+- Scaling (Cloud): Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
+- Privacy/Offline (Standalone): Enhanced standalone AutoDream memory consistency using SQL-backed idempotent ingestion for mission artifacts.
+
 ## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
 - Scaling (Cloud): Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.
 - Privacy/Offline (Standalone): Added interop.ValidateSPIFFEID validation to all realtime mesh broadcast and capability advertisements ensuring compliance with OHC Hybrid Architecture protocols.
