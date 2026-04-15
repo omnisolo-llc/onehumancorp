@@ -10,7 +10,7 @@ Agents running locally (Zero WIP Standalone) stream their context to the Cloud M
 
 ```mermaid
 sequenceDiagram
-    participant LocalFS as Local Agent File System (.agent-task/)
+    participant LocalFS as Local Agent File System (.ohc/runtime/)
     participant Sync as MCP Local Daemon
     participant Router as Cloud MCP Router
     participant Vector as pgvector (AutoDream)

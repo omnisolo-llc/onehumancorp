@@ -4,6 +4,7 @@ go_library(
     name = "growth",
     srcs = [
         "referrals.go",
+        "referral_api.go",
         "invites.go",
         "invites_repo.go",
         "experiments.go",
@@ -22,6 +23,7 @@ go_test(
     name = "growth_test",
     srcs = [
         "referrals_test.go",
+        "referral_api_test.go",
         "invites_test.go",
         "experiments_test.go",
         "quota_test.go",

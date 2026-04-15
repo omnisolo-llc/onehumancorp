@@ -1,3 +1,0 @@
-type: "research_synthesis"
-domain: "Orchestration"
-findings: "Created KAIROS orchestrator mission. Shared Task List uses Postgres FOR UPDATE SKIP LOCKED. Teammate Mesh APIs are defined for Phase 2."

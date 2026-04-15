@@ -53,7 +53,7 @@ Agents use this endpoint to announce task state transitions.
 ```
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
-To continuously evolve the AI OS bit by bit, the AutoDream system wakes up periodically to vectorize architectural decisions and agent memories into pgvector. Background workers consolidate `.agent-task/memory/*.yml` to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table, granting the swarm exact semantic search capabilities.
+To continuously evolve the AI OS bit by bit, the AutoDream system wakes up periodically to vectorize architectural decisions and agent memories into pgvector. Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table, granting the swarm exact semantic search capabilities.
 
 ### 3.1 pgvector Schema Definition
 ```sql
@@ -82,7 +82,7 @@ When KAIROS decomposes a mission, it submits jobs to a distributed background qu
   "job_id": "worker-task-77",
   "queue_name": "l5-implementers",
   "data": {
-    "mission_path": ".agent-task/missions/2026-04-14T17-02-23Z.md",
+    "issue_ref": "GitHub issue created from the repository task template",
     "repository_state_hash": "sha256-abc123def456",
     "execution_timeout_ms": 3600000
   }

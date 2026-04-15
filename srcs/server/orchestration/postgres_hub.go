@@ -207,6 +207,24 @@ func (r *PgHubRepository) RemoveAgent(ctx context.Context, id string) error {
 	})
 }
 
+func (r *PgHubRepository) AppendEvent(ctx context.Context, event HubEvent) error {
+	return pgWithRetry(ctx, func() error {
+		payload := json.RawMessage(event.Payload)
+		if len(payload) == 0 {
+			payload = json.RawMessage("{}")
+		}
+
+		_, err := r.pool.Exec(ctx, `
+			INSERT INTO hub_events (type, payload, occurred_at)
+			VALUES ($1, $2::jsonb, $3)
+		`, event.Type, string(payload), event.OccurredAt.UTC())
+		if err != nil {
+			return fmt.Errorf("pg: append event: %w", err)
+		}
+		return nil
+	})
+}
+
 func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg Message) error {
 	return pgWithRetry(ctx, func() error {
 		if r.orgID != "" {

@@ -78,6 +78,6 @@ graph TD
 
 To capitalize on this Blue Ocean, OHC must immediately prioritize the following mission:
 *   **Mission**: Implement the "Hybrid Local-Private RAG Worker".
-*   **Action**: A mission file will be deployed to the `.agent-task/missions/` queue for immediate implementation by the Engineering Swarm.
+*   **Action**: A GitHub issue should be opened from the repository task template for immediate implementation by the Engineering Swarm.
 
 </div>

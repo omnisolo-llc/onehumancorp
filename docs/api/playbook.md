@@ -194,7 +194,7 @@ Channels:
 <div class="glass-panel" markdown="1">
 
 ### AutoDream Data Pipelines (pgvector)
-The API supports AutoDream pipelines where the backend background workers process `.agent-task/memory/*.yml` files.
+The API supports AutoDream pipelines where the backend background workers process `agent_session_data` and any `*.yml` files found under `OHC_MEMORY_DIR`.
 
 **Endpoint:** `POST /api/mesh/broadcast`
 Allows agents to publish messages to the mesh.
@@ -408,7 +408,7 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
 ### 4.7 AutoDream Vector Embedding Workflow
 ```mermaid
 graph TD
-    Agent[Agent Shared Memory] -->|Writes to .agent-task/memory| FS[File System]
+    Agent[Agent Shared Memory] -->|Writes to OHC_MEMORY_DIR| FS[Runtime Memory Directory]
     FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
     AutoDream --> Chunk[Chunk & Tokenize]
     Chunk --> Embed[Minimax/Cohere Embedding API]
@@ -462,7 +462,7 @@ Triggers an immediate AutoDream vector embedding workflow on newly generated age
 ```json
 {
   "target_memory_files": [
-    ".agent-task/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.md"
+    ".ohc/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
   ],
   "priority": "high"
 }

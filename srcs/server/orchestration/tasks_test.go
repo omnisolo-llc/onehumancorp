@@ -2,20 +2,51 @@ package orchestration
 
 import (
 	"context"
-	"os"
+	"database/sql"
+	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	_ "modernc.org/sqlite"
 )
+
+func newTaskTestProvider(t *testing.T) db.Provider {
+	t.Helper()
+
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open test sqlite db: %v", err)
+	}
+	if err := sqlDB.PingContext(context.Background()); err != nil {
+		t.Fatalf("failed to ping test sqlite db: %v", err)
+	}
+	t.Cleanup(func() {
+		sqlDB.Close()
+	})
+
+	return db.NewSqliteProvider(sqlDB)
+}
+
+func taskClaimsContext() context.Context {
+	return context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+}
+
+func approveTasksForExecution(t *testing.T, tm *TaskManager, ctx context.Context, taskIDs ...string) {
+	t.Helper()
+	for _, taskID := range taskIDs {
+		if _, err := tm.db.Exec(ctx, "UPDATE shared_tasks SET ultraplan_phase = 'APPROVED' WHERE id = $1", taskID); err != nil {
+			t.Fatalf("failed to approve task %s: %v", taskID, err)
+		}
+	}
+}
 
 func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 	t.Helper()
 	telemetry.InitTelemetry()
 	// Create an in-memory SQLite database
-	prov := db.NewTestProvider(t)
+	prov := newTaskTestProvider(t)
 
 	// Create tables
 	_, err := prov.Exec(context.Background(), `
@@ -31,6 +62,9 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT NOT NULL DEFAULT '{}',
 			locked_until DATETIME,
+			ultraplan_phase TEXT,
+			deliberation_log TEXT NOT NULL DEFAULT '[]',
+			depth INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
@@ -39,6 +73,17 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			task_id TEXT NOT NULL,
 			depends_on_task_id TEXT NOT NULL,
 			PRIMARY KEY (task_id, depends_on_task_id)
+		);
+
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY,
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 	if err != nil {
@@ -58,7 +103,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := taskClaimsContext()
 	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -80,7 +125,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := taskClaimsContext()
 
 	// Claim when empty
 	task, err := tm.ClaimTask(ctx, "non-existent-task-id", "agent-1")
@@ -96,6 +141,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	approveTasksForExecution(t, tm, ctx, createdTask.ID)
 
 	// Claim task
 	claimedTask, err := tm.ClaimTask(ctx, createdTask.ID, "agent-1")
@@ -128,7 +174,7 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := taskClaimsContext()
 
 	// Poll when empty
 	tasks, err := tm.PollTasks(ctx, "agent-1", 5)
@@ -140,9 +186,10 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	}
 
 	// Create a few tasks with different priorities
-	_, _ = tm.CreateTask(ctx, "org-1", "Task 1", "Desc", "P2")
-	_, _ = tm.CreateTask(ctx, "org-1", "Task 2", "Desc", "P1") // Should be polled first
-	_, _ = tm.CreateTask(ctx, "org-1", "Task 3", "Desc", "P3")
+	task1, _ := tm.CreateTask(ctx, "org-1", "Task 1", "Desc", "P2")
+	task2, _ := tm.CreateTask(ctx, "org-1", "Task 2", "Desc", "P1") // Should be polled first
+	task3, _ := tm.CreateTask(ctx, "org-1", "Task 3", "Desc", "P3")
+	approveTasksForExecution(t, tm, ctx, task1.ID, task2.ID, task3.ID)
 
 	// Poll tasks with limit 2
 	tasks, err = tm.PollTasks(ctx, "agent-1", 2)
@@ -193,11 +240,12 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := taskClaimsContext()
 
 	// Create a parent task and a dependent task
 	parentTask, _ := tm.CreateTask(ctx, "org-1", "Parent Task", "Desc", "P1")
 	dependentTask, _ := tm.CreateTask(ctx, "org-1", "Dependent Task", "Desc", "P1")
+	approveTasksForExecution(t, tm, ctx, parentTask.ID, dependentTask.ID)
 
 	// Add dependency
 	_, err := tm.db.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", dependentTask.ID, parentTask.ID)
@@ -242,8 +290,9 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := taskClaimsContext()
 	task, _ := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
+	approveTasksForExecution(t, tm, ctx, task.ID)
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
 	if claimedTask.ID != task.ID {
@@ -269,19 +318,71 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	}
 }
 
+func TestTaskManager_CompleteTaskWithResult_PersistsOutput(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("expected no error creating task, got %v", err)
+	}
+	approveTasksForExecution(t, tm, ctx, task.ID)
+
+	claimedTask, err := tm.ClaimTask(ctx, task.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error claiming task, got %v", err)
+	}
+	if claimedTask == nil {
+		t.Fatalf("expected claimed task, got nil")
+	}
+
+	result := "all checks passed"
+	err = tm.CompleteTaskWithResult(ctx, claimedTask.ID, "agent-1", result)
+	if err != nil {
+		t.Fatalf("expected no error completing task, got %v", err)
+	}
+
+	var payloadText string
+	var deliberationLog string
+	err = tm.db.QueryRow(ctx, "SELECT payload, deliberation_log FROM shared_tasks WHERE id = $1", claimedTask.ID).Scan(&payloadText, &deliberationLog)
+	if err != nil {
+		t.Fatalf("expected persisted task payload, got %v", err)
+	}
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadText), &payload); err != nil {
+		t.Fatalf("expected valid payload JSON, got %v", err)
+	}
+	if payload["result"] != result {
+		t.Fatalf("expected payload result %q, got %v", result, payload["result"])
+	}
+
+	var entries []string
+	if err := json.Unmarshal([]byte(deliberationLog), &entries); err != nil {
+		t.Fatalf("expected valid deliberation log JSON, got %v", err)
+	}
+	if len(entries) == 0 || entries[len(entries)-1] != result {
+		t.Fatalf("expected deliberation log to end with %q, got %v", result, entries)
+	}
+}
+
 func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
 	t.Setenv("OHC_MULTITENANT", "false")
 
 	tm, cleanup := setupTasksTestDB(t)
 	defer cleanup()
 
-	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org-1"})
+	ctx := taskClaimsContext()
 
 	// Create 1 task
 	task, err := tm.CreateTask(ctx, "org-1", "Test Concurrent Claim", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	approveTasksForExecution(t, tm, ctx, task.ID)
 
 	// Concurrently attempt to claim
 	errCh := make(chan error, 10)
@@ -298,7 +399,7 @@ func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
 			} else {
 				errCh <- nil // nil task means it couldn't claim, which is fine
 			}
-		}( "agent-" + string(rune('A'+i)))
+		}("agent-" + string(rune('A'+i)))
 	}
 
 	for i := 0; i < 10; i++ {
@@ -341,10 +442,11 @@ func TestTaskManager_PollTasks_TeammateMesh(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 
-	_, err := tm.CreateTask(ctx, "org-1", "Test Mesh", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "org-1", "Test Mesh", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("failed to create task: %v", err)
 	}
+	approveTasksForExecution(t, tm, ctx, task.ID)
 
 	tasks, err := tm.PollTasks(ctx, "agent-mesh", 1)
 	if err != nil {
