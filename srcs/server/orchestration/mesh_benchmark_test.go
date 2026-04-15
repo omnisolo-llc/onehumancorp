@@ -45,7 +45,7 @@ func BenchmarkLocalTeammateMesh_Broadcast(b *testing.B) {
 		i := 0
 		for pb.Next() {
 			task := Task{
-				AgentID: "agent-bench",
+				AgentID: "spiffe://onehumancorp.io/agent/bench",
 				Action:  "BENCHMARK",
 				Status:  "PENDING",
 				TaskID:  fmt.Sprintf("task-%d", i),
