@@ -5,9 +5,7 @@ format="${1:-}"
 RUNFILES="${RUNFILES_DIR:-${TEST_SRCDIR:-$PWD}}"
 TMPDIR="${TEST_TMPDIR:-/tmp/ohc_package_test}"
 
-expected_paths=(
-  "opt/ohc-desktop/pubspec.yaml"
-  "opt/ohc-desktop/srcs/app/lib/main.dart"
+required_paths=(
   "opt/ohc-desktop/libexec/ohc"
   "opt/ohc-desktop/libexec/ohc-server"
   "opt/ohc-desktop/libexec/ohc-desktop"
@@ -26,16 +24,33 @@ assert_tar_contains() {
   local listing="$2"
   local verbose_listing="$3"
   local path
+  local launcher_path
+  local launcher_contents
 
   tar -tf "${archive}" | sed 's#^\./##' >"${listing}"
   tar -tvf "${archive}" >"${verbose_listing}"
 
-  for path in "${expected_paths[@]}"; do
+  for path in "${required_paths[@]}"; do
     if ! grep -Fxq "${path}" "${listing}"; then
       echo "ERROR: ${archive} is missing ${path}" >&2
       exit 1
     fi
   done
+
+  if ! grep -Eq '^opt/ohc-desktop(/[^/]+)?/ohc_app$' "${listing}"; then
+    echo "ERROR: ${archive} is missing the packaged ohc_app executable" >&2
+    exit 1
+  fi
+
+  if ! grep -Eq '^opt/ohc-desktop(/[^/]+)?/data/' "${listing}"; then
+    echo "ERROR: ${archive} is missing packaged Flutter data assets" >&2
+    exit 1
+  fi
+
+  if ! grep -Eq '^opt/ohc-desktop(/[^/]+)?/lib/' "${listing}"; then
+    echo "ERROR: ${archive} is missing packaged Flutter shared libraries" >&2
+    exit 1
+  fi
 
   if ! grep -Eq '(\./)?usr/bin/ohc -> /opt/ohc-desktop/libexec/ohc$' "${verbose_listing}"; then
     echo "ERROR: ${archive} is missing the /usr/bin/ohc symlink" >&2
@@ -44,6 +59,17 @@ assert_tar_contains() {
 
   if ! grep -Eq '(\./)?usr/bin/ohc-desktop -> /opt/ohc-desktop/libexec/ohc-desktop$' "${verbose_listing}"; then
     echo "ERROR: ${archive} is missing the /usr/bin/ohc-desktop symlink" >&2
+    exit 1
+  fi
+
+  launcher_path="$(grep -E '^opt/ohc-desktop/libexec/ohc-desktop$' "${listing}" | head -n 1)"
+  launcher_contents="$(tar -xOf "${archive}" "${launcher_path}")"
+  if grep -q "flutter run" <<<"${launcher_contents}"; then
+    echo "ERROR: packaged launcher still shells out to flutter run" >&2
+    exit 1
+  fi
+  if ! grep -q 'ohc_app' <<<"${launcher_contents}"; then
+    echo "ERROR: packaged launcher does not invoke the bundled executable" >&2
     exit 1
   fi
 }
@@ -55,13 +81,12 @@ import sys
 
 rpm_path = sys.argv[1]
 required = [
-    b"opt/ohc-desktop/pubspec.yaml",
-    b"opt/ohc-desktop/srcs/app/lib/main.dart",
     b"opt/ohc-desktop/libexec/ohc",
     b"opt/ohc-desktop/libexec/ohc-server",
     b"opt/ohc-desktop/libexec/ohc-desktop",
     b"usr/bin/ohc",
     b"usr/bin/ohc-desktop",
+    b"ohc_app",
 ]
 
 data = open(rpm_path, "rb").read()
