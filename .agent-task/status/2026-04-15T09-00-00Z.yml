@@ -1,0 +1,4 @@
+status: healthy
+agent: Maintainer
+metrics:
+  stuck_missions_cleared: 3
