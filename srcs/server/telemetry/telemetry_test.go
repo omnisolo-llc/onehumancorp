@@ -382,6 +382,10 @@ func TestRecordFunctions(t *testing.T) {
 		RecordPostgresLockContention(ctx, "test_operation")
 	})
 
+	t.Run("RecordPostgresRetryExhausted", func(t *testing.T) {
+		RecordPostgresRetryExhausted(ctx, "test_op")
+	})
+
 	t.Run("RecordLLMNetworkLatency", func(t *testing.T) {
 		RecordLLMNetworkLatency(ctx, "claude-3-5-sonnet", 1.23)
 	})

@@ -99,6 +99,12 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
+	RecordPostgresLockContention(ctx, "write")
+	if !called {
+		t.Errorf("expected buffer call")
+	}
+	called = false
+
 	RecordTaskQueueLength(ctx, 5)
 	if !called {
 		t.Errorf("expected buffer call")
