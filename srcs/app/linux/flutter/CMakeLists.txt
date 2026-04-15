@@ -35,8 +35,10 @@ set(FLUTTER_LIBRARY_DIR "${EPHEMERAL_DIR}")
 set(FLUTTER_ICU_DATA_FILE "${EPHEMERAL_DIR}/icudtl.dat")
 set(FLUTTER_AOT_SNAPSHOT "${EPHEMERAL_DIR}/kernel_blob.bin")
 
-target_compile_options(flutter INTERFACE
-  "-include${EPHEMERAL_DIR}/flutter_export.h")
+set(FLUTTER_LIBRARY_DIR "${FLUTTER_LIBRARY_DIR}" PARENT_SCOPE)
+set(FLUTTER_ICU_DATA_FILE "${FLUTTER_ICU_DATA_FILE}" PARENT_SCOPE)
+set(FLUTTER_AOT_SNAPSHOT "${FLUTTER_AOT_SNAPSHOT}" PARENT_SCOPE)
+
 target_link_options(flutter INTERFACE "-Wl,-rpath,\$ORIGIN/lib")
 
 find_package(PkgConfig REQUIRED)
@@ -108,6 +110,4 @@ function(apply_standard_settings TARGET)
     "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
 endfunction()
 
-set(PLUGIN_BUNDLED_LIBRARIES)
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/generated_plugins.cmake)
+set(PLUGIN_BUNDLED_LIBRARIES "${PLUGIN_BUNDLED_LIBRARIES}" PARENT_SCOPE)
