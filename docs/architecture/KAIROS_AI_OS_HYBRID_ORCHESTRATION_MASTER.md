@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     payload JSONB,
     parent_plan_id TEXT,
     dependencies JSONB NOT NULL DEFAULT '[]',
-    locked_until TIMESTAMP WITH TIME ZONE,
+    locked_until TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
