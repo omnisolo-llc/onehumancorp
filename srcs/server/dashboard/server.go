@@ -910,6 +910,11 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.AgentID == "" || req.Action == "" || req.Status == "" {
+		http.Error(w, "invalid request: missing required fields", http.StatusBadRequest)
+		return
+	}
+
 	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" {
 		http.Error(w, "invalid channel", http.StatusBadRequest)
 		return
