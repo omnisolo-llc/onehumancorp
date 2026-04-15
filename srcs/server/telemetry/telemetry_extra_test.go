@@ -181,3 +181,14 @@ func TestRecordAgentExecutionTrace(t *testing.T) {
 	RecordAgentExecutionTrace(ctx, "agent-456", "deliberation")
 	// Since we are mocking the meter under the hood in proper tests, this just verifies no panic.
 }
+
+func TestPushMetrics(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("PROMETHEUS_PUSHGATEWAY_URL", "http://localhost:9999") // dummy
+	err := PushMetrics(ctx, "test_job")
+	// The actual push is fire-and-forget asynchronously, so we only expect no panic
+	// and a nil return error.
+	if err != nil {
+		t.Errorf("Expected no sync error from fire-and-forget push, got %v", err)
+	}
+}

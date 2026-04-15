@@ -27,3 +27,19 @@ spec:
   - port: http
     path: /metrics
     interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-pushgateway-monitor
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: pushgateway
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 5s
+    honorLabels: true

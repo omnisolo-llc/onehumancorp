@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ohc.fullname" . }}-pushgateway
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9091
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "ohc.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway

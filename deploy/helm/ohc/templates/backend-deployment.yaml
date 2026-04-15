@@ -72,6 +72,8 @@ spec:
             {{- if .Values.ohcCore.enabled }}
             - name: OHC_CORE_URL
               value: "http://{{ .Release.Name }}-ohc-core:{{ .Values.ohcCore.service.port }}"
+            - name: PROMETHEUS_PUSHGATEWAY_URL
+              value: "http://{{ include \"ohc.fullname\" . }}-pushgateway:9091"
             {{- end }}
             - name: JWT_SECRET
               valueFrom:

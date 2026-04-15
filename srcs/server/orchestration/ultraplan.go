@@ -292,6 +292,12 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 	if oldPhase != "" && newPhase != "" && oldPhase != newPhase {
 		duration := time.Since(plan.UpdatedAt).Seconds()
 		telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, duration)
+		// Fire-and-forget push of metrics, using a background context with timeout
+		go func(phase string) {
+			bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = telemetry.PushMetrics(bgCtx, "kairos_phase_"+phase)
+		}(newPhase)
 	}
 
 	updatedJSON, err := json.Marshal(plan.StateMachine)
@@ -408,6 +414,12 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 				if oldPhase != "" && (oldPhase != newPhase || currentStatus != newStatus) {
 					duration := time.Since(oldPlan.UpdatedAt).Seconds()
 					telemetry.RecordDeliberationPhaseDuration(ctx, planID, oldPhase, duration)
+					// Fire-and-forget push of metrics, using a background context with timeout
+					go func(phase string) {
+						bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+						defer cancel()
+						_ = telemetry.PushMetrics(bgCtx, "kairos_phase_"+phase)
+					}(newPhase)
 				}
 			}
 		}

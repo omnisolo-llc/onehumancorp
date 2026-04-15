@@ -31,6 +31,8 @@ spec:
               value: "0.0.0.0:{{ .Values.ohcCore.service.port }}"
             - name: RUST_LOG
               value: "info"
+            - name: PROMETHEUS_PUSHGATEWAY_URL
+              value: "http://{{ include \"ohc.fullname\" . }}-pushgateway:9091"
           resources:
             {{- toYaml .Values.ohcCore.resources | nindent 12 }}
           livenessProbe:

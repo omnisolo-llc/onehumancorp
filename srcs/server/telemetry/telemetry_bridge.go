@@ -3,7 +3,12 @@ package telemetry
 import (
 	"context"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 	"go.opentelemetry.io/otel/metric"
+	"net/http"
+	"os"
+	"time"
 )
 
 var (
@@ -59,4 +64,29 @@ func RecordBridgeStatus(ctx context.Context, active int64) {
 	if bridgeStatusGauge != nil {
 		bridgeStatusGauge.Add(ctx, active)
 	}
+}
+
+func PushMetrics(ctx context.Context, jobName string) error {
+	url := os.Getenv("PROMETHEUS_PUSHGATEWAY_URL")
+	if url == "" {
+		url = "http://localhost:9091"
+	}
+	// Since OpenTelemetry manages its own prometheus exporter,
+	// we directly use the prometheus DefaultGatherer to ensure all exported OTEL metrics
+	// are successfully pushed to the pushgateway.
+	pusher := push.New(url, jobName).Gatherer(prometheus.DefaultGatherer)
+
+	// Create an HTTP client with a strict timeout to prevent leaking goroutines
+	// if the Pushgateway is slow or unresponsive.
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	pusher.Client(client)
+
+	// Execute push asynchronously to avoid blocking orchestration threads
+	go func() {
+		_ = pusher.Push()
+	}()
+
+	return nil
 }
