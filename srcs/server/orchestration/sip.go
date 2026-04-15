@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -980,8 +981,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, payload string
-			if err := rows.Scan(&id, &payload); err != nil {
+			var id, payload, status string
+			if err := rows.Scan(&id, &payload, &status); err != nil {
 				return err
 			}
 			records = append(records, struct {
@@ -1072,25 +1073,27 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	var missions []struct {
 		id      string
 		payload string
+		status  string
 	}
 
 	err := withSipRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
+		rows, err := s.db.Query(ctx, "SELECT id, payload, status FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, payload string
-			if err := rows.Scan(&id, &payload); err != nil {
+			var id, payload, status string
+			if err := rows.Scan(&id, &payload, &status); err != nil {
 				return err
 			}
 			missions = append(missions, struct {
 				id      string
 				payload string
-			}{id, payload})
+				status  string
+			}{id, payload, status})
 		}
 		return nil
 	})
@@ -1135,7 +1138,30 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 		m.payload = string(sanitizedBytes)
 
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+
+		// The cloud endpoint expects an array of missions
+		syncPayload := []struct {
+			ID      string `json:"id"`
+			Status  string `json:"status"`
+			Payload string `json:"payload"`
+		}{
+			{
+				ID:      m.id,
+				Status:  m.status,
+				Payload: m.payload,
+			},
+		}
+
+		syncBytes, err := json.Marshal(syncPayload)
+		if err != nil {
+			slog.Warn("Failed to marshal sync payload array", "mission_id", m.id)
+			if syncMissionsErr != nil {
+				syncMissionsErr.Add(ctx, 1)
+			}
+			continue
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, bytes.NewReader(syncBytes))
 		if err != nil {
 			if syncMissionsErr != nil {
 				syncMissionsErr.Add(ctx, 1)
