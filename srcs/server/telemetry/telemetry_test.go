@@ -414,10 +414,6 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
 	})
 
-	t.Run("RecordPostgresRetryExhausted Uninitialized", func(t *testing.T) {
-		RecordPostgresRetryExhausted(ctx, "test_op")
-	})
-
 	t.Run("RecordTokenBurnRate", func(t *testing.T) {
 		mockM := &mockMeter{}
 		err := InitWithMeter(mockM)

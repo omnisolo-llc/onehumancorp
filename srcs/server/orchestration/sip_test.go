@@ -1029,7 +1029,7 @@ func TestSIPDB_SyncMissions_Sanitization(t *testing.T) {
 		t.Fatalf("Expected 1 synced record, got %d", syncedCount)
 	}
 
-	expectedPayload := `[{"id":"m-sync-1","status":"PENDING","payload":"{\"id\":\"m-sync-1\",\"role\":\"TESTER\",\"task\":{\"content\":\" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]\",\"id\":\"m-sync-1\",\"type\":\"task\"}}"}]`
+	expectedPayload := `{"id":"m-sync-1","role":"TESTER","status":"PENDING","task":{"content":" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]","id":"m-sync-1","type":"task"}}`
 	if string(reqBody) != expectedPayload {
 		t.Fatalf("Expected payload %s, got %s", expectedPayload, string(reqBody))
 	}
@@ -1083,5 +1083,45 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSIPDB_BurstMission_SyncDaemon(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_burst_mission_daemon.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	msg := Message{
+		ID:         "msg-burst-daemon-1",
+		FromAgent:  "agent-1",
+		ToAgent:    "agent-burst",
+		Type:       EventTask,
+		Content:    "High intensity task",
+		OccurredAt: time.Now().UTC(),
+	}
+	err = db.DelegateMission(ctx, "mission-burst-daemon-1", "BURST_ENGINEER", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	var receivedPayload string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		receivedPayload = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	err = db.BurstMission(ctx, "mission-burst-daemon-1", ts.URL)
+	if err != nil {
+		t.Fatalf("BurstMission failed: %v", err)
+	}
+
+	if receivedPayload == "" {
+		t.Fatalf("Mock server did not receive payload")
 	}
 }

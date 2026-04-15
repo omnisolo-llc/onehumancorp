@@ -1119,8 +1119,9 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 
 		if payloadData, ok := rawData.(map[string]interface{}); ok {
-			// Add ID to payload for synchronization endpoint
+			// Add ID and Status to payload for synchronization endpoint
 			payloadData["id"] = m.id
+			payloadData["status"] = m.status
 		}
 
 		// Unconditionally apply unified sanitization
@@ -1137,29 +1138,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 		m.payload = string(sanitizedBytes)
 
-		// The cloud endpoint expects an array of missions
-		syncPayload := []struct {
-			ID      string `json:"id"`
-			Status  string `json:"status"`
-			Payload string `json:"payload"`
-		}{
-			{
-				ID:      m.id,
-				Status:  m.status,
-				Payload: m.payload,
-			},
-		}
-
-		syncBytes, err := json.Marshal(syncPayload)
-		if err != nil {
-			slog.Warn("Failed to marshal sync payload array", "mission_id", m.id)
-			if syncMissionsErr != nil {
-				syncMissionsErr.Add(ctx, 1)
-			}
-			continue
-		}
-
-		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, bytes.NewReader(syncBytes))
+		req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
 		if err != nil {
 			if syncMissionsErr != nil {
 				syncMissionsErr.Add(ctx, 1)

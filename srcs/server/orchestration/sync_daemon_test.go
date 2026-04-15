@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"io"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -134,4 +135,54 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 	// Wait a moment for the goroutine to actually exit before we defer-close the DB
 	time.Sleep(10 * time.Millisecond)
 	// No panic implies successful shutdown via stop channel
+}
+
+func TestHybridMCPRAGDaemon_ProcessSync_Bursting(t *testing.T) {
+	sqlDB_burst, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB_burst.Close()
+	dbWrapper := &db.DB{Provider: db.NewSqliteProvider(sqlDB_burst)}
+	defer dbWrapper.Close()
+
+
+	ctx := context.Background()
+	_, err = dbWrapper.Exec(ctx, `
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT,
+			payload TEXT,
+			synced_to_cloud BOOLEAN DEFAULT FALSE
+		)
+	`)
+	if err != nil && !dbWrapper.IsSQLite() {
+		// table might exist in PG, clear it for safety if we were testing PG, but sync_daemon only runs in sqlite
+	}
+
+	_, err = dbWrapper.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('mission-burst-1', 'BURSTING', '{\"foo\":\"bar\"}', 0)")
+	if err != nil {
+		t.Fatalf("failed to insert burst mission: %v", err)
+	}
+
+	var receivedPayloads []SyncDaemonPayload
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &receivedPayloads)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	daemon := NewHybridMCPRAGDaemon(dbWrapper, 1*time.Second, ts.URL)
+	daemon.ProcessSync(ctx)
+
+	if len(receivedPayloads) != 1 || receivedPayloads[0].ID != "mission-burst-1" {
+		t.Fatalf("ProcessSync did not sync BURSTING mission. Received: %+v", receivedPayloads)
+	}
+
+	var synced int
+	err = dbWrapper.QueryRow(ctx, "SELECT synced_to_cloud FROM agent_missions WHERE id = 'mission-burst-1'").Scan(&synced)
+	if err != nil || synced != 1 {
+		t.Fatalf("synced_to_cloud was not updated for BURSTING mission: %v, synced=%d", err, synced)
+	}
 }
