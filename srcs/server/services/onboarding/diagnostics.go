@@ -13,20 +13,28 @@ type DiagnosticsResult struct {
 }
 
 // RunDiagnostics checks for the existence of required Day One paths programmatically.
-func RunDiagnostics(isCloud bool) DiagnosticsResult {
+func RunDiagnostics() DiagnosticsResult {
 	result := DiagnosticsResult{
 		Passed:  true,
 		Details: make([]string, 0),
 	}
-	baseDir := ".ohc-local-data"
-	if isCloud {
-		baseDir = ".ohc-cloud-data"
+	runtimeDir := os.Getenv("OHC_RUNTIME_DIR")
+	if runtimeDir == "" {
+		runtimeDir = filepath.Join(".ohc", "runtime")
+	}
+	memoryDir := os.Getenv("OHC_MEMORY_DIR")
+	if memoryDir == "" {
+		memoryDir = filepath.Join(runtimeDir, "memory")
+	}
+	statusDir := os.Getenv("OHC_STATUS_DIR")
+	if statusDir == "" {
+		statusDir = filepath.Join(runtimeDir, "status")
 	}
 
 	requiredPaths := []string{
-		filepath.Join(baseDir, "db"),
-		filepath.Join(baseDir, "blob"),
-		filepath.Join(baseDir, "config"),
+		runtimeDir,
+		memoryDir,
+		statusDir,
 	}
 
 	for _, path := range requiredPaths {

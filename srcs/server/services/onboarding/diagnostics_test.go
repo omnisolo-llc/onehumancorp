@@ -28,7 +28,7 @@ func TestRunDiagnostics(t *testing.T) {
 	}()
 
 	// Scenario 1: All paths are missing
-	res := RunDiagnostics(false) // standalone mode
+	res := RunDiagnostics()
 	if res.Passed {
 		t.Errorf("expected diagnostics to fail when paths are missing")
 	}
@@ -36,11 +36,11 @@ func TestRunDiagnostics(t *testing.T) {
 		t.Errorf("expected 3 details, got %d", len(res.Details))
 	}
 
-	// Create required paths for standalone mode
+	// Create required paths
 	requiredPaths := []string{
-		filepath.Join(".ohc-local-data", "db"),
-		filepath.Join(".ohc-local-data", "blob"),
-		filepath.Join(".ohc-local-data", "config"),
+		filepath.Join(".ohc", "runtime"),
+		filepath.Join(".ohc", "runtime", "memory"),
+		filepath.Join(".ohc", "runtime", "status"),
 	}
 
 	for _, p := range requiredPaths {
@@ -49,37 +49,12 @@ func TestRunDiagnostics(t *testing.T) {
 		}
 	}
 
-	// Scenario 2: All paths exist for standalone mode
-	res = RunDiagnostics(false)
+	// Scenario 2: All paths exist
+	res = RunDiagnostics()
 	if !res.Passed {
 		t.Errorf("expected diagnostics to pass when all paths exist")
 	}
 	if len(res.Details) != 3 {
 		t.Errorf("expected 3 details, got %d", len(res.Details))
-	}
-
-    // Scenario 3: All paths missing for cloud mode
-    res = RunDiagnostics(true)
-	if res.Passed {
-		t.Errorf("expected diagnostics to fail when paths are missing for cloud")
-	}
-
-    // Create required paths for cloud mode
-	cloudPaths := []string{
-		filepath.Join(".ohc-cloud-data", "db"),
-		filepath.Join(".ohc-cloud-data", "blob"),
-		filepath.Join(".ohc-cloud-data", "config"),
-	}
-
-	for _, p := range cloudPaths {
-		if err := os.MkdirAll(p, 0755); err != nil {
-			t.Fatalf("failed to create dir: %v", err)
-		}
-	}
-
-    // Scenario 4: All paths exist for cloud mode
-	res = RunDiagnostics(true)
-	if !res.Passed {
-		t.Errorf("expected diagnostics to pass when all paths exist for cloud")
 	}
 }
