@@ -139,7 +139,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			insertQuery = `
 				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
 				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
+				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
 			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
 		} else {
