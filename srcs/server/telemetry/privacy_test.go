@@ -1,8 +1,8 @@
 package telemetry_test
 
 import (
-	"testing"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"testing"
 )
 
 func TestRedactPII(t *testing.T) {
