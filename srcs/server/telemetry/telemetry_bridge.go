@@ -49,44 +49,32 @@ func initBridgeMetrics() {
 }
 
 func RecordBridgeMessageSent(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{}))
+		_ = BufferMetricFunc(ctx, "bridge_message_sent", string(payloadBytes))
+	}
 	if bridgeMessagesSentTotal != nil {
 		bridgeMessagesSentTotal.Add(ctx, 1)
-	}
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"event": "message_sent",
-		}
-		redactedPayload := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedPayload)
-		_ = BufferMetricFunc(ctx, "ohc_mesh_bridge_messages_sent_total", string(payloadBytes))
 	}
 }
 
 func RecordBridgeMessageReceived(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{}))
+		_ = BufferMetricFunc(ctx, "bridge_message_received", string(payloadBytes))
+	}
 	if bridgeMessagesReceivedTotal != nil {
 		bridgeMessagesReceivedTotal.Add(ctx, 1)
-	}
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"event": "message_received",
-		}
-		redactedPayload := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedPayload)
-		_ = BufferMetricFunc(ctx, "ohc_mesh_bridge_messages_received_total", string(payloadBytes))
 	}
 }
 
 func RecordBridgeStatus(ctx context.Context, active int64) {
+	if BufferMetricFunc != nil {
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{"active": active}))
+		_ = BufferMetricFunc(ctx, "bridge_status", string(payloadBytes))
+	}
 	if bridgeStatusGauge != nil {
 		bridgeStatusGauge.Add(ctx, active)
-	}
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"active": active,
-		}
-		redactedPayload := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedPayload)
-		_ = BufferMetricFunc(ctx, "ohc_mesh_bridge_status_gauge", string(payloadBytes))
 	}
 }
 

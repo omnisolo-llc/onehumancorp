@@ -1,0 +1,5 @@
+status: "Healthy"
+last_update: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+metrics:
+  missions_created: 1
+  research_phase: "Complete"

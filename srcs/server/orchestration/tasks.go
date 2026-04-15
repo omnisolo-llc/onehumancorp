@@ -479,10 +479,6 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		return fmt.Errorf("failed to verify task ownership: %w", err)
 	}
 
-	if currentStatus == "COMPLETED" {
-		return errors.New("task is already completed")
-	}
-
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
@@ -538,6 +534,20 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+
+	// Broadcast mesh events
+	if tm.mesh != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  taskID,
+				"action":   "COMPLETE",
+				"agent_id": agentID,
+				"status":   "COMPLETED",
+			}
+			payloadBytes, _ := json.Marshal(payload)
+			_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
 		}()
 	}
 

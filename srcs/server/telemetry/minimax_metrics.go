@@ -51,6 +51,14 @@ func initMinimaxMetrics(m mockableMeter) error {
 
 // RecordMinimaxCall records metrics for a Minimax API call.
 func RecordMinimaxCall(ctx context.Context, operation string, durationSeconds float64, err error) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation":        operation,
+			"duration_seconds": durationSeconds,
+		}
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "minimax_call", string(payloadBytes))
+	}
 	attrs := metric.WithAttributes(attribute.String("operation", operation))
 
 	if minimaxCallsCounter != nil {
@@ -61,18 +69,5 @@ func RecordMinimaxCall(ctx context.Context, operation string, durationSeconds fl
 	}
 	if err != nil && minimaxErrorsCounter != nil {
 		minimaxErrorsCounter.Add(ctx, 1, attrs)
-	}
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"operation":        operation,
-			"duration_seconds": durationSeconds,
-		}
-		if err != nil {
-			payloadMap["error"] = err.Error()
-		}
-		redactedPayload := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedPayload)
-		_ = BufferMetricFunc(ctx, "ohc_minimax_api_latency_seconds", string(payloadBytes))
 	}
 }
