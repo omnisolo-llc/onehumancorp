@@ -154,3 +154,50 @@ func TestBufferMetricFunc(t *testing.T) {
 	meetingEventsCounter = origMeeting
 	swarmTasksCompletedCounter = origSwarm
 }
+
+func TestBufferMetricFuncExtensions(t *testing.T) {
+	called := false
+	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		called = true
+		return nil
+	}
+	defer func() { BufferMetricFunc = nil }()
+
+	ctx := context.Background()
+
+	RecordBridgeMessageSent(ctx)
+	if !called {
+		t.Errorf("expected buffer call for RecordBridgeMessageSent")
+	}
+	called = false
+
+	RecordBridgeMessageReceived(ctx)
+	if !called {
+		t.Errorf("expected buffer call for RecordBridgeMessageReceived")
+	}
+	called = false
+
+	RecordBridgeStatus(ctx, 1)
+	if !called {
+		t.Errorf("expected buffer call for RecordBridgeStatus")
+	}
+	called = false
+
+	RecordMinimaxCall(ctx, "op1", 1.5, nil)
+	if !called {
+		t.Errorf("expected buffer call for RecordMinimaxCall")
+	}
+	called = false
+
+	RecordRAGRecordsSynced(ctx, 10)
+	if !called {
+		t.Errorf("expected buffer call for RecordRAGRecordsSynced")
+	}
+	called = false
+
+	RecordRAGSyncError(ctx, "err1")
+	if !called {
+		t.Errorf("expected buffer call for RecordRAGSyncError")
+	}
+	called = false
+}
