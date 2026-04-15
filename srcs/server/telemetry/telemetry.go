@@ -59,6 +59,7 @@ var (
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
 	postgresLockContentionCounter      metric.Int64Counter
+	postgresRetryExhaustedCounter      metric.Int64Counter
 	llmNetworkLatencyHistogram         metric.Float64Histogram
 	ToolAutoCorrectionTotal            metric.Int64Counter
 	DeliberationPhaseDuration          metric.Float64Histogram
@@ -457,6 +458,13 @@ func InitWithMeter(m mockableMeter) error {
 	postgresLockContentionCounter, err = m.Int64Counter(
 		"ohc_postgres_lock_contention_total",
 		metric.WithDescription("Total PostgreSQL lock contentions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	postgresRetryExhaustedCounter, err = m.Int64Counter(
+		"ohc_postgres_retry_exhausted_total",
+		metric.WithDescription("Total times a PostgreSQL transaction failed after exhausting retries."),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1084,6 +1092,24 @@ func RecordPostgresLockContention(ctx context.Context, operation string) {
 		return
 	}
 	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordPostgresRetryExhausted increments the global counter for PostgreSQL transaction failed after exhausting retries.
+func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "postgres_retry_exhausted", string(payloadBytes))
+	}
+	if postgresRetryExhaustedCounter == nil {
+		return
+	}
+	postgresRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
 }
