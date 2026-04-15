@@ -8,24 +8,10 @@ import (
 
 func TestRunDiagnostics(t *testing.T) {
 	// Create temporary directories to simulate the agent-task structure
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get cwd: %v", err)
-	}
-
 	tempDir := t.TempDir()
-
-	// Change working directory to tempDir so that relative paths work
-	if err := os.Chdir(tempDir); err != nil {
-		t.Fatalf("failed to change directory to tempDir: %v", err)
-	}
-
-	// Ensure we restore the working directory after the test
-	defer func() {
-		if err := os.Chdir(cwd); err != nil {
-			t.Fatalf("failed to restore working directory: %v", err)
-		}
-	}()
+	t.Setenv("OHC_RUNTIME_DIR", filepath.Join(tempDir, ".ohc", "runtime"))
+	t.Setenv("OHC_MEMORY_DIR", filepath.Join(tempDir, ".ohc", "runtime", "memory"))
+	t.Setenv("OHC_STATUS_DIR", filepath.Join(tempDir, ".ohc", "runtime", "status"))
 
 	// Scenario 1: All paths are missing
 	res := RunDiagnostics()
@@ -38,9 +24,9 @@ func TestRunDiagnostics(t *testing.T) {
 
 	// Create required paths
 	requiredPaths := []string{
-		filepath.Join(".ohc", "runtime"),
-		filepath.Join(".ohc", "runtime", "memory"),
-		filepath.Join(".ohc", "runtime", "status"),
+		filepath.Join(tempDir, ".ohc", "runtime"),
+		filepath.Join(tempDir, ".ohc", "runtime", "memory"),
+		filepath.Join(tempDir, ".ohc", "runtime", "status"),
 	}
 
 	for _, p := range requiredPaths {
