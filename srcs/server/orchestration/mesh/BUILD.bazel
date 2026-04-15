@@ -5,11 +5,14 @@ go_library(
     srcs = [
         "local_mesh.go",
         "mesh.go",
+        "server.go",
         "redis_mesh.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/mesh",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/telemetry",
+        "@com_github_redis_rueidis//:rueidis",
         "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )
@@ -19,6 +22,8 @@ go_test(
     srcs = ["mesh_test.go"],
     embed = [":mesh"],
     deps = [
+        "//srcs/server/telemetry",
+        "@com_github_redis_rueidis//:rueidis",
         "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )

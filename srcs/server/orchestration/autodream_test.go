@@ -1,6 +1,9 @@
 package orchestration
 
 import (
+    "database/sql"
+    _ "modernc.org/sqlite"
+    "os"
 	"context"
 	"fmt"
 	"testing"
@@ -257,4 +260,30 @@ func TestAutoDreamWorker_PipelinesCoverage(t *testing.T) {
 	if count != 0 {
 		t.Errorf("expected compressSessionContexts to process and delete session, got %d", count)
 	}
+}
+
+func TestAutoDreamProcessMemoriesYML(t *testing.T) {
+    conn, _ := sql.Open("sqlite", ":memory:")
+    provider := db.NewSqliteProvider(conn)
+    defer provider.Close()
+
+    ctx := context.Background()
+    provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories (id TEXT, content TEXT, embedding TEXT)`)
+
+    worker := NewAutoDreamWorker(provider)
+
+    os.MkdirAll(".agent-task/memory", 0755)
+    os.WriteFile(".agent-task/memory/test.yml", []byte("test memory"), 0644)
+    defer os.RemoveAll(".agent-task/memory")
+
+    err := worker.ProcessMemoriesYML(ctx, ".agent-task/memory", nil)
+    if err != nil {
+        t.Errorf("ProcessMemoriesYML failed: %v", err)
+    }
+
+    var count int
+    provider.QueryRow(ctx, `SELECT COUNT(*) FROM autodream_memories`).Scan(&count)
+    if count == 0 {
+        t.Error("Expected memory to be inserted")
+    }
 }

@@ -1,8 +1,9 @@
 package queue
 
 import (
+    "database/sql"
+    _ "modernc.org/sqlite"
 	"context"
-	"database/sql"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -179,4 +180,27 @@ func TestQueueManager(t *testing.T) {
 	if polledJob2 != nil {
 		t.Fatalf("expected nil job, got %v", polledJob2)
 	}
+}
+
+func TestEnqueueDequeueJob(t *testing.T) {
+    conn, _ := sql.Open("sqlite", ":memory:")
+    provider := db.NewSqliteProvider(conn)
+    defer provider.Close()
+    ctx := context.Background()
+
+    provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS sub_agent_jobs (id TEXT, parent_task_id TEXT, agent_role TEXT, payload TEXT, status TEXT, attempts INTEGER, max_attempts INTEGER, run_after TEXT, locked_until TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)`)
+
+    job := Job{ID: "job-1", ParentTaskID: "task-1", Status: "QUEUED"}
+    err := EnqueueJob(ctx, provider, job)
+    if err != nil {
+        t.Fatalf("EnqueueJob failed: %v", err)
+    }
+
+    dequeued, err := DequeueJob(ctx, provider)
+    if err != nil || dequeued == nil {
+        t.Fatalf("DequeueJob failed or nil: %v", err)
+    }
+    if dequeued.ID != "job-1" {
+        t.Errorf("Expected job-1, got %v", dequeued.ID)
+    }
 }

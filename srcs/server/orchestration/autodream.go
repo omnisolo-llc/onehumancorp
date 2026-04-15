@@ -1010,3 +1010,30 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 		}
 	}
 }
+
+func (w *AutoDreamWorker) ProcessMemoriesYML(ctx context.Context, memoryDir string, client MinimaxClient) error {
+    matches, err := filepath.Glob(filepath.Join(memoryDir, "*.yml"))
+    if err != nil || len(matches) == 0 {
+        return err
+    }
+    for _, file := range matches {
+        data, err := os.ReadFile(file)
+        if err != nil { continue }
+        content := string(data)
+        embedding := make([]float32, 1536)
+        if client != nil {
+            resp, _ := client.GenerateEmbedding(ctx, content)
+            if len(resp) == 1536 { embedding = resp }
+        }
+        id := uuid.New().String()
+        embStr := formatFloat32SliceForVector(embedding)
+        tx, _ := w.pool.Begin(ctx)
+        if w.pool.IsSQLite() {
+            tx.Exec(ctx, `INSERT INTO autodream_memories (id, content, embedding) VALUES ($1, $2, $3)`, id, content, embStr)
+        } else {
+            tx.Exec(ctx, `INSERT INTO autodream_memories (id, content, embedding) VALUES ($1, $2, $3::vector)`, id, content, embStr)
+        }
+        tx.Commit(ctx)
+    }
+    return nil
+}

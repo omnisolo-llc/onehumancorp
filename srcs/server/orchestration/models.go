@@ -20,3 +20,9 @@ type SharedTaskDecomposition struct {
     CreatedAt       time.Time       `json:"created_at"`
     UpdatedAt       time.Time       `json:"updated_at"`
 }
+
+type MeshEvent struct {
+    AgentID string \`json:"agent_id"\`
+    Action  string \`json:"action"\`
+    Status  string \`json:"status"\`
+}

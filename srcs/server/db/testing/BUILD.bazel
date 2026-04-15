@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "testing",
+    srcs = ["test_provider.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/db/testing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

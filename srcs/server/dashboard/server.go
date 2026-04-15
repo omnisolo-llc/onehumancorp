@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	omesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	growthapi "github.com/onehumancorp/mono/services/growth/api"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -601,7 +602,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 
 	// Teammate Mesh APIs
-	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", omesh.NewMeshServer(server).HandleMeshBroadcast)))
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
@@ -2022,4 +2023,20 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) PublishMeshEvent(channel string, payload string) error {
+    return s.hub.Publish(orchestration.Message{
+        ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+        FromAgent: "system",
+        ToAgent:   "system",
+        Type:      channel,
+        Content:   payload,
+    })
+}
+
+func (s *Server) PublishCentrifugeTask(taskID string, payload map[string]interface{}) {
+    if s.hub != nil && s.hub.CentrifugeNode() != nil {
+        s.hub.CentrifugeNode().PublishTaskBroadcast(taskID, payload)
+    }
 }
