@@ -76,7 +76,7 @@ func TestClaimTask_SQLite(t *testing.T) {
     claims := &auth.Claims{OrganizationID: "org-1"}
     ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
-    to := NewSharedTaskOrchestrator(dbProvider)
+    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
 
     task, err := to.ClaimTask(ctxWithClaims, "spiffe://onehumancorp.io/agent/1")
     if err != nil {
@@ -167,7 +167,7 @@ func TestClaimTask_Postgres(t *testing.T) {
 
     // Dependency added directly above in JSON format
 
-    to := NewSharedTaskOrchestrator(dbProvider)
+    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
 
     task, err := to.claimTaskPostgres(ctx, "org-1", "agent-pg")
     if err != nil {
