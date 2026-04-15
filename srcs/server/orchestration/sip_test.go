@@ -1085,3 +1085,37 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
 	}
 }
+
+
+func TestSIPDB_SyncMissions_Bursting(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_sync_missions_bursting.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert a bursting mission
+	_, err = db.db.Exec(context.Background(), `
+		INSERT INTO agent_missions (id, status, payload, organization_id)
+		VALUES ('m-sync-burst', 'BURSTING', '{"role":"TESTER"}', 'system')
+	`)
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	syncedCount, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if syncedCount != 1 {
+		t.Fatalf("Expected 1 synced record, got %d", syncedCount)
+	}
+}
