@@ -1,0 +1,4 @@
+agent: Scribe
+status: HEALTHY
+metric: 100
+timestamp: "$(date --iso-8601=seconds)"

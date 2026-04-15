@@ -11,6 +11,8 @@ toc:
     path: /docs/features/index.md
   - title: Walkthroughs
     path: /docs/walkthroughs/index.md
+  - title: Hybrid API
+    path: /docs/walkthroughs/hybrid_agentic_os_api_walkthrough.md
   - title: Operations
     path: /docs/operations/index.md
   - title: Releases
