@@ -182,4 +182,25 @@ func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
 	if err == nil {
 		t.Errorf("Mission 'old-mission' should have been pruned/deleted")
 	}
+
+	// Insert an old BURSTING mission to verify it also gets pruned
+	_, err = sip.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, $2, $3, $4, $5)",
+		"old-bursting-mission", "BURSTING", "{}", oldTime, "system")
+	if err != nil {
+		t.Fatalf("failed to insert old bursting mission: %v", err)
+	}
+
+	// Prune with 24h threshold
+	err = sip.PruneStaleMissions(ctx, 24*time.Hour)
+	if err != nil {
+		t.Errorf("PruneStaleMissions failed for bursting: %v", err)
+	}
+
+	err = sip.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'old-bursting-mission'").Scan(&status)
+	if err != nil && err.Error() != "sql: no rows in result set" {
+		t.Errorf("Unexpected error querying pruned bursting mission: %v", err)
+	}
+	if err == nil {
+		t.Errorf("Mission 'old-bursting-mission' should have been pruned/deleted")
+	}
 }
