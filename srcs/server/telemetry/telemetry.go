@@ -1025,6 +1025,24 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 	))
 }
 
+// RecordPostgresRetryExhausted increments the global counter for PostgreSQL transaction failed after exhausting retries.
+func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "postgres_retry_exhausted", string(payloadBytes))
+	}
+	if postgresRetryExhaustedCounter == nil {
+		return
+	}
+	postgresRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
 // RecordTeammateMeshBroadcast increments the global counter for Teammate Mesh broadcasts.
 func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 	if TeammateMeshBroadcastsCounter == nil {
@@ -1495,22 +1513,4 @@ func RecordRagEscalation(ctx context.Context) {
 	if RagEscalationCount != nil {
 		RagEscalationCount.Add(ctx, 1)
 	}
-}
-
-// RecordPostgresRetryExhausted increments the global counter for PostgreSQL transaction failed after exhausting retries.
-func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"operation": operation,
-		}
-		redactedMap := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "postgres_retry_exhausted", string(payloadBytes))
-	}
-	if postgresRetryExhaustedCounter == nil {
-		return
-	}
-	postgresRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("operation", operation),
-	))
 }
