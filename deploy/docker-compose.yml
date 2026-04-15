@@ -38,8 +38,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 256M
+          cpus: "0.5"
+          memory: 128M
         reservations:
           cpus: "0.2"
           memory: 128M
@@ -106,8 +106,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 512M
+          cpus: "0.5"
+          memory: 128M
 
   powersync:
     image: journeyapps/powersync-service:latest
@@ -163,7 +163,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 256M
+          memory: 128M
 
   chatwoot-worker:
     image: chatwoot/chatwoot:latest
@@ -182,7 +182,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 256M
+          memory: 128M
 
   prometheus:
     image: prom/prometheus:latest
@@ -194,7 +194,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 256M
+          memory: 128M
 
   grafana:
     image: grafana/grafana:latest
@@ -211,7 +211,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 256M
+          memory: 128M
 
 
 
