@@ -139,7 +139,7 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, organizationID, agentI
 	`
 
 	var t TaskRecord
-	var payloadStr string
+	var payloadStr *string
 	var createdAtStr, updatedAtStr string
 	err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
 		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &payloadStr, &createdAtStr, &updatedAtStr,
@@ -163,7 +163,7 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, organizationID, agentI
 		return nil, err
 	}
 
-	t.Payload = &payloadStr
+	t.Payload = payloadStr
 	if t.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAtStr); err != nil {
 		// Fallback for RFC3339 which is sometimes used in tests
 		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
