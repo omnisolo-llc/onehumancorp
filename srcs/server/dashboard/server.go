@@ -34,6 +34,7 @@ import (
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+
 // UserSkill represents an installable/enableable skill visible to the user.
 // It matches the Skill model expected by the Flutter client.
 type UserSkill struct {

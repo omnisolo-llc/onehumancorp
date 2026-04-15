@@ -324,7 +324,10 @@ func (s *Server) handleSkillUpdate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{"name": name, "enabled": *body.Enabled})
 }
 
-// handleSkillImport handles importing a SkillPack (legacy endpoint, separate from UserSkill catalog).
+// handleSkillImport handles importing a SkillPack (role-oriented skill packs used by agent orchestration).
+// This endpoint is separate from the user-facing UserSkill catalog managed by
+// handleSkillInstall / handleSkillUpdate. SkillPacks define per-role system prompt
+// injections; UserSkills are user-selectable capability modules.
 func (s *Server) handleSkillImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
