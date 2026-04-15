@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ohc_web_app/widgets/agent_task_progress.dart';
+import '../lib/widgets/agent_task_progress.dart';
 
 void main() {
   testWidgets('AgentTaskProgressWidget renders correctly', (WidgetTester tester) async {
@@ -11,6 +11,7 @@ void main() {
           body: AgentTaskProgressWidget(
             taskName: 'Analyzing Data',
             progress: 0.5,
+            isWorking: true,
           ),
         ),
       ),

@@ -1,0 +1,4 @@
+status: OK
+metrics:
+  tasks_completed: 1
+  domain: apps/web
