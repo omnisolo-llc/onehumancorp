@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/swarm_context_overlay.dart';
+
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,7 +22,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(dashboardProvider);
-    return Scaffold(
+    return SwarmContextOverlay(title: 'Swarm Active Tasks', agents: const ['🎨 Palette: Undercover', '🗺️ Guide: Scribe', '🚀 Nova: Miser', '🧠 Implementer'], child: Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         leading: const Padding(
@@ -44,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         data: (data) => _DashboardContent(data: data, ref: ref),
       ),
-    );
+    ));
   }
 }
 
