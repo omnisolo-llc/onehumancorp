@@ -164,7 +164,15 @@ type mockRow struct {
 }
 
 func (r *mockRow) Scan(dest ...any) error {
-	*dest[0].(*int) = 5
+	for _, d := range dest {
+		switch v := d.(type) {
+		case *int:
+			*v = 5
+		case *sql.NullTime:
+			v.Time = time.Now()
+			v.Valid = true
+		}
+	}
 	return nil
 }
 
