@@ -658,3 +658,15 @@ func TestOmniContextBytesRoutedMetric(t *testing.T) {
 	// Should not panic when nil
 	RecordOmniContextBytes(context.Background(), 1024)
 }
+
+func TestRecordSubAgentQueueDelay(t *testing.T) {
+	ctx := context.Background()
+	// Should not panic if uninitialized
+	RecordSubAgentQueueDelay(ctx, 1.0)
+}
+
+func TestRecordTaskClaimContention(t *testing.T) {
+	ctx := context.Background()
+	// Should not panic if uninitialized
+	RecordTaskClaimContention(ctx, "postgres")
+}

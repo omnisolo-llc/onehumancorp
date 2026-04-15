@@ -31,7 +31,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 
 	// Apply migrations or schema
 	schema := `
-	CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+	CREATE TABLE IF NOT EXISTS sub_agent_queue (
 		id TEXT PRIMARY KEY,
 		parent_task_id TEXT,
 		agent_role TEXT NOT NULL,
@@ -44,7 +44,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
-	CREATE INDEX IF NOT EXISTS idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';
+	CREATE INDEX IF NOT EXISTS idx_jobs_runnable ON sub_agent_queue (status, run_after) WHERE status = 'QUEUED';
 	`
 	_, err := provider.Exec(ctx, schema)
 	if err != nil {
@@ -86,7 +86,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 
 	// Verify completion
 	var status string
-	err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_jobs WHERE id = 'test-job-1'").Scan(&status)
+	err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_queue WHERE id = 'test-job-1'").Scan(&status)
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 	}
 
 	var attempts int
-	err = provider.QueryRow(ctx, "SELECT status, attempts FROM sub_agent_jobs WHERE id = 'test-job-2'").Scan(&status, &attempts)
+	err = provider.QueryRow(ctx, "SELECT status, attempts FROM sub_agent_queue WHERE id = 'test-job-2'").Scan(&status, &attempts)
 	if err != nil {
 		t.Fatalf("Failed to query job: %v", err)
 	}

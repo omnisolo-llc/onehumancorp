@@ -1,7 +1,6 @@
 package queue
 
-import (
-	"context"
+import (	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -56,6 +55,7 @@ func (q *PostgresTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 }
 
 func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
+	telemetry.RecordTaskClaimContention(ctx, "postgres")
 	// Select a PENDING job. We use FOR UPDATE SKIP LOCKED
 	// Agent role is in the payload. We extract it using JSON ops ->> 'agent_role'
 
@@ -125,7 +125,12 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 
 	j.Attempts++
 
+
+	if !j.CreatedAt.IsZero() {
+		telemetry.RecordSubAgentQueueDelay(ctx, time.Since(j.CreatedAt).Seconds())
+	}
 	return &j, nil
+
 }
 
 func (q *PostgresTaskQueue) Complete(ctx context.Context, jobID string) error {

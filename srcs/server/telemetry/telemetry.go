@@ -28,6 +28,8 @@ var (
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
+	SubAgentQueueDelayHistogram metric.Float64Histogram
+	TaskClaimContentionTotal    metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
@@ -202,7 +204,23 @@ func InitWithMeter(m mockableMeter) error {
 	}
 	var err error
 	var errs []error
-	requestCounter, err = m.Int64Counter(
+	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
+        "sub_agent_queue_delay",
+        metric.WithDescription("Measures time from job enqueue to dequeue"),
+    )
+    if err != nil {
+        errs = append(errs, err)
+    }
+
+    TaskClaimContentionTotal, err = m.Int64Counter(
+        "task_claim_contention_total",
+        metric.WithDescription("Tracks the number of failed task claim attempts or retries due to lock contention"),
+    )
+    if err != nil {
+        errs = append(errs, err)
+    }
+
+    requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
 	)
@@ -1513,4 +1531,22 @@ func RecordRagEscalation(ctx context.Context) {
 	if RagEscalationCount != nil {
 		RagEscalationCount.Add(ctx, 1)
 	}
+}
+
+// RecordSubAgentQueueDelay records the queue wait times of Sub-Agents.
+func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
+	if SubAgentQueueDelayHistogram == nil {
+		return
+	}
+	SubAgentQueueDelayHistogram.Record(ctx, delay)
+}
+
+// RecordTaskClaimContention records failed task claim attempts due to lock contention.
+func RecordTaskClaimContention(ctx context.Context, mode string) {
+	if TaskClaimContentionTotal == nil {
+		return
+	}
+	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }

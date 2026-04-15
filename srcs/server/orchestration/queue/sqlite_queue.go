@@ -31,7 +31,7 @@ func (q *SQLiteTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	}
 
 	query := `
-		INSERT INTO sub_agent_jobs (
+		INSERT INTO sub_agent_queue (
 			id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8
@@ -45,6 +45,7 @@ func (q *SQLiteTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 }
 
 func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
+	telemetry.RecordTaskClaimContention(ctx, "sqlite")
 	// In SQLite, we don't have FOR UPDATE SKIP LOCKED.
 	// We'll use a transaction with a quick UPDATE to acquire.
 	tx, err := q.provider.Begin(ctx)
@@ -72,7 +73,7 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 	// We check for both QUEUED jobs, and RUNNING jobs that have crashed (locked_until has passed)
 	query := fmt.Sprintf(`
 		SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
-		FROM sub_agent_jobs
+		FROM sub_agent_queue
 		WHERE (status = 'QUEUED' AND run_after <= %s %s)
 		   OR (status = 'RUNNING' AND locked_until IS NOT NULL AND locked_until <= %s %s)
 		ORDER BY run_after ASC
@@ -95,7 +96,7 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 	// Update the job to mark it as RUNNING (simulate acquiring lock)
 	lockTime := time.Now().Add(5 * time.Minute)
 	updateQuery := `
-		UPDATE sub_agent_jobs
+		UPDATE sub_agent_queue
 		SET status = 'RUNNING', locked_until = $1, attempts = attempts + 1, updated_at = $2
 		WHERE id = $3 AND (status = 'QUEUED' OR status = 'RUNNING')
 	`
@@ -140,12 +141,17 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 	j.Status = "RUNNING"
 	j.Attempts++
 
+
+	if !j.CreatedAt.IsZero() {
+		telemetry.RecordSubAgentQueueDelay(ctx, time.Since(j.CreatedAt).Seconds())
+	}
 	return &j, nil
+
 }
 
 func (q *SQLiteTaskQueue) Complete(ctx context.Context, jobID string) error {
 	query := `
-		UPDATE sub_agent_jobs
+		UPDATE sub_agent_queue
 		SET status = 'COMPLETED', updated_at = $1, locked_until = NULL
 		WHERE id = $2
 	`
@@ -155,7 +161,7 @@ func (q *SQLiteTaskQueue) Complete(ctx context.Context, jobID string) error {
 
 func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string) error {
 	// First fetch the job to check attempts
-	query := `SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = $1`
+	query := `SELECT attempts, max_attempts FROM sub_agent_queue WHERE id = $1`
 	var attempts, maxAttempts int
 	err := q.provider.QueryRow(ctx, query, jobID).Scan(&attempts, &maxAttempts)
 	if err != nil {
@@ -181,7 +187,7 @@ func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string)
 
 	// Add reason to payload ideally, but for now just update status
 	var payload map[string]interface{}
-	payloadQuery := `SELECT payload FROM sub_agent_jobs WHERE id = $1`
+	payloadQuery := `SELECT payload FROM sub_agent_queue WHERE id = $1`
 	var payloadStr string
 	if err := q.provider.QueryRow(ctx, payloadQuery, jobID).Scan(&payloadStr); err == nil {
 		json.Unmarshal([]byte(payloadStr), &payload)
@@ -194,7 +200,7 @@ func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string)
 	}
 
 	updateQuery := `
-		UPDATE sub_agent_jobs
+		UPDATE sub_agent_queue
 		SET status = $1, run_after = $2, locked_until = $3, updated_at = $4, payload = $5
 		WHERE id = $6
 	`
