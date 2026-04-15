@@ -682,6 +682,30 @@ func TestSIPDB_BurstMission(t *testing.T) {
 		t.Fatalf("Mock server did not receive payload")
 	}
 
+	// Test 2.5: Verify SyncMissions syncs BURSTING missions
+	err = db.DelegateMission(ctx, "mission-burst-3", "BURST_ENGINEER_3", msg)
+	if err != nil {
+		t.Fatalf("DelegateMission failed: %v", err)
+	}
+
+	// set to BURSTING but don't pass an endpoint to let SyncMissions pick it up
+	err = db.BurstMission(ctx, "mission-burst-3", "")
+	if err != nil {
+		t.Fatalf("BurstMission without endpoint failed: %v", err)
+	}
+
+	receivedPayload = "" // reset mock server received payload
+	synced, err := db.SyncMissions(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncMissions failed: %v", err)
+	}
+	if synced == 0 {
+		t.Fatalf("Expected SyncMissions to sync BURSTING mission, but synced %d", synced)
+	}
+	if receivedPayload == "" {
+		t.Fatalf("Mock server did not receive payload during SyncMissions")
+	}
+
 	// Test 3: Burst mission not found
 	err = db.BurstMission(ctx, "mission-burst-nonexistent", "")
 	if err == nil {
