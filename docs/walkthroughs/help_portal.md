@@ -123,6 +123,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 
 - **[Thin Client Integration Walkthrough](thin_client_integration.md)**: Visual guide to the UI-only Thin Client connection.
 - **[SPIFFE Identity Onboarding Walkthrough](spiffe_identity_onboarding.md)**: Visual guide to the zero-trust secure agent identity protocol.
+- **[Local LLM Inference Walkthrough](local_llm_inference.md)**: Visual guide to local LLM inferencing in Standalone Mode.
 
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
