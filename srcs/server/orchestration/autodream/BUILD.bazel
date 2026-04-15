@@ -5,10 +5,7 @@ go_library(
     srcs = ["repository.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/autodream",
     visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/db",
-        "@org_modernc_sqlite//:sqlite",
-    ],
+    deps = ["//srcs/server/db"],
 )
 
 go_test(

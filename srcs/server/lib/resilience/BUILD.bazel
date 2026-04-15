@@ -8,6 +8,10 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/resilience",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_redis_rueidis//:rueidis",
+    ],
 )
 
 go_test(
@@ -17,4 +21,8 @@ go_test(
         "mesh_fallback_chaos_test.go",
     ],
     embed = [":resilience"],
+    deps = [
+        "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
 )
