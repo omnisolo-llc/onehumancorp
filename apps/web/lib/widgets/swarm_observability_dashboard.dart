@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:ohc_web_app/widgets/agent_message_state_animation.dart';
+import 'package:ohc_web_app/widgets/agent_avatar.dart';
 
 abstract class MeshClient {
   Stream<String> get messageStream;
@@ -45,13 +46,25 @@ class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboar
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
           child: AgentMessageStateAnimation(
             state: MessageState.delivered, // Reusing existing animation widget
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontFamily: 'Outfit',
-                color: Colors.white,
-                fontSize: 14,
-              ),
+            child: Row(
+              children: [
+                AgentAvatar(
+                  agentName: 'System',
+                  isOnline: true,
+                  isWorking: true,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
