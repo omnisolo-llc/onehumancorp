@@ -278,6 +278,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		err := tm.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
+				telemetry.RecordTaskClaimContention(ctx, "redis_lock")
 				return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
@@ -326,6 +327,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	if queryErr != nil {
 		if errors.Is(queryErr, sql.ErrNoRows) {
+			if tm.db.IsSQLite() {
+				telemetry.RecordTaskClaimContention(ctx, "sqlite_lock")
+			} else {
+				telemetry.RecordTaskClaimContention(ctx, "postgres_lock")
+			}
 			return nil, nil // No task available or blocked
 		}
 		if strings.Contains(queryErr.Error(), "database is locked") || strings.Contains(queryErr.Error(), "SQLITE_BUSY") {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // JobHandler is a function that processes a job.
@@ -46,6 +48,9 @@ func (w *Worker) Start(ctx context.Context) {
 				// No job available
 				continue
 			}
+
+			delay := time.Since(job.CreatedAt).Seconds()
+			telemetry.RecordSubAgentQueueDelay(ctx, delay)
 
 			slog.Info("Worker processing job", "job_id", job.ID)
 			err = w.handler(ctx, job)
