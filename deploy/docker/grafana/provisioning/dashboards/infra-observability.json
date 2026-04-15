@@ -54,6 +54,21 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>.panel-container { backdrop-filter: blur(20px); background: rgba(255, 255, 255, 0.05) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>"
+      },
+      "transparent": true
+    },
+    {
       "datasource": {
         "type": "datasource",
         "uid": "grafana"
@@ -257,7 +272,11 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["ohc", "infra", "observability"],
+  "tags": [
+    "ohc",
+    "infra",
+    "observability"
+  ],
   "templating": {
     "list": []
   },
