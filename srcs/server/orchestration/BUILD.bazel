@@ -24,6 +24,7 @@ go_library(
         "sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
+        "mesh_api.go",
         "mesh.go",
         "shared_tasks.go",
         "models.go",
