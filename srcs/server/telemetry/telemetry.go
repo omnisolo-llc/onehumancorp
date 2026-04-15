@@ -1374,7 +1374,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
