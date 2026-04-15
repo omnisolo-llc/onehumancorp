@@ -50,6 +50,57 @@ graph TD
 **Tool Invoke**: `crdt_push`
 - **Payload**: `{"entity_id": "task_12345", "mutations": [{"clock": 42, "op": "set", "path": "status", "value": "COMPLETED"}]}`
 
+### 5. Task Claiming
+**POST** `/api/v1/tasks/claim`
+- **Payload**: `{"agent_id": "agent_swe_007", "role": "swe"}`
+
+```mermaid
+sequenceDiagram
+    participant Agent as Worker Agent
+    participant Hub as Orchestration Hub
+    participant DB as Shared Task DB
+
+    Agent->>Hub: POST /api/v1/tasks/claim
+    Hub->>DB: SELECT FOR UPDATE SKIP LOCKED
+    DB-->>Hub: Return Task & Lock Row
+    Hub-->>Agent: Task Payload
+```
+
+### 6. Publish to Virtual Room
+**POST** `/api/v1/mesh/rooms/{room_id}/messages`
+- **Payload**: `{"agent_id": "agent_pm_001", "action": "ultraplan_deliberation", "status": "active", "payload": {"content": "I propose we use pgvector instead of Pinecone for AutoDream."}}`
+
+```mermaid
+sequenceDiagram
+    participant PM as Agent (PM)
+    participant Mesh as Teammate Mesh
+    participant SWE as Agent (SWE)
+
+    PM->>Mesh: POST /api/v1/mesh/rooms/{room_id}/messages
+    Mesh->>SWE: WebSocket Push Event
+    SWE->>SWE: Process Meeting Intent
+```
+
+### 7. Trigger AutoDream Sync
+**POST** `/api/v1/autodream/sync`
+- **Payload**: `{"force_reindex": false}`
+
+```mermaid
+sequenceDiagram
+    participant Worker as Agent (Worker)
+    participant FS as Local Filesystem
+    participant AutoDream as AutoDream API
+    participant LLM as Embedding Model
+    participant DB as pgvector
+
+    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
+    AutoDream->>FS: Polling/Manual Sync Trigger
+    AutoDream->>LLM: Pass text to Minimax/Ada
+    LLM-->>AutoDream: Return 1536-dim Embedding
+    AutoDream->>DB: Upsert Vector to autodream_memories
+    AutoDream-->>Worker: Broadcast Consolidation Success
+```
+
 ## Hybrid Architecture Visualizations
 
 ### Hybrid Health Probe Flow
