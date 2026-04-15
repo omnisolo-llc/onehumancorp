@@ -1,55 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-enum TaskStatus { inProgress, completed, failed }
-
 class AgentTaskProgressWidget extends StatelessWidget {
   final String taskName;
   final double progress;
-  final TaskStatus status;
 
   const AgentTaskProgressWidget({
     Key? key,
     required this.taskName,
     required this.progress,
-    this.status = TaskStatus.inProgress,
   }) : super(key: key);
-
-  Color get _statusColor {
-    switch (status) {
-      case TaskStatus.completed:
-        return Colors.greenAccent;
-      case TaskStatus.failed:
-        return Colors.redAccent;
-      case TaskStatus.inProgress:
-      default:
-        return Colors.blueAccent;
-    }
-  }
-
-  IconData get _statusIcon {
-    switch (status) {
-      case TaskStatus.completed:
-        return Icons.check_circle_outline;
-      case TaskStatus.failed:
-        return Icons.error_outline;
-      case TaskStatus.inProgress:
-      default:
-        return Icons.hourglass_empty;
-    }
-  }
-
-  String get _statusText {
-    switch (status) {
-      case TaskStatus.completed:
-        return 'Completed';
-      case TaskStatus.failed:
-        return 'Failed';
-      case TaskStatus.inProgress:
-      default:
-        return 'In Progress';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,33 +28,14 @@ class AgentTaskProgressWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    taskName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Outfit',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Icon(_statusIcon, color: _statusColor, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        _statusText,
-                        style: TextStyle(
-                          color: _statusColor,
-                          fontFamily: 'Outfit',
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              Text(
+                taskName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Outfit',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               ClipRRect(
@@ -102,7 +43,7 @@ class AgentTaskProgressWidget extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   backgroundColor: const Color.fromRGBO(255, 255, 255, 0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(_statusColor),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.greenAccent),
                   minHeight: 8,
                 ),
               ),
