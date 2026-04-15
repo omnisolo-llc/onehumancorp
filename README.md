@@ -54,6 +54,7 @@ graph TD;
 | `srcs/examples/` | **Go / YAML** | Example agent binaries and supporting assets |
 | `srcs/benchmarks/` | **Go** | Performance benchmarks for coordination and messaging helpers |
 | `srcs/proto/` | **Protobuf** | gRPC service definitions |
+| `srcs/tests/` | **Python / Shell** | Repository-local validation helpers and test utilities |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
@@ -95,8 +96,7 @@ routed exclusively to the Acme tenant.
 ### Docker (single-machine deployment)
 
 ```bash
-cd deploy
-docker compose up
+bazelisk run //:deploy_dev
 ```
 
 Services:
@@ -126,6 +126,9 @@ bazelisk run //srcs/app:start
 
 # Standalone desktop source launcher
 bazelisk run //:desktop
+
+# Build the MkDocs site
+bazelisk run //:docs_build
 
 # Linux desktop/runtime packages
 bazelisk build //srcs/app:app_deb
@@ -193,8 +196,10 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 - **Run the Go backend:** `bazelisk run //srcs/server:ohc`
 - **Serve the Bazel-built Flutter web app:** `bazelisk run //srcs/app:start`
 - **Launch standalone desktop mode:** `bazelisk run //:desktop`
+- **Build the docs site:** `bazelisk run //:docs_build`
 - **Build Linux package artifacts:** `bazelisk build //srcs/app:app_deb` and `bazelisk build //srcs/app:app_rpm` (`app_rpm` requires `rpmbuild` on the host)
 - **Use mobile platform profiles:** `--config=android` and `--config=ios`
 - **Format Go code:** `gofmt -w ./...`
 - **Format frontend:** `cd srcs/app && flutter format .`
 - **Analyze Flutter app:** `cd srcs/app && flutter analyze`
+- **Preview the docs site:** `bazelisk run //:docs_serve`

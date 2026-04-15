@@ -53,7 +53,7 @@ It operates over two primary channels:
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
 Continuous evolution demands that agents retain long-term memory. The AutoDream worker processes isolated agent sessions and pushes consolidated findings into the vector database.
-- Consumes from `.agent-task/memory/*.yml`
+- Consumes from `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files
 - Stores in `autodream_memories` table using `pgvector` for retrieval and LLM context injection.
 
 ```sql

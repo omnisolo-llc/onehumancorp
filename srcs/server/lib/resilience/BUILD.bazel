@@ -2,13 +2,19 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "resilience",
-    srcs = ["mesh_fallback.go"],
+    srcs = [
+        "distributed_locks.go",
+        "mesh_fallback.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/resilience",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "resilience_test",
-    srcs = ["mesh_fallback_chaos_test.go"],
+    srcs = [
+        "distributed_locks_test.go",
+        "mesh_fallback_chaos_test.go",
+    ],
     embed = [":resilience"],
 )

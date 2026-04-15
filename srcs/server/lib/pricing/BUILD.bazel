@@ -2,13 +2,25 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "pricing",
-    srcs = ["calculator.go"],
+    srcs = [
+        "budget.go",
+        "cache.go",
+        "calculator.go",
+        "compression.go",
+        "pricing.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/pricing",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "pricing_test",
-    srcs = ["calculator_test.go"],
+    srcs = [
+        "budget_test.go",
+        "cache_test.go",
+        "calculator_test.go",
+        "compression_test.go",
+        "pricing_test.go",
+    ],
     embed = [":pricing"],
 )

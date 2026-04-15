@@ -51,7 +51,7 @@ The Teammate Mesh provides low-latency communication via Centrifuge node integra
 - **Standalone Mode:** Uses `LocalMeshBroker` for in-memory Go channel broadcast to degrade gracefully.
 
 ## 3. Phase 3: AutoDream Data Pipelines (Memory)
-AutoDream consolidates ephemeral `.agent-task/memory/*.yml` files into long-term embeddings.
+AutoDream consolidates ephemeral `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files into long-term embeddings.
 - **Implementation:** Background `AutoDreamWorker` converts episodic memory into long-term embeddings using LLM wrappers.
 - **Storage:** Embeddings are stored in a `pgvector` enabled PostgreSQL `autodream_memories` table (Cloud) or stored as JSON text blobs in SQLite (Standalone).
 

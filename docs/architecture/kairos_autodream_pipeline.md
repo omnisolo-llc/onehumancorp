@@ -1,7 +1,7 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 # autoDream Pipeline: Omni-Context Memory
-The pipeline reads from `agent_session_data` and `.agent-task/memory/*.yml` and writes to `autodream_memories`.
+The pipeline reads from `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files and writes to `autodream_memories`.
 
 ## Data Pipeline Sequence
 ```mermaid

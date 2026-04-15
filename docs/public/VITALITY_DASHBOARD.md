@@ -12,7 +12,7 @@ Welcome to the **OHC-SIP Swarm Vitality Dashboard**. This document provides an u
 
 ## 📡 Live Telemetry Report
 - **Agent Roles Deployed:** `Principal Cloud Cost Optimizer (L7)`, `Principal Data Scientist - Agentic Operations (L7)`, `Principal Software Engineer & Distributed Systems Architect (L7)`.
-- **Global Intelligence Entries:** > 10 recent observations added via Swarm Intelligence Protocol (`.agent-task/memory`).
+- **Global Intelligence Entries:** > 10 recent observations added via Swarm Intelligence Protocol (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory`).
 - **MCP Tool Status:** Active, seamlessly executing dynamic Capability Plugin meshes with SPIFFE-based mTLS identities.
 
 ---

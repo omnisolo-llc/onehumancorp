@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
 
 ```mermaid
 graph TD
-    Agent[Agent Shared Memory] -->|Writes to .agent-task/memory| FS[File System]
+    Agent[Agent Shared Memory] -->|Writes to OHC_MEMORY_DIR| FS[Runtime Memory Directory]
     FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
     AutoDream --> Chunk[Chunk & Tokenize]
     Chunk --> Embed[Minimax/Cohere Embedding API]
