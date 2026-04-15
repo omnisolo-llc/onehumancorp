@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/checkpointer"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
@@ -49,6 +50,7 @@ type TaskOrchestrator interface {
 
 type DefaultTaskOrchestrator struct {
 	db           db.Provider
+	checkpointer checkpointer.CheckpointSaver
 	redisClient  rueidis.Client
 	hub          *CentrifugeNode
 	mesh         MeshTransport
@@ -75,8 +77,11 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 
 	subWorker := NewSubAgentWorker(tq, spawner)
 
+	cp := checkpointer.NewPgCheckpointSaver(provider)
+
 	to := &DefaultTaskOrchestrator{
 		db:           provider,
+		checkpointer: cp,
 		redisClient:  redisClient,
 		hub:          hub,
 		mesh:         mesh,
@@ -395,6 +400,22 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
+	// Phase 8: Stateful Episodic Memory Checkpoint
+	if to.checkpointer != nil {
+		_ = to.checkpointer.PutCheckpoint(ctx, &checkpointer.Checkpoint{
+			ThreadID:     task.MissionID,
+			CheckpointID: task.ID,
+			Data: map[string]interface{}{
+				"status": "IN_PROGRESS",
+				"agent":  agentID,
+			},
+			Metadata: map[string]interface{}{
+				"action": "ACQUIRE",
+			},
+			CreatedAt: time.Now(),
+		})
+	}
+
 	// Broadcast
 	if to.mesh != nil {
 		_ = to.mesh.BroadcastTask(ctx, Task{
@@ -498,6 +519,27 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	// Phase 8: Stateful Episodic Memory Checkpoint
+	if to.checkpointer != nil {
+		// Load task mission_id for thread_id
+		var missionID string
+		_ = to.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
+
+		_ = to.checkpointer.PutCheckpoint(ctx, &checkpointer.Checkpoint{
+			ThreadID:     missionID,
+			CheckpointID: taskID + "_complete",
+			ParentID:     &taskID,
+			Data: map[string]interface{}{
+				"status": "COMPLETED",
+				"result": result,
+			},
+			Metadata: map[string]interface{}{
+				"action": "COMPLETE",
+			},
+			CreatedAt: time.Now(),
+		})
 	}
 
 	// Metrics

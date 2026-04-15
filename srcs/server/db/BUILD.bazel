@@ -8,6 +8,7 @@ go_library(
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
+        "test_provider.go",
     ],
     embedsrcs = [
         "migrations/001_users.sql",
@@ -59,6 +60,7 @@ go_library(
         "migrations/053_shared_tasks_v4.sql",
         "migrations/054_shared_tasks_decomposition.sql",
         "migrations/055_hub_events.sql",
+        "migrations/056_langgraph_checkpoints.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
         "migrations/20260415123000_autodream_memories_schema.sql",
 
@@ -80,7 +82,6 @@ go_test(
     name = "db_test",
     srcs = [
         "provider_test.go",
-        "test_provider_test.go",
     ],
     embed = [":db"],
     deps = ["@org_modernc_sqlite//:sqlite"],
