@@ -184,6 +184,16 @@ services:
           cpus: "0.5"
           memory: 256M
 
+  pushgateway:
+    image: prom/pushgateway:latest
+    ports:
+      - "9091:9091"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
   prometheus:
     image: prom/prometheus:latest
     volumes:

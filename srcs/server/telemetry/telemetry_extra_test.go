@@ -181,3 +181,13 @@ func TestRecordAgentExecutionTrace(t *testing.T) {
 	RecordAgentExecutionTrace(ctx, "agent-456", "deliberation")
 	// Since we are mocking the meter under the hood in proper tests, this just verifies no panic.
 }
+
+func TestPushMetrics(t *testing.T) {
+	ctx := context.Background()
+	os.Setenv("PROMETHEUS_PUSHGATEWAY_URL", "") // Empty should return nil
+	t.Cleanup(func() { os.Unsetenv("PROMETHEUS_PUSHGATEWAY_URL") })
+	err := PushMetrics(ctx, "test_job")
+	if err != nil {
+		t.Fatalf("Expected nil when URL is empty, got: %v", err)
+	}
+}
