@@ -1143,6 +1143,7 @@ func TestAllExpectedIntegrationTypesPresent(t *testing.T) {
 		IntegrationTypeGitHub, IntegrationTypeGitLab, IntegrationTypeGitea,
 		// Issue trackers
 		IntegrationTypeJIRA, IntegrationTypePlane, IntegrationTypeGitHubIssues,
+		IntegrationTypeLinear,
 	}
 	for _, typ := range expected {
 		if !types[typ] {
@@ -1197,6 +1198,33 @@ func TestTeamsIntegrationSendMessage(t *testing.T) {
 	}
 	if msg.IntegrationID != "teams" {
 		t.Errorf("expected integrationId teams, got %q", msg.IntegrationID)
+	}
+}
+
+func TestLinearIntegrationCreateIssue(t *testing.T) {
+	r := NewRegistry()
+
+	i, ok := r.Instance("linear")
+	if !ok {
+		t.Fatal("expected linear integration to exist")
+	}
+	if i.Type != IntegrationTypeLinear {
+		t.Errorf("expected type linear, got %q", i.Type)
+	}
+	if i.Category != CategoryIssues {
+		t.Errorf("expected category issues, got %q", i.Category)
+	}
+
+	issue, err := r.CreateIssue("linear", "ENG", "Add Linear integration", "Support Linear as issue tracker",
+		"pm-1", IssuePriorityHigh, []string{"integration"}, testNow)
+	if err != nil {
+		t.Fatalf("create linear issue returned error: %v", err)
+	}
+	if issue.IntegrationID != "linear" {
+		t.Errorf("expected integrationId linear, got %q", issue.IntegrationID)
+	}
+	if issue.Project != "ENG" {
+		t.Errorf("expected project ENG, got %q", issue.Project)
 	}
 }
 

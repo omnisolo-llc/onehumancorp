@@ -256,3 +256,18 @@ func (s *GitHubIssuesIntegration) Metadata() *pb.IntegrationMetadata {
 		Tags:        []string{"developer", "issues", "integrated"}}.Build()
 }
 func (s *GitHubIssuesIntegration) WizardSteps() []*pb.WizardStep { return nil }
+
+type LinearIntegration struct{}
+
+func (s *LinearIntegration) Metadata() *pb.IntegrationMetadata {
+	return pb.IntegrationMetadata_builder{
+		Id:          proto.String("linear"),
+		Name:        proto.String("Linear"),
+		Type:        proto.String(string(IntegrationTypeLinear)),
+		Category:    proto.String(string(CategoryIssues)),
+		Description: proto.String("Manage issues, cycles, and roadmaps with Linear — the modern issue tracker for high-velocity teams."),
+		Publisher:   proto.String("Linear Orbit, Inc."),
+		Icon:        proto.String("https://linear.app/favicon.ico"),
+		Tags:        []string{"developer", "issues", "fast"}}.Build()
+}
+func (s *LinearIntegration) WizardSteps() []*pb.WizardStep { return nil }
