@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
+	"database/sql"
+	_ "modernc.org/sqlite"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 )
 
 func TestSIPDB_SyncMissions_Chaos(t *testing.T) {
@@ -80,53 +83,41 @@ func TestSIPDB_SyncMissions_Chaos(t *testing.T) {
 }
 
 func TestSIPDB_SyncMissions_NetworkPartition(t *testing.T) {
-	sip, _ := NewSIPDB(":memory:")
+	sip, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create SIPDB: %v", err)
+	}
 	defer sip.Close()
 	ctx := context.Background()
 
-	err := sip.UpsertMission(ctx, "network-mission", "PENDING", `{"test":"partition"}`, true)
+	err = sip.UpsertMission(ctx, "partition-1", "PENDING", `{"test":"partition"}`, true)
 	if err != nil {
 		t.Fatalf("failed to seed mission: %v", err)
 	}
 
-	// Use an invalid port to simulate connection refused / network partition
-	synced, err := sip.SyncMissions(ctx, "http://127.0.0.1:1")
+	// Simulate complete partition by using a URL that will instantly fail dial
+	synced, err := sip.SyncMissions(ctx, "http://127.0.0.1:0")
 	if err == nil {
-		t.Error("Expected error for network partition, got nil")
+		t.Errorf("Expected network error on partition, got nil")
 	}
 	if synced != 0 {
-		t.Errorf("Expected 0 synced missions, got %d", synced)
+		t.Errorf("Expected 0 synced on partition, got %d", synced)
 	}
 
-	// Verify local state is still PENDING
-	missions, err := sip.GetPendingMissions(ctx, "ANY")
+	// Make sure the mission is still pending and wasn't lost
+	var status string
+	err = sip.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'partition-1'").Scan(&status)
 	if err != nil {
-		t.Fatalf("failed to get pending missions: %v", err)
+		t.Fatalf("failed to verify local mission status: %v", err)
 	}
-	found := false
-	for _, m := range missions {
-		if m.ID == "network-mission" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Error("Mission should still be PENDING locally after failed sync")
+	if status != "PENDING" {
+		t.Errorf("Expected status to remain PENDING during partition, got %s", status)
 	}
 }
 
-func TestSIPDB_SQLiteLockContention_Chaos(t *testing.T) {
-	// SQLite :memory: doesn't easily support multi-connection locking tests in the same process
-	// with the current setup, but we can mock the behavior by manually triggering withSipRetry
-	// logic or using a file-based DB with a manual lock.
-
-	tempDir, err := os.MkdirTemp("", "sip-chaos-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-	dbPath := filepath.Join(tempDir, "chaos.db")
-
+func TestWithSipRetry_Chaos(t *testing.T) {
+	// Standalone SQLite contention simulation
+	dbPath := filepath.Join(t.TempDir(), "chaos.db")
 	sip, err := NewSIPDB(dbPath)
 	if err != nil {
 		t.Fatalf("failed to create SIPDB: %v", err)
@@ -181,5 +172,72 @@ func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
 	}
 	if err == nil {
 		t.Errorf("Mission 'old-mission' should have been pruned/deleted")
+	}
+}
+
+func TestSharedTaskOrchestrator_Chaos(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open test sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+	prov := db.NewSqliteProvider(sqlDB)
+
+	// Create the orchestrator
+	orchestrator := NewSharedTaskOrchestrator(prov)
+
+	ctx := context.Background()
+
+	// Setup necessary tables
+	_, err = prov.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            agent_id TEXT,
+            priority TEXT NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+	if err != nil {
+		t.Fatalf("failed to create shared_tasks: %v", err)
+	}
+
+	_, err = prov.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+	if err != nil {
+		t.Fatalf("failed to create state_machine_transitions: %v", err)
+	}
+
+	// Chaos 1: Try to acquire a task when there are none, shouldn't crash
+	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+	task, err := orchestrator.ClaimTask(ctxWithClaims, "agent-1")
+	if err != nil {
+		t.Errorf("Expected nil error acquiring task when none exist: %v", err)
+	}
+	if task != nil {
+		t.Errorf("Expected nil task")
+	}
+
+	// Chaos 2: Transition a non-existent task, shouldn't crash
+	err = orchestrator.TransitionTask(ctxWithClaims, "non-existent-task", "agent-1", "PENDING", "IN_PROGRESS", "chaos test")
+	if err == nil {
+		t.Errorf("Expected error transitioning non-existent task")
 	}
 }

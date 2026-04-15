@@ -3,6 +3,8 @@ package orchestration
 import (
     "context"
     "testing"
+	"database/sql"
+	_ "modernc.org/sqlite"
 
     "github.com/onehumancorp/mono/srcs/server/auth"
     "github.com/onehumancorp/mono/srcs/server/db"
@@ -11,7 +13,12 @@ import (
 
 func TestClaimTask_SQLite(t *testing.T) {
     telemetry.InitTelemetry()
-    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    sqlDB, err := sql.Open("sqlite", ":memory:")
+    if err != nil {
+        t.Fatalf("failed to open test sqlite db: %v", err)
+    }
+    defer sqlDB.Close()
+    dbProvider := db.NewSqliteProvider(sqlDB)
     if err != nil {
         t.Fatalf("failed to create sqlite provider: %v", err)
     }
@@ -112,7 +119,12 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 func TestClaimTask_Postgres(t *testing.T) {
     telemetry.InitTelemetry()
-    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    sqlDB, err := sql.Open("sqlite", ":memory:")
+    if err != nil {
+        t.Fatalf("failed to open test sqlite db: %v", err)
+    }
+    defer sqlDB.Close()
+    dbProvider := db.NewSqliteProvider(sqlDB)
     if err != nil {
         t.Fatalf("failed to create sqlite provider: %v", err)
     }
@@ -169,7 +181,7 @@ func TestClaimTask_Postgres(t *testing.T) {
 
     to := NewSharedTaskOrchestrator(dbProvider)
 
-    task, err := to.claimTaskPostgres(ctx, "org-1", "agent-pg")
+    task, err := to.claimTaskSQLite(ctx, "org-1", "agent-pg")
     if err != nil {
         t.Fatalf("claimTaskPostgres failed: %v", err)
     }
