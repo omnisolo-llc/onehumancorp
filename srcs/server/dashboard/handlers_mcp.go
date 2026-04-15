@@ -343,7 +343,9 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 
 		integrationID := p.IntegrationID
 		if integrationID == "" {
-			integrationID = "jira"
+			if req.ToolID == "jira-mcp" {
+				integrationID = "jira"
+			}
 		}
 
 		project := p.Project

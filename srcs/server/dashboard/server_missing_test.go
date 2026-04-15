@@ -767,7 +767,6 @@ func TestInvokeMCPToolJira(t *testing.T) {
 	}
 }
 
-
 // ── Additional coverage: handleSettings ──────────────────────────────────────
 
 func TestHandleSettingsMethodNotAllowed(t *testing.T) {

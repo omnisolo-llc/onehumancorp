@@ -177,8 +177,8 @@ stop_daemon() {
   if ! is_pid_running; then
     rm -f "${PID_FILE}" "${LOG_FILE}"
     if [[ "${OHC_STANDALONE:-}" == "true" ]]; then
-    find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
-  fi
+      find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+    fi
     echo "ohc is not running"
     return 0
   fi
@@ -193,8 +193,8 @@ stop_daemon() {
     if ! kill -0 "${pid}" 2>/dev/null; then
       rm -f "${PID_FILE}" "${LOG_FILE}"
       if [[ "${OHC_STANDALONE:-}" == "true" ]]; then
-    find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
-  fi
+        find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+      fi
       echo "ohc stopped"
       return 0
     fi
