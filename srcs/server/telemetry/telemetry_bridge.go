@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,18 +48,38 @@ func initBridgeMetrics() {
 }
 
 func RecordBridgeMessageSent(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "bridge_message_sent", string(payloadBytes))
+	}
 	if bridgeMessagesSentTotal != nil {
 		bridgeMessagesSentTotal.Add(ctx, 1)
 	}
 }
 
 func RecordBridgeMessageReceived(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "bridge_message_received", string(payloadBytes))
+	}
 	if bridgeMessagesReceivedTotal != nil {
 		bridgeMessagesReceivedTotal.Add(ctx, 1)
 	}
 }
 
 func RecordBridgeStatus(ctx context.Context, active int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"active": active,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "bridge_status", string(payloadBytes))
+	}
 	if bridgeStatusGauge != nil {
 		bridgeStatusGauge.Add(ctx, active)
 	}
