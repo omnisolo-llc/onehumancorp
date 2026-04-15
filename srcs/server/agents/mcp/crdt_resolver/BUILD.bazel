@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "crdt_resolver",
+    srcs = ["crdt_resolver.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp/crdt_resolver",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "crdt_resolver_test",
+    srcs = ["crdt_resolver_test.go"],
+    embed = [":crdt_resolver"],
+)
