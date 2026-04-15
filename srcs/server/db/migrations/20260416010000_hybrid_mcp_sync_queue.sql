@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS hybrid_mcp_sync_queue (
+    id VARCHAR(255) PRIMARY KEY,
+    tool_name VARCHAR(255) NOT NULL,
+    arguments TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
