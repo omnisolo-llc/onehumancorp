@@ -520,6 +520,19 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				logLine = "Task " + taskID + " completed successfully."
 			}
 			logs := []string{logLine}
+
+			var payload string
+			var deliberationLog string
+			err := tm.db.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks WHERE id = $1", taskID).Scan(&payload, &deliberationLog)
+			if err == nil {
+				if payload != "" && payload != "{}" {
+					logs = append(logs, "Payload: "+payload)
+				}
+				if deliberationLog != "" {
+					logs = append(logs, "Deliberation: "+deliberationLog)
+				}
+			}
+
 			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
 		}()
 	}
