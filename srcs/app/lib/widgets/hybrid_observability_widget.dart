@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/agent_status_indicator.dart';
 
 class HybridObservabilityWidget extends ConsumerWidget {
   const HybridObservabilityWidget({super.key});
@@ -45,7 +46,34 @@ class HybridObservabilityWidget extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _MetricRow(label: 'Active Agents', value: activeAgents.toString()),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Active Agents',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          AgentStatusIndicator(isActive: activeAgents > 0),
+                          const SizedBox(width: 8),
+                          Text(
+                            activeAgents.toString(),
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   _MetricRow(label: 'Total Tasks', value: totalTasks.toString()),
                   const _MetricRow(label: 'Avg Hybrid Latency', value: '45ms'),
                 ],
