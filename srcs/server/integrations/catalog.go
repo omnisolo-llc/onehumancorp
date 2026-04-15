@@ -25,7 +25,6 @@ var Catalog = []Integration{
 	&JiraIntegration{},
 	&PlaneIntegration{},
 	&GitHubIssuesIntegration{},
-	&LinearIntegration{},
 }
 
 // GetCatalog returns all available integration providers.
