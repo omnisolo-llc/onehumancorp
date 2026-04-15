@@ -13,15 +13,25 @@ type Tool struct {
 }
 
 type HybridFSMCP struct {
-	provider FileSystemProvider
+	provider  FileSystemProvider
+	escalator Escalator
 }
 
 func NewHybridFSMCP(provider FileSystemProvider) *HybridFSMCP {
 	return &HybridFSMCP{provider: provider}
 }
 
+func NewHybridFSMCPWithEscalator(provider FileSystemProvider, escalator Escalator) *HybridFSMCP {
+	return &HybridFSMCP{provider: provider, escalator: escalator}
+}
+
 func (m *HybridFSMCP) ListTools() []Tool {
 	return []Tool{
+		{
+			Name:        "rag_query",
+			Description: "Executes a Retrieval-Augmented Generation (RAG) query. Automatically escalates to Cloud if query is complex.",
+			InputSchema: `{"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}`,
+		},
 		{
 			Name:        "read_file",
 			Description: "Reads the contents of a file.",
@@ -42,6 +52,27 @@ func (m *HybridFSMCP) ListTools() []Tool {
 
 func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
 	switch toolName {
+	case "rag_query":
+		query, ok := arguments["query"].(string)
+		if !ok {
+			return nil, errors.New("missing or invalid 'query' argument")
+		}
+
+		var result string
+		var err error
+
+		if m.escalator != nil && m.escalator.AnalyzeComplexity(query) {
+			result, err = m.escalator.ExecuteEscalatedRAG(ctx, query)
+		} else if m.escalator != nil {
+			result, err = m.escalator.ExecuteLocalRAG(ctx, query)
+		} else {
+			result = "Local RAG Result: " + query
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"status": "success", "content": result}, nil
 	case "read_file":
 		path, ok := arguments["path"].(string)
 		if !ok {

@@ -89,8 +89,8 @@ func TestHybridFSMCP(t *testing.T) {
 	ctx := context.Background()
 
 	tools := mcp.ListTools()
-	if len(tools) != 3 {
-		t.Errorf("expected 3 tools, got %d", len(tools))
+	if len(tools) != 4 {
+		t.Errorf("expected 4 tools, got %d", len(tools))
 	}
 
 	// Write

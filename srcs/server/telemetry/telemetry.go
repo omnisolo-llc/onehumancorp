@@ -58,6 +58,7 @@ var (
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
 	postgresLockContentionCounter      metric.Int64Counter
+	RagEscalationCount                 metric.Int64Counter
 	llmNetworkLatencyHistogram         metric.Float64Histogram
 	ToolAutoCorrectionTotal            metric.Int64Counter
 	DeliberationPhaseDuration          metric.Float64Histogram
@@ -448,6 +449,14 @@ func InitWithMeter(m mockableMeter) error {
 	postgresLockContentionCounter, err = m.Int64Counter(
 		"ohc_postgres_lock_contention_total",
 		metric.WithDescription("Total PostgreSQL lock contentions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	RagEscalationCount, err = m.Int64Counter(
+		"rag_escalation_count",
+		metric.WithDescription("Total number of dynamic RAG escalations from Local to Cloud"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1076,6 +1085,16 @@ func RecordPostgresLockContention(ctx context.Context, operation string) {
 	}
 	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
+	))
+}
+
+// RecordRagEscalation increments the counter for dynamic RAG escalations.
+func RecordRagEscalation(ctx context.Context, reason string) {
+	if RagEscalationCount == nil {
+		return
+	}
+	RagEscalationCount.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("reason", reason),
 	))
 }
 
