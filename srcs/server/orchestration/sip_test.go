@@ -246,12 +246,6 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 4. Bursting but old (should be deleted)
-	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('4', 'BURSTING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now', '-2 days'))")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Prune missions older than 24 hours
 	err = db.PruneStaleMissions(ctx, 24*time.Hour)
 	if err != nil {

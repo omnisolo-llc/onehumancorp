@@ -5,7 +5,7 @@
 //
 //   - Chat services: Slack, Discord, Google Chat, Telegram, Microsoft Teams — for human–agent messaging
 //   - Git platforms: GitHub, GitLab, Gitea    — for PR/MR creation
-//   - Issue trackers: JIRA, Plane, GitHub Issues — for ticket management
+//   - Issue trackers: JIRA, Plane, GitHub Issues, Linear — for ticket management
 //
 // All state is held in-memory following the same pattern used by the rest of
 // the platform.  Chat integrations with stored credentials (Telegram, Discord)
@@ -138,6 +138,12 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	IntegrationTypeGitHubIssues IntegrationType = "github_issues"
+	// IntegrationTypeLinear provides domain-specific context and typed constraints for IntegrationTypeLinear operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	IntegrationTypeLinear IntegrationType = "linear"
 )
 
 // ConnectionStatus reflects whether an integration is currently active and reachable.

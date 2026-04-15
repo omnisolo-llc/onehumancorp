@@ -11,7 +11,6 @@ import (
     "github.com/onehumancorp/mono/srcs/server/auth"
     "github.com/onehumancorp/mono/srcs/server/db"
     "github.com/onehumancorp/mono/srcs/server/memory/autodream"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type SharedTaskDB struct {
@@ -63,10 +62,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
 }
 
 func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-    if !to.mu.TryLock() {
-        telemetry.RecordPostgresLockContention(ctx, "claim_task")
-        to.mu.Lock()
-    }
+    to.mu.Lock()
     defer to.mu.Unlock()
 
     tx, err := to.dbProvider.Begin(ctx)
@@ -94,20 +90,6 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
         &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
     ); err != nil {
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-            var checkID string
-            checkQuery := `
-                SELECT st.id FROM shared_tasks_master st
-                WHERE st.status = 'PENDING' AND st.organization_id = $1
-                AND NOT EXISTS (
-                    SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
-                    JOIN shared_tasks_master d ON d.id = dep
-                    WHERE d.status != 'COMPLETED'
-                )
-                LIMIT 1
-            `
-            if checkErr := tx.QueryRow(ctx, checkQuery, orgID).Scan(&checkID); checkErr == nil && checkID != "" {
-                telemetry.RecordPostgresLockContention(ctx, "claim_task")
-            }
             return nil, nil
         }
         return nil, fmt.Errorf("failed to query pending task: %w", err)
@@ -157,20 +139,6 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
         &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
     ); err != nil {
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-            var checkID string
-            checkQuery := `
-                SELECT st.id FROM shared_tasks_master st
-                WHERE st.status = 'PENDING' AND st.organization_id = $1
-                AND NOT EXISTS (
-                    SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
-                    JOIN shared_tasks_master d ON d.id = dep
-                    WHERE d.status != 'COMPLETED'
-                )
-                LIMIT 1
-            `
-            if checkErr := tx.QueryRow(ctx, checkQuery, orgID).Scan(&checkID); checkErr == nil && checkID != "" {
-                telemetry.RecordPostgresLockContention(ctx, "claim_task")
-            }
             return nil, nil
         }
         return nil, fmt.Errorf("failed to query pending task: %w", err)

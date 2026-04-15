@@ -132,7 +132,7 @@ func TestCloudFSProvider(t *testing.T) {
 func TestHybridFSMCP(t *testing.T) {
 	tempDir := t.TempDir()
 	provider := NewLocalFSProvider(tempDir)
-	mcp := NewHybridFSMCP(provider, nil)
+	mcp := NewHybridFSMCP(provider)
 	ctx := context.Background()
 
 	// List tools
@@ -285,7 +285,7 @@ func TestCloudFSProvider_Errors(t *testing.T) {
 func TestHybridFSMCP_Errors(t *testing.T) {
 	tempDir := t.TempDir()
 	provider := NewLocalFSProvider(tempDir)
-	mcp := NewHybridFSMCP(provider, nil)
+	mcp := NewHybridFSMCP(provider)
 	ctx := context.Background()
 
 	// Test unknown tool

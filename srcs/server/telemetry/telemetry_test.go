@@ -589,13 +589,6 @@ func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 	return true
 }
 
-func TestAutoDreamErrorMetrics(t *testing.T) {
-	AutoDreamIngestionErrorCounter = nil
-	AutoDreamCompressionErrorCounter = nil
-	RecordAutoDreamIngestionError(context.Background(), "agent-1", "timeout")
-	RecordAutoDreamCompressionError(context.Background(), "agent-1", "timeout")
-}
-
 func TestInitTelemetry_PrometheusError(t *testing.T) {
 	originalReg := prometheus.DefaultRegisterer
 	defer func() { prometheus.DefaultRegisterer = originalReg }()

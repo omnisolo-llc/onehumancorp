@@ -7,8 +7,8 @@ go_library(
         "flextime.go",
         "postgres_provider.go",
         "provider.go",
-        "sqlite_provider.go",
         "shared_tasks_repo.go",
+        "sqlite_provider.go",
         "test_provider.go",
     ],
     embedsrcs = [
@@ -67,7 +67,25 @@ go_library(
         "migrations/20260415124000_shared_tasks_master.sql",
         "migrations/20260415124100_autodream_memories_master.sql",
         "migrations/20260416000000_shared_tasks_decomposition_pg.sql",
-
+        "migrations/027_autodream_memories.sql",
+        "migrations/032_kairos_mission.sql",
+        "migrations/032_mcp_telemetry_mesh_mission.sql",
+        "migrations/033_swarm_tasks_kairos.sql",
+        "migrations/037_kairos_tasks_state_machine.sql",
+        "migrations/038_kairos_triad.sql",
+        "migrations/042_kairos_phase1.sql",
+        "migrations/043_kairos_phase2.sql",
+        "migrations/044_kairos_phase3.sql",
+        "migrations/045_oracle_research_missions.sql",
+        "migrations/047_shared_tasks_v4.sql",
+        "migrations/048_shared_tasks_dag.sql",
+        "migrations/049_kairos_orchestration_interfaces.sql",
+        "migrations/050_refine_shared_tasks.sql",
+        "migrations/051_hybrid_rag_sync.sql",
+        "migrations/20260410_kairos_tasks.sql",
+        "migrations/20260411_kairos_tasks_add_locked_until.sql",
+        "migrations/20260412_shared_tasks_decomposition.sql",
+        "migrations/20260415120000_shared_tasks.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
@@ -84,9 +102,6 @@ go_library(
 
 go_test(
     name = "db_test",
-    srcs = [
-        "provider_test.go",
-    ],
+    srcs = ["provider_test.go"],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
 )

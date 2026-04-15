@@ -1,0 +1,19 @@
+toc:
+  - title: Home
+    path: /docs/index.md
+  - title: Architecture
+    path: /docs/architecture/index.md
+  - title: Developer
+    path: /docs/developer/index.md
+  - title: API
+    path: /docs/api/index.md
+  - title: Features
+    path: /docs/features/index.md
+  - title: Walkthroughs
+    path: /docs/walkthroughs/index.md
+  - title: Operations
+    path: /docs/operations/index.md
+  - title: Releases
+    path: /docs/public/index.md
+  - title: Archive
+    path: /docs/archive/index.md
