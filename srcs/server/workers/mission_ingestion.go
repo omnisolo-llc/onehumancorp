@@ -176,7 +176,7 @@ func (w *MissionIngestionWorker) processSingleMission(ctx context.Context, missi
 	if err := tx.Commit(ctx); err != nil {
 		slog.Error("MissionIngestionWorker: failed to commit tx", "error", err)
 	} else {
-		slog.Info("MissionIngestionWorker: ingested mission artifact", "file", filePath)
+		slog.Debug("MissionIngestionWorker: ingested mission artifact", "file", filePath)
 	}
 }
 
