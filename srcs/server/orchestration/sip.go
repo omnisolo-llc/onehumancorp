@@ -1076,7 +1076,7 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	err := withSipRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
+		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
 		if err != nil {
 			return err
 		}
