@@ -10,6 +10,7 @@ go_library(
         "http_handler.go",
         "mesh.go",
         "redis_mesh.go",
+        "server.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/mesh",
     visibility = ["//visibility:public"],
