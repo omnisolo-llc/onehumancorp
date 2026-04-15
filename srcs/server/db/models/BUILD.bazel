@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "models",
+    srcs = ["tasks.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/db/models",
+    visibility = ["//visibility:public"],
+)
