@@ -1,0 +1,2 @@
+context: |
+  Completed competitive audit on Local-Private RAG. Identified critical gap in CRDT synchronization for vector embeddings between Standalone SQLite and Cloud Postgres. Mission created.
