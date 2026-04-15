@@ -148,7 +148,9 @@ start_daemon() {
   fi
 
   rm -f "${PID_FILE}" "${LOG_FILE}"
-  find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+  if [[ "${OHC_STANDALONE:-}" == "true" ]]; then
+    find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+  fi
   touch "${LOG_FILE}" "${PID_FILE}"
   chmod 0600 "${LOG_FILE}" "${PID_FILE}"
 
@@ -174,7 +176,9 @@ start_daemon() {
 stop_daemon() {
   if ! is_pid_running; then
     rm -f "${PID_FILE}" "${LOG_FILE}"
+    if [[ "${OHC_STANDALONE:-}" == "true" ]]; then
     find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+  fi
     echo "ohc is not running"
     return 0
   fi
@@ -188,7 +192,9 @@ stop_daemon() {
   for attempt in $(seq 1 20); do
     if ! kill -0 "${pid}" 2>/dev/null; then
       rm -f "${PID_FILE}" "${LOG_FILE}"
-      find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+      if [[ "${OHC_STANDALONE:-}" == "true" ]]; then
+    find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+  fi
       echo "ohc stopped"
       return 0
     fi
@@ -198,7 +204,9 @@ stop_daemon() {
   pkill -9 -P "${pid}" 2>/dev/null || true
   kill -9 "${pid}" 2>/dev/null || true
   rm -f "${PID_FILE}" "${LOG_FILE}"
-  find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+  if [[ "${OHC_STANDALONE:-}" == "true" ]]; then
+    find "${STATE_DIR}" -name "*.tmp" -type f -delete 2>/dev/null || true
+  fi
   echo "ohc stopped"
 }
 
