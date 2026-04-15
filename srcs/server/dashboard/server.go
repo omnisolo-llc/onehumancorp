@@ -763,10 +763,11 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	}
 
 	details := map[string]interface{}{
-		"status":        status,
-		"mesh_active":   probe.MeshActive,
-		"sync_queue":    probe.SyncBacklog,
-		"agent_workers": 0,
+		"status":         status,
+		"mesh_active":    probe.MeshActive,
+		"sync_queue":     probe.SyncBacklog,
+		"last_sync_at":   probe.LastSyncTime,
+		"agent_workers":  0,
 	}
 
 	details["stuck_missions"] = probe.StuckMissions

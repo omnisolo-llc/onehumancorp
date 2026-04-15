@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -10,19 +11,21 @@ type HybridHealthProbe struct {
 	Mode        string        `json:"mode"`
 	Status      string        `json:"status"`
 	DBPing      time.Duration `json:"db_ping"`
-	SyncBacklog int           `json:"sync_backlog"`
-	StuckMissions int         `json:"stuck_missions"`
-	MeshActive  bool          `json:"mesh_active"`
+	SyncBacklog   int           `json:"sync_backlog"`
+	StuckMissions int           `json:"stuck_missions"`
+	LastSyncTime  time.Time     `json:"last_sync_time"`
+	MeshActive    bool          `json:"mesh_active"`
 }
 
 // CheckHealth returns a HybridHealthProbe detailing the system health.
 func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 	probe := HybridHealthProbe{
-		Mode:        "standalone",
-		Status:      "healthy",
-		MeshActive:  false,
-		SyncBacklog: 0,
+		Mode:          "standalone",
+		Status:        "healthy",
+		MeshActive:    false,
+		SyncBacklog:   0,
 		StuckMissions: 0,
+		LastSyncTime:  time.Time{},
 	}
 
 	start := time.Now()
@@ -48,6 +51,13 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'").Scan(&stuckCount)
 			if err == nil {
 				probe.StuckMissions = stuckCount
+			}
+
+			// Get last sync time
+			var lastSync sql.NullTime
+			err = h.sipDB.Provider().QueryRow(ctx, "SELECT MAX(updated_at) FROM agent_missions WHERE status = 'SYNCED'").Scan(&lastSync)
+			if err == nil && lastSync.Valid {
+				probe.LastSyncTime = lastSync.Time
 			}
 		}
 	} else {
