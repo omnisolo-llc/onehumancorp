@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"sort"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -247,7 +249,6 @@ func (r *PgHubRepository) PushMessage(ctx context.Context, toAgent string, msg M
 }
 
 // PopMessages atomically retrieves and removes all pending messages.
-// Uses a transaction for consume-once semantics.
 func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Message, error) {
 	var msgs []Message
 	err := pgWithRetry(ctx, func() error {
@@ -261,51 +262,43 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 			}
 		}
 
-		tx, err := r.pool.Begin(ctx)
-		if err != nil {
-			return fmt.Errorf("pg: begin pop: %w", err)
-		}
-		defer func() { _ = tx.Rollback(ctx) }()
-
-		query := `SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at FROM agent_inbox WHERE agent_id = $1`
+		query := `DELETE FROM agent_inbox WHERE agent_id = $1`
 		args := []any{agentID}
 		if r.orgID != "" {
 			query += ` AND organization_id = $2`
 			args = append(args, r.orgID)
 		}
-		query += ` ORDER BY seq`
+		query += ` RETURNING seq, message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`
 
-		rows, err := tx.Query(ctx, query, args...)
+		rows, err := r.pool.Query(ctx, query, args...)
 		if err != nil {
-			return fmt.Errorf("pg: peek messages for pop: %w", err)
+			return fmt.Errorf("pg: pop messages: %w", err)
 		}
+		defer rows.Close()
+
+		type rowData struct {
+			seq int64
+			m   Message
+		}
+		var temp []rowData
 
 		for rows.Next() {
-			var m Message
-			if err := rows.Scan(&m.ID, &m.FromAgent, &m.ToAgent, &m.Type, &m.Content, &m.MeetingID, &m.OccurredAt); err != nil {
-				rows.Close()
+			var r rowData
+			if err := rows.Scan(&r.seq, &r.m.ID, &r.m.FromAgent, &r.m.ToAgent, &r.m.Type, &r.m.Content, &r.m.MeetingID, &r.m.OccurredAt); err != nil {
 				return fmt.Errorf("pg: scan message: %w", err)
 			}
-			msgs = append(msgs, m)
-		}
-		rows.Close()
-
-		if len(msgs) > 0 {
-			delQuery := "DELETE FROM agent_inbox WHERE agent_id = $1"
-			delArgs := []any{agentID}
-			if r.orgID != "" {
-				delQuery += " AND organization_id = $2"
-				delArgs = append(delArgs, r.orgID)
-			}
-			_, err = tx.Exec(ctx, delQuery, delArgs...)
-			if err != nil {
-				return fmt.Errorf("pg: delete popped messages: %w", err)
-			}
+			temp = append(temp, r)
 		}
 
-		if err := tx.Commit(ctx); err != nil {
-			return fmt.Errorf("pg: commit pop: %w", err)
+		// Sort by seq to maintain order since DELETE ... RETURNING does not guarantee order
+		sort.Slice(temp, func(i, j int) bool {
+			return temp[i].seq < temp[j].seq
+		})
+
+		for _, r := range temp {
+			msgs = append(msgs, r.m)
 		}
+
 		return nil
 	})
 
