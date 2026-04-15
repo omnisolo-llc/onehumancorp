@@ -125,10 +125,16 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 	}
 
 	// Wait a moment for background goroutines to finish (e.g. telemetry, summarization)
-	time.Sleep(100 * time.Millisecond)
+	var pmInbox []orchestration.Message
+	for i := 0; i < 150; i++ {
+		pmInbox = hub.Inbox("pm-e2e")
+		if len(pmInbox) > 0 {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	// PM inbox should now contain the SWE's reply.
-	pmInbox := hub.Inbox("pm-e2e")
 	if len(pmInbox) == 0 {
 		t.Fatal("PM inbox is empty after SWE reply")
 	}
@@ -149,9 +155,6 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // After the three-turn exchange the test asserts that the meeting transcript
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
-	// TODO(sentry): Investigate and fix flaky meeting room e2e test.
-	// Tracking issue: https://github.com/onehumancorp/mono/issues/1234
-	t.Skip("Skipping TestMinimaxAgentMeetingRoomE2E due to flakiness. See issue #1234")
 	key := minimaxAPIKey()
 	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
@@ -248,7 +251,13 @@ func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
 	}
 
 	// Wait a moment for background goroutines to finish (e.g. telemetry, summarization)
-	time.Sleep(100 * time.Millisecond)
+	for i := 0; i < 150; i++ {
+		meeting, ok := hub.Meeting("sprint-e2e")
+		if ok && len(meeting.Transcript) == len(turns) {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	// Verify the meeting transcript captured all three turns in order.
 	meeting, ok := hub.Meeting("sprint-e2e")
