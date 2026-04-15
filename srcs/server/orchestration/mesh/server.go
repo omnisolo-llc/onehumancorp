@@ -9,6 +9,8 @@ import (
 	"github.com/redis/rueidis"
 )
 
+var GlobalLocalBroker = NewLocalMeshBroker()
+
 func HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -49,6 +51,7 @@ func HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Local broker fallback (dummy implementation for standalone without redis)
 		// In a real scenario, this would use the LocalMeshBroker's channel system
+		GlobalLocalBroker.Broadcast(context.Background(), channel, payloadBytes)
 	}
 
 	w.WriteHeader(http.StatusOK)

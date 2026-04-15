@@ -2,26 +2,28 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	_ "modernc.org/sqlite"
+	"sync"
 	"testing"
-    "encoding/json"
-    "database/sql"
-    _ "modernc.org/sqlite"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func setupTestDBSharedTasks(t *testing.T) db.Provider {
-    conn, err := sql.Open("sqlite", ":memory:")
-    if err != nil {
-        t.Fatalf("failed to open sqlite: %v", err)
-    }
+	conn, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite: %v", err)
+	}
 
-    p := db.NewSqliteProvider(conn)
+	p := db.NewSqliteProvider(conn)
 
-    ctx := context.Background()
+	ctx := context.Background()
 
-    // Create the required table
-    _, err = p.Exec(ctx, `
+	// Create the required table
+	_, err = p.Exec(ctx, `
 CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     id VARCHAR PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
@@ -37,57 +39,106 @@ CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );`)
-    if err != nil {
-        t.Fatalf("failed to create table: %v", err)
-    }
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
 
-    return p
+	return p
 }
 
 func TestClaimTask(t *testing.T) {
 	provider := setupTestDBSharedTasks(t)
-    defer provider.Close()
+	defer provider.Close()
 
 	ctx := context.Background()
 
-    task := &SharedTaskDecomposition{
-        OrganizationID: "org-1",
-        Title: "Test Task",
-        Status: "PENDING",
-        Priority: "P2",
-        Payload: json.RawMessage("{}"),
-        Dependencies: json.RawMessage("[]"),
-    }
+	task := &SharedTaskDecomposition{
+		OrganizationID: "org-1",
+		Title:          "Test Task",
+		Status:         "PENDING",
+		Priority:       "P2",
+		Payload:        json.RawMessage("{}"),
+		Dependencies:   json.RawMessage("[]"),
+	}
 
-    err := CreateTask(ctx, provider, task)
-    if err != nil {
-        t.Fatalf("failed to create task: %v", err)
-    }
+	err := CreateTask(ctx, provider, task)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
 
-    claimedTask, err := ClaimTask(ctx, provider, "agent-1")
-    if err != nil {
-        t.Fatalf("failed to claim task: %v", err)
-    }
+	claimedTask, err := ClaimTask(ctx, provider, "agent-1")
+	if err != nil {
+		t.Fatalf("failed to claim task: %v", err)
+	}
 
-    if claimedTask.AgentID.String != "agent-1" {
-        t.Errorf("expected agent-1, got %v", claimedTask.AgentID.String)
-    }
+	if claimedTask.AgentID.String != "agent-1" {
+		t.Errorf("expected agent-1, got %v", claimedTask.AgentID.String)
+	}
 
-    if claimedTask.Status != "ASSIGNED" {
-        t.Errorf("expected status ASSIGNED, got %v", claimedTask.Status)
-    }
+	if claimedTask.Status != "ASSIGNED" {
+		t.Errorf("expected status ASSIGNED, got %v", claimedTask.Status)
+	}
 
-    err = TransitionTask(ctx, provider, claimedTask.ID, "DONE")
-    if err != nil {
-        t.Fatalf("failed to transition task: %v", err)
-    }
+	err = TransitionTask(ctx, provider, claimedTask.ID, "DONE")
+	if err != nil {
+		t.Fatalf("failed to transition task: %v", err)
+	}
 
-    var status string
-    err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1", claimedTask.ID).Scan(&status)
-    if err != nil {
-        t.Fatalf("failed to query status: %v", err)
-    }
-    if status != "DONE" {
-        t.Errorf("expected status DONE, got %v", status)
-    }
+	var status string
+	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1", claimedTask.ID).Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query status: %v", err)
+	}
+	if status != "DONE" {
+		t.Errorf("expected status DONE, got %v", status)
+	}
+}
+
+func TestClaimTask_Concurrent(t *testing.T) {
+	provider := setupTestDBSharedTasks(t)
+	defer provider.Close()
+
+	ctx := context.Background()
+
+	// Create 1 task
+	task := &SharedTaskDecomposition{
+		OrganizationID: "org-concurrent",
+		Title:          "Test Concurrent Claim",
+		Status:         "PENDING",
+		Priority:       "P1",
+		Payload:        json.RawMessage("{}"),
+		Dependencies:   json.RawMessage("[]"),
+	}
+
+	err := CreateTask(ctx, provider, task)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	successCount := 0
+	var mu sync.Mutex
+
+	// Try claiming concurrently from 10 workers
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(agentID string) {
+			defer wg.Done()
+			// Some stagger
+			time.Sleep(10 * time.Millisecond)
+
+			claimed, _ := ClaimTask(ctx, provider, agentID)
+			if claimed != nil {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
+			}
+		}("agent-conc-" + string(rune('A'+i)))
+	}
+
+	wg.Wait()
+
+	if successCount != 1 {
+		t.Errorf("expected exactly 1 task to be claimed, but got %d", successCount)
+	}
 }

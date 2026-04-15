@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
-	"gopkg.in/yaml.v3"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -72,7 +72,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
-		return // DB-backed memory only; no file processing
+		memoryDir = ".agent-task/memory/" // fallback as per instructions
 	}
 	matches, err := filepath.Glob(filepath.Join(memoryDir, "*.yml"))
 	if err != nil {
