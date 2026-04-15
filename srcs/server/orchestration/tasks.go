@@ -486,10 +486,6 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
-	if currentStatus == statemachine.StateCompleted {
-		return errors.New("task already completed")
-	}
-
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)

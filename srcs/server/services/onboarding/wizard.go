@@ -13,12 +13,6 @@ func NewInteractiveWizard() *InteractiveWizard {
 }
 
 func (w *InteractiveWizard) RunInteractiveSetup(ctx context.Context, isCloud bool) (map[string]string, error) {
-    // Run preflight check before setting up
-    preflightRes := RunPreflightCheck(isCloud)
-    if !preflightRes.Passed {
-        return nil, fmt.Errorf("preflight check failed: %s", preflightRes.Message)
-    }
-
     if isCloud {
         return map[string]string{
             "mode":  "cloud",
