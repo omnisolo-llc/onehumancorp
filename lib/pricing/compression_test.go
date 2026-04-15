@@ -90,3 +90,30 @@ func TestTruncateByWordCount(t *testing.T) {
 		t.Fatalf("Truncated string doesn't match expected. Got %q, expected %q", truncated, "")
 	}
 }
+
+func TestMinifyJSONPrompt(t *testing.T) {
+	original := `{
+  "name": "Miser",
+  "role": "Agent"
+}`
+	minified := MinifyJSONPrompt(original)
+	expected := `{"name":"Miser","role":"Agent"}`
+	if minified != expected {
+		t.Fatalf("Minified JSON doesn't match expected. Got %q, expected %q", minified, expected)
+	}
+
+	invalid := `not a json`
+	if MinifyJSONPrompt(invalid) != invalid {
+		t.Fatalf("MinifyJSONPrompt modified non-JSON string")
+	}
+
+	arrayJson := `[
+  "Miser",
+  "Agent"
+]`
+	minifiedArray := MinifyJSONPrompt(arrayJson)
+	expectedArray := `["Miser","Agent"]`
+	if minifiedArray != expectedArray {
+		t.Fatalf("Minified array JSON doesn't match expected. Got %q, expected %q", minifiedArray, expectedArray)
+	}
+}

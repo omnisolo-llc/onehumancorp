@@ -128,3 +128,25 @@ func TestCompressedEmbeddingCache_Expiration(t *testing.T) {
 		t.Fatalf("Expected prompt to be expired from cache")
 	}
 }
+
+func TestBoundedEmbeddingCache(t *testing.T) {
+	c := NewBoundedEmbeddingCache(10*time.Minute, 2)
+
+	c.Set("prompt1", "response1")
+	c.Set("prompt2", "response2")
+
+	// Evicts prompt1
+	c.Set("prompt3", "response3")
+
+	if _, ok := c.Get("prompt1"); ok {
+		t.Fatalf("prompt1 should have been evicted")
+	}
+
+	if val, ok := c.Get("prompt2"); !ok || val != "response2" {
+		t.Fatalf("prompt2 should be present")
+	}
+
+	if val, ok := c.Get("prompt3"); !ok || val != "response3" {
+		t.Fatalf("prompt3 should be present")
+	}
+}
