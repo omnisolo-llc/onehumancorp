@@ -21,6 +21,25 @@ import (
 )
 
 // TaskOrchestrator abstracts the state machine and dependency tracking for the Teammate Mesh
+
+
+type SharedTaskDecompositionDB struct {
+	ID              string          `json:"id" db:"id"`
+	OrganizationID  string          `json:"organization_id" db:"organization_id"`
+	Title           string          `json:"title" db:"title"`
+	Description     *string         `json:"description" db:"description"`
+	Status          string          `json:"status" db:"status"`
+	AssignedAgentID *string         `json:"assigned_agent_id" db:"assigned_agent_id"`
+	Priority        string          `json:"priority" db:"priority"`
+	Payload         json.RawMessage `json:"payload" db:"payload"`
+	ParentPlanID    *string         `json:"parent_plan_id" db:"parent_plan_id"`
+	Dependencies    json.RawMessage `json:"dependencies" db:"dependencies"`
+	LockedUntil     *time.Time      `json:"locked_until" db:"locked_until"`
+	CreatedAt       time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+
 type TaskOrchestrator interface {
 	ReceiveHighLevelRequest(ctx context.Context, orgID, title string) (string, error)
 	EnqueueTask(ctx context.Context, task *models.Task, dependsOn []string) (*models.Task, error)
@@ -584,4 +603,106 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 	}
 
 	return taskID, nil
+}
+
+
+
+func (to *DefaultTaskOrchestrator) ClaimDecompositionTask(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
+	if to.db.IsSQLite() {
+		return to.claimDecompositionTaskSQLite(ctx, agentID)
+	}
+	return to.claimDecompositionTaskPostgres(ctx, agentID)
+}
+
+func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
+	to.mu.Lock()
+	defer to.mu.Unlock()
+
+	tx, err := to.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		FROM shared_tasks_decomposition
+		WHERE status = 'PENDING'
+		LIMIT 1
+	`
+	row := tx.QueryRow(ctx, query)
+
+	var task SharedTaskDecompositionDB
+	var payloadStr, dependenciesStr string
+    var createdAtStr, updatedAtStr string
+    var lockedUntil *time.Time
+	if err := row.Scan(
+		&task.ID, &task.OrganizationID, &task.Title, &task.Description,
+		&task.Status, &task.AssignedAgentID, &task.Priority, &payloadStr, &task.ParentPlanID,
+		&dependenciesStr, &lockedUntil, &createdAtStr, &updatedAtStr,
+	); err != nil {
+		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to query pending task: %w", err)
+	}
+
+	task.Payload = []byte(payloadStr)
+	task.Dependencies = []byte(dependenciesStr)
+    task.LockedUntil = lockedUntil
+    task.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
+    task.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAtStr)
+
+	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+		return nil, fmt.Errorf("failed to update task status: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	task.Status = "IN_PROGRESS"
+	task.AssignedAgentID = &agentID
+	return &task, nil
+}
+
+func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
+	tx, err := to.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		FROM shared_tasks_decomposition
+		WHERE status = 'PENDING'
+		LIMIT 1
+		FOR UPDATE SKIP LOCKED
+	`
+	row := tx.QueryRow(ctx, query)
+
+	var task SharedTaskDecompositionDB
+	if err := row.Scan(
+		&task.ID, &task.OrganizationID, &task.Title, &task.Description,
+		&task.Status, &task.AssignedAgentID, &task.Priority, &task.Payload, &task.ParentPlanID,
+		&task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+	); err != nil {
+		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to query pending task: %w", err)
+	}
+
+	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+		return nil, fmt.Errorf("failed to update task status: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	task.Status = "IN_PROGRESS"
+	task.AssignedAgentID = &agentID
+	return &task, nil
 }

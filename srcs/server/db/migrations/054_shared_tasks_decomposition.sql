@@ -1,16 +1,16 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
-    id VARCHAR PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
-    agent_id VARCHAR,
+    assigned_agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
-    payload TEXT,
+    payload JSONB,
     parent_plan_id TEXT,
-    dependencies TEXT NOT NULL DEFAULT '[]',
+    dependencies JSONB NOT NULL DEFAULT '[]',
     locked_until TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
