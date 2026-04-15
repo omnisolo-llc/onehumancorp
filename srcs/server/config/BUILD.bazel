@@ -14,8 +14,8 @@ go_library(
 go_test(
     name = "config_test",
     srcs = ["config_test.go"],
+    embed = [":config"],
     deps = [
-        ":config",
         "@com_github_spf13_afero//:afero",
     ],
 )

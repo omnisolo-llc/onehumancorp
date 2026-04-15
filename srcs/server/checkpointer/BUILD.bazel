@@ -15,5 +15,5 @@ go_test(
     name = "checkpointer_test",
     srcs = ["checkpointer_test.go"],
     embed = [":checkpointer"],
-    deps = ["//srcs/server/db"],
+    deps = ["@org_modernc_sqlite//:sqlite"],
 )

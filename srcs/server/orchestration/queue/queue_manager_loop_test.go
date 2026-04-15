@@ -17,7 +17,7 @@ func TestQueueManagerLoop(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		organization_id TEXT NOT NULL,
 		parent_task_id TEXT NOT NULL,
-		payload TEXT,
+		payload JSONB,
 		status TEXT NOT NULL DEFAULT 'QUEUED',
 		worker_id TEXT,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

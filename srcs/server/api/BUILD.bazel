@@ -3,8 +3,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "api",
     srcs = [
-        "sync_escalation_handler.go",
         "sync_handler.go",
+        "sync_escalation_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
@@ -19,15 +19,10 @@ go_library(
 
 go_test(
     name = "api_test",
-    srcs = [
-        "sync_escalation_handler_test.go",
-        "sync_handler_test.go",
-    ],
+    srcs = ["sync_escalation_handler_test.go"],
     embed = [":api"],
     deps = [
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
-        "@org_golang_google_grpc//credentials",
-        "@org_golang_google_grpc//peer",
     ],
 )
