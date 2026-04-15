@@ -1,0 +1,4 @@
+metrics:
+  health: OK
+  tasks_processed: 1
+status: SUCCESS
