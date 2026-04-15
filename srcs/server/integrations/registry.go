@@ -138,12 +138,6 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	IntegrationTypeGitHubIssues IntegrationType = "github_issues"
-	// IntegrationTypeLinear provides domain-specific context and typed constraints for IntegrationTypeLinear operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	IntegrationTypeLinear IntegrationType = "linear"
 )
 
 // ConnectionStatus reflects whether an integration is currently active and reachable.
