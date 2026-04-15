@@ -12,6 +12,7 @@ go_library(
         "centrifuge_hub.go",
         "delegation.go",
         "event_log.go",
+        "events.go",
         "health.go",
         "hub.go",
         "postgres_hub.go",
