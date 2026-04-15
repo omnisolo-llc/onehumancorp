@@ -16,17 +16,20 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
-	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	"github.com/redis/go-redis/v9"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	orchestration_mesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
-	"github.com/onehumancorp/mono/srcs/server/utils")
+	"github.com/onehumancorp/mono/srcs/server/utils"
+)
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -62,8 +65,8 @@ type Server struct {
 	referrals             []Referral
 	downloads             []Download
 	teamInvites           []TeamInvite
-	onboardingFunnels []OnboardingFunnel
-	waitlist          []WaitlistEntry
+	onboardingFunnels     []OnboardingFunnel
+	waitlist              []WaitlistEntry
 }
 
 // RateLimitState functionality.
@@ -459,8 +462,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		experiments:           []LandingPageExperiment{},
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
-		waitlist:          []WaitlistEntry{},
-		onboardingFunnels: []OnboardingFunnel{},
+		waitlist:              []WaitlistEntry{},
+		onboardingFunnels:     []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
@@ -913,7 +916,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	payloadMap := map[string]interface{}{
 		"agent_id": req.AgentID,
 		"action":   req.Action,
@@ -985,7 +987,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-
 
 	err := s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -2017,6 +2018,19 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return
 	}
+
+	// Dispatch to the specific MeshBroker per implementation request
+	var broker orchestration_mesh.MeshBroker
+	if mode == "cloud" && os.Getenv("REDIS_URL") != "" {
+		redisURL := os.Getenv("REDIS_URL")
+		opt, _ := redis.ParseURL(redisURL)
+		client := redis.NewClient(opt)
+		defer client.Close()
+		broker = orchestration_mesh.NewRedisMeshBroker(client)
+	} else {
+		broker = orchestration_mesh.NewLocalMeshBroker()
+	}
+	_ = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))

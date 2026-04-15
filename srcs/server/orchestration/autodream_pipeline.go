@@ -129,21 +129,12 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 		memID := missionID
 
-		if p.db.IsSQLite() {
-			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content
-			`
-			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
-		} else {
-			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
-			`
-			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
-		}
+		insertQuery = `
+			INSERT INTO autodream_memories (id, task_id, content, embedding, created_at)
+			VALUES ($1, $2, $3, $4::vector, CURRENT_TIMESTAMP)
+			ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+		`
+		insertArgs = []interface{}{memID, missionID, contentToEmbed, embeddingStr}
 
 		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
 			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", memID, "error", err)

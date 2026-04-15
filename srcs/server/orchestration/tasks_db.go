@@ -50,14 +50,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
     }
 
     if to.dbProvider.IsSQLite() {
-        return to.claimTaskSQLite(ctx, claims.OrganizationID, agentID)
+        to.mu.Lock()
+        defer to.mu.Unlock()
     }
-    return to.claimTaskPostgres(ctx, claims.OrganizationID, agentID)
-}
-
-func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-    to.mu.Lock()
-    defer to.mu.Unlock()
 
     tx, err := to.dbProvider.Begin(ctx)
     if err != nil {
@@ -67,65 +62,17 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
 
     query := `
         SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
-        FROM shared_tasks_v4 st
+        FROM shared_tasks_decomposition st
         WHERE st.status = 'PENDING' AND st.organization_id = $1
         AND NOT EXISTS (
-            SELECT 1 FROM json_each(st.dependencies) AS dep
-            JOIN shared_tasks_v4 d ON d.id = dep.value
+            SELECT 1 FROM shared_tasks_decomposition d
             WHERE d.status != 'COMPLETED'
-        )
-        LIMIT 1
-    `
-    row := tx.QueryRow(ctx, query, orgID)
-
-    var task SharedTaskDB
-    if err := row.Scan(
-        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
-        &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
-    ); err != nil {
-        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-            return nil, nil
-        }
-        return nil, fmt.Errorf("failed to query pending task: %w", err)
-    }
-
-    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
-        return nil, fmt.Errorf("failed to update task status: %w", err)
-    }
-
-    if err := to.insertTransition(ctx, tx, task.ID, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
-        return nil, fmt.Errorf("failed to insert transition: %w", err)
-    }
-
-    if err := tx.Commit(ctx); err != nil {
-        return nil, fmt.Errorf("failed to commit transaction: %w", err)
-    }
-
-    task.Status = "IN_PROGRESS"
-    task.AgentID = &agentID
-    return &task, nil
-}
-
-func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-    tx, err := to.dbProvider.Begin(ctx)
-    if err != nil {
-        return nil, fmt.Errorf("failed to begin transaction: %w", err)
-    }
-    defer tx.Rollback(ctx)
-
-    query := `
-        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
-        FROM shared_tasks_v4 st
-        WHERE st.status = 'PENDING' AND st.organization_id = $1
-        AND NOT EXISTS (
-            SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
-            JOIN shared_tasks_v4 d ON d.id = dep
-            WHERE d.status != 'COMPLETED'
+            AND st.dependencies LIKE '%"' || d.id || '"%'
         )
         LIMIT 1
         FOR UPDATE SKIP LOCKED
     `
-    row := tx.QueryRow(ctx, query, orgID)
+    row := tx.QueryRow(ctx, query, claims.OrganizationID)
 
     var task SharedTaskDB
     if err := row.Scan(
@@ -138,7 +85,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
         return nil, fmt.Errorf("failed to query pending task: %w", err)
     }
 
-    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
         return nil, fmt.Errorf("failed to update task status: %w", err)
     }
 
@@ -163,7 +110,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
     defer tx.Rollback(ctx)
 
     var current string
-    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1", taskID).Scan(&current); err != nil {
+    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", taskID).Scan(&current); err != nil {
         return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
     }
 
@@ -171,7 +118,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
     }
 
-    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
         return err
     }
 

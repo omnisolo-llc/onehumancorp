@@ -3,8 +3,12 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "mesh",
     srcs = [
+        "broker.go",
+        "http_handler.go",
+        "local_broker.go",
         "local_mesh.go",
         "mesh.go",
+        "redis_broker.go",
         "redis_mesh.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/mesh",
