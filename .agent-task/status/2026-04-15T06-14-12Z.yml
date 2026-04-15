@@ -1,0 +1,6 @@
+timestamp: "${TS}"
+agent: Jules
+status: HEALTHY
+metrics:
+  kairos_hybrid_os_design_creation: SUCCESS
+  mission_brief_generation: SUCCESS
