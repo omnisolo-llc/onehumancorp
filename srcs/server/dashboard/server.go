@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	growthapi "github.com/onehumancorp/mono/services/growth/api"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -36,6 +37,7 @@ import (
 // Has no side effects.
 type Server struct {
 	mu  sync.RWMutex
+	MeshBroker orchmesh.MeshBroker
 	org domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
@@ -454,6 +456,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		authHandlers:          auth.NewHandlers(store),
 		agentProviderRegistry: agents.DefaultRegistry(),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
+		MeshBroker:            orchmesh.NewLocalMeshBroker(),
 		rateLimitStates:       make(map[string]*RateLimitState),
 		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),
 		serveUI:               shouldServeUI(),
@@ -1966,6 +1969,8 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+
 	var req struct {
 		Channel string                 `json:"channel"`
 		Data    map[string]interface{} `json:"data"`
@@ -1986,7 +1991,17 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.hub.Publish(orchestration.Message{
+	var broker orchmesh.MeshBroker
+	if mode == "cloud" && s.MeshBroker != nil {
+		broker = s.MeshBroker
+	} else {
+		broker = s.MeshBroker // Already initialized to LocalMeshBroker
+	}
+
+	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
+
+	// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated
+	_ = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   "system",
