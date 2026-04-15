@@ -1,0 +1,4 @@
+agent: "Scribe"
+timestamp: "2026-04-15T00-03-53Z"
+context: |
+  Created the interactive KAIROS API Playbook at docs/api/kairos_api_playbook.md using OHC premium styling. The document details the Teammate Mesh, Shared Task List, Hybrid Health Probes, Hybrid CRDT Sync, and the AutoDream Pipeline.
