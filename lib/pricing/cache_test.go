@@ -78,3 +78,53 @@ func TestLocalEmbeddingCache_Prune(t *testing.T) {
 		t.Fatalf("Expected prompt3 to still be in cache")
 	}
 }
+
+func TestCompressedEmbeddingCache_GetSet(t *testing.T) {
+	cache := NewCompressedEmbeddingCache(5 * time.Minute)
+
+	prompt := "What is the capital of France?"
+	response := "Paris"
+
+	// Should not exist initially
+	_, exists := cache.Get(prompt)
+	if exists {
+		t.Fatalf("Expected prompt to not be in cache")
+	}
+
+	// Set and retrieve
+	cache.Set(prompt, response)
+
+	cachedResponse, exists := cache.Get(prompt)
+	if !exists {
+		t.Fatalf("Expected prompt to be in cache")
+	}
+
+	if cachedResponse != response {
+		t.Fatalf("Expected cached response %q, got %q", response, cachedResponse)
+	}
+}
+
+func TestCompressedEmbeddingCache_Expiration(t *testing.T) {
+	// Very short TTL for testing
+	cache := NewCompressedEmbeddingCache(10 * time.Millisecond)
+
+	prompt := "What is the meaning of life?"
+	response := "42"
+
+	cache.Set(prompt, response)
+
+	// Should exist immediately
+	_, exists := cache.Get(prompt)
+	if !exists {
+		t.Fatalf("Expected prompt to be in cache immediately after set")
+	}
+
+	// Wait for expiration
+	time.Sleep(20 * time.Millisecond)
+
+	// Should not exist after expiration
+	_, exists = cache.Get(prompt)
+	if exists {
+		t.Fatalf("Expected prompt to be expired from cache")
+	}
+}
