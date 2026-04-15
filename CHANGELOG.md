@@ -1,5 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Fully implemented KAIROS Master Orchestration interfaces, including Shared Task List, Sub-Agent Queues, and AutoDream pipelines for cross-pod coordination.
+- Integrated Teammate Mesh v2 with WebSocket transport and SPIFFE mTLS validation for zero-trust agent communication.
+
+### Privacy/Offline Improvements
+- Enhanced Standalone reliability with KAIROS state machine SQLite fallbacks and proactive chaos engineering verification.
+- Integrated SwarmContextOverlay with premium Glassmorphism aesthetics for improved local swarm observability.
+
 ## v0.3.6 (Cloud) / v0.3.6+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implemented storage compression and token budget management tools for cost optimization in Kubernetes deployments.

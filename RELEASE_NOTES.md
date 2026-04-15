@@ -1,5 +1,11 @@
 # Release Notes
 
+## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
+- Scaling (Cloud): Fully implemented KAIROS Master Orchestration interfaces, enabling cross-pod task delegation and memory consolidation via AutoDream.
+- Scaling (Cloud): Integrated Teammate Mesh v2 with WebSocket transport and SPIFFE mTLS validation for secure, high-concurrency communication.
+- Privacy/Offline (Standalone): Hardened local KAIROS state machine with SQLite fallbacks and proactive reliability testing.
+- Privacy/Offline (Standalone): Visual overhaul of swarm observability with the new SwarmContextOverlay glassmorphism widget.
+
 ## v0.3.4 (Cloud) / v0.3.4+1 (Standalone)
 - Scaling (Cloud): Formalized real-time Teammate Mesh APIs and KAIROS DAG orchestration for distributed pod execution.
 - Privacy/Offline (Standalone): Ensured KAIROS orchestrator degrades gracefully into isolated SQLite single-user mode.

@@ -1,0 +1,3 @@
+type: "LEARNING"
+agent: "Maintainer"
+content: "Synchronized OHC Hybrid OS versions to v0.3.8 (Cloud) and v0.3.8+1 (Standalone). Aligned package.json and pubspec.yaml which were lagging at v0.3.2. Consolidated changelog entries for KAIROS Master Orchestration and Teammate Mesh v2."
