@@ -3,6 +3,7 @@ package hybridfsmcp
 import (
 	"bytes"
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/agents/mcp/proxy"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -199,12 +200,14 @@ func (p *CloudFSProvider) ListDir(ctx context.Context, path string) ([]string, e
 // HybridFSMCP implements the MCP interface for filesystem operations.
 type HybridFSMCP struct {
 	provider FileSystemProvider
+	proxy    *proxy.McpSyncProxy
 }
 
 // NewHybridFSMCP creates a new HybridFSMCP instance.
-func NewHybridFSMCP(provider FileSystemProvider) *HybridFSMCP {
+func NewHybridFSMCP(provider FileSystemProvider, mcpProxy *proxy.McpSyncProxy) *HybridFSMCP {
 	return &HybridFSMCP{
 		provider: provider,
+		proxy:    mcpProxy,
 	}
 }
 
@@ -248,6 +251,9 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 		if err != nil {
 			return nil, err
 		}
+		if m.proxy != nil {
+			m.proxy.Buffer(ctx, toolName, arguments)
+		}
 		return map[string]interface{}{"content": string(data)}, nil
 	case "write_file":
 		path, ok := arguments["path"].(string)
@@ -262,6 +268,9 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 		if err != nil {
 			return nil, err
 		}
+		if m.proxy != nil {
+			m.proxy.Buffer(ctx, toolName, arguments)
+		}
 		return map[string]interface{}{"status": "success"}, nil
 	case "list_directory":
 		path, ok := arguments["path"].(string)
@@ -271,6 +280,9 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 		entries, err := m.provider.ListDir(ctx, path)
 		if err != nil {
 			return nil, err
+		}
+		if m.proxy != nil {
+			m.proxy.Buffer(ctx, toolName, arguments)
 		}
 		return map[string]interface{}{"entries": entries}, nil
 	default:
