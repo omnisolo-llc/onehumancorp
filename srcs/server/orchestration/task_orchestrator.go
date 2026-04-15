@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/checkpointer"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
@@ -59,6 +60,7 @@ type DefaultTaskOrchestrator struct {
 	workerWg     sync.WaitGroup
 	taskQueue    queue.TaskQueue
 	subWorker    *SubAgentWorker
+	checkpointer checkpointer.CheckpointSaver
 }
 
 func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode, mesh MeshTransport) TaskOrchestrator {
@@ -74,6 +76,7 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 	}
 
 	subWorker := NewSubAgentWorker(tq, spawner)
+	cp := checkpointer.NewPgCheckpointSaver(provider)
 
 	to := &DefaultTaskOrchestrator{
 		db:           provider,
@@ -85,6 +88,7 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 		workerCancel: cancel,
 		taskQueue:    tq,
 		subWorker:    subWorker,
+		checkpointer: cp,
 	}
 	to.StartBackgroundWorker()
 	subWorker.Start(ctx)
@@ -395,6 +399,19 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 		return nil, fmt.Errorf("failed to commit: %w", err)
 	}
 
+	// Save checkpoint
+	if to.checkpointer != nil {
+		err := to.checkpointer.PutCheckpoint(ctx, task.ID, &checkpointer.Checkpoint{
+			ThreadID:     task.ID,
+			CheckpointID: checkpointer.GenerateCheckpointID(),
+			Checkpoint:   map[string]interface{}{"status": "ACQUIRED", "agent_id": agentID},
+			Metadata:     map[string]interface{}{"event": "AcquireReadyTask"},
+		})
+		if err != nil {
+			slog.Error("Failed to save checkpoint in AcquireReadyTask", "taskID", task.ID, "error", err)
+		}
+	}
+
 	// Broadcast
 	if to.mesh != nil {
 		_ = to.mesh.BroadcastTask(ctx, Task{
@@ -498,6 +515,19 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	// Save checkpoint
+	if to.checkpointer != nil {
+		err := to.checkpointer.PutCheckpoint(ctx, taskID, &checkpointer.Checkpoint{
+			ThreadID:     taskID,
+			CheckpointID: checkpointer.GenerateCheckpointID(),
+			Checkpoint:   map[string]interface{}{"status": "COMPLETED", "result": result},
+			Metadata:     map[string]interface{}{"event": "CompleteTask"},
+		})
+		if err != nil {
+			slog.Error("Failed to save checkpoint in CompleteTask", "taskID", taskID, "error", err)
+		}
 	}
 
 	// Metrics
