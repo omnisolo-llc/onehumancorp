@@ -23,7 +23,6 @@ go_test(
     embed = [":resilience"],
     deps = [
         "//srcs/server/db",
-        "@com_github_redis_rueidis//:rueidis",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
