@@ -27,8 +27,6 @@ go.work.sum
 # env file
 .env
 
-.claude-code/
-
 # Editor/IDE
 # .idea/
 # .vscode/
@@ -74,8 +72,11 @@ node_modules/
 *.tgz
 *.tar.gz
 Chart.lock
+
+.claude-code/
 /.claude-code
 
 # Rust build artifacts
 /target/
+.agent-task/
 /.agent-task
