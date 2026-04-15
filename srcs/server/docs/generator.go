@@ -2,6 +2,7 @@ package docs
 
 import (
 	"fmt"
+	"log/slog"
 	"html"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ func init() {
 	var err error
 	docsGenerated, err = meter.Int64Counter("docs_generated_total", metric.WithDescription("Total number of premium design docs generated"))
 	if err != nil {
-		fmt.Printf("failed to initialize metrics: %v\n", err)
+		slog.Error("failed to initialize metrics", "err", err)
 	}
 }
 
