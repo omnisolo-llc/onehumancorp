@@ -1,5 +1,6 @@
 package interop
 
+
 import (
 	"context"
 	"fmt"
@@ -8,9 +9,17 @@ import (
 	"sync"
 
 	"github.com/redis/rueidis"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
+
+var (
+	meter                 = otel.Meter("github.com/onehumancorp/mono/srcs/server/interop")
+	meshMessagesPublished, _ = meter.Int64Counter("mesh.messages.published")
+	meshMessagesReceived, _  = meter.Int64Counter("mesh.messages.received")
+)
+
 
 // TeammateMesh provides the interface for agents to publish and subscribe
 // to real-time communication messages across the swarm.

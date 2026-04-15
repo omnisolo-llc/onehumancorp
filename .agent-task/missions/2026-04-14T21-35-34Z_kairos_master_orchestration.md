@@ -2,9 +2,7 @@
 title: "KAIROS Master Orchestration Interfaces"
 priority: P0
 estimated_scope: Large
-status: BLOCKED
-blockers:
-  - "Mission requires file modifications outside the Miser domain bounds (apps/billing/, services/billing/, lib/pricing/)."
+status: DONE
 ---
 
 # Title: KAIROS Master Orchestration Interfaces

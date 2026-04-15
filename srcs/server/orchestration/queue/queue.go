@@ -33,3 +33,11 @@ type JobQueue interface {
 	Push(ctx context.Context, topic string, payload []byte) error
 	Pop(ctx context.Context, topic string) ([]byte, error)
 }
+
+func EnqueueJob(ctx context.Context, q TaskQueue, job *Job) error {
+	return q.Enqueue(ctx, job)
+}
+
+func DequeueJob(ctx context.Context, q TaskQueue, roles []string) (*Job, error) {
+	return q.Dequeue(ctx, roles)
+}

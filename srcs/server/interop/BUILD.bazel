@@ -10,11 +10,17 @@ go_library(
         "semantickernel_adapter.go",
         "types.go",
         "lock.go",
+        "mesh.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop",
     deps = [
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@io_opentelemetry_go_otel//attribute",
+
+
     ],
     visibility = ["//visibility:public"],
 )
@@ -30,6 +36,11 @@ go_test(
     deps = [
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@io_opentelemetry_go_otel//attribute",
+
+
     ],
     embed = [":interop"],
 )
