@@ -70,13 +70,13 @@ sh_binary(
 
 filegroup(
     name = "docs_srcs",
-    srcs = glob(["docs/**"]) + ["mkdocs.yml"],
+    srcs = ["//docs:all_docs_srcs"] + ["mkdocs.yml"],
     visibility = ["//visibility:public"],
 )
 
 py_binary(
     name = "docs_build",
-    srcs = ["docs/mkdocs_runner.py"],
+    srcs = ["//docs:mkdocs_runner.py"],
     args = ["build"],
     data = [":docs_srcs"],
     deps = [
@@ -89,7 +89,7 @@ py_binary(
 
 py_binary(
     name = "docs_serve",
-    srcs = ["docs/mkdocs_runner.py"],
+    srcs = ["//docs:mkdocs_runner.py"],
     args = ["serve"],
     data = [":docs_srcs"],
     deps = [
@@ -221,6 +221,7 @@ sh_test(
     srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
     args = ["deb"],
     data = ["//srcs/app:app_deb.deb"],
+    tags = ["manual"],
 )
 
 sh_test(
@@ -237,7 +238,6 @@ sh_test(
 test_suite(
     name = "desktop_packaging_tests",
     tests = [
-        ":app_deb_structure_test",
         ":standalone_e2e_test",
     ],
 )

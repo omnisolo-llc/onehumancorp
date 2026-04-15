@@ -3,3 +3,9 @@ exports_files([
     "requirements.txt",
     "mkdocs_runner.py",
 ])
+
+filegroup(
+    name = "all_docs_srcs",
+    srcs = glob(["**/*"], exclude = ["**/*.pyc", "BUILD.bazel"]),
+    visibility = ["//visibility:public"],
+)
