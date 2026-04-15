@@ -22,11 +22,12 @@ go_library(
     name = "mcp",
     srcs = [
         "blob_provider.go",
-        "crdt_provider.go",
         "client.go",
+        "crdt_provider.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
     visibility = ["//visibility:public"],
+    deps = ["//srcs/server/telemetry"],
 )
 
 go_test(

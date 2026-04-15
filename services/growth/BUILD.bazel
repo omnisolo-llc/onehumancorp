@@ -2,7 +2,11 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "growth",
-    srcs = ["referral.go"],
+    srcs = [
+        "landing.go",
+        "referral.go",
+        "team.go",
+    ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
     deps = [
@@ -12,7 +16,11 @@ go_library(
 
 go_test(
     name = "growth_test",
-    srcs = ["referral_test.go"],
+    srcs = [
+        "landing_test.go",
+        "referral_test.go",
+        "team_test.go",
+    ],
     embed = [":growth"],
     deps = [
         "//lib/analytics",
