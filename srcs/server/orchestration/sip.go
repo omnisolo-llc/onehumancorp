@@ -125,7 +125,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 			return err
 		}
 
-		slog.Warn("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
+		slog.Debug("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
 		time.Sleep(retryInterval * time.Duration(1<<i))
 	}
 
