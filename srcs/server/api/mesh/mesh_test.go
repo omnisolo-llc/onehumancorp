@@ -1,19 +1,22 @@
 package mesh
 
 import (
+	"bytes"
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
-	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 func TestMain(m *testing.M) {
-    provider := noop.NewMeterProvider()
-    otel.SetMeterProvider(provider)
-    m.Run()
+	provider := noop.NewMeterProvider()
+	otel.SetMeterProvider(provider)
+	m.Run()
 }
 
 func TestMemoryMeshService(t *testing.T) {
@@ -52,5 +55,22 @@ func TestAuthErrors(t *testing.T) {
 	_, err = svc.Subscribe(ctx)
 	if err == nil {
 		t.Error("expected unauthorized error")
+	}
+}
+
+func TestMeshHandlerBroadcast(t *testing.T) {
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	reqBody := []byte(`{"intent":"hello handler"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 }
