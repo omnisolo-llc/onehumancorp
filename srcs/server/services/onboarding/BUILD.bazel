@@ -4,10 +4,11 @@ go_library(
     name = "onboarding",
     srcs = [
         "audit.go",
-        "provisioner.go",
-        "wizard.go",
         "cli.go",
+        "diagnostics.go",
+        "provisioner.go",
         "validation.go",
+        "wizard.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/services/onboarding",
     visibility = ["//visibility:public"],
@@ -21,10 +22,11 @@ go_test(
     name = "onboarding_test",
     srcs = [
         "audit_test.go",
-        "provisioner_test.go",
-        "wizard_test.go",
         "cli_test.go",
+        "diagnostics_test.go",
+        "provisioner_test.go",
         "validation_test.go",
+        "wizard_test.go",
     ],
     embed = [":onboarding"],
 )
