@@ -3,7 +3,7 @@ package growth
 import (
 	"context"
 	"testing"
-	"github.com/onehumancorp/mono/lib/analytics"
+	"github.com/onehumancorp/mono/srcs/server/lib/analytics"
 )
 
 func TestViralLoopTracker(t *testing.T) {

@@ -1,7 +1,0 @@
-type: status
-metadata:
-  role: Maintainer
-  timestamp: 1776239999
-health: ok
-observations:
-  - Infrastructure hardening complete.

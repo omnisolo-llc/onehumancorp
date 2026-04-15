@@ -577,7 +577,8 @@ def flutter_build_action(
         target,
         pub_cache_dir,
         dart_tool_dir,
-        package_dir = ""):
+        package_dir = "",
+        build_args = []):
     """Run a Flutter build command.
 
     Returns:
@@ -603,6 +604,10 @@ def flutter_build_action(
         "apk": {
             "command": "build apk --release",
             "output_dir": "build/app/outputs/flutter-apk",
+        },
+        "aab": {
+            "command": "build appbundle --release",
+            "output_dir": "build/app/outputs/bundle/release",
         },
         "ios": {
             "command": "build ios --release --no-codesign",
@@ -633,6 +638,7 @@ DART_TOOL_DIR="{dart_tool_dir}"
 FLUTTER_BIN="{flutter_bin}"
 OUTPUT_LOG="{output_log}"
 BUILD_ARTIFACTS="{build_artifacts}"
+BUILD_ARGS="{build_args}"
 BUILD_COMMAND="{build_command}"
 BUILD_OUTPUT_DIR="{build_output_dir}"
 ORIGINAL_PWD="$PWD"
@@ -957,9 +963,9 @@ else
 fi
 echo ""
 
-echo "Running: $FLUTTER_BIN_ABS {build_command}"
+echo "Running: $FLUTTER_BIN_ABS {build_command} {build_args}"
 
-if "$FLUTTER_BIN_ABS" --suppress-analytics {build_command}; then
+if "$FLUTTER_BIN_ABS" --suppress-analytics {build_command} {build_args}; then
     echo "✓ flutter {build_command} completed successfully"
 
     # Copy build artifacts to absolute path
@@ -991,6 +997,7 @@ fi
         flutter_bin = flutter_bin,
         output_log = build_output.path,
         build_artifacts = build_artifacts.path,
+        build_args = " ".join(build_args),
         build_command = config["command"],
         build_output_dir = config["output_dir"],
         target = target,

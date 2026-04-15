@@ -1,5 +1,0 @@
-mission_id: 1776249819956888538
-key_patterns:
-  - React components missing correct tsconfig options
-  - Fix using isolated rootDir to isolate React projects inside apps/web folder.
-  - Fix Jest settings to use @testing-library/jest-dom setup and ts-jest.

@@ -22,10 +22,12 @@ add_executable(${BINARY_NAME}
 apply_standard_settings(${BINARY_NAME})
 
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
-target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
-target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
+target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+set(PLUGIN_BUNDLED_LIBRARIES)
+include(${FLUTTER_MANAGED_DIR}/generated_plugins.cmake)
 
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}")
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${CMAKE_INSTALL_PREFIX}/data")

@@ -116,11 +116,26 @@ jobs:
       - name: Build iOS (no code sign)
         run: bazelisk run //release:flutter-build-ios
 
+      - name: Package unsigned iOS IPA
+        run: |
+          mkdir -p dist/Payload
+          app_path="$(find srcs/app/build/ios/iphoneos -maxdepth 1 -name '*.app' | head -n 1)"
+          if [[ -z "${app_path}" ]]; then
+            echo "No built .app bundle found in srcs/app/build/ios/iphoneos" >&2
+            exit 1
+          fi
+          cp -R "${app_path}" dist/Payload/
+          (
+            cd dist
+            zip -qry ohc-app-ios-unsigned.ipa Payload
+          )
+          rm -rf dist/Payload
+
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: flutter-ios
-          path: srcs/app/build/ios/iphoneos/
+          path: dist/ohc-app-ios-unsigned.ipa
           retention-days: 7
 
   # ── Build Flutter macOS desktop app ─────────────────────────────────────────
@@ -195,17 +210,26 @@ jobs:
       - name: Build Linux app
         run: bazelisk run //release:flutter-build-linux
 
+      - name: Build Linux native packages
+        run: bazelisk build //srcs/app:app_deb //srcs/app:app_rpm
+
       - name: Archive Linux build
         run: |
           mkdir -p dist
           tar -C srcs/app/build/linux/x64/release/bundle \
             -czf dist/ohc-app-linux-x86_64.tar.gz .
+          while read -r artifact; do
+            [[ -n "${artifact}" && -f "${artifact}" ]] && cp "${artifact}" dist/
+          done < <(bazelisk cquery --output=files //srcs/app:app_deb //srcs/app:app_rpm)
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: flutter-linux
-          path: dist/ohc-app-linux-x86_64.tar.gz
+          path: |
+            dist/ohc-app-linux-x86_64.tar.gz
+            dist/*.deb
+            dist/*.rpm
           retention-days: 7
 
   # ── Build Flutter Web app ────────────────────────────────────────────────────
@@ -264,7 +288,7 @@ jobs:
           # Individual patterns are checked separately so a missing platform
           # (e.g. no APK when the Android job was skipped) does not abort.
           files=()
-          for pat in "*.tar.gz" "*.zip" "*.aab" "*.apk"; do
+          for pat in "*.tar.gz" "*.zip" "*.aab" "*.apk" "*.deb" "*.rpm" "*.ipa"; do
             # shellcheck disable=SC2206
             found=( $pat ) 2>/dev/null || true
             for f in "${found[@]}"; do
@@ -285,6 +309,10 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/*.aab
+            dist/*.apk
+            dist/*.deb
+            dist/*.rpm
+            dist/*.ipa
             dist/checksums.txt
           generate_release_notes: true
           draft: false

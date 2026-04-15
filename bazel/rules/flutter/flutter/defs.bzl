@@ -534,6 +534,7 @@ fi
         library_info.pub_cache,
         library_info.dart_tool,
         package_dir = ctx.label.package if ctx.file.workspace_pubspec else "",
+        build_args = ctx.attr.build_args,
     )
 
     runner = ctx.actions.declare_file(ctx.label.name + "_runner.sh")
@@ -574,8 +575,11 @@ _flutter_app_rule = rule(
             doc = "Additional source files to overlay (e.g. web/ directories).",
         ),
         "target": attr.string(
-            values = ["web", "apk", "ios", "macos", "linux", "windows"],
+            values = ["web", "apk", "aab", "ios", "macos", "linux", "windows"],
             doc = "Flutter build target platform",
+        ),
+        "build_args": attr.string_list(
+            doc = "Additional arguments appended to the underlying flutter build command.",
         ),
         "workspace_pubspec": attr.label(
             allow_single_file = True,
@@ -599,11 +603,13 @@ def flutter_app(
         name,
         embed,
         srcs = None,
+        build_args = None,
         visibility = None,
         tags = None,
         testonly = False,
         web = None,
         apk = None,
+        aab = None,
         ios = None,
         macos = None,
         linux = None,
@@ -611,7 +617,7 @@ def flutter_app(
         workspace_pubspec = None):
     """Macro that defines flutter_app platform targets.
 
-    Each platform attribute (`web`, `apk`, `ios`, `macos`, `linux`, `windows`) accepts
+    Each platform attribute (`web`, `apk`, `aab`, `ios`, `macos`, `linux`, `windows`) accepts
     labels for files that should be overlaid into the Flutter workspace when building
     for that platform. A target is emitted only when the corresponding attribute is
     provided.
@@ -620,11 +626,13 @@ def flutter_app(
       name: The base name for the flutter_app targets.
       embed: List of flutter_library targets to embed.
       srcs: Additional source files to include in the build workspace.
+      build_args: Additional arguments passed to each generated flutter build target.
       visibility: Visibility specification for generated targets.
       tags: Tags to apply to generated targets.
       testonly: Whether the targets are testonly.
       web: Label for web-specific files (e.g., web/index.html). If provided, generates {name}.web target.
       apk: Label for Android APK-specific files. If provided, generates {name}.apk target.
+      aab: Label for Android App Bundle-specific files. If provided, generates {name}.aab target.
       ios: Label for iOS-specific files. If provided, generates {name}.ios target.
       macos: Label for macOS-specific files. If provided, generates {name}.macos target.
       linux: Label for Linux-specific files. If provided, generates {name}.linux target.
@@ -634,6 +642,7 @@ def flutter_app(
     platform_specs = {
         "web": web,
         "apk": apk,
+        "aab": aab,
         "ios": ios,
         "macos": macos,
         "linux": linux,
@@ -642,6 +651,7 @@ def flutter_app(
 
     platform_compatibility = {
         "apk": ["@platforms//os:android"],
+        "aab": ["@platforms//os:android"],
         "ios": ["@platforms//os:ios"],
         "macos": ["@platforms//os:macos"],
         "linux": ["@platforms//os:linux"],
@@ -662,6 +672,7 @@ def flutter_app(
             "embed": embed,
             "srcs": common_srcs + _to_label_list(platform_srcs),
             "target": platform,
+            "build_args": build_args or [],
             "workspace_pubspec": workspace_pubspec,
         }
 
@@ -681,7 +692,7 @@ def flutter_app(
 
     if not generated:
         fail(
-            "flutter_app requires at least one platform attribute (web, apk, ios, macos, linux, windows).",
+            "flutter_app requires at least one platform attribute (web, apk, aab, ios, macos, linux, windows).",
         )
 
     primary = generated[0]

@@ -4,7 +4,7 @@
 #   bazelisk build //release:ironclaw-x86_64-unknown-linux-gnu
 #   bazelisk build //release:all_ironclaw_archives
 #
-# Flutter mobile / desktop apps (require Flutter SDK on PATH):
+# Flutter mobile / desktop apps (built with the hermetic Bazel Flutter toolchain):
 #   bazelisk run  //release:flutter-build-android-apk
 #   bazelisk run  //release:flutter-build-android-aab
 #   bazelisk run  //release:flutter-build-ios          # macOS only
@@ -160,11 +160,9 @@ alias(
 )
 
 # Android – App Bundle (Play Store)
-# App bundle output is not currently defined in the hermetic macro, so we'll
-# alias to APK for now or wait for rules_flutter update.
 alias(
     name = "flutter-build-android-aab",
-    actual = "//srcs/app:app.apk",
+    actual = "//srcs/app:app.aab",
     visibility = ["//visibility:public"],
 )
 

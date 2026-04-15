@@ -81,10 +81,13 @@ The generated images are referenced from [docs/app/user-guide.md](../../docs/app
 ## Native Platform Note
 
 The repository still contains Android, iOS, macOS, Windows, and Linux project
-folders. The hermetic Bazel workflow in this repo currently standardizes the
-test, local web serving, Playwright e2e, and documentation screenshot flows.
-Native packaging for those OS-specific targets still depends on the appropriate
-host platform SDKs when you need to produce native binaries.
+folders. The hermetic Bazel workflow in this repo standardizes the test, local
+web serving, Playwright e2e, and release build flows. Linux native packaging
+now bundles the compiled Flutter desktop output into the published `.deb` and
+`.rpm` artifacts, so end users do not need Flutter installed to run the app.
+Other native targets still require the appropriate host SDKs and, for signed
+distribution artifacts such as production iOS/macOS releases, platform signing
+credentials.
 
 ## Configuration
 
