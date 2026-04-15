@@ -1346,6 +1346,24 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 1010,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 124
+      },
+      "type": "timeseries",
+      "title": "Swarm Task Queue Length",
+      "targets": [
+        {
+          "expr": "sum(ohc_swarm_task_queue_length)",
+          "legendFormat": "Queue Length",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",
