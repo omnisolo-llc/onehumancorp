@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"sync"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"sync"
 )
 
 var referralsCounter metric.Int64Counter
@@ -120,4 +120,19 @@ func CalculateReferralTier(referrals int) string {
 		return "Silver"
 	}
 	return "Bronze"
+}
+
+func CalculateTierDiscount(tier string) float64 {
+	switch tier {
+	case "Platinum":
+		return 0.20
+	case "Gold":
+		return 0.10
+	case "Silver":
+		return 0.05
+	case "Bronze":
+		return 0.00
+	default:
+		return 0.00
+	}
 }

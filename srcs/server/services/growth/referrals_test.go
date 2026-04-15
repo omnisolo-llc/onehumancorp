@@ -39,7 +39,6 @@ func TestReferralTracker(t *testing.T) {
 	}
 }
 
-
 func TestReferralTrackerWithChannel(t *testing.T) {
 	tracker := NewReferralTracker()
 	userID := "user456"
@@ -76,6 +75,26 @@ func TestCalculateReferralTier(t *testing.T) {
 		got := CalculateReferralTier(tt.referrals)
 		if got != tt.expected {
 			t.Errorf("CalculateReferralTier(%d): expected %s, got %s", tt.referrals, tt.expected, got)
+		}
+	}
+}
+
+func TestCalculateTierDiscount(t *testing.T) {
+	tests := []struct {
+		tier     string
+		expected float64
+	}{
+		{"Bronze", 0.00},
+		{"Silver", 0.05},
+		{"Gold", 0.10},
+		{"Platinum", 0.20},
+		{"Unknown", 0.00},
+	}
+
+	for _, tt := range tests {
+		got := CalculateTierDiscount(tt.tier)
+		if got != tt.expected {
+			t.Errorf("CalculateTierDiscount(%q): expected %f, got %f", tt.tier, tt.expected, got)
 		}
 	}
 }
