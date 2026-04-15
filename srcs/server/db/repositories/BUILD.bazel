@@ -7,7 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//srcs/server/db/dbtest",
         "//srcs/server/db/models",
         "@com_github_google_uuid//:uuid",
     ],
