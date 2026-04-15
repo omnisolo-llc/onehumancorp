@@ -64,7 +64,7 @@ func (r *RedisLock) Unlock(ctx context.Context) error {
 }
 
 // PostgresLock implements DistributedLock using PostgreSQL advisory locks.
-// It uses pg_try_advisory_lock based on a 64-bit integer derived from the key string.
+// It uses pg_try_advisory_xact_lock based on a 64-bit integer derived from the key string.
 type PostgresLock struct {
 	provider db.Provider
 	key      string
