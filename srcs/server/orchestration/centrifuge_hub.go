@@ -121,8 +121,57 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 
 
 // SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
+// and starts listening to the transport to forward events to websocket clients.
 func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 	cn.meshTransport = mt
+
+	ctx := context.Background()
+
+	// Forward Tasks
+	if ch, err := mt.SubscribeTasks(ctx); err == nil {
+		go func() {
+			for task := range ch {
+				payload := map[string]interface{}{
+					"agent_id": task.AgentID,
+					"action":   task.Action,
+					"status":   task.Status,
+				}
+				cn.PublishTaskBroadcast(task.TaskID, payload)
+			}
+		}()
+	} else {
+		slog.Error("[centrifuge] failed to subscribe to tasks from mesh transport", "error", err)
+	}
+
+	// Forward Coordination
+	if ch, err := mt.SubscribeCoordination(ctx); err == nil {
+		go func() {
+			for msg := range ch {
+				cm := Message{
+					ID:         "coord",
+					FromAgent:  msg.AgentID,
+					Type:       "coordination",
+					Content:    msg.Content,
+					OccurredAt: msg.Timestamp,
+				}
+				cn.PublishCoordinationMessage(cm)
+			}
+		}()
+	} else {
+		slog.Error("[centrifuge] failed to subscribe to coordination from mesh transport", "error", err)
+	}
+
+	// Forward Capabilities
+	if ch, err := mt.SubscribeCapabilities(ctx); err == nil {
+		go func() {
+			for caps := range ch {
+				data, _ := json.Marshal(caps)
+				_, _ = cn.node.Publish("mesh:capabilities", data)
+			}
+		}()
+	} else {
+		slog.Error("[centrifuge] failed to subscribe to capabilities from mesh transport", "error", err)
+	}
 }
 
 // Handler returns an http.Handler that serves the Centrifuge WebSocket endpoint.

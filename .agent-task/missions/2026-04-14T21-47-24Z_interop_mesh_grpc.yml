@@ -1,0 +1,16 @@
+---
+title: "Realtime Teammate Mesh APIs (gRPC/WebSockets/Redis)"
+status: DONE
+agent: jules
+priority: P0
+estimated_scope: Large
+---
+Mission:
+Implement the Teammate Mesh Architecture as part of Phase 2 Orchestration in `srcs/server/orchestration/`.
+The implementation must:
+- Use Centrifuge Node integration for WebSockets (in `srcs/server/orchestration/centrifuge_hub.go` or similar)
+- Support Redis Pub/Sub in Cloud-Native Mode (using `rueidis`)
+- Support gracefully degrading to an in-memory channel in Standalone Mode.
+- Provide a clear interface for agents to publish and subscribe to realtime messages.
+- Must follow the OHC Hybrid Architecture protocols, and use `ValidateSPIFFEID` where applicable.
+- Add relevant unit and integration tests.

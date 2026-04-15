@@ -151,7 +151,7 @@ func TestLocalTeammateMesh(t *testing.T) {
 	}
 
 	task := Task{
-		AgentID: "agent-123",
+		AgentID: "spiffe://onehumancorp.io/agent/123",
 		Action:  "PICK_UP_TASK",
 		Status:  "IN_PROGRESS",
 		TaskID:  "task-456",
@@ -195,7 +195,7 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 		require.NoError(t, err)
 
 		err = mt.AdvertiseCapabilities(ctx, pb.AgentCapabilities{
-			AgentId: "test-agent",
+			AgentId: "spiffe://onehumancorp.io/agent/test-agent",
 		})
 		require.NoError(t, err)
 

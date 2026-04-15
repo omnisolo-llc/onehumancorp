@@ -85,6 +85,9 @@ func ValidateSPIFFEID(id string) error {
 		"onehumancorp.io": true,
 		"ohc.local":       true,
 		"ohc.os":          true,
+		"ohc.global":      true,
+		"eu.ohc.global":   true,
+		"eu-west.ohc.global": true,
 	}
 
 	if !validDomains[u.Host] {

@@ -77,7 +77,7 @@ func TestHubServiceServer_AdvertiseCapabilities(t *testing.T) {
 
 	// Test success
 	req = &pb.AgentCapabilities{
-		AgentId: "test-agent",
+		AgentId: "spiffe://onehumancorp.io/agent/test-agent",
 	}
 	resp, err := srv.AdvertiseCapabilities(context.Background(), req)
 	if err != nil {
@@ -103,7 +103,7 @@ func TestHubServiceServer_DiscoverAgents(t *testing.T) {
 	go func() {
 		time.Sleep(10 * time.Millisecond)
 		mt.AdvertiseCapabilities(context.Background(), pb.AgentCapabilities{
-			AgentId: "agent-123",
+			AgentId: "spiffe://onehumancorp.io/agent/123",
 		})
 	}()
 
@@ -120,8 +120,8 @@ func TestHubServiceServer_DiscoverAgents(t *testing.T) {
 
 	if len(stream.sent) == 0 {
 		t.Errorf("expected to receive capabilities, got none")
-	} else if stream.sent[0].AgentId != "agent-123" {
-		t.Errorf("expected agent-123, got %v", stream.sent[0].AgentId)
+	} else if stream.sent[0].AgentId != "spiffe://onehumancorp.io/agent/123" {
+		t.Errorf("expected spiffe://onehumancorp.io/agent/123, got %v", stream.sent[0].AgentId)
 	}
 }
 
