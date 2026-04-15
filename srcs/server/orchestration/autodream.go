@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"regexp"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -269,7 +269,7 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 	}
 }
 
-// runMemoryIngestionPipeline reads files from .agent-task/memory/ and injects them.
+// runMemoryIngestionPipeline reads imported runtime memory files and injects them.
 func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -895,8 +895,8 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 	return nil
 }
 
-
-// runMissionIngestionPipeline reads files from .agent-task/missions/ and injects them.
+// runMissionIngestionPipeline reads imported task artifacts from the directory
+// configured by OHC_MISSIONS_DIR and injects them into autodream memory.
 func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -912,12 +912,12 @@ func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
 }
 
 // ingestMissionArtifacts processes Markdown files from the directory specified
-// by OHC_MISSIONS_DIR.  When the env var is empty it defaults to
-// ".agent-task/missions" relative to the current working directory.
+// by OHC_MISSIONS_DIR. GitHub issues are the canonical task tracker, so file
+// ingestion is disabled unless the env var is explicitly configured.
 func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 	missionDir := os.Getenv("OHC_MISSIONS_DIR")
 	if missionDir == "" {
-		missionDir = ".agent-task/missions"
+		return
 	}
 	files, err := os.ReadDir(missionDir)
 	if err != nil {

@@ -1,6 +1,17 @@
 package orchestration
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"time"
+)
+
+type HubEvent struct {
+	Seq        int64           `json:"seq,omitempty"`
+	Type       string          `json:"type,omitempty"`
+	Payload    json.RawMessage `json:"payload"`
+	OccurredAt time.Time       `json:"occurred_at"`
+}
 
 // HubRepository defines the persistence contract for the orchestration
 // Hub's core state: agents, message inboxes, and meeting rooms.
@@ -22,6 +33,8 @@ type HubRepository interface {
 	UpdateAgentStatus(ctx context.Context, id string, status Status) error
 	// RemoveAgent deregisters an agent and clears its inbox.
 	RemoveAgent(ctx context.Context, id string) error
+	// AppendEvent persists a redacted hub event for audit and replay.
+	AppendEvent(ctx context.Context, event HubEvent) error
 
 	// --- Message inbox ---
 

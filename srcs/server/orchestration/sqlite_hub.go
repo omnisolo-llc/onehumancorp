@@ -134,6 +134,22 @@ func (r *SqliteHubRepository) RemoveAgent(ctx context.Context, id string) error 
 	return tx.Commit(ctx)
 }
 
+func (r *SqliteHubRepository) AppendEvent(ctx context.Context, event HubEvent) error {
+	payload := json.RawMessage(event.Payload)
+	if len(payload) == 0 {
+		payload = json.RawMessage("{}")
+	}
+
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO hub_events (type, payload, occurred_at)
+		VALUES (?, ?, ?)
+	`, event.Type, string(payload), event.OccurredAt.UTC())
+	if err != nil {
+		return fmt.Errorf("sqlite: append event: %w", err)
+	}
+	return nil
+}
+
 func (r *SqliteHubRepository) PushMessage(ctx context.Context, toAgent string, msg Message) error {
 	if r.orgID != "" {
 		var count int

@@ -21,6 +21,9 @@ PORT=8080
 OHC_MULTITENANT=false
 OHC_HEADLESS=false
 OHC_SOURCE_MODE=standalone
+OHC_RUNTIME_DIR=.ohc/runtime
+OHC_MEMORY_DIR=.ohc/runtime/memory
+OHC_STATUS_DIR=.ohc/runtime/status
 ENV
   chmod 0600 .env
 fi
@@ -38,10 +41,13 @@ export OHC_SOURCE_MODE=cloud
 bazelisk test //...
 
 echo "[4/4] Generating Local Memory Log..."
-mkdir -p .agent-task/memory .agent-task/status
+RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
+MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
+STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
+mkdir -p "${MEMORY_DIR}" "${STATUS_DIR}"
 TIMESTAMP=$(date +%s)
 
-cat << MEM > ".agent-task/memory/setup-${TIMESTAMP}.yml"
+cat << MEM > "${MEMORY_DIR}/setup-${TIMESTAMP}.yml"
 type: memory
 metadata:
   role: Developer Setup
@@ -54,7 +60,7 @@ actions_taken:
 resolution: Developer environment successfully initialized.
 MEM
 
-cat << STAT > ".agent-task/status/${TIMESTAMP}.yml"
+cat << STAT > "${STATUS_DIR}/${TIMESTAMP}.yml"
 type: status
 metadata:
   role: Developer Setup

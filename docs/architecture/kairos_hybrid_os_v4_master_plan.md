@@ -33,6 +33,6 @@ sequenceDiagram
 Realtime communication using `mesh:tasks`, `mesh:coordination`, and `mesh:capabilities`.
 
 ## 4. autoDream Pipeline
-Consolidates `.agent-task/memory/*.yml` into embeddings stored in `consolidated_memory` using `pgvector`.
+Consolidates `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files into embeddings stored in `consolidated_memory` using `pgvector`.
 
 </div>

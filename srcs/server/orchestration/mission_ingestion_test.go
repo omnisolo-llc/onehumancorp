@@ -15,24 +15,19 @@ func setupMockMissions(t *testing.T, count int) string {
 		t.Fatal(err)
 	}
 
-	originalDir, _ := os.Getwd()
-	os.MkdirAll(filepath.Join(dir, ".agent-task", "missions"), 0755)
-
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	missionsDir := filepath.Join(dir, "missions")
+	t.Setenv("OHC_MISSIONS_DIR", missionsDir)
+	os.MkdirAll(missionsDir, 0755)
 
 	for i := 0; i < count; i++ {
 		content := fmt.Sprintf(`<div markdown="1" style="backdrop-filter: blur(20px);">
 # Problem Statement %d
 </div>`, i)
-		filePath := filepath.Join(".agent-task", "missions", fmt.Sprintf("test_mission_%d.md", i))
+		filePath := filepath.Join(missionsDir, fmt.Sprintf("test_mission_%d.md", i))
 		os.WriteFile(filePath, []byte(content), 0644)
 	}
 
 	t.Cleanup(func() {
-		os.Chdir(originalDir)
 		os.RemoveAll(dir)
 	})
 

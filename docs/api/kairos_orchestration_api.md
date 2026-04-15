@@ -77,7 +77,7 @@ The AutoDream endpoints manage long-term semantic memory consolidation.
 
 ### 4.1 Trigger Manual AutoDream Sync
 **Endpoint:** `POST /api/v1/autodream/sync`
-Forces the background worker to scan `.agent-task/memory/*.yml` files, generate Minimax embeddings, and upsert them into `autodream_memories`.
+Forces the background worker to scan any `*.yml` files in `OHC_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
 
 **Payload:**
 ```json
@@ -120,7 +120,7 @@ sequenceDiagram
     participant LLM as Embedding Model
     participant DB as pgvector
 
-    Worker->>FS: Writes Session Context to .agent-task/memory
+    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
     AutoDream->>FS: Polling/Manual Sync Trigger
     AutoDream->>LLM: Pass text to Minimax/Ada
     LLM-->>AutoDream: Return 1536-dim Embedding

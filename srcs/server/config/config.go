@@ -83,7 +83,7 @@ type AppConfig struct {
 	S3Endpoint   string // OHC_S3_ENDPOINT
 	S3BucketBlobs string // OHC_S3_BUCKET_BLOBS (default: "ohc-blobs")
 
-	// Filesystem (via Afero) — only for legitimate file access, never .agent-task
+	// Filesystem (via Afero) — only for legitimate file access, never legacy task files
 	// Fs is the Afero filesystem implementation.  Tests can substitute a MemMapFs.
 	Fs afero.Fs
 }

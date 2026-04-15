@@ -15,7 +15,7 @@ import (
 
 // writeHeartbeat persists a heartbeat record for taskID into the database.
 // The agents table (or tasks table) is updated with the current timestamp;
-// this replaces the former filesystem-based .agent-task/status/<taskID>.yml.
+// this replaces the former filesystem-based .ohc/runtime/status/<taskID>.yml.
 func writeHeartbeat(ctx context.Context, provider db.Provider, taskID, status, subAgentType, parentTaskID string) {
 	if provider == nil {
 		return
@@ -172,7 +172,7 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 	_ = parentTaskID
 	_ = isolatedContext
 
-	// Emit heartbeat to database (replaces former .agent-task/status/<taskID>.yml).
+	// Emit heartbeat to database (replaces former .ohc/runtime/status/<taskID>.yml).
 	writeHeartbeat(context.Background(), s.db, task.ID, "IN_PROGRESS", subAgentType, parentTaskID)
 
 	// Simulate real work that might fail
