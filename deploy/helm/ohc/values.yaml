@@ -82,6 +82,12 @@ chatwoot:
   replicas: 1
   service:
     port: 3000
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "100m"
@@ -115,6 +121,12 @@ powersync:
     type: ClusterIP
     port: 8081
     targetPort: 8080
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
@@ -133,3 +145,14 @@ kube-prometheus-stack:
         enabled: true
         label: grafana_dashboard
         labelValue: "1"
+
+# Pushgateway for Prometheus metrics
+pushgateway:
+  enabled: true
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"

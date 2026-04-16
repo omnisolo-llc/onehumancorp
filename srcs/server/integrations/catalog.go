@@ -2,7 +2,7 @@ package integrations
 
 import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
+	"github.com/onehumancorp/mono/srcs/server/integrations/litefs"
 )
 
 // Integration represents a plugin blueprint defining how to instantiate connections.
@@ -26,7 +26,7 @@ var Catalog = []Integration{
 	&JiraIntegration{},
 	&PlaneIntegration{},
 	&GitHubIssuesIntegration{},
-	&powersync.PowerSyncIntegration{},
+	&litefs.LiteFSIntegration{},
 }
 
 // GetCatalog returns all available integration providers.

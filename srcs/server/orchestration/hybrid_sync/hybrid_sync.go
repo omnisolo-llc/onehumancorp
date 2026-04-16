@@ -136,6 +136,11 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
+	telemetry.RecordSyncEscalation(ctx, int64(len(payloads)))
+	for range payloads {
+		telemetry.RecordRagEscalation(ctx)
+	}
+
 	// Update the local SQLite database to mark as no longer requiring escalation
 	if len(ids) > 0 {
 		for _, id := range ids {

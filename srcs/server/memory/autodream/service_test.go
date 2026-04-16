@@ -7,6 +7,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/memory"
 )
 
@@ -28,12 +29,13 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	defer dbConn.Close()
 
 	provider := db.NewSqliteProvider(dbConn)
-	ctx := context.Background()
+	claims := &auth.Claims{OrganizationID: "test-tenant-123"}
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 
 	// In test, creating table
 	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories_master (
 		id VARCHAR PRIMARY KEY,
-		tenant_id VARCHAR NOT NULL,
+		organization_id VARCHAR NOT NULL,
 		memory_type TEXT NOT NULL,
 		content TEXT NOT NULL,
 		embedding BLOB,

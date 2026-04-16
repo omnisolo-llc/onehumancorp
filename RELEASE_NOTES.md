@@ -1,13 +1,8 @@
 # Release Notes
 
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
-### Cloud Scaling Improvements
-- Optimized multi-tenant pod scaling by increasing maxReplicas for backend and ohcCore in Helm charts.
-- Implemented KAIROS Sub-Agent Orchestration Queue to efficiently distribute load across the swarm.
-
-### Privacy/Offline Improvements
-- Reduced standalone desktop memory footprint by optimizing GOMEMLIMIT and GOGC.
-- Drafted Obsidian MCP for Local-First Knowledge Base Synchronization.
+- Scaling (Cloud): Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
+- Privacy/Offline (Standalone): Maintained Standalone telemetry consistency across single-user environments for the new MCP Bridge integration.
 
 ## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
 - Scaling (Cloud): Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
