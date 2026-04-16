@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "growth_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/cmd/growth",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//srcs/server/lib/analytics",
+        "//srcs/server/services/growth",
+    ],
+)
+
+go_binary(
+    name = "growth",
+    embed = [":growth_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = ["main_test.go"],
+    embed = [":growth_lib"],
+    deps = [],
+)
