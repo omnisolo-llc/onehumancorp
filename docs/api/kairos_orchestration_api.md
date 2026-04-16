@@ -41,6 +41,7 @@ Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS us
 Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
 
 
+
 **Payload:**
 ```json
 {
@@ -48,6 +49,25 @@ Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
   "outcome_summary": "Successfully merged PR #124."
 }
 ```
+
+### Shared Task Flow Visual
+```mermaid
+sequenceDiagram
+    participant SubAgent as Sub-Agent
+    participant API as Orchestration API
+    participant DB as Shared Task State
+
+    SubAgent->>API: POST /api/v1/tasks/claim
+    API->>DB: Lock row & Mark IN_PROGRESS
+    DB-->>API: Task Context
+    API-->>SubAgent: 200 OK + Payload
+    SubAgent->>API: POST /api/v1/tasks/{task_id}/complete
+    API->>DB: Update state to COMPLETED & Unlock dependents
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class SubAgent,API,DB premium;
+```
+
 
 ### Shared Task Flow Visual
 ```mermaid

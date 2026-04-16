@@ -33,20 +33,3 @@ type JobQueue interface {
 	Push(ctx context.Context, topic string, payload []byte) error
 	Pop(ctx context.Context, topic string) ([]byte, error)
 }
-
-type SubAgentTaskData struct {
-	IssueRef           string `json:"issue_ref"`
-	RepositoryStateHash string `json:"repository_state_hash"`
-	ExecutionTimeoutMs int64  `json:"execution_timeout_ms"`
-}
-
-type SubAgentTaskQueuePayload struct {
-	JobID     string           `json:"job_id"`
-	QueueName string           `json:"queue_name"`
-	Data      SubAgentTaskData `json:"data"`
-}
-
-type SubAgentTaskQueue interface {
-	Enqueue(ctx context.Context, payload *SubAgentTaskQueuePayload) error
-	Process(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error)
-}
