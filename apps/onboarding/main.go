@@ -30,7 +30,6 @@ func main() {
 	http.HandleFunc("/api/wizard/state/save", onboarding.SaveWizardStateHandler)
 	http.HandleFunc("/api/wizard/state", onboarding.GetWizardStateHandler)
 	http.HandleFunc("/api/verify-environment", onboarding.VerifyEnvironmentHandler)
-	http.HandleFunc("/api/audit-setup", onboarding.AuditSetupHandler)
 	http.HandleFunc("/api/generate-config", onboarding.GenerateConfigHandler)
 
 	fmt.Println("Starting onboarding service on :8080...")

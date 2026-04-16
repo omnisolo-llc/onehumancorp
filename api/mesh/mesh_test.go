@@ -48,10 +48,9 @@ func TestTeammateMesh_PublishSubscribe(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	expectedMsg := MeshMessage{
-		AgentID: "test_agent",
-		EventType: "test_event",
-		Channel:    topic,
-		Data:  json.RawMessage(`{"status":"OK"}`),
+		SenderID: "test_agent",
+		Topic:    topic,
+		Payload:  json.RawMessage(`{"status":"OK"}`),
 	}
 
 	if err := mesh.Publish(ctx, expectedMsg); err != nil {
@@ -62,17 +61,14 @@ func TestTeammateMesh_PublishSubscribe(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal("Timeout waiting for message")
 	case msg := <-msgReceived:
-		if msg.AgentID != expectedMsg.AgentID {
-			t.Errorf("Expected SenderID %s, got %s", expectedMsg.AgentID, msg.AgentID)
+		if msg.SenderID != expectedMsg.SenderID {
+			t.Errorf("Expected SenderID %s, got %s", expectedMsg.SenderID, msg.SenderID)
 		}
-		if msg.Channel != expectedMsg.Channel {
-			t.Errorf("Expected Topic %s, got %s", expectedMsg.Channel, msg.Channel)
+		if msg.Topic != expectedMsg.Topic {
+			t.Errorf("Expected Topic %s, got %s", expectedMsg.Topic, msg.Topic)
 		}
-		if msg.EventType != expectedMsg.EventType {
-			t.Errorf("Expected EventType %s, got %s", expectedMsg.EventType, msg.EventType)
-		}
-		if string(msg.Data) != string(expectedMsg.Data) {
-			t.Errorf("Expected Payload %s, got %s", expectedMsg.Data, msg.Data)
+		if string(msg.Payload) != string(expectedMsg.Payload) {
+			t.Errorf("Expected Payload %s, got %s", expectedMsg.Payload, msg.Payload)
 		}
 	}
 }
@@ -90,10 +86,9 @@ func TestTeammateMesh_Standalone_LocalFallback(t *testing.T) {
 	})
 
 	expectedMsg := MeshMessage{
-		AgentID: "local_agent",
-		EventType: "local_event",
-		Channel:    topic,
-		Data:  json.RawMessage(`{"status":"LOCAL_OK"}`),
+		SenderID: "local_agent",
+		Topic:    topic,
+		Payload:  json.RawMessage(`{"status":"LOCAL_OK"}`),
 	}
 
 	err := mesh.Publish(ctx, expectedMsg)
@@ -101,9 +96,8 @@ func TestTeammateMesh_Standalone_LocalFallback(t *testing.T) {
 
 	select {
 	case msg := <-msgReceived:
-		assert.Equal(t, expectedMsg.AgentID, msg.AgentID)
-		assert.Equal(t, expectedMsg.Channel, msg.Channel)
-		assert.Equal(t, expectedMsg.EventType, msg.EventType)
+		assert.Equal(t, expectedMsg.SenderID, msg.SenderID)
+		assert.Equal(t, expectedMsg.Topic, msg.Topic)
 	case <-ctx.Done():
 		t.Fatal("Timeout waiting for local message")
 	}
@@ -114,10 +108,9 @@ func TestTeammateMesh_HandlePublish(t *testing.T) {
 	topic := "api_topic"
 
 	msg := MeshMessage{
-		AgentID: "api_agent",
-		EventType: "api_event",
-		Channel:    topic,
-		Data:  json.RawMessage(`{"data":"test"}`),
+		SenderID: "api_agent",
+		Topic:    topic,
+		Payload:  json.RawMessage(`{"data":"test"}`),
 	}
 	body, _ := json.Marshal(msg)
 
@@ -146,10 +139,9 @@ func TestTeammateMesh_HandleSubscribe(t *testing.T) {
 	defer conn.Close()
 
 	expectedMsg := MeshMessage{
-		AgentID: "ws_agent",
-		EventType: "ws_event",
-		Channel:    topic,
-		Data:  json.RawMessage(`{"msg":"hello"}`),
+		SenderID: "ws_agent",
+		Topic:    topic,
+		Payload:  json.RawMessage(`{"msg":"hello"}`),
 	}
 
 	// Publish message after a short delay to allow subscription to register
@@ -162,7 +154,6 @@ func TestTeammateMesh_HandleSubscribe(t *testing.T) {
 	err = conn.ReadJSON(&receivedMsg)
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedMsg.AgentID, receivedMsg.AgentID)
-	assert.Equal(t, expectedMsg.Channel, receivedMsg.Channel)
-	assert.Equal(t, expectedMsg.EventType, receivedMsg.EventType)
+	assert.Equal(t, expectedMsg.SenderID, receivedMsg.SenderID)
+	assert.Equal(t, expectedMsg.Topic, receivedMsg.Topic)
 }
