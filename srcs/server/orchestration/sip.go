@@ -347,11 +347,15 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 		var err error
 
 		if role == "ANY" {
-			query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+			if s.db.IsSQLite() {
+				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500"
+			} else {
+				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+			}
 			rows, err = s.db.Query(ctx, query, s.orgID)
 		} else {
 			if s.db.IsSQLite() {
-				query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+				query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
 			} else {
 				query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
 			}
