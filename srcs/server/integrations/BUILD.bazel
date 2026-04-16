@@ -12,8 +12,6 @@ go_library(
     deps = [
         "//srcs/proto:hub_go_proto",
         "@org_golang_google_protobuf//proto",
-        "//srcs/server/integrations/powersync",
-
     ],
 )
 
