@@ -1,4 +1,4 @@
-package local
+package builtin
 
 // TaskNotificationPayload is the typed notification sent when a local agent task completes.
 //
