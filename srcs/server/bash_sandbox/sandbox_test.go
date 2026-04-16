@@ -62,3 +62,19 @@ func TestSandboxExecutionViolation(t *testing.T) {
 		t.Errorf("ExecuteContext error = %v, want it to contain 'security policy'", err)
 	}
 }
+
+func TestSandboxExecutionPermissionDenied(t *testing.T) {
+	sandbox := NewSandbox()
+	ctx := context.Background()
+
+	// Use python to trigger a Permission denied error without using restricted commands like chmod or sudo
+	out, err := sandbox.ExecuteContext(ctx, "python3 -c 'open(\"/etc/shadow\", \"r\")'", "")
+
+	if err == nil {
+		t.Fatalf("ExecuteContext expected error for permission denied, got nil")
+	}
+
+	if !strings.Contains(out, "sandbox_violations") {
+		t.Errorf("ExecuteContext output = %v, want it to contain 'sandbox_violations'", out)
+	}
+}

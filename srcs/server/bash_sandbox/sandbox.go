@@ -1,6 +1,7 @@
 package bash_sandbox
 
 import (
+	"strings"
 	"context"
 
 	"fmt"
@@ -87,7 +88,11 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		errorCount.Add(ctx, 1)
-		return string(out), fmt.Errorf("execution failed: %w", err)
+		outStr := string(out)
+		if strings.Contains(outStr, "Operation not permitted") || strings.Contains(outStr, "Permission denied") {
+			outStr = fmt.Sprintf("%s\n<sandbox_violations>%s: sandbox boundary drop</sandbox_violations>", outStr, err.Error())
+		}
+		return outStr, fmt.Errorf("execution failed: %w", err)
 	}
 
 	return string(out), nil

@@ -1,6 +1,7 @@
 package statemachine
 
 import (
+	"fmt"
 	"context"
 	"strings"
 	"testing"
@@ -12,7 +13,7 @@ import (
 
 // Helper to create an in-memory test provider
 func setupTestDB(t *testing.T) db.Provider {
-	sqliteDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	sqliteDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	if err != nil {
 		t.Fatalf("Failed to open sqlite db: %v", err)
 	}

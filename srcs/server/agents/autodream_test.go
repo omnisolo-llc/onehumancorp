@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"fmt"
 	"context"
 	"database/sql"
 	"os"
@@ -12,7 +13,7 @@ import (
 
 func setupAutoDreamDB(t *testing.T) (db.Provider, func()) {
 	t.Helper()
-	dbConn, err := sql.Open("sqlite", "file:autodream-test?mode=memory&cache=shared")
+	dbConn, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}

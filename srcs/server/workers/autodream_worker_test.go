@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"fmt"
 	"context"
 	"database/sql"
 	"testing"
@@ -10,7 +11,7 @@ import (
 )
 
 func setupAutoDreamTestDB(t *testing.T) db.Provider {
-	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	sqlDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	if err != nil {
 		t.Fatalf("failed to open sqlite in-memory db: %v", err)
 	}
