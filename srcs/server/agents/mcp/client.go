@@ -2,12 +2,11 @@ package mcp
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"encoding/json"
 	"errors"
 	"sync"
 	"time"
-
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type ExecutionResult struct {
