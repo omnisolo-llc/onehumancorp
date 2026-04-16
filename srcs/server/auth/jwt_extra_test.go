@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -19,7 +20,7 @@ func TestValidateToken_OIDCEnabledAndFallback(t *testing.T) {
 
 func TestParseHS256_MalformedHeader(t *testing.T) {
 	s := NewStore()
-	u, err := s.CreateUser("user", "user@test.com", "password", nil)
+	u, err := s.CreateUser(context.Background(), "user", "user@test.com", "password", nil)
 	if err != nil || u == nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
@@ -37,7 +38,7 @@ func TestParseHS256_MalformedHeader(t *testing.T) {
 
 func TestParseHS256_InvalidHeaderJSON(t *testing.T) {
 	s := NewStore()
-	u, err := s.CreateUser("user2", "user2@test.com", "password", nil)
+	u, err := s.CreateUser(context.Background(), "user2", "user2@test.com", "password", nil)
 	if err != nil || u == nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
@@ -53,7 +54,7 @@ func TestParseHS256_InvalidHeaderJSON(t *testing.T) {
 
 func TestParseHS256_WrongAlg(t *testing.T) {
 	s := NewStore()
-	u, err := s.CreateUser("user3", "user3@test.com", "password", nil)
+	u, err := s.CreateUser(context.Background(), "user3", "user3@test.com", "password", nil)
 	if err != nil || u == nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestParseHS256_WrongAlg(t *testing.T) {
 
 func TestParseHS256_MalformedSignatureBase64(t *testing.T) {
 	s := NewStore()
-	u, err := s.CreateUser("user4", "user4@test.com", "password", nil)
+	u, err := s.CreateUser(context.Background(), "user4", "user4@test.com", "password", nil)
 	if err != nil || u == nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
@@ -85,7 +86,7 @@ func TestParseHS256_MalformedSignatureBase64(t *testing.T) {
 
 func TestParseHS256_MalformedPayloadBase64(t *testing.T) {
 	s := NewStore()
-	u, err := s.CreateUser("user5", "user5@test.com", "password", nil)
+	u, err := s.CreateUser(context.Background(), "user5", "user5@test.com", "password", nil)
 	if err != nil || u == nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
@@ -108,7 +109,7 @@ func TestParseHS256_MalformedPayloadBase64(t *testing.T) {
 
 func TestParseHS256_InvalidPayloadJSON(t *testing.T) {
 	s := NewStore()
-	u, err := s.CreateUser("user6", "user6@test.com", "password", nil)
+	u, err := s.CreateUser(context.Background(), "user6", "user6@test.com", "password", nil)
 	if err != nil || u == nil {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
