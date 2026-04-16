@@ -1,9 +1,9 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "litefs",
+    name = "pglite",
     srcs = ["provider.go"],
-    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/litefs",
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/pglite",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto:hub_go_proto",
@@ -12,7 +12,7 @@ go_library(
 )
 
 go_test(
-    name = "litefs_test",
+    name = "pglite_test",
     srcs = ["provider_test.go"],
-    embed = [":litefs"],
+    embed = [":pglite"],
 )

@@ -15,10 +15,10 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/local",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/bash_sandbox",
         "//srcs/server/db",
         "//srcs/server/telemetry",
         "//srcs/server/utils",
-        "//srcs/server/bash_sandbox",
         "@com_github_google_uuid//:uuid",
         "@com_github_redis_rueidis//:rueidis",
     ],

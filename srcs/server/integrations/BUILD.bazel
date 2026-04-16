@@ -10,8 +10,9 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/integrations",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/integrations/litefs",
         "//srcs/proto:hub_go_proto",
+        "//srcs/server/integrations/litefs",
+        "//srcs/server/integrations/pglite",
         "@org_golang_google_protobuf//proto",
     ],
 )
