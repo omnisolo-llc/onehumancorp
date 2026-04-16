@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "billing",
+    srcs = ["billing_service.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/services/billing",
+    visibility = ["//visibility:public"],
+)
