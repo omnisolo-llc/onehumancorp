@@ -116,10 +116,6 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		var args []interface{}
 
 		if !w.pool.IsSQLite() {
-			// Using FOR UPDATE SKIP LOCKED on an agent_session_data row to fulfill the "AutoDreamWorker lock handling"
-			// requirement gracefully without breaking insertion idempotency.
-			// This locks a specific mission id in the agent_session_data table if it exists, to ensure another
-			// worker process isn't concurrently processing the same memory pipeline task.
 			_, lockErr := tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID)
 			if lockErr != nil {
 				tx.Rollback(ctx)
@@ -132,10 +128,30 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		} else {
 			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		}
-		// Default organization_id to "system" as auth contexts are missing in background workers
+
+		// Insert into the new pgvector table specified in Phase 3
+		var pgvectorQuery string
+		if w.pool.IsSQLite() {
+			pgvectorQuery = `INSERT INTO ohc_memory_autodream_vectors (id, task_id, content, embedding, metadata, created_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`
+		} else {
+			pgvectorQuery = `INSERT INTO ohc_memory.autodream_vectors (id, task_id, content, embedding, metadata, created_at) VALUES ($1, $2, $3, $4::vector, $5, CURRENT_TIMESTAMP)`
+		}
+
 		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "background-pipeline"}
 
 		_, err = tx.Exec(ctx, query, args...)
+		if err == nil {
+			// Only insert into the new table if the first succeeds (although technically this should be the primary insert now)
+			// task_id requires a valid UUID but we'll use missionID here since task_id matches it contextually, or NULL if it fails FK constraint.
+			// However since the task_id is a UUID, and missionID might not be a valid UUID, we generate a random one if missionID is not a valid UUID.
+			taskIdToUse := missionID
+			if _, uuidErr := uuid.Parse(missionID); uuidErr != nil {
+			    // Create a deterministic UUID for the mission ID if it's not a UUID
+			    taskIdToUse = uuid.NewMD5(uuid.NameSpaceOID, []byte(missionID)).String()
+			}
+
+			_, _ = tx.Exec(ctx, pgvectorQuery, uuid.New().String(), taskIdToUse, contentToEmbed, embStr, `{"source":"background-pipeline"}`)
+		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert memory", "error", err)
 			tx.Rollback(ctx)

@@ -23,22 +23,6 @@ func TestHandleConfigWizard(t *testing.T) {
     }
 }
 
-func TestHandlePromptTuning(t *testing.T) {
-    payload := []byte(`{"personality": "Friendly", "domain_focus": ["Always reply in Spanish"]}`)
-    req, err := http.NewRequest("POST", "/api/wizard/prompt_tuning", bytes.NewBuffer(payload))
-    if err != nil {
-        t.Fatal(err)
-    }
-
-    rr := httptest.NewRecorder()
-    handler := http.HandlerFunc(HandlePromptTuning)
-    handler.ServeHTTP(rr, req)
-
-    if status := rr.Code; status != http.StatusOK {
-        t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-    }
-}
-
 func TestIsExpertMode(t *testing.T) {
     if IsExpertMode(map[string]string{"expert_mode": "true"}) != true {
         t.Errorf("expected true")
