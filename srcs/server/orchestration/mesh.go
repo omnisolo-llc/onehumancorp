@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"log/slog"
 	"net/http"
 
@@ -310,8 +310,8 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 	return ch, nil
 }
 
-func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error {
-	if err := interop.ValidateSPIFFEID(caps.AgentID); err != nil {
+func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	if err := interop.ValidateSPIFFEID(caps.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
 	data, err := json.Marshal(caps)
@@ -324,11 +324,11 @@ func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps Ag
 	})
 }
 
-func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error) {
-	ch := make(chan AgentCapabilities, 100)
+func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	ch := make(chan pb.AgentCapabilities, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:capabilities").Build(), func(msg rueidis.PubSubMessage) {
-			var c AgentCapabilities
+			var c pb.AgentCapabilities
 			if err := json.Unmarshal([]byte(msg.Message), &c); err == nil {
 				select {
 				case ch <- c:
@@ -465,8 +465,8 @@ type MeshTransport interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error)
+	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
+	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
 }
@@ -482,8 +482,8 @@ type MemoryMeshTransport struct {
 	coordBroadcast  []chan MeshMessage
 	coordSubs       []map[chan MeshMessage]struct{}
 	coordMu         []sync.RWMutex
-	capsBroadcast   []chan AgentCapabilities
-	capsSubs        []map[chan AgentCapabilities]struct{}
+	capsBroadcast   []chan pb.AgentCapabilities
+	capsSubs        []map[chan pb.AgentCapabilities]struct{}
 	capsMu          []sync.RWMutex
 	eventsBroadcast map[string][]chan []byte
 	eventsSubs      map[string][]map[chan []byte]struct{}
@@ -501,8 +501,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		coordBroadcast:  make([]chan MeshMessage, numShards),
 		coordSubs:       make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:         make([]sync.RWMutex, numShards),
-		capsBroadcast:   make([]chan AgentCapabilities, numShards),
-		capsSubs:        make([]map[chan AgentCapabilities]struct{}, numShards),
+		capsBroadcast:   make([]chan pb.AgentCapabilities, numShards),
+		capsSubs:        make([]map[chan pb.AgentCapabilities]struct{}, numShards),
 		capsMu:          make([]sync.RWMutex, numShards),
 		eventsBroadcast: make(map[string][]chan []byte),
 		eventsSubs:      make(map[string][]map[chan []byte]struct{}),
@@ -515,8 +515,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.subs[i] = make(map[chan Task]struct{})
 		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
-		lm.capsBroadcast[i] = make(chan AgentCapabilities, 10000)
-		lm.capsSubs[i] = make(map[chan AgentCapabilities]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		for j := 0; j < 4; j++ {
 			go lm.run(i)
@@ -674,11 +674,11 @@ func (lm *MemoryMeshTransport) runCoord(shardIdx int) {
 	}
 }
 
-func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error {
-	if err := interop.ValidateSPIFFEID(caps.AgentID); err != nil {
+func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	if err := interop.ValidateSPIFFEID(caps.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
-	shardIdx := lm.getShard(caps.AgentID)
+	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {
 		select {
@@ -695,8 +695,8 @@ func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps A
 	return nil
 }
 
-func (lm *MemoryMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error) {
-	ch := make(chan AgentCapabilities, 100)
+func (lm *MemoryMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	ch := make(chan pb.AgentCapabilities, 100)
 
 	for i := 0; i < numShards; i++ {
 		lm.capsMu[i].Lock()
@@ -832,8 +832,8 @@ type LocalTeammateMesh struct {
 	coordSubs      []map[chan MeshMessage]struct{}
 	coordMu        []sync.RWMutex
 
-	capsBroadcast []chan AgentCapabilities
-	capsSubs      []map[chan AgentCapabilities]struct{}
+	capsBroadcast []chan pb.AgentCapabilities
+	capsSubs      []map[chan pb.AgentCapabilities]struct{}
 	capsMu        []sync.RWMutex
 
 	eventsBroadcast map[string][]chan []byte
@@ -852,8 +852,8 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		coordBroadcast:  make([]chan MeshMessage, numShards),
 		coordSubs:       make([]map[chan MeshMessage]struct{}, numShards),
 		coordMu:         make([]sync.RWMutex, numShards),
-		capsBroadcast:   make([]chan AgentCapabilities, numShards),
-		capsSubs:        make([]map[chan AgentCapabilities]struct{}, numShards),
+		capsBroadcast:   make([]chan pb.AgentCapabilities, numShards),
+		capsSubs:        make([]map[chan pb.AgentCapabilities]struct{}, numShards),
 		capsMu:          make([]sync.RWMutex, numShards),
 		eventsBroadcast: make(map[string][]chan []byte),
 		eventsSubs:      make(map[string][]map[chan []byte]struct{}),
@@ -868,8 +868,8 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		lm.subs[i] = make(map[chan Task]struct{})
 		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
-		lm.capsBroadcast[i] = make(chan AgentCapabilities, 10000)
-		lm.capsSubs[i] = make(map[chan AgentCapabilities]struct{})
+		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
+		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		// Spawn multiple worker threads per shard
 		for j := 0; j < 4; j++ {
@@ -1036,11 +1036,11 @@ func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
 	}
 }
 
-func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps AgentCapabilities) error {
-	if err := interop.ValidateSPIFFEID(caps.AgentID); err != nil {
+func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	if err := interop.ValidateSPIFFEID(caps.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
-	shardIdx := lm.getShard(caps.AgentID)
+	shardIdx := lm.getShard(caps.GetAgentId())
 
 	err := meshWithRetry(ctx, 3, func() error {
 		select {
@@ -1057,8 +1057,8 @@ func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps Age
 	return nil
 }
 
-func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan AgentCapabilities, error) {
-	ch := make(chan AgentCapabilities, 100)
+func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	ch := make(chan pb.AgentCapabilities, 100)
 
 	for i := 0; i < numShards; i++ {
 		lm.capsMu[i].Lock()
