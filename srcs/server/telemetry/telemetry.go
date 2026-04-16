@@ -199,6 +199,7 @@ func redactValue(rv reflect.Value) reflect.Value {
 	}
 }
 
+
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
 //
 // Accepts no parameters.
