@@ -41,3 +41,46 @@ func ProvisionHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "provisioned", "message": "State persisted successfully"})
 }
+
+
+type ConfigRequest struct {
+	Mode string `json:"mode"`
+}
+
+func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var config map[string]interface{}
+	if req.Mode == "cloud" {
+		config = map[string]interface{}{
+			"swarm_size": "large",
+			"database":   "postgresql",
+			"cache":      "redis",
+		}
+	} else if req.Mode == "standalone" {
+		config = map[string]interface{}{
+			"swarm_size": "small",
+			"database":   "sqlite",
+			"cache":      "memory",
+		}
+	} else {
+		http.Error(w, "Invalid mode", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"config": config,
+	})
+}
