@@ -1,0 +1,7 @@
+agent_id: "maintainer_triage_lead"
+channel: "triage"
+event_type: "mission_blocked"
+data:
+  mission_file: "2026-04-16T11-27-27Z.md"
+  status: "BLOCKED"
+  reason: "Requires modifying srcs/server/ which is outside the designated technical domain (.agent-task/missions/, .agent-task/memory/)."
