@@ -66,11 +66,13 @@ const profiles = [
 const browser = await chromium.launch({ headless: true });
 const screenName = "landing-page";
 
+
 try {
   for (const profile of profiles) {
     const context = await browser.newContext(profile.context);
     const page = await context.newPage();
 
+    // Capture Landing Page
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.waitForFunction(
       () =>
@@ -83,15 +85,35 @@ try {
     );
     await page.waitForTimeout(1500);
 
-    const targetDir = path.join(outputRoot, screenName);
+    const targetDir = path.join(outputRoot, profile.name);
     await mkdir(targetDir, { recursive: true });
+
     await page.screenshot({
-      path: path.join(targetDir, `${profile.name}.png`),
+      path: path.join(targetDir, "landing.png"),
+      fullPage: true,
+    });
+
+    // Capture Login Page
+    await page.goto(`${baseUrl}/#/login`, { waitUntil: "networkidle" });
+    await page.waitForFunction(
+      () =>
+        Boolean(
+          document.querySelector("flutter-view") ||
+          document.querySelector("flt-glass-pane") ||
+          document.querySelector("canvas"),
+        ),
+      { timeout: 60000 },
+    );
+    await page.waitForTimeout(1500);
+
+    await page.screenshot({
+      path: path.join(targetDir, "login.png"),
       fullPage: true,
     });
 
     await context.close();
   }
 } finally {
+
   await browser.close();
 }
