@@ -1,13 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement Bubblewrap Sandbox Telemetry.
-- Implement Hybrid Parity Stress Tests.
-
-### Privacy/Offline Improvements
-- Clean up dead Linear integration and harden standalone wrapper.
-
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.

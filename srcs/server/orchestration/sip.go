@@ -1271,11 +1271,6 @@ func (s *SIPDB) SetRedisClient(r rueidis.Client) {
 	s.redisClient = r
 }
 
-// RedisClient returns the Redis client.
-func (s *SIPDB) RedisClient() rueidis.Client {
-	return s.redisClient
-}
-
 func (s *SIPDB) getCache(ctx context.Context, key string, operation string) (string, bool) {
 	if s.redisClient != nil {
 		cmd := s.redisClient.B().Get().Key(key).Build()

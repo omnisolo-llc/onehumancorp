@@ -20,8 +20,6 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/storage"
@@ -453,13 +451,7 @@ func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payloa
 		return fmt.Errorf("invalid payload: %w", err)
 	}
 
-	var dbProvider db.Provider
-	var redisClient rueidis.Client
-	if h.SIPDB() != nil {
-		dbProvider = h.SIPDB().Provider()
-		redisClient = h.SIPDB().RedisClient()
-	}
-	client := NewCachedMinimaxClient(NewMinimaxClient(h.MinimaxAPIKey()), dbProvider, redisClient)
+	client := NewMinimaxClient(h.MinimaxAPIKey())
 
 	// Safely encode the untrusted payload as JSON to prevent prompt injection.
 	contextPayload, _ := json.Marshal(map[string]string{
@@ -922,13 +914,7 @@ func (h *Hub) Publish(message Message) error {
 			go func(mID string, tLines []transcriptLine) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				var dbProvider db.Provider
-				var redisClient rueidis.Client
-				if h.SIPDB() != nil {
-					dbProvider = h.SIPDB().Provider()
-					redisClient = h.SIPDB().RedisClient()
-				}
-				client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), dbProvider, redisClient)
+				client := NewMinimaxClient(minimaxKey)
 
 				// Redact PII in the goroutine to save main thread CPU
 				for i, line := range tLines {
@@ -1492,13 +1478,7 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*pb.ReasonResponse, error) {
-	var dbProvider db.Provider
-	var redisClient rueidis.Client
-	if s.hub.SIPDB() != nil {
-		dbProvider = s.hub.SIPDB().Provider()
-		redisClient = s.hub.SIPDB().RedisClient()
-	}
-	client := NewCachedMinimaxClient(NewMinimaxClient(s.hub.MinimaxAPIKey()), dbProvider, redisClient)
+	client := NewMinimaxClient(s.hub.MinimaxAPIKey())
 	content, err := client.Reason(ctx, req.GetPrompt())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "minimax reasoning failed: %v", err)
