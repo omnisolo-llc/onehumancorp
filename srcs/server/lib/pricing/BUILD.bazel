@@ -4,6 +4,7 @@ go_library(
     name = "pricing",
     srcs = [
         "budget.go",
+        "router.go",
         "cache.go",
         "calculator.go",
         "compression.go",
@@ -18,6 +19,7 @@ go_test(
     name = "pricing_test",
     srcs = [
         "budget_test.go",
+        "router_test.go",
         "cache_test.go",
         "calculator_test.go",
         "compression_test.go",
