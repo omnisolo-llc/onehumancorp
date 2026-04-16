@@ -4,6 +4,7 @@ go_library(
     name = "workers",
     srcs = [
         "mission_ingestion.go",
+        "autodream_worker.go",
         "competitor_audit.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/workers",
@@ -21,6 +22,7 @@ go_test(
     name = "workers_test",
     srcs = [
         "mission_ingestion_test.go",
+        "autodream_worker_test.go",
         "competitor_audit_test.go",
     ],
     embed = [":workers"],
