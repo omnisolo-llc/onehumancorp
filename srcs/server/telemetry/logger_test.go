@@ -48,20 +48,53 @@ func TestPIIRedactingHandler_WithAttrs(t *testing.T) {
 	}
 }
 
-func TestPIIRedactingHandler_GroupRedaction(t *testing.T) {
+func TestPIIRedactingHandler_Group(t *testing.T) {
 	var buf bytes.Buffer
 	baseHandler := slog.NewJSONHandler(&buf, nil)
 	handler := NewPIIRedactingHandler(baseHandler)
 	logger := slog.New(handler)
 
-	// Test deep group attribute redaction
-	logger.Info("User Action", slog.Group("context", slog.String("email", "nested@example.com")))
+	logger.Info("User group test",
+		slog.Group("user",
+			slog.String("email", "test@example.com"),
+			slog.String("id", "1234"),
+			slog.Group("nested",
+				slog.String("phone", "555-123-4567"),
+			),
+		),
+	)
 
 	output := buf.String()
-	if strings.Contains(output, "nested@example.com") {
+	if strings.Contains(output, "test@example.com") {
 		t.Errorf("Expected email in group to be redacted, got: %s", output)
 	}
 	if !strings.Contains(output, "[REDACTED_EMAIL]") {
-		t.Errorf("Expected [REDACTED_EMAIL] in output, got: %s", output)
+		t.Errorf("Expected [REDACTED_EMAIL] in group output, got: %s", output)
+	}
+	if strings.Contains(output, "555-123-4567") {
+		t.Errorf("Expected phone in nested group to be redacted, got: %s", output)
+	}
+	if !strings.Contains(output, "[REDACTED_PHONE]") {
+		t.Errorf("Expected [REDACTED_PHONE] in nested group output, got: %s", output)
+	}
+}
+
+func TestPIIRedactingHandler_TenantID(t *testing.T) {
+	var buf bytes.Buffer
+	baseHandler := slog.NewJSONHandler(&buf, nil)
+	handler := NewPIIRedactingHandler(baseHandler)
+	logger := slog.New(handler)
+
+	logger.Info("Tenant login",
+		"tenant_id", "test@example.com",
+		"organization_id", "555-123-4567",
+	)
+
+	output := buf.String()
+	if !strings.Contains(output, "test@example.com") {
+		t.Errorf("Expected tenant_id NOT to be redacted, got: %s", output)
+	}
+	if !strings.Contains(output, "555-123-4567") {
+		t.Errorf("Expected organization_id NOT to be redacted, got: %s", output)
 	}
 }
