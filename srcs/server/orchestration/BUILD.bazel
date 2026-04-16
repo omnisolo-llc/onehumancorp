@@ -99,6 +99,8 @@ go_test(
         "mesh_chaos_test.go",
         "lock_chaos_test.go",
         "chaos_thin_client_test.go",
+        "chaos_thin_client_latency_test.go",
+        "chaos_sql_sync_lag_test.go",
     ],
     embed = [":orchestration"],
     deps = [

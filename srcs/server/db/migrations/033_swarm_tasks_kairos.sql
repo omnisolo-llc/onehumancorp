@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE swarm_tasks ADD COLUMN IF NOT EXISTS organization_id TEXT;
+ALTER TABLE swarm_tasks ADD COLUMN organization_id TEXT;
 UPDATE swarm_tasks SET organization_id = 'default' WHERE organization_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS state_machine_transitions (
