@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -144,6 +145,55 @@ func RedactInterfacePII(val interface{}) interface{} {
 		}
 		return res
 	default:
+		if val == nil {
+			return nil
+		}
+		rv := reflect.ValueOf(val)
+		if rv.Kind() == reflect.String {
+			return RedactPII(rv.String())
+		}
+		switch rv.Kind() {
+		case reflect.Slice, reflect.Array:
+			if rv.Len() == 0 {
+				return val
+			}
+			// Important: Leave []byte intact. It marshals to base64 natively and usually doesn't need field-by-field string redaction here unless handled separately.
+			if rv.Type().Elem().Kind() == reflect.Uint8 {
+				return val
+			}
+			res := make([]interface{}, rv.Len())
+			for i := 0; i < rv.Len(); i++ {
+				res[i] = RedactInterfacePII(rv.Index(i).Interface())
+			}
+			return res
+		case reflect.Map:
+			if rv.Len() == 0 {
+				return val
+			}
+			res := make(map[string]interface{})
+			for _, key := range rv.MapKeys() {
+				var kStr string
+				if key.Kind() == reflect.String {
+					kStr = key.String()
+				} else {
+					kStr = fmt.Sprintf("%v", key.Interface())
+				}
+				res[kStr] = RedactInterfacePII(rv.MapIndex(key).Interface())
+			}
+			return res
+		case reflect.Struct:
+			res := make(map[string]interface{})
+			rt := rv.Type()
+			for i := 0; i < rv.NumField(); i++ {
+				field := rt.Field(i)
+				// Skip unexported fields
+				if field.PkgPath != "" {
+					continue
+				}
+				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
+			}
+			return res
+		}
 		return val
 	}
 }
