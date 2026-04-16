@@ -1,3 +1,0 @@
-status: DONE
-mission: NONE
-reason: "The prompt states: `Mission Queue Protocol... If no pending missions exist, use your domain expertise to identify and implement improvements within your specialty area, and still create a PR with tests.` The memory says: `The Principal Interoperability Engineer & Link (L7) domain is strictly restricted to srcs/server/interop/` but the prompt says: `Your exclusive domain: lib/integrations/, services/webhooks/, api/`. I will delete the mock integration and try something in srcs/server/interop/ instead since the code review failed."
