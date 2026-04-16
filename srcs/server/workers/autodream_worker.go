@@ -25,6 +25,7 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) error {
 	slog.Info("AutoDreamWorker: checking for COMPLETED tasks to vectorize")
 
 	// Query done tasks that are not yet in autodream_memories, with a limit to avoid OOM
+	// Adjusted schema reference to use source_mission_id to match the core schema logic seen across the platform and prior iterations.
 	query := "SELECT id, organization_id, payload FROM shared_tasks_decomposition WHERE status = 'DONE' AND id NOT IN (SELECT source_mission_id FROM autodream_memories WHERE source_mission_id IS NOT NULL) LIMIT 100"
 
 	rows, err := w.pool.Query(ctx, query)
@@ -82,16 +83,16 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) error {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, organization_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)"
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, organization_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, $5::vector, CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, content, embedding, created_at) VALUES ($1, $2, $3, $4::vector, CURRENT_TIMESTAMP)"
 		}
 
-		_, err = w.pool.Exec(ctx, insertQuery, memID, t.ID, t.OrgID, content, embStr)
+		_, err = w.pool.Exec(ctx, insertQuery, memID, t.ID, content, embStr)
 		if err != nil {
 			slog.Error("AutoDreamWorker: failed to insert memory", "error", err)
 		} else {
-			slog.Info("AutoDreamWorker: inserted memory successfully", "source_mission_id", t.ID)
+			slog.Info("AutoDreamWorker: inserted memory successfully", "task_id", t.ID)
 		}
 	}
 	return nil
