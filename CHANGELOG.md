@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.0 (Cloud) / v0.4.0+1 (Standalone)
+### Cloud Scaling Improvements
+- Architected the Elastic Swarm Bursting capabilities to ensure horizontal cloud scaling against traffic spikes.
+- Enhanced shared task execution and worker pools leveraging PostgreSQL SKIP LOCKED.
+
+### Privacy/Offline Improvements
+- Implemented Hybrid CRDT Sync Tool and state sync wrappers for standalone offline autonomy.
+
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
