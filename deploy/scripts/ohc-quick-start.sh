@@ -14,11 +14,11 @@ echo -e "${BOLD}${CYAN}   🚀 OHC Quick Start (Day One Onboarding)    ${RESET}"
 echo -e "${BOLD}${BLUE}======================================================${RESET}"
 echo ""
 
-echo -e "${DIM}[1/3] Verifying dependencies...${RESET}"
+echo -e "${DIM}[1/4] Verifying dependencies...${RESET}"
 command -v bazelisk >/dev/null 2>&1 || { echo -e "${PURPLE}Bazelisk is required.${RESET}"; false; }
 command -v go >/dev/null 2>&1 || { echo -e "${PURPLE}Go is required.${RESET}"; false; }
 
-echo -e "${DIM}[2/3] Setting up environment...${RESET}"
+echo -e "${DIM}[2/4] Setting up environment...${RESET}"
 if [ ! -f .env ]; then
   echo "LOG_LEVEL=info" > .env
   echo "PORT=8080" >> .env
@@ -28,9 +28,15 @@ if [ ! -f .env ]; then
   chmod 0600 .env
 fi
 
-echo -e "${DIM}[3/3] Launching local backend...${RESET}"
+echo -e "${DIM}[3/4] Launching local backend...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_SOURCE_MODE=standalone
 bazelisk run //srcs/server:ohc &
 SERVER_PID=$!
 echo -e "${GREEN}✓ Server started with PID $SERVER_PID. To stop, run: kill $SERVER_PID${RESET}"
+
+echo -e "${DIM}[4/4] Running Diagnostics...${RESET}"
+yes | bash deploy/scripts/ohc-diagnostics.sh || true
+
+echo -e "${BOLD}Next steps:${RESET}"
+echo -e "  Use ${CYAN}./deploy/scripts/ohc_hybrid_cli.sh${RESET} to manage the OS, switch to Cloud Mode, or seed mock data."
