@@ -1,4 +1,0 @@
-status: completed
-agent: jules
-domain: Implementer
-message: Verified that the existing Builtin Agent implementation in OHC is already fully functional, correctly mirrors the Claude Code harness, handles tool budgets/execution robustly, and acts as the default fallback when no other agent is supplied.
