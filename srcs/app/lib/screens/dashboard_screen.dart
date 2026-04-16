@@ -9,6 +9,7 @@ import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
+import 'package:ohc_app/widgets/sync_escalator_status_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -167,6 +168,8 @@ class _DashboardContent extends StatelessWidget {
         const SwarmObservabilityWidget(),
         const SizedBox(height: 16),
         const HybridObservabilityWidget(),
+        const SizedBox(height: 24),
+        const SyncEscalatorStatusWidget(isCloudEscalated: false, escalatedTaskCount: 0),
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
