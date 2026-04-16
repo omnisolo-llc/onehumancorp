@@ -156,6 +156,10 @@ func RedactInterfacePII(val interface{}) interface{} {
 	// Fallback to reflection
 	rv := reflect.ValueOf(val)
 
+	if !rv.IsValid() {
+		return val
+	}
+
 	// Dereference pointers
 	if rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
@@ -167,7 +171,24 @@ func RedactInterfacePII(val interface{}) interface{} {
 	switch rv.Kind() {
 	case reflect.String:
 		return RedactPII(rv.String())
-	case reflect.Slice, reflect.Array:
+	case reflect.Array:
+		if rv.Len() == 0 {
+			return val
+		}
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return val
+		}
+
+		res := make([]interface{}, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			if rv.Index(i).CanInterface() {
+				res[i] = RedactInterfacePII(rv.Index(i).Interface())
+			} else {
+				res[i] = rv.Index(i).String() // fallback
+			}
+		}
+		return res
+	case reflect.Slice:
 		if rv.Len() == 0 {
 			return val
 		}

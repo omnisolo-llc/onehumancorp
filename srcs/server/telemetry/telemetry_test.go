@@ -534,6 +534,32 @@ func TestRedactInterfacePII(t *testing.T) {
 		}
 	})
 
+	t.Run("Array", func(t *testing.T) {
+		a := [2]string{"user@example.com", "safe text"}
+		res := RedactInterfacePII(a).([]interface{})
+		if res[0] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0])
+		}
+		if res[1] != "safe text" {
+			t.Errorf("Expected 'safe text', got %v", res[1])
+		}
+	})
+
+	t.Run("Nil Pointer", func(t *testing.T) {
+		var ptr *string = nil
+		res := RedactInterfacePII(ptr)
+		if res != ptr {
+			t.Errorf("Expected same nil pointer back, got %v", res)
+		}
+	})
+
+	t.Run("Nil interface", func(t *testing.T) {
+		res := RedactInterfacePII(nil)
+		if res != nil {
+			t.Errorf("Expected nil, got %v", res)
+		}
+	})
+
 	t.Run("Slice of interface", func(t *testing.T) {
 		s := []interface{}{"user@example.com", "safe text"}
 		res := RedactInterfacePII(s).([]interface{})
