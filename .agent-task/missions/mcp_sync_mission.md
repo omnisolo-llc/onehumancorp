@@ -1,3 +1,7 @@
+---
+status: BLOCKED
+blockers: Outside of assigned persona domain (apps/web/src/components/, apps/web/src/styles/)
+---
 Parent: #4296
 
 ## Title

@@ -30,10 +30,11 @@ const TaskDAGViewer = () => {
       backdropFilter: 'blur(20px) saturate(200%)',
       background: 'rgba(255, 255, 255, 0.03)',
       fontFamily: '"Outfit", "Inter", sans-serif',
-      padding: '20px',
-      borderRadius: '12px',
+      padding: '24px',
+      borderRadius: '16px',
       border: '1px solid rgba(255, 255, 255, 0.1)',
-      color: '#fff'
+      color: '#fff',
+      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
     }}>
       <h2>Task DAG Viewer</h2>
       <p>Visual representation of parent-child dependencies and task statuses.</p>
@@ -41,10 +42,17 @@ const TaskDAGViewer = () => {
         <p>Loading tasks...</p>
       ) : (
         <ul data-testid="task-list">
-          {tasks.map((task, idx) => (
-            <li key={idx}>
-              {task.title} - {task.status}
-              <button onClick={() => handlePause(task.id)}>Pause</button>
+          {tasks.length === 0 ? <p>No tasks in DAG.</p> : tasks.map((task, idx) => (
+            <li key={idx} style={{ marginBottom: '10px' }}>
+              <span style={{
+                marginRight: '10px',
+                color: task.status === 'PENDING' ? '#f39c12' :
+                       task.status === 'COMPLETED' ? '#2ecc71' :
+                       task.status === 'EXECUTING' ? '#3498db' : '#fff'
+              }}>
+                {task.title} - {task.status}
+              </span>
+              <button onClick={() => handlePause(task.id)} style={{ marginRight: '5px' }}>Pause</button>
               <button onClick={() => handleKill(task.id)}>Kill</button>
             </li>
           ))}
