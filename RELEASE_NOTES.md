@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
+- Scaling (Cloud): Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
+- Privacy/Offline (Standalone): Maintained Standalone telemetry consistency across single-user environments for the new MCP Bridge integration.
+
 ## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
 - Scaling (Cloud): Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
 - Privacy/Offline (Standalone): Enhanced standalone AutoDream memory consistency using SQL-backed idempotent ingestion for mission artifacts.
