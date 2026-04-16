@@ -47,3 +47,20 @@ func TestPIIRedactingHandler_WithAttrs(t *testing.T) {
 		t.Errorf("Expected [REDACTED_ANTHROPIC_KEY] in output, got: %s", output)
 	}
 }
+
+func TestPIIRedactingHandler_Group(t *testing.T) {
+	var buf bytes.Buffer
+	baseHandler := slog.NewJSONHandler(&buf, nil)
+	handler := NewPIIRedactingHandler(baseHandler)
+	logger := slog.New(handler)
+
+	logger.Info("User action", slog.Group("user", slog.String("email", "test@example.com")))
+
+	output := buf.String()
+	if strings.Contains(output, "test@example.com") {
+		t.Errorf("Expected email in group to be redacted, got: %s", output)
+	}
+	if !strings.Contains(output, "[REDACTED_EMAIL]") {
+		t.Errorf("Expected [REDACTED_EMAIL] in output, got: %s", output)
+	}
+}
