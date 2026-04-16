@@ -32,7 +32,7 @@ type MemoryFile struct {
 	Content          string `yaml:"content"`
 }
 
-// ProcessMemories ingests pending memory YAML files into the autodream_memories table.
+// ProcessMemories ingests pending memory YAML files into the autodream_memories_master table.
 //
 // When OHC_MEMORY_DIR is set the worker reads YAML files from that directory
 // (migration path: legacy agents wrote memory files there).  If the env var is
@@ -127,12 +127,12 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories_master (id, content, embedding, source_task_id, tenant_id, memory_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories_master (id, content, embedding, source_task_id, tenant_id, memory_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, CURRENT_TIMESTAMP)`
 		}
 		// Default organization_id to "system" as auth contexts are missing in background workers
-		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "background-pipeline"}
+		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "background-pipeline"}
 
 		_, err = tx.Exec(ctx, query, args...)
 		if err != nil {

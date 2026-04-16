@@ -21,19 +21,19 @@ func setupTestDB(t *testing.T) db.Provider {
 	provider := db.NewSqliteProvider(sqlDB)
 
 	// Create required tables
-	query := `CREATE TABLE IF NOT EXISTS autodream_memories (
+	query := `CREATE TABLE IF NOT EXISTS autodream_memories_master (
 		id TEXT PRIMARY KEY,
 		content TEXT NOT NULL,
 		embedding TEXT,
-		source_mission_id TEXT,
-		organization_id TEXT,
-		agent_id TEXT,
-		source_type TEXT,
+		source_task_id TEXT,
+		tenant_id TEXT,
+
+		memory_type TEXT,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);`
 	_, err = provider.Exec(context.Background(), query)
 	if err != nil {
-		t.Fatalf("failed to create autodream_memories table: %v", err)
+		t.Fatalf("failed to create autodream_memories_master table: %v", err)
 	}
 
 	return provider
@@ -80,7 +80,7 @@ func TestAutoDreamWorker_ProcessMemories(t *testing.T) {
 	}
 
 	// Verify insertion
-	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories")
+	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories_master")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}

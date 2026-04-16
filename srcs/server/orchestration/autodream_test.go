@@ -142,14 +142,16 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
 	_, err = pool.Provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS autodream_memories (
+		CREATE TABLE IF NOT EXISTS autodream_memories_master (
+			tenant_id TEXT,
+			memory_type TEXT,
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
-			source_mission_id TEXT
+			source_task_id TEXT
 		)
 	`)
 	if err != nil {
-		t.Fatalf("failed to create autodream_memories: %v", err)
+		t.Fatalf("failed to create autodream_memories_master: %v", err)
 	}
 
 	_, err = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess-1', 'agent-1', 'test context')")
@@ -171,7 +173,7 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 	}
 
 	// Verify the memory was inserted
-	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 'sess-1'").Scan(&count)
+	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories_master WHERE source_task_id = 'sess-1'").Scan(&count)
 	if err != nil {
 		t.Fatalf("failed to query count: %v", err)
 	}

@@ -115,7 +115,7 @@ func (w *MissionIngestionWorker) processSingleMission(ctx context.Context, missi
 	}
 
 	// For Postgres, we can try locking a dummy row, or use a distributed lock. But actually,
-	// checking existence inside the transaction with a unique constraint or locking the autodream_memories table
+	// checking existence inside the transaction with a unique constraint or locking the autodream_memories_master table
 	// is more robust than trying to lock a non-existent row in agent_session_data.
 	// Since source_mission_id and source_type might not have a unique constraint, we will do a SELECT FOR UPDATE if we can,
 	// or rely on idempotency by doing a read then insert within the same tx in SQLite, and serializable/locking in Postgres.
@@ -135,7 +135,7 @@ func (w *MissionIngestionWorker) processSingleMission(ctx context.Context, missi
 
 	// Check if it already exists inside the transaction
 	var count int
-	err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = $1 AND source_type = 'mission-artifact'", missionID).Scan(&count)
+	err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories_master WHERE source_task_id = $1 AND memory_type = 'mission-artifact'", missionID).Scan(&count)
 	if err != nil {
 		slog.Error("MissionIngestionWorker: failed to check memory existence", "error", err)
 		tx.Rollback(ctx)
@@ -159,12 +159,12 @@ func (w *MissionIngestionWorker) processSingleMission(ctx context.Context, missi
 	var args []interface{}
 
 	if w.pool.IsSQLite() {
-		query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+		query = `INSERT INTO autodream_memories_master (id, content, embedding, source_task_id, tenant_id, memory_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`
 	} else {
-		query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+		query = `INSERT INTO autodream_memories_master (id, content, embedding, source_task_id, tenant_id, memory_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, CURRENT_TIMESTAMP)`
 	}
 
-	args = []interface{}{memID, content, embStr, missionID, "system", "mission-ingestion-worker", "mission-artifact"}
+	args = []interface{}{memID, content, embStr, missionID, "system", "mission-artifact"}
 
 	_, err = tx.Exec(ctx, query, args...)
 	if err != nil {

@@ -20,14 +20,14 @@ func setupTestDB(t *testing.T) db.Provider {
 	provider := db.NewSqliteProvider(sqlDB)
 
 	// Create required tables
-	query := `CREATE TABLE IF NOT EXISTS autodream_memories (
+	query := `CREATE TABLE IF NOT EXISTS autodream_memories_master (
 		id TEXT PRIMARY KEY,
 		content TEXT NOT NULL,
 		embedding TEXT,
-		source_mission_id TEXT,
-		organization_id TEXT,
-		agent_id TEXT,
-		source_type TEXT,
+		source_task_id TEXT,
+		tenant_id TEXT,
+
+		memory_type TEXT,
 		created_at TEXT DEFAULT CURRENT_TIMESTAMP
 	);
 
@@ -74,12 +74,12 @@ title: Test
 
 	// Verify insertion
 	var count int
-	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = 'test_mission'").Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories_master WHERE source_task_id = 'test_mission'").Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
 	var savedContent string
-	err = provider.QueryRow(ctx, "SELECT content FROM autodream_memories WHERE source_mission_id = 'test_mission'").Scan(&savedContent)
+	err = provider.QueryRow(ctx, "SELECT content FROM autodream_memories_master WHERE source_task_id = 'test_mission'").Scan(&savedContent)
 	assert.NoError(t, err)
 
 	// Should have stripped HTML
@@ -90,7 +90,7 @@ title: Test
 	worker.IngestMissions(ctx)
 
 	var countAfter int
-	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = 'test_mission'").Scan(&countAfter)
+	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories_master WHERE source_task_id = 'test_mission'").Scan(&countAfter)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, countAfter)
 }
@@ -120,7 +120,7 @@ title: Test YAML
 
 	// Verify insertion
 	var count int
-	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = 'test_mission'").Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories_master WHERE source_task_id = 'test_mission'").Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 }

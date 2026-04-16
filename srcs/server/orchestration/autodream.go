@@ -51,7 +51,7 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runCompletedTasksIngestionPipeline(ctx)
 }
 
-// runCompletedTasksIngestionPipeline processes COMPLETED tasks into autodream_memories.
+// runCompletedTasksIngestionPipeline processes COMPLETED tasks into autodream_memories_master.
 func (w *AutoDreamWorker) runCompletedTasksIngestionPipeline(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
@@ -66,7 +66,7 @@ func (w *AutoDreamWorker) runCompletedTasksIngestionPipeline(ctx context.Context
 	}
 }
 
-// ingestCompletedTasks queries shared_tasks for COMPLETED status and adds them to autodream_memories
+// ingestCompletedTasks queries shared_tasks for COMPLETED status and adds them to autodream_memories_master
 func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -177,7 +177,7 @@ func (w *AutoDreamWorker) runSessionCompressionPipeline(ctx context.Context) {
 	}
 }
 
-// compressSessionData reads agent_session_data and inserts it into autodream_memories.
+// compressSessionData reads agent_session_data and inserts it into autodream_memories_master.
 func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -234,13 +234,13 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 		var insertQuery string
 		if w.pool.IsSQLite() {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, content, source_mission_id)
-				VALUES (?, ?, ?)
+				INSERT INTO autodream_memories_master (id, content, source_task_id, tenant_id, memory_type)
+				VALUES (?, ?, ?, 'system', 'autodream')
 			`
 		} else {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, content, source_mission_id)
-				VALUES ($1, $2, $3)
+				INSERT INTO autodream_memories_master (id, content, source_task_id, tenant_id, memory_type)
+				VALUES ($1, $2, $3, 'system', 'autodream')
 			`
 		}
 		memID := "ad-" + rec.ID
@@ -285,7 +285,7 @@ func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
 	}
 }
 
-// compressSessionContexts periodically compresses context from agent_session_data into autodream_memories.
+// compressSessionContexts periodically compresses context from agent_session_data into autodream_memories_master.
 func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 	// Only process sessions older than 5 minutes to avoid compressing active sessions
 	threshold := time.Now().Add(-5 * time.Minute).UTC()
@@ -435,9 +435,9 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		var check int
 		var checkQuery string
 		if w.pool.IsSQLite() {
-			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = ? LIMIT 1"
+			checkQuery = "SELECT 1 FROM autodream_memories_master WHERE source_task_id = ? LIMIT 1"
 		} else {
-			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = $1 LIMIT 1"
+			checkQuery = "SELECT 1 FROM autodream_memories_master WHERE source_task_id = $1 LIMIT 1"
 		}
 		if err := w.pool.QueryRow(ctx, checkQuery, memoryID).Scan(&check); err == nil {
 			// Already exists, delete file and skip
@@ -800,7 +800,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to create epoch: %w", err)
 	}
 
-	// 2. Fetch context from agent_session_data and shared_tasks, and compress it into autodream_memories/swarm_truth_embeddings/agent_memories
+	// 2. Fetch context from agent_session_data and shared_tasks, and compress it into autodream_memories_master/swarm_truth_embeddings/agent_memories
 	var rows db.Rows
 	var errQuery error
 	if w.pool.IsSQLite() {
@@ -967,7 +967,7 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 
 		// Check if it already exists to prevent duplication
 		var count int
-		err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = $1 AND source_type = 'mission-artifact'", missionID).Scan(&count)
+		err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories_master WHERE source_task_id = $1 AND memory_type = 'mission-artifact'", missionID).Scan(&count)
 		if err == nil && count > 0 {
 			tx.Rollback(ctx)
 			continue
@@ -982,11 +982,11 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 		var args []interface{}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories_master (id, content, embedding, source_task_id, tenant_id, memory_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO autodream_memories_master (id, content, embedding, source_task_id, tenant_id, memory_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, CURRENT_TIMESTAMP)`
 		}
-		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "mission-artifact"}
+		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "mission-artifact"}
 
 		_, err = tx.Exec(ctx, query, args...)
 		if err != nil {
