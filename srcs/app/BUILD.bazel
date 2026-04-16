@@ -133,6 +133,7 @@ flutter_library(
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         ":router_lib",
+        "//srcs/app/lib/widgets:widgets_lib",
         "@pub_mocktail//:mocktail",
     ],
 )
@@ -336,4 +337,21 @@ pkg_rpm(
     tags = ["manual"],
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
+)
+
+# Tests for widgets
+[
+    flutter_test(
+        name = file.replace(".dart", "").replace("/", "_"),
+        srcs = [file],
+        embed = [":app_for_tests"],
+        workspace_pubspec = "//:pubspec.yaml",
+        test_files = [file],
+    )
+    for file in glob(["test/widgets/*_test.dart"])
+]
+
+test_suite(
+    name = "widget_tests",
+    tests = [":" + file.replace(".dart", "").replace("/", "_") for file in glob(["test/widgets/*_test.dart"])],
 )

@@ -27,6 +27,7 @@ flutter_library(
     srcs = glob(
         ["*.dart"],
         exclude = ["*_test.dart"],
+        allow_empty = True,
     ),
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
