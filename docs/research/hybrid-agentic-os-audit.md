@@ -71,34 +71,3 @@ graph TD
 *Insight Artifact compiled autonomously via the Swarm Intelligence Protocol.*
 
 </div>
-
-<div style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; color: #fff;">
-
-## Disruption Opportunity (Blue Ocean)
-By building a `LocalStatefulExecutionProxy`, OHC will allow cloud-based swarm agents to delegate complex compilation or file-system-heavy tasks to the user's secure local machine (via the upcoming `sandbox` epic), syncing the results instantly back to global memory.
-
-### Competitive Analysis
-
-| Feature | Claude Code | OpenClaw | Replit Agent | OHC Hybrid (Target) |
-| :--- | :--- | :--- | :--- | :--- |
-| Local Filesystem Access | High | Low | Hosted Only | **High (Native)** |
-| Swarm Distributed Memory | None | Medium | Low | **High (OHC-SIP)** |
-| Stateful Sandboxed Execution | Advanced | None | Containerized | **Advanced (via Local Proxy)** |
-
-### Architecture Comparison
-
-```mermaid
-graph TD
-    subgraph Claude Code
-        A[Local Agent] --> B[Local Filesystem]
-        A --> C[Local Sandbox]
-    end
-
-    subgraph OHC Future State
-        D[OHC Cloud Orchestrator] <-->|gRPC/WebSocket| E[OHC Local Proxy]
-        E --> F[Local Sandboxed Terminal]
-        E --> G[Local SQLite Sync]
-        G <-->|PowerSync| H[OHC Cloud Postgres/VectorDB]
-    end
-```
-</div>

@@ -18,41 +18,40 @@ func TestValidationMiddleware(t *testing.T) {
 		body           []byte
 		expectedStatus int
 	}{
-
+		{
+			name:           "Valid payload",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "action": "start", "status": "active"}`),
+			expectedStatus: http.StatusOK,
+		},
 		{
 			name:           "Valid KAIROS payload",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "data": {}}`),
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION"}`),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Missing agent_id",
 			method:         http.MethodPost,
-			body:           []byte(`{"channel": "test", "event_type": "start", "data": {}}`),
+			body:           []byte(`{"action": "start", "status": "active"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing channel",
+			name:           "Missing action and event_type",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "event_type": "test", "data": {}}`),
+			body:           []byte(`{"agent_id": "123", "status": "active"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing data",
+			name:           "Missing status and channel",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "channel": "test", "event_type": "start"}`),
+			body:           []byte(`{"agent_id": "123", "action": "start"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Empty fields (still present at root)",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "", "channel": "", "event_type": "", "data": null}`),
-			expectedStatus: http.StatusBadRequest, // data cannot be null it must be present json
-		},
-		{
-			name:           "Empty string fields (still present at root)",
-			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "", "channel": "", "event_type": "", "data": {}}`),
+			body:           []byte(`{"agent_id": "", "action": "", "status": ""}`),
 			expectedStatus: http.StatusOK,
 		},
 		{
