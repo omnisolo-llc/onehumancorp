@@ -31,6 +31,8 @@ type SharedTask struct {
 	Title           string     `json:"title"`
 	Description     string     `json:"description,omitempty"`
 	AssignedAgentID string     `json:"assigned_agent_id,omitempty"`
+	ClaimedBy       *string    `json:"claimed_by,omitempty"`
+	ClaimStatus     *string    `json:"claim_status,omitempty"`
 	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
 	Priority        string     `json:"priority"`
 	Payload         string     `json:"payload"`
@@ -746,13 +748,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, claimed_by, claim_status, created_at, updated_at
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.ClaimedBy, &task.ClaimStatus, &task.CreatedAt, &task.UpdatedAt,
 			)
 
 			if errQuery != nil {
@@ -810,13 +812,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, claimed_by, claim_status, created_at, updated_at
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.ClaimedBy, &task.ClaimStatus, &task.CreatedAt, &task.UpdatedAt,
 			)
 
 			if errQuery != nil {
