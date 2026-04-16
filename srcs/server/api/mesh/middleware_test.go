@@ -21,31 +21,31 @@ func TestValidationMiddleware(t *testing.T) {
 		{
 			name:           "Valid payload",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "action": "start", "status": "active"}`),
+			body:           []byte(`{"agent_id": "123", "channel": "start", "event_type": "active"}`),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Missing agent_id",
 			method:         http.MethodPost,
-			body:           []byte(`{"action": "start", "status": "active"}`),
+			body:           []byte(`{"channel": "start", "event_type": "active"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing action",
+			name:           "Missing channel",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "status": "active"}`),
+			body:           []byte(`{"agent_id": "123", "event_type": "active"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing status",
+			name:           "Missing event_type",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "action": "start"}`),
+			body:           []byte(`{"agent_id": "123", "channel": "start"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Empty fields (still present at root)",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "", "action": "", "status": ""}`),
+			body:           []byte(`{"agent_id": "", "channel": "", "event_type": ""}`),
 			expectedStatus: http.StatusOK,
 		},
 		{
