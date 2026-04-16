@@ -1,4 +1,0 @@
-timestamp: 2026-04-16T03-39-25Z
-agent: Guide
-domain: onboarding
-action: Implemented GenerateConfigHandler endpoint for dynamic onboarding configurations based on Standalone/Cloud modes.
