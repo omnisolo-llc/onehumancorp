@@ -174,15 +174,18 @@ const publicScreens = [
 // Main capture loop
 // ---------------------------------------------------------------------------
 
+// Run headless:false so that xvfb-run can provide a real X11 display with
+// Mesa software GL (LIBGL_ALWAYS_SOFTWARE=1).  This allows Flutter's
+// CanvasKit/skwasm renderer to use WebGL and produce real screenshots.
+// When run via `bazelisk run //srcs/app:capture_screenshots` the wrapper
+// script (test/capture_screenshots.sh) calls us under xvfb-run with the
+// LIBGL_ALWAYS_SOFTWARE env var set.
 const browser = await chromium.launch({
-  headless: true,
+  headless: false,
   args: [
-    // Enable software-based WebGL via SwiftShader so CanvasKit renders
-    // correctly in headless environments without a physical GPU.
-    '--use-angle=swiftshader-webgl',
-    '--use-gl=angle',
-    '--disable-gpu-sandbox',
-    '--ignore-gpu-blocklist',
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
+    '--use-gl=egl',
     '--enable-webgl',
     '--enable-webgl2',
   ],

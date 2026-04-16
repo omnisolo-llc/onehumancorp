@@ -32,14 +32,16 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        // Enable software-based WebGL via SwiftShader so CanvasKit renders
-        // correctly in headless environments without a physical GPU.
+        // Use headless:false so that xvfb-run (with LIBGL_ALWAYS_SOFTWARE=1)
+        // provides a real X11+Mesa GL context for Flutter's CanvasKit/WebGL
+        // renderer.  The flutter_web_e2e_test.sh wrapper invokes Playwright
+        // under xvfb-run when available.
         launchOptions: {
+          headless: false,
           args: [
-            '--use-angle=swiftshader-webgl',
-            '--use-gl=angle',
-            '--disable-gpu-sandbox',
-            '--ignore-gpu-blocklist',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--use-gl=egl',
             '--enable-webgl',
             '--enable-webgl2',
           ],

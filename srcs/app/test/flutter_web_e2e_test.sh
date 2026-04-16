@@ -258,10 +258,26 @@ fi
 OUTPUT_DIR="${TMPDIR}/pw_results"
 mkdir -p "${OUTPUT_DIR}"
 
+# ── Run tests ─────────────────────────────────────────────────────────────
+OUTPUT_DIR="${TMPDIR}/pw_results"
+mkdir -p "${OUTPUT_DIR}"
+
 echo "Running Playwright tests…"
-"${PLAYWRIGHT_CMD[@]}" test \
-  --config="${CONFIG}" \
-  --output="${OUTPUT_DIR}" \
-  2>&1
+# Run under xvfb-run so headless:false Chrome gets a real X11 display.
+# LIBGL_ALWAYS_SOFTWARE=1 enables Mesa software GL so Flutter CanvasKit
+# WebGL renders correctly without a physical GPU.
+if command -v xvfb-run >/dev/null 2>&1; then
+  export LIBGL_ALWAYS_SOFTWARE=1
+  xvfb-run -a -s "-screen 0 1920x1080x24" \
+    "${PLAYWRIGHT_CMD[@]}" test \
+      --config="${CONFIG}" \
+      --output="${OUTPUT_DIR}" \
+      2>&1
+else
+  "${PLAYWRIGHT_CMD[@]}" test \
+    --config="${CONFIG}" \
+    --output="${OUTPUT_DIR}" \
+    2>&1
+fi
 
 echo "✓ Playwright web e2e tests completed"

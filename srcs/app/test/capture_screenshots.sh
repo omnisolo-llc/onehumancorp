@@ -242,6 +242,20 @@ capture_work_dir="${work_tmp}/capture_work"
 mkdir -p "${capture_work_dir}"
 cp "${capture_script}" "${capture_work_dir}/capture_screenshots.mjs"
 ln -sf "${node_modules_dir}" "${capture_work_dir}/node_modules"
-"${node_bin}" "${capture_work_dir}/capture_screenshots.mjs"
+
+# Run under xvfb-run so headless: false Chrome gets a real X11 display.
+# LIBGL_ALWAYS_SOFTWARE=1 makes Mesa use software rasterisation (llvmpipe /
+# swrast), giving Chrome a working OpenGL / WebGL context so Flutter's
+# CanvasKit renderer produces real screenshots even without a physical GPU.
+run_node() {
+  if command -v xvfb-run >/dev/null 2>&1; then
+    xvfb-run -a -s "-screen 0 1920x1080x24" env LIBGL_ALWAYS_SOFTWARE=1 \
+      "${node_bin}" "$@"
+  else
+    LIBGL_ALWAYS_SOFTWARE=1 "${node_bin}" "$@"
+  fi
+}
+
+run_node "${capture_work_dir}/capture_screenshots.mjs"
 
 echo "Screenshots written to ${output_root}"
