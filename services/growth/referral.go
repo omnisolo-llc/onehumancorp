@@ -36,3 +36,14 @@ func (s *ReferralService) AcceptInvite(ctx context.Context, inviteID string) err
 	})
 	return nil
 }
+
+func (s *ReferralService) ProcessBulkInvites(ctx context.Context, senderID string, receiverEmails []string) error {
+	if senderID == "" || len(receiverEmails) == 0 {
+		return fmt.Errorf("invalid bulk invite parameters")
+	}
+	s.tracker.TrackEvent(ctx, "bulk_invite_sent", map[string]interface{}{
+		"sender_id":      senderID,
+		"receiver_emails": receiverEmails,
+	})
+	return nil
+}
