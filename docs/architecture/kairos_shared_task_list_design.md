@@ -1,4 +1,4 @@
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; color: #E0E0E0;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 <h1 style="color: #FFFFFF; font-weight: 600; letter-spacing: -0.02em;">KAIROS: Shared Task List & Teammate Mesh Architecture</h1>
 
 <h2 style="color: #B0B0B0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">1. Executive Summary</h2>
