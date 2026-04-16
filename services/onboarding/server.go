@@ -3,8 +3,6 @@ package onboarding
 import (
 	"encoding/json"
 	"net/http"
-	"os"
-	"strings"
 )
 
 type ProvisionRequest struct {
@@ -74,12 +72,6 @@ func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
 			"database":   "sqlite",
 			"cache":      "memory",
 		}
-	} else if req.Mode == "thin_client" {
-		config = map[string]interface{}{
-			"swarm_size": "none",
-			"database":   "remote",
-			"cache":      "none",
-		}
 	} else {
 		http.Error(w, "Invalid mode", http.StatusBadRequest)
 		return
@@ -91,42 +83,4 @@ func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 		"config": config,
 	})
-}
-
-type VerifyEnvResponse struct {
-    Status string `json:"status"`
-    Config *EnvConfig `json:"config,omitempty"`
-    Error  string `json:"error,omitempty"`
-}
-
-func VerifyEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodGet {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
-
-    envVars := make(map[string]string)
-    for _, env := range os.Environ() {
-        parts := strings.SplitN(env, "=", 2)
-        if len(parts) == 2 {
-            envVars[parts[0]] = parts[1]
-        }
-    }
-
-    config, err := VerifyEnvironment(envVars)
-    w.Header().Set("Content-Type", "application/json")
-    if err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(VerifyEnvResponse{
-            Status: "error",
-            Error:  err.Error(),
-        })
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(VerifyEnvResponse{
-        Status: "success",
-        Config: config,
-    })
 }

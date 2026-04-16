@@ -1,16 +1,19 @@
-1. **Fix DB Migration for SQLite Compatibility:**
-   - Remove PostgreSQL-specific syntax like schemas (`ohc_tasks`, `ohc_memory`), `gen_random_uuid()`, and `NOW()` in the migration file `srcs/server/db/migrations/20260416030000_kairos_mesh.sql`, or implement an SQLite-friendly schema. However, `db/database.go`'s `RunMigrations` already handles SQLite compatibility by rewriting SQL dynamically. Wait, `db/database.go` replaces `NOW()` and `vector(1536)` for SQLite. It doesn't handle schemas.
-   - I should remove schemas from the migration and use a single flattened namespace, e.g., `ohc_tasks_mission_queue`. Or, just use `shared_tasks_decomposition` which already exists? The design doc specified `ohc_tasks.mission_queue`. Let me adjust the migration to only use schemas if PGX? No, standard is to use prefix if necessary. I'll modify `srcs/server/db/migrations/20260416030000_kairos_mesh.sql` to avoid PostgreSQL schema creation, using `mission_queue`, `autodream_vectors`, and `sub_agent_queue` directly. Wait, the design explicitly says "Database Schema (PostgreSQL)", so I should use schemas and let the test run correctly. Or I should write the migration without schema prefix since the tests expect table names without schemas to work on sqlite.
-   - Let's fix the SQL migration to NOT use PostgreSQL schemas, but instead use table prefixes (e.g., `mission_queue`, `autodream_vectors`). Wait, `docs/architecture/kairos_ai_os_core_features.md` explicitly demands `ohc_tasks.mission_queue`. Let me review `srcs/server/db/database.go` to see if it strips `ohc_tasks.` for SQLite. It doesn't. Thus, for tests on SQLite, I will provide a wrapper or just use `ohc_tasks_mission_queue` in sqlite instead of schema. Let's fix the schema string replacements in `database.go` or just update the migration. It is safer to rewrite the migration so it does not use schemas for tables, since the design doc mentions them as logical separations.
-   - Wait, if I must obey the design document verbatim: "Create the database migrations (e.g. in db/migrations/) for: ohc_tasks.mission_queue ... Ensure schemas exactly match the Design Doc." So the schemas must be created. For SQLite testing, I should not create schemas but use table prefixes or attach another database. The `orchestration.go` correctly handles `o.DBProvider.IsSQLite()` to use `mission_queue` instead of `ohc_tasks.mission_queue`.
-   - The issue with the API is that `MeshHandler.Broadcast` expects `Intent string`. The design doc expected `POST /api/mesh/broadcast` to receive a `TASK_TRANSITION` payload. The `MeshHandler.Broadcast` must accept BOTH the old `Intent string` payload AND the new detailed payload. Or perhaps the string `Intent` was just a JSON string containing the detailed payload? Ah, the payload from the design doc is: `{"agent_id": "...", "channel": "...", ...}`. If the handler expects `Intent`, maybe the client is sending that. Let's revert `mesh.go` and implement a union type or parse the intent out. The feedback says: "Any existing client calling `/api/mesh/broadcast` with an `intent` will have its data dropped, breaking existing functionality."
+1.  **Add Database Migrations**:
+    *   Create a new migration file (e.g., `srcs/server/db/migrations/20260416030000_add_referral_fields_to_users.sql`).
+    *   Add `referral_code` (TEXT UNIQUE) and `referred_by` (TEXT, foreign key to `users(id)`) columns to the `users` table.
+    *   Update `srcs/server/db/BUILD.bazel` to include this new migration in `embedsrcs`.
 
-   - I will modify `srcs/server/api/mesh/mesh.go` to parse either the old `intent` format or the new detailed KAIROS format, and broadcast it correctly.
+2.  **Update `growth` Service API**:
+    *   Currently `referral_api.go` contains a `/api/referrals` handler (though it's not actually applying the referral yet). We need to implement `POST /api/referrals/apply` endpoint.
+    *   Wait, the issue states: "Create `POST /api/referrals/apply` endpoint." Let's add an `ApplyReferralHandler` to `referral_api.go` (or create an `apply_referral.go`). This handler should accept a `user_id` and a `referral_code`.
+    *   It should interact with the database to set the `referred_by` field for the user and increment referral counts. Or, wait, the `ReferralTracker` in `referrals.go` is an in-memory struct right now. Let's see if we should use DB instead of the in-memory `ReferralTracker`, or update the `ReferralTracker` to interact with the database. The issue explicitly states: "Add a referral_code to the users table. Add a referred_by to the users table (foreign key to users.id)." This implies the database must be used.
 
-   - I will modify `srcs/server/db/migrations/20260416030000_kairos_mesh.sql` to remove the schema prefix so it works perfectly in both environments OR handle the schema difference properly. Wait, PostgreSQL requires schemas, SQLite does not. I will add logic to `database.go` `RunMigrations` to strip `ohc_tasks.` and `ohc_memory.` schema prefixes when running on SQLite.
+3.  **Update Database Layer (`users` representation)**:
+    *   If there's a `srcs/server/db/models/user.go` or similar, update the Go structs. I should check if one exists.
+    *   If no explicit model file, the handler can just execute raw SQL using `db.Provider`.
 
-   - I will improve the test `srcs/server/tasks/orchestration_test.go` to assert the mocked mesh server payload correctly.
+4.  **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done**:
+    *   Run tests using `bazelisk test //srcs/server/services/growth/... //srcs/server/db/...`.
 
-   - I will remove the empty `srcs/server/mesh/mesh.go` file.
-
-   - Let's create a new script to apply these fixes.
+5.  **Submit PR**:
+    *   Commit changes and create a PR with the required format `🚀 Nova: [growth] Implement user referral tracking system`. Update the GitHub issue.

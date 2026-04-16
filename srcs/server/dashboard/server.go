@@ -1,8 +1,6 @@
 package dashboard
 
 import (
-	"github.com/onehumancorp/mono/srcs/server/db"
-
 	"context"
 	"encoding/json"
 	"fmt"
@@ -542,11 +540,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)
 	mux.HandleFunc("/api/agents/delegate", server.handleDelegateTask)
 	mux.HandleFunc("/api/growth/referral", growth.ReferralHandler)
-	var dbProvider db.Provider
-	if hub != nil && hub.SIPDB() != nil {
-		dbProvider = hub.SIPDB().Provider()
-	}
-	mux.HandleFunc("/api/referrals/apply", auth.RequireRole("user", growth.ApplyReferralHandler(dbProvider)))
 	// Agent provider management
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)
 	mux.HandleFunc("/api/agents/providers/auth", server.handleAgentProviderAuth)
