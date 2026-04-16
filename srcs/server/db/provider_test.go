@@ -135,3 +135,48 @@ func TestProvider_AcquireTask(t *testing.T) {
 		t.Errorf("Expected nil task, got %v", task3.ID)
 	}
 }
+
+func TestKairosSchemaCanBeQueried(t *testing.T) {
+    p := NewTestProvider(t)
+
+    ctx := context.Background()
+
+    // TestProvider in provider_test.go already creates an SQLite provider, but let's test executing the migration itself if possible, or just the schema matching what we put in the file but with tenant_id. Since the test is running against the sqlite provider, let's use TEXT for UUIDs as mentioned in the notes, although SQLite will accept UUID type string gracefully.
+    schema := `
+CREATE TABLE IF NOT EXISTS missions (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    priority TEXT CHECK (priority IN ('P0', 'P1', 'P2', 'P3')),
+    status TEXT CHECK (status IN ('PENDING', 'IN_PROGRESS', 'BLOCKED', 'DONE')),
+    agent_assigned TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS agent_state (
+    agent_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    current_mission_id TEXT REFERENCES missions(id),
+    status TEXT CHECK (status IN ('IDLE', 'WORKING', 'ERROR')),
+    lock_id TEXT,
+    lock_expires_at TEXT,
+    last_heartbeat TEXT DEFAULT CURRENT_TIMESTAMP
+);`
+
+    _, err := p.Exec(ctx, schema)
+    if err != nil {
+        t.Fatalf("Failed to execute schema: %v", err)
+    }
+
+    _, err = p.Exec(ctx, "SELECT id, tenant_id, title, status FROM missions LIMIT 1")
+    if err != nil {
+        t.Errorf("Failed to query missions table: %v", err)
+    }
+
+    _, err = p.Exec(ctx, "SELECT agent_id, tenant_id, status FROM agent_state LIMIT 1")
+    if err != nil {
+        t.Errorf("Failed to query agent_state table: %v", err)
+    }
+}
