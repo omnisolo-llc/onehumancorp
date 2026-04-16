@@ -82,7 +82,7 @@ func TestMeshHandlerBroadcast(t *testing.T) {
 	svc := NewMemoryMeshService()
 	handler := NewMeshHandler(svc)
 
-	reqBody := []byte(`{"agent_id":"test", "channel":"test", "event_type":"test", "data": {"intent":"hello handler"}}`)
+	reqBody := []byte(`{"intent":"hello handler"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()

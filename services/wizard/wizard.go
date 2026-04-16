@@ -12,7 +12,6 @@ import (
 var (
 	meter = otel.GetMeterProvider().Meter("ohc_wizard")
 	agentConfigCounter metric.Int64Counter
-	promptTuningCounter metric.Int64Counter
 )
 
 func init() {
@@ -21,10 +20,6 @@ func init() {
     if err != nil {
         panic(err)
     }
-	promptTuningCounter, err = meter.Int64Counter("ohc_prompt_tuning_total")
-	if err != nil {
-		panic(err)
-	}
 }
 
 type AgentConfig struct {
@@ -43,25 +38,6 @@ func HandleConfigWizard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	agentConfigCounter.Add(ctx, 1)
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "success"}`))
-}
-
-type PromptTuningConfig struct {
-	Personality string   `json:"personality"`
-	DomainFocus []string `json:"domain_focus"`
-}
-
-func HandlePromptTuning(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	var config PromptTuningConfig
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	promptTuningCounter.Add(ctx, 1)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status": "success"}`))
