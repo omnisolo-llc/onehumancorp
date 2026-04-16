@@ -33,12 +33,14 @@ nav:
       - developer/index.md
   - API:
       - api/index.md
+      - API Playbook: api/playbook.md
   - Features:
       - features/index.md
   - Walkthroughs:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - walkthroughs/index.md
+      - API Playbook Visual Walkthrough: walkthroughs/api_playbook_visual_walkthrough.md
   - Operations:
       - operations/index.md
       - Task Tracking: operations/task-tracking.md
