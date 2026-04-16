@@ -266,14 +266,6 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read', 'write']", "'[\"read\", \"write\"]'")
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['read']", "'[\"read\"]'")
 
-			// Strip PostgreSQL schemas for SQLite standalone compatibility
-			sqlStr = strings.ReplaceAll(sqlStr, "ohc_tasks.", "")
-			sqlStr = strings.ReplaceAll(sqlStr, "ohc_memory.", "")
-			sqlStr = strings.ReplaceAll(sqlStr, "CREATE SCHEMA IF NOT EXISTS ohc_tasks;", "")
-			sqlStr = strings.ReplaceAll(sqlStr, "CREATE SCHEMA IF NOT EXISTS ohc_memory;", "")
-			sqlStr = strings.ReplaceAll(sqlStr, "DROP SCHEMA IF EXISTS ohc_memory;", "")
-			sqlStr = strings.ReplaceAll(sqlStr, "DROP SCHEMA IF EXISTS ohc_tasks;", "")
-
 			// Remove constraint drops for SQLite since it's unsupported
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+\w+;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT\s+\w+\s+CHECK\s*\([^;]+;`).ReplaceAllString(sqlStr, "")
