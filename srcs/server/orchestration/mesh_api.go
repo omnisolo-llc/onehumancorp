@@ -27,23 +27,10 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var event MeshEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
-	}
-
-	// Validate OHC-SIP payload structure requirements
-	if event.AgentID == "" || event.Channel == "" || event.EventType == "" || event.Data == nil {
-		http.Error(w, "Missing required fields for OHC-SIP compliance", http.StatusBadRequest)
-		return
-	}
-
-	req := map[string]interface{}{
-		"agent_id":   event.AgentID,
-		"channel":    event.Channel,
-		"event_type": event.EventType,
-		"data":       event.Data,
 	}
 
 	payload, err := json.Marshal(req)

@@ -23,8 +23,9 @@ type SharedTaskDecomposition struct {
 
 // MeshEvent defines the structure for Teammate Mesh coordination events.
 type MeshEvent struct {
-	AgentID   string          `json:"agent_id"`
-	Channel   string          `json:"channel"`
+	ID        string          `json:"id"`
+	SenderID  string          `json:"sender_id"`
 	EventType string          `json:"event_type"`
-	Data      json.RawMessage `json:"data"`
+	Payload   json.RawMessage `json:"payload"`
+	Timestamp time.Time       `json:"timestamp"`
 }
