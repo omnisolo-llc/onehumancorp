@@ -15,10 +15,9 @@ import (
 
 // MeshMessage represents a payload sent over the Teammate Mesh.
 type MeshMessage struct {
-	AgentID   string          `json:"agent_id"`
-	Channel   string          `json:"channel"`
-	EventType string          `json:"event_type"`
-	Data      json.RawMessage `json:"data"`
+	SenderID string          `json:"sender_id"`
+	Topic    string          `json:"topic"`
+	Payload  json.RawMessage `json:"payload"`
 }
 
 // TeammateMesh is the Redis Pub/Sub powered communication layer.
@@ -115,12 +114,12 @@ func (m *TeammateMesh) Publish(ctx context.Context, msg MeshMessage) error {
 		if err != nil {
 			return err
 		}
-		return m.client.Publish(ctx, msg.Channel, data).Err()
+		return m.client.Publish(ctx, msg.Topic, data).Err()
 	}
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	if subs, ok := m.subscribers[msg.Channel]; ok {
+	if subs, ok := m.subscribers[msg.Topic]; ok {
 		for _, sub := range subs {
 			select {
 			case sub <- msg:
