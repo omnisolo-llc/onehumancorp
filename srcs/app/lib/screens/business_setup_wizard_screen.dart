@@ -45,6 +45,7 @@ class BusinessSetupState {
     String? adminPassword,
     bool? isLoading,
     String? errorMessage,
+    bool clearError = false,
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
@@ -57,7 +58,7 @@ class BusinessSetupState {
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
@@ -67,8 +68,16 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   BusinessSetupState build() => const BusinessSetupState();
 
   void nextStep() {
+    if (state.step == 1 && state.companyName.trim().isEmpty) {
+      state = state.copyWith(errorMessage: 'Company Name is required.');
+      return;
+    }
+    if (state.step == 3 && state.deployment.trim().isEmpty) {
+      state = state.copyWith(errorMessage: 'Deployment Preference is required.');
+      return;
+    }
     if (state.step < 4) {
-      state = state.copyWith(step: state.step + 1);
+      state = state.copyWith(step: state.step + 1, clearError: true);
     }
   }
 
@@ -187,12 +196,17 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   ],
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
                     transitionBuilder: (Widget child, Animation<double> animation) {
-                      return FadeTransition(opacity: animation, child: child);
+                      return FadeTransition(opacity: animation, child: SlideTransition(position: Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero).animate(animation), child: child));
                     },
                     child: Container(
                       key: ValueKey<int>(state.step),
-                      child: Column(
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOutCubic,
+                        child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (state.step == 0) ...[
@@ -278,6 +292,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                             ),
                           ],
                         ],
+                      ),
                       ),
                     ),
                   ),
