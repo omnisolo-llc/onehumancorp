@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"fmt"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -21,7 +23,7 @@ func TestHandleMissionsSync_PIIRedaction(t *testing.T) {
 	defer hub.Close()
 
 	// Create mock SIPDB
-	db, err := orchestration.NewSIPDB("file::memory:?cache=shared")
+	db, err := orchestration.NewSIPDB(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	if err != nil {
 		t.Fatalf("failed to init sipdb: %v", err)
 	}
@@ -69,7 +71,7 @@ func TestHandleHybridSyncMissions_PIIRedaction(t *testing.T) {
 	defer hub.Close()
 
 	// Create mock SIPDB
-	db, err := orchestration.NewSIPDB("file::memory:?cache=shared")
+	db, err := orchestration.NewSIPDB(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	if err != nil {
 		t.Fatalf("failed to init sipdb: %v", err)
 	}
@@ -125,7 +127,7 @@ func TestHandleSyncRAG_PIIRedaction(t *testing.T) {
 	defer hub.Close()
 
 	// Create mock SIPDB
-	db, err := orchestration.NewSIPDB("file::memory:?cache=shared")
+	db, err := orchestration.NewSIPDB(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	if err != nil {
 		t.Fatalf("failed to init sipdb: %v", err)
 	}

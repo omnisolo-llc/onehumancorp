@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"fmt"
+
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +40,7 @@ func TestBridgeManager(t *testing.T) {
 
 	wsURL := "ws" + server.URL[4:]
 
-	dbProvider, _ := db.NewSqliteProvider("file::memory:?cache=shared")
+	dbProvider, _ := db.NewSqliteProvider(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
 	mt := NewMemoryMeshTransport(dbProvider)
 
 	// Create a dummy CentrifugeNode for testing using the unexported fields
