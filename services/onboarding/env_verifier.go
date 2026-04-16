@@ -7,11 +7,9 @@ import (
 
 // EnvConfig represents a parsed day-one configuration.
 type EnvConfig struct {
-	Mode             string
-	MultiTenant      bool
-	Headless         bool
-	TelemetryEnabled bool
-	ApiEndpoint      string
+	Mode         string
+	MultiTenant  bool
+	Headless     bool
 }
 
 // VerifyEnvironment checks the provided environment variables for Day One setup validity.
@@ -20,7 +18,7 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 
 	mode, ok := envVars["OHC_SOURCE_MODE"]
 	if !ok || mode == "" {
-		return nil, errors.New("OHC_SOURCE_MODE is required (e.g. standalone, cloud, headless, thin_client)")
+		return nil, errors.New("OHC_SOURCE_MODE is required (e.g. standalone, cloud, headless)")
 	}
 	config.Mode = strings.ToLower(mode)
 
@@ -38,36 +36,6 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 
 	if config.Mode == "standalone" && config.MultiTenant {
 		return nil, errors.New("standalone mode cannot be multitenant")
-	}
-
-	if config.Mode == "thin_client" {
-		endpoint, ok := envVars["OHC_API_ENDPOINT"]
-		if !ok || endpoint == "" {
-			return nil, errors.New("thin_client mode requires OHC_API_ENDPOINT")
-		}
-		config.ApiEndpoint = endpoint
-	}
-
-	telemetryEnabled := false
-	if tel, ok := envVars["OHC_TELEMETRY_ENABLED"]; ok && strings.ToLower(tel) == "true" {
-		telemetryEnabled = true
-	}
-
-	isStandalone := false
-	if sa, ok := envVars["OHC_STANDALONE"]; ok && strings.ToLower(sa) == "true" {
-		isStandalone = true
-	}
-	if config.Mode == "standalone" {
-		isStandalone = true
-	}
-
-	if isStandalone {
-		config.TelemetryEnabled = telemetryEnabled
-	} else {
-		config.TelemetryEnabled = true
-		if tel, ok := envVars["OHC_TELEMETRY_ENABLED"]; ok && strings.ToLower(tel) == "false" {
-			config.TelemetryEnabled = false
-		}
 	}
 
 	return config, nil
