@@ -90,10 +90,12 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     }
     state = state.copyWith(goals: goals);
   }
+
   void updateDeployment(String val) => state = state.copyWith(deployment: val);
   void updateAdminName(String name) => state = state.copyWith(adminName: name);
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
-  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
+  void updateAdminPassword(String val) =>
+      state = state.copyWith(adminPassword: val);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
@@ -111,7 +113,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
           'deployment_preference': state.deployment,
           'admin_name': state.adminName,
           'admin_email': state.adminEmail,
-        }
+        },
       };
 
       try {
@@ -125,11 +127,17 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
         );
 
         if (res.statusCode != 200) {
-          state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: 'Configuration failed: ${res.statusCode}',
+          );
           return;
         }
       } catch (e) {
-        state = state.copyWith(isLoading: false, errorMessage: 'Network error: $e');
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Network error: $e',
+        );
         return;
       }
     }
@@ -142,24 +150,178 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   }
 }
 
-final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
-  return BusinessSetupNotifier();
-});
+final businessSetupProvider =
+    NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
+      return BusinessSetupNotifier();
+    });
 
 class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
 
   @override
-  ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
+  ConsumerState<BusinessSetupWizardScreen> createState() =>
+      _BusinessSetupWizardScreenState();
 }
 
-class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
+class _BusinessSetupWizardScreenState
+    extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+
+  Widget _buildStep0() {
+    return const Padding(
+      key: ValueKey('step0'),
+      padding: EdgeInsets.symmetric(vertical: 24.0),
+      child: Text(
+        'Welcome! Your AI team, ready in minutes.',
+        style: TextStyle(fontFamily: 'Inter'),
+      ),
+    );
+  }
+
+  Widget _buildStep1(BusinessSetupState state, BusinessSetupNotifier notifier) {
+    return Column(
+      key: const ValueKey('step1'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          decoration: const InputDecoration(labelText: 'Company Name'),
+          onChanged: notifier.updateCompany,
+          style: const TextStyle(fontFamily: 'Inter'),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          decoration: const InputDecoration(labelText: 'Industry'),
+          onChanged: notifier.updateIndustry,
+          style: const TextStyle(fontFamily: 'Inter'),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: state.size,
+          decoration: const InputDecoration(labelText: 'Size'),
+          items: const [
+            DropdownMenuItem(value: 'S', child: Text('Small')),
+            DropdownMenuItem(value: 'M', child: Text('Medium')),
+            DropdownMenuItem(value: 'L', child: Text('Large')),
+          ],
+          onChanged: (val) {
+            if (val != null) notifier.updateSize(val);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep2(BusinessSetupState state, BusinessSetupNotifier notifier) {
+    return Column(
+      key: const ValueKey('step2'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Goals',
+          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+        ),
+        ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map(
+          (goal) => CheckboxListTile(
+            title: Text(goal, style: const TextStyle(fontFamily: 'Inter')),
+            value: state.goals.contains(goal),
+            onChanged: (bool? value) {
+              notifier.toggleGoal(goal);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep3(BusinessSetupState state, BusinessSetupNotifier notifier) {
+    return Column(
+      key: const ValueKey('step3'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Deployment Preference',
+          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+        ),
+        ...['Cloud', 'Desktop', 'Mobile-only'].map(
+          (dep) => RadioListTile<String>(
+            title: Text(dep, style: const TextStyle(fontFamily: 'Inter')),
+            value: dep,
+            groupValue: state.deployment,
+            onChanged: (String? value) {
+              if (value != null) notifier.updateDeployment(value);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep4(BusinessSetupState state, BusinessSetupNotifier notifier) {
+    return Column(
+      key: const ValueKey('step4'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          decoration: const InputDecoration(labelText: 'Admin Name'),
+          onChanged: notifier.updateAdminName,
+          style: const TextStyle(fontFamily: 'Inter'),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          decoration: const InputDecoration(labelText: 'Admin Email'),
+          onChanged: notifier.updateAdminEmail,
+          style: const TextStyle(fontFamily: 'Inter'),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          obscureText: _obscurePassword,
+          onChanged: notifier.updateAdminPassword,
+          style: const TextStyle(fontFamily: 'Inter'),
+          decoration: InputDecoration(
+            labelText: 'Admin Password',
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
+
+    Widget currentStepWidget;
+    switch (state.step) {
+      case 0:
+        currentStepWidget = _buildStep0();
+        break;
+      case 1:
+        currentStepWidget = _buildStep1(state, notifier);
+        break;
+      case 2:
+        currentStepWidget = _buildStep2(state, notifier);
+        break;
+      case 3:
+        currentStepWidget = _buildStep3(state, notifier);
+        break;
+      case 4:
+        currentStepWidget = _buildStep4(state, notifier);
+        break;
+      default:
+        currentStepWidget = const SizedBox.shrink();
+    }
 
     return Scaffold(
       body: Center(
@@ -171,88 +333,32 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Business Setup',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   if (state.errorMessage != null) ...[
-                    Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
+                    Text(
+                      state.errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                     const SizedBox(height: 16),
                   ],
-                  if (state.step == 0) ...[
-                    const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter')),
-                  ] else if (state.step == 1) ...[
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Company Name'),
-                      onChanged: notifier.updateCompany,
-                      style: const TextStyle(fontFamily: 'Inter'),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Industry'),
-                      onChanged: notifier.updateIndustry,
-                      style: const TextStyle(fontFamily: 'Inter'),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: state.size,
-                      decoration: const InputDecoration(labelText: 'Size'),
-                      items: const [
-                        DropdownMenuItem(value: 'S', child: Text('Small')),
-                        DropdownMenuItem(value: 'M', child: Text('Medium')),
-                        DropdownMenuItem(value: 'L', child: Text('Large')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) notifier.updateSize(val);
-                      },
-                    ),
-                  ] else if (state.step == 2) ...[
-                     const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                     ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
-                      title: Text(goal, style: const TextStyle(fontFamily: 'Inter')),
-                      value: state.goals.contains(goal),
-                      onChanged: (bool? value) {
-                        notifier.toggleGoal(goal);
-                      },
-                    )),
-                  ] else if (state.step == 3) ...[
-                     const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                     ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
-                      title: Text(dep, style: const TextStyle(fontFamily: 'Inter')),
-                      value: dep,
-                      groupValue: state.deployment,
-                      onChanged: (String? value) {
-                        if (value != null) notifier.updateDeployment(value);
-                      },
-                    )),
-                  ] else if (state.step == 4) ...[
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Admin Name'),
-                      onChanged: notifier.updateAdminName,
-                      style: const TextStyle(fontFamily: 'Inter'),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Admin Email'),
-                      onChanged: notifier.updateAdminEmail,
-                      style: const TextStyle(fontFamily: 'Inter'),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      obscureText: _obscurePassword,
-                      onChanged: notifier.updateAdminPassword,
-                      style: const TextStyle(fontFamily: 'Inter'),
-                      decoration: InputDecoration(
-                        labelText: 'Admin Password',
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (
+                      Widget child,
+                      Animation<double> animation,
+                    ) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    child: currentStepWidget,
+                  ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -260,21 +366,39 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       if (state.step > 0)
                         TextButton(
                           onPressed: state.isLoading ? null : notifier.prevStep,
-                          child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
+                          child: const Text(
+                            'Back',
+                            style: TextStyle(fontFamily: 'Inter'),
+                          ),
                         )
                       else
                         const SizedBox(),
                       ElevatedButton(
-                        onPressed: state.isLoading ? null : () {
-                          if (state.step < 4) {
-                            notifier.nextStep();
-                          } else {
-                            notifier.launch(context, ref);
-                          }
-                        },
-                        child: state.isLoading
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                        onPressed:
+                            state.isLoading
+                                ? null
+                                : () {
+                                  if (state.step < 4) {
+                                    notifier.nextStep();
+                                  } else {
+                                    notifier.launch(context, ref);
+                                  }
+                                },
+                        child:
+                            state.isLoading
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : Text(
+                                  state.step == 4
+                                      ? 'Launch My AI Team →'
+                                      : 'Next',
+                                  style: const TextStyle(fontFamily: 'Inter'),
+                                ),
                       ),
                     ],
                   ),
