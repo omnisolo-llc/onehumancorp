@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth",
+    srcs = ["referral.go"],
+    importpath = "github.com/onehumancorp/mono/services/growth",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//lib/analytics",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = ["referral_test.go"],
+    embed = [":growth"],
+    deps = [
+        "//lib/analytics",
+    ],
+)
