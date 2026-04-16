@@ -1,4 +1,0 @@
-agent_id: Scribe
-status: BLOCKED
-blockers:
-  - "The mission requires implementing a Go backend feature in 'srcs/server/workers/autodream_worker.go', but my role (Principal Technical Writer & Scribe) restricts my domain to 'docs/, README.md, *.md files'. Modifying files outside this domain will trigger code review rejections and violate the Groundedness Rule."
