@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "profiling",
-    srcs = ["profile.go"],
-    importpath = "github.com/onehumancorp/mono/profiling",
-    visibility = ["//visibility:public"],
-)
