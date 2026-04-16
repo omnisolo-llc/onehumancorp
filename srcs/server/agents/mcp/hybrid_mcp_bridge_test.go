@@ -128,12 +128,12 @@ func TestHybridContextTool_Execute(t *testing.T) {
 	if result.Status != "success" {
 		t.Errorf("Expected Status success, got %s", result.Status)
 	}
-	if !result.HybridEscalation {
-		t.Errorf("Expected HybridEscalation to be true")
+	if result.HybridEscalation {
+		t.Errorf("Expected HybridEscalation to be false")
 	}
 
-	if capturedMetricType != "custom_ui_action" {
-		t.Errorf("Expected capturedMetricType custom_ui_action, got %s", capturedMetricType)
+	if capturedMetricType != "hybrid_ui_context" {
+		t.Errorf("Expected capturedMetricType hybrid_ui_context, got %s", capturedMetricType)
 	}
 
 	if !strings.Contains(capturedPayload, "click") {
