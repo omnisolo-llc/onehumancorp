@@ -107,6 +107,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
             `
             if checkErr := tx.QueryRow(ctx, checkQuery, orgID).Scan(&checkID); checkErr == nil && checkID != "" {
                 telemetry.RecordPostgresLockContention(ctx, "claim_task")
+                telemetry.RecordTaskClaimContention(ctx, "sqlite")
             }
             return nil, nil
         }
@@ -170,6 +171,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
             `
             if checkErr := tx.QueryRow(ctx, checkQuery, orgID).Scan(&checkID); checkErr == nil && checkID != "" {
                 telemetry.RecordPostgresLockContention(ctx, "claim_task")
+                telemetry.RecordTaskClaimContention(ctx, "postgres")
             }
             return nil, nil
         }

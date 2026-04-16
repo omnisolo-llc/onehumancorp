@@ -113,6 +113,14 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 
 	telemetry.RecordQueueLength(ctx, -1) // Job removed from queued state
 
+	if !scheduledAt.IsZero() {
+		delay := time.Since(scheduledAt).Seconds()
+		// Since scheduled_at is the time it was meant to run, we record how long it has been since then
+		if delay > 0 {
+			telemetry.RecordSubAgentQueueDelay(ctx, delay)
+		}
+	}
+
 	j.RunAfter = scheduledAt
 
 	// Reconstruct other fields from payload
