@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mesh",
-    srcs = ["mesh.go", "middleware.go"],
+    srcs = ["mesh.go", "middleware.go", "handoff.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/api/mesh",
     visibility = ["//visibility:public"],
     deps = [
@@ -16,7 +16,7 @@ go_library(
 
 go_test(
     name = "mesh_test",
-    srcs = ["mesh_test.go", "middleware_test.go"],
+    srcs = ["mesh_test.go", "middleware_test.go", "handoff_test.go"],
     embed = [":mesh"],
     deps = [
         "//srcs/server/auth",

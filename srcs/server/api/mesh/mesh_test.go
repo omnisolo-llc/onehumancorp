@@ -95,6 +95,7 @@ func TestMeshHandlerStream(t *testing.T) {
 	}
 	defer conn.Close()
 
+	time.Sleep(10 * time.Millisecond)
 	err = svc.BroadcastIntent(ctx, "hello stream")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
