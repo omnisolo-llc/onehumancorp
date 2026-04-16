@@ -9,6 +9,8 @@ toc:
     path: /docs/api/index.md
   - title: Hybrid MCP API Playbook
     path: /docs/api/hybrid_mcp_api.md
+  - title: Teammate Mesh API Playbook
+    path: /docs/api/mesh_api_playbook.md
   - title: Features
     path: /docs/features/index.md
   - title: Walkthroughs
