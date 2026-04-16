@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 
 void main() {
-  testWidgets('Landing screen displays key local-first features', (tester) async {
+  testWidgets('Landing screen shows app mode entry options', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -13,12 +13,10 @@ void main() {
       ),
     );
 
-    expect(find.text('The Hybrid Agentic OS'), findsOneWidget);
-    expect(find.text('Zero Data Leakage'), findsOneWidget);
-    expect(find.text('Air-Gapped Autonomy'), findsOneWidget);
-    expect(find.text('Viral Referral Loop'), findsOneWidget);
-    expect(find.text('Download for Mac'), findsOneWidget);
-    expect(find.text('Download for Windows'), findsOneWidget);
-    expect(find.text('Download for Linux'), findsOneWidget);
+    expect(find.text('One Human Corp App'), findsOneWidget);
+    expect(find.text('Standalone Mode'), findsOneWidget);
+    expect(find.text('Cloud Mode'), findsOneWidget);
+    expect(find.text('Open App'), findsOneWidget);
+    expect(find.text('Switch to Cloud mode'), findsOneWidget);
   });
 }

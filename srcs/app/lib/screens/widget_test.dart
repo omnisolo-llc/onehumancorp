@@ -99,7 +99,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Sign Out'), findsOneWidget);
+      expect(find.text('Sign Out'), findsNothing);
     });
 
     testWidgets('renders user info when user is logged in', (tester) async {

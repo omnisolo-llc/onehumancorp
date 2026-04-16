@@ -32,20 +32,32 @@ import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final settings = ref.watch(clientSettingsProvider).valueOrNull;
+  final standaloneMode =
+      settings?.standaloneMode ??
+      const bool.fromEnvironment('OHC_STANDALONE', defaultValue: false);
+  final requiresLogin = kIsWeb || !standaloneMode;
 
   return GoRouter(
-    initialLocation: '/landing',
+    initialLocation: '/dashboard',
     redirect: (context, state) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
 
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) return '/landing';
-      if (isLoggedIn && isLoginRoute) return '/dashboard';
+      if (!requiresLogin) {
+        if (isLoginRoute) return '/dashboard';
+        return null;
+      }
+
+      if (!isLoggedIn && !isLoginRoute) return '/login';
+      if (isLoggedIn && (isLoginRoute || isLandingRoute)) return '/dashboard';
       return null;
     },
     routes: [

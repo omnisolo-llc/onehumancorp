@@ -37,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
             (settings) => ListView(
               padding: const EdgeInsets.all(24),
               children: [
-                if (user == null) ...[
+                if (user != null) ...[
                   ListTile(
                     leading: Icon(
                       Icons.logout,
@@ -128,19 +128,20 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: Text(user?.role ?? '—'),
                 ),
                 const Divider(),
-                ListTile(
-                  leading: Icon(
-                    Icons.logout,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    'Sign Out',
-                    style: TextStyle(
+                if (user != null)
+                  ListTile(
+                    leading: Icon(
+                      Icons.logout,
                       color: Theme.of(context).colorScheme.error,
                     ),
+                    title: Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    onTap: () => ref.read(authStateProvider.notifier).logout(),
                   ),
-                  onTap: () => ref.read(authStateProvider.notifier).logout(),
-                ),
               ],
             ),
       ),
