@@ -1,0 +1,11 @@
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "benchmarks_test",
+    srcs = ["hybrid_benchmark_test.go"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/orchestration",
+        "@com_github_jackc_pgx_v5//pgxpool",
+    ],
+)
