@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "mission_ingestion.go",
         "competitor_audit.go",
+        "autodream_pipeline.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/workers",
     visibility = ["//visibility:public"],
@@ -22,6 +23,7 @@ go_test(
     srcs = [
         "mission_ingestion_test.go",
         "competitor_audit_test.go",
+        "autodream_pipeline_test.go",
     ],
     embed = [":workers"],
     deps = [
