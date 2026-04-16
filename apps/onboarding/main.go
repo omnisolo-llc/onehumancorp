@@ -28,6 +28,7 @@ func main() {
 
 	http.HandleFunc("/api/provision", onboarding.ProvisionHandler)
 	http.HandleFunc("/api/generate-config", onboarding.GenerateConfigHandler)
+	http.HandleFunc("/api/preflight", onboarding.PreflightHandler)
 
 	fmt.Println("Starting onboarding service on :8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

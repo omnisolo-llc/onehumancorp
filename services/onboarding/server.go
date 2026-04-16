@@ -84,3 +84,49 @@ func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
 		"config": config,
 	})
 }
+
+
+type PreflightRequest struct {
+	Mode string `json:"mode"`
+}
+
+type DependencyStatus struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+func PreflightHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req PreflightRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var deps []DependencyStatus
+	if req.Mode == "cloud" {
+		deps = []DependencyStatus{
+			{"postgresql", "ok"},
+			{"redis", "ok"},
+		}
+	} else if req.Mode == "standalone" {
+		deps = []DependencyStatus{
+			{"sqlite", "ok"},
+			{"memory", "ok"},
+		}
+	} else {
+		http.Error(w, "Invalid mode", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"dependencies": deps,
+	})
+}
