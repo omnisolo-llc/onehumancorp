@@ -533,6 +533,21 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  Future<void> bulkInviteTeam(String referralCode, List<String> emails) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/v1/growth/referrals/bulk_invite'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'referralCode': referralCode,
+        'emails': emails,
+      }),
+    );
+    _checkStatus(response);
+  }
+
   Future<void> createReferral(String userId, String referralCode) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/referrals'),

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/bulk_invite_dialog.dart';
 
 class GrowthReferralWidget extends ConsumerStatefulWidget {
   const GrowthReferralWidget({super.key});
@@ -111,14 +112,17 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         },
                       ),
                       const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () async {
-                          try {
-                            await ref.read(apiServiceProvider)!.createReferral(
-                              "anonymous",
-                              "xYz8vQ_local_sovereign",
-                            );
-                            if (context.mounted) {
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () async {
+                              try {
+                                await ref.read(apiServiceProvider)!.createReferral(
+                                  "anonymous",
+                                  "xYz8vQ_local_sovereign",
+                                );
+                                if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
                                     'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
@@ -136,14 +140,26 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: colorScheme.error,
-                                ),
+                                      content: Text('Error: $e'),
+                                      backgroundColor: colorScheme.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => const BulkInviteDialog(referralCode: "xYz8vQ_local_sovereign"),
                               );
-                            }
-                          }
-                        },
-                        child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                            },
+                            child: const Text('Bulk Invite', style: TextStyle(fontFamily: 'Outfit')),
+                          ),
+                        ],
                       ),
                     ],
                   ),
