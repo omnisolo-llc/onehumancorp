@@ -32,6 +32,8 @@ const (
 	ConnectionDrop
 	// ResourceExhaustion returns errors simulating CPU/Memory limits.
 	ResourceExhaustion
+	// CorruptAgentLock simulates agent lock corruption.
+	CorruptAgentLock
 )
 
 // String returns the string representation of ChaosMode.
@@ -45,6 +47,8 @@ func (c ChaosMode) String() string {
 		return "connection_drop"
 	case ResourceExhaustion:
 		return "resource_exhaustion"
+	case CorruptAgentLock:
+		return "corrupt_agent_lock"
 	default:
 		return "unknown"
 	}
@@ -52,17 +56,26 @@ func (c ChaosMode) String() string {
 
 // Injector is responsible for injecting chaos into operations.
 type Injector struct {
-	mode ChaosMode
-	mu   sync.Mutex
-	rand *rand.Rand
+	mode        ChaosMode
+	mu          sync.Mutex
+	rand        *rand.Rand
+	probability float32
 }
 
 // NewInjector creates a new Chaos Injector.
 func NewInjector(mode ChaosMode, seed int64) *Injector {
 	return &Injector{
-		mode: mode,
-		rand: rand.New(rand.NewSource(seed)),
+		mode:        mode,
+		rand:        rand.New(rand.NewSource(seed)),
+		probability: 0.1, // Default probability for connection drop
 	}
+}
+
+// SetProbability sets the trigger probability for modes that use it.
+func (i *Injector) SetProbability(p float32) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.probability = p
 }
 
 // ChaosError is a custom error for chaos-induced failures.
@@ -78,7 +91,12 @@ func (e *ChaosError) Error() string {
 func (i *Injector) Inject(ctx context.Context) error {
 	chaosInjections.WithLabelValues(i.mode.String()).Inc()
 
-	switch i.mode {
+	i.mu.Lock()
+	mode := i.mode
+	probability := i.probability
+	i.mu.Unlock()
+
+	switch mode {
 	case LatencySpike:
 		i.mu.Lock()
 		delay := time.Duration(i.rand.Intn(90)+10) * time.Millisecond
@@ -91,17 +109,27 @@ func (i *Injector) Inject(ctx context.Context) error {
 		}
 	case ConnectionDrop:
 		i.mu.Lock()
-		drop := i.rand.Float32() < 0.1
+		drop := i.rand.Float32() < probability
 		i.mu.Unlock()
 		if drop {
 			return &ChaosError{Message: "chaos: simulated connection drop"}
 		}
 	case ResourceExhaustion:
 		i.mu.Lock()
+		// Resource exhaustion typically has a lower default trigger rate in the original code,
+		// but we'll use the configured probability for consistency if desired.
+		// For now, keeping original 0.05 logic or configuring it.
 		exhaust := i.rand.Float32() < 0.05
 		i.mu.Unlock()
 		if exhaust {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
+		}
+	case CorruptAgentLock:
+		i.mu.Lock()
+		corrupt := i.rand.Float32() < probability
+		i.mu.Unlock()
+		if corrupt {
+			return &ChaosError{Message: "chaos: agent lock corrupted"}
 		}
 	}
 	return nil
