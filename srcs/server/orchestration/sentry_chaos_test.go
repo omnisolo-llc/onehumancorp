@@ -87,7 +87,7 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	worker := NewAutoDreamWorker(db)
+	worker := NewAutoDreamWorker(db.db)
 
 	// Since we made the file unreadable, the application code `contentBytes, err := os.ReadFile(filePath)`
 	// will fail. This should gracefully log an error and continue without panicking.
