@@ -2,16 +2,18 @@ import 'package:ohc_app/widgets/glass_card.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
+import 'package:ohc_app/services/api_service.dart';
 
-class LandingScreen extends StatefulWidget {
+class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
 
   @override
-  State<LandingScreen> createState() => _LandingScreenState();
+  ConsumerState<LandingScreen> createState() => _LandingScreenState();
 }
 
-class _LandingScreenState extends State<LandingScreen> {
+class _LandingScreenState extends ConsumerState<LandingScreen> {
   bool _showVariantB = false;
 
   @override
@@ -42,6 +44,17 @@ class _LandingScreenState extends State<LandingScreen> {
                       const SizedBox(height: 48),
                       _ValuePropGrid(isVariantB: _showVariantB),
                       const SizedBox(height: 48),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _DownloadButton(os: 'Mac', icon: Icons.apple),
+                          _DownloadButton(os: 'Windows', icon: Icons.window),
+                          _DownloadButton(os: 'Linux', icon: Icons.laptop_chromebook),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => context.go('/business_setup'),
                         style: ElevatedButton.styleFrom(
@@ -231,6 +244,68 @@ class _GlassCard extends StatelessWidget {
                 ),
               ],
             ),
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends ConsumerWidget {
+  final String os;
+  final IconData icon;
+
+  const _DownloadButton({required this.os, required this.icon});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(const <double>[
+              1.787, -0.715, -0.072, 0, 0,
+              -0.213, 1.285, -0.072, 0, 0,
+              -0.213, -0.715, 1.928, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: TextButton.icon(
+            onPressed: () async {
+              try {
+                await ref.read(apiServiceProvider)!.trackDownload(os, '1.0.0');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Downloading OHC Desktop for $os...'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
+            },
+            icon: Icon(icon, color: Theme.of(context).colorScheme.primary),
+            label: Text('Download for $os', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+            ),
+          ),
+        ),
       ),
     );
   }
