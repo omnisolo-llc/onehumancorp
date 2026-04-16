@@ -178,8 +178,6 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
 				payloadData = string(redactedBytes)
 			}
-		} else {
-			payloadData = telemetry.RedactPII(payloadData)
 		}
 
 		payloads = append(payloads, AutoDreamPayload{

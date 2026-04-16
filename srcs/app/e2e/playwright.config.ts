@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'node:path';
 
 /**
  * Playwright configuration for Flutter web e2e tests.
@@ -7,16 +8,21 @@ import { defineConfig, devices } from '@playwright/test';
  * sh_test wrapper (flutter_web_e2e_test.sh).  The base URL is passed via the
  * PLAYWRIGHT_BASE_URL environment variable; it defaults to localhost:8765 when
  * running outside Bazel.
+ *
+ * Screenshots are written to APP_SCREENSHOT_OUTPUT_DIR (set by the Bazel
+ * wrapper) which defaults to docs/public/assets/screenshots/app/screens so
+ * they are committed alongside documentation.
  */
 export default defineConfig({
   testDir: __dirname,
   testMatch: ['web.spec.ts'],
-  timeout: 60_000,
+  timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
   reporter: [['list'], ['json', { outputFile: 'playwright-results.json' }]],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8765',
-    screenshot: 'only-on-failure',
+    // Always capture screenshots so docs/screenshots are regenerated on every run.
+    screenshot: 'on',
     video: 'off',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,

@@ -151,7 +151,7 @@ func newDemoSystem(now time.Time, hub *orchestration.Hub, tracker *billing.Track
 	org := domain.NewSoftwareCompany("demo", "Demo Software Company", "Human CEO", now.UTC())
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "news-1", Name: "AI News Collector", Role: "AI_NEWS_COLLECTOR", OrganizationID: org.ID, Status: orchestration.StatusActive})
+	hub.RegisterAgent(orchestration.Agent{ID: "news-1", Name: "AI News Collector", Role: "AI_NEWS_COLLECTOR", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	if tracker.Summary(org.ID).TotalTokens == 0 {
@@ -388,20 +388,9 @@ func run(now time.Time, listen listenFunc) error {
 				case <-ticker.C:
 					// Prune missions older than 7 days or marked COMPLETED
 					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
-						slog.Error("failed to prune stale missions", "error", err)
-					}
-					// Hygiene: Prune old telemetry buffer entries to prevent unbounded local growth
-					if err := sipdb.PruneTelemetryBuffer(ctx, 24*time.Hour); err != nil {
-						slog.Error("failed to prune stale telemetry buffer", "error", err)
+						slog.Error("failed to prune stale agent missions", "error", err)
 					} else {
-						slog.Debug("successfully pruned stale agent missions and telemetry buffer")
-					}
-
-					// Prune buffered telemetry metrics older than 24 hours
-					if err := sipdb.PruneBufferedMetrics(ctx, 24*time.Hour); err != nil {
-						slog.Error("failed to prune stale telemetry metrics", "error", err)
-					} else {
-						slog.Debug("successfully pruned stale telemetry metrics")
+						slog.Debug("successfully pruned stale agent missions")
 					}
 				}
 			}
@@ -539,11 +528,6 @@ func run(now time.Time, listen listenFunc) error {
 // Produces no errors.
 // Has no side effects.
 func main() {
-	// Set up global PII-redacting logger
-	baseHandler := slog.NewJSONHandler(os.Stdout, nil)
-	redactingHandler := telemetry.NewPIIRedactingHandler(baseHandler)
-	slog.SetDefault(slog.New(redactingHandler))
-
 	shutdown, err := initTelemetry()
 	if err != nil {
 		slog.Warn("failed to initialize telemetry", "error", err)

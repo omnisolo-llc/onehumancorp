@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
-	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -169,80 +168,6 @@ func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
 	}
 }
 
-
-// ConsolidateMemories processes the backlog of episodic memories into embeddings.
-// It fetches up to 100 rows where processed_at IS NULL.
-func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
-	var rows db.Rows
-	var err error
-
-	if w.pool.IsSQLite() {
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100")
-	} else {
-		// Postgres lock row for update so no other worker picks it up
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100 FOR UPDATE SKIP LOCKED")
-	}
-	if err != nil {
-		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)
-	}
-
-	type memEntry struct {
-		id      string
-		content string
-	}
-	var entries []memEntry
-
-	for rows.Next() {
-		var e memEntry
-		if scanErr := rows.Scan(&e.id, &e.content); scanErr == nil {
-			entries = append(entries, e)
-		}
-	}
-	rows.Close()
-
-	if len(entries) == 0 {
-		return nil
-	}
-
-	minimaxKey := os.Getenv("MINIMAX_API_KEY")
-	var client MinimaxClient
-	if minimaxKey != "" {
-		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
-	}
-
-	for _, e := range entries {
-		embedding := make([]float32, 1536)
-		if client != nil {
-			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, embedErr := client.GenerateEmbedding(ctxTimeout, e.content)
-			cancel()
-			if embedErr == nil && len(resp) == 1536 {
-				embedding = resp
-			} else {
-				slog.Warn("AutoDream: failed to embed memory with Minimax, using empty", "error", embedErr)
-			}
-		}
-
-		embStr := formatFloat32SliceForVector(embedding)
-
-		var query string
-		if w.pool.IsSQLite() {
-			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
-		} else {
-			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
-		}
-
-		_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
-		if updateErr != nil {
-			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
-		} else {
-			slog.Debug("AutoDream: consolidated memory", "id", e.id)
-		}
-	}
-
-	return nil
-}
-
 func (d *AutoDreamWorkerDaemon) Start(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -257,9 +182,6 @@ func (d *AutoDreamWorkerDaemon) Start(ctx context.Context) {
 		case <-ticker.C:
 			if err := d.worker.ProcessMemories(ctx); err != nil {
 				slog.Error("AutoDreamWorkerDaemon: failed to process memories", "error", err)
-			}
-			if err := d.worker.ConsolidateMemories(ctx); err != nil {
-				slog.Error("AutoDreamWorkerDaemon: failed to consolidate memories", "error", err)
 			}
 		}
 	}

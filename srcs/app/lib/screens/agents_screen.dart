@@ -237,7 +237,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        widget.agent.formattedRole,
+                                        widget.agent.role,
                                         style: TextStyle(
                                           color: colorScheme.onSurfaceVariant,
                                           fontFamily: 'Inter',

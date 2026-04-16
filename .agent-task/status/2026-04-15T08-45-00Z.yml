@@ -1,6 +1,0 @@
-heartbeat: true
-agent: Researcher
-status: "Mission decomposition completed"
-metrics:
-  missions_created: 4
-  status: "OK"

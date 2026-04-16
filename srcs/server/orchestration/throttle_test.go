@@ -11,7 +11,6 @@ import (
 func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	// Clear the package-level semaphore after the test.
 	defer ClearSemaphore()
-	ClearSemaphore() // Ensure it's clear before starting
 
 	// Temporarily enable OHC_STANDALONE to trigger the throttle
 	t.Setenv("OHC_STANDALONE", "true")
