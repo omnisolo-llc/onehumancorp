@@ -20,9 +20,4 @@ spec:
         ports:
         - containerPort: 9091
         resources:
-          limits:
-            cpu: 200m
-            memory: 128Mi
-          requests:
-            cpu: 50m
-            memory: 64Mi
+          {{- toYaml .Values.pushgateway.resources | nindent 12 }}
