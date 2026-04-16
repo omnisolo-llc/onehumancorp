@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mesh",
-    srcs = ["mesh.go", "lock.go"],
+    srcs = ["mesh.go", "lock.go", "claim.go", "queue.go"],
     importpath = "github.com/onehumancorp/mono/api/mesh",
     visibility = ["//visibility:public"],
     deps = [
@@ -14,7 +14,7 @@ go_library(
 
 go_test(
     name = "mesh_test",
-    srcs = ["mesh_test.go", "lock_test.go"],
+    srcs = ["mesh_test.go", "lock_test.go", "claim_test.go", "queue_test.go"],
     embed = [":mesh"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
