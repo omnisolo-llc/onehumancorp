@@ -1,7 +1,0 @@
-<<<<<<< SEARCH
-package proxy
-=======
-package proxy
-
-import "fmt"
->>>>>>> REPLACE
