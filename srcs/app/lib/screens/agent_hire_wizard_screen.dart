@@ -18,6 +18,21 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   String _selectedRole = '';
   String _selectedProvider = '';
   final _nameController = TextEditingController();
+
+  // Topology state
+  String _topologyPreset = 'Independent';
+
+  // Capabilities selection state
+  bool _capEmailRead = false;
+  bool _capMessagingSend = false;
+  bool _capDataAccess = false;
+
+  // Resource limits state
+  double _maxSessionsPerDay = 50.0;
+  bool _showAdvanced = false;
+  final _endpointUrlController = TextEditingController();
+  final _tokenLimitController = TextEditingController();
+
   bool _isDeploying = false;
   bool _isLoading = true;
   List<String> _roles = [];
@@ -74,6 +89,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
+        // Note: Additional state collected (capabilities, limits, topology)
+        // should be passed here when the API supports them. For now we use the required fields.
         await api.hireAgent(
           _nameController.text.trim(),
           _selectedRole,
@@ -122,7 +139,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
-          if (_step < 3) {
+          if (_step < 6) {
             setState(() => _step++);
           } else {
             _handleDeploy();
@@ -138,7 +155,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             padding: const EdgeInsets.only(top: 24),
             child: Row(
               children: [
-                if (_step < 3)
+                if (_step < 6)
                   Semantics(
                     label: 'Proceed to next step',
                     child: Tooltip(
@@ -301,13 +318,171 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             ),
           ),
           Step(
-            title: const Text('Confirm'),
+            title: const Text('Topology'),
             isActive: _step >= 3,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 4 — Confirm Deployment',
+                  'Step 4 — Sub-agent Topology',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('How does this agent interact with others?'),
+                const SizedBox(height: 16),
+                RadioListTile<String>(
+                  title: const Text('Independent Worker'),
+                  subtitle: const Text('Works alone without sub-agents.'),
+                  value: 'Independent',
+                  groupValue: _topologyPreset,
+                  onChanged: (val) => setState(() => _topologyPreset = val!),
+                ),
+                RadioListTile<String>(
+                  title: const Text('Delegator / Supervisor'),
+                  subtitle: const Text(
+                    'Can ask other agents for help (e.g. asking the Code Builder).',
+                  ),
+                  value: 'Delegator',
+                  groupValue: _topologyPreset,
+                  onChanged: (val) => setState(() => _topologyPreset = val!),
+                ),
+                if (_showAdvanced) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white24),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Text('Drag-and-drop Node Graph Placeholder'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Capabilities'),
+            isActive: _step >= 4,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Step 5 — Select Capabilities',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('What permissions should this agent have?'),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Read my emails'),
+                  subtitle: const Text('Grants EMAIL_READ permission'),
+                  value: _capEmailRead,
+                  onChanged: (val) => setState(() => _capEmailRead = val!),
+                ),
+                CheckboxListTile(
+                  title: const Text('Send messages on my behalf'),
+                  subtitle: const Text('Grants MESSAGING_SEND permission'),
+                  value: _capMessagingSend,
+                  onChanged: (val) => setState(() => _capMessagingSend = val!),
+                ),
+                CheckboxListTile(
+                  title: const Text('Access business data'),
+                  subtitle: const Text('Grants DATA_ACCESS permission'),
+                  value: _capDataAccess,
+                  onChanged: (val) => setState(() => _capDataAccess = val!),
+                ),
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Limits'),
+            isActive: _step >= 5,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Step 6 — Resource Limits',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Text('Advanced Settings'),
+                        Switch(
+                          value: _showAdvanced,
+                          onChanged:
+                              (val) => setState(() => _showAdvanced = val),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('How much should this agent work per day?'),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: _maxSessionsPerDay,
+                        min: 10,
+                        max: 200,
+                        divisions: 19,
+                        label: _maxSessionsPerDay.round().toString(),
+                        onChanged:
+                            (val) => setState(() => _maxSessionsPerDay = val),
+                      ),
+                    ),
+                    Text('${_maxSessionsPerDay.round()} sessions'),
+                  ],
+                ),
+                Text(
+                  'Estimated cost: \$${(_maxSessionsPerDay * 0.05).toStringAsFixed(2)} / day',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                if (_showAdvanced) ...[
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Advanced Configuration',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Custom Endpoint URL (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Token Limit (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Confirm'),
+            isActive: _step >= 6,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Step 7 — Confirm Deployment',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -316,25 +491,47 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
                       outer: ColorFilter.matrix(const <double>[
-                        1.787, -0.715, -0.072, 0, 0,
-                        -0.213, 1.285, -0.072, 0, 0,
-                        -0.213, -0.715, 1.928, 0, 0,
-                        0, 0, 0, 1, 0,
+                        1.787,
+                        -0.715,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        1.285,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        -0.715,
+                        1.928,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
                       ]),
                       inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.2),
                           child: Text(
                             _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
                             style: TextStyle(
@@ -356,9 +553,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                           style: const TextStyle(fontFamily: 'Inter'),
                         ),
                         trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
