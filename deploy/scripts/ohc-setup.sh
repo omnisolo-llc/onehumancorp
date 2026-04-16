@@ -49,6 +49,12 @@ export OHC_SOURCE_MODE=cloud
 bazelisk test //srcs/server/api/...
 
 echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
+
+if [ -f deploy/scripts/ohc-verify-setup.sh ]; then
+    bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Setup verification failed.${RESET}"; false; }
+else
+    echo -e "${DIM}Setup verification script not found, skipping.${RESET}"
+fi
 if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
     bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
 else
