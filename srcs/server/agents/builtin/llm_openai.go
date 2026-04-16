@@ -71,7 +71,12 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 			Message struct {
 				Content string `json:"content"`
 			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
 		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+		} `json:"usage"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -79,8 +84,10 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	}
 
 	content := ""
+	stopReason := ""
 	if len(result.Choices) > 0 {
 		content = result.Choices[0].Message.Content
+		stopReason = result.Choices[0].FinishReason
 	}
 
 	return ChatResponse{
@@ -88,5 +95,10 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 			Role:    RoleAssistant,
 			Content: content,
 		},
+		Usage: Usage{
+			InputTokens:  result.Usage.PromptTokens,
+			OutputTokens: result.Usage.CompletionTokens,
+		},
+		StopReason: stopReason,
 	}, nil
 }
