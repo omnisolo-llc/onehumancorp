@@ -548,6 +548,21 @@ class ApiService {
     _checkStatus(response);
   }
 
+  Future<void> bulkInviteTeam(String referralCode, List<String> emails) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/v1/growth/referrals/bulk_invite'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'referralCode': referralCode,
+        'emails': emails,
+      }),
+    );
+    _checkStatus(response);
+  }
+
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('API error ${res.statusCode}: ${res.body}');

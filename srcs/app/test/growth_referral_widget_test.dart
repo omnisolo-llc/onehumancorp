@@ -25,7 +25,11 @@ void main() {
         ],
         child: const MaterialApp(
           home: Scaffold(
-            body: GrowthReferralWidget(),
+            body: SizedBox(
+              width: 800,
+              height: 600,
+              child: GrowthReferralWidget(),
+            ),
           ),
         ),
       ),
@@ -43,5 +47,43 @@ void main() {
     verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign")).called(1);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.textContaining('Cloud-Bridge invite link copied'), findsOneWidget);
+  });
+
+  testWidgets('GrowthReferralWidget bulk invite dialog works', (WidgetTester tester) async {
+    when(() => mockApiService.getQuota()).thenAnswer((_) async => {'used': 10, 'max': 100});
+    when(() => mockApiService.bulkInviteTeam(any(), any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiServiceProvider.overrideWithValue(mockApiService),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 800,
+              height: 600,
+              child: GrowthReferralWidget(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Bulk Invite'), findsOneWidget);
+    await tester.tap(find.text('Bulk Invite'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bulk Invite Team'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'test1@example.com, test2@example.com');
+    await tester.tap(find.text('Send Invites'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockApiService.bulkInviteTeam('xYz8vQ_local_sovereign', ['test1@example.com', 'test2@example.com'])).called(1);
+    expect(find.text('Bulk invites sent successfully.'), findsOneWidget);
   });
 }
