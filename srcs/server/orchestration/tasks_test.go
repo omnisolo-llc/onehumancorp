@@ -62,8 +62,6 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT NOT NULL DEFAULT '{}',
 			locked_until DATETIME,
-			claimed_by TEXT DEFAULT NULL,
-			claim_status TEXT DEFAULT NULL,
 			ultraplan_phase TEXT,
 			deliberation_log TEXT NOT NULL DEFAULT '[]',
 			depth INTEGER NOT NULL DEFAULT 0,
