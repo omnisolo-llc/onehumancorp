@@ -1,7 +1,6 @@
 package dbinspector
 
 import (
-	"fmt"
 	"context"
 	"database/sql"
 	"testing"
@@ -12,7 +11,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) db.Provider {
-	sqliteDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
+	sqliteDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open sqlite: %v", err)
 	}

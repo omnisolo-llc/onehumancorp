@@ -91,18 +91,26 @@ func TestSandboxExecution_PermissionDenied(t *testing.T) {
 	}
 }
 
-func TestSandboxExecutionPermissionDenied(t *testing.T) {
+func TestSandboxExecution_EnvironmentScrubbing(t *testing.T) {
 	sandbox := NewSandbox()
 	ctx := context.Background()
 
-	// Use python to trigger a Permission denied error without using restricted commands like chmod or sudo
-	out, err := sandbox.ExecuteContext(ctx, "python3 -c 'open(\"/etc/shadow\", \"r\")'", "")
+	t.Setenv("GITHUB_TOKEN", "secret123")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "header123")
 
-	if err == nil {
-		t.Fatalf("ExecuteContext expected error for permission denied, got nil")
+	out, err := sandbox.ExecuteContext(ctx, "env", "")
+	if err != nil {
+		t.Fatalf("ExecuteContext failed: %v", err)
 	}
 
-	if !strings.Contains(out, "sandbox_violations") {
-		t.Errorf("ExecuteContext output = %v, want it to contain 'sandbox_violations'", out)
+	if strings.Contains(out, "GITHUB_TOKEN=secret123") {
+		t.Errorf("ExecuteContext output leaked GITHUB_TOKEN, output: %v", out)
+	}
+	if strings.Contains(out, "OTEL_EXPORTER_OTLP_HEADERS=header123") {
+		t.Errorf("ExecuteContext output leaked OTEL_EXPORTER_OTLP_HEADERS, output: %v", out)
+	}
+
+	if !strings.Contains(out, "HOME=.agent-home/") {
+		t.Errorf("ExecuteContext output did not override HOME, output: %v", out)
 	}
 }

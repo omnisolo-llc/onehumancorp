@@ -14,7 +14,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) db.Provider {
-	sqlDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
+	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open sqlite in-memory db: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 
 	// Verify only 5 were updated (6 total with the one we inserted as processed)
 	// Actually, wait, does the setupTestDB insert other memories? Let's check test count again.
-	// Oh, the other tests use setupTestDB and it shares memory! ":memory:" vs fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()).
+	// Oh, the other tests use setupTestDB and it shares memory! ":memory:" vs "file::memory:?cache=shared".
 	// We changed it to ":memory:", so it should be isolated now.
 	// Why is it 8? Maybe there are other things in the test table?
 	// The test `TestAutoDreamWorker_ProcessMemories` inserts 2 memories. If tests run in parallel, it might be 8.
