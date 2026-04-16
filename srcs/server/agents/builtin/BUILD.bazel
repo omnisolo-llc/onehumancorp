@@ -51,6 +51,7 @@ go_test(
         "notification_test.go",
         "pubsub_test.go",
         "scheduler_benchmark_test.go",
+        "prompt_test.go",
     ],
     embed = [":builtin"],
 )
