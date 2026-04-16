@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"fmt"
+
 	"context"
 	"testing"
 	"time"
@@ -12,7 +14,7 @@ import (
 
 func TestSubAgentSpawner(t *testing.T) {
 	// 1. Setup in-memory SQLite DB
-	pool, err := db.NewPool("sqlite://file::memory:?cache=shared", 1)
+	pool, err := db.NewPool(fmt.Sprintf("sqlite://file:%s?mode=memory&cache=shared", t.Name()), 1)
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -66,7 +68,7 @@ func TestSubAgentSpawner_CloudModeMock(t *testing.T) {
 
 func TestSubAgentSpawner_FailedJobUpdatesParent(t *testing.T) {
 	// 1. Setup in-memory SQLite DB
-	pool, err := db.NewPool("sqlite://file::memory:?cache=shared", 1)
+	pool, err := db.NewPool(fmt.Sprintf("sqlite://file:%s?mode=memory&cache=shared", t.Name()), 1)
 	require.NoError(t, err)
 	defer pool.Close()
 
