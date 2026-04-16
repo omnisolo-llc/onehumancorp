@@ -52,18 +52,25 @@ func (it *InviteTracker) RecordInvite(ctx context.Context, teamID, inviterID, in
 	return nil
 }
 
+func (it *InviteTracker) GetTeamInvitesCount(ctx context.Context, teamID string) (int, error) {
+	return it.repo.GetTeamInvitesCount(ctx, teamID)
+}
+
+func (it *InviteTracker) GetTotalInvitesCount(ctx context.Context) (int, error) {
+	return it.repo.GetTotalInvitesCount(ctx)
+}
+
 func (it *InviteTracker) RecordInvites(ctx context.Context, teamID, inviterID string, inviteeIDs []string) error {
 	var invites []*TeamInvite
-	baseTime := time.Now().UnixNano()
-
-	for i, inviteeID := range inviteeIDs {
-		invites = append(invites, &TeamInvite{
-			ID:        fmt.Sprintf("inv-%d-%d", baseTime, i),
+	for _, inviteeID := range inviteeIDs {
+		invite := &TeamInvite{
+			ID:        fmt.Sprintf("inv-%d-%s", time.Now().UnixNano(), inviteeID),
 			TeamID:    teamID,
 			InviterID: inviterID,
 			InviteeID: inviteeID,
 			Status:    "PENDING",
-		})
+		}
+		invites = append(invites, invite)
 	}
 
 	err := it.repo.CreateInvites(ctx, invites)
@@ -72,16 +79,8 @@ func (it *InviteTracker) RecordInvites(ctx context.Context, teamID, inviterID st
 	}
 
 	if invitesCounter != nil {
-		invitesCounter.Add(ctx, int64(len(inviteeIDs)))
+		invitesCounter.Add(ctx, int64(len(invites)))
 	}
 
 	return nil
-}
-
-func (it *InviteTracker) GetTeamInvitesCount(ctx context.Context, teamID string) (int, error) {
-	return it.repo.GetTeamInvitesCount(ctx, teamID)
-}
-
-func (it *InviteTracker) GetTotalInvitesCount(ctx context.Context) (int, error) {
-	return it.repo.GetTotalInvitesCount(ctx)
 }

@@ -13,7 +13,7 @@ import (
 )
 
 // AdvertiseCapabilities advertises an agent's capabilities to the mesh
-func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *AgentCapabilities) (*pb.PublishMessageResponse, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
 
