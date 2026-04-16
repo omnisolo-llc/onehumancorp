@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"strings"
 	"time"
 )
 
@@ -73,7 +74,14 @@ func TestQueueManagerLoop(t *testing.T) {
 
 	// Verify status in DB
 	var status1, status2 string
-	err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
+	// Retry loop for SQLITE_BUSY
+	for i := 0; i < 5; i++ {
+		err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
+		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}
@@ -81,7 +89,13 @@ func TestQueueManagerLoop(t *testing.T) {
 		t.Fatalf("Expected job-1 status COMPLETED, got %s", status1)
 	}
 
-	err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
+	for i := 0; i < 5; i++ {
+		err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
+		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}
