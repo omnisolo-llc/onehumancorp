@@ -198,6 +198,7 @@ func (s *Server) handleTeamInvites(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.teamInvites = append(s.teamInvites, invite)
 		s.mu.Unlock()
+		s.ViralLoopTracker.RecordInviteSent(r.Context(), req.InviterID)
 		writeJSON(w, invite)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -224,10 +225,7 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 
 	uniqueInviters := len(inviters)
-	kFactor := 0.0
-	if uniqueInviters > 0 {
-		kFactor = float64(totalConversions) / float64(uniqueInviters)
-	}
+	kFactor := s.ViralLoopTracker.CalculateKFactor()
 
 	res := ViralCoefficientResponse{
 		TotalReferrals:   totalReferrals,
@@ -352,6 +350,7 @@ func (s *Server) handleTeamInviteAccept(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "invite not found", http.StatusNotFound)
 		return
 	}
+	s.ViralLoopTracker.RecordInviteAccepted(r.Context(), updated.InviteeID)
 	writeJSON(w, updated)
 }
 
@@ -428,44 +427,44 @@ func (s *Server) handleReferralConvert(w http.ResponseWriter, r *http.Request) {
 }
 
 type WaitlistEntry struct {
-    ID        string    `json:"id"`
-    Email     string    `json:"email"`
-    CreatedAt time.Time `json:"createdAt"`
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type waitlistCreateRequest struct {
-    Email string `json:"email"`
+	Email string `json:"email"`
 }
 
 func (s *Server) handleWaitlist(w http.ResponseWriter, r *http.Request) {
-    switch r.Method {
-    case http.MethodGet:
-        s.mu.RLock()
-        wl := append([]WaitlistEntry(nil), s.waitlist...)
-        s.mu.RUnlock()
-        writeJSON(w, wl)
-    case http.MethodPost:
-        var req waitlistCreateRequest
-        if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-            http.Error(w, "invalid JSON payload", http.StatusBadRequest)
-            return
-        }
-        if req.Email == "" {
-            http.Error(w, "email is required", http.StatusBadRequest)
-            return
-        }
-        entry := WaitlistEntry{
-            ID:        "wl-" + time.Now().UTC().Format("20060102150405"),
-            Email:     req.Email,
-            CreatedAt: time.Now().UTC(),
-        }
-        s.mu.Lock()
-        s.waitlist = append(s.waitlist, entry)
-        s.mu.Unlock()
-        writeJSON(w, entry)
-    default:
-        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-    }
+	switch r.Method {
+	case http.MethodGet:
+		s.mu.RLock()
+		wl := append([]WaitlistEntry(nil), s.waitlist...)
+		s.mu.RUnlock()
+		writeJSON(w, wl)
+	case http.MethodPost:
+		var req waitlistCreateRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+		if req.Email == "" {
+			http.Error(w, "email is required", http.StatusBadRequest)
+			return
+		}
+		entry := WaitlistEntry{
+			ID:        "wl-" + time.Now().UTC().Format("20060102150405"),
+			Email:     req.Email,
+			CreatedAt: time.Now().UTC(),
+		}
+		s.mu.Lock()
+		s.waitlist = append(s.waitlist, entry)
+		s.mu.Unlock()
+		writeJSON(w, entry)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (s *Server) handleViralCoefficientMetrics(w http.ResponseWriter, r *http.Request) {
@@ -474,23 +473,7 @@ func (s *Server) handleViralCoefficientMetrics(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	s.mu.RLock()
-	refs := append([]Referral(nil), s.referrals...)
-	s.mu.RUnlock()
-
-	var totalConversions int
-	inviters := make(map[string]bool)
-
-	for _, ref := range refs {
-		totalConversions += ref.Conversions
-		inviters[ref.UserID] = true
-	}
-
-	uniqueInviters := len(inviters)
-	kFactor := 0.0
-	if uniqueInviters > 0 {
-		kFactor = float64(totalConversions) / float64(uniqueInviters)
-	}
+	kFactor := s.ViralLoopTracker.CalculateKFactor()
 
 	type ViralCoefficientMetricsResponse struct {
 		ViralCoefficient float64 `json:"viral_coefficient"`

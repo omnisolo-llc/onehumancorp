@@ -14,6 +14,7 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
+  late Future<Map<String, dynamic>> _viralCoefficientFuture;
   late Future<List<Map<String, dynamic>>> _referralsFuture;
 
   @override
@@ -22,9 +23,10 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
     _refresh();
   }
 
-  void _refresh() {
+void _refresh() {
     setState(() {
       _referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+      _viralCoefficientFuture = ref.read(apiServiceProvider)!.getViralCoefficient();
     });
   }
 
@@ -42,41 +44,73 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _referralsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _viralCoefficientFuture,
+        builder: (context, viralSnapshot) {
+          if (viralSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
+          if (viralSnapshot.hasError) {
             return Center(
               child: Text(
-                'Error: ${snapshot.error}',
+                'Error: ${viralSnapshot.error}',
                 style: TextStyle(color: colors.error),
               ),
             );
           }
 
-          final referrals = snapshot.data ?? [];
+          final viralData = viralSnapshot.data ?? {};
+          final kFactor = viralData['kFactor'] ?? 0.0;
+          final totalConversions = viralData['totalConversions'] ?? 0;
+          final uniqueInviters = viralData['uniqueInviters'] ?? 0;
 
-          if (referrals.isEmpty) {
-            return const Center(
-              child: Text(
-                'No referrals tracked yet.',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              ),
-            );
-          }
+          return FutureBuilder<List<Map<String, dynamic>>>(
+            future: _referralsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error: ${snapshot.error}',
+                    style: TextStyle(color: colors.error),
+                  ),
+                );
+              }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Wrap(
+              final referrals = snapshot.data ?? [];
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _KFactorCard(
+                      kFactor: kFactor,
+                      totalConversions: totalConversions,
+                      uniqueInviters: uniqueInviters,
+                    ),
+                    const SizedBox(height: 32),
+                    if (referrals.isEmpty)
+                      const Center(
+                        child: Text(
+                          'No referrals tracked yet.',
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                        ),
+                      )
+                    else
+                      Wrap(
               spacing: 24,
               runSpacing: 24,
               children: referrals.map((r) {
                 return _ReferralCard(referral: r);
               }).toList(),
-            ),
+                      ),
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
@@ -181,6 +215,36 @@ class _StatColumn extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _KFactorCard extends StatelessWidget {
+  final double kFactor;
+  final int totalConversions;
+  final int uniqueInviters;
+
+  const _KFactorCard({
+    required this.kFactor,
+    required this.totalConversions,
+    required this.uniqueInviters,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(32),
+      color: colors.primaryContainer.withValues(alpha: 0.8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _StatColumn(label: 'K-Factor', value: kFactor.toStringAsFixed(2)),
+          _StatColumn(label: 'Total Conversions', value: '$totalConversions'),
+          _StatColumn(label: 'Unique Inviters', value: '$uniqueInviters'),
+        ],
+      ),
     );
   }
 }

@@ -23,7 +23,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
-	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
 	"github.com/onehumancorp/mono/srcs/server/utils"
+	"github.com/onehumancorp/mono/srcs/server/services/growth"
 )
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
@@ -72,6 +72,7 @@ type Server struct {
 	teamInvites           []TeamInvite
 	onboardingFunnels     []OnboardingFunnel
 	waitlist              []WaitlistEntry
+	ViralLoopTracker      *growth.ViralLoopTracker
 }
 
 // RateLimitState functionality.
@@ -469,6 +470,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		teamInvites:           []TeamInvite{},
 		waitlist:              []WaitlistEntry{},
 		onboardingFunnels:     []OnboardingFunnel{},
+		ViralLoopTracker:      growth.NewViralLoopTracker(nil),
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"

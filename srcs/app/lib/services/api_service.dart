@@ -506,6 +506,17 @@ class ApiService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
+  Future<Map<String, dynamic>> getViralCoefficient() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/growth/viral-coefficient'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+
+
 
   Future<void> trackDownload(String os, String version) async {
     final response = await http.post(

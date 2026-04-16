@@ -2,15 +2,16 @@ package dashboard
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
 )
 
 func TestHandleLandingPageExperiments(t *testing.T) {
-	s := &Server{}
+	s := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
 	// Test POST
 	payload := `{"title": "Test Experiment", "trafficSplit": 0.5}`
@@ -63,7 +64,7 @@ func TestHandleLandingPageExperiments(t *testing.T) {
 }
 
 func TestHandleTeamInvites(t *testing.T) {
-	s := &Server{}
+	s := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
 	// Test POST
 	payload := `{"inviterId": "user-A", "inviteeId": "user-B"}`
@@ -117,6 +118,7 @@ func TestHandleTeamInvites(t *testing.T) {
 
 func TestHandleViralCoefficient(t *testing.T) {
 	s := &Server{
+		ViralLoopTracker: growth.NewViralLoopTracker(nil),
 		referrals: []Referral{
 			{UserID: "user-1", Conversions: 2},
 			{UserID: "user-1", Conversions: 1},
@@ -124,6 +126,15 @@ func TestHandleViralCoefficient(t *testing.T) {
 			{UserID: "user-3", Conversions: 3},
 		},
 	}
+	s.ViralLoopTracker.RecordInviteSent(context.Background(), "user-1")
+	s.ViralLoopTracker.RecordInviteSent(context.Background(), "user-1")
+	s.ViralLoopTracker.RecordInviteSent(context.Background(), "user-2")
+	s.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee-1")
+	s.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee-2")
+	s.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee-3")
+	s.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee-4")
+	s.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee-5")
+	s.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee-6")
 
 	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/viral-coefficient", nil)
 	wGet := httptest.NewRecorder()
@@ -157,7 +168,7 @@ func TestHandleViralCoefficient(t *testing.T) {
 }
 
 func TestHandleReferrals(t *testing.T) {
-	s := &Server{}
+	s := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
 	// Test POST
 	payload := `{"userId": "user-123", "referralCode": "GROWTH2026"}`
@@ -213,7 +224,7 @@ func TestHandleReferrals(t *testing.T) {
 }
 
 func TestHandleDownloads(t *testing.T) {
-	s := &Server{}
+	s := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
 	// Test POST
 	payload := `{"os": "Mac", "version": "1.0.0"}`
@@ -263,7 +274,7 @@ func TestHandleDownloads(t *testing.T) {
 }
 
 func TestHandleOnboardingFunnel(t *testing.T) {
-	s := &Server{}
+	s := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
 	// Test POST
 	payload := `{"userId": "user-A", "step": "step-1"}`
@@ -354,6 +365,7 @@ func TestHandleTeamInviteAccept(t *testing.T) {
 		teamInvites: []TeamInvite{
 			{ID: "inv-1", InviterID: "user-A", InviteeID: "user-B", Status: "PENDING"},
 		},
+		ViralLoopTracker: growth.NewViralLoopTracker(nil),
 	}
 
 	payload := `{"id": "inv-1"}`
@@ -436,48 +448,52 @@ func TestHandleReferralClickAndConvert(t *testing.T) {
 }
 
 func TestHandleWaitlist(t *testing.T) {
-    s := &Server{}
+	s := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
-    // Test POST
-    payload := `{"email": "test@example.com"}`
-    req := httptest.NewRequest(http.MethodPost, "/api/growth/waitlist", bytes.NewBufferString(payload))
-    req.Header.Set("Content-Type", "application/json")
-    w := httptest.NewRecorder()
+	// Test POST
+	payload := `{"email": "test@example.com"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/waitlist", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 
-    s.handleWaitlist(w, req)
+	s.handleWaitlist(w, req)
 
-    if w.Result().StatusCode != http.StatusOK {
-        t.Errorf("expected 200 OK, got %d", w.Result().StatusCode)
-    }
-    var created WaitlistEntry
-    json.NewDecoder(w.Result().Body).Decode(&created)
-    if created.Email != "test@example.com" {
-        t.Errorf("expected email test@example.com, got %s", created.Email)
-    }
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("expected 200 OK, got %d", w.Result().StatusCode)
+	}
+	var created WaitlistEntry
+	json.NewDecoder(w.Result().Body).Decode(&created)
+	if created.Email != "test@example.com" {
+		t.Errorf("expected email test@example.com, got %s", created.Email)
+	}
 
-    // Test GET
-    reqGET := httptest.NewRequest(http.MethodGet, "/api/growth/waitlist", nil)
-    wGET := httptest.NewRecorder()
-    s.handleWaitlist(wGET, reqGET)
+	// Test GET
+	reqGET := httptest.NewRequest(http.MethodGet, "/api/growth/waitlist", nil)
+	wGET := httptest.NewRecorder()
+	s.handleWaitlist(wGET, reqGET)
 
-    if wGET.Result().StatusCode != http.StatusOK {
-        t.Errorf("expected 200 OK, got %d", wGET.Result().StatusCode)
-    }
-    var list []WaitlistEntry
-    json.NewDecoder(wGET.Result().Body).Decode(&list)
-    if len(list) != 1 {
-        t.Errorf("expected 1 waitlist entry, got %d", len(list))
-    }
+	if wGET.Result().StatusCode != http.StatusOK {
+		t.Errorf("expected 200 OK, got %d", wGET.Result().StatusCode)
+	}
+	var list []WaitlistEntry
+	json.NewDecoder(wGET.Result().Body).Decode(&list)
+	if len(list) != 1 {
+		t.Errorf("expected 1 waitlist entry, got %d", len(list))
+	}
 }
 
 func TestHandleViralCoefficientMetrics(t *testing.T) {
-	server := &Server{}
+	server := &Server{ViralLoopTracker: growth.NewViralLoopTracker(nil)}
 
 	// Add mock referrals
 	server.referrals = []Referral{
 		{UserID: "user1", Conversions: 2},
 		{UserID: "user2", Conversions: 4},
 	}
+	server.ViralLoopTracker.RecordInviteSent(context.Background(), "user1")
+	server.ViralLoopTracker.RecordInviteSent(context.Background(), "user1")
+	server.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee1")
+	server.ViralLoopTracker.RecordInviteAccepted(context.Background(), "invitee2")
 
 	req, err := http.NewRequest("GET", "/api/growth/viral-coefficient-metrics", nil)
 	if err != nil {
@@ -496,8 +512,12 @@ func TestHandleViralCoefficientMetrics(t *testing.T) {
 
 	var resp map[string]interface{}
 	json.Unmarshal(rr.Body.Bytes(), &resp)
-	if resp["viral_coefficient"] != float64(3.0) { t.Errorf("expected 3.0, got %v", resp["viral_coefficient"]) }
-	if resp["organization_id"] != "default" { t.Errorf("expected default, got %v", resp["organization_id"]) }
+	if resp["viral_coefficient"] != float64(1.0) {
+		t.Errorf("expected 3.0, got %v", resp["viral_coefficient"])
+	}
+	if resp["organization_id"] != "default" {
+		t.Errorf("expected default, got %v", resp["organization_id"])
+	}
 }
 
 func TestHandleQuota(t *testing.T) {
