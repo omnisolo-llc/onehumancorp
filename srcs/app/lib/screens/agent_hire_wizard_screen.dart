@@ -14,8 +14,6 @@ class AgentHireWizardScreen extends ConsumerStatefulWidget {
 }
 
 class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
-  Offset _mainNodePos = const Offset(50, 50);
-  Offset _subNodePos = const Offset(200, 50);
   int _step = 0;
   String _selectedRole = '';
   String _selectedProvider = '';
@@ -351,93 +349,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 if (_showAdvanced) ...[
                   const SizedBox(height: 16),
                   Container(
-                    height: 250,
+                    height: 150,
                     width: double.infinity,
-                    clipBehavior: Clip.hardEdge,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
                       border: Border.all(color: Colors.white24),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Stack(
-                      children: [
-                        // Dynamic Edge
-                        CustomPaint(
-                          size: const Size(double.infinity, 250),
-                          painter: _TopologyEdgePainter(_mainNodePos, _subNodePos, Theme.of(context).colorScheme.primary),
-                        ),
-                        // Main Agent Node
-                        Positioned(
-                          left: _mainNodePos.dx,
-                          top: _mainNodePos.dy,
-                          child: GestureDetector(
-                            onPanUpdate: (details) {
-                              setState(() {
-                                _mainNodePos = Offset(
-                                  (_mainNodePos.dx + details.delta.dx).clamp(0.0, 300.0),
-                                  (_mainNodePos.dy + details.delta.dy).clamp(0.0, 150.0),
-                                );
-                              });
-                            },
-                            child: Container(
-                              width: 100,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                                border: Border.all(color: Theme.of(context).colorScheme.primary),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: const Column(
-                                children: [
-                                  Icon(Icons.smart_toy, color: Colors.white, size: 24),
-                                  SizedBox(height: 4),
-                                  Text('This Agent', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center,),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Sub Agent Node
-                        Positioned(
-                          left: _subNodePos.dx,
-                          top: _subNodePos.dy,
-                          child: GestureDetector(
-                            onPanUpdate: (details) {
-                              setState(() {
-                                _subNodePos = Offset(
-                                  (_subNodePos.dx + details.delta.dx).clamp(0.0, 300.0),
-                                  (_subNodePos.dy + details.delta.dy).clamp(0.0, 150.0),
-                                );
-                              });
-                            },
-                            child: Container(
-                              width: 100,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white10,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: const Column(
-                                children: [
-                                  Icon(Icons.code, color: Colors.white70, size: 24),
-                                  SizedBox(height: 4),
-                                  Text('Code Builder', style: TextStyle(color: Colors.white70, fontSize: 10), textAlign: TextAlign.center,),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: const Center(
+                      child: Text('Drag-and-drop Node Graph Placeholder'),
                     ),
                   ),
                 ],
@@ -673,39 +592,5 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ],
       ),
     );
-  }
-}
-
-class _TopologyEdgePainter extends CustomPainter {
-  final Offset start;
-  final Offset end;
-  final Color color;
-
-  _TopologyEdgePainter(this.start, this.end, this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.5)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final startCenter = start + const Offset(50, 45); // Approximate center of 100x90 node
-    final endCenter = end + const Offset(50, 45);
-
-    final path = Path()
-      ..moveTo(startCenter.dx, startCenter.dy)
-      ..cubicTo(
-        startCenter.dx + 50, startCenter.dy,
-        endCenter.dx - 50, endCenter.dy,
-        endCenter.dx, endCenter.dy,
-      );
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TopologyEdgePainter oldDelegate) {
-    return oldDelegate.start != start || oldDelegate.end != end || oldDelegate.color != color;
   }
 }
