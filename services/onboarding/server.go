@@ -171,6 +171,21 @@ func GetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(wizardState)
 }
 
+func ResetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	wizardMu.Lock()
+	wizardState = make(map[string]interface{})
+	wizardMu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "reset"})
+}
+
 type AuditSetupResponse struct {
     Status string `json:"status"`
     Config *EnvConfig `json:"config,omitempty"`
@@ -209,4 +224,52 @@ func AuditSetupHandler(w http.ResponseWriter, r *http.Request) {
         Status: "success",
         Config: config,
     })
+}
+
+type DiagnosticsResponse struct {
+	Status string                 `json:"status"`
+	Config *EnvConfig             `json:"config,omitempty"`
+	Wizard map[string]interface{} `json:"wizard,omitempty"`
+	Error  string                 `json:"error,omitempty"`
+}
+
+func DiagnosticsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	envVars := make(map[string]string)
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			envVars[parts[0]] = parts[1]
+		}
+	}
+
+	config, err := VerifyEnvironment(envVars)
+
+	wizardMu.RLock()
+	currentWizardState := make(map[string]interface{})
+	for k, v := range wizardState {
+		currentWizardState[k] = v
+	}
+	wizardMu.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DiagnosticsResponse{
+			Status: "error",
+			Error:  err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(DiagnosticsResponse{
+		Status: "success",
+		Config: config,
+		Wizard: currentWizardState,
+	})
 }
