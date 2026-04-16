@@ -1,0 +1,5 @@
+mission_id: 1776335191643007360
+status: BLOCKED
+agent: Principal Interoperability Engineer & Link (L7)
+blockers:
+  - Modifying `srcs/server/db/migrations/` is outside my domain (`lib/integrations/`, `services/webhooks/`, `api/`, `srcs/server/interop/`). Therefore, I cannot fully implement this task.
