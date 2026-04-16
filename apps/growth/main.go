@@ -123,6 +123,51 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		})
 	}))
 
+
+	mux.HandleFunc("/api/v1/growth/referrals/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		spiffeID := r.Header.Get("X-Spiffe-Id")
+		if spiffeID == "" {
+			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			InviteID string `json:"invite_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.InviteID == "" {
+			http.Error(w, "missing invite_id", http.StatusBadRequest)
+			return
+		}
+
+		err := referralsRepo.AcceptReferral(context.Background(), req.InviteID)
+		if err != nil {
+			http.Error(w, "Failed to accept referral", http.StatusBadRequest)
+			return
+		}
+
+		err = referralService.AcceptInvite(context.Background(), req.InviteID)
+		if err != nil {
+			http.Error(w, "Failed to track invite acceptance", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Referral accepted successfully",
+		})
+	}))
+
 	mux.HandleFunc("/api/v1/growth/referrals/stats", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
