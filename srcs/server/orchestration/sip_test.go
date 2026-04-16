@@ -1,6 +1,9 @@
 package orchestration
 
 import (
+	"database/sql"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"sync"
 	"context"
 	"io"
 	"net/http"
@@ -217,6 +220,44 @@ func TestSIPDB_CompleteMission_ExecError(t *testing.T) {
 	}
 }
 
+func TestSIPDB_PruneBufferedMetrics(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert metrics:
+	// 1. New metric (should not be deleted)
+	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('type', 'payload', datetime('now'), 'system')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Old metric (should be deleted)
+	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('type', 'payload', datetime('now', '-2 days'), 'system')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.PruneBufferedMetrics(ctx, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("PruneBufferedMetrics failed: %v", err)
+	}
+
+	var count int
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 telemetry record remaining, got %d", count)
+	}
+}
+
 func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
@@ -277,6 +318,59 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 
 	if id != "1" {
 		t.Fatalf("Expected remaining mission to be '1', got '%s'", id)
+	}
+}
+
+
+func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert old telemetry
+	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric1', 'data1', datetime('now', '-2 days'), 'system')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert new telemetry
+	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric2', 'data2', datetime('now'), 'system')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.PruneTelemetryBuffer(ctx, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to prune telemetry buffer: %v", err)
+	}
+
+	var count int
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if count != 1 {
+		t.Fatalf("Expected 1 telemetry record remaining, got %d", count)
+	}
+}
+
+func TestSIPDB_PruneTelemetryBuffer_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	err = db.PruneTelemetryBuffer(context.Background(), 24*time.Hour)
+	if err == nil {
+		t.Fatal("Expected error when pruning on closed DB")
 	}
 }
 
@@ -1089,5 +1183,81 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSIPDB_Caching(t *testing.T) {
+	sqliteDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to open sqlite: %v", err)
+	}
+	dbProv := db.NewSqliteProvider(sqliteDB)
+	_ = err
+	if err != nil {
+		t.Fatalf("failed to create db provider: %v", err)
+	}
+	defer dbProv.Close()
+
+	sip, _ := NewSIPDBWithProvider(dbProv, "org1")
+	sip.localCache = sync.Map{}
+
+	ctx := context.Background()
+
+	// 1. Test SyncMemory / UpdateMemory caching
+	err = sip.UpdateMemory(ctx, "key1", "val1")
+	if err != nil {
+		t.Fatalf("UpdateMemory failed: %v", err)
+	}
+
+	// First fetch should hit db (miss) and populate cache
+	val, err := sip.SyncMemory(ctx, "key1")
+	if err != nil || val != "val1" {
+		t.Fatalf("SyncMemory failed or returned wrong val: %v, %v", val, err)
+	}
+
+	// Delete from DB manually to test cache
+	_, _ = sip.db.Exec(ctx, "DELETE FROM swarm_memory WHERE key = 'key1'")
+
+	// Second fetch should hit cache (hit)
+	val, err = sip.SyncMemory(ctx, "key1")
+	if err != nil || val != "val1" {
+		t.Fatalf("SyncMemory cache miss: %v, %v", val, err)
+	}
+
+	// UpdateMemory should invalidate
+	err = sip.UpdateMemory(ctx, "key1", "val2")
+	if err != nil {
+		t.Fatalf("UpdateMemory failed: %v", err)
+	}
+
+	// Third fetch should hit db (miss) and get new value
+	val, err = sip.SyncMemory(ctx, "key1")
+	if err != nil || val != "val2" {
+		t.Fatalf("SyncMemory cache invalidate failed: %v, %v", val, err)
+	}
+
+	// 2. Test GetCapabilityPlugins caching
+	p := CapabilityPlugin{
+		PluginID:    "p1",
+		Name:        "Plugin1",
+		Version:     "1.0",
+		ManifestURL: "http",
+		Status:      "ACTIVE",
+	}
+	err = sip.RegisterCapabilityPlugin(ctx, p)
+	if err != nil {
+		t.Fatalf("RegisterCapabilityPlugin failed: %v", err)
+	}
+
+	plugins, err := sip.GetCapabilityPlugins(ctx, "ACTIVE")
+	if err != nil || len(plugins) != 1 {
+		t.Fatalf("GetCapabilityPlugins failed: %v, %v", plugins, err)
+	}
+
+	_, _ = sip.db.Exec(ctx, "DELETE FROM capability_plugins WHERE plugin_id = 'p1'")
+
+	plugins, err = sip.GetCapabilityPlugins(ctx, "ACTIVE")
+	if err != nil || len(plugins) != 1 {
+		t.Fatalf("GetCapabilityPlugins cache miss: %v, %v", plugins, err)
 	}
 }
