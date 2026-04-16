@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	meshapi "github.com/onehumancorp/mono/api/mesh"
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
@@ -23,6 +24,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
+	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
@@ -38,9 +40,10 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
-	mu         sync.RWMutex
-	MeshBroker orchmesh.MeshBroker
-	org        domain.Organization
+	mu           sync.RWMutex
+	MeshBroker   orchmesh.MeshBroker
+	TeammateMesh *meshapi.TeammateMesh
+	org          domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub
@@ -485,8 +488,17 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		} else {
 			server.MeshBroker = orchmesh.NewLocalMeshBroker()
 		}
+
+		// Initialize the new TeammateMesh for Cloud mode
+		opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+		if err == nil {
+			server.TeammateMesh = meshapi.NewTeammateMesh(redis.NewClient(opt))
+		} else {
+			server.TeammateMesh = meshapi.NewTeammateMesh(nil)
+		}
 	} else {
 		server.MeshBroker = orchmesh.NewLocalMeshBroker()
+		server.TeammateMesh = meshapi.NewTeammateMesh(nil)
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
@@ -623,6 +635,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 
 	// Teammate Mesh APIs
+	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
+	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
