@@ -631,6 +631,26 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	})
 }
 
+// PruneBufferedMetrics removes telemetry buffered metrics older than a specified duration to prevent storage leaks and ensure privacy compliance.
+// Accepts parameters: ctx context.Context, ageThreshold time.Duration.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Deletes records from the telemetry_buffer table.
+func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Duration) error {
+	return withSipRetry(ctx, func() error {
+		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
+
+		var err error
+		if s.db.IsSQLite() {
+			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+		} else {
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+		}
+
+		return err
+	})
+}
+
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
 // It also sanitizes stuck PENDING missions by converting them to FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
