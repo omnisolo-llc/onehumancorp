@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "modernc.org/sqlite"
@@ -109,17 +110,20 @@ func New(ctx context.Context) (*DB, error) {
 				key = "transient_memory_key"
 			}
 		}
+
+		pragmaOpts := "_pragma=key(" + key + ")&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)"
 		if !strings.Contains(sqliteDSN, "?") {
-			sqliteDSN += "?_pragma=key(" + key + ")"
+			sqliteDSN += "?" + pragmaOpts
 		} else {
-			sqliteDSN += "&_pragma=key(" + key + ")"
+			sqliteDSN += "&" + pragmaOpts
 		}
 
 		sqliteDB, sqliteErr := sql.Open("sqlite", sqliteDSN)
 		if sqliteErr != nil {
 			return nil, fmt.Errorf("db: connect to sqlite: %w", sqliteErr)
 		}
-		sqliteDB.SetMaxOpenConns(1)
+		sqliteDB.SetMaxOpenConns(10)
+		sqliteDB.SetMaxIdleConns(5)
 
 		if pingErr := sqliteDB.PingContext(ctx); pingErr != nil {
 			sqliteDB.Close()
@@ -156,7 +160,18 @@ func New(ctx context.Context) (*DB, error) {
 		return &DB{Provider: NewSqliteProvider(sqliteDB)}, nil
 	}
 
-	pool, err := pgxpool.New(ctx, dsn)
+	config, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("db: parse postgres config: %w", err)
+	}
+
+	// Optimize Postgres pool settings for sub-second agentic latency
+	config.MaxConns = 50
+	config.MinConns = 10
+	config.MaxConnIdleTime = 5 * time.Minute
+	config.MaxConnLifetime = 1 * time.Hour
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("db: connect to postgres: %w", err)
 	}
@@ -269,6 +284,9 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// Remove constraint drops for SQLite since it's unsupported
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+\w+;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT\s+\w+\s+CHECK\s*\([^;]+;`).ReplaceAllString(sqlStr, "")
+
+			// Ignore unsupported RENAME COLUMN commands that can cause issues during migrations
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+RENAME\s+COLUMN\s+\w+\s+TO\s+\w+;`).ReplaceAllString(sqlStr, "")
 		}
 
 		tx, err := p.Begin(ctx)
