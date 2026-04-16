@@ -22,12 +22,10 @@ spec:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
   egress:
-    # Allow traffic within the same namespace (to Redis, Core, etc.)
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
-    # Allow DNS resolution
     - to:
         - namespaceSelector:
             matchLabels:
@@ -37,8 +35,6 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # Allow external egress only to authorized LLM API endpoints (Public IPs)
-    # but block all other internal RFC1918 traffic for strict tenant isolation.
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -46,4 +42,5 @@ spec:
               - 10.0.0.0/8
               - 172.16.0.0/12
               - 192.168.0.0/16
+              - 169.254.169.254/32
 {{- end }}
