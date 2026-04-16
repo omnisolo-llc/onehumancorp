@@ -42,7 +42,6 @@ Provisions a new organization in multi-tenant mode.
 
 **Payload:**
 
-
 ```json
 {
   "id": "acme",
@@ -79,7 +78,6 @@ sequenceDiagram
 Retrieves a list of active agents within the current tenant scope.
 
 **Endpoint:** `POST /api/agents/hire`
-
 
 Requests a new agent capability. This triggers dynamic tool registration via MCP.
 
