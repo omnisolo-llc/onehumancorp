@@ -15,6 +15,8 @@ case $MODE in
     export OHC_MULTITENANT=true
     export OHC_HEADLESS=false
     export OHC_SOURCE_MODE=cloud
+    export LOG_FORMAT="json"
+    export LOG_LEVEL="info"
     echo "Configured for Cloud-Native Multi-Tenant Mode."
     ;;
   standalone)
@@ -23,12 +25,18 @@ case $MODE in
     export OHC_SOURCE_MODE=standalone
     export GOMAXPROCS=2
     export OHC_STANDALONE=true
+    export GOMEMLIMIT="256MiB"
+    export GOGC=50
+    export LOG_FORMAT="json"
+    export LOG_LEVEL="info"
     echo "Configured for Standalone Desktop Mode."
     ;;
   headless)
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=true
     export OHC_SOURCE_MODE=cloud
+    export LOG_FORMAT="json"
+    export LOG_LEVEL="info"
     echo "Configured for Headless API Mode."
     ;;
   *)

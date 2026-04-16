@@ -246,6 +246,12 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// 4. Bursting but old (should be deleted)
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('4', 'BURSTING', '{\"role\":\"ROLE\",\"task\":\"task\"}', datetime('now', '-2 days'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Prune missions older than 24 hours
 	err = db.PruneStaleMissions(ctx, 24*time.Hour)
 	if err != nil {
@@ -1029,7 +1035,7 @@ func TestSIPDB_SyncMissions_Sanitization(t *testing.T) {
 		t.Fatalf("Expected 1 synced record, got %d", syncedCount)
 	}
 
-	expectedPayload := `{"id":"m-sync-1","role":"TESTER","task":{"content":" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]","id":"m-sync-1","type":"task"}}`
+	expectedPayload := `{"id":"m-sync-1","role":"TESTER","status":"PENDING","task":{"content":" my email is [REDACTED_EMAIL] and  phone is [REDACTED_PHONE]","id":"m-sync-1","type":"task"}}`
 	if string(reqBody) != expectedPayload {
 		t.Fatalf("Expected payload %s, got %s", expectedPayload, string(reqBody))
 	}

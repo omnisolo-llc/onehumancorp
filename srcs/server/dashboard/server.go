@@ -364,7 +364,6 @@ var defaultMcpTools = []MCPTool{
 	{ID: "git-mcp", Name: "Git", Description: "Source control operations: clone, commit, pull-request, review via GitHub or Gitea.", Category: "code", Status: "available"},
 	{ID: "github-mcp", Name: "GitHub (MCP)", Description: "Full repository introspections, PR management, issue tracking, and automated code review.", Category: "code", Status: "available"},
 	{ID: "jira-mcp", Name: "Jira / Plane", Description: "Task and issue tracking: create tickets, update status, list sprint items.", Category: "project_management", Status: "available"},
-	{ID: "linear-mcp", Name: "Linear", Description: "Modern issue tracking: manage issues, cycles, and roadmaps for high-velocity teams.", Category: "project_management", Status: "available"},
 	{ID: "figma-mcp", Name: "Figma", Description: "Design file access: read wireframes, export assets, inspect component specs.", Category: "design", Status: "available"},
 	{ID: "aws-mcp", Name: "AWS", Description: "Cloud infrastructure: provision EC2 instances, manage S3, deploy Lambda functions.", Category: "infrastructure", Status: "available"},
 	{ID: "gcp-mcp", Name: "Google Cloud Platform", Description: "Cloud infrastructure: manage GCE instances, Cloud Storage, Cloud Run, and GKE clusters.", Category: "infrastructure", Status: "available"},
@@ -905,10 +904,11 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Channel string `json:"channel"`
-		AgentID string `json:"agent_id"`
-		Action  string `json:"action"`
-		Status  string `json:"status"`
+		Channel string                 `json:"channel"`
+		AgentID string                 `json:"agent_id"`
+		Action  string                 `json:"action"`
+		Status  string                 `json:"status"`
+		Payload map[string]interface{} `json:"payload,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -930,6 +930,9 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		"action":   req.Action,
 		"status":   req.Status,
 	}
+	if req.Payload != nil {
+		payloadMap["payload"] = req.Payload
+	}
 
 	payloadBytes, err := json.Marshal(payloadMap)
 	if err != nil {
@@ -937,7 +940,14 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.hub.Publish(orchestration.Message{
+	var broker orchmesh.MeshBroker
+	broker = s.MeshBroker
+	if broker == nil {
+		broker = orchmesh.NewLocalMeshBroker()
+	}
+	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
+
+	_ = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   "system",

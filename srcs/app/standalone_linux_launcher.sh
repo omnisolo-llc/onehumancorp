@@ -2,28 +2,31 @@
 set -euo pipefail
 
 install_root="${OHC_DESKTOP_ROOT:-/opt/ohc-desktop}"
-app_dir="${install_root}/srcs/app"
 libexec_dir="${install_root}/libexec"
-platform="${OHC_DESKTOP_PLATFORM:-linux}"
-
-if ! command -v flutter >/dev/null 2>&1; then
-  echo "Flutter SDK is required to launch the packaged OHC desktop sources." >&2
-  echo "Install Flutter and rerun 'ohc-desktop'." >&2
-  exit 1
-fi
-
-if [[ ! -d "${app_dir}" ]]; then
-  echo "Packaged app sources not found at ${app_dir}" >&2
-  exit 1
-fi
+bundle_root=""
 
 if [[ ! -d "${libexec_dir}" ]]; then
   echo "Packaged runtime helpers not found at ${libexec_dir}" >&2
   exit 1
 fi
 
+for candidate in \
+  "${install_root}" \
+  "${install_root}/standalone_app.linux_build_artifacts" \
+  "${install_root}/app.linux_build_artifacts" \
+  "${install_root}/bundle"; do
+  if [[ -x "${candidate}/ohc_app" ]]; then
+    bundle_root="${candidate}"
+    break
+  fi
+done
+
+if [[ -z "${bundle_root}" ]]; then
+  echo "Packaged OHC desktop bundle not found under ${install_root}" >&2
+  exit 1
+fi
+
 export PATH="${libexec_dir}:${PATH}"
 
-echo "--- Starting OHC Desktop App (Standalone Mode, Platform: ${platform}) ---"
-cd "${app_dir}"
-exec flutter run -d "${platform}" --dart-define=OHC_STANDALONE=true
+echo "--- Starting OHC Desktop App (Standalone Bundle: ${bundle_root}) ---"
+exec "${bundle_root}/ohc_app" "$@"

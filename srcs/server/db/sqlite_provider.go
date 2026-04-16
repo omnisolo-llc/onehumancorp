@@ -111,7 +111,7 @@ func (p *SqliteProvider) Close() {
 	p.db.Close()
 }
 
-func (p *SqliteProvider) AcquireTask(ctx context.Context, agentID string) (*TaskRecord, error) {
+func (p *SqliteProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error) {
 	start := time.Now()
 	// SQLite supports UPDATE ... RETURNING
 	// But it does not support subqueries with LIMIT in UPDATE directly.
@@ -127,27 +127,29 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, agentID string) (*Task
 	// because SQLite Begin creates an immediate transaction lock by default or
 	// we rely on the concurrent writes lock.
 	query := `
-		UPDATE tasks
-		SET status = 'RUNNING', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		UPDATE shared_tasks_decomposition
+		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = (
-			SELECT id FROM tasks
-			WHERE status = 'PENDING' AND organization_id = 'system'
+			SELECT id FROM shared_tasks_decomposition
+			WHERE status = 'PENDING' AND organization_id = $2
 			ORDER BY created_at ASC
 			LIMIT 1
 		)
-		RETURNING id, parent_task_id, agent_id, status, payload, created_at, updated_at
+		RETURNING id, parent_plan_id, assigned_agent_id, status, payload, created_at, updated_at
 	`
 
 	var t TaskRecord
-	err = tx.QueryRow(ctx, query, agentID).Scan(
-		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &t.Payload, &t.CreatedAt, &t.UpdatedAt,
+	var payloadStr *string
+	var createdAtStr, updatedAtStr string
+	err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
+		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &payloadStr, &createdAtStr, &updatedAtStr,
 	)
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
 			// Memory instructions: SQLite lock contention detection parity with Postgres
 			// Secondary check to see if any PENDING tasks exist that were skipped.
 			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'PENDING' AND organization_id = 'system')").Scan(&exists)
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1)", organizationID).Scan(&exists)
 			if checkErr == nil && exists {
 				// We found pending tasks but couldn't acquire any because they are locked.
 				// In SQLite this usually happens if another connection locked them and we timed out or missed.
@@ -159,6 +161,15 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, agentID string) (*Task
 		}
 		trackQuery(ctx, "AcquireTask", err, time.Since(start))
 		return nil, err
+	}
+
+	t.Payload = payloadStr
+	if t.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAtStr); err != nil {
+		// Fallback for RFC3339 which is sometimes used in tests
+		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+	}
+	if t.UpdatedAt, err = time.Parse("2006-01-02 15:04:05", updatedAtStr); err != nil {
+		t.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -22,9 +22,13 @@ go_library(
     name = "mcp",
     srcs = [
         "blob_provider.go",
+        "crdt_provider.go",
         "client.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
+    deps = [
+        "//srcs/server/telemetry",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -32,6 +36,7 @@ go_test(
     name = "mcp_test",
     srcs = [
         "blob_provider_test.go",
+        "crdt_provider_test.go",
         "hybrid_mcp_bridge_test.go",
     ],
     embed = [":mcp"],

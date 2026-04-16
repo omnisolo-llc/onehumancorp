@@ -11,5 +11,5 @@ type TaskStore interface {
 }
 
 func NewTaskStore(dbProvider db.Provider) TaskStore {
-	return NewSharedTaskOrchestrator(dbProvider)
+	return NewSharedTaskOrchestrator(dbProvider, nil, nil)
 }
