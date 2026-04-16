@@ -24,6 +24,7 @@ go_library(
         "migrations/008_swarm_tasks.sql",
         "migrations/009_llm_reason_cache.sql",
         "migrations/010_ultraplan.sql",
+        "migrations/20260416040000_shared_tasks_v2.sql",
         "migrations/20260416030000_kairos_mesh.sql",
         "migrations/011_autodream_sync.sql",
         "migrations/012_hybrid_rag_mission.sql",
@@ -69,9 +70,6 @@ go_library(
         "migrations/20260415124100_autodream_memories_master.sql",
         "migrations/20260416000000_shared_tasks_decomposition_pg.sql",
         "migrations/20260416020000_hybrid_mcp_sync_queue.sql",
-        "migrations/20260416040000_kairos_phase1.sql",
-        "migrations/20260416040001_kairos_phase3.sql",
-
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
