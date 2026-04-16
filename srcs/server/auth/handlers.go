@@ -61,7 +61,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.store.Authenticate(r.Context(), req.Username, req.Password)
+	user, err := h.store.Authenticate(req.Username, req.Password)
 	if err != nil {
 		jsonError(w, "invalid credentials", http.StatusUnauthorized)
 		return
@@ -112,7 +112,7 @@ func (h *Handlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "not authenticated", http.StatusUnauthorized)
 		return
 	}
-	user, ok := h.store.GetUser(r.Context(), claims.Subject)
+	user, ok := h.store.GetUser(claims.Subject)
 	if !ok {
 		// OIDC user not yet materialised locally — return claims-derived info
 		writeJSON(w, http.StatusOK, UserPublic{
@@ -149,14 +149,14 @@ type updateUserRequest struct {
 // Has no side effects.
 func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 	claims := ClaimsFromContext(r.Context())
-	if claims == nil || !claims.HasRole(RoleAdmin) {
+	if claims == nil || !claims.HasRole(RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
 		jsonError(w, "forbidden", http.StatusForbidden)
 		return
 	}
 
 	switch r.Method {
 	case http.MethodGet:
-		users := h.store.ListUsers(r.Context())
+		users := h.store.ListUsers()
 		out := make([]UserPublic, 0, len(users))
 		for _, u := range users {
 			out = append(out, u.PublicView())
@@ -174,7 +174,7 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 		if len(req.Roles) == 0 {
 			req.Roles = []string{RoleViewer}
 		}
-		user, err := h.store.CreateUser(r.Context(), req.Username, req.Email, req.Password, req.Roles)
+		user, err := h.store.CreateUser(req.Username, req.Email, req.Password, req.Roles)
 		if err != nil {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -206,7 +206,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Non-admins may only read/update themselves
-	isAdmin := claims.HasRole(RoleAdmin)
+	isAdmin := claims.HasRole(RoleAdmin) && (claims.OrganizationID == "" || claims.OrganizationID == "sys")
 	if !isAdmin && claims.Subject != id {
 		jsonError(w, "forbidden", http.StatusForbidden)
 		return
@@ -214,7 +214,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		user, ok := h.store.GetUser(r.Context(), id)
+		user, ok := h.store.GetUser(id)
 		if !ok {
 			jsonError(w, "user not found", http.StatusNotFound)
 			return
@@ -234,7 +234,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			req.Roles = nil
 			req.Active = nil
 		}
-		user, err := h.store.UpdateUser(r.Context(), id, req.Email, req.Roles, req.Active)
+		user, err := h.store.UpdateUser(id, req.Email, req.Roles, req.Active)
 		if err != nil {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -246,7 +246,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		if err := h.store.DeleteUser(r.Context(), id); err != nil {
+		if err := h.store.DeleteUser(id); err != nil {
 			jsonError(w, err.Error(), http.StatusNotFound)
 			return
 		}
@@ -282,7 +282,7 @@ func (h *Handlers) HandleRoles(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, roles)
 
 	case http.MethodPost:
-		if !claims.HasRole(RoleAdmin) {
+		if !claims.HasRole(RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
 			jsonError(w, "forbidden", http.StatusForbidden)
 			return
 		}

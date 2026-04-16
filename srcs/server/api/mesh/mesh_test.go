@@ -60,6 +60,23 @@ func TestAuthErrors(t *testing.T) {
 	}
 }
 
+func TestMeshHandlerBroadcastSIP(t *testing.T) {
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	reqBody := []byte(`{"agent_id":"xyz","channel":"mesh:tasks","event_type":"TASK_TRANSITION","data":{"task_id":"123"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
 func TestMeshHandlerBroadcast(t *testing.T) {
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 	svc := NewMemoryMeshService()
