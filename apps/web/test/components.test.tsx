@@ -26,10 +26,12 @@ describe('Swarm Orchestration UI Components', () => {
     expect(screen.getByText('Loading tasks...')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Task 1 - PENDING')).toBeInTheDocument();
+      expect(screen.getByText('Task 1')).toBeInTheDocument();
+      expect(screen.getByText('PENDING')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Task 2 - COMPLETED')).toBeInTheDocument();
+    expect(screen.getByText('Task 2')).toBeInTheDocument();
+    expect(screen.getByText('COMPLETED')).toBeInTheDocument();
   });
 
   test('TeammateMeshConsole connects to websocket', () => {
