@@ -296,6 +296,9 @@ func run(now time.Time, listen listenFunc) error {
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
 
+		autodreamMemWorker := workers.NewAutoDreamWorker(pool.Provider)
+		go autodreamMemWorker.Start(ctx)
+
 		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
 		go competitorAuditWorker.Start(ctx)
 
