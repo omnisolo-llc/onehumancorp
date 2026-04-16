@@ -112,22 +112,6 @@ func RedactPII(input string) string {
 }
 
 // RedactInterfacePII deeply scrubs maps, slices, structs, and strings for PII.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// RedactInterfacePII deeply scrubs maps, slices, structs, and strings for PII.
 func RedactInterfacePII(val interface{}) interface{} {
 	if val == nil {
 		return nil
