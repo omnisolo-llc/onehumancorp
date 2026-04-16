@@ -58,24 +58,12 @@ func IsTelemetryMCPBridgeRegistered(endpoint string) bool {
 type HybridContextTool struct{}
 
 func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	if telemetry.BufferMetricFunc != nil {
-		metricType := "hybrid_ui_context"
-		if mt, ok := payload["metric_type"].(string); ok && mt != "" {
-			metricType = mt
-		}
-
-		payloadBytes, err := json.Marshal(payload)
-		if err != nil {
-			return nil, errors.New("failed to marshal payload")
-		}
-
-		_ = telemetry.BufferMetricFunc(ctx, metricType, string(payloadBytes))
-	}
-
-	resultBytes, err := json.Marshal(map[string]string{"status": "recorded"})
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, errors.New("failed to marshal result")
+		return nil, err
 	}
-
-	return FormatExecutionResult("hybrid_context", "success", resultBytes, true), nil
+	if telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "hybrid_ui_context", string(payloadBytes))
+	}
+	return FormatExecutionResult("hybrid_context", "success", payloadBytes, false), nil
 }
