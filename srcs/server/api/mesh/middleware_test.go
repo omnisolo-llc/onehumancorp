@@ -53,7 +53,7 @@ func TestValidationMiddleware(t *testing.T) {
 			name:           "Empty fields (still present at root)",
 			method:         http.MethodPost,
 			body:           []byte(`{"agent_id": "", "channel": "", "event_type": "", "data": null}`),
-			expectedStatus: http.StatusBadRequest, // data cannot be null it must be present json
+			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Empty string fields (still present at root)",

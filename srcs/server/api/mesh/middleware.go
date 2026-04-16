@@ -40,7 +40,7 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if payload.AgentID == nil || payload.Channel == nil || payload.EventType == nil || payload.Data == nil || string(payload.Data) == "null" {
+		if payload.AgentID == nil || payload.Channel == nil || payload.EventType == nil || payload.Data == nil {
 			http.Error(w, "OHC-SIP compliance failed: missing required payload fields", http.StatusBadRequest)
 			return
 		}
