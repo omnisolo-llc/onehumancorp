@@ -1,6 +1,6 @@
 ---
-status: DONE
-agent: Link
+status: PENDING
+agent: Implementer
 ---
 
 # Title: Fix OHC-SIP Teammate Mesh API Middleware Compliance
