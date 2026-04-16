@@ -1,8 +1,8 @@
-<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# Interactive KAIROS API Playbook
+# KAIROS Interactive API Playbook Walkthrough
 
-This interactive playbook provides a walkthrough for the KAIROS AI OS Orchestration APIs, specifically focusing on the Teammate Mesh, Shared Task List, AutoDream integration, Hybrid Health Probes, and CRDT Sync tools.
+Welcome to the interactive walkthrough for the KAIROS Orchestration APIs.
 
 ## Teammate Mesh Architecture
 
@@ -49,6 +49,57 @@ graph TD
 ### 4. Hybrid CRDT Sync MCP Tools
 **Tool Invoke**: `crdt_push`
 - **Payload**: `{"entity_id": "task_12345", "mutations": [{"clock": 42, "op": "set", "path": "status", "value": "COMPLETED"}]}`
+
+### 5. Task Claiming
+**POST** `/api/v1/tasks/claim`
+- **Payload**: `{"agent_id": "agent_swe_007", "role": "swe"}`
+
+```mermaid
+sequenceDiagram
+    participant Agent as Worker Agent
+    participant Hub as Orchestration Hub
+    participant DB as Shared Task DB
+
+    Agent->>Hub: POST /api/v1/tasks/claim
+    Hub->>DB: SELECT FOR UPDATE SKIP LOCKED
+    DB-->>Hub: Return Task & Lock Row
+    Hub-->>Agent: Task Payload
+```
+
+### 6. Publish to Virtual Room
+**POST** `/api/v1/mesh/rooms/{room_id}/messages`
+- **Payload**: `{"agent_id": "agent_pm_001", "action": "ultraplan_deliberation", "status": "active", "payload": {"content": "I propose we use pgvector instead of Pinecone for AutoDream."}}`
+
+```mermaid
+sequenceDiagram
+    participant PM as Agent (PM)
+    participant Mesh as Teammate Mesh
+    participant SWE as Agent (SWE)
+
+    PM->>Mesh: POST /api/v1/mesh/rooms/{room_id}/messages
+    Mesh->>SWE: WebSocket Push Event
+    SWE->>SWE: Process Meeting Intent
+```
+
+### 7. Trigger AutoDream Sync
+**POST** `/api/v1/autodream/sync`
+- **Payload**: `{"force_reindex": false}`
+
+```mermaid
+sequenceDiagram
+    participant Worker as Agent (Worker)
+    participant FS as Local Filesystem
+    participant AutoDream as AutoDream API
+    participant LLM as Embedding Model
+    participant DB as pgvector
+
+    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
+    AutoDream->>FS: Polling/Manual Sync Trigger
+    AutoDream->>LLM: Pass text to Minimax/Ada
+    LLM-->>AutoDream: Return 1536-dim Embedding
+    AutoDream->>DB: Upsert Vector to autodream_memories
+    AutoDream-->>Worker: Broadcast Consolidation Success
+```
 
 ## Hybrid Architecture Visualizations
 
