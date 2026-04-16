@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import TaskDAGViewer from '../src/components/orchestration/TaskDAGViewer';
 import TeammateMeshConsole from '../src/components/orchestration/TeammateMeshConsole';
 import SwarmOverview from '../src/components/orchestration/SwarmOverview';
+import AutoDreamPipelineWidget from '../src/components/orchestration/AutoDreamPipelineWidget';
 
 describe('Swarm Orchestration UI Components', () => {
   test('SwarmOverview renders correctly', () => {
@@ -10,6 +11,14 @@ describe('Swarm Orchestration UI Components', () => {
     expect(screen.getByText('Swarm Overview')).toBeInTheDocument();
     expect(screen.getByTestId('active-agents')).toHaveTextContent('12');
     expect(screen.getByTestId('completed-tasks')).toHaveTextContent('145');
+  });
+
+  test('AutoDreamPipelineWidget renders correctly', () => {
+    render(<AutoDreamPipelineWidget />);
+    expect(screen.getByTestId('autodream-pipeline')).toBeInTheDocument();
+    expect(screen.getByText('AutoDream Pipeline Stream')).toBeInTheDocument();
+    expect(screen.getByText('Extract')).toBeInTheDocument();
+    expect(screen.getByText('Analyze')).toBeInTheDocument();
   });
 
   test('TaskDAGViewer fetches and renders tasks', async () => {
