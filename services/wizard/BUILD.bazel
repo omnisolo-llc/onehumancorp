@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "wizard",
+    srcs = ["wizard.go"],
+    importpath = "github.com/onehumancorp/mono/services/wizard",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "wizard_test",
+    srcs = ["wizard_test.go"],
+    embed = [":wizard"],
+)
