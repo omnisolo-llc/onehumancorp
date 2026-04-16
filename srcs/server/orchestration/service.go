@@ -302,6 +302,17 @@ func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository)
 }
 
 func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	isMultiTenant := os.Getenv("OHC_MULTITENANT") == "true"
+	if isMultiTenant {
+		if !RunCloudOnboarding() {
+			slog.Warn("Cloud K8s onboarding verification failed. Proceeding with caution.")
+		}
+	} else {
+		if !RunDesktopOnboarding() {
+			slog.Warn("Standalone Desktop onboarding verification failed. Proceeding with caution.")
+		}
+	}
+
 	sched := scheduler.NewScheduler()
 	if taskRepo != nil {
 		sched = scheduler.NewSchedulerWithRepository(taskRepo)

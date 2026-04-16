@@ -29,6 +29,8 @@ go_library(
         "mesh.go",
         "shared_tasks.go",
         "models.go",
+
+        "wizard.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -101,6 +103,8 @@ go_test(
         "mesh_chaos_test.go",
         "lock_chaos_test.go",
         "chaos_thin_client_test.go",
+
+        "wizard_test.go",
     ],
     embed = [":orchestration"],
     deps = [
