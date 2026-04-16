@@ -37,6 +37,7 @@ nav:
       - features/index.md
   - Walkthroughs:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
+      - Interactive Help Portal Walkthrough: walkthroughs/help_portal_interactive.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
