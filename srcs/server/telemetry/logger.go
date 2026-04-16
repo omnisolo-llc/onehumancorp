@@ -52,23 +52,21 @@ func (h *PIIRedactingHandler) WithGroup(name string) slog.Handler {
 }
 
 func redactAttr(a slog.Attr) slog.Attr {
-	if a.Key == "tenant_id" || a.Key == "organization_id" {
-		return a
-	}
-
+	// If a is a Group, recursively redact its attributes.
 	if a.Value.Kind() == slog.KindGroup {
 		groupAttrs := a.Value.Group()
-		redactedGroupAttrs := make([]any, len(groupAttrs))
+		redactedAttrs := make([]any, len(groupAttrs))
 		for i, attr := range groupAttrs {
-			redactedGroupAttrs[i] = redactAttr(attr)
+			redactedAttrs[i] = redactAttr(attr)
 		}
-		return slog.Group(a.Key, redactedGroupAttrs...)
+		return slog.Group(a.Key, redactedAttrs...)
 	}
 
 	val := a.Value.Any()
 	if val == nil {
 		return a
 	}
+
 	redactedVal := RedactInterfacePII(val)
 	return slog.Any(a.Key, redactedVal)
 }
