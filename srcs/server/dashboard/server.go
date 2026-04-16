@@ -937,18 +937,17 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Channel string                 `json:"channel"`
-		AgentID string                 `json:"agent_id"`
-		Action  string                 `json:"action"`
-		Status  string                 `json:"status"`
-		Payload map[string]interface{} `json:"payload,omitempty"`
+		AgentID   string          `json:"agent_id"`
+		Channel   string          `json:"channel"`
+		EventType string          `json:"event_type"`
+		Data      json.RawMessage `json:"data"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	if req.AgentID == "" || req.Action == "" || req.Status == "" {
+	if req.AgentID == "" || req.Channel == "" || req.EventType == "" {
 		http.Error(w, "invalid request: missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -958,16 +957,7 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payloadMap := map[string]interface{}{
-		"agent_id": req.AgentID,
-		"action":   req.Action,
-		"status":   req.Status,
-	}
-	if req.Payload != nil {
-		payloadMap["payload"] = req.Payload
-	}
-
-	payloadBytes, err := json.Marshal(payloadMap)
+	payloadBytes, err := json.Marshal(req)
 	if err != nil {
 		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
 		return
@@ -993,8 +983,11 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 
 		// Map mesh channels to Centrifuge WebSocket channels for UI updates
 		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			var fullPayloadMap map[string]interface{}
+			_ = json.Unmarshal(payloadBytes, &fullPayloadMap)
+
 			if req.Channel == "mesh:tasks" {
-				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payloadMap)
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), fullPayloadMap)
 			} else if req.Channel == "mesh:coordination" {
 				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
 					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),

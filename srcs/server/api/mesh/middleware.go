@@ -9,13 +9,14 @@ import (
 
 // meshPayload is used to verify OHC-SIP compliance.
 type meshPayload struct {
-	AgentID *string `json:"agent_id"`
-	Action  *string `json:"action"`
-	Status  *string `json:"status"`
+	AgentID   *string          `json:"agent_id"`
+	Channel   *string          `json:"channel"`
+	EventType *string          `json:"event_type"`
+	Data      *json.RawMessage `json:"data"`
 }
 
 // ValidationMiddleware enforces OHC-SIP compliance for Teammate Mesh unified gateway requests.
-// It verifies that agent_id, action, and status exist at the root of the JSON payload.
+// It verifies that agent_id, channel, event_type, and data exist at the root of the JSON payload.
 func ValidationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Only validate POST requests (like POST /api/mesh/broadcast)
@@ -39,8 +40,8 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if payload.AgentID == nil || payload.Action == nil || payload.Status == nil {
-			http.Error(w, "OHC-SIP compliance failed: missing agent_id, action, or status", http.StatusBadRequest)
+		if payload.AgentID == nil || payload.Channel == nil || payload.EventType == nil || payload.Data == nil {
+			http.Error(w, "OHC-SIP compliance failed: missing agent_id, channel, event_type, or data", http.StatusBadRequest)
 			return
 		}
 
