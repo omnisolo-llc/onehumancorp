@@ -25,19 +25,25 @@ func TestValidationMiddleware(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
+			name:           "Valid KAIROS payload",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION"}`),
+			expectedStatus: http.StatusOK,
+		},
+		{
 			name:           "Missing agent_id",
 			method:         http.MethodPost,
 			body:           []byte(`{"action": "start", "status": "active"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing action",
+			name:           "Missing action and event_type",
 			method:         http.MethodPost,
 			body:           []byte(`{"agent_id": "123", "status": "active"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing status",
+			name:           "Missing status and channel",
 			method:         http.MethodPost,
 			body:           []byte(`{"agent_id": "123", "action": "start"}`),
 			expectedStatus: http.StatusBadRequest,
