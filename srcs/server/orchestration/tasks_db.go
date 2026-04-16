@@ -254,35 +254,3 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
     return nil
 }
-
-
-func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
-    tx, err := to.dbProvider.Begin(ctx)
-    if err != nil {
-        return nil, fmt.Errorf("failed to begin transaction: %w", err)
-    }
-    defer tx.Rollback(ctx)
-
-    query := `
-        SELECT id FROM shared_tasks_v2
-        WHERE status = 'PENDING'
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-    `
-    var id string
-    err = tx.QueryRow(ctx, query).Scan(&id)
-    if err != nil {
-        return nil, err
-    }
-
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS' WHERE id = $1", id)
-    if err != nil {
-        return nil, err
-    }
-
-    if err := tx.Commit(ctx); err != nil {
-        return nil, err
-    }
-
-    return &Task{TaskID: id, Status: "IN_PROGRESS"}, nil
-}
