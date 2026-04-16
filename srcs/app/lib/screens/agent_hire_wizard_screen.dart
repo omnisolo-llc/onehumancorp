@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 class AgentHireWizardScreen extends ConsumerStatefulWidget {
   const AgentHireWizardScreen({super.key});
@@ -229,7 +230,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   children:
                       _roles.map((role) {
                         final isSelected = _selectedRole == role;
-                        final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
+                        final dummyAgent = Agent(
+                          id: '',
+                          name: '',
+                          role: role,
+                          status: '',
+                          organizationId: '',
+                          createdAt: DateTime.now(),
+                        );
                         return ChoiceChip(
                           label: Text(dummyAgent.formattedRole),
                           selected: isSelected,
@@ -355,7 +363,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     width: double.infinity,
                     clipBehavior: Clip.hardEdge,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: 0.1),
                       border: Border.all(color: Colors.white24),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -364,7 +374,11 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                         // Dynamic Edge
                         CustomPaint(
                           size: const Size(double.infinity, 250),
-                          painter: _TopologyEdgePainter(_mainNodePos, _subNodePos, Theme.of(context).colorScheme.primary),
+                          painter: _TopologyEdgePainter(
+                            _mainNodePos,
+                            _subNodePos,
+                            Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                         // Main Agent Node
                         Positioned(
@@ -374,8 +388,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                             onPanUpdate: (details) {
                               setState(() {
                                 _mainNodePos = Offset(
-                                  (_mainNodePos.dx + details.delta.dx).clamp(0.0, 300.0),
-                                  (_mainNodePos.dy + details.delta.dy).clamp(0.0, 150.0),
+                                  (_mainNodePos.dx + details.delta.dx).clamp(
+                                    0.0,
+                                    300.0,
+                                  ),
+                                  (_mainNodePos.dy + details.delta.dy).clamp(
+                                    0.0,
+                                    150.0,
+                                  ),
                                 );
                               });
                             },
@@ -383,12 +403,17 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                               width: 100,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                                border: Border.all(color: Theme.of(context).colorScheme.primary),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.2),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.2),
                                     blurRadius: 10,
                                     spreadRadius: 2,
                                   ),
@@ -396,9 +421,21 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.smart_toy, color: Colors.white, size: 24),
+                                  Icon(
+                                    Icons.smart_toy,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
                                   SizedBox(height: 4),
-                                  Text('This Agent', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center,),
+                                  Text(
+                                    'This Agent',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ],
                               ),
                             ),
@@ -412,8 +449,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                             onPanUpdate: (details) {
                               setState(() {
                                 _subNodePos = Offset(
-                                  (_subNodePos.dx + details.delta.dx).clamp(0.0, 300.0),
-                                  (_subNodePos.dy + details.delta.dy).clamp(0.0, 150.0),
+                                  (_subNodePos.dx + details.delta.dx).clamp(
+                                    0.0,
+                                    300.0,
+                                  ),
+                                  (_subNodePos.dy + details.delta.dy).clamp(
+                                    0.0,
+                                    150.0,
+                                  ),
                                 );
                               });
                             },
@@ -424,14 +467,26 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                                 color: Colors.white10,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.2),
                                 ),
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.code, color: Colors.white70, size: 24),
+                                  Icon(
+                                    Icons.code,
+                                    color: Colors.white70,
+                                    size: 24,
+                                  ),
                                   SizedBox(height: 4),
-                                  Text('Code Builder', style: TextStyle(color: Colors.white70, fontSize: 10), textAlign: TextAlign.center,),
+                                  Text(
+                                    'Code Builder',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ],
                               ),
                             ),
@@ -567,92 +622,58 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.compose(
-                      outer: ColorFilter.matrix(const <double>[
-                        1.787,
-                        -0.715,
-                        -0.072,
-                        0,
-                        0,
-                        -0.213,
-                        1.285,
-                        -0.072,
-                        0,
-                        0,
-                        -0.213,
-                        -0.715,
-                        1.928,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        1,
-                        0,
-                      ]),
-                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                GlassCard(
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.2),
+                      child: Text(
+                        _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    child: Container(
+                    title: Text(
+                      _nameController.text,
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      Agent(
+                        id: '',
+                        name: '',
+                        role: _selectedRole,
+                        status: '',
+                        organizationId: '',
+                        createdAt: DateTime.now(),
+                      ).formattedRole,
+                      style: const TextStyle(fontFamily: 'Inter'),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
-                        ).colorScheme.surface.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
+                        ).colorScheme.secondary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.2),
-                          child: Text(
-                            _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontFamily: 'Outfit',
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          _nameController.text,
-                          style: const TextStyle(
-                            fontFamily: 'Outfit',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(
-                          Agent(id: '', name: '', role: _selectedRole, status: '', organizationId: '', createdAt: DateTime.now()).formattedRole,
-                          style: const TextStyle(fontFamily: 'Inter'),
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.secondary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _selectedProvider.toUpperCase(),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.secondary,
-                              fontFamily: 'Outfit',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
+                      child: Text(
+                        _selectedProvider.toUpperCase(),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       ),
                     ),
@@ -685,27 +706,35 @@ class _TopologyEdgePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.5)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+    final paint =
+        Paint()
+          ..color = color.withValues(alpha: 0.5)
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
 
-    final startCenter = start + const Offset(50, 45); // Approximate center of 100x90 node
+    final startCenter =
+        start + const Offset(50, 45); // Approximate center of 100x90 node
     final endCenter = end + const Offset(50, 45);
 
-    final path = Path()
-      ..moveTo(startCenter.dx, startCenter.dy)
-      ..cubicTo(
-        startCenter.dx + 50, startCenter.dy,
-        endCenter.dx - 50, endCenter.dy,
-        endCenter.dx, endCenter.dy,
-      );
+    final path =
+        Path()
+          ..moveTo(startCenter.dx, startCenter.dy)
+          ..cubicTo(
+            startCenter.dx + 50,
+            startCenter.dy,
+            endCenter.dx - 50,
+            endCenter.dy,
+            endCenter.dx,
+            endCenter.dy,
+          );
 
     canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(covariant _TopologyEdgePainter oldDelegate) {
-    return oldDelegate.start != start || oldDelegate.end != end || oldDelegate.color != color;
+    return oldDelegate.start != start ||
+        oldDelegate.end != end ||
+        oldDelegate.color != color;
   }
 }
