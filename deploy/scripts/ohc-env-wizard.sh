@@ -42,26 +42,29 @@ echo -e "${BOLD}Let's configure your Day One environment variables.${RESET}"
 echo ""
 
 # 1. Logging Level
-read -p "Log Level [info, debug, warn, error] (default: info): " log_level
-log_level=${log_level:-info}
-update_env "LOG_LEVEL" "$log_level"
+update_env "LOG_LEVEL" "info"
 
 # 2. HTTP Port
-read -p "HTTP Server Port (default: 8080): " port
-port=${port:-8080}
-update_env "PORT" "$port"
+update_env "PORT" "8080"
 
 # 3. Mode configurations
-echo -e "\n${BOLD}Environment Mode Settings:${RESET}"
-read -p "Enable Multi-tenant Cloud mode? (true/false) (default: false): " multitenant
-multitenant=${multitenant:-false}
-update_env "OHC_MULTITENANT" "$multitenant"
+echo -e "
+${BOLD}Environment Mode Settings:${RESET}"
+echo "1) Standalone Desktop Mode (Local, SQLite)"
+echo "2) Cloud-native Mode (K8s, PostgreSQL)"
+read -p "Select mode [1-2] (default: 1): " mode_choice
+mode_choice=${mode_choice:-1}
 
-if [ "$multitenant" = "false" ]; then
+if [ "$mode_choice" = "1" ]; then
+    update_env "OHC_MULTITENANT" "false"
     update_env "OHC_SOURCE_MODE" "standalone"
+    update_env "MCP_ENABLED" "false"
 else
+    update_env "OHC_MULTITENANT" "true"
     update_env "OHC_SOURCE_MODE" "cloud"
+    update_env "MCP_ENABLED" "true"
 fi
+
 
 # 4. Agent LLM Providers
 echo -e "\n${BOLD}LLM Provider Configuration:${RESET}"
@@ -76,7 +79,7 @@ if [ -n "$anthropic_key" ]; then
 fi
 
 # 5. Database Settings (if applicable)
-if [ "$multitenant" = "true" ]; then
+if [ "$mode_choice" = "2" ]; then
     echo -e "\n${BOLD}Cloud Mode Database Configuration:${RESET}"
     read -p "PostgreSQL DATABASE_URL (leave blank to skip): " db_url
     if [ -n "$db_url" ]; then
@@ -90,10 +93,7 @@ if [ "$multitenant" = "true" ]; then
 fi
 
 # 6. Advanced Features
-echo -e "\n${BOLD}Advanced Features:${RESET}"
-read -p "Enable MCP (Model Context Protocol) features? (true/false) (default: false): " mcp_enabled
-mcp_enabled=${mcp_enabled:-false}
-update_env "MCP_ENABLED" "$mcp_enabled"
+# Defaulting to MCP based on mode
 
 # Apply secure permissions to .env
 chmod 0600 "$ENV_FILE"
