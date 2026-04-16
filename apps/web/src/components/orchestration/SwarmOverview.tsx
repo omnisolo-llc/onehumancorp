@@ -1,27 +1,18 @@
 import React from 'react';
+import { theme } from '../../styles/theme';
 
 const SwarmOverview = () => {
   return (
-    <div style={{
-      backdropFilter: 'blur(20px) saturate(200%)',
-      background: 'rgba(255, 255, 255, 0.03)',
-      fontFamily: '"Outfit", "Inter", sans-serif',
-      padding: '24px',
-      borderRadius: '16px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      color: '#fff',
-      marginBottom: '24px',
-      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
-    }}>
-      <h2>Swarm Overview</h2>
-      <div style={{ display: 'flex', gap: '20px' }}>
-        <div>
-          <h3>Active Agents</h3>
-          <p data-testid="active-agents">12</p>
+    <div style={{ ...theme.glassmorphism, ...theme.typography, padding: '24px', borderRadius: '16px', color: theme.colors.text, marginBottom: '24px' }}>
+      <h2 style={{ marginBottom: '16px', fontWeight: 600 }}>Swarm Overview</h2>
+      <div style={{ display: 'flex', gap: '32px' }}>
+        <div style={{ flex: 1, padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+          <h3 style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>Active Agents</h3>
+          <p data-testid="active-agents" style={{ fontSize: '32px', fontWeight: 'bold' }}>12</p>
         </div>
-        <div>
-          <h3>Completed Tasks</h3>
-          <p data-testid="completed-tasks">145</p>
+        <div style={{ flex: 1, padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+          <h3 style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>Completed Tasks</h3>
+          <p data-testid="completed-tasks" style={{ fontSize: '32px', fontWeight: 'bold' }}>145</p>
         </div>
       </div>
     </div>
