@@ -7,38 +7,9 @@ import (
 	"os/exec"
 	"regexp"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"time"
 )
-
-var (
-	meter         = otel.Meter("ohc_bash_sandbox")
-	execCount     metric.Int64Counter
-	violationCount metric.Int64Counter
-	errorCount    metric.Int64Counter
-)
-
-func init() {
-	var err error
-	execCount, err = meter.Int64Counter("ohc_sandbox_exec_total",
-		metric.WithDescription("Total number of bash sandbox execution attempts"))
-	if err != nil {
-		panic(err)
-	}
-
-	violationCount, err = meter.Int64Counter("ohc_sandbox_violation_total",
-		metric.WithDescription("Total number of bash sandbox security violations"))
-	if err != nil {
-		panic(err)
-	}
-
-	errorCount, err = meter.Int64Counter("ohc_sandbox_error_total",
-		metric.WithDescription("Total number of bash sandbox execution errors"))
-	if err != nil {
-		panic(err)
-	}
-}
 
 // Sandbox defines the configuration for secure bash execution.
 type Sandbox struct {
@@ -65,7 +36,7 @@ func NewSandbox() *Sandbox {
 func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
 	for _, pattern := range s.blockedPatterns {
 		if pattern.MatchString(command) {
-			violationCount.Add(ctx, 1, metric.WithAttributes(attribute.String("pattern", pattern.String())))
+			telemetry.RecordBubblewrapViolation(ctx, pattern.String())
 			return fmt.Errorf("command violates security policy: matched %s", pattern.String())
 		}
 	}
@@ -74,7 +45,8 @@ func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
 
 // ExecuteContext runs the command if it passes validation.
 func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir string) (string, error) {
-	execCount.Add(ctx, 1)
+	telemetry.RecordBubblewrapSpawn(ctx)
+	start := time.Now()
 
 	if err := s.ValidateContext(ctx, command); err != nil {
 		return "", err
@@ -86,9 +58,11 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		errorCount.Add(ctx, 1)
+
+		telemetry.RecordBubblewrapError(ctx)
 		return string(out), fmt.Errorf("execution failed: %w", err)
 	}
 
+	telemetry.RecordBubblewrapExecutionLatency(ctx, time.Since(start).Seconds())
 	return string(out), nil
 }

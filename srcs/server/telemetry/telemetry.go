@@ -1,13 +1,13 @@
 package telemetry
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"time"
 
@@ -23,9 +23,14 @@ import (
 var (
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
-	SyncConflictsResolvedTotal       metric.Int64Counter
-	OmniContextBytesRouted           metric.Int64Counter
-	RagEscalationCount               metric.Int64Counter
+
+	BubblewrapSpawnTotal       metric.Int64Counter
+	BubblewrapExecutionLatency metric.Float64Histogram
+	BubblewrapViolationTotal   metric.Int64Counter
+	BubblewrapErrorTotal       metric.Int64Counter
+	SyncConflictsResolvedTotal metric.Int64Counter
+	OmniContextBytesRouted     metric.Int64Counter
+	RagEscalationCount         metric.Int64Counter
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
@@ -55,8 +60,8 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -344,6 +349,38 @@ func InitWithMeter(m mockableMeter) error {
 	AutoDreamIngestionErrorCounter, err = m.Int64Counter(
 		"ohc_autodream_ingestion_error_total",
 		metric.WithDescription("Total number of ingestion errors"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapSpawnTotal, err = m.Int64Counter(
+		"ohc_bubblewrap_spawn_total",
+		metric.WithDescription("Total number of bubblewrap spawns"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapExecutionLatency, err = m.Float64Histogram(
+		"ohc_bubblewrap_execution_latency",
+		metric.WithDescription("Latency of bubblewrap executions"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapViolationTotal, err = m.Int64Counter(
+		"ohc_bubblewrap_violation_total",
+		metric.WithDescription("Total number of bubblewrap violations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapErrorTotal, err = m.Int64Counter(
+		"ohc_bubblewrap_error_total",
+		metric.WithDescription("Total number of bubblewrap execution errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1629,40 +1666,40 @@ func RecordRagEscalation(ctx context.Context) {
 
 // RecordAutoDreamIngestionError records an ingestion error.
 func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter != nil {
+		AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordAutoDreamCompressionError records a compression error.
 func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter != nil {
+		AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
@@ -1697,4 +1734,32 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("mode", mode),
 	))
+}
+
+// RecordBubblewrapSpawn records a new bubblewrap spawn.
+func RecordBubblewrapSpawn(ctx context.Context) {
+	if BubblewrapSpawnTotal != nil {
+		BubblewrapSpawnTotal.Add(ctx, 1)
+	}
+}
+
+// RecordBubblewrapExecutionLatency records the latency of a bubblewrap execution.
+func RecordBubblewrapExecutionLatency(ctx context.Context, latency float64) {
+	if BubblewrapExecutionLatency != nil {
+		BubblewrapExecutionLatency.Record(ctx, latency)
+	}
+}
+
+// RecordBubblewrapViolation records a bubblewrap violation.
+func RecordBubblewrapViolation(ctx context.Context, pattern string) {
+	if BubblewrapViolationTotal != nil {
+		BubblewrapViolationTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("pattern", pattern)))
+	}
+}
+
+// RecordBubblewrapError records a bubblewrap execution error.
+func RecordBubblewrapError(ctx context.Context) {
+	if BubblewrapErrorTotal != nil {
+		BubblewrapErrorTotal.Add(ctx, 1)
+	}
 }
