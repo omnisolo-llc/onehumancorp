@@ -12,6 +12,7 @@ go_library(
         "//srcs/server/agents/local",
         "//srcs/server/auth",
         "//srcs/server/db",
+        "//srcs/server/orchestration",
         "//srcs/server/telemetry",
         "@com_github_google_uuid//:uuid",
         "@com_github_redis_rueidis//:rueidis",
@@ -28,5 +29,6 @@ go_test(
     deps = [
         "//srcs/server/agents/local",
         "//srcs/server/db",
+        "//srcs/server/orchestration",
     ],
 )

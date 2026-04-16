@@ -24,6 +24,12 @@ type TruthSearchResult struct {
 	Distance float64
 }
 
+type sessionRec struct {
+	ID          string
+	AgentID     string
+	ContextData string
+}
+
 // AutoDreamPipeline orchestrates the background processing of agent memories.
 // It extracts raw memory, consolidates it, embeds it via LLM clients, and loads it into pgvector.
 // Master table: autodream_memories_master
@@ -278,7 +284,6 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
 	}
 
-	// We open a short-lived transaction just to claim the rows
 	tx, err := p.pool.Begin(ctx)
 	if err != nil {
 		slog.Error("AutoDreamPipeline: failed to begin claim tx", "error", err)
@@ -292,23 +297,15 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 		return
 	}
 
-	type Session struct {
-		ID          string
-		AgentID     string
-		ContextData string
-	}
-
-	var sessions []Session
+	var sessions []sessionRec
 	for rows.Next() {
-		var s Session
+		var s sessionRec
 		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err == nil {
 			sessions = append(sessions, s)
 		}
 	}
 	rows.Close()
 
-	// Release the claim transaction BEFORE starting LLM calls to avoid holding locks.
-	// This is slightly risky as other workers might pick them up, but better than holding locks for minutes.
 	tx.Rollback(ctx)
 
 	if len(sessions) == 0 {
@@ -322,7 +319,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: batch completed", "count", len(sessions))
 }
 
-func (p *AutoDreamPipeline) processSession(ctx context.Context, s Session) {
+func (p *AutoDreamPipeline) processSession(ctx context.Context, s sessionRec) {
 	prompt := fmt.Sprintf("Summarize and consolidate this agent session memory:\n%s", s.ContextData)
 
 	req := local.CompletionRequest{
