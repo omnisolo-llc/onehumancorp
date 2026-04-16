@@ -136,6 +136,13 @@ print_doctor() {
   fi
 }
 
+
+cleanup_tmp_files() {
+  if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
+    find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
+  fi
+}
+
 start_daemon() {
   local port="$1"
 
@@ -148,9 +155,7 @@ start_daemon() {
   fi
 
   rm -f "${PID_FILE}" "${LOG_FILE}"
-  if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
-    find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
-  fi
+  cleanup_tmp_files
   touch "${LOG_FILE}" "${PID_FILE}"
   chmod 0600 "${LOG_FILE}" "${PID_FILE}"
 
@@ -161,6 +166,7 @@ start_daemon() {
     GOMEMLIMIT="${GOMEMLIMIT:-128MiB}" \
     GOGC="${GOGC:-30}" \
     OHC_STANDALONE="true" \
+    OHC_SQLITE_KEY="${OHC_SQLITE_KEY:-standalone_ephemeral_key}" \
     nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
@@ -176,9 +182,7 @@ start_daemon() {
 stop_daemon() {
   if ! is_pid_running; then
     rm -f "${PID_FILE}" "${LOG_FILE}"
-    if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
-      find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
-    fi
+    cleanup_tmp_files
     echo "ohc is not running"
     return 0
   fi
@@ -189,13 +193,10 @@ stop_daemon() {
 
   kill "${pid}" 2>/dev/null || true
   pkill -P "${pid}" 2>/dev/null || true
-  pkill -f "ohc.*${pid}" 2>/dev/null || true
   for attempt in $(seq 1 20); do
     if ! kill -0 "${pid}" 2>/dev/null; then
       rm -f "${PID_FILE}" "${LOG_FILE}"
-      if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
-        find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
-      fi
+      cleanup_tmp_files
       echo "ohc stopped"
       return 0
     fi
@@ -203,12 +204,9 @@ stop_daemon() {
   done
 
   pkill -9 -P "${pid}" 2>/dev/null || true
-  pkill -9 -f "ohc.*${pid}" 2>/dev/null || true
   kill -9 "${pid}" 2>/dev/null || true
   rm -f "${PID_FILE}" "${LOG_FILE}"
-  if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
-    find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
-  fi
+  cleanup_tmp_files
   echo "ohc stopped"
 }
 
