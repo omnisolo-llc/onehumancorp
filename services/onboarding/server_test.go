@@ -37,6 +37,7 @@ func TestGenerateConfigHandler(t *testing.T) {
 	}{
 		{"cloud mode", "cloud", http.StatusOK, "postgresql"},
 		{"standalone mode", "standalone", http.StatusOK, "sqlite"},
+		{"thin client mode", "thin_client", http.StatusOK, "remote"},
 		{"invalid mode", "invalid", http.StatusBadRequest, ""},
 	}
 
@@ -66,4 +67,59 @@ func TestGenerateConfigHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyEnvironmentHandler(t *testing.T) {
+    tests := []struct {
+        name       string
+        env        map[string]string
+        wantStatus int
+    }{
+        {
+            name: "valid standalone",
+            env: map[string]string{
+                "OHC_SOURCE_MODE": "standalone",
+            },
+            wantStatus: http.StatusOK,
+        },
+        {
+            name: "invalid cloud",
+            env: map[string]string{
+                "OHC_SOURCE_MODE": "cloud",
+                "OHC_MULTITENANT": "false",
+            },
+            wantStatus: http.StatusBadRequest,
+        },
+        {
+            name: "valid thin client",
+            env: map[string]string{
+                "OHC_SOURCE_MODE": "thin_client",
+                "OHC_API_ENDPOINT": "https://api.ohc.io",
+            },
+            wantStatus: http.StatusOK,
+        },
+        {
+            name: "invalid thin client missing endpoint",
+            env: map[string]string{
+                "OHC_SOURCE_MODE": "thin_client",
+            },
+            wantStatus: http.StatusBadRequest,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            for k, v := range tt.env {
+                t.Setenv(k, v)
+            }
+
+            req := httptest.NewRequest(http.MethodGet, "/api/verify-environment", nil)
+            rr := httptest.NewRecorder()
+            VerifyEnvironmentHandler(rr, req)
+
+            if status := rr.Code; status != tt.wantStatus {
+                t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)
+            }
+        })
+    }
 }
