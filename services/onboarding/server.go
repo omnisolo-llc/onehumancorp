@@ -6,10 +6,10 @@ import (
 )
 
 type ProvisionRequest struct {
-	Profile    Profile    `json:"profile"`
-	Goals      []string   `json:"goals"`
-	Deployment string     `json:"deployment"`
-	Admin      Admin      `json:"admin"`
+	Profile    Profile  `json:"profile"`
+	Goals      []string `json:"goals"`
+	Deployment string   `json:"deployment"`
+	Admin      Admin    `json:"admin"`
 }
 
 type Profile struct {
@@ -42,7 +42,6 @@ func ProvisionHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "provisioned", "message": "State persisted successfully"})
 }
 
-
 type ConfigRequest struct {
 	Mode string `json:"mode"`
 }
@@ -71,6 +70,12 @@ func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
 			"swarm_size": "small",
 			"database":   "sqlite",
 			"cache":      "memory",
+		}
+	} else if req.Mode == "thin_client" {
+		config = map[string]interface{}{
+			"swarm_size": "none",
+			"database":   "api_only",
+			"cache":      "none",
 		}
 	} else {
 		http.Error(w, "Invalid mode", http.StatusBadRequest)

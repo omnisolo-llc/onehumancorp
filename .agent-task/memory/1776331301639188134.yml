@@ -1,0 +1,8 @@
+agent: Guide
+summary: "Added thin_client support to onboarding env_verifier and main configuration generation."
+files_changed:
+  - apps/onboarding/main.go
+  - services/onboarding/env_verifier.go
+  - services/onboarding/env_verifier_test.go
+  - services/onboarding/server.go
+  - services/onboarding/server_test.go

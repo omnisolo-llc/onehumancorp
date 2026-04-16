@@ -7,9 +7,10 @@ import (
 
 // EnvConfig represents a parsed day-one configuration.
 type EnvConfig struct {
-	Mode         string
-	MultiTenant  bool
-	Headless     bool
+	Mode           string
+	MultiTenant    bool
+	Headless       bool
+	RemoteEndpoint string
 }
 
 // VerifyEnvironment checks the provided environment variables for Day One setup validity.
@@ -18,7 +19,7 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 
 	mode, ok := envVars["OHC_SOURCE_MODE"]
 	if !ok || mode == "" {
-		return nil, errors.New("OHC_SOURCE_MODE is required (e.g. standalone, cloud, headless)")
+		return nil, errors.New("OHC_SOURCE_MODE is required (e.g. standalone, cloud, headless, thin_client)")
 	}
 	config.Mode = strings.ToLower(mode)
 
@@ -36,6 +37,14 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 
 	if config.Mode == "standalone" && config.MultiTenant {
 		return nil, errors.New("standalone mode cannot be multitenant")
+	}
+
+	if config.Mode == "thin_client" {
+		endpoint, ok := envVars["OHC_REMOTE_ENDPOINT"]
+		if !ok || endpoint == "" {
+			return nil, errors.New("thin_client mode requires OHC_REMOTE_ENDPOINT")
+		}
+		config.RemoteEndpoint = endpoint
 	}
 
 	return config, nil

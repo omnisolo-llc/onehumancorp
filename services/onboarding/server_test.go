@@ -27,7 +27,6 @@ func TestProvisionHandler(t *testing.T) {
 	}
 }
 
-
 func TestGenerateConfigHandler(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -37,6 +36,7 @@ func TestGenerateConfigHandler(t *testing.T) {
 	}{
 		{"cloud mode", "cloud", http.StatusOK, "postgresql"},
 		{"standalone mode", "standalone", http.StatusOK, "sqlite"},
+		{"thin client mode", "thin_client", http.StatusOK, "api_only"},
 		{"invalid mode", "invalid", http.StatusBadRequest, ""},
 	}
 

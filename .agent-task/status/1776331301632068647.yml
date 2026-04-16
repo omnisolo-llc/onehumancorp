@@ -1,0 +1,4 @@
+agent: Guide
+status: ONLINE
+memory_updates:
+  - "Added support for thin_client mode to Day One setup environments"
