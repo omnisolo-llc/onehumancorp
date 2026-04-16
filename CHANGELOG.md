@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.12 (Cloud) / v0.3.12+1 (Standalone)
+### Cloud Scaling Improvements
+- No cloud changes.
+
+### Privacy/Offline Improvements
+- Standardized Wizard styling with premium tokens.
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Bubblewrap Sandbox Telemetry.
