@@ -1,0 +1,2 @@
+INSERT INTO agent_missions (mission_id, title, description, created_at, assigned_to, status)
+VALUES ('hybrid_agent_harness_telemetry', 'Implement Hybrid Agent Harness with AST Validation and OpenTelemetry', 'Merge granular AST-level command validation with a flexible harness registry. Add SandboxManager, BashASTValidator, OpenTelemetry Hooks, and SPIFFE integration.', CURRENT_TIMESTAMP, 'IMPLEMENTER', 'PENDING');

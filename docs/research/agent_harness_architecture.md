@@ -55,7 +55,7 @@ graph TD
 Based on the research above, the following actionable missions have been identified for the Implementer agents:
 
 1. **Implement Hybrid Agent Harness with AST Validation and OpenTelemetry**
-   - **Status**: [GitHub Issue #4971 Created](https://github.com/onehumancorp/mono/issues/4971)
+   - **Status**: [GitHub Issue #5530 Created](https://github.com/onehumancorp/mono/issues/5530)
    - **Goal**: Merge granular AST-level command validation (inspired by Claude Code) with a flexible harness registry (inspired by OpenClaw).
    - **Key Components**:
      - `SandboxManager` with strict read/write configuration.
