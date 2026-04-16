@@ -1,13 +1,13 @@
 package telemetry
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"time"
 
@@ -55,8 +55,8 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -211,6 +211,12 @@ func InitTelemetry() (func(), error) {
 		// Enforce user data privacy and local sovereignty in Standalone Mode.
 		// Exporter is strictly opt-in and disabled by default.
 		BufferMetricFunc = nil // Disable local buffer when opt-out
+		return func() {}, nil
+	}
+
+	// Double check standalone mode telemetry explicitly for absolute certainty
+	if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
+		BufferMetricFunc = nil
 		return func() {}, nil
 	}
 
@@ -1603,40 +1609,40 @@ func RecordRagEscalation(ctx context.Context) {
 
 // RecordAutoDreamIngestionError records an ingestion error.
 func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter != nil {
+		AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordAutoDreamCompressionError records a compression error.
 func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter != nil {
+		AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
