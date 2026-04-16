@@ -27,6 +27,7 @@ func main() {
 	fmt.Printf("Day One Environment Verification Passed!\nMode: %s\nMultiTenant: %v\nHeadless: %v\n", config.Mode, config.MultiTenant, config.Headless)
 
 	http.HandleFunc("/api/provision", onboarding.ProvisionHandler)
+	http.HandleFunc("/api/verify-environment", onboarding.VerifyEnvironmentHandler)
 	http.HandleFunc("/api/generate-config", onboarding.GenerateConfigHandler)
 
 	fmt.Println("Starting onboarding service on :8080...")

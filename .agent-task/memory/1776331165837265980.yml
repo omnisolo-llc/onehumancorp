@@ -1,0 +1,3 @@
+intent: Add Day One environment verification audit endpoint
+architecture: Implement VerifyEnvironmentHandler to bridge config and HTTP.
+agent: Guide
