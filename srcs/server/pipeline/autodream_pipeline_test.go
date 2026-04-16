@@ -33,10 +33,9 @@ func TestAutoDreamPipeline_Batch(t *testing.T) {
 		t.Fatalf("failed migrations: %v", err)
 	}
 
-	// Make sure consolidated_memory table exists
 	ctx := context.Background()
+	_, _ = pool.Exec(ctx, "CREATE TABLE IF NOT EXISTS autodream_memories_master (id TEXT PRIMARY KEY, organization_id TEXT, memory_type TEXT, content TEXT, embedding TEXT, source_task_id TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)")
 
-	// Insert mock stale session
 	oldTime := time.Now().Add(-2 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 	_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', ?)", oldTime)
 	if err != nil {
@@ -48,7 +47,6 @@ func TestAutoDreamPipeline_Batch(t *testing.T) {
 
 	pipeline.processBatch(ctx)
 
-	// Verify session was deleted
 	var count int
 	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data WHERE session_id = 's1'").Scan(&count)
 	if err != nil {
@@ -58,8 +56,7 @@ func TestAutoDreamPipeline_Batch(t *testing.T) {
 		t.Errorf("expected session to be deleted, got %d", count)
 	}
 
-	// Verify consolidated_memory was inserted
-	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'session_compression'").Scan(&count)
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories_master WHERE memory_type = 'session_compression'").Scan(&count)
 	if err != nil {
 		t.Fatalf("failed to count consolidated memories: %v", err)
 	}
@@ -81,8 +78,8 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	_, _ = pool.Exec(ctx, "CREATE TABLE IF NOT EXISTS autodream_memories_master (id TEXT PRIMARY KEY, organization_id TEXT, memory_type TEXT, content TEXT, embedding TEXT, source_task_id TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)")
 
-	// Create a temporary memory directory and point the pipeline at it.
 	memDir := t.TempDir()
 	t.Setenv("OHC_MEMORY_DIR", memDir)
 
@@ -95,9 +92,8 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 
 	pipeline.processFiles(ctx)
 
-	// Verify consolidated_memory was inserted
 	var count int
-	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'file_ingestion'").Scan(&count)
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories_master WHERE memory_type = 'file_ingestion'").Scan(&count)
 	if err != nil {
 		t.Fatalf("failed to count consolidated memories: %v", err)
 	}
@@ -105,8 +101,40 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 		t.Errorf("expected 1 consolidated memory, got %d", count)
 	}
 
-	// File should be deleted
 	if _, err := os.Stat(filepath.Join(memDir, "test.yml")); !os.IsNotExist(err) {
 		t.Errorf("expected test file to be deleted")
+	}
+}
+
+func TestAutoDreamPipeline_Prune(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	ctx := context.Background()
+
+	oldTime := time.Now().Add(-8 * 24 * time.Hour).UTC().Format("2006-01-02 15:04:05")
+	_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s_old', 'a1', 'stale context', ?)", oldTime)
+	if err != nil {
+		t.Fatalf("failed to insert stale session: %v", err)
+	}
+
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
+	pipeline.pruneStaleData(ctx)
+
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data WHERE session_id = 's_old'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count sessions: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected stale session to be pruned, got %d", count)
 	}
 }
