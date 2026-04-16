@@ -81,8 +81,8 @@ String _mockHiredAgent(String name, String role) => jsonEncode({
       'name': name,
       'role': role,
       'status': 'IDLE',
-      'organizationId': 'org-1',
-      'createdAt': DateTime.now().toIso8601String(),
+      'organization_id': 'org-1',
+      'created_at': DateTime.now().toIso8601String(),
     });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -177,7 +177,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Tap a role chip (SOFTWARE_ENGINEER from providers).
-        final roleChips = find.byType(FilterChip);
+        final roleChips = find.byType(ChoiceChip);
         if (roleChips.evaluate().isNotEmpty) {
           await tester.tap(roleChips.first);
           await tester.pumpAndSettle();
@@ -253,7 +253,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Step 1: Select first available role.
-        final roleChips = find.byType(FilterChip);
+        final roleChips = find.byType(ChoiceChip);
         if (roleChips.evaluate().isNotEmpty) {
           await tester.tap(roleChips.first);
           await tester.pumpAndSettle();
@@ -328,7 +328,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Select a role and go to step 2.
-        final roleChips = find.byType(FilterChip);
+        final roleChips = find.byType(ChoiceChip);
         if (roleChips.evaluate().isNotEmpty) {
           await tester.tap(roleChips.first);
           await tester.pumpAndSettle();
@@ -408,7 +408,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Navigate to last step.
-        final roleChips = find.byType(FilterChip);
+        final roleChips = find.byType(ChoiceChip);
         if (roleChips.evaluate().isNotEmpty) {
           await tester.tap(roleChips.first);
           await tester.pumpAndSettle();
@@ -432,6 +432,10 @@ void main() {
             find.byType(CircularProgressIndicator),
             findsWidgets,
           );
+
+          // Allow the delayed future to complete so no pending timers remain.
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pumpAndSettle();
         }
       },
     );
