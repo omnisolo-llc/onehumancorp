@@ -151,7 +151,7 @@ func newDemoSystem(now time.Time, hub *orchestration.Hub, tracker *billing.Track
 	org := domain.NewSoftwareCompany("demo", "Demo Software Company", "Human CEO", now.UTC())
 	hub.RegisterAgent(orchestration.Agent{ID: "pm-1", Name: "Product Manager", Role: "PRODUCT_MANAGER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "Software Engineer", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "news-1", Name: "AI News Collector", Role: "AI_NEWS_COLLECTOR", OrganizationID: org.ID})
+	hub.RegisterAgent(orchestration.Agent{ID: "news-1", Name: "AI News Collector", Role: "AI_NEWS_COLLECTOR", OrganizationID: org.ID, Status: orchestration.StatusActive})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
 	if tracker.Summary(org.ID).TotalTokens == 0 {
