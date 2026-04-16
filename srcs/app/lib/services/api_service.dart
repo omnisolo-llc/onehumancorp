@@ -34,10 +34,9 @@ class ApiService {
   // ── Agents ──────────────────────────────────────────────────────────────
 
   Future<List<Agent>> listAgents() async {
-    final res = await _client.get(
-      Uri.parse('$baseUrl/api/agents'),
-      headers: _headers,
-    ).timeout(_timeout);
+    final res = await _client
+        .get(Uri.parse('$baseUrl/api/agents'), headers: _headers)
+        .timeout(_timeout);
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list.map((e) => Agent.fromJson(e as Map<String, dynamic>)).toList();
@@ -192,20 +191,21 @@ class ApiService {
   }
 
   Future<UserPublic> createUser(Map<String, dynamic> data) async {
-    final res = await _client.post(
-      Uri.parse('$baseUrl/api/users'),
-      headers: _headers,
-      body: jsonEncode(data),
-    ).timeout(_timeout);
+    final res = await _client
+        .post(
+          Uri.parse('$baseUrl/api/users'),
+          headers: _headers,
+          body: jsonEncode(data),
+        )
+        .timeout(_timeout);
     _checkStatus(res);
     return UserPublic.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<void> deleteUser(String userId) async {
-    final res = await _client.delete(
-      Uri.parse('$baseUrl/api/users/$userId'),
-      headers: _headers,
-    ).timeout(_timeout);
+    final res = await _client
+        .delete(Uri.parse('$baseUrl/api/users/$userId'), headers: _headers)
+        .timeout(_timeout);
     _checkStatus(res);
   }
 
@@ -269,10 +269,9 @@ class ApiService {
   // ── Channels ─────────────────────────────────────────────────────────────
 
   Future<List<ChatChannel>> listChannels() async {
-    final res = await _client.get(
-      Uri.parse('$baseUrl/api/channels'),
-      headers: _headers,
-    ).timeout(_timeout);
+    final res = await _client
+        .get(Uri.parse('$baseUrl/api/channels'), headers: _headers)
+        .timeout(_timeout);
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list
@@ -469,14 +468,14 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> createLandingPageExperiment(String title, double trafficSplit) async {
+  Future<Map<String, dynamic>> createLandingPageExperiment(
+    String title,
+    double trafficSplit,
+  ) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/growth/experiments'),
       headers: _headers,
-      body: jsonEncode({
-        'title': title,
-        'trafficSplit': trafficSplit,
-      }),
+      body: jsonEncode({'title': title, 'trafficSplit': trafficSplit}),
     );
     _checkStatus(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -492,7 +491,7 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
-    // ── Shared Tasks ─────────────────────────────────────────────────────────
+  // ── Shared Tasks ─────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> listSharedTasks() async {
     final res = await _client.get(
@@ -506,17 +505,11 @@ class ApiService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-
   Future<void> trackDownload(String os, String version) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/downloads'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'os': os,
-        'version': version,
-      }),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'os': os, 'version': version}),
     );
 
     if (response.statusCode != 200) {
@@ -540,10 +533,7 @@ class ApiService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'userId': userId,
-        'referralCode': referralCode,
-      }),
+      body: jsonEncode({'userId': userId, 'referralCode': referralCode}),
     );
     _checkStatus(response);
   }
