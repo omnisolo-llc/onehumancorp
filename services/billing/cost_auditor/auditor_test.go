@@ -46,6 +46,7 @@ func TestCostAuditor(t *testing.T) {
   if totalStorageSavings != 0.115 {
     t.Errorf("expected total storage savings 0.115, got %f", totalStorageSavings)
   }
+
   report := auditor.GenerateReport()
   if report == "" {
     t.Errorf("expected non-empty report")
