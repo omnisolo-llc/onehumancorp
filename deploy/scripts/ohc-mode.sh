@@ -28,8 +28,11 @@ case $MODE in
     export GOMEMLIMIT="256MiB"
     export GOGC=50
     mkdir -p .ohc/memory/auto/ .ohc/memory/team/
-    export LOG_FORMAT="json"
+    export LOG_FORMAT="text"
     export LOG_LEVEL="info"
+    if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+      export OHC_TELEMETRY_ENABLED=false
+    fi
     echo "Configured for Standalone Desktop Mode."
     ;;
   headless)
