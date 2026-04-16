@@ -1,11 +1,12 @@
 package mcp
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"context"
 	"encoding/json"
 	"errors"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 )
 
 // MCPTool defines a common interface for MCP tools.
