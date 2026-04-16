@@ -1,0 +1,3 @@
+status: DONE
+mission: NONE
+reason: "I was looking at api/mesh/mesh.go. It looks like Teammate Mesh logic using Redis Pub/Sub already exists there (HandlePublish, Publish, Subscribe). I will create a PR adding more unit tests or fix something."

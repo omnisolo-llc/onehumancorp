@@ -1,0 +1,3 @@
+status: BLOCKED
+mission: 2026-04-16T05-24-39Z.md
+reason: "Mission requires modifying files in srcs/server/db/migrations/ and srcs/server/orchestration/ which are outside my designated technical domain (lib/integrations/, services/webhooks/, api/)."

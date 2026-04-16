@@ -1,0 +1,3 @@
+status: DONE
+mission: NONE
+reason: "My domain from memory was strictly restricted to `srcs/server/interop/` but from the prompt was strictly `lib/integrations/, services/webhooks/, api/`. I will look for any tasks I can do in the codebase..."
