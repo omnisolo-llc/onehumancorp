@@ -35,3 +35,24 @@ func TestAcceptInvite(t *testing.T) {
 		t.Errorf("Expected error for empty invite ID")
 	}
 }
+
+func TestProcessBulkInvites(t *testing.T) {
+	tracker := analytics.NewTracker()
+	service := NewReferralService(tracker)
+
+	emails := []string{"test1@example.com", "test2@example.com"}
+	err := service.ProcessBulkInvites(context.Background(), "user-123", emails)
+	if err != nil {
+		t.Errorf("ProcessBulkInvites failed: %v", err)
+	}
+
+	err = service.ProcessBulkInvites(context.Background(), "", emails)
+	if err == nil {
+		t.Errorf("Expected error for empty sender ID")
+	}
+
+	err = service.ProcessBulkInvites(context.Background(), "user-123", []string{})
+	if err == nil {
+		t.Errorf("Expected error for empty email list")
+	}
+}
