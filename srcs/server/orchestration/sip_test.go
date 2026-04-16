@@ -280,6 +280,59 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	}
 }
 
+
+func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert old telemetry
+	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric1', 'data1', datetime('now', '-2 days'), 'system')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert new telemetry
+	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric2', 'data2', datetime('now'), 'system')")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.PruneTelemetryBuffer(ctx, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to prune telemetry buffer: %v", err)
+	}
+
+	var count int
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if count != 1 {
+		t.Fatalf("Expected 1 telemetry record remaining, got %d", count)
+	}
+}
+
+func TestSIPDB_PruneTelemetryBuffer_DBError(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	db.Close()
+
+	err = db.PruneTelemetryBuffer(context.Background(), 24*time.Hour)
+	if err == nil {
+		t.Fatal("Expected error when pruning on closed DB")
+	}
+}
+
 func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)

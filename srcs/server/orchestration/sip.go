@@ -835,6 +835,26 @@ func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload str
 // Produces errors: Explicit error handling.
 // Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from telemetry_buffer.
 // Returns the number of synced records and an error.
+// PruneTelemetryBuffer removes telemetry metrics older than a specified duration from the telemetry_buffer table.
+// Accepts parameters: ctx context.Context, ageThreshold time.Duration.
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has side effects: Deletes records from the telemetry_buffer table.
+func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Duration) error {
+	return withSipRetry(ctx, func() error {
+		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
+
+		var err error
+		if s.db.IsSQLite() {
+			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+		} else {
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+		}
+		return err
+	})
+}
+
+// SyncBufferedMetrics aggregates and syncs buffered telemetry metrics with the OHC-SIP Cloud DB.
 func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) (int, error) {
 	var records []struct {
 		id         int64
