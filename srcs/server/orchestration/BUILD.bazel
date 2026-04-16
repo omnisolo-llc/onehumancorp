@@ -5,6 +5,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
+        "task_router.go",
         "auth_interceptor.go",
         "autodream.go",
         "autodream_worker.go",
@@ -70,7 +71,8 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
-        "auth_interceptor_test.go",
+        "task_router_test.go",
+                "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_worker_test.go",
         "autodream_advanced_test.go",
@@ -105,6 +107,8 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "//srcs/server/auth",
         "//srcs/server/checkpointer",
         "//srcs/server/utils",
