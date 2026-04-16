@@ -130,6 +130,8 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 	}
 
 	j.RunAfter = parseTime(runAfterStr)
+
+	telemetry.RecordSubAgentQueueDelay(ctx, time.Since(j.RunAfter).Seconds())
 	j.CreatedAt = parseTime(createdAtStr)
 	j.UpdatedAt = parseTime(updatedAtStr)
 	if lockedUntil.Valid && lockedUntil.String != "" {
