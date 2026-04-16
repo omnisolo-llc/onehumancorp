@@ -10,6 +10,7 @@ type BuiltinAgent struct {
 	Tools       []Tool
 	MaxTokens   int
 	Temperature float32
+	MaxTaskBudget int // Maximum output tokens permitted for an entire task
 }
 
 // LLMClient is the interface for talking to the LLM backend.
