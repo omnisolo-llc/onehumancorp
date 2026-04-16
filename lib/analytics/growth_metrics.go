@@ -7,12 +7,14 @@ import (
 )
 
 var (
-	inviteSentCounter     metric.Int64Counter
-	inviteAcceptedCounter metric.Int64Counter
-	abTestImpressionCounter metric.Int64Counter
-	abTestConversionCounter metric.Int64Counter
-	quotaExceededCounter    metric.Int64Counter
-	quotaUsageCounter       metric.Int64Counter
+	inviteSentCounter         metric.Int64Counter
+	inviteAcceptedCounter     metric.Int64Counter
+	teamInviteSentCounter     metric.Int64Counter
+	teamInviteAcceptedCounter metric.Int64Counter
+	abTestImpressionCounter   metric.Int64Counter
+	abTestConversionCounter   metric.Int64Counter
+	quotaExceededCounter      metric.Int64Counter
+	quotaUsageCounter         metric.Int64Counter
 )
 
 func init() {
@@ -23,6 +25,14 @@ func init() {
 		panic(err)
 	}
 	inviteAcceptedCounter, err = meter.Int64Counter("growth_viral_invite_accepted_total")
+	if err != nil {
+		panic(err)
+	}
+	teamInviteSentCounter, err = meter.Int64Counter("growth_team_invite_sent_total")
+	if err != nil {
+		panic(err)
+	}
+	teamInviteAcceptedCounter, err = meter.Int64Counter("growth_team_invite_accepted_total")
 	if err != nil {
 		panic(err)
 	}
@@ -56,6 +66,10 @@ func (t *Tracker) TrackEvent(ctx context.Context, name string, props map[string]
 		inviteSentCounter.Add(ctx, 1)
 	} else if name == "invite_accepted" && inviteAcceptedCounter != nil {
 		inviteAcceptedCounter.Add(ctx, 1)
+	} else if name == "team_invite_sent" && teamInviteSentCounter != nil {
+		teamInviteSentCounter.Add(ctx, 1)
+	} else if name == "team_invite_accepted" && teamInviteAcceptedCounter != nil {
+		teamInviteAcceptedCounter.Add(ctx, 1)
 	} else if name == "ab_test_impression" && abTestImpressionCounter != nil {
 		abTestImpressionCounter.Add(ctx, 1)
 	} else if name == "ab_test_conversion" && abTestConversionCounter != nil {

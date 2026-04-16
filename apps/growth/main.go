@@ -18,6 +18,17 @@ type ReferralRequest struct {
 	ReceiverEmail string `json:"receiver_email"`
 }
 
+type TeamInviteRequest struct {
+	TenantID      string `json:"tenant_id"`
+	SenderID      string `json:"sender_id"`
+	ReceiverEmail string `json:"receiver_email"`
+}
+
+type TeamInviteAcceptRequest struct {
+	TenantID string `json:"tenant_id"`
+	InviteID string `json:"invite_id"`
+}
+
 type QuotaRequest struct {
 	TenantID string `json:"tenant_id"`
 }
@@ -45,6 +56,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 
 	quotaService := growth.NewQuotaService(tracker, rdb, 100)
 	referralService := growth.NewReferralService(tracker)
+	teamInviteService := growth.NewTeamInviteService(tracker)
 
 	mux.HandleFunc("/growth/referral", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -69,6 +81,56 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		}
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Invite sent successfully\n")
+	}))
+
+	mux.HandleFunc("/growth/team_invite/send", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req TeamInviteRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.TenantID == "" || req.SenderID == "" || req.ReceiverEmail == "" {
+			http.Error(w, "missing parameters", http.StatusBadRequest)
+			return
+		}
+
+		err := teamInviteService.SendTeamInvite(context.Background(), req.TenantID, req.SenderID, req.ReceiverEmail)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "Team invite sent successfully\n")
+	}))
+
+	mux.HandleFunc("/growth/team_invite/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req TeamInviteAcceptRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.TenantID == "" || req.InviteID == "" {
+			http.Error(w, "missing parameters", http.StatusBadRequest)
+			return
+		}
+
+		err := teamInviteService.AcceptTeamInvite(context.Background(), req.TenantID, req.InviteID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "Team invite accepted successfully\n")
 	}))
 
 	mux.HandleFunc("/growth/quota/check", authMiddleware(func(w http.ResponseWriter, r *http.Request) {

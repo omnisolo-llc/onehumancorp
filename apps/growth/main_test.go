@@ -30,6 +30,37 @@ func TestReferralEndpoint(t *testing.T) {
 	}
 }
 
+func TestTeamInviteEndpoints(t *testing.T) {
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, nil)
+
+	reqSend, err := http.NewRequest("POST", "/growth/team_invite/send", bytes.NewBuffer([]byte(`{"tenant_id":"t1","sender_id":"s1","receiver_email":"r1@example.com"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqSend.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
+
+	rrSend := httptest.NewRecorder()
+	mux.ServeHTTP(rrSend, reqSend)
+
+	if status := rrSend.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for send: got %v want %v", status, http.StatusOK)
+	}
+
+	reqAccept, err := http.NewRequest("POST", "/growth/team_invite/accept", bytes.NewBuffer([]byte(`{"tenant_id":"t1","invite_id":"i1"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqAccept.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
+
+	rrAccept := httptest.NewRecorder()
+	mux.ServeHTTP(rrAccept, reqAccept)
+
+	if status := rrAccept.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for accept: got %v want %v", status, http.StatusOK)
+	}
+}
+
 func TestQuotaCheckEndpoint(t *testing.T) {
 	mr, err := miniredis.Run()
 	if err != nil {
