@@ -45,6 +45,13 @@ type ChatRequest struct {
 }
 
 // ChatResponse is the payload received from the LLM.
+type Usage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
+}
+
 type ChatResponse struct {
-	Message Message `json:"message"`
+	Message    Message `json:"message"`
+	Usage      Usage   `json:"usage"`
+	StopReason string  `json:"stop_reason,omitempty"`
 }
