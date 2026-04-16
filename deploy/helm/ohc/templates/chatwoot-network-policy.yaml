@@ -1,12 +1,12 @@
-{{- if .Values.backend.networkPolicy.enabled }}
+{{- if .Values.chatwoot.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ .Release.Name }}-backend-isolation
+  name: {{ .Release.Name }}-chatwoot-isolation
 spec:
   podSelector:
     matchLabels:
-      app: {{ .Release.Name }}-backend
+      app: {{ .Release.Name }}-chatwoot
   policyTypes:
     - Ingress
     - Egress
@@ -15,12 +15,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
-              app: {{ .Release.Name }}-ohc-core
       ports:
         - protocol: TCP
-          port: {{ .Values.backend.service.port }}
+          port: {{ .Values.chatwoot.service.port }}
   egress:
     - to:
         - namespaceSelector:
