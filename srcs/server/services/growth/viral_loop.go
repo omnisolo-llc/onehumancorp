@@ -2,8 +2,8 @@ package growth
 
 import (
 	"context"
-	"sync"
 	"github.com/onehumancorp/mono/lib/analytics"
+	"sync"
 )
 
 type ViralLoopTracker struct {
