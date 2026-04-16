@@ -71,6 +71,7 @@ go_library(
         "migrations/20260416020000_hybrid_mcp_sync_queue.sql",
         "migrations/20260416040000_kairos_phase1.sql",
         "migrations/20260416040001_kairos_phase3.sql",
+        "migrations/20260416040004_hybrid_core_final.sql",
 
 
     ],

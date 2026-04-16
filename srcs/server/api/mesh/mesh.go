@@ -165,12 +165,29 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Intent string `json:"intent"`
 	}
+	var kairosReq struct {
+		AgentID string `json:"agent_id"`
+		Channel string `json:"channel"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
+		Payload map[string]interface{} `json:"payload"`
+	}
+	var sipReq struct {
+		AgentID   string `json:"agent_id"`
+		Channel   string `json:"channel"`
+		EventType string `json:"event_type"`
+		Data      interface{} `json:"data"`
+	}
 	var intentStr string
 
 	if err := json.Unmarshal(bodyBytes, &req); err == nil && req.Intent != "" {
 		intentStr = req.Intent
+	} else if err := json.Unmarshal(bodyBytes, &kairosReq); err == nil && kairosReq.AgentID != "" && kairosReq.Channel != "" {
+		intentStr = string(bodyBytes)
+	} else if err := json.Unmarshal(bodyBytes, &sipReq); err == nil && sipReq.AgentID != "" && sipReq.Channel != "" && sipReq.EventType != "" {
+		intentStr = string(bodyBytes)
 	} else {
-		// New KAIROS Payload
+		// Fallback for raw string or unknown JSON
 		intentStr = string(bodyBytes)
 	}
 
