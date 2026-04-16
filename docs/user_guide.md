@@ -20,7 +20,7 @@ Or use the VS Code task `App: Capture Flutter screenshots`.
 
 Generated images are written to:
 
-- `docs/public/assets/screenshots/app/landing-page/`
+- `docs/app/`
 
 ## 3. Screenshot Gallery
 
