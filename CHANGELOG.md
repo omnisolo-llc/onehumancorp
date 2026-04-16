@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
+### Cloud Scaling Improvements
+- Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
+
+### Privacy/Offline Improvements
+- Maintained Standalone telemetry consistency across single-user environments for the new MCP Bridge integration.
+
 ## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
 ### Cloud Scaling Improvements
 - Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
