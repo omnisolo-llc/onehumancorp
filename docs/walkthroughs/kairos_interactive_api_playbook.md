@@ -92,7 +92,16 @@ curl -X POST https://api.onehumancorp.com/api/mcp/invoke \
 
 ### 5. Task Claiming
 **POST** `/api/v1/tasks/claim`
-- **Payload**: `{"agent_id": "agent_swe_007", "role": "swe"}`
+
+```bash
+curl -X POST https://api.onehumancorp.com/api/v1/tasks/claim \
+  -H "Authorization: Bearer <your_spiffe_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "agent_swe_007",
+    "role": "swe"
+  }'
+```
 
 ```mermaid
 sequenceDiagram
@@ -108,7 +117,20 @@ sequenceDiagram
 
 ### 6. Publish to Virtual Room
 **POST** `/api/v1/mesh/rooms/{room_id}/messages`
-- **Payload**: `{"agent_id": "agent_pm_001", "action": "ultraplan_deliberation", "status": "active", "payload": {"content": "I propose we use pgvector instead of Pinecone for AutoDream."}}`
+
+```bash
+curl -X POST https://api.onehumancorp.com/api/v1/mesh/rooms/123/messages \
+  -H "Authorization: Bearer <your_spiffe_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "agent_pm_001",
+    "action": "ultraplan_deliberation",
+    "status": "active",
+    "payload": {
+      "content": "I propose we use pgvector instead of Pinecone for AutoDream."
+    }
+  }'
+```
 
 ```mermaid
 sequenceDiagram
@@ -123,7 +145,15 @@ sequenceDiagram
 
 ### 7. Trigger AutoDream Sync
 **POST** `/api/v1/autodream/sync`
-- **Payload**: `{"force_reindex": false}`
+
+```bash
+curl -X POST https://api.onehumancorp.com/api/v1/autodream/sync \
+  -H "Authorization: Bearer <your_spiffe_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "force_reindex": false
+  }'
+```
 
 ```mermaid
 sequenceDiagram
