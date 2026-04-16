@@ -29,7 +29,7 @@ func TestNewStore_AdminUserCreated(t *testing.T) {
 	t.Setenv("ADMIN_EMAIL", "testadmin@test.com")
 	s := auth.NewStore()
 
-	users := s.ListUsers(context.Background())
+	users := s.ListUsers()
 	if len(users) != 1 {
 		t.Fatalf("expected 1 user after init, got %d", len(users))
 	}
@@ -40,12 +40,12 @@ func TestNewStore_AdminUserCreated(t *testing.T) {
 
 func TestStore_CreateAndAuthenticate(t *testing.T) {
 	s := auth.NewStore()
-	u, err := s.CreateUser(context.Background(), "alice", "alice@test.com", "hunter2!", []string{auth.RoleViewer})
+	u, err := s.CreateUser("alice", "alice@test.com", "hunter2!", []string{auth.RoleViewer})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 
-	got, err := s.Authenticate(context.Background(), "alice", "hunter2!")
+	got, err := s.Authenticate("alice", "hunter2!")
 	if err != nil {
 		t.Fatalf("Authenticate: %v", err)
 	}
@@ -53,38 +53,38 @@ func TestStore_CreateAndAuthenticate(t *testing.T) {
 		t.Error("id mismatch after authenticate")
 	}
 
-	if _, err := s.Authenticate(context.Background(), "alice", "wrongpass"); err == nil {
+	if _, err := s.Authenticate("alice", "wrongpass"); err == nil {
 		t.Error("expected error for wrong password")
 	}
-	if _, err := s.Authenticate(context.Background(), "nobody", "x"); err == nil {
+	if _, err := s.Authenticate("nobody", "x"); err == nil {
 		t.Error("expected error for unknown user")
 	}
 }
 
 func TestStore_DuplicateUsername(t *testing.T) {
 	s := auth.NewStore()
-	if _, err := s.CreateUser(context.Background(), "bob", "bob@test.com", "pass123", nil); err != nil {
+	if _, err := s.CreateUser("bob", "bob@test.com", "pass123", nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CreateUser(context.Background(), "bob", "bob2@test.com", "pass123", nil); err == nil {
+	if _, err := s.CreateUser("bob", "bob2@test.com", "pass123", nil); err == nil {
 		t.Error("expected duplicate-username error")
 	}
 }
 
 func TestStore_ShortPasswordRejected(t *testing.T) {
 	s := auth.NewStore()
-	if _, err := s.CreateUser(context.Background(), "short", "short@test.com", "abc", nil); err == nil {
+	if _, err := s.CreateUser("short", "short@test.com", "abc", nil); err == nil {
 		t.Error("expected error for password < 6 chars")
 	}
 }
 
 func TestStore_UpdateAndDeleteUser(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "charlie", "c@test.com", "p@ssw0rd", []string{auth.RoleViewer})
+	u, _ := s.CreateUser("charlie", "c@test.com", "p@ssw0rd", []string{auth.RoleViewer})
 
 	newEmail := "charlie2@test.com"
 	inactive := false
-	updated, err := s.UpdateUser(context.Background(), u.ID, &newEmail, []string{auth.RoleOperator}, &inactive)
+	updated, err := s.UpdateUser(u.ID, &newEmail, []string{auth.RoleOperator}, &inactive)
 	if err != nil {
 		t.Fatalf("UpdateUser: %v", err)
 	}
@@ -95,21 +95,21 @@ func TestStore_UpdateAndDeleteUser(t *testing.T) {
 		t.Error("active should be false after update")
 	}
 
-	if err := s.DeleteUser(context.Background(), u.ID); err != nil {
+	if err := s.DeleteUser(u.ID); err != nil {
 		t.Fatalf("DeleteUser: %v", err)
 	}
-	if _, ok := s.GetUser(context.Background(), u.ID); ok {
+	if _, ok := s.GetUser(u.ID); ok {
 		t.Error("user should be gone after delete")
 	}
 }
 
 func TestStore_DisabledUserCannotLogin(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "disabled", "dis@test.com", "dispass1", nil)
+	u, _ := s.CreateUser("disabled", "dis@test.com", "dispass1", nil)
 	inactive := false
-	s.UpdateUser(context.Background(), u.ID, nil, nil, &inactive)
+	s.UpdateUser(u.ID, nil, nil, &inactive)
 
-	if _, err := s.Authenticate(context.Background(), "disabled", "dispass1"); err == nil {
+	if _, err := s.Authenticate("disabled", "dispass1"); err == nil {
 		t.Error("expected error authenticating disabled user")
 	}
 }
@@ -138,7 +138,7 @@ func TestStore_Roles(t *testing.T) {
 
 func TestJWT_RoundTrip(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "jwt-user", "jwt@test.com", "jwtpass1", []string{auth.RoleOperator})
+	u, _ := s.CreateUser("jwt-user", "jwt@test.com", "jwtpass1", []string{auth.RoleOperator})
 
 	token, err := s.IssueToken(u)
 	if err != nil {
@@ -162,7 +162,7 @@ func TestJWT_RoundTrip(t *testing.T) {
 
 func TestJWT_InvalidSignature(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "tamper", "tamper@test.com", "tamperp1", nil)
+	u, _ := s.CreateUser("tamper", "tamper@test.com", "tamperp1", nil)
 	token, _ := s.IssueToken(u)
 
 	parts := strings.Split(token, ".")
@@ -187,7 +187,7 @@ func TestJWT_InvalidSignature(t *testing.T) {
 
 func TestJWT_RevokedToken(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "revoke-me", "revoke@test.com", "revpass1", nil)
+	u, _ := s.CreateUser("revoke-me", "revoke@test.com", "revpass1", nil)
 	token, _ := s.IssueToken(u)
 
 	claims, err := s.ValidateToken(token)
@@ -204,7 +204,7 @@ func TestJWT_RevokedToken(t *testing.T) {
 
 func TestJWT_HasRole(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "rolly", "rolly@test.com", "rollyp1", []string{auth.RoleOperator})
+	u, _ := s.CreateUser("rolly", "rolly@test.com", "rollyp1", []string{auth.RoleOperator})
 	token, _ := s.IssueToken(u)
 	claims, _ := s.ValidateToken(token)
 
@@ -250,7 +250,7 @@ func TestMiddleware_MissingToken(t *testing.T) {
 
 func TestMiddleware_ValidBearerToken(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "mwuser", "mw@test.com", "mwpass12", []string{auth.RoleViewer})
+	u, _ := s.CreateUser("mwuser", "mw@test.com", "mwpass12", []string{auth.RoleViewer})
 	token, _ := s.IssueToken(u)
 
 	var gotClaims *auth.Claims
@@ -275,7 +275,7 @@ func TestMiddleware_ValidBearerToken(t *testing.T) {
 
 func TestMiddleware_CookieToken(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "cookie-user", "ck@test.com", "cookiep1", nil)
+	u, _ := s.CreateUser("cookie-user", "ck@test.com", "cookiep1", nil)
 	token, _ := s.IssueToken(u)
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
@@ -408,7 +408,7 @@ func TestHandleUsers_AdminCRUD(t *testing.T) {
 
 func TestHandleUsers_NonAdminForbidden(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "viewer", "v@test.com", "viewerp1", []string{auth.RoleViewer})
+	u, _ := s.CreateUser("viewer", "v@test.com", "viewerp1", []string{auth.RoleViewer})
 	tok, _ := s.IssueToken(u)
 
 	h := auth.NewHandlers(s)
@@ -425,26 +425,11 @@ func TestHandleUsers_NonAdminForbidden(t *testing.T) {
 	}
 }
 
-func TestHandleUsers_TenantAdminAllowed(t *testing.T) {
+func TestHandleUsers_TenantAdminForbidden(t *testing.T) {
 	s := auth.NewStore()
-	// Create a tenant admin
-	u, _ := s.CreateUser(context.Background(), "tenantadmin", "ta@test.com", "tadminpass", []string{auth.RoleAdmin})
+	u, _ := s.CreateUser("tenantadmin", "ta@test.com", "tadminpass", []string{auth.RoleAdmin})
 	u.OrganizationID = "some-org-id"
 	tok, _ := s.IssueToken(u)
-
-	// Create a user in the same org
-	s.CreateUser(context.Background(), "orguser", "org@test.com", "password", []string{auth.RoleViewer})
-	// The store doesn't automatically assign OrgID for in-memory users from CreateUser without context having it.
-	// In NewStore, context is usually background.
-	// Let's manually set it for the test since Store.CreateUser (in-memory) doesn't use ctx.OrganizationID yet
-	// Wait, I updated Store.CreateUser to use it!
-
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "some-org-id"})
-	s.CreateUser(ctx, "orguser-real", "orgreal@test.com", "password", []string{auth.RoleViewer})
-
-	// Create a user in a different org
-	ctxOther := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "other-org"})
-	s.CreateUser(ctxOther, "otheruser", "other@test.com", "password", []string{auth.RoleViewer})
 
 	h := auth.NewHandlers(s)
 	mw := auth.Middleware(s)
@@ -455,18 +440,8 @@ func TestHandleUsers_TenantAdminAllowed(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200 for tenant admin, got %d: %s", rec.Code, rec.Body.String())
-	}
-
-	var users []auth.UserPublic
-	json.NewDecoder(rec.Body).Decode(&users)
-
-	// Should see tenantadmin and orguser-real, but NOT otheruser or the default admin (org "")
-	for _, user := range users {
-		if user.OrganizationID != "some-org-id" {
-			t.Errorf("tenant admin saw user from another org: %s (org: %s)", user.Username, user.OrganizationID)
-		}
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for tenant admin, got %d", rec.Code)
 	}
 }
 
@@ -648,22 +623,22 @@ func TestStore_MiscCoverage(t *testing.T) {
 		// Just accessing it to cover OIDCCfg
 	}
 
-	u1 := s.GetOrCreateOIDCUser(context.Background(), "sub1", "sub1@test.com", "sub1user")
+	u1 := s.GetOrCreateOIDCUser("sub1", "sub1@test.com", "sub1user")
 	if u1.OIDCSubject != "sub1" {
 		t.Error("expected sub1")
 	}
 
-	u2 := s.GetOrCreateOIDCUser(context.Background(), "sub1", "sub1@test.com", "sub1user")
+	u2 := s.GetOrCreateOIDCUser("sub1", "sub1@test.com", "sub1user")
 	if u1.ID != u2.ID {
 		t.Error("expected same user for same sub")
 	}
 
-	u3 := s.GetOrCreateOIDCUser(context.Background(), "sub3", "sub1@test.com", "sub3user")
+	u3 := s.GetOrCreateOIDCUser("sub3", "sub1@test.com", "sub3user")
 	if u3.ID != u1.ID {
 		t.Error("expected same user mapped by email")
 	}
 
-	u4 := s.GetOrCreateOIDCUser(context.Background(), "sub4", "sub4@test.com", "sub1user")
+	u4 := s.GetOrCreateOIDCUser("sub4", "sub4@test.com", "sub1user")
 	if u4.Username == "sub1user" {
 		t.Error("expected deduplicated username")
 	}
@@ -684,7 +659,7 @@ func TestMiddleware_RequireRole(t *testing.T) {
 
 	req2 := httptest.NewRequest(http.MethodGet, "/api/admin", nil)
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "admin2", "admin2@test.com", "admin2pass", []string{auth.RoleAdmin})
+	u, _ := s.CreateUser("admin2", "admin2@test.com", "admin2pass", []string{auth.RoleAdmin})
 	token, _ := s.IssueToken(u)
 	claims, _ := s.ValidateToken(token)
 
@@ -703,11 +678,11 @@ func TestHandleUser_CRUD(t *testing.T) {
 	h := auth.NewHandlers(s)
 
 	// Create an admin
-	admin, _ := s.CreateUser(context.Background(), "adminCRUD", "adminCRUD@test.com", "adminpass", []string{auth.RoleAdmin})
+	admin, _ := s.CreateUser("adminCRUD", "adminCRUD@test.com", "adminpass", []string{auth.RoleAdmin})
 	adminTok, _ := s.IssueToken(admin)
 
 	// Create a regular user
-	user, _ := s.CreateUser(context.Background(), "userCRUD", "userCRUD@test.com", "userpass", []string{auth.RoleViewer})
+	user, _ := s.CreateUser("userCRUD", "userCRUD@test.com", "userpass", []string{auth.RoleViewer})
 	userTok, _ := s.IssueToken(user)
 
 	tests := []struct {
@@ -754,7 +729,7 @@ func TestHandleUsers_Coverage(t *testing.T) {
 	s := auth.NewStore()
 	h := auth.NewHandlers(s)
 
-	admin, _ := s.CreateUser(context.Background(), "admincov", "admincov@test.com", "adminpass", []string{auth.RoleAdmin})
+	admin, _ := s.CreateUser("admincov", "admincov@test.com", "adminpass", []string{auth.RoleAdmin})
 	adminTok, _ := s.IssueToken(admin)
 
 	tests := []struct {
@@ -791,7 +766,7 @@ func TestHandleUsers_Coverage(t *testing.T) {
 func TestHandleLogin_Coverage(t *testing.T) {
 	s := auth.NewStore()
 	h := auth.NewHandlers(s)
-	s.CreateUser(context.Background(), "logincov", "logincov@test.com", "loginpass", []string{auth.RoleViewer})
+	s.CreateUser("logincov", "logincov@test.com", "loginpass", []string{auth.RoleViewer})
 
 	tests := []struct {
 		name       string
@@ -862,10 +837,10 @@ func TestHandleRoles_Coverage(t *testing.T) {
 	s := auth.NewStore()
 	h := auth.NewHandlers(s)
 
-	admin, _ := s.CreateUser(context.Background(), "adminroles", "adminroles@test.com", "adminpass", []string{auth.RoleAdmin})
+	admin, _ := s.CreateUser("adminroles", "adminroles@test.com", "adminpass", []string{auth.RoleAdmin})
 	adminTok, _ := s.IssueToken(admin)
 
-	user, _ := s.CreateUser(context.Background(), "userroles", "userroles@test.com", "userpass", []string{auth.RoleViewer})
+	user, _ := s.CreateUser("userroles", "userroles@test.com", "userpass", []string{auth.RoleViewer})
 	userTok, _ := s.IssueToken(user)
 
 	tests := []struct {
@@ -902,25 +877,25 @@ func TestAuthMoreCoverage(t *testing.T) {
 	s := auth.NewStore()
 
 	// UpdateUser email duplication
-	u1, _ := s.CreateUser(context.Background(), "cov1", "cov1@test.com", "pass123", []string{auth.RoleViewer})
-	_, _ = s.CreateUser(context.Background(), "cov2", "cov2@test.com", "pass123", []string{auth.RoleViewer})
+	u1, _ := s.CreateUser("cov1", "cov1@test.com", "pass123", []string{auth.RoleViewer})
+	_, _ = s.CreateUser("cov2", "cov2@test.com", "pass123", []string{auth.RoleViewer})
 	newEmail := "cov2@test.com"
-	if _, err := s.UpdateUser(context.Background(), u1.ID, &newEmail, nil, nil); err == nil {
+	if _, err := s.UpdateUser(u1.ID, &newEmail, nil, nil); err == nil {
 		t.Error("expected error for duplicate email on update")
 	}
 
 	// UpdateUser missing
-	if _, err := s.UpdateUser(context.Background(), "missing", nil, nil, nil); err == nil {
+	if _, err := s.UpdateUser("missing", nil, nil, nil); err == nil {
 		t.Error("expected error for missing user on update")
 	}
 
 	// DeleteUser missing
-	if err := s.DeleteUser(context.Background(), "missing"); err == nil {
+	if err := s.DeleteUser("missing"); err == nil {
 		t.Error("expected error for missing user on delete")
 	}
 
 	// CreateUser missing username
-	if _, err := s.CreateUser(context.Background(), "", "miss@test.com", "pass123", nil); err == nil {
+	if _, err := s.CreateUser("", "miss@test.com", "pass123", nil); err == nil {
 		t.Error("expected error for missing username on create")
 	}
 
@@ -1073,10 +1048,10 @@ func TestStore_RevokeCleanup(t *testing.T) {
 
 func TestStore_DeleteOIDCUser(t *testing.T) {
 	s := auth.NewStore()
-	u := s.GetOrCreateOIDCUser(context.Background(), "sub-delete", "del@test.com", "deluser")
-	s.DeleteUser(context.Background(), u.ID)
+	u := s.GetOrCreateOIDCUser("sub-delete", "del@test.com", "deluser")
+	s.DeleteUser(u.ID)
 
-	u2 := s.GetOrCreateOIDCUser(context.Background(), "sub-delete", "del@test.com", "deluser")
+	u2 := s.GetOrCreateOIDCUser("sub-delete", "del@test.com", "deluser")
 	if u.ID == u2.ID {
 		t.Error("expected new user after delete")
 	}
@@ -1151,7 +1126,7 @@ func TestHandleLogin_IssueTokenError(t *testing.T) {
 	// CreateUser error when password too long for bcrypt
 	s := auth.NewStore()
 	longPass := strings.Repeat("a", 73) // bcrypt max length is 72 chars
-	if _, err := s.CreateUser(context.Background(), "longpass", "long@test.com", longPass, nil); err == nil {
+	if _, err := s.CreateUser("longpass", "long@test.com", longPass, nil); err == nil {
 		t.Error("expected error for overly long password causing bcrypt failure")
 	}
 }
@@ -1161,7 +1136,7 @@ func TestGetOrCreateOIDCUser_NoUsernameOrEmail(t *testing.T) {
 	// Both email and username are empty, it should use sub as uname fallback,
 	// actually the code does: uname = preferredUsername, if uname == "" { uname = email }
 	// so if both empty, uname is "".
-	u := s.GetOrCreateOIDCUser(context.Background(), "sub-nouname", "", "")
+	u := s.GetOrCreateOIDCUser("sub-nouname", "", "")
 	if u.OIDCSubject != "sub-nouname" {
 		t.Error("expected sub-nouname")
 	}
@@ -1318,7 +1293,7 @@ func TestValidateToken_Algorithm(t *testing.T) {
 	s := auth.NewStore()
 
 	// valid token setup
-	u, _ := s.CreateUser(context.Background(), "alguser", "alg@test.com", "pass123", nil)
+	u, _ := s.CreateUser("alguser", "alg@test.com", "pass123", nil)
 	tok, _ := s.IssueToken(u)
 	parts := strings.Split(tok, ".")
 
@@ -1356,7 +1331,7 @@ func TestHandleRoles_CreateValidation(t *testing.T) {
 	s := auth.NewStore()
 	h := auth.NewHandlers(s)
 
-	admin, _ := s.CreateUser(context.Background(), "adminroleerr", "adminroleerr@test.com", "adminpass", []string{auth.RoleAdmin})
+	admin, _ := s.CreateUser("adminroleerr", "adminroleerr@test.com", "adminpass", []string{auth.RoleAdmin})
 	adminTok, _ := s.IssueToken(admin)
 
 	// create existing role
@@ -1440,7 +1415,7 @@ func TestOIDC_EdgeCasesMissingClaims(t *testing.T) {
 
 func TestStore_AuthenticateMissingUser(t *testing.T) {
 	s := auth.NewStore()
-	if _, err := s.Authenticate(context.Background(), "nonexistentuser", "pass"); err == nil {
+	if _, err := s.Authenticate("nonexistentuser", "pass"); err == nil {
 		t.Error("expected error for non-existent user authentication")
 	}
 }
@@ -1473,17 +1448,17 @@ func TestOIDC_OtherBranchesMore(t *testing.T) {
 func TestStore_CreateUserErrorsMore(t *testing.T) {
 	s := auth.NewStore()
 	// short password
-	if _, err := s.CreateUser(context.Background(), "user1", "u1@test.com", "12345", nil); err == nil {
+	if _, err := s.CreateUser("user1", "u1@test.com", "12345", nil); err == nil {
 		t.Error("expected error for short password")
 	}
 }
 
 func TestStore_AuthenticateErrorsMore(t *testing.T) {
 	s := auth.NewStore()
-	u, _ := s.CreateUser(context.Background(), "user1", "u1@test.com", "123456", nil)
+	u, _ := s.CreateUser("user1", "u1@test.com", "123456", nil)
 	inactive := false
-	s.UpdateUser(context.Background(), u.ID, nil, nil, &inactive)
-	if _, err := s.Authenticate(context.Background(), "user1", "123456"); err == nil {
+	s.UpdateUser(u.ID, nil, nil, &inactive)
+	if _, err := s.Authenticate("user1", "123456"); err == nil {
 		t.Error("expected error for disabled user")
 	}
 }
