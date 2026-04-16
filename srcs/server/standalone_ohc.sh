@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cleanup_tmp_files() {
+  if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
+    find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
+  fi
+}
+
 resolve_script_dir() {
   local source="${BASH_SOURCE[0]}"
 
@@ -133,13 +139,6 @@ print_doctor() {
     echo "health: reachable"
   else
     echo "health: unreachable"
-  fi
-}
-
-
-cleanup_tmp_files() {
-  if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
-    find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
   fi
 }
 

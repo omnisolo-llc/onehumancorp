@@ -1,8 +1,8 @@
 # Release Notes
 
-## v0.4.0 (Cloud) / v0.4.0+1 (Standalone)
-- Scaling (Cloud): Architected the Elastic Swarm Bursting capabilities to ensure horizontal cloud scaling against traffic spikes.
-- Privacy/Offline (Standalone): Implemented Hybrid CRDT Sync Tool and state sync wrappers for standalone offline autonomy.
+## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
+- Scaling (Cloud): Implement Bubblewrap Sandbox Telemetry and Implement Hybrid Parity Stress Tests.
+- Privacy/Offline (Standalone): Clean up dead Linear integration and harden standalone wrapper.
 
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 - Scaling (Cloud): Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.

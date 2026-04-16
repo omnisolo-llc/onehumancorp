@@ -1,12 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.0 (Cloud) / v0.4.0+1 (Standalone)
+## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements
-- Architected the Elastic Swarm Bursting capabilities to ensure horizontal cloud scaling against traffic spikes.
-- Enhanced shared task execution and worker pools leveraging PostgreSQL SKIP LOCKED.
+- Implement Bubblewrap Sandbox Telemetry.
+- Implement Hybrid Parity Stress Tests.
 
 ### Privacy/Offline Improvements
-- Implemented Hybrid CRDT Sync Tool and state sync wrappers for standalone offline autonomy.
+- Clean up dead Linear integration and harden standalone wrapper.
 
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 ### Cloud Scaling Improvements
