@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -116,4 +118,59 @@ func TestAutoDreamPipeline_StartStop(t *testing.T) {
 	// Just checking that we can start and stop it without deadlocking
 	time.Sleep(50 * time.Millisecond)
 	pipeline.Stop()
+}
+
+func TestAutoDreamPipeline_Deduplication(t *testing.T) {
+	provider, err := db.NewSQLiteProvider(":memory:")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	_, err = provider.Exec(ctx, `
+		CREATE TABLE autodream_memories (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			agent_id TEXT,
+			content TEXT NOT NULL,
+			embedding TEXT,
+			source_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	require.NoError(t, err)
+
+	// Since SQLite doesn't support vector deduplication natively without pgvector,
+	// our deduplication step will just skip in SQLite or do simple insert.
+	// We'll write the test structure, but since SQLite is used, process will just UPSERT based on ID.
+	// For actual merging, the pgvector check happens in postgres.
+
+	// Wait, the test should verify "duplicate sessions are merged" - since SQLite UPSERTs by ID,
+	// it should merge on conflict ID in SQLite.
+	_, err = provider.Exec(ctx, `
+		INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type)
+		VALUES ('task-dedup', 'org-1', 'agent-1', 'old content', '[0.1, 0.2, 0.3]', 'memory_file')
+	`)
+	require.NoError(t, err)
+
+	pipeline := NewAutoDreamPipeline(provider)
+	pipeline.client = &mockEmbeddingClient{}
+
+	// Let's create a temporary file to be processed by process()
+	tempDir := t.TempDir()
+	os.Setenv("OHC_MEMORY_DIR", tempDir)
+	defer os.Unsetenv("OHC_MEMORY_DIR")
+
+	memContent := `
+agent_session_data: "new content"
+content: "something"
+`
+	err = os.WriteFile(filepath.Join(tempDir, "task-dedup.yml"), []byte(memContent), 0644)
+	require.NoError(t, err)
+
+	pipeline.process(ctx)
+
+	var content string
+	err = provider.QueryRow(ctx, "SELECT content FROM autodream_memories WHERE id = 'task-dedup'").Scan(&content)
+	require.NoError(t, err)
+	assert.Equal(t, "new content", content)
 }

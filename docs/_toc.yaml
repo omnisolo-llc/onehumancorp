@@ -15,6 +15,8 @@ toc:
     path: /docs/walkthroughs/index.md
   - title: Hybrid MCP Telemetry Visual Guide
     path: /docs/walkthroughs/hybrid_mcp_telemetry_visual_guide.md
+  - title: Dynamic Cloud Escalation
+    path: /docs/walkthroughs/dynamic_cloud_escalation.md
   - title: Operations
     path: /docs/operations/index.md
   - title: Releases
