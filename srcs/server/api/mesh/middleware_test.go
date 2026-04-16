@@ -18,40 +18,41 @@ func TestValidationMiddleware(t *testing.T) {
 		body           []byte
 		expectedStatus int
 	}{
-		{
-			name:           "Valid payload",
-			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "action": "start", "status": "active"}`),
-			expectedStatus: http.StatusOK,
-		},
+
 		{
 			name:           "Valid KAIROS payload",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION"}`),
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "data": {}}`),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Missing agent_id",
 			method:         http.MethodPost,
-			body:           []byte(`{"action": "start", "status": "active"}`),
+			body:           []byte(`{"channel": "test", "event_type": "start", "data": {}}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing action and event_type",
+			name:           "Missing channel",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "status": "active"}`),
+			body:           []byte(`{"agent_id": "123", "event_type": "test", "data": {}}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "Missing status and channel",
+			name:           "Missing data",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "action": "start"}`),
+			body:           []byte(`{"agent_id": "123", "channel": "test", "event_type": "start"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Empty fields (still present at root)",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "", "action": "", "status": ""}`),
+			body:           []byte(`{"agent_id": "", "channel": "", "event_type": "", "data": null}`),
+			expectedStatus: http.StatusBadRequest, // data cannot be null it must be present json
+		},
+		{
+			name:           "Empty string fields (still present at root)",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "", "channel": "", "event_type": "", "data": {}}`),
 			expectedStatus: http.StatusOK,
 		},
 		{
