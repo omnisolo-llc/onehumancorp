@@ -115,19 +115,24 @@ func RedactPII(input string) string {
 
 // RedactInterfacePII deeply scrubs maps, slices, and strings for PII.
 func RedactInterfacePII(val interface{}) interface{} {
+	if val == nil {
+		return nil
+	}
+
+	// Fast paths for common types
 	switch v := val.(type) {
 	case string:
 		return RedactPII(v)
 	case map[string]interface{}:
 		res := make(map[string]interface{}, len(v))
-		for k, val := range v {
-			res[k] = RedactInterfacePII(val)
+		for k, vVal := range v {
+			res[k] = RedactInterfacePII(vVal)
 		}
 		return res
 	case []interface{}:
 		res := make([]interface{}, len(v))
-		for i, val := range v {
-			res[i] = RedactInterfacePII(val)
+		for i, vVal := range v {
+			res[i] = RedactInterfacePII(vVal)
 		}
 		return res
 	case []string:
@@ -140,62 +145,83 @@ func RedactInterfacePII(val interface{}) interface{} {
 		res := make([]map[string]interface{}, len(v))
 		for i, m := range v {
 			newM := make(map[string]interface{}, len(m))
-			for k, val := range m {
-				newM[k] = RedactInterfacePII(val)
+			for k, vVal := range m {
+				newM[k] = RedactInterfacePII(vVal)
 			}
 			res[i] = newM
 		}
 		return res
-	default:
-		if val == nil {
-			return nil
+	}
+
+	// Fallback to reflection
+	rv := reflect.ValueOf(val)
+
+	// Dereference pointers
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return val
 		}
-		rv := reflect.ValueOf(val)
-		if rv.Kind() == reflect.String {
-			return RedactPII(rv.String())
+		rv = rv.Elem()
+	}
+
+	switch rv.Kind() {
+	case reflect.String:
+		return RedactPII(rv.String())
+	case reflect.Slice, reflect.Array:
+		if rv.Len() == 0 {
+			return val
 		}
-		switch rv.Kind() {
-		case reflect.Slice, reflect.Array:
-			if rv.Len() == 0 {
-				return val
-			}
-			// Important: Leave []byte intact. It marshals to base64 natively and usually doesn't need field-by-field string redaction here unless handled separately.
-			if rv.Type().Elem().Kind() == reflect.Uint8 {
-				return val
-			}
-			res := make([]interface{}, rv.Len())
-			for i := 0; i < rv.Len(); i++ {
+		// Important: Leave []byte intact. It marshals to base64 natively and usually doesn't need field-by-field string redaction here unless handled separately.
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return val
+		}
+		res := make([]interface{}, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			if rv.Index(i).CanInterface() {
 				res[i] = RedactInterfacePII(rv.Index(i).Interface())
+			} else {
+				res[i] = rv.Index(i).String() // fallback
 			}
-			return res
-		case reflect.Map:
-			if rv.Len() == 0 {
-				return val
-			}
-			res := make(map[string]interface{})
-			for _, key := range rv.MapKeys() {
-				var kStr string
-				if key.Kind() == reflect.String {
-					kStr = key.String()
-				} else {
-					kStr = fmt.Sprintf("%v", key.Interface())
-				}
-				res[kStr] = RedactInterfacePII(rv.MapIndex(key).Interface())
-			}
-			return res
-		case reflect.Struct:
-			res := make(map[string]interface{})
-			rt := rv.Type()
-			for i := 0; i < rv.NumField(); i++ {
-				field := rt.Field(i)
-				// Skip unexported fields
-				if field.PkgPath != "" {
-					continue
-				}
-				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
-			}
-			return res
 		}
+		return res
+	case reflect.Map:
+		if rv.Len() == 0 {
+			return val
+		}
+		res := make(map[string]interface{})
+		for _, key := range rv.MapKeys() {
+			var kStr string
+			if key.Kind() == reflect.String {
+				kStr = key.String()
+			} else if key.CanInterface() {
+				kStr = fmt.Sprintf("%v", key.Interface())
+			} else {
+				// Avoid calling .String() directly on reflect.Value objects that are not strings
+				continue
+			}
+
+			mapVal := rv.MapIndex(key)
+			if mapVal.CanInterface() {
+				res[kStr] = RedactInterfacePII(mapVal.Interface())
+			} else {
+				res[kStr] = mapVal.String()
+			}
+		}
+		return res
+	case reflect.Struct:
+		res := make(map[string]interface{})
+		rt := rv.Type()
+		for i := 0; i < rv.NumField(); i++ {
+			field := rt.Field(i)
+			fieldVal := rv.Field(i)
+			// Skip unexported fields or fields that cannot be interfaced
+			if field.PkgPath != "" || !fieldVal.CanInterface() {
+				continue
+			}
+			res[field.Name] = RedactInterfacePII(fieldVal.Interface())
+		}
+		return res
+	default:
 		return val
 	}
 }
