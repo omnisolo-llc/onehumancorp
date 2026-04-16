@@ -170,3 +170,91 @@ func GetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(wizardState)
 }
+
+type AuditSetupResponse struct {
+    Status string `json:"status"`
+    Config *EnvConfig `json:"config,omitempty"`
+    Error  string `json:"error,omitempty"`
+}
+
+type AuditSetupRequest struct {
+    Env map[string]string `json:"env"`
+}
+
+func AuditSetupHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    var req AuditSetupRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    config, err := VerifyEnvironment(req.Env)
+    w.Header().Set("Content-Type", "application/json")
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(AuditSetupResponse{
+            Status: "error",
+            Error:  err.Error(),
+        })
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(AuditSetupResponse{
+        Status: "success",
+        Config: config,
+    })
+}
+
+type DiagnosticsResponse struct {
+	Status string                 `json:"status"`
+	Config *EnvConfig             `json:"config,omitempty"`
+	Wizard map[string]interface{} `json:"wizard,omitempty"`
+	Error  string                 `json:"error,omitempty"`
+}
+
+func DiagnosticsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	envVars := make(map[string]string)
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			envVars[parts[0]] = parts[1]
+		}
+	}
+
+	config, err := VerifyEnvironment(envVars)
+
+	wizardMu.RLock()
+	currentWizardState := make(map[string]interface{})
+	for k, v := range wizardState {
+		currentWizardState[k] = v
+	}
+	wizardMu.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DiagnosticsResponse{
+			Status: "error",
+			Error:  err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(DiagnosticsResponse{
+		Status: "success",
+		Config: config,
+		Wizard: currentWizardState,
+	})
+}

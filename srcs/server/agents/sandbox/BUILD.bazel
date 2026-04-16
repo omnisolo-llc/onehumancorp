@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sandbox",
+    srcs = ["session.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/sandbox",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "sandbox_test",
+    srcs = ["session_test.go"],
+    embed = [":sandbox"],
+)
