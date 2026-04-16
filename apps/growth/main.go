@@ -1,7 +1,8 @@
 package main
 
 import (
-		"encoding/json"
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -47,55 +48,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 	referralService := growth.NewReferralService(tracker)
 	referralsRepo := growth.NewReferralRepository(rdb)
 
-	abTestService := growth.NewABTestService(tracker)
-
-	mux.HandleFunc("/api/v1/growth/ab_test/impression", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		var req struct {
-			ExperimentID string `json:"experiment_id"`
-			Variant      string `json:"variant"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		err := abTestService.RecordImpression(r.Context(), req.ExperimentID, req.Variant)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Impression recorded\n")
-	}))
-
-	mux.HandleFunc("/api/v1/growth/ab_test/conversion", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		var req struct {
-			ExperimentID string `json:"experiment_id"`
-			Variant      string `json:"variant"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		err := abTestService.RecordConversion(r.Context(), req.ExperimentID, req.Variant)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Conversion recorded\n")
-	}))
-
-
 	mux.HandleFunc("/growth/referral", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -112,7 +64,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 			return
 		}
 
-		err := referralService.ProcessInvite(r.Context(), req.SenderID, req.ReceiverEmail)
+		err := referralService.ProcessInvite(context.Background(), req.SenderID, req.ReceiverEmail)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -154,14 +106,14 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		}
 		referral.ID = fmt.Sprintf("ref-%d", time.Now().UnixNano())
 
-		err := referralsRepo.SaveReferral(r.Context(), referral)
+		err := referralsRepo.SaveReferral(context.Background(), referral)
 		if err != nil {
 			http.Error(w, "Failed to save referral", http.StatusInternalServerError)
 			return
 		}
 
 		// Also track the event
-		_ = referralService.ProcessInvite(r.Context(), spiffeID, req.InviteeEmail)
+		_ = referralService.ProcessInvite(context.Background(), spiffeID, req.InviteeEmail)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -183,7 +135,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 			return
 		}
 
-		stats, err := referralsRepo.GetStats(r.Context(), spiffeID)
+		stats, err := referralsRepo.GetStats(context.Background(), spiffeID)
 		if err != nil {
 			http.Error(w, "Failed to get stats", http.StatusInternalServerError)
 			return
@@ -210,7 +162,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 			return
 		}
 
-		allowed, err := quotaService.CheckQuota(r.Context(), req.TenantID)
+		allowed, err := quotaService.CheckQuota(context.Background(), req.TenantID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -236,7 +188,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 			return
 		}
 
-		err := quotaService.IncrementUsage(r.Context(), req.TenantID)
+		err := quotaService.IncrementUsage(context.Background(), req.TenantID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
