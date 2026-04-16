@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcpsync",
+    srcs = ["mcpsync.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcpsync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "mcpsync_test",
+    srcs = ["mcpsync_test.go"],
+    embed = [":mcpsync"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)

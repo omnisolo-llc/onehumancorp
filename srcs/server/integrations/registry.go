@@ -25,6 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/integrations/mcpsync"
+
 	pb "github.com/onehumancorp/mono/srcs/proto"
 )
 
@@ -386,6 +389,13 @@ type Registry struct {
 	chatMessages []ChatMessage
 	pullRequests []PullRequest
 	issues       []Issue
+	McpSyncProxy *mcpsync.McpSyncProxy
+}
+
+func (r *Registry) InitMcpSync(provider db.Provider) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.McpSyncProxy = mcpsync.NewMcpSyncProxy(provider)
 }
 
 // NewRegistry returns an initialised Registry pre-populated with the default

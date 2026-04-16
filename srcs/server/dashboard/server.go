@@ -466,6 +466,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		waitlist:              []WaitlistEntry{},
 		onboardingFunnels:     []OnboardingFunnel{},
 	}
+
+
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
 	}
