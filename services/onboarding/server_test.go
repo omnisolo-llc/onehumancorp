@@ -123,3 +123,29 @@ func TestVerifyEnvironmentHandler(t *testing.T) {
         })
     }
 }
+
+func TestWizardStateHandler(t *testing.T) {
+    reqBody, _ := json.Marshal(map[string]interface{}{"step": 2, "name": "TestCorp"})
+    req := httptest.NewRequest(http.MethodPost, "/api/wizard/state/save", bytes.NewReader(reqBody))
+    req.Header.Set("Content-Type", "application/json")
+    rr := httptest.NewRecorder()
+    SaveWizardStateHandler(rr, req)
+
+    if status := rr.Code; status != http.StatusOK {
+        t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+    }
+
+    reqGet := httptest.NewRequest(http.MethodGet, "/api/wizard/state", nil)
+    rrGet := httptest.NewRecorder()
+    GetWizardStateHandler(rrGet, reqGet)
+
+    if status := rrGet.Code; status != http.StatusOK {
+        t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+    }
+
+    var res map[string]interface{}
+    json.NewDecoder(rrGet.Body).Decode(&res)
+    if res["name"] != "TestCorp" {
+        t.Errorf("handler returned unexpected body: got %v", res)
+    }
+}
