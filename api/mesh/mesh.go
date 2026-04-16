@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
+	pb "github.com/onehumancorp/mono/api/proto"
 )
 
 // MeshMessage represents a payload sent over the Teammate Mesh.
@@ -25,6 +27,7 @@ type TeammateMesh struct {
 	client      *redis.Client
 	mu          sync.RWMutex
 	subscribers map[string][]chan MeshMessage
+	pb.UnimplementedCoordinationServiceServer
 }
 
 // NewTeammateMesh initializes a new TeammateMesh.
@@ -33,6 +36,107 @@ func NewTeammateMesh(client *redis.Client) *TeammateMesh {
 		client:      client,
 		subscribers: make(map[string][]chan MeshMessage),
 	}
+}
+
+// AcquireLock attempts to acquire a lock for a specific resource via Redis or SQLite fallback.
+func (m *TeammateMesh) AcquireLock(ctx context.Context, req *pb.LockRequest) (*pb.LockResponse, error) {
+	if m.client != nil {
+		// Use the robust DistributedLock utility instead of duplicating primitive SETNX
+		lock := &DistributedLock{
+			client: m.client,
+			key:    fmt.Sprintf("lock:%s", req.TargetResource),
+			value:  req.AgentId,
+		}
+
+		// Use a short timeout context to make this non-blocking like the original gRPC intent
+		acquireCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		defer cancel()
+
+		err := lock.Acquire(acquireCtx, time.Duration(req.TtlSeconds)*time.Second)
+		if err == context.DeadlineExceeded {
+			return &pb.LockResponse{Acquired: false, ErrorMessage: "lock already held"}, nil
+		} else if err != nil {
+			return &pb.LockResponse{Acquired: false, ErrorMessage: err.Error()}, nil
+		}
+
+		return &pb.LockResponse{Acquired: true}, nil
+	}
+
+	// Implementation placeholder for SQLite fallback
+	return &pb.LockResponse{Acquired: false, ErrorMessage: "DB locks not yet implemented for standalone mode"}, nil
+}
+
+// ReleaseLock attempts to release a previously acquired lock.
+func (m *TeammateMesh) ReleaseLock(ctx context.Context, req *pb.ReleaseRequest) (*pb.ReleaseResponse, error) {
+	if m.client != nil {
+		lock := &DistributedLock{
+			client: m.client,
+			key:    fmt.Sprintf("lock:%s", req.TargetResource),
+			value:  req.AgentId,
+		}
+
+		err := lock.Release(ctx)
+		if err != nil {
+			return &pb.ReleaseResponse{Success: false}, err
+		}
+
+		return &pb.ReleaseResponse{Success: true}, nil
+	}
+
+	return &pb.ReleaseResponse{Success: false}, fmt.Errorf("DB locks not yet implemented for standalone mode")
+}
+
+// StreamAgentState streams updates from ohc.mesh.agent.status
+func (m *TeammateMesh) StreamAgentState(req *pb.StateStreamRequest, stream pb.CoordinationService_StreamAgentStateServer) error {
+	ctx, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+
+	msgChan := make(chan MeshMessage, 10)
+
+	go m.Subscribe(ctx, "ohc.mesh.agent.status", func(msg MeshMessage) {
+		msgChan <- msg
+	})
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case msg := <-msgChan:
+			var update pb.StateUpdate
+			if err := json.Unmarshal(msg.Payload, &update); err != nil {
+				log.Printf("Failed to unmarshal state update payload: %v", err)
+				continue
+			}
+
+			// Simple domain filtering mockup
+			if req.DomainFilter == "" || strings.Contains(update.CurrentMission, req.DomainFilter) {
+				if err := stream.Send(&update); err != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
+// BroadcastStateUpdate is a helper to publish state updates to Redis PubSub.
+func (m *TeammateMesh) BroadcastStateUpdate(ctx context.Context, agentID, status, currentMission string) error {
+	update := &pb.StateUpdate{
+		AgentId: agentID,
+		NewStatus: status,
+		CurrentMission: currentMission,
+	}
+	payload, err := json.Marshal(update)
+	if err != nil {
+		return err
+	}
+
+	msg := MeshMessage{
+		SenderID: agentID,
+		Topic: "ohc.mesh.agent.status",
+		Payload: payload,
+	}
+
+	return m.Publish(ctx, msg)
 }
 
 var upgrader = websocket.Upgrader{
