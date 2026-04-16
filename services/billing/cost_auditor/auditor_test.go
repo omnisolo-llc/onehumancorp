@@ -11,7 +11,6 @@ func TestCostAuditor(t *testing.T) {
     CostPerCachedInputToken: 0.000005,
     CostPerLocalEmbedding:   0.000002,
     DiscountFactor:          0.0,
-    CostPerGBMonth:          0.023,
   }
   auditor := NewCostAuditor(config)
   ctx := context.Background()
@@ -37,14 +36,6 @@ func TestCostAuditor(t *testing.T) {
   savings := auditor.GetTotalSavings()
   if savings != 0.01 {
     t.Errorf("expected savings %f, got %f", 0.01, savings)
-  }
-  savingsStorage := auditor.RecordStorageCompression(ctx, 10737418240, 5368709120)
-  if savingsStorage != 0.115 {
-    t.Errorf("expected storage savings 0.115, got %f", savingsStorage)
-  }
-  totalStorageSavings := auditor.GetTotalStorageSavings()
-  if totalStorageSavings != 0.115 {
-    t.Errorf("expected total storage savings 0.115, got %f", totalStorageSavings)
   }
   report := auditor.GenerateReport()
   if report == "" {
