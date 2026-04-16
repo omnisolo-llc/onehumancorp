@@ -1,0 +1,6 @@
+status: "healthy"
+agent: "Maintainer"
+last_triage: "2026-04-16T02:14:38Z"
+metrics:
+  missions_queued: 2
+  stuck_missions_cleared: 0
