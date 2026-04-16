@@ -27,6 +27,10 @@ var (
 	RagEscalationCount               metric.Int64Counter
 
 	SubAgentExecutionDuration  metric.Float64Histogram
+
+	SubAgentQueueDelayHistogram metric.Float64Histogram
+	TaskClaimContentionTotal    metric.Int64Counter
+
 	SubAgentFailuresTotal      metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
@@ -522,6 +526,25 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+
+	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
+		"ohc_sub_agent_queue_delay_seconds",
+		metric.WithDescription("Wait time for Sub-Agents in queue"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskClaimContentionTotal, err = m.Int64Counter(
+		"ohc_task_claim_contention_total",
+		metric.WithDescription("Total failed task claim attempts or retries due to lock contention"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 
 	TeammateMeshBroadcastsCounter, err = m.Int64Counter(
 		"teammate_mesh_broadcasts_total",
@@ -1569,4 +1592,21 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
             attribute.String("error_type", errorType),
         ))
     }
+}
+
+
+// RecordSubAgentQueueDelay records the wait time for a Sub-Agent in the queue.
+func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
+	if SubAgentQueueDelayHistogram != nil {
+		SubAgentQueueDelayHistogram.Record(ctx, delay)
+	}
+}
+
+// RecordTaskClaimContention increments the counter for task claim contention.
+func RecordTaskClaimContention(ctx context.Context, mode string) {
+	if TaskClaimContentionTotal != nil {
+		TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
 }

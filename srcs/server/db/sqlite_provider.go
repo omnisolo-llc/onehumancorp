@@ -155,6 +155,7 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, organizationID, agentI
 				// In SQLite this usually happens if another connection locked them and we timed out or missed.
 				// We simulate lock contention metric.
 				telemetry.RecordPostgresLockContention(ctx, "acquire_task_sqlite")
+					telemetry.RecordTaskClaimContention(ctx, "SQLite")
 			}
 			trackQuery(ctx, "AcquireTask", nil, time.Since(start))
 			return nil, nil

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -89,11 +90,20 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		var wID sql.NullString
 		var createdAt, updatedAt string
 
+
 		row := q.provider.QueryRow(ctx, query)
 		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
 		if errors.Is(err, sql.ErrNoRows) {
+			// Memory instructions: SQLite lock contention detection parity with Postgres
+			var exists bool
+			checkErr := q.provider.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM sub_agent_queue WHERE status = 'QUEUED')").Scan(&exists)
+			if checkErr == nil && exists {
+				telemetry.RecordPostgresLockContention(ctx, "poll_sub_agent_queue_sqlite")
+				telemetry.RecordTaskClaimContention(ctx, "SQLite")
+			}
 			return nil, nil
 		} else if err != nil {
+
 			return nil, err
 		}
 
@@ -141,13 +151,22 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		var wID sql.NullString
 		var createdAt, updatedAt time.Time
 
+
 		err := q.provider.QueryRow(ctx, query, workerID, time.Now()).Scan(
 			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt,
 		)
 
 		if errors.Is(err, sql.ErrNoRows) {
+			// Memory instructions: Postgres lock contention detection for FOR UPDATE SKIP LOCKED
+			var exists bool
+			checkErr := q.provider.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM sub_agent_queue WHERE status = 'QUEUED')").Scan(&exists)
+			if checkErr == nil && exists {
+				telemetry.RecordPostgresLockContention(ctx, "poll_sub_agent_queue")
+				telemetry.RecordTaskClaimContention(ctx, "PostgreSQL")
+			}
 			return nil, nil
 		} else if err != nil {
+
 			return nil, err
 		}
 

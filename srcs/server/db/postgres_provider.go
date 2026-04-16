@@ -98,6 +98,7 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 			if checkErr == nil && exists {
 				// We found pending tasks but couldn't acquire any because they are locked.
 				telemetry.RecordPostgresLockContention(ctx, "acquire_task")
+					telemetry.RecordTaskClaimContention(ctx, "PostgreSQL")
 			}
 			trackQuery(ctx, "AcquireTask", nil, time.Since(start))
 			return nil, nil
