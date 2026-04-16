@@ -2,7 +2,6 @@ package bash_sandbox
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 )
@@ -96,10 +95,8 @@ func TestSandboxExecution_EnvironmentScrubbing(t *testing.T) {
 	sandbox := NewSandbox()
 	ctx := context.Background()
 
-	os.Setenv("GITHUB_TOKEN", "secret123")
-	os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "header123")
-	defer os.Unsetenv("GITHUB_TOKEN")
-	defer os.Unsetenv("OTEL_EXPORTER_OTLP_HEADERS")
+	t.Setenv("GITHUB_TOKEN", "secret123")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "header123")
 
 	out, err := sandbox.ExecuteContext(ctx, "env", "")
 	if err != nil {
