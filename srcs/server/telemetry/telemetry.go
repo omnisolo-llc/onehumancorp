@@ -29,7 +29,6 @@ var (
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
-	HarnessExecutionsTotal     metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
@@ -696,14 +695,6 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),
 		metric.WithUnit("s"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	HarnessExecutionsTotal, err = m.Int64Counter(
-		"ohc_harness_executions_total",
-		metric.WithDescription("Total number of harness executions"),
 	)
 	if err != nil {
 		errs = append(errs, err)
