@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'agent_task_progress.dart';
 import 'agent_mesh_message_tile.dart';
 import 'autodream_pipeline_widget.dart';
+import 'vector_memory_visualizer.dart';
 
 class SwarmObservabilityDashboard extends StatefulWidget {
   final WebSocketChannel channel;
@@ -22,6 +23,7 @@ class SwarmObservabilityDashboard extends StatefulWidget {
 class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboard> {
   List<dynamic> _tasks = [];
   List<dynamic> _messages = [];
+  double _embeddingActivity = 0.5;
   late final StreamSubscription<dynamic> _subscription;
 
   @override
@@ -33,6 +35,11 @@ class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboar
         if (data['tasks'] != null) {
           setState(() {
             _tasks = data['tasks'];
+          });
+        }
+        if (data['embeddingActivity'] != null) {
+          setState(() {
+            _embeddingActivity = (data['embeddingActivity'] as num).toDouble();
           });
         }
         if (data['messages'] != null) {
@@ -67,6 +74,8 @@ class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboar
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const AutoDreamPipelineWidget(),
+              const SizedBox(height: 16),
+              VectorMemoryVisualizerWidget(embeddingActivity: _embeddingActivity),
               const SizedBox(height: 24),
               const Text(
                 'Swarm Observability',

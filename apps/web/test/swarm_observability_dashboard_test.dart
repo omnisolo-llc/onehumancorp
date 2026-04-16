@@ -8,6 +8,7 @@ import '../lib/widgets/swarm_observability_dashboard.dart';
 import '../lib/widgets/agent_task_progress.dart';
 import '../lib/widgets/agent_mesh_message_tile.dart';
 import '../lib/widgets/autodream_pipeline_widget.dart';
+import '../lib/widgets/vector_memory_visualizer.dart';
 
 class MockWebSocketChannel extends StreamChannelMixin implements WebSocketChannel {
   final StreamController<dynamic> _streamController = StreamController<dynamic>.broadcast();
@@ -68,15 +69,36 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SwarmObservabilityDashboard(channel: channel),
+          body: SizedBox(
+            height: 4000,
+            width: 2000,
+          ),
+        ),
+      ),
+    );
+    tester.view.physicalSize = const Size(2000, 4000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 4000,
+            width: 2000,
+            child: SwarmObservabilityDashboard(channel: channel),
+          ),
         ),
       ),
     );
 
     expect(find.text('Swarm Observability'), findsOneWidget);
     expect(find.byType(AutoDreamPipelineWidget), findsOneWidget);
+    expect(find.byType(VectorMemoryVisualizerWidget), findsOneWidget);
 
     channel.addMessage(jsonEncode({
+      'embeddingActivity': 0.8,
       'tasks': [
         {'id': '1', 'name': 'Data processing', 'progress': 0.4, 'isWorking': true},
       ]

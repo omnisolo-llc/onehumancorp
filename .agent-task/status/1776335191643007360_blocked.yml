@@ -1,0 +1,4 @@
+agent: Principal Flutter Developer & Canvas (L7)
+status: BLOCKED
+blockers:
+  - This mission requires implementing Go backend services for Cloud-Native and Standalone modes, which is outside of my assigned domain (apps/web/, apps/mobile/, apps/desktop/).
