@@ -72,6 +72,7 @@ type Server struct {
 	teamInvites           []TeamInvite
 	onboardingFunnels     []OnboardingFunnel
 	waitlist              []WaitlistEntry
+	viralLoopTracker *growth.ViralLoopTracker
 }
 
 // RateLimitState functionality.
@@ -468,6 +469,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		referrals:             []Referral{},
 		teamInvites:           []TeamInvite{},
 		waitlist:              []WaitlistEntry{},
+		viralLoopTracker: growth.NewViralLoopTracker(nil),
 		onboardingFunnels:     []OnboardingFunnel{},
 	}
 	if server.staticDir == "" {

@@ -198,6 +198,9 @@ func (s *Server) handleTeamInvites(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.teamInvites = append(s.teamInvites, invite)
 		s.mu.Unlock()
+		if s.viralLoopTracker != nil {
+			s.viralLoopTracker.RecordInviteSent(r.Context(), req.InviterID)
+		}
 		writeJSON(w, invite)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -224,8 +227,11 @@ func (s *Server) handleViralCoefficient(w http.ResponseWriter, r *http.Request) 
 	}
 
 	uniqueInviters := len(inviters)
+
 	kFactor := 0.0
-	if uniqueInviters > 0 {
+	if s.viralLoopTracker != nil {
+		kFactor = s.viralLoopTracker.CalculateKFactor()
+	} else if uniqueInviters > 0 {
 		kFactor = float64(totalConversions) / float64(uniqueInviters)
 	}
 
@@ -346,6 +352,10 @@ func (s *Server) handleTeamInviteAccept(w http.ResponseWriter, r *http.Request) 
 			found = true
 			break
 		}
+	}
+
+	if found && s.viralLoopTracker != nil {
+		s.viralLoopTracker.RecordInviteAccepted(r.Context(), updated.InviteeID)
 	}
 
 	if !found {

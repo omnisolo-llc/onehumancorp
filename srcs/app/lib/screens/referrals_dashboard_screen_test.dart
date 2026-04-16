@@ -26,6 +26,9 @@ void main() {
   }
 
   testWidgets('displays list of referrals', (tester) async {
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.devicePixelRatio = 1.0;
+
     when(() => mockApiService.listReferrals()).thenAnswer(
       (_) async => [
         {
@@ -38,9 +41,12 @@ void main() {
         },
       ],
     );
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {'kFactor': 2.5},
+    );
 
     await tester.pumpWidget(buildTestWidget());
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
 
     await tester.pumpAndSettle();
 
@@ -51,20 +57,28 @@ void main() {
     expect(find.text('10'), findsOneWidget);
     expect(find.text('Clicks'), findsOneWidget);
     expect(find.text('Conversions'), findsOneWidget);
+    expect(find.text('2.50'), findsWidgets);
   });
 
   testWidgets('displays empty state', (tester) async {
     when(() => mockApiService.listReferrals()).thenAnswer((_) async => []);
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {'kFactor': 0.0},
+    );
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
     expect(find.text('No referrals tracked yet.'), findsOneWidget);
+    expect(find.text('0.00'), findsOneWidget);
   });
 
   testWidgets('displays error state', (tester) async {
     when(() => mockApiService.listReferrals())
         .thenAnswer((_) => Future.error(Exception('API failure')));
+    when(() => mockApiService.getViralCoefficient()).thenAnswer(
+      (_) async => {'kFactor': 0.0},
+    );
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();

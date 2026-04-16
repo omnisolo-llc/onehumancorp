@@ -11,9 +11,11 @@ import (
 
 var referralsCounter metric.Int64Counter
 
+
 func init() {
 	meter := otel.Meter("github.com/onehumancorp/mono/ohc")
 	referralsCounter, _ = meter.Int64Counter("growth_referrals_total")
+
 }
 
 type ReferralTracker struct {
@@ -79,6 +81,8 @@ func (rt *ReferralTracker) GetTotalReferrals() int {
 	defer rt.mu.RUnlock()
 	return rt.TotalReferrals
 }
+
+
 
 func (rt *ReferralTracker) RecordReferralWithChannel(ctx context.Context, code string, channel string) bool {
 	rt.mu.Lock()

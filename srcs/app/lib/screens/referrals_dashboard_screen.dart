@@ -15,6 +15,8 @@ class ReferralsDashboardScreen extends ConsumerStatefulWidget {
 
 class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScreen> {
   late Future<List<Map<String, dynamic>>> _referralsFuture;
+  late Future<Map<String, dynamic>> _viralCoefficientFuture;
+  late Future<List<dynamic>> _combinedFuture;
 
   @override
   void initState() {
@@ -25,6 +27,8 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
   void _refresh() {
     setState(() {
       _referralsFuture = ref.read(apiServiceProvider)!.listReferrals();
+      _viralCoefficientFuture = ref.read(apiServiceProvider)!.getViralCoefficient();
+      _combinedFuture = Future.wait([_referralsFuture, _viralCoefficientFuture]);
     });
   }
 
@@ -42,8 +46,8 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _referralsFuture,
+      body: FutureBuilder<List<dynamic>>(
+        future: _combinedFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -56,10 +60,45 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
               ),
             );
           }
-
-          final referrals = snapshot.data ?? [];
-
-          if (referrals.isEmpty) {
+          final referrals = snapshot.data?[0] as List<Map<String, dynamic>>? ?? [];
+          final vcData = snapshot.data?[1] as Map<String, dynamic>? ?? {};
+          final kFactor = vcData['kFactor'] ?? 0.0;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(24),
+                  color: colors.surface.withValues(alpha: 0.6),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Viral Coefficient (K-Factor)',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        kFactor.toStringAsFixed(2),
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: colors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Builder(
+              builder: (context) {
+                if (referrals.isEmpty) {
             return const Center(
               child: Text(
                 'No referrals tracked yet.',
@@ -78,8 +117,13 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
               }).toList(),
             ),
           );
-        },
-      ),
+              },
+            ),
+          ),
+        ],
+      );
+    },
+  ),
     );
   }
 }
