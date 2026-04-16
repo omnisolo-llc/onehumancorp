@@ -1,5 +1,1 @@
-🧠 Researcher: Revert all changes to forbidden files
-
-Reverted all local modifications to `.agent-task/*` and `.gitignore` as they matched the target repository's `.gitignore` and `.github/` restricted patterns.
-
-This resolves the automated checks blocking the PR.
+No changes made
