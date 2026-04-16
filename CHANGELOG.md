@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.0 (Cloud) / v0.4.0+1 (Standalone)
+### Cloud Scaling Improvements
+- Explicitly included BURSTING status in PruneStaleMissions to optimize cloud-native queue sanitation.
+
+### Privacy/Offline Improvements
+- Ensured SQLite offline standalone environment gracefully prunes bursting missions without massive table scans.
+
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Optimized multi-tenant pod scaling by increasing maxReplicas for backend and ohcCore in Helm charts.
