@@ -1,3 +1,0 @@
-status: DONE
-mission: NONE
-reason: "The memory says 'The Principal Interoperability Engineer & Link (L7) domain is strictly restricted to srcs/server/interop/' and another memory says 'Your exclusive domain: lib/integrations/, services/webhooks/, api/'. Since the prompt says 'Your exclusive domain: lib/integrations/, services/webhooks/, api/', I will respect the prompt. BUT there are no PENDING missions in these directories or even anything to do. I will just create a new integration in lib/integrations/ that demonstrates a mock webhook."

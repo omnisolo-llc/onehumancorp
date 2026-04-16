@@ -47,7 +47,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 	quotaService := growth.NewQuotaService(tracker, rdb, 100)
 	referralService := growth.NewReferralService(tracker)
 	referralsRepo := growth.NewReferralRepository(rdb)
-	abTestService := growth.NewABTestService(tracker)
 
 	mux.HandleFunc("/growth/referral", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -122,95 +121,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 			"message": "Invite sent successfully",
 			"link":    fmt.Sprintf("ohc://join?ref=%s", referral.ID),
 		})
-	}))
-
-	mux.HandleFunc("/api/v1/growth/referrals/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req struct {
-			InviteID string `json:"invite_id"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		if req.InviteID == "" {
-			http.Error(w, "missing invite_id", http.StatusBadRequest)
-			return
-		}
-
-		err := referralService.AcceptInvite(context.Background(), req.InviteID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Invite accepted successfully\n")
-	}))
-
-	mux.HandleFunc("/api/v1/growth/ab/impression", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req struct {
-			ExperimentID string `json:"experiment_id"`
-			Variant      string `json:"variant"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		if req.ExperimentID == "" || req.Variant == "" {
-			http.Error(w, "missing experiment_id or variant", http.StatusBadRequest)
-			return
-		}
-
-		err := abTestService.RecordImpression(context.Background(), req.ExperimentID, req.Variant)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Impression recorded\n")
-	}))
-
-	mux.HandleFunc("/api/v1/growth/ab/conversion", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req struct {
-			ExperimentID string `json:"experiment_id"`
-			Variant      string `json:"variant"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		if req.ExperimentID == "" || req.Variant == "" {
-			http.Error(w, "missing experiment_id or variant", http.StatusBadRequest)
-			return
-		}
-
-		err := abTestService.RecordConversion(context.Background(), req.ExperimentID, req.Variant)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Conversion recorded\n")
 	}))
 
 	mux.HandleFunc("/api/v1/growth/referrals/stats", authMiddleware(func(w http.ResponseWriter, r *http.Request) {

@@ -1,3 +1,0 @@
-mission_id: "1776335191643007360"
-status: blocked
-reason: "The mission requires modifying backend Go files and SQL migrations, which are outside the scope of the Principal UX Wizard & Onboarding Experience Engineer domain."
