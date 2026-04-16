@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+- Scaling (Cloud): Implement Hybrid Parity Stress Tests and Chaos Parity Engineering Test Suite.
+- Privacy/Offline (Standalone): Harden standalone wrapper and cleanup privacy telemetry.
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 - Scaling (Cloud): Implement Bubblewrap Sandbox Telemetry and Implement Hybrid Parity Stress Tests.
 - Privacy/Offline (Standalone): Clean up dead Linear integration and harden standalone wrapper.

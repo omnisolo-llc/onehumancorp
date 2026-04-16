@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Hybrid Parity Stress Tests and Chaos Parity Engineering Test Suite.
+
+### Privacy/Offline Improvements
+- Harden standalone wrapper and cleanup privacy telemetry.
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Bubblewrap Sandbox Telemetry.
