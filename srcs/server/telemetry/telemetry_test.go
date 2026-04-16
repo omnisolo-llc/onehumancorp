@@ -646,7 +646,7 @@ func TestInitTelemetry_PrometheusError(t *testing.T) {
 }
 
 func TestInitTelemetry_StandaloneOptOut(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
+	t.Setenv("OHC_STANDALONE", "true")
 	t.Setenv("OHC_TELEMETRY_ENABLED", "false")
 
 	// Since we mock the actual metrics if initialized in other tests,
@@ -662,7 +662,7 @@ func TestInitTelemetry_StandaloneOptOut(t *testing.T) {
 }
 
 func TestInitTelemetry_StandaloneOptIn(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
+	t.Setenv("OHC_STANDALONE", "true")
 	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
 
 	originalReg := prometheus.DefaultRegisterer
