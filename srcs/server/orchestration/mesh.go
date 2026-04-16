@@ -48,6 +48,7 @@ var (
 // LegacyTeammateMesh manages real-time pub/sub for agents
 type LegacyTeammateMesh struct {
 	redisClient *redis.Client
+	rueidisClient rueidis.Client
 	isCloud     bool
 
 	// In-memory pub/sub for standalone mode
@@ -1189,4 +1190,61 @@ type TeammateMeshEvent struct {
 	AgentID string `json:"agent_id"`
 	Action  string `json:"action"`
 	Status  string `json:"status"`
+}
+
+
+func (m *LegacyTeammateMesh) BroadcastEvent(ctx context.Context, channel string, payload []byte) error {
+	if m.rueidisClient != nil {
+		err := m.rueidisClient.Do(ctx, m.rueidisClient.B().Publish().Channel(channel).Message(string(payload)).Build()).Error()
+		if err != nil {
+			return fmt.Errorf("failed to broadcast to channel %s using rueidis: %w", channel, err)
+		}
+		return nil
+	} else if m.redisClient != nil {
+		err := m.redisClient.Publish(ctx, channel, string(payload)).Err()
+		if err != nil {
+			return fmt.Errorf("failed to broadcast to channel %s using go-redis: %w", channel, err)
+		}
+		return nil
+	}
+	return fmt.Errorf("no redis client configured")
+}
+
+func (m *LegacyTeammateMesh) SubscribeChannel(ctx context.Context, channel string) (<-chan []byte, error) {
+	ch := make(chan []byte)
+
+	if m.rueidisClient != nil {
+		go func() {
+			err := m.rueidisClient.Receive(ctx, m.rueidisClient.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+				if msg.Channel == channel {
+					ch <- []byte(msg.Message)
+				}
+			})
+			if err != nil && err != context.Canceled {
+				slog.Error("SubscribeChannel rueidis error", "err", err)
+			}
+			close(ch)
+		}()
+		return ch, nil
+	} else if m.redisClient != nil {
+		sub := m.redisClient.Subscribe(ctx, channel)
+		go func() {
+			defer sub.Close()
+			for {
+				select {
+				case <-ctx.Done():
+					close(ch)
+					return
+				case msg, ok := <-sub.Channel():
+					if !ok {
+						close(ch)
+						return
+					}
+					ch <- []byte(msg.Payload)
+				}
+			}
+		}()
+		return ch, nil
+	}
+	return nil, fmt.Errorf("no redis client configured")
 }

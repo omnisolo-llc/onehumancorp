@@ -254,3 +254,95 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
     return nil
 }
+
+
+func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
+    if to.dbProvider.IsSQLite() {
+        return to.claimPendingTaskSQLite(ctx)
+    }
+    return to.claimPendingTaskPostgres(ctx)
+}
+
+func (to *SharedTaskOrchestrator) claimPendingTaskSQLite(ctx context.Context) (*Task, error) {
+    if !to.mu.TryLock() {
+        to.mu.Lock()
+    }
+    defer to.mu.Unlock()
+
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer tx.Rollback(ctx)
+
+    query := `
+        SELECT id, task_name, status, locked_at, locked_by, payload, created_at, updated_at
+        FROM shared_tasks_v2
+        WHERE status = 'PENDING'
+        LIMIT 1
+    `
+    row := tx.QueryRow(ctx, query)
+
+    var task Task
+    var payloadStr *string
+    var lockedAt, createdAt, updatedAt *string
+    if err := row.Scan(&task.ID, &task.Name, &task.Status, &lockedAt, &task.LockedBy, &payloadStr, &createdAt, &updatedAt); err != nil {
+        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            return nil, nil
+        }
+        return nil, fmt.Errorf("failed to query pending task: %w", err)
+    }
+    if payloadStr != nil {
+        task.Payload = []byte(*payloadStr)
+    }
+
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS', locked_by = 'system', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID); err != nil {
+        return nil, fmt.Errorf("failed to update task status: %w", err)
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
+    }
+
+    return &task, nil
+}
+
+func (to *SharedTaskOrchestrator) claimPendingTaskPostgres(ctx context.Context) (*Task, error) {
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer tx.Rollback(ctx)
+
+    query := `
+        SELECT id, task_name, status, locked_at, locked_by, payload, created_at, updated_at
+        FROM shared_tasks_v2
+        WHERE status = 'PENDING'
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+    `
+    row := tx.QueryRow(ctx, query)
+
+    var task Task
+    var payloadStr *string
+    var lockedAt, createdAt, updatedAt *string
+    if err := row.Scan(&task.ID, &task.Name, &task.Status, &lockedAt, &task.LockedBy, &payloadStr, &createdAt, &updatedAt); err != nil {
+        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            return nil, nil
+        }
+        return nil, fmt.Errorf("failed to query pending task: %w", err)
+    }
+    if payloadStr != nil {
+        task.Payload = []byte(*payloadStr)
+    }
+
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS', locked_by = 'system', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID); err != nil {
+        return nil, fmt.Errorf("failed to update task status: %w", err)
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
+    }
+
+    return &task, nil
+}

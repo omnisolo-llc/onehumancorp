@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS shared_tasks_v2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_name VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    locked_at DATETIME,
+    locked_by VARCHAR(255),
+    payload TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS autodream_vectors (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_id VARCHAR(36) NOT NULL,
+    memory_text TEXT NOT NULL,
+    embedding BLOB,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

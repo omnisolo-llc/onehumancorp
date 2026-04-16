@@ -25,6 +25,8 @@ go_library(
         "migrations/009_llm_reason_cache.sql",
         "migrations/010_ultraplan.sql",
         "migrations/20260416030000_kairos_mesh.sql",
+        "migrations/20260416040000_kairos_orchestration.sql",
+        "migrations/20260416040000_kairos_orchestration_sqlite.sql",
         "migrations/011_autodream_sync.sql",
         "migrations/012_hybrid_rag_mission.sql",
         "migrations/013_shared_tasks.sql",

@@ -186,3 +186,42 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
     }
 }
+
+
+func TestClaimPendingTask_SQLite(t *testing.T) {
+	provider, err := db.NewSQLiteProvider(":memory:")
+	require.NoError(t, err)
+
+	_, err = provider.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS shared_tasks_v2 (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			task_name VARCHAR(255) NOT NULL,
+			status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+			locked_at DATETIME,
+			locked_by VARCHAR(255),
+			payload TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	require.NoError(t, err)
+
+	_, err = provider.Exec(context.Background(), `
+		INSERT INTO shared_tasks_v2 (task_name, payload) VALUES ('test_task_1', '{"test": "data"}');
+	`)
+	require.NoError(t, err)
+
+	orchestrator := NewSharedTaskOrchestrator(provider, nil, nil)
+
+	task, err := orchestrator.ClaimPendingTask(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, task)
+	assert.Equal(t, "test_task_1", task.Name)
+	assert.Equal(t, "IN_PROGRESS", task.Status)
+	assert.Equal(t, "system", task.LockedBy)
+	assert.Equal(t, []byte(`{"test": "data"}`), task.Payload)
+
+	task2, err := orchestrator.ClaimPendingTask(context.Background())
+	require.NoError(t, err)
+	require.Nil(t, task2)
+}

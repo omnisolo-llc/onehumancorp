@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS shared_tasks_v2 (
+    id SERIAL PRIMARY KEY,
+    task_name VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    locked_at TIMESTAMP WITH TIME ZONE,
+    locked_by VARCHAR(255),
+    payload JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE SCHEMA IF NOT EXISTS ohc_memory;
+
+CREATE TABLE IF NOT EXISTS ohc_memory.autodream_vectors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    memory_text TEXT NOT NULL,
+    embedding VECTOR(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
