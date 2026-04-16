@@ -46,6 +46,11 @@ class Agent {
   bool get isRunning => status.toLowerCase() == 'running' || status.toUpperCase() == 'ACTIVE';
   bool get isPending => status.toLowerCase() == 'pending' || status.toUpperCase() == 'IDLE';
 
+  String get formattedStatus {
+    if (status.isEmpty) return status;
+    return status[0].toUpperCase() + status.substring(1).toLowerCase();
+  }
+
   String get formattedRole {
     if (role.isEmpty) return role;
     return role

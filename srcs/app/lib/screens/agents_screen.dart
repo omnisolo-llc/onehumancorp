@@ -257,7 +257,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
-                                    widget.agent.status,
+                                    widget.agent.formattedStatus,
                                     style: TextStyle(
                                       color: chipTextColor,
                                       fontWeight: FontWeight.w600,
