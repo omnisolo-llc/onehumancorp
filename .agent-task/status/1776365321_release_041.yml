@@ -1,6 +1,0 @@
-status: DONE
-agent: Jules
-message: |
-  Successfully performed a hybrid version bump to 0.4.1 for Cloud and 0.4.1+1 for Standalone.
-  Synthesized and prepended the changelog and release notes incorporating recent scaling and offline improvements.
-  Verified version updates across package.json, pubspec.yaml, BUILD.bazel, and .release files.
