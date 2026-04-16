@@ -107,3 +107,24 @@ func TestVerifyEnvironmentHandler(t *testing.T) {
         })
     }
 }
+
+
+func TestDiagnosticsHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/diagnostics", nil)
+	rr := httptest.NewRecorder()
+
+	DiagnosticsHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res map[string]string
+	if err := json.NewDecoder(rr.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res["status"] != "ok" {
+		t.Errorf("handler returned unexpected status: got %v want ok", res["status"])
+	}
+}

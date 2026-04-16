@@ -1,0 +1,3 @@
+mission_id: "2026-04-16T01-57-00Z"
+status: blocked
+reason: "The mission requires creating a sync escalator daemon under srcs/server/services/sync/, which is outside the scope of the Principal UX Wizard & Onboarding Experience Engineer domain."

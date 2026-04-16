@@ -1,0 +1,3 @@
+mission_id: "2026-04-16T05-24-39Z"
+status: blocked
+reason: "The mission requires implementing KAIROS Hybrid Orchestration database migrations in srcs/server/db/migrations and mesh logic in srcs/server/orchestration, which are outside the scope of the Principal UX Wizard & Onboarding Experience Engineer domain."
