@@ -756,7 +756,7 @@ func TestInvokeMCPToolJira(t *testing.T) {
 	// Jira success
 	req := mcpInvokeRequest{
 		ToolID: "jira-mcp",
-		Params: json.RawMessage(`{"project": "test-project", "title": "test-title"}`),
+		Params: json.RawMessage(`{"integrationId": "jira", "project": "test-project", "title": "test-title"}`),
 	}
 	res, err := app.invokeMCPTool(req)
 	if err != nil {
