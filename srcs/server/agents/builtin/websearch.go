@@ -102,10 +102,6 @@ func duckDuckGoSearch(ctx context.Context, query string, numResults int) (string
 			break
 		}
 		rawURL := strings.TrimSpace(m[1])
-		// handle relative duckduckgo urls if any
-		if strings.HasPrefix(rawURL, "/") {
-			rawURL = "https://duckduckgo.com" + rawURL
-		}
 		title := strings.TrimSpace(reHTMLTag.ReplaceAllString(m[2], ""))
 		title = reMultiSpace.ReplaceAllString(title, " ")
 		if title == "" || rawURL == "" || seen[rawURL] {

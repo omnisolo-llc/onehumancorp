@@ -19,34 +19,22 @@ if [ -z "$agent_name" ]; then
     echo -e "${PURPLE}Name cannot be empty. Aborting.${RESET}"
     exit 1
 fi
-echo -e "
-${BOLD}Available Roles:${RESET}"
+echo -e "\n${BOLD}Available Roles:${RESET}"
 echo -e "  1) Software Engineer"
 echo -e "  2) QA Automation"
 echo -e "  3) SRE/DevOps"
 echo -e "  4) Data Analyst"
-if [ -n "$DEFAULT_ROLE_CHOICE" ]; then
-    role_choice=$DEFAULT_ROLE_CHOICE
-    echo -e "${DIM}[Auto-selected role: $role_choice]${RESET}"
-else
-    read -p "Select a role [1-4] (default: 1): " role_choice
-fi
+read -p "Select a role [1-4] (default: 1): " role_choice
 agent_role="Software Engineer"
 case $role_choice in
     2) agent_role="QA Automation" ;;
     3) agent_role="SRE/DevOps" ;;
     4) agent_role="Data Analyst" ;;
 esac
-echo -e "
-${BOLD}Provider Type:${RESET}"
+echo -e "\n${BOLD}Provider Type:${RESET}"
 echo -e "  1) Cloud (OpenAI/Anthropic)"
 echo -e "  2) Local (Standalone)"
-if [ -n "$DEFAULT_PROVIDER_CHOICE" ]; then
-    provider_choice=$DEFAULT_PROVIDER_CHOICE
-    echo -e "${DIM}[Auto-selected provider: $provider_choice]${RESET}"
-else
-    read -p "Select a provider type [1-2] (default: 1): " provider_choice
-fi
+read -p "Select a provider type [1-2] (default: 1): " provider_choice
 provider_type="cloud"
 if [ "$provider_choice" == "2" ]; then
     provider_type="local"

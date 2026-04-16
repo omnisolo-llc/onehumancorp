@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "harness",
+    srcs = ["harness.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/harness",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@io_opentelemetry_go_otel//attribute",
+    ],
+)
+
+go_test(
+    name = "harness_test",
+    srcs = ["harness_test.go"],
+    embed = [":harness"],
+)
