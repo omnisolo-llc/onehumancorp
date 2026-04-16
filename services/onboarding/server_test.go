@@ -191,3 +191,34 @@ func TestAuditSetupHandler(t *testing.T) {
         })
     }
 }
+
+func TestDiagnosticsHandler(t *testing.T) {
+	t.Setenv("OHC_SOURCE_MODE", "standalone")
+
+	wizardMu.Lock()
+	wizardState = map[string]interface{}{"step": float64(3), "status": "completed"}
+	wizardMu.Unlock()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/diagnostics", nil)
+	rr := httptest.NewRecorder()
+	DiagnosticsHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res DiagnosticsResponse
+	if err := json.NewDecoder(rr.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.Status != "success" {
+		t.Errorf("expected status 'success', got '%v'", res.Status)
+	}
+	if res.Config == nil || res.Config.Mode != "standalone" {
+		t.Errorf("expected config mode 'standalone', got '%v'", res.Config)
+	}
+	if res.Wizard["step"] != float64(3) {
+		t.Errorf("expected wizard step 3, got '%v'", res.Wizard["step"])
+	}
+}
