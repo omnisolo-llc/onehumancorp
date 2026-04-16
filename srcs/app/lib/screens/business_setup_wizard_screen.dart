@@ -67,26 +67,12 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   BusinessSetupState build() => const BusinessSetupState();
 
   void nextStep() {
-    state = state.copyWith(errorMessage: null);
-    if (state.step == 1) {
-      if (state.companyName.trim().isEmpty || state.industry.trim().isEmpty) {
-        state = state.copyWith(errorMessage: 'Please fill in all fields.');
-        return;
-      }
-    } else if (state.step == 2) {
-      if (state.goals.isEmpty) {
-        state = state.copyWith(errorMessage: 'Please select at least one goal.');
-        return;
-      }
-    }
-
     if (state.step < 4) {
       state = state.copyWith(step: state.step + 1);
     }
   }
 
   void prevStep() {
-    state = state.copyWith(errorMessage: null);
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
     }
@@ -110,20 +96,6 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
-    state = state.copyWith(errorMessage: null);
-    if (state.adminName.trim().isEmpty || state.adminEmail.trim().isEmpty || state.adminPassword.trim().isEmpty) {
-      state = state.copyWith(errorMessage: 'Please fill in all fields.');
-      return;
-    }
-    if (!state.adminEmail.contains('@')) {
-      state = state.copyWith(errorMessage: 'Please enter a valid email address.');
-      return;
-    }
-    if (state.adminPassword.length < 8) {
-      state = state.copyWith(errorMessage: 'Password must be at least 8 characters long.');
-      return;
-    }
-
     final user = ref.read(authStateProvider).valueOrNull;
     final baseUrl = ref.read(backendUrlProvider);
 
@@ -216,16 +188,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     transitionBuilder: (Widget child, Animation<double> animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.0, 0.05),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
+                      return FadeTransition(opacity: animation, child: child);
                     },
                     child: Container(
                       key: ValueKey<int>(state.step),

@@ -1,4 +1,0 @@
-status: DONE
-agent: Bolt
-title: "[backend] Implement Advanced Bubblewrap Hybrid Agent Harness"
-details: "Successfully implemented srcs/server/harness using bwrap sandboxing and httputil proxying. Integrated OpenTelemetry metric counting and span tracing context."
