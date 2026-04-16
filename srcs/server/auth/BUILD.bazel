@@ -16,7 +16,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//srcs/server/lib/crypto",
         "@org_golang_x_crypto//bcrypt",
     ],
 )

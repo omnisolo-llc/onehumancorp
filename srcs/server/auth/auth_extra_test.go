@@ -28,8 +28,8 @@ func TestOrganizationIDFromContext(t *testing.T) {
 func TestHandleUser_PutError(t *testing.T) {
 	store := NewStore()
 	h := NewHandlers(store)
-	u1, _ := store.CreateUser(context.Background(), "u1", "u1@test.com", "password", []string{})
-	store.CreateUser(context.Background(), "u2", "u2@test.com", "password", []string{})
+	u1, _ := store.CreateUser("u1", "u1@test.com", "password", []string{})
+	store.CreateUser("u2", "u2@test.com", "password", []string{})
 
 	reqBody := `{"email": "u2@test.com"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/auth/users/"+u1.ID, bytes.NewBufferString(reqBody))
@@ -98,7 +98,7 @@ func TestHandleUsers_InvalidJSON(t *testing.T) {
 func TestHandleUser_InvalidJSON(t *testing.T) {
 	store := NewStore()
 	h := NewHandlers(store)
-	u, _ := store.CreateUser(context.Background(), "u1", "u1@test.com", "password", []string{})
+	u, _ := store.CreateUser("u1", "u1@test.com", "password", []string{})
 
 	req := httptest.NewRequest(http.MethodPut, "/api/auth/users/"+u.ID, bytes.NewBufferString("{invalid"))
 	req.SetPathValue("id", u.ID)
@@ -174,7 +174,7 @@ func TestHandleRoles_MethodNotAllowed(t *testing.T) {
 }
 func TestStoreCreateUser_ShortPassword(t *testing.T) {
 	s := NewStore()
-	_, err := s.CreateUser(context.Background(), "test1", "test1@test.com", "short", nil)
+	_, err := s.CreateUser("test1", "test1@test.com", "short", nil)
 	if err == nil || err.Error() != "password must be at least 6 characters" {
 		t.Errorf("expected short password error, got %v", err)
 	}
@@ -182,9 +182,9 @@ func TestStoreCreateUser_ShortPassword(t *testing.T) {
 
 func TestStoreGetOrCreateOIDCUser_Fallback(t *testing.T) {
 	s := NewStore()
-	s.CreateUser(context.Background(), "fallback1", "fallback1@test.com", "password", nil)
+	s.CreateUser("fallback1", "fallback1@test.com", "password", nil)
 
-	u := s.GetOrCreateOIDCUser(context.Background(), "sub123", "fallback1@test.com", "fallback1")
+	u := s.GetOrCreateOIDCUser("sub123", "fallback1@test.com", "fallback1")
 	if u.OIDCSubject != "sub123" {
 		t.Errorf("expected sub123, got %s", u.OIDCSubject)
 	}

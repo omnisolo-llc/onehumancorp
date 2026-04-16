@@ -7,8 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//srcs/server/orchestration/kairos",
-        "@com_github_prometheus_client_golang//prometheus",
     ],
 )
 

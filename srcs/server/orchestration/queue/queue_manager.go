@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
-	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -69,9 +67,6 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 		job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes),
 		"QUEUED", job.CreatedAt, job.UpdatedAt,
 	)
-	if err == nil {
-		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Inc()
-	}
 	return err
 }
 
@@ -125,7 +120,6 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		}
 
 		json.Unmarshal([]byte(payloadStr), &j.Payload)
-		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Dec()
 		return &j, nil
 	} else {
 		// Postgres mode
@@ -165,7 +159,6 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		j.UpdatedAt = updatedAt
 
 		json.Unmarshal([]byte(payloadStr), &j.Payload)
-		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Dec()
 		return &j, nil
 	}
 }

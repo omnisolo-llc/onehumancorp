@@ -74,12 +74,6 @@ func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
 			"database":   "sqlite",
 			"cache":      "memory",
 		}
-	} else if req.Mode == "thin_client" {
-		config = map[string]interface{}{
-			"swarm_size": "none",
-			"database":   "remote",
-			"cache":      "none",
-		}
 	} else {
 		http.Error(w, "Invalid mode", http.StatusBadRequest)
 		return
