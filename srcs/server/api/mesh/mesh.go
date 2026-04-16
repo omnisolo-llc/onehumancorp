@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
+	"io"
+		"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"
@@ -154,15 +155,26 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Intent string `json:"intent"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// Fallback to parse either old payload or new KAIROS payload
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.BroadcastIntent(r.Context(), req.Intent); err != nil {
+	var req struct {
+		Intent string `json:"intent"`
+	}
+	var intentStr string
+
+	if err := json.Unmarshal(bodyBytes, &req); err == nil && req.Intent != "" {
+		intentStr = req.Intent
+	} else {
+		// New KAIROS Payload
+		intentStr = string(bodyBytes)
+	}
+
+	if err := h.Service.BroadcastIntent(r.Context(), intentStr); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to broadcast: %v", err), http.StatusInternalServerError)
 		return
 	}
