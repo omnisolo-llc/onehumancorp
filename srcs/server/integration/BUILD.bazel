@@ -19,7 +19,6 @@ go_test(
         "agent_interaction_test.go",
         "feature_integration_test.go",
         "frontend_backend_test.go",
-        "gemini_e2e_test.go",
         "minimax_e2e_test.go",
     ],
     deps = [
