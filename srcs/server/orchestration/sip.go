@@ -95,11 +95,6 @@ func releaseThrottle() {
 
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
-	if err := acquireThrottle(ctx); err != nil {
-		return err
-	}
-	defer releaseThrottle()
-
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = op()
@@ -587,6 +582,11 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
+
 	_ = CheckDocumentationGate(task.Content)
 
 	if s.ContextRoot != "" {
