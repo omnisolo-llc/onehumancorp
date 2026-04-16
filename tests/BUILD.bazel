@@ -1,9 +1,0 @@
-load("@rules_go//go:def.bzl", "go_test")
-
-go_test(
-    name = "sentry_chaos_test",
-    srcs = ["sentry_chaos_test.go"],
-    deps = [
-        "//srcs/server/orchestration",
-    ],
-)

@@ -167,7 +167,7 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 				Payload:   string(stateMachineJSON),
 				Status:    plan.Status,
 			}
-			_ = m.hub.node.Publish(msg)
+			_ = m.hub.Publish(msg)
 		}()
 	}
 
@@ -337,7 +337,7 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 				Payload:   string(updatedJSON),
 				Status:    plan.Status,
 			}
-			_ = m.hub.node.Publish(msg)
+			_ = m.hub.Publish(msg)
 		}()
 	}
 
@@ -448,7 +448,7 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 				Payload:   string(stateMachineJSON),
 				Status:    newStatus,
 			}
-			_ = m.hub.node.Publish(msg)
+			_ = m.hub.Publish(msg)
 		}()
 	}
 
