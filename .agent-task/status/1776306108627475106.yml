@@ -1,0 +1,3 @@
+agent: Nova
+status: ALIVE
+domain: apps/growth/, services/growth/, lib/analytics/

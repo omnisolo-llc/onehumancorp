@@ -11,6 +11,7 @@ var (
 	inviteAcceptedCounter metric.Int64Counter
 	abTestImpressionCounter metric.Int64Counter
 	abTestConversionCounter metric.Int64Counter
+	quotaExceededCounter    metric.Int64Counter
 )
 
 func init() {
@@ -32,6 +33,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	quotaExceededCounter, err = meter.Int64Counter("growth_quota_exceeded_total")
+	if err != nil {
+		panic(err)
+	}
 }
 
 type Tracker struct {
@@ -50,5 +55,7 @@ func (t *Tracker) TrackEvent(ctx context.Context, name string, props map[string]
 		abTestImpressionCounter.Add(ctx, 1)
 	} else if name == "ab_test_conversion" && abTestConversionCounter != nil {
 		abTestConversionCounter.Add(ctx, 1)
+	} else if name == "quota_exceeded" && quotaExceededCounter != nil {
+		quotaExceededCounter.Add(ctx, 1)
 	}
 }
