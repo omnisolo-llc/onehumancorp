@@ -4,7 +4,7 @@
 // TaskAssignment messages, and executes each task using the full local agent
 // loop (LLM + tool execution). It is selected as the default implementation
 // when an agent has ProviderType == "" or "builtin".
-package local
+package builtin
 
 import (
 "context"
