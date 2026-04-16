@@ -22,6 +22,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/api",
+        "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/api/mesh",
         "//srcs/server/orchestration/mesh",
         "//srcs/server/services/growth",
@@ -62,6 +63,7 @@ go_test(
     embed = [":dashboard"],
     deps = [
         "//srcs/server/api",
+        "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/api/mesh",
         "//srcs/server/orchestration/mesh",
         "//srcs/server/services/growth",
