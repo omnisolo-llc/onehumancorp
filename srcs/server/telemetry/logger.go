@@ -52,6 +52,15 @@ func (h *PIIRedactingHandler) WithGroup(name string) slog.Handler {
 }
 
 func redactAttr(a slog.Attr) slog.Attr {
+	if a.Value.Kind() == slog.KindGroup {
+		attrs := a.Value.Group()
+		var newAttrs []any
+		for _, attr := range attrs {
+			newAttrs = append(newAttrs, redactAttr(attr))
+		}
+		return slog.Group(a.Key, newAttrs...)
+	}
+
 	val := a.Value.Any()
 	if val == nil {
 		return a
