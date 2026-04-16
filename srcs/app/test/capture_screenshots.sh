@@ -169,9 +169,54 @@ export PLAYWRIGHT_BASE_URL="http://127.0.0.1:${port}"
 export APP_SCREENSHOT_OUTPUT_DIR="${output_root}"
 
 mkdir -p \
-  "${output_root}/landing-page"
+  "${output_root}/landing-page" \
+  "${output_root}/login" \
+  "${output_root}/dashboard" \
+  "${output_root}/agents" \
+  "${output_root}/agent-hire-wizard" \
+  "${output_root}/prompt-tuning-wizard" \
+  "${output_root}/meetings" \
+  "${output_root}/chat" \
+  "${output_root}/channels" \
+  "${output_root}/ai-providers" \
+  "${output_root}/skills" \
+  "${output_root}/logs" \
+  "${output_root}/security" \
+  "${output_root}/settings" \
+  "${output_root}/service-management" \
+  "${output_root}/setup-wizard" \
+  "${output_root}/diagnostics" \
+  "${output_root}/business-setup-wizard" \
+  "${output_root}/handoffs" \
+  "${output_root}/cost-dashboard" \
+  "${output_root}/dynamic-scaling" \
+  "${output_root}/pipelines" \
+  "${output_root}/integrations" \
+  "${output_root}/user-management" \
+  "${output_root}/fix-wizard" \
+  "${output_root}/upgrade-wizard" \
+  "${output_root}/billing-wizard" \
+  "${output_root}/task-list" \
+  "${output_root}/swarm-memory" \
+  "${output_root}/growth-experiments" \
+  "${output_root}/referrals"
 
-python3 -m http.server "${port}" --directory "${web_artifacts}" >/dev/null 2>&1 &
+# Start a SPA-aware HTTP server (serves index.html for all non-asset paths
+# so Flutter's HTML5 history routing works correctly).
+python3 -c "
+import http.server, os, sys
+port = int(sys.argv[1])
+directory = sys.argv[2]
+class H(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        p = self.translate_path(self.path)
+        if not os.path.isfile(p):
+            self.path = '/index.html'
+        return super().do_GET()
+    def log_message(self, *a): pass
+os.chdir(directory)
+with http.server.HTTPServer(('', port), H) as s: s.serve_forever()
+" "${port}" "${web_artifacts}" >/dev/null 2>&1 &
 server_pid=$!
 trap 'kill "${server_pid}" 2>/dev/null || true; rm -rf "${work_tmp}"' EXIT
 
