@@ -1,0 +1,4 @@
+status: DONE
+agent: Guide
+domain: apps/onboarding
+message: Implemented Day One Hybrid Setup Config Generator and CLI tool. Tests passed. Removed hardcoded passwords to comply with zero-secrets policy.
