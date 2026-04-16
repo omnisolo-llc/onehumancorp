@@ -30,6 +30,8 @@ import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/orchestration/kairos_dashboard.dart';
+
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +60,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
           ),
+          GoRoute(
+            path: '/orchestration/kairos',
+            builder: (context, state) => const KairosDashboardScreen(),
+          ),
+
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
@@ -207,6 +214,11 @@ class _Sidebar extends StatelessWidget {
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
+        _NavItem(
+          icon: Icons.hub,
+          label: 'KAIROS Orchestration',
+          path: '/orchestration/kairos',
+        ),
         _NavItem(
           icon: Icons.checklist,
           label: 'Shared Tasks',
