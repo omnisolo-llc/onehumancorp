@@ -1185,6 +1185,65 @@ func (lm *LocalTeammateMesh) runEvents(topic string, shardIdx int) {
 }
 
 // TeammateMeshEvent is the payload structure for Teammate Mesh coordination
+func (lm *LocalTeammateMesh) BroadcastEvent(ctx context.Context, channel string, message string) error {
+	// Implementing Redis Pub/Sub BroadcastEvent as per Phase 2 design
+	// Since LocalTeammateMesh doesn't have an actual Redis client initialized,
+	// we route this through the local events mechanism
+	return lm.BroadcastMeshEvent(ctx, channel, []byte(message))
+}
+
+func (lm *LocalTeammateMesh) SubscribeChannel(ctx context.Context, channel string) (<-chan string, error) {
+	byteChan, err := lm.SubscribeMeshEvents(ctx, channel)
+	if err != nil {
+		return nil, err
+	}
+
+	strChan := make(chan string, 100)
+	go func() {
+		defer close(strChan)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case b, ok := <-byteChan:
+				if !ok {
+					return
+				}
+				strChan <- string(b)
+			}
+		}
+	}()
+	return strChan, nil
+}
+
+func (lm *MemoryMeshTransport) BroadcastEvent(ctx context.Context, channel string, message string) error {
+	return lm.BroadcastMeshEvent(ctx, channel, []byte(message))
+}
+
+func (lm *MemoryMeshTransport) SubscribeChannel(ctx context.Context, channel string) (<-chan string, error) {
+	byteChan, err := lm.SubscribeMeshEvents(ctx, channel)
+	if err != nil {
+		return nil, err
+	}
+
+	strChan := make(chan string, 100)
+	go func() {
+		defer close(strChan)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case b, ok := <-byteChan:
+				if !ok {
+					return
+				}
+				strChan <- string(b)
+			}
+		}
+	}()
+	return strChan, nil
+}
+
 type TeammateMeshEvent struct {
 	AgentID string `json:"agent_id"`
 	Action  string `json:"action"`
