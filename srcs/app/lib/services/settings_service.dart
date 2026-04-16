@@ -44,17 +44,23 @@ final clientSettingsProvider =
     });
 
 class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
-  final Ref _ref;
+  final Ref? _ref;
   static const _key = 'client_settings';
 
-  ClientSettingsNotifier(this._ref) : super(const AsyncLoading()) {
+  ClientSettingsNotifier(Ref ref) : _ref = ref, super(const AsyncLoading()) {
     _load();
   }
 
+  /// Creates a notifier with a pre-loaded value (useful for testing).
+  ClientSettingsNotifier.fromValue(ClientSettings settings)
+      : _ref = null,
+        super(AsyncData(settings));
+
   Future<void> _load() async {
+    if (_ref == null) return; // fromValue constructor; already pre-loaded
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final prefs = await _ref.watch(_prefsProvider.future);
+      final prefs = await _ref!.watch(_prefsProvider.future);
       final json = prefs.getString(_key);
       if (json == null) {
         // Check environment variable if web/desktop supports it via string.fromEnvironment
@@ -90,9 +96,10 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
   }
 
   Future<void> _save() async {
+    if (_ref == null) return; // fromValue constructor; no persistence
     final current = state.valueOrNull;
     if (current == null) return;
-    final prefs = await _ref.read(_prefsProvider.future);
+    final prefs = await _ref!.read(_prefsProvider.future);
     await prefs.setString(_key, jsonEncode(current.toJson()));
   }
 }

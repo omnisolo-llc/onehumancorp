@@ -129,7 +129,7 @@ func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
 
 	// Update TaskStateMachine
 	if s.tm != nil && s.tm.stateMachine != nil {
-		_ = s.tm.stateMachine.ProcessEvent(context.Background(), task.ID, EventSubTaskFailed)
+		_ = s.tm.stateMachine.Fire(context.Background(), task.ID, EventSubTaskFailed)
 	}
 
 	// Emit SUB_AGENT_FAILED event
@@ -154,7 +154,7 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 
 	if len(task.Payload) > 0 {
 		var payload map[string]interface{}
-		if err := json.Unmarshal(task.Payload, &payload); err == nil {
+		if err := json.Unmarshal([]byte(task.Payload), &payload); err == nil {
 			if v, ok := payload["sub_agent_type"].(string); ok {
 				subAgentType = v
 			}
@@ -193,7 +193,7 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 
 	// Update TaskStateMachine
 	if s.tm != nil && s.tm.stateMachine != nil {
-		_ = s.tm.stateMachine.ProcessEvent(context.Background(), task.ID, EventSubTaskCompleted)
+		_ = s.tm.stateMachine.Fire(context.Background(), task.ID, EventSubTaskCompleted)
 	}
 
 	// Emit SUB_AGENT_COMPLETED event
