@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"fmt"
+
     "context"
     "testing"
 
@@ -11,7 +13,7 @@ import (
 
 func TestClaimTask_SQLite(t *testing.T) {
     telemetry.InitTelemetry()
-    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    dbProvider, err := db.NewSqliteProvider(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
     if err != nil {
         t.Fatalf("failed to create sqlite provider: %v", err)
     }
@@ -112,7 +114,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 func TestClaimTask_Postgres(t *testing.T) {
     telemetry.InitTelemetry()
-    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    dbProvider, err := db.NewSqliteProvider(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
     if err != nil {
         t.Fatalf("failed to create sqlite provider: %v", err)
     }

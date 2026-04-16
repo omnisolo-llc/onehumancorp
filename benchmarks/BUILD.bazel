@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "benchmarks_test",
-    srcs = ["hybrid_benchmark_test.go"],
+    srcs = ["hybrid_benchmark_test.go", "mesh_benchmark_test.go"],
     deps = [
         "//srcs/server/db",
         "//srcs/server/orchestration",
