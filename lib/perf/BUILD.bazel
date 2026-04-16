@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "perf",
+    srcs = ["worker.go"],
+    importpath = "github.com/onehumancorp/mono/lib/perf",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "perf_test",
+    srcs = ["worker_test.go"],
+    embed = [":perf"],
+)
