@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp_sync",
+    srcs = ["proxy.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcp_sync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "mcp_sync_test",
+    srcs = ["proxy_test.go"],
+    embed = [":mcp_sync"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
