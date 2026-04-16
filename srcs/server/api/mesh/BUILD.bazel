@@ -2,25 +2,43 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mesh",
-    srcs = ["mesh.go", "middleware.go"],
+    srcs = [
+        "grpc_service.go",
+        "mesh.go",
+        "middleware.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api/mesh",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/api/proto:teammate_mesh_go_proto",
         "//srcs/server/auth",
+        "//srcs/server/orchestration/mesh",
+        "@com_github_gorilla_websocket//:websocket",
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
-        "@io_opentelemetry_go_otel_metric//:metric",
-        "@com_github_gorilla_websocket//:websocket",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
     ],
 )
 
 go_test(
     name = "mesh_test",
-    srcs = ["mesh_test.go", "middleware_test.go"],
+    srcs = [
+        "grpc_service_test.go",
+        "mesh_test.go",
+        "middleware_test.go",
+    ],
     embed = [":mesh"],
     deps = [
+        "//srcs/server/api/proto:teammate_mesh_go_proto",
         "//srcs/server/auth",
-        "@io_opentelemetry_go_otel_metric//noop",
+        "//srcs/server/orchestration/mesh",
         "@com_github_gorilla_websocket//:websocket",
+        "@com_github_redis_rueidis//:rueidis",
+        "@io_opentelemetry_go_otel_metric//noop",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
     ],
 )

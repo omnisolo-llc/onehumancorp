@@ -1,0 +1,4 @@
+Implement Teammate Mesh Coordination API
+
+This PR implements the Teammate Mesh API per docs/architecture/kairos_shared_task_mesh_orchestration_design.md.
+It adds the Protocol Buffers definition in srcs/server/api/proto/teammate_mesh.proto and provides a complete implementation of CoordinationService in srcs/server/api/mesh/grpc_service.go mapping back to the underlying mesh functionality to handle lock acquisitions, releases, and agent state streaming.
