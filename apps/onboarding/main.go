@@ -23,5 +23,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Day One Environment Verification Passed!\nMode: %s\nMultiTenant: %v\nHeadless: %v\n", config.Mode, config.MultiTenant, config.Headless)
+	fmt.Printf("Day One Environment Verification Passed!\nMode: %s\nMultiTenant: %v\nHeadless: %v\nDatabaseURL: %s\nRedisURL: %s\n", config.Mode, config.MultiTenant, config.Headless, config.DatabaseURL, config.RedisURL)
 }
