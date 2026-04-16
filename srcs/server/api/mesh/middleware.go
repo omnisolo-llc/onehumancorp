@@ -9,10 +9,11 @@ import (
 
 // meshPayload is used to verify OHC-SIP compliance.
 type meshPayload struct {
-	AgentID   *string         `json:"agent_id"`
-	Channel   *string         `json:"channel"`
-	EventType *string         `json:"event_type"`
-	Data      json.RawMessage `json:"data"`
+	AgentID   *string `json:"agent_id"`
+	Channel   *string `json:"channel"`
+	EventType *string `json:"event_type"`
+	Action    *string `json:"action"`
+	Status    *string `json:"status"`
 }
 
 // ValidationMiddleware enforces OHC-SIP compliance for Teammate Mesh unified gateway requests.
@@ -40,7 +41,7 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if payload.AgentID == nil || payload.Channel == nil || payload.EventType == nil || payload.Data == nil || string(payload.Data) == "null" {
+		if payload.AgentID == nil || (payload.Action == nil && payload.EventType == nil) || (payload.Status == nil && payload.Channel == nil) {
 			http.Error(w, "OHC-SIP compliance failed: missing required payload fields", http.StatusBadRequest)
 			return
 		}
