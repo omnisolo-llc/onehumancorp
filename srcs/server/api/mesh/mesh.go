@@ -45,7 +45,15 @@ func (s *RedisMeshService) BroadcastIntent(ctx context.Context, intent string) e
 
 	broadcastCount.Add(ctx, 1)
 
-	cmd := s.client.B().Publish().Channel(s.channel).Message(intent).Build()
+	var req struct {
+		Channel string `json:"channel"`
+	}
+	ch := s.channel
+	if err := json.Unmarshal([]byte(intent), &req); err == nil && req.Channel != "" {
+		ch = req.Channel
+	}
+
+	cmd := s.client.B().Publish().Channel(ch).Message(intent).Build()
 	return s.client.Do(ctx, cmd).Error()
 }
 
