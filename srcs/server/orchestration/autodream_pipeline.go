@@ -2,7 +2,6 @@ package orchestration
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -13,11 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"net/http"
-	"bytes"
 )
 
 // EmbeddingClient interface for dependency injection and testing
@@ -141,33 +135,16 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 		memID := missionID
 
-		isDuplicate := false
-		if !p.db.IsSQLite() && embeddingStr != "[0.0, 0.0, 0.0]" {
-			// Check for cosine similarity distance <= 0.1
-			var distance float64
-			query := `SELECT embedding <=> $1::vector FROM autodream_memories ORDER BY embedding <=> $1::vector LIMIT 1`
-			err := p.db.QueryRow(ctx, query, embeddingStr).Scan(&distance)
-			if err == nil && distance <= 0.1 {
-				isDuplicate = true
-				slog.Debug("AutoDreamPipeline: skipping duplicate memory", "id", memID, "distance", distance)
-			}
-		}
-
-		if isDuplicate {
-			os.Remove(file)
-			continue
-		}
-
 		if p.db.IsSQLite() {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
 				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
 			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
 		} else {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
 				VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
 				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 			`
@@ -179,74 +156,8 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		} else {
 			slog.Debug("AutoDreamPipeline: consolidated memory", "id", memID)
 			os.Remove(file)
-			if telemetry.AutoDreamMemoriesIngestedCounter != nil {
-				telemetry.AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("agent_id", "auto-dream-pipeline")))
-			}
 		}
 	}
 
 	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(matches))
-}
-
-// Sync pushes local memories to the cloud pgvector store.
-func (p *AutoDreamPipeline) Sync(ctx context.Context, cloudEndpoint string) error {
-	if cloudEndpoint == "" {
-		return nil
-	}
-
-	// Fetch un-synced memories (for simplicity, we'll fetch recently created ones or all if not tracked.
-	// But let's fetch everything since this is an escalation push, or just recent ones.)
-	// The problem doesn't specify which ones, just "export local memories to the cloud endpoint".
-	query := "SELECT id, content, embedding FROM autodream_memories LIMIT 100"
-	rows, err := p.db.Query(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	type SyncPayload struct {
-		ID        string `json:"id"`
-		Content   string `json:"content"`
-		Embedding string `json:"embedding"`
-	}
-
-	var payloads []SyncPayload
-	for rows.Next() {
-		var p SyncPayload
-		if err := rows.Scan(&p.ID, &p.Content, &p.Embedding); err == nil {
-			payloads = append(payloads, p)
-		}
-	}
-
-	if len(payloads) == 0 {
-		return nil
-	}
-
-	jsonData, err := json.Marshal(payloads)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cloudEndpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
-		req.Header.Set("Authorization", "Bearer "+spiffeToken)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return nil
 }
