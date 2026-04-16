@@ -4,8 +4,14 @@ import (
   "fmt"
   "math"
   "sync"
-  "ohc/lib/pricing/token_calculator"
+  "github.com/onehumancorp/mono/lib/pricing/token_calculator"
 )
+type StorageEvent struct {
+	AgentID         string
+	OriginalBytes   int64
+	CompressedBytes int64
+}
+
 type AuditEvent struct {
   AgentID              string
   InputTokens          int
@@ -19,6 +25,8 @@ type CostAuditor struct {
   agentCosts     map[string]float64
   totalCost      float64
   cachingSavings float64
+	storageSavings float64
+	totalSavedBytes int64
 }
 func NewCostAuditor(config token_calculator.CostConfig) *CostAuditor {
   return &CostAuditor{
@@ -43,6 +51,27 @@ func (a *CostAuditor) RecordCacheHit(ctx context.Context, event AuditEvent) floa
   a.cachingSavings += savedCost
   return savedCost
 }
+
+func (a *CostAuditor) RecordStorageCompression(ctx context.Context, event StorageEvent) float64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	savings := token_calculator.CalculateStorageSavings(event.OriginalBytes, event.CompressedBytes, a.config)
+	a.storageSavings += savings
+
+	if event.OriginalBytes > event.CompressedBytes {
+		a.totalSavedBytes += (event.OriginalBytes - event.CompressedBytes)
+	}
+
+	return savings
+}
+
+func (a *CostAuditor) GetTotalStorageSavings() float64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.storageSavings
+}
+
 func (a *CostAuditor) GetAgentCost(agentID string) float64 {
   a.mu.Lock()
   defer a.mu.Unlock()
@@ -58,6 +87,7 @@ func (a *CostAuditor) GenerateReport() string {
   defer a.mu.Unlock()
   report := fmt.Sprintf("Total Cost: $%.4f\n", a.totalCost)
   report += fmt.Sprintf("Total Savings via Caching: $%.4f\n", a.cachingSavings)
+	report += fmt.Sprintf("Total Savings via Storage Compression: $%.4f (Saved: %d Bytes)\n", a.storageSavings, a.totalSavedBytes)
   report += "Agent Costs:\n"
   for agentID, cost := range a.agentCosts {
     report += fmt.Sprintf("- %s: $%.4f\n", agentID, cost)
