@@ -222,3 +222,37 @@ func TestDiagnosticsHandler(t *testing.T) {
 		t.Errorf("expected wizard step 3, got '%v'", res.Wizard["step"])
 	}
 }
+
+func TestResetWizardStateHandler(t *testing.T) {
+	reqSaveBody, _ := json.Marshal(map[string]interface{}{"step": 5, "name": "ResetCorp"})
+	reqSave := httptest.NewRequest(http.MethodPost, "/api/wizard/state/save", bytes.NewReader(reqSaveBody))
+	reqSave.Header.Set("Content-Type", "application/json")
+	rrSave := httptest.NewRecorder()
+	SaveWizardStateHandler(rrSave, reqSave)
+
+	if status := rrSave.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	reqReset := httptest.NewRequest(http.MethodPost, "/api/wizard/state/reset", nil)
+	rrReset := httptest.NewRecorder()
+	ResetWizardStateHandler(rrReset, reqReset)
+
+	if status := rrReset.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/wizard/state", nil)
+	rrGet := httptest.NewRecorder()
+	GetWizardStateHandler(rrGet, reqGet)
+
+	if status := rrGet.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res map[string]interface{}
+	json.NewDecoder(rrGet.Body).Decode(&res)
+	if len(res) != 0 {
+		t.Errorf("expected empty state, got %v", res)
+	}
+}

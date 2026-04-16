@@ -1,13 +1,13 @@
 package growth
 
 type QuotaTracker struct {
-	BaseQuota int
+	BaseQuota        int
 	BonusPerReferral int
 }
 
 func NewQuotaTracker(base int, bonus int) *QuotaTracker {
 	return &QuotaTracker{
-		BaseQuota: base,
+		BaseQuota:        base,
 		BonusPerReferral: bonus,
 	}
 }

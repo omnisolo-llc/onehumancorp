@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -38,6 +40,11 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// ExecutionEnvironment defines the interface for command execution.
+type ExecutionEnvironment interface {
+	ExecuteContext(ctx context.Context, command string, workDir string) (string, error)
 }
 
 // Sandbox defines the configuration for secure bash execution.
@@ -77,17 +84,33 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	execCount.Add(ctx, 1)
 
 	if err := s.ValidateContext(ctx, command); err != nil {
-		return "", err
+		return fmt.Sprintf("<sandbox_violations>%v</sandbox_violations>", err), err
 	}
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	cmd.Env = []string{} // Clear inherited environment explicitly to prevent secret leaks
+	// Pass through essential PATH and set HOME to isolated directory
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "PATH=") {
+			cmd.Env = append(cmd.Env, env)
+		}
+	}
+	cmd.Env = append(cmd.Env, "HOME=.agent-home/")
 	if workDir != "" {
 		cmd.Dir = workDir
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		errorCount.Add(ctx, 1)
-		return string(out), fmt.Errorf("execution failed: %w", err)
+
+		outputStr := string(out)
+		if strings.Contains(outputStr, "Operation not permitted") {
+			outputStr += "\n<sandbox_violations>Operation not permitted: sandbox boundary drop</sandbox_violations>"
+		} else if strings.Contains(outputStr, "Permission denied") {
+			outputStr += "\n<sandbox_violations>Permission denied: sandbox boundary drop</sandbox_violations>"
+		}
+
+		return outputStr, fmt.Errorf("execution failed: %w", err)
 	}
 
 	return string(out), nil
