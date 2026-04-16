@@ -41,15 +41,15 @@ update_env() {
 echo -e "${BOLD}Let's configure your Day One environment variables.${RESET}"
 echo ""
 
-# 1. Logging Level
-read -p "Log Level [info, debug, warn, error] (default: info): " log_level
-log_level=${log_level:-info}
+# 1. Logging Level (Streamlined)
+log_level=${LOG_LEVEL:-info}
 update_env "LOG_LEVEL" "$log_level"
+echo -e "${DIM}[Auto-configured Log Level: $log_level]${RESET}"
 
-# 2. HTTP Port
-read -p "HTTP Server Port (default: 8080): " port
-port=${port:-8080}
+# 2. HTTP Port (Streamlined)
+port=${PORT:-8080}
 update_env "PORT" "$port"
+echo -e "${DIM}[Auto-configured HTTP Port: $port]${RESET}"
 
 # 3. Mode configurations
 echo -e "\n${BOLD}Environment Mode Settings:${RESET}"
