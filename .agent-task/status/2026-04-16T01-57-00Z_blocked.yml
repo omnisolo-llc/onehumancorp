@@ -1,0 +1,2 @@
+status: BLOCKED
+reason: "Mission 2026-04-16T01-57-00Z.md is out of domain. Requires Go/SQLite backend changes but domain is docs/, README.md, *.md files."

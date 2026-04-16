@@ -21,3 +21,5 @@ toc:
     path: /docs/public/index.md
   - title: Archive
     path: /docs/archive/index.md
+  - title: Sync Escalator Daemon Walkthrough
+    path: /docs/walkthroughs/sync_escalator_daemon_walkthrough.md
