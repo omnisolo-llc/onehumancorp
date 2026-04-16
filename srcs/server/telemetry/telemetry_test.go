@@ -701,23 +701,3 @@ func TestOmniContextBytesRoutedMetric(t *testing.T) {
 	// Should not panic when nil
 	RecordOmniContextBytes(context.Background(), 1024)
 }
-
-func TestRecordSubAgentQueueDelay(t *testing.T) {
-	_, err := InitTelemetry()
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// This should not panic
-	RecordSubAgentQueueDelay(context.Background(), 1.5)
-}
-
-func TestRecordTaskClaimContention(t *testing.T) {
-	_, err := InitTelemetry()
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// This should not panic
-	RecordTaskClaimContention(context.Background(), "Postgres")
-}

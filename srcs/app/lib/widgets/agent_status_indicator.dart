@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class AgentStatusIndicator extends StatefulWidget {
@@ -15,8 +14,7 @@ class AgentStatusIndicator extends StatefulWidget {
   State<AgentStatusIndicator> createState() => _AgentStatusIndicatorState();
 }
 
-class _AgentStatusIndicatorState extends State<AgentStatusIndicator>
-    with SingleTickerProviderStateMixin {
+class _AgentStatusIndicatorState extends State<AgentStatusIndicator> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -27,10 +25,9 @@ class _AgentStatusIndicatorState extends State<AgentStatusIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    _animation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _animation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
     if (widget.isActive) {
       _controller.repeat(reverse: true);
     }
@@ -60,44 +57,22 @@ class _AgentStatusIndicatorState extends State<AgentStatusIndicator>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.isActive ? Colors.greenAccent : Colors.grey,
-                boxShadow:
-                    widget.isActive
-                        ? [
-                          BoxShadow(
-                            color: Colors.greenAccent.withOpacity(
-                              0.6 * _animation.value,
-                            ),
-                            blurRadius: widget.size * _animation.value,
-                            spreadRadius: widget.size * 0.5 * _animation.value,
-                          ),
-                        ]
-                        : [],
-              ),
-            ),
-            if (widget.isActive)
-              ClipOval(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                  child: Container(
-                    width: widget.size,
-                    height: widget.size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color.fromRGBO(255, 255, 255, 0.03),
-                    ),
-                  ),
-                ),
-              ),
-          ],
+        return Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.isActive ? Colors.greenAccent : Colors.grey,
+            boxShadow: widget.isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.greenAccent.withOpacity(0.6 * _animation.value),
+                      blurRadius: widget.size * _animation.value,
+                      spreadRadius: widget.size * 0.5 * _animation.value,
+                    )
+                  ]
+                : [],
+          ),
         );
       },
     );

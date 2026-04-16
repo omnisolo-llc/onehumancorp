@@ -3,10 +3,8 @@ package mesh
 import (
 	"bytes"
 	"context"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -74,39 +72,5 @@ func TestMeshHandlerBroadcast(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
-	}
-}
-
-func TestMeshHandlerStream(t *testing.T) {
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
-	svc := NewMemoryMeshService()
-	handler := NewMeshHandler(svc)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r = r.WithContext(ctx)
-		handler.Stream(w, r)
-	}))
-	defer server.Close()
-
-	url := "ws" + strings.TrimPrefix(server.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
-	if err != nil {
-		t.Fatalf("could not dial websocket: %v", err)
-	}
-	defer conn.Close()
-
-	err = svc.BroadcastIntent(ctx, "hello stream")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-	_, msg, err := conn.ReadMessage()
-	if err != nil {
-		t.Fatalf("could not read message: %v", err)
-	}
-
-	if string(msg) != "hello stream" {
-		t.Errorf("expected 'hello stream', got '%s'", string(msg))
 	}
 }

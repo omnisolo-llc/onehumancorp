@@ -72,9 +72,6 @@ func (c *OllamaClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 		Message struct {
 			Content string `json:"content"`
 		} `json:"message"`
-		PromptEvalCount int    `json:"prompt_eval_count"`
-		EvalCount       int    `json:"eval_count"`
-		DoneReason      string `json:"done_reason"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -86,10 +83,5 @@ func (c *OllamaClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 			Role:    RoleAssistant,
 			Content: result.Message.Content,
 		},
-		Usage: Usage{
-			InputTokens:  result.PromptEvalCount,
-			OutputTokens: result.EvalCount,
-		},
-		StopReason: result.DoneReason,
 	}, nil
 }

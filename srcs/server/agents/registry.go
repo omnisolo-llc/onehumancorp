@@ -60,14 +60,6 @@ func (r *Registry) Get(t ProviderType) (Provider, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	p, ok := r.providers[t]
-	if !ok {
-		// Fallback to builtin agent as default if not found
-		p, ok = r.providers[ProviderTypeBuiltin]
-		if !ok {
-			return nil, false
-		}
-		return p, true
-	}
 	return p, ok
 }
 

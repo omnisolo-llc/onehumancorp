@@ -9,7 +9,7 @@ func GetSystemPrompt() string {
 	if cwd == "" {
 		cwd = "/workspace"
 	}
-	prompt := `You are OHC Builtin Agent, an autonomous software engineer running within the One Human Corp (OHC) mono-repository.
+	return `You are OHC Builtin Agent, an autonomous software engineer running within the One Human Corp (OHC) mono-repository.
 
 <system>
   <environment>
@@ -42,13 +42,4 @@ You have access to tools: Bash, Read (file_read), Write (file_write), Edit (file
 - Do not make up file contents; read them first.
 - Do not use sudo or attempt to escape the sandbox.
 - Do not store secrets or credentials in files.`
-
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		prompt += `
-
-# Memory Fallback (Standalone Mode)
-The directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly for durable memory storage.`
-	}
-
-	return prompt
 }

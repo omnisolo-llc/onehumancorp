@@ -17,9 +17,6 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 	messages := append([]Message(nil), initialMessages...)
 	iteration := 0
 
-	budgetTracker := &BudgetTracker{}
-	totalTurnTokens := 0
-
 	for {
 		iteration++
 		if cb != nil {
@@ -48,31 +45,8 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 
 		messages = append(messages, resp.Message)
 
-		totalTurnTokens += resp.Usage.OutputTokens
-
 		if len(resp.Message.ToolCalls) == 0 {
-			// Check if we stopped due to max length and should continue under budget
-			// We check for length/max_tokens as StopReason based on standard provider outputs
-			if a.MaxTaskBudget > 0 && (resp.StopReason == "max_tokens" || resp.StopReason == "length") {
-				decision := CheckTokenBudget(budgetTracker, a.MaxTaskBudget, totalTurnTokens)
-				if decision.Action == "continue" {
-					messages = append(messages, Message{
-						Role:    RoleUser,
-						Content: decision.NudgeMessage,
-					})
-					continue
-				} else if decision.Action == "stop" && decision.Diminishing {
-					if cb != nil {
-						cb(AgentEvent{
-							Type:    AgentEventTypeTaskComplete,
-							Content: "Stopped due to token budget limit or diminishing returns.\n" + resp.Message.Content,
-						})
-					}
-					break
-				}
-			}
-
-			// No tool calls and not forced to continue — the agent produced a final response.
+			// No tool calls — the agent produced a final response.
 			if cb != nil {
 				cb(AgentEvent{
 					Type:    AgentEventTypeTaskComplete,

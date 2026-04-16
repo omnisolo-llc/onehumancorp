@@ -10,7 +10,6 @@ go_library(
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
-        "@com_github_gorilla_websocket//:websocket",
     ],
 )
 
@@ -21,6 +20,5 @@ go_test(
     deps = [
         "//srcs/server/auth",
         "@io_opentelemetry_go_otel_metric//noop",
-        "@com_github_gorilla_websocket//:websocket",
     ],
 )

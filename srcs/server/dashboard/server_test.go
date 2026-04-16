@@ -3972,9 +3972,8 @@ func TestHandleHireAgent_UnknownProviderRejected(t *testing.T) {
 		t.Fatalf("POST /api/agents/hire error: %v", err)
 	}
 	defer resp.Body.Close()
-	// Because of fallback logic to builtin, it should actually succeed and return 200
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 for unknown provider fallback to builtin, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for unknown provider, got %d", resp.StatusCode)
 	}
 }
 

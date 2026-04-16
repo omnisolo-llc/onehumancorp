@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"
@@ -133,11 +132,6 @@ func (s *MemoryMeshService) Subscribe(ctx context.Context) (<-chan string, error
 	return out, nil
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 type MeshHandler struct {
 	Service TeammateMeshService
 }
@@ -176,31 +170,21 @@ func (h *MeshHandler) Stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		// upgrader.Upgrade already replies with an error to the client
-		return
-	}
-	defer conn.Close()
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	sub, err := h.Service.Subscribe(ctx)
-	if err != nil {
-		conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Failed to subscribe: %v", err)))
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
 		return
 	}
 
-	// Start a goroutine to read from the websocket to handle client disconnects
-	go func() {
-		defer cancel()
-		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
-				break
-			}
-		}
-	}()
+	sub, err := h.Service.Subscribe(r.Context())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to subscribe: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
 
 	for {
 		select {
@@ -208,10 +192,9 @@ func (h *MeshHandler) Stream(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-				return
-			}
-		case <-ctx.Done():
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		case <-r.Context().Done():
 			return
 		}
 	}

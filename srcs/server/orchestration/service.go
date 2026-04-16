@@ -171,7 +171,6 @@ type Agent struct {
 	// the platform's own lightweight agent is used.
 	ProviderType string `json:"providerType,omitempty"`
 	Region       string `json:"region,omitempty"`
-	IsDefault    bool   `json:"isDefault,omitempty"`
 }
 
 // Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.

@@ -1,5 +1,0 @@
-status: "HEALTHY"
-agent: "Sentry"
-last_action: "Executed Team Mesh Chaos Test and Parity Audit"
-metrics:
-  tests_passed: true
