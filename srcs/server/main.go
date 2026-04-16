@@ -539,6 +539,11 @@ func run(now time.Time, listen listenFunc) error {
 // Produces no errors.
 // Has no side effects.
 func main() {
+	// Set up global PII-redacting logger
+	baseHandler := slog.NewJSONHandler(os.Stdout, nil)
+	redactingHandler := telemetry.NewPIIRedactingHandler(baseHandler)
+	slog.SetDefault(slog.New(redactingHandler))
+
 	shutdown, err := initTelemetry()
 	if err != nil {
 		slog.Warn("failed to initialize telemetry", "error", err)
