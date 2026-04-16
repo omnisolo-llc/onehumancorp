@@ -11,7 +11,7 @@ import (
 
 func newTestProvider(t *testing.T) db.Provider {
 	t.Helper()
-	d, err := sql.Open("sqlite", ":memory:")
+	d, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}
