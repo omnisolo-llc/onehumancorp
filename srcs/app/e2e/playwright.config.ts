@@ -30,7 +30,21 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Enable software-based WebGL via SwiftShader so CanvasKit renders
+        // correctly in headless environments without a physical GPU.
+        launchOptions: {
+          args: [
+            '--use-angle=swiftshader-webgl',
+            '--use-gl=angle',
+            '--disable-gpu-sandbox',
+            '--ignore-gpu-blocklist',
+            '--enable-webgl',
+            '--enable-webgl2',
+          ],
+        },
+      },
     },
   ],
   // Do NOT start any web server here – it is started by the Bazel test wrapper.

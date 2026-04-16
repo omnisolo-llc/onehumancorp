@@ -174,7 +174,19 @@ const publicScreens = [
 // Main capture loop
 // ---------------------------------------------------------------------------
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  args: [
+    // Enable software-based WebGL via SwiftShader so CanvasKit renders
+    // correctly in headless environments without a physical GPU.
+    '--use-angle=swiftshader-webgl',
+    '--use-gl=angle',
+    '--disable-gpu-sandbox',
+    '--ignore-gpu-blocklist',
+    '--enable-webgl',
+    '--enable-webgl2',
+  ],
+});
 
 try {
   for (const profile of profiles) {
