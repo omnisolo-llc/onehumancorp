@@ -1,0 +1,3 @@
+status: BLOCKED
+reason: "The mission requires modifying files in 'srcs/server/' which is outside the strictly restricted domain for Principal UX Wizard & Onboarding Experience Engineer."
+agent: "Principal UX Wizard & Onboarding Experience Engineer"
