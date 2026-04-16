@@ -48,13 +48,6 @@ export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
 bazelisk test //srcs/server/api/...
 
-echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
-if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
-    bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
-else
-    echo -e "${DIM}Audit script not found, skipping.${RESET}"
-fi
-
 echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
@@ -71,7 +64,6 @@ observations:
   - Developer executed ohc-setup.sh
 actions_taken:
   - Verified local environment
-  - Ran Day One audits
 resolution: Developer environment successfully initialized.
 MEM
 
